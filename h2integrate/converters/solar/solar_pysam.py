@@ -1,3 +1,4 @@
+import numpy as np
 import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define
 
@@ -148,6 +149,10 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
         )
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        # self.dt = dt
+        sim_length_dt = int(n_timesteps * dt)
         self.add_input(
             "system_capacity_DC",
             val=self.design_config.pv_capacity_kWdc,
@@ -156,10 +161,22 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         )
         self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
         self.add_output(
-            "annual_energy",
+            "total_electricity_produced",  # "annual_energy",
             val=0.0,
-            units="kW*h/year",
-            desc="Annual energy production in kWac",
+            units=f"kW*({dt}*s)/({sim_length_dt}*s)",
+            desc="Total AC energy production in kWac",
+        )
+        self.add_output(
+            "annual_energy",  # "annual_energy",
+            val=0.0,
+            units="(kW*h)/yr",
+            desc="Annual AC energy production",
+        )
+        self.add_output(
+            "capacity_factor",  # "annual_energy",
+            val=0.0,
+            units="unitless",
+            desc="AC Capacity Factor",
         )
 
         if self.design_config.create_model_from == "default":
@@ -293,8 +310,14 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.execute(0)
 
         # assign outputs
-        outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-dc
+        electricity_kWh_per_dt = np.array(self.system_model.Outputs.gen)
+        # electricity out is in kW*(dt*s)
+        outputs["electricity_out"] = electricity_kWh_per_dt  # kW-dc
         pv_capacity_kWdc = self.system_model.value("system_capacity")
         dc_ac_ratio = self.system_model.value("dc_ac_ratio")
+        outputs["total_electricity_produced"] = np.sum(electricity_kWh_per_dt)
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["annual_energy"] = self.system_model.value("ac_annual")
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
+            outputs["system_capacity_AC"] * len(electricity_kWh_per_dt)
+        )

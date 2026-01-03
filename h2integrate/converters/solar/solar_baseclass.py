@@ -14,12 +14,13 @@ class SolarPerformanceBaseClass(om.ExplicitComponent):
             desc="Solar resource data dictionary",
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.add_output(
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
-            desc="Power output from SolarPlant",
+            units=f"kW*({dt}*s)",
+            desc="Energy output profile from SolarPlant",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
