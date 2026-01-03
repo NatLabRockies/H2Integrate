@@ -9,11 +9,13 @@ class WindPerformanceBaseClass(om.ExplicitComponent):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
         self.add_output(
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Power output from WindPlant",
         )
         self.add_discrete_input(

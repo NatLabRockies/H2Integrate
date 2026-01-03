@@ -184,6 +184,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
     def setup(self):
         super().setup()
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        sim_length_dt = int(n_timesteps * dt)
 
         performance_inputs = self.options["tech_config"]["model_inputs"]["performance_parameters"]
 
@@ -248,6 +251,18 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         )
         self.add_output(
             "total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity in kW"
+        )
+        self.add_output(
+            "total_electricity_produced",
+            val=0.0,
+            units=f"kW*({dt}*s)/({sim_length_dt}*s)",
+            desc="Total AC energy production in kWac",
+        )
+        self.add_output(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            desc="Capacity Factor",
         )
 
         if self.config.create_model_from == "default":
@@ -470,6 +485,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         outputs["electricity_out"] = self.system_model.Outputs.gen
         outputs["total_capacity"] = self.system_model.Farm.system_capacity
         outputs["annual_energy"] = self.system_model.Outputs.annual_energy
+
+        outputs["total_electricity_produced"] = np.sum(np.array(self.system_model.Outputs.gen))
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
+            outputs["total_capacity"] * len(outputs["electricity_out"])
+        )
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(

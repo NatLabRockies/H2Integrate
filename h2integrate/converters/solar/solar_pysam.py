@@ -151,7 +151,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        # self.dt = dt
         sim_length_dt = int(n_timesteps * dt)
         self.add_input(
             "system_capacity_DC",
@@ -167,13 +166,13 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             desc="Total AC energy production in kWac",
         )
         self.add_output(
-            "annual_energy",  # "annual_energy",
+            "annual_energy",
             val=0.0,
             units="(kW*h)/yr",
             desc="Annual AC energy production",
         )
         self.add_output(
-            "capacity_factor",  # "annual_energy",
+            "capacity_factor",
             val=0.0,
             units="unitless",
             desc="AC Capacity Factor",

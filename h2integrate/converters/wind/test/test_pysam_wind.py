@@ -93,10 +93,6 @@ def test_wind_plant_pysam_no_changes_from_setup(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
             pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
@@ -106,7 +102,7 @@ def test_wind_plant_pysam_no_changes_from_setup(
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
             prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
-        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW*h"))
 
     with subtests.test("wind AEP value"):
         assert (
@@ -144,10 +140,6 @@ def test_wind_plant_pysam_change_hub_height(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
             pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
@@ -157,7 +149,7 @@ def test_wind_plant_pysam_change_hub_height(
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
             prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
-        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW*h"))
 
     with subtests.test("wind AEP value"):
         assert (
@@ -208,7 +200,7 @@ def test_wind_plant_pysam_change_rotor_diameter(
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
             prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
-        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW*h"))
 
     with subtests.test("wind AEP value"):
         assert (
@@ -245,10 +237,6 @@ def test_wind_plant_pysam_change_turbine_rating(
 
     expected_farm_capacity_MW = wind_plant_config["num_turbines"] * new_rating_MW
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
             pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
@@ -258,7 +246,7 @@ def test_wind_plant_pysam_change_turbine_rating(
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
             prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
-        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW*h"))
 
     with subtests.test("wind AEP value"):
         assert (
@@ -295,10 +283,6 @@ def test_wind_plant_pysam_change_n_turbines(
 
     expected_farm_capacity_MW = new_num_turbines * wind_plant_config["turbine_rating_kw"] / 1e3
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
             pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
@@ -308,7 +292,7 @@ def test_wind_plant_pysam_change_n_turbines(
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
             prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
-        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW*h"))
 
     with subtests.test("wind AEP value"):
         assert (
