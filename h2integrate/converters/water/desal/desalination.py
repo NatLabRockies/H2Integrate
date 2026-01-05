@@ -33,13 +33,16 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
 
     def setup(self):
         super().setup()
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = ReverseOsmosisPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         self.add_output(
             "electricity_in",
             val=0.0,
-            units="kW",
+            shape=n_timesteps,
+            units=f"kW*({dt}*s)",
             desc="Electricity required to run desalination plant",
         )
         self.add_output("feedwater", val=0.0, units="m**3/h", desc="Feedwater flow rate")

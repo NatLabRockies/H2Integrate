@@ -17,9 +17,18 @@ def test_brackish_performance(subtests):
             },
         }
     }
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,  # Default number of timesteps for the simulation
+                "dt": 3600,
+            },
+        },
+    }
 
     prob = om.Problem()
-    comp = ReverseOsmosisPerformanceModel(tech_config=tech_config)
+    comp = ReverseOsmosisPerformanceModel(plant_config=plant_config, tech_config=tech_config)
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     prob.setup()
@@ -47,9 +56,18 @@ def test_seawater_performance(subtests):
             },
         }
     }
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,  # Default number of timesteps for the simulation
+                "dt": 3600,
+            },
+        },
+    }
 
     prob = om.Problem()
-    comp = ReverseOsmosisPerformanceModel(tech_config=tech_config)
+    comp = ReverseOsmosisPerformanceModel(plant_config=plant_config, tech_config=tech_config)
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     prob.setup()
@@ -82,6 +100,7 @@ def test_ro_desalination_cost(subtests):
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,
+                "dt": 3600,
             },
         },
     }
