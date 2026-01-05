@@ -63,7 +63,8 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        sim_length_dt = n_timesteps * dt
         # Add natural gas consumed output
         self.add_output(
             "natural_gas_consumed",
@@ -78,7 +79,7 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units=f"MW*({dt}*s)",
             desc="Electricity output from natural gas plant",
         )
 
@@ -103,7 +104,7 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
             "electricity_demand",
             val=self.config.system_capacity_mw,
             shape=n_timesteps,
-            units="MW",
+            units=f"MW*({dt}*s)",
             desc="Electricity demand for natural gas plant",
         )
 
@@ -114,6 +115,13 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
             shape=n_timesteps,
             units="MMBtu",
             desc="Natural gas input energy",
+        )
+
+        self.add_output(
+            "total_electricity_produced",
+            val=0.0,
+            units=f"MW*({dt}*s)/({sim_length_dt}*s)",
+            desc="Total electrical energy production",
         )
 
     def compute(self, inputs, outputs):
@@ -158,6 +166,7 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
 
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
+        outputs["total_electricity_produced"] = np.sum(electricity_out)
 
 
 @define(kw_only=True)
@@ -233,7 +242,7 @@ class NaturalGasCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         super().setup()
 
         # Add inputs specific to the cost model with config values as defaults
@@ -247,7 +256,7 @@ class NaturalGasCostModel(CostModelBaseClass):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units=f"kW*({dt}*s)",
             desc="Hourly electricity output from performance model",
         )
         self.add_input(

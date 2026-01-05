@@ -16,6 +16,8 @@ class NaturalGasPerformanceBaseClass(om.ExplicitComponent):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        sim_length_dt = n_timesteps * dt
         self.add_input(
             "natural_gas_in",
             val=0.0,
@@ -27,8 +29,14 @@ class NaturalGasPerformanceBaseClass(om.ExplicitComponent):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units=f"MW*({dt}*s)",
             desc="Electricity output from natural gas plant",
+        )
+        self.add_output(
+            "total_electricity_produced",
+            val=0.0,
+            units=f"MW*({dt}*s)/({sim_length_dt}*s)",
+            desc="Total electrical energy production",
         )
 
     def compute(self, inputs, outputs):
