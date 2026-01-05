@@ -53,7 +53,7 @@ class GridPerformanceModel(om.ExplicitComponent):
         )
 
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         # Interconnection size input
         self.add_input(
             "interconnection_size",
@@ -67,7 +67,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_in",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity flowing into grid interconnection point (selling to grid)",
         )
 
@@ -76,7 +76,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_demand",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity demand from downstream technologies",
         )
 
@@ -85,7 +85,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity flowing out of grid interconnection point (buying from grid)",
         )
 
@@ -93,7 +93,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_sold",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity sold to the grid",
         )
 
@@ -101,7 +101,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_unmet_demand",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity demand that is not met",
         )
 
@@ -109,7 +109,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_excess",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity that was not sold due to interconnection limits",
         )
 
@@ -174,7 +174,6 @@ class GridCostModel(CostModelBaseClass):
         super().setup()
 
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         # Common input for sizing costs
         self.add_input(
             "interconnection_size",
@@ -188,7 +187,7 @@ class GridCostModel(CostModelBaseClass):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units="kW*h",
             desc="Electricity flowing out of grid (buying from grid)",
         )
 
@@ -219,7 +218,7 @@ class GridCostModel(CostModelBaseClass):
             "electricity_sold",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units="kW*h",
             desc="Electricity flowing into grid (selling to grid)",
         )
 

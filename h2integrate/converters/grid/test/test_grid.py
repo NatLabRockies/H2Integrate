@@ -12,7 +12,10 @@ class TestGridPerformanceModel(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.n_timesteps = 10
-        self.plant_config = {"plant": {"simulation": {"n_timesteps": self.n_timesteps}}}
+        self.dt = 3600
+        self.plant_config = {
+            "plant": {"simulation": {"n_timesteps": self.n_timesteps, "dt": self.dt}}
+        }
 
     def test_buying_electricity(self):
         """Test buying electricity from grid (electricity flows out)."""
