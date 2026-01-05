@@ -305,19 +305,19 @@ class CacheBaseClass(om.ExplicitComponent):
     #     """
     #     Computation for the OM component.
     #     This template includes commented out code on how to use the functionality
-    #     of this component within a model.
+    #     of this base class within a subclass.
 
-    #     For a template class this is not implement and raises an error.
-    #         """
+    #     Please ensure this method is implemented in a subclass.
+    #     """
 
-    #     # 1. check if this case has been run before
+    #     # 1. Check if this combination of inputs and parameters has been run before
     #     loaded_results = self.load_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
     #     if loaded_results:
+    #         # Case has been run before and outputs have been set, can exit this function
     #         return
 
-    #     # 2. run model as normal and set outputs
+    #     # 2. Run compute() method as normal and set outputs. For example:
+    #     # outputs['my_output_var'] = inputs['my_input_var']*10
 
-    #     # 3. save outputs to cache directory
+    #     # 3. Save outputs to cache directory
     #     self.cache_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
-
-    #     raise NotImplementedError("This method should be implemented in a subclass.")
