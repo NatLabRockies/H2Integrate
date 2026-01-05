@@ -174,17 +174,23 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
 
         commodity = self.config.commodity_name
 
+        if commodity == "electricity":
+            charge_rate_units = f"{self.config.commodity_units}/h"
+            capacity_units = self.config.commodity_units
+        else:
+            charge_rate_units = self.config.commodity_units
+            capacity_units = f"({self.config.commodity_units})*h"
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=f"{self.config.commodity_units}/h",
+            units=charge_rate_units,
             desc="Storage charge/discharge rate",
         )
 
         self.add_input(
             "max_capacity",
             val=self.config.max_capacity,
-            units=self.config.commodity_units,
+            units=capacity_units,
             desc="Maximum storage capacity",
         )
 
