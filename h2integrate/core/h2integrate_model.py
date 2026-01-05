@@ -889,7 +889,8 @@ class H2IntegrateModel:
                     pass
                 else:
                     connection_component = self.supported_models[transport_type](
-                        transport_item=transport_item
+                        transport_item=transport_item,
+                        plant_config=self.plant_config,
                     )
 
                     # Add the connection component to the model

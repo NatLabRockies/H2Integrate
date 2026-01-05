@@ -8,8 +8,10 @@ class CablePerformanceModel(om.ExplicitComponent):
 
     def initialize(self):
         self.options.declare("transport_item", values=["electricity"])
+        self.options.declare("plant_config", types=dict)
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.input_name = self.options["transport_item"] + "_in"
         self.output_name = self.options["transport_item"] + "_out"
         self.add_input(
@@ -17,14 +19,14 @@ class CablePerformanceModel(om.ExplicitComponent):
             val=-1.0,
             shape_by_conn=True,
             copy_shape=self.output_name,
-            units="kW",
+            units=f"kW*({dt}*s)",
         )
         self.add_output(
             self.output_name,
             val=-1.0,
             shape_by_conn=True,
             copy_shape=self.input_name,
-            units="kW",
+            units=f"kW*({dt}*s)",
         )
 
     def compute(self, inputs, outputs):

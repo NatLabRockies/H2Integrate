@@ -26,6 +26,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "pig_iron",
             ],
         )
+        self.options.declare("plant_config", types=dict)
 
     def setup(self):
         transport_item = self.options["transport_item"]
