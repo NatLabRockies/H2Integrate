@@ -4,4 +4,4 @@ system_summary: "This reference hybrid plant contains a simple geologic hydrogen
 
 driver_config: "driver_config.yaml"
 technology_config: "tech_config_stimulated.yaml"
-plant_config: "plant_config.yaml"
+plant_config: "plant_config_stimulated.yaml"
