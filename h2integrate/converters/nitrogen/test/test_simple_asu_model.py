@@ -10,6 +10,7 @@ plant_config = {
         "plant_life": 30,
         "simulation": {
             "n_timesteps": 8760,  # Default number of timesteps for the simulation
+            "dt": 3600,
         },
     },
 }
@@ -38,7 +39,7 @@ def test_simple_ASU_performance_model_set_capacity_kW(subtests):
     prob.setup()
 
     # Set dummy electricity input
-    prob.set_val("asu_perf.electricity_in", e_profile_in_kW.tolist(), units="kW")
+    prob.set_val("asu_perf.electricity_in", e_profile_in_kW.tolist(), units="kW*h")
     prob.run_model()
     # Dummy expected values
     max_n2_mfr = prob.get_val("asu_perf.rated_N2_kg_pr_hr")[0]

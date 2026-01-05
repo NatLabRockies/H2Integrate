@@ -68,15 +68,17 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        sim_length_dt = n_timesteps * dt
         self.config = SimpleASUPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         if self.config.size_from_N2_demand:
             self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-            self.add_output("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_output("electricity_in", val=0.0, shape=n_timesteps, units=f"kW*({dt}*s)")
 
         else:
-            self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_input("electricity_in", val=0.0, shape=n_timesteps, units=f"kW*({dt}*s)")
 
         self.add_output("air_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("ASU_capacity_kW", val=0.0, units="kW", desc="ASU rated capacity in kW")
@@ -87,7 +89,7 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "annual_electricity_consumption",
             val=0.0,
-            units="kW",
+            units=f"kW*({dt}*s)/({sim_length_dt}*s)",
             desc="ASU annual electricity consumption in kWh/year",
         )
         self.add_output(
