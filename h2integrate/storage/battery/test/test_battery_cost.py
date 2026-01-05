@@ -15,6 +15,7 @@ def plant_config():
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,
+                "dt": 3600,
             },
         },
     }
@@ -35,7 +36,7 @@ def battery_tech_config_kW():
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
-                "commodity_units": "kW",
+                "commodity_units": "kW*h",
                 "max_charge_rate": 5000.0,
                 "max_capacity": 30000.0,
             },
@@ -68,7 +69,7 @@ def battery_tech_config_MW():
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
-                "commodity_units": "MW",
+                "commodity_units": "MW*h",
                 "max_charge_rate": 5.0,
                 "max_capacity": 30.0,
             },
@@ -164,7 +165,7 @@ def test_integrated_battery_cost_MW(
 
     prob.setup()
 
-    prob.set_val("demand_openloop_controller.electricity_in", electricity_profile_MW, units="MW")
+    prob.set_val("demand_openloop_controller.electricity_in", electricity_profile_MW, units="MW*h")
 
     prob.run_model()
 

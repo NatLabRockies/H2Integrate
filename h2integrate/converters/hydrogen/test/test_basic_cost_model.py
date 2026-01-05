@@ -33,6 +33,7 @@ class TestBasicH2Costs:
                         "plant_life": self.useful_life,
                         "simulation": {
                             "n_timesteps": self.n_timesteps,
+                            "dt": 3600,
                         },
                     },
                 },
@@ -49,7 +50,7 @@ class TestBasicH2Costs:
             promotes=["*"],
         )
         prob.setup()
-        prob.set_val("electricity_in", electrical_generation_timeseries, units="kW")
+        prob.set_val("electricity_in", electrical_generation_timeseries, units="kW*h")
         prob.set_val("electrolyzer_size_mw", electrolyzer_size_mw, units="MW")
         return prob
 

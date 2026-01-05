@@ -36,6 +36,7 @@ class TestSingliticoCostModel:
                         "plant_life": 30,
                         "simulation": {
                             "n_timesteps": 8760,
+                            "dt": 3600,
                         },
                     },
                 },
@@ -52,7 +53,7 @@ class TestSingliticoCostModel:
         )
         prob.setup()
         prob.set_val("electrolyzer_size_mw", self.P_elec_mw, units="MW")
-        prob.set_val("electricity_in", np.ones(8760) * self.P_elec_mw, units="kW")
+        prob.set_val("electricity_in", np.ones(8760) * self.P_elec_mw, units="kW*h")
         prob.set_val("total_hydrogen_produced", 1000.0, units="kg/year")
         return prob
 
