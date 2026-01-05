@@ -859,8 +859,12 @@ class H2IntegrateModel:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
 
-                # make the connection_name based on source, dest, item, type
-                connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
+                if transport_type in self.tech_names:
+                    # if the transport type is already a technology, skip creating a new component
+                    connection_name = f"{transport_type}"
+                else:
+                    # make the connection_name based on source, dest, item, type
+                    connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
 
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
@@ -879,12 +883,17 @@ class H2IntegrateModel:
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object
-                connection_component = self.supported_models[transport_type](
-                    transport_item=transport_item
-                )
+                # allow transport_type to be from self.tech_name
+                if transport_type in self.tech_names:
+                    # Connect the connection component to the destination technology
+                    pass
+                else:
+                    connection_component = self.supported_models[transport_type](
+                        transport_item=transport_item
+                    )
 
-                # Add the connection component to the model
-                self.plant.add_subsystem(connection_name, connection_component)
+                    # Add the connection component to the model
+                    self.plant.add_subsystem(connection_name, connection_component)
 
                 # Check if the source technology is a splitter
                 if "splitter" in source_tech:

@@ -3,6 +3,8 @@
 - Updates models for NumPy version 2.4.0
 - Update test values for WOMBAT update to 0.13.0
 - Added standlone iron DRI and steel EAF performance and cost models
+- Added capability to have transport models that require user input parameters
+- Add geologic hydrogen surface processing converter
 
 ## 0.5.1 [December 18, 2025]
 

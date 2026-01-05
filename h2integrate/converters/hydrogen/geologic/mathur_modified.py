@@ -128,7 +128,7 @@ class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
         contingency_pct (float): Contingency costs as a percentage of bare capital cost [%].
         preprod_time (float): Duration of preproduction phase [months].
         as_spent_ratio (float): Ratio of as-spent costs to overnight costs.
-        hydrogen_out (ndarray): Hydrogen production rate over time [kg/h].
+        wellhead_gas_out (ndarray): Wellhead gas production rate over time [kg/h].
 
     Outputs:
         bare_capital_cost (float): Unadjusted capital cost before multipliers [USD].
@@ -214,7 +214,7 @@ class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
         fopex = inflate_cpi(inputs["fixed_opex"], 2022, cost_year)
         vopex = inflate_cpi(inputs["variable_opex"], 2022, cost_year)
         outputs["OpEx"] = fopex
-        outputs["VarOpEx"] = vopex * inputs["total_hydrogen_produced"]
+        outputs["VarOpEx"] = vopex * inputs["total_wellhead_gas_produced"]
 
         # Apply cost multipliers to bare erected cost via NETL-PUB-22580
         contracting = inputs["contracting_pct"]

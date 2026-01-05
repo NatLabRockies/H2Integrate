@@ -27,7 +27,7 @@ def test_steel_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered")[0], rel=1e-3
             )
-            == 7.47944016
+            == 7.4937685542
         )
 
     with subtests.test("Check LCOS"):
@@ -46,7 +46,7 @@ def test_steel_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 96349901.77625626
+            == 97524697.65173519
         )
 
     with subtests.test("Check steel CapEx"):
@@ -85,7 +85,7 @@ def test_simple_ammonia_example(subtests):
         assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-3) == 65336874.189441
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-3) == 2358776.66234517
+        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-3) == 3149096.037312718
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-3) == 1.0124126e08
@@ -106,14 +106,14 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 53161706.5
+            == 54034051.95
         )
 
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 3.970
+            == 3.982
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -121,14 +121,14 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen")[0], rel=1e-3
             )
-            == 3.970
+            == 3.982
         )
 
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_ammonia.LCOA")[0], rel=1e-3)
-            == 1.02470046
+            == 1.027395
         )
 
     # Check that the expected output files exist
@@ -173,7 +173,7 @@ def test_ammonia_synloop_example(subtests):
         assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 65337437.18075897
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 2358794.11507603
+        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 3149096.037312718
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
@@ -194,19 +194,19 @@ def test_ammonia_synloop_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted")[0], rel=1e-6
             )
-            == 78873785.09009656
+            == 79746130.53956798
         )
 
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_h2.LCOH")[0], rel=1e-6)
-            == 3.9705799098258776
+            == 3.981693202109977
         )
 
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_nh3.LCOA")[0], rel=1e-6)
-            == 1.21777477635066
+            == 1.2201640214384049
         )
 
 
@@ -515,7 +515,7 @@ def test_hydrogen_dispatch_example(subtests):
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.360810057454742
+            == 5.380013537850591
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -524,7 +524,7 @@ def test_hydrogen_dispatch_example(subtests):
                 model.prob.get_val("finance_subgroup_dispatched_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 7.54632229849164
+            == 7.573354943596408
         )
 
 
@@ -1297,6 +1297,104 @@ def test_24_solar_battery_grid_example(subtests):
     with subtests.test("Value check on LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/(MW*h)")[0]
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
+
+
+def test_natural_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_nat = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_natural.yaml")
+    h2i_nat.run()
+
+    with subtests.test("H2 Production"):
+        assert (
+            pytest.approx(
+                np.mean(h2i_nat.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")),
+                rel=1e-6,
+            )
+            == 603.4286677531819
+        )
+
+    with subtests.test("integrated LCOH"):
+        assert (
+            pytest.approx(
+                h2i_nat.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg"), rel=1e-6
+            )
+            == 1.59307314
+        )
+    with subtests.test("subsurface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 7667341.11417252
+        )
+    with subtests.test("subsurface fixed Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("subsurface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.VarOpEx"), rel=1e-6) == 0.0
+        )
+    with subtests.test("subsurface adjusted opex"):
+        adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
+
+    with subtests.test("surface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6) == 1795733.55
+        )
+    with subtests.test("surface fixed Opex"):
+        assert pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.OpEx"), rel=1e-6) == 4567464
+    with subtests.test("surface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.VarOpEx"), rel=1e-6)
+            == 984842.53
+        )
+    with subtests.test("surface adjusted opex"):
+        surface_adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_surface"
+        )
+        assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
+
+
+def test_stimulated_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_stim = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_stimulated.yaml")
+    h2i_stim.run()
+
+    h2_prod = h2i_stim.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")
+
+    with subtests.test("H2 Production"):
+        assert pytest.approx(np.mean(h2_prod), rel=1e-6) == 155.03934945719536
+
+    with subtests.test("integrate LCOH"):
+        lcoh = h2i_stim.prob.get_val("finance_subgroup_default.LCOH")
+        assert lcoh == pytest.approx(
+            2.29337734, 1e-6
+        )  # previous val from custom finance model was 1.74903827
+
+    # failure is expected because we are inflating using general inflation rather than CPI and CEPCI
+    with subtests.test("Capex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 19520122.88478073
+        )
+    with subtests.test("fixed Opex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("variable Opex"):
+        var_om_pr_h2 = h2i_stim.model.get_val("geoh2_well_subsurface.VarOpEx") / np.sum(h2_prod)
+        assert pytest.approx(var_om_pr_h2, rel=1e-6) == 0.32105362
+    with subtests.test("adjusted Opex"):
+        adjusted_opex = h2i_stim.prob.get_val(
+            "finance_subgroup_default.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
 
 def test_21_iron_dri_eaf_example(subtests):

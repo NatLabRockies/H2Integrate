@@ -26,7 +26,7 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
 
     Attributes:
         product (str): 'ng_dri'
-        config (HydrogenIronReductionCostConfig): configuration class
+        config (NaturalGasIronReductionCostConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
@@ -37,13 +37,13 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
 
 
 class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerformanceComponent):
-    """Cost component for hydrogen-based direct reduced iron (DRI) plant
-    using the Rosner cost model.
+    """Performance component for hydrogen-based direct reduced iron (DRI) plant
+    using the Rosner performance model.
 
     Attributes:
         product (str): 'h2_dri'
-        config (HydrogenIronReductionCostConfig): configuration class
-        coeff_df (pd.DataFrame): cost coefficient dataframe
+        config (HydrogenIronReductionPerformanceConfig): configuration class
+        coeff_df (pd.DataFrame): performance coefficient dataframe
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
@@ -60,13 +60,13 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
 
 
 class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePerformanceComponent):
-    """Cost component for natural gas-based direct reduced iron (DRI) plant
-    using the Rosner cost model.
+    """Performance component for natural gas-based direct reduced iron (DRI) plant
+    using the Rosner performance model.
 
     Attributes:
         product (str): 'ng_dri'
-        config (HydrogenIronReductionCostConfig): configuration class
-        coeff_df (pd.DataFrame): cost coefficient dataframe
+        config (NaturalGasIronReductionPerformanceConfig): configuration class
+        coeff_df (pd.DataFrame): performance coefficient dataframe
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
