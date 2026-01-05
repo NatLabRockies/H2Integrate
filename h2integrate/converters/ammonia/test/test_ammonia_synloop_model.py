@@ -72,7 +72,7 @@ def test_ammonia_synloop_limiting_cases(subtests):
     prob.setup()
     prob.set_val("synloop.hydrogen_in", h2, units="kg/h")
     prob.set_val("synloop.nitrogen_in", n2, units="kg/h")
-    prob.set_val("synloop.electricity_in", elec, units="MW")
+    prob.set_val("synloop.electricity_in", elec, units="MW*h")
     prob.run_model()
     nh3 = prob.get_val("synloop.ammonia_out")
     total = prob.get_val("synloop.total_ammonia_produced")

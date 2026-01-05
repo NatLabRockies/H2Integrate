@@ -143,6 +143,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = AmmoniaSynLoopPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -150,7 +151,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="MW")
+        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units=f"MW*({dt}*s)")
 
         self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
