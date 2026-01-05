@@ -77,7 +77,7 @@ def test_baseline_iron_ore_costs(plant_config, driver_config, iron_ore_config_ma
     annual_electricity = 1030.0 * 1e6
     ore_rated_capacity = 516.0497610311598
 
-    prob.set_val("ore_perf.electricity_in", [annual_electricity / 8760] * 8760, units="kW")
+    prob.set_val("ore_perf.electricity_in", [annual_electricity / 8760] * 8760, units="kW*h")
     prob.set_val("ore_perf.crude_ore_in", [annual_crude_ore / 8760] * 8760, units="t/h")
     prob.set_val("ore_perf.iron_ore_demand", [ore_rated_capacity] * 8760, units="t/h")
 

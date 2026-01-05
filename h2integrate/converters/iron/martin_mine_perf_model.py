@@ -38,6 +38,7 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = MartinIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -55,7 +56,7 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
             "electricity_in",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity available for iron ore processing",
         )
 
@@ -89,7 +90,7 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
             "electricity_consumed",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity consumed",
         )
 

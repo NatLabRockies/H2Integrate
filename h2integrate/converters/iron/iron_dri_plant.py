@@ -48,12 +48,13 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
     """
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.product = "h2_dri"
         self.feedstocks_to_units = {
             "natural_gas": "MMBtu",
             "water": "galUS",  # "galUS/h"
             "iron_ore": "t/h",
-            "electricity": "kW",
+            "electricity": f"kW*({dt}*s)",
             "hydrogen": "t/h",
         }
         super().setup()
@@ -71,11 +72,12 @@ class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePer
     """
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.feedstocks_to_units = {
             "natural_gas": "MMBtu",
             "water": "galUS",  # "galUS/h"
             "iron_ore": "t/h",
-            "electricity": "kW",
+            "electricity": f"kW*({dt}*s)",
             "reformer_catalyst": "(m**3)",  # "(m**3)/h"
         }
 
