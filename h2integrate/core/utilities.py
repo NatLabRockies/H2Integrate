@@ -310,6 +310,8 @@ def dict_to_yaml_formatting(orig_dict):
             elif isinstance(key, str):
                 if isinstance(orig_dict[key], (str, bool, int)):
                     continue
+                if orig_dict[key] is None:
+                    continue
                 if isinstance(orig_dict[key], (list, np.ndarray)):
                     if any(isinstance(v, dict) for v in val):
                         for vii, v in enumerate(val):
@@ -582,6 +584,23 @@ def write_yaml(
     yaml.allow_unicode = False
     with Path(foutput).open("w", encoding="utf-8") as f:
         yaml.dump(instance, f)
+
+
+def write_readable_yaml(instance: dict, foutput: str | Path):
+    """
+    Writes a dictionary to a YAML file using the yaml library.
+
+    Args:
+        instance (dict): Dictionary to be written to the YAML file.
+        foutput (str | Path): Path to the output YAML file.
+
+    Returns:
+        None
+    """
+    instance = dict_to_yaml_formatting(instance)
+
+    with Path(foutput).open("w", encoding="utf-8") as f:
+        yaml.dump(instance, f, sort_keys=False, encoding=None, default_flow_style=False)
 
 
 def make_unique_case_name(folder, proposed_fname, fext):

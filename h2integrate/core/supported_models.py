@@ -128,6 +128,9 @@ from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
 )
 from h2integrate.control.control_rules.converters.generic_converter_opt import (
     PyomoDispatchGenericConverterMinOperatingCosts,
+from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
+    AspenGeoH2SurfaceCostModel,
+    AspenGeoH2SurfacePerformanceModel,
 )
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
@@ -223,6 +226,8 @@ supported_models = {
     "simple_natural_geoh2_performance": NaturalGeoH2PerformanceModel,
     "templeton_serpentinization_geoh2_performance": StimulatedGeoH2PerformanceModel,
     "mathur_modified_geoh2_cost": GeoH2SubsurfaceCostModel,
+    "aspen_geoh2_performance": AspenGeoH2SurfacePerformanceModel,
+    "aspen_geoh2_cost": AspenGeoH2SurfaceCostModel,
     "natural_gas_performance": NaturalGasPerformanceModel,
     "natural_gas_cost": NaturalGasCostModel,
     # Transport

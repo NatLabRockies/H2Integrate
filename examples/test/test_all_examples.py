@@ -1299,6 +1299,104 @@ def test_24_solar_battery_grid_example(subtests):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
+def test_natural_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_nat = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_natural.yaml")
+    h2i_nat.run()
+
+    with subtests.test("H2 Production"):
+        assert (
+            pytest.approx(
+                np.mean(h2i_nat.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")),
+                rel=1e-6,
+            )
+            == 603.4286677531819
+        )
+
+    with subtests.test("integrated LCOH"):
+        assert (
+            pytest.approx(
+                h2i_nat.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg"), rel=1e-6
+            )
+            == 1.59307314
+        )
+    with subtests.test("subsurface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 7667341.11417252
+        )
+    with subtests.test("subsurface fixed Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("subsurface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.VarOpEx"), rel=1e-6) == 0.0
+        )
+    with subtests.test("subsurface adjusted opex"):
+        adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
+
+    with subtests.test("surface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6) == 1795733.55
+        )
+    with subtests.test("surface fixed Opex"):
+        assert pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.OpEx"), rel=1e-6) == 4567464
+    with subtests.test("surface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.VarOpEx"), rel=1e-6)
+            == 984842.53
+        )
+    with subtests.test("surface adjusted opex"):
+        surface_adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_surface"
+        )
+        assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
+
+
+def test_stimulated_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_stim = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_stimulated.yaml")
+    h2i_stim.run()
+
+    h2_prod = h2i_stim.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")
+
+    with subtests.test("H2 Production"):
+        assert pytest.approx(np.mean(h2_prod), rel=1e-6) == 155.03934945719536
+
+    with subtests.test("integrate LCOH"):
+        lcoh = h2i_stim.prob.get_val("finance_subgroup_default.LCOH")
+        assert lcoh == pytest.approx(
+            2.29337734, 1e-6
+        )  # previous val from custom finance model was 1.74903827
+
+    # failure is expected because we are inflating using general inflation rather than CPI and CEPCI
+    with subtests.test("Capex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 19520122.88478073
+        )
+    with subtests.test("fixed Opex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("variable Opex"):
+        var_om_pr_h2 = h2i_stim.model.get_val("geoh2_well_subsurface.VarOpEx") / np.sum(h2_prod)
+        assert pytest.approx(var_om_pr_h2, rel=1e-6) == 0.32105362
+    with subtests.test("adjusted Opex"):
+        adjusted_opex = h2i_stim.prob.get_val(
+            "finance_subgroup_default.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
+
+
 def test_21_iron_dri_eaf_example(subtests):
     os.chdir(EXAMPLE_DIR / "21_iron_mn_to_il")
 

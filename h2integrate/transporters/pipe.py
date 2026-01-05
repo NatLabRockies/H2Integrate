@@ -17,6 +17,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "nitrogen",
                 "natural_gas",
                 "crude_ore",
+                "wellhead_gas",
                 "iron_ore",
                 "reformer_catalyst",
                 "water",

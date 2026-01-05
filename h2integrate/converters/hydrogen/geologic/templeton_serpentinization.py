@@ -131,4 +131,7 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         h2_prod_avg = h2_produced[-1] / lifetime / n_timesteps
         outputs["hydrogen_out_stim"] = h2_prod_avg
         outputs["hydrogen_out"] = h2_prod_avg
+        # Until surface processing model is developed, wellhead gas = hydrogen
+        outputs["wellhead_gas_out"] = h2_prod_avg
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
+        outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
