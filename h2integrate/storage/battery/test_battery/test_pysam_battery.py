@@ -38,7 +38,7 @@ def test_pysam_battery_performance_model_without_controller(subtests):
 
     prob.model.add_subsystem(
         name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="kW*h"),
         promotes=["*"],
     )
 
@@ -50,7 +50,7 @@ def test_pysam_battery_performance_model_without_controller(subtests):
 
     prob.model.add_subsystem(
         name="IVC3",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW*h"),
         promotes=["*"],
     )
 

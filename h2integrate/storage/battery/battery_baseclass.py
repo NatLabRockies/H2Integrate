@@ -8,11 +8,13 @@ class BatteryPerformanceBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
         self.add_input(
             "electricity_in",
             val=0.0,
             shape_by_conn=True,
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Power input to Battery",
         )
 
@@ -20,7 +22,7 @@ class BatteryPerformanceBaseClass(om.ExplicitComponent):
             "electricity_out",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Total electricity out of Battery",
         )
 
@@ -36,7 +38,7 @@ class BatteryPerformanceBaseClass(om.ExplicitComponent):
             "battery_electricity_discharge",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Electricity output from Battery only",
         )
 

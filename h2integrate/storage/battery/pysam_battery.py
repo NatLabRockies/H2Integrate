@@ -220,6 +220,8 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         If dispatch connections are specified, it also sets up a discrete
         input for Pyomo solver integration.
         """
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
         self.config = PySAMBatteryPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
@@ -245,7 +247,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             "electricity_demand",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Power demand",
         )
 
@@ -253,7 +255,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             "P_chargeable",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Estimated max chargeable power",
         )
 
@@ -261,7 +263,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             "P_dischargeable",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Estimated max dischargeable power",
         )
 
@@ -269,7 +271,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             "unmet_electricity_demand_out",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Unmet power demand",
         )
 
@@ -277,7 +279,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             "unused_electricity_out",
             val=0.0,
             copy_shape="electricity_in",
-            units="kW",
+            units=f"kW*({dt}*s)",
             desc="Unused generated commodity",
         )
 
