@@ -39,8 +39,13 @@ class MarineCarbonCapturePerformanceBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.add_input(
-            "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
+            "electricity_in",
+            val=0.0,
+            shape=8760,
+            units=f"W*({dt}*s)",
+            desc="Hourly input electricity (W)",
         )
         self.add_output(
             "co2_out",

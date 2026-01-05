@@ -61,7 +61,7 @@ class TestOAEPerformanceModel(unittest.TestCase):
         base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 300 MW to 200 MW over 8760 hours
         noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±50 MW noise
         power_profile = base_power + noise
-        self.prob.set_val("OAE.electricity_in", power_profile, units="W")
+        self.prob.set_val("OAE.electricity_in", power_profile, units="W*h")
 
         # Run the model
         self.prob.run_model()
