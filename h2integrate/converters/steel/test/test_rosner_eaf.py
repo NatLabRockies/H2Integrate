@@ -60,7 +60,7 @@ def ng_feedstock_availability_costs():
     feedstocks_dict = {
         "electricity": {
             "rated_capacity": 56640,  # need 56636.07192 kW
-            "units": "kW",
+            "units": "kW*h",
             "price": 0.05802,  # USD/kW
         },
         "natural_gas": {
@@ -88,7 +88,7 @@ def h2_feedstock_availability_costs():
         "electricity": {
             # (1189678/8760)t-steel/h * 433.170439 kWh/t-steel = 58828.00702 kW
             "rated_capacity": 58830,  # need 58828.00702 kW
-            "units": "kW",
+            "units": "kW*h",
             "price": 0.05802,  # USD/kW TODO: update
         },
         "natural_gas": {

@@ -11,7 +11,8 @@ class SteelPerformanceBaseClass(om.ExplicitComponent):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units=f"kW*({dt}*s)")
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("steel", val=0.0, shape=n_timesteps, units="t/year")
 
