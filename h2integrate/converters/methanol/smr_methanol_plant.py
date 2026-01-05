@@ -44,6 +44,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = SMRPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -74,7 +75,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         self.add_output("ng_consume", shape=n_timesteps, units="kg/h")
 
         # Set up electricity production output
-        self.add_output("electricity_out", shape=n_timesteps, units="kW*h/h")
+        self.add_output("electricity_out", shape=n_timesteps, units=f"kW*({dt}*s)")
 
     def compute(self, inputs, outputs):
         n_timesteps = len(inputs["ng_in"])

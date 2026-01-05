@@ -51,6 +51,7 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = CO2HPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -76,7 +77,7 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         self.add_input("co2_in", shape=n_timesteps, units="kg/h", val=co2_ratio * meoh_max_out)
         self.add_input("hydrogen_in", shape=n_timesteps, units="kg/h", val=h2_ratio * meoh_max_out)
         self.add_input(
-            "electricity_in", shape=n_timesteps, units="kW*h/h", val=elec_ratio * meoh_max_out
+            "electricity_in", shape=n_timesteps, units=f"kW*({dt}*s)", val=elec_ratio * meoh_max_out
         )
 
         # Set up feedstock consumption outputs
@@ -84,7 +85,7 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         self.add_output("ng_consume", shape=n_timesteps, units="kg/h")
         self.add_output("co2_consume", shape=n_timesteps, units="kg/h")
         self.add_output("hydrogen_consume", shape=n_timesteps, units="kg/s")
-        self.add_output("electricity_consume", shape=n_timesteps, units="kW*h/h")
+        self.add_output("electricity_consume", shape=n_timesteps, units=f"kW*({dt}*s)")
 
     def compute(self, inputs, outputs):
         n_timesteps = len(inputs["ng_in"])
@@ -213,6 +214,7 @@ class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = MethanolFinanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance")
         )
@@ -235,7 +237,7 @@ class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
         )
         self.add_input(
             "electricity_consume",
-            units="kW*h/h",
+            units=f"kW*({dt}*s)",
             desc="Electricity consumption in kWh/h",
             shape=n_timesteps,
         )
