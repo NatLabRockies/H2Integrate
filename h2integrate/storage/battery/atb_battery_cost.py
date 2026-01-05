@@ -34,7 +34,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
     opex_fraction: float = field(validator=range_val(0, 1))
     max_capacity: float = field()
     max_charge_rate: float = field()
-    commodity_units: str = field(validator=contains(["W", "kW", "MW", "GW", "TW"]))
+    commodity_units: str = field(validator=contains(["W*h", "kW*h", "MW*h", "GW*h", "TW*h"]))
 
 
 class ATBBatteryCostModel(CostModelBaseClass):
@@ -64,13 +64,13 @@ class ATBBatteryCostModel(CostModelBaseClass):
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=f"{self.config.commodity_units}",
+            units=f"{self.config.commodity_units}/h",
             desc="Battery charge/discharge rate",
         )
         self.add_input(
             "max_capacity",
             val=self.config.max_capacity,
-            units=f"{self.config.commodity_units}*h",
+            units=f"{self.config.commodity_units}",
             desc="Battery storage capacity",
         )
 
@@ -79,12 +79,12 @@ class ATBBatteryCostModel(CostModelBaseClass):
 
         # convert the input capacity to units of kW*h
         max_capacity_kWh = units.convert_units(
-            inputs["max_capacity"], f"{self.config.commodity_units}*h", "kW*h"
+            inputs["max_capacity"], self.config.commodity_units, "kW*h"
         )
 
         # convert the input charge rate to units of kW
         max_charge_rate_kW = units.convert_units(
-            inputs["max_charge_rate"], self.config.commodity_units, "kW"
+            inputs["max_charge_rate"], f"{self.config.commodity_units}/h", "kW"
         )
 
         if max_charge_rate_kW > 0:

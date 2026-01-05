@@ -33,9 +33,10 @@ class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
 class ElectrolyzerCostBaseClass(CostModelBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         super().setup()
         self.add_input("total_hydrogen_produced", val=0.0, units="kg/year")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units=f"kW*({dt}*s)")
 
 
 class ElectrolyzerFinanceBaseClass(om.ExplicitComponent):

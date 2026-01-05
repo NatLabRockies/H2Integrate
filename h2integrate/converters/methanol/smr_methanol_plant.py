@@ -143,12 +143,13 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
 
         self.add_input("ng_lhv", units="MJ/kg", val=self.config.ng_lhv)
         self.add_input("meoh_syn_cat_consume", units="ft**3/yr")
         self.add_input("meoh_atr_cat_consume", units="ft**3/yr")
         self.add_input("ng_consume", shape=n_timesteps, units="kg/h")
-        self.add_input("electricity_out", shape=n_timesteps, units="kW*h/h")
+        self.add_input("electricity_out", shape=n_timesteps, units=f"kW*({dt}*s)")
         self.add_input("meoh_syn_cat_price", units="USD/ft**3", val=self.config.meoh_syn_cat_price)
         self.add_input("meoh_atr_cat_price", units="USD/ft**3", val=self.config.meoh_atr_cat_price)
         self.add_input(

@@ -256,7 +256,7 @@ class NaturalGasCostModel(CostModelBaseClass):
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units=f"kW*({dt}*s)",
+            units=f"MW*({dt}*s)",
             desc="Hourly electricity output from performance model",
         )
         self.add_input(

@@ -69,9 +69,15 @@ class MarineCarbonCaptureCostBaseClass(CostModelBaseClass):
     """
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
         super().setup()
         self.add_input(
-            "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
+            "electricity_in",
+            val=0.0,
+            shape=8760,
+            units=f"W*({dt}*s)",
+            desc="Hourly input electricity (W)",
         )
         self.add_input(
             "co2_capture_mtpy",
