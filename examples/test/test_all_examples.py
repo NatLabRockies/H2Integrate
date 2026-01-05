@@ -592,10 +592,10 @@ def test_natural_gas_example(subtests):
     model.run()
 
     model.post_process()
-    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW"))
-    solar_bat_out_total = sum(model.prob.get_val("battery.electricity_out", units="kW"))
+    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW*h"))
+    solar_bat_out_total = sum(model.prob.get_val("battery.electricity_out", units="kW*h"))
     solar_curtailed_total = sum(
-        model.prob.get_val("battery.electricity_unused_commodity", units="kW")
+        model.prob.get_val("battery.electricity_unused_commodity", units="kW*h")
     )
 
     renewable_subgroup_total_electricity = model.prob.get_val(
@@ -610,9 +610,11 @@ def test_natural_gas_example(subtests):
 
     # NOTE: battery output power is not included in any of the financials
 
-    pre_ng_missed_load = model.prob.get_val("battery.electricity_unmet_demand", units="kW")
-    ng_electricity_demand = model.prob.get_val("natural_gas_plant.electricity_demand", units="kW")
-    ng_electricity_production = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
+    pre_ng_missed_load = model.prob.get_val("battery.electricity_unmet_demand", units="kW*h")
+    ng_electricity_demand = model.prob.get_val("natural_gas_plant.electricity_demand", units="kW*h")
+    ng_electricity_production = model.prob.get_val(
+        "natural_gas_plant.electricity_out", units="kW*h"
+    )
     bat_init_charge = 200000.0 * 0.1  # max capacity in kW and initial charge rate percentage
 
     with subtests.test(
@@ -742,8 +744,8 @@ def test_wind_solar_electrolyzer_example(subtests):
         assert Path(solar_fpath).name == "30.6617_-101.7096_psmv3_60_2013.csv"
     model.post_process()
 
-    wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW"))
-    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW"))
+    wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW*h"))
+    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW*h"))
     total_aep = model.prob.get_val(
         "finance_subgroup_electricity.electricity_sum.total_electricity_produced", units="kW*h/year"
     )[0]
@@ -769,10 +771,10 @@ def test_wind_solar_electrolyzer_example(subtests):
             == 5.3277923
         )
 
-    wind_generation = model.prob.get_val("wind.electricity_out", units="kW")
-    solar_generation = model.prob.get_val("solar.electricity_out", units="kW")
-    total_generation = model.prob.get_val("combiner.electricity_out", units="kW")
-    total_energy_to_electrolyzer = model.prob.get_val("electrolyzer.electricity_in", units="kW")
+    wind_generation = model.prob.get_val("wind.electricity_out", units="kW*h")
+    solar_generation = model.prob.get_val("solar.electricity_out", units="kW*h")
+    total_generation = model.prob.get_val("combiner.electricity_out", units="kW*h")
+    total_energy_to_electrolyzer = model.prob.get_val("electrolyzer.electricity_in", units="kW*h")
     with subtests.test("Check combiner output"):
         assert (
             pytest.approx(wind_generation.sum() + solar_generation.sum(), rel=1e-5)
@@ -850,7 +852,7 @@ def test_pyomo_heuristic_dispatch_example(subtests):
 
     # TODO: Update with demand module once it is developed
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW*h")
 
     # Run the model
     model.run()
@@ -878,7 +880,7 @@ def test_pyomo_heuristic_dispatch_example(subtests):
         assert wind_electricity.sum() == pytest.approx(battery_electricity_in.sum(), rel=1e-6)
 
     with subtests.test("Check demand satisfaction"):
-        electricity_out = model.prob.get_val("battery.electricity_out", units="MW")
+        electricity_out = model.prob.get_val("battery.electricity_out", units="MW*h")
         # Battery output should try to meet the 50 MW constant demand
         # Average output should be close to demand when there's sufficient generation
         assert electricity_out.mean() >= 45  # MW
@@ -903,14 +905,14 @@ def test_pyomo_heuristic_dispatch_example(subtests):
     # Subtest for electricity unused_commodity
     with subtests.test("Check electricity unused commodity"):
         electricity_unused_commodity = np.linalg.norm(
-            model.prob.get_val("battery.unused_electricity_out", units="MW")
+            model.prob.get_val("battery.unused_electricity_out", units="MW*h")
         )
         assert electricity_unused_commodity == pytest.approx(36590.067573337095, rel=1e-6)
 
     # Subtest for unmet demand
     with subtests.test("Check electricity unmet demand"):
         electricity_unmet_demand = np.linalg.norm(
-            model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")
+            model.prob.get_val("battery.unmet_electricity_demand_out", units="MW*h")
         )
         assert electricity_unmet_demand == pytest.approx(711.1997294551337, rel=1e-6)
 
@@ -936,7 +938,7 @@ def test_simple_dispatch_example(subtests):
 
     model.post_process()
 
-    wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW"))
+    wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW*h"))
     aep_for_finance = model.prob.get_val(
         "finance_subgroup_electricity.total_electricity_produced", units="kW*h/year"
     )[0]
@@ -961,7 +963,7 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(wind_electricity.sum(), rel=1e-6) == battery_electricity_in.sum()
 
     with subtests.test("Check demand satisfaction"):
-        electricity_out = model.prob.get_val("battery.electricity_out", units="MW")
+        electricity_out = model.prob.get_val("battery.electricity_out", units="MW*h")
         # Battery output should try to meet the 5 MW constant demand
         # Average output should be close to demand when there's sufficient generation
         assert electricity_out.mean() > 4.20  # MW
@@ -1016,7 +1018,7 @@ def test_simple_dispatch_example(subtests):
 
     with subtests.test("Check total electricity produced from wind compared to wind aep"):
         wind_electricity_performance = np.sum(
-            model.prob.get_val("wind.electricity_out", units="kW")
+            model.prob.get_val("wind.electricity_out", units="kW*h")
         )
         assert pytest.approx(wind_electricity_performance, rel=1e-6) == wind_electricity_finance
 
@@ -1027,7 +1029,7 @@ def test_simple_dispatch_example(subtests):
             "finance_subgroup_battery.electricity_sum.total_electricity_produced", units="MW*h/year"
         )[0]
         battery_electricity_performance = np.sum(
-            model.prob.get_val("battery.electricity_out", units="MW")
+            model.prob.get_val("battery.electricity_out", units="MW*h")
         )
         assert (
             pytest.approx(battery_electricity_finance, rel=1e-6) == battery_electricity_performance
@@ -1275,13 +1277,15 @@ def test_24_solar_battery_grid_example(subtests):
         "finance_subgroup_renewables.electricity_sum.total_electricity_produced", units="kW*h/year"
     )
 
-    electricity_bought = sum(model.prob.get_val("grid_buy.electricity_out", units="kW"))
-    battery_missed_load = sum(model.prob.get_val("battery.electricity_unmet_demand", units="kW"))
+    electricity_bought = sum(model.prob.get_val("grid_buy.electricity_out", units="kW*h"))
+    battery_missed_load = sum(model.prob.get_val("battery.electricity_unmet_demand", units="kW*h"))
 
-    battery_curtailed = sum(model.prob.get_val("battery.electricity_unused_commodity", units="kW"))
-    electricity_sold = sum(model.prob.get_val("grid_sell.electricity_in", units="kW"))
+    battery_curtailed = sum(
+        model.prob.get_val("battery.electricity_unused_commodity", units="kW*h")
+    )
+    electricity_sold = sum(model.prob.get_val("grid_sell.electricity_in", units="kW*h"))
 
-    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW"))
+    solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW*h"))
 
     with subtests.test("Behavior check battery missed load is electricity bought"):
         assert pytest.approx(battery_missed_load, rel=1e-6) == electricity_bought

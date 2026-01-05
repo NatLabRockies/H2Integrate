@@ -19,7 +19,7 @@ technologies:
       performance_parameters:
         split_mode: "fraction"
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_units: "kW*h"
         fraction_to_priority_tech: 0.25
 
   doc:

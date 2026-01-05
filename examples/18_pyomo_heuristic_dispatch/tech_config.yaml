@@ -62,7 +62,7 @@ technologies:
         chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2022
-        commodity_units: "kW"
+        commodity_units: "kW*h"
         energy_capex: 310 # $/kWh from 2024 ATB year 2025
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB

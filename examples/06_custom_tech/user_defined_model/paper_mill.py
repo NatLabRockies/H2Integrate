@@ -22,6 +22,7 @@ class PaperMillPerformance(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.config = PaperMillConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -29,7 +30,7 @@ class PaperMillPerformance(om.ExplicitComponent):
             "electricity_in",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units=f"MW*({dt}*s)",
             desc="Power inputted to the paper mill",
         )
 

@@ -177,14 +177,14 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=self.config.commodity_units,
+            units=f"{self.config.commodity_units}/h",
             desc="Storage charge/discharge rate",
         )
 
         self.add_input(
             "max_capacity",
             val=self.config.max_capacity,
-            units=self.config.commodity_units + "*h",
+            units=self.config.commodity_units,
             desc="Maximum storage capacity",
         )
 

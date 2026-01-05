@@ -61,7 +61,7 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity_units: "kg"
         max_charge_rate: 12446.00729773  # kg/time step
         max_capacity: 2987042.0  # kg
       control_parameters:

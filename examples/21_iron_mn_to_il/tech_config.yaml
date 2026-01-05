@@ -10,12 +10,12 @@ technologies:
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
-        units: "MW"
+        units: "MW*h"
       performance_parameters:
         rated_capacity: 30. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
         cost_year: 2022
-        price: 58.02 #USD/MW
+        price: 58.02 #USD/MWh
         annual_cost: 0.
         start_up_cost: 0.
 
@@ -119,12 +119,12 @@ technologies:
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
-        units: "kW"
+        units: "kW*h"
       performance_parameters:
         rated_capacity: 27000. # need 26949.46472431 kW
       cost_parameters:
         cost_year: 2022
-        price: 0.05802 #USD/kW
+        price: 0.05802 #USD/kWh
         annual_cost: 0.
         start_up_cost: 0.
 
@@ -150,7 +150,7 @@ technologies:
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
-        units: "kW"
+        units: "kW*h"
       performance_parameters:
         rated_capacity: 56650. # need 56642.327357 kW
       cost_parameters:
