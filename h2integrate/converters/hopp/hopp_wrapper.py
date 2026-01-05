@@ -22,6 +22,7 @@ class HOPPComponent(CostModelBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         config_dict = {
             "cost_year": self.options["tech_config"]["model_inputs"]["cost_parameters"]["cost_year"]
         }
@@ -66,7 +67,7 @@ class HOPPComponent(CostModelBaseClass):
         self.add_output("curtailment_percent", units="percent", val=0.0)
         self.add_output("aep", units="kW*h", val=0.0)
         self.add_output(
-            "electricity_out", val=np.zeros(n_timesteps), units="kW", desc="Power output"
+            "electricity_out", val=np.zeros(n_timesteps), units=f"kW*({dt}*s)", desc="Power output"
         )
         self.add_output("battery_duration", val=0.0, units="h", desc="Battery duration")
         self.add_output(
