@@ -25,6 +25,7 @@ def test_custom_electrolyzer_cost_model(subtests):
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,  # Default number of timesteps for the simulation
+                "dt": 3600,
             },
         },
     }
