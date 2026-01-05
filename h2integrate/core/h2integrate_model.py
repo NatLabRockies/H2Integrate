@@ -722,7 +722,7 @@ class H2IntegrateModel:
                         "model_inputs": {
                             "performance_parameters": {
                                 "commodity": commodity,
-                                "commodity_units": "kW" if commodity == "electricity" else "kg/h",
+                                "commodity_units": "kW*h" if commodity == "electricity" else "kg/h",
                             }
                         }
                     }
@@ -737,7 +737,8 @@ class H2IntegrateModel:
 
             if commodity_stream is None and commodity == "electricity":
                 finance_subgroup.add_subsystem(
-                    "electricity_sum", ElectricitySumComp(tech_configs=tech_configs)
+                    "electricity_sum",
+                    ElectricitySumComp(plant_config=self.plant_config, tech_configs=tech_configs),
                 )
 
             # Add adjusted capex/opex
