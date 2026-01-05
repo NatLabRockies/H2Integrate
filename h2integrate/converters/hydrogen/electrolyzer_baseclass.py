@@ -9,9 +9,10 @@ from h2integrate.core.model_baseclasses import (
 class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         super().setup()
         # Define inputs for electricity and outputs for hydrogen and oxygen generation
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units=f"kW*({dt}*s)")
         self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output(
             "time_until_replacement", val=80000.0, units="h", desc="Time until replacement"

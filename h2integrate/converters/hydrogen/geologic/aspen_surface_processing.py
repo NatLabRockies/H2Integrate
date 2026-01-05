@@ -82,6 +82,7 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
 
         self.outputs_to_units = {
             "H2 Flow Out": "kg/hr",
@@ -107,7 +108,9 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
         self.add_input("max_wellhead_gas", val=-1.0, units="kg/h")
         self.add_discrete_input("perf_coeffs", val=coeffs)
 
-        self.add_output("electricity_consumed", val=-1.0, shape=(n_timesteps,), units="kW")
+        self.add_output(
+            "electricity_consumed", val=-1.0, shape=(n_timesteps,), units=f"kW*({dt}*s)"
+        )
         self.add_output("water_consumed", val=-1.0, shape=(n_timesteps,), units="kt/h")
         self.add_output("steam_out", val=-1.0, shape=(n_timesteps,), units="kt/h")
 
@@ -242,7 +245,7 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
+        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         if self.config.refit_coeffs:
             output_names = ["Capex [USD]", "Labor [op/shift]"]
             coeffs = refit_coeffs(
@@ -261,7 +264,7 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
         self.add_input("overhead_rate", val=self.config.overhead_rate, units="unitless")
         self.add_input("electricity_price", val=self.config.electricity_price, units="USD/kW/h")
         self.add_input("water_price", val=self.config.water_price, units="USD/kt")
-        self.add_input("electricity_consumed", val=-1.0, shape=(n_timesteps,), units="kW")
+        self.add_input("electricity_consumed", val=-1.0, shape=(n_timesteps,), units=f"kW*({dt}*s)")
         self.add_input("water_consumed", val=-1.0, shape=(n_timesteps,), units="kt/h")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

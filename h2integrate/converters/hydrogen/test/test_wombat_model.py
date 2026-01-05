@@ -16,6 +16,7 @@ def test_wombat_model_outputs(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },
@@ -40,7 +41,7 @@ def test_wombat_model_outputs(subtests):
         promotes=["*"],
     )
     prob.setup()
-    prob.set_val("electricity_in", np.ones(8760) * 40.0, units="MW")
+    prob.set_val("electricity_in", np.ones(8760) * 40.0, units="MW*h")
     prob.run_model()
 
     with subtests.test("hydrogen_out"):
@@ -73,6 +74,7 @@ def test_wombat_error(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },
@@ -97,7 +99,7 @@ def test_wombat_error(subtests):
         promotes=["*"],
     )
     prob.setup()
-    prob.set_val("electricity_in", np.ones(8760) * 40.0, units="MW")
+    prob.set_val("electricity_in", np.ones(8760) * 40.0, units="MW*h")
 
     with pytest.raises(ValueError, match="Electrolyzer rating .* does not match the product of"):
         prob.run_model()
