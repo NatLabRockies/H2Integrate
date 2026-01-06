@@ -218,10 +218,6 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         return time_series
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # NOTE: could update air density based on elevation if elevation is included
-        # in the resource data.
-        # would need to duplicate the ``calculate_air_density`` function from HOPP
-
         # 1. Check if the results for the current configuration are already cached
         config_dict = self.config.as_dict()
         config_dict.update({"wind_turbine_size_kw": self.wind_turbine_rating_kW})
