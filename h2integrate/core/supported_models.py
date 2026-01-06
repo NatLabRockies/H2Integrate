@@ -126,11 +126,12 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
-from h2integrate.control.control_rules.converters.generic_converter_opt import (
-    PyomoDispatchGenericConverterMinOperatingCosts,
 from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
     AspenGeoH2SurfaceCostModel,
     AspenGeoH2SurfacePerformanceModel,
+)
+from h2integrate.control.control_rules.converters.generic_converter_opt import (
+    PyomoDispatchGenericConverterMinOperatingCosts,
 )
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
@@ -259,12 +260,10 @@ supported_models = {
     "demand_open_loop_converter_controller": DemandOpenLoopConverterController,
     "flexible_demand_open_loop_converter_controller": FlexibleDemandOpenLoopConverterController,
     # Dispatch
-    "pyomo_dispatch_generic_converter": PyomoDispatchGenericConverter,
-    "pyomo_dispatch_generic_storage": PyomoRuleStorageBaseclass,
-    "pyomo_dispatch_battery_min_operating_cost": (PyomoRuleStorageMinOperatingCosts),
-    "pyomo_dispatch_generic_converter_min_operating_cost": (
-        PyomoDispatchGenericConverterMinOperatingCosts
-    ),
+    "pyomo_generic_converter": PyomoDispatchGenericConverter,
+    "pyomo_generic_storage": PyomoRuleStorageBaseclass,
+    "pyomo_battery_min_operating_cost": PyomoRuleStorageMinOperatingCosts,
+    "pyomo_generic_converter_min_operating_cost": PyomoDispatchGenericConverterMinOperatingCosts,
     # Feedstock
     "feedstock_performance": FeedstockPerformanceModel,
     "feedstock_cost": FeedstockCostModel,

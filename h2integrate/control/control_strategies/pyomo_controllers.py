@@ -110,7 +110,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
         Adds discrete inputs named 'dispatch_block_rule_function' (and variants
         suffixed with source tech names for cross-tech connections) plus a
-        discrete output 'pyomo_dispatch_solver' that will hold the assembled
+        discrete output 'pyomo_solver' that will hold the assembled
         callable after compute().
         """
 
@@ -139,7 +139,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
         # create output for the pyomo control model
         self.add_discrete_output(
-            "pyomo_dispatch_solver",
+            "pyomo_solver",
             val=dummy_function,
             desc="callable: fully formed pyomo model and execution logic to be run \
                 by owning technologies performance model",
@@ -147,7 +147,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Build Pyomo model blocks and assign the dispatch solver."""
-        discrete_outputs["pyomo_dispatch_solver"] = self.pyomo_setup(discrete_inputs)
+        discrete_outputs["pyomo_solver"] = self.pyomo_setup(discrete_inputs)
 
     def pyomo_setup(self, discrete_inputs):
         """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
@@ -190,7 +190,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 continue
 
         # define dispatch solver
-        def pyomo_dispatch_solver(
+        def pyomo_solver(
             performance_model: callable,
             performance_model_kwargs,
             inputs,
@@ -332,7 +332,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
             return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
 
-        return pyomo_dispatch_solver
+        return pyomo_solver
 
     @staticmethod
     def dispatch_block_rule(block, t):
