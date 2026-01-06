@@ -25,11 +25,8 @@ technology_interconnections: [
   # connect feedstocks to iron mine
   ["grid_feedstock","iron_mine","electricity","cable"],
   ["mine_feedstock","iron_mine","crude_ore","pipe"],
-  # connect iron mine to iron transport
-  #TODO: update after updated transport model is integrated
-  ["iron_mine","iron_transport","total_iron_ore_produced"],
-  ["iron_mine","iron_plant","iron_ore","pipe"], #temp workaround until transport model is updated
   # connect feedstocks to iron plant
+  ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["dri_grid_feedstock","iron_plant","electricity","cable"],
   ["catalyst_feedstock","iron_plant","reformer_catalyst","pipe"],
   ["water_feedstock","iron_plant","water","pipe"],
@@ -39,7 +36,6 @@ technology_interconnections: [
   ["eaf_water_feedstock","steel_plant","water","pipe"],
   ["eaf_natural_gas_feedstock","steel_plant","natural_gas","pipe"],
   ["iron_plant","steel_plant","pig_iron","pipe"],
-  # ["iron_transport","iron_plant","iron_transport_cost"],
 ]
 
 plant:

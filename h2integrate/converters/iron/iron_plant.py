@@ -67,7 +67,7 @@ class IronPlantPerformanceComponent(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
         )
-
+        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
         self.add_discrete_output(
             "iron_plant_performance", val=pd.DataFrame, desc="iron plant performance results"
         )
