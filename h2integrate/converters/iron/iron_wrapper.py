@@ -5,10 +5,10 @@ from attrs import field, define
 from hopp.utilities import load_yaml
 
 import h2integrate.tools.profast_reverse_tools as rev_pf_tools
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, range_val
 from h2integrate.converters.iron.iron import run_iron_full_model
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.converters.iron.martin_transport.iron_transport import calc_iron_ship_cost
 
 

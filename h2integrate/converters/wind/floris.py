@@ -4,9 +4,9 @@ import numpy as np
 from attrs import field, define, validators
 from floris import TimeSeries, FlorisModel
 
-from h2integrate.core.utilities import CacheBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, range_val
-from h2integrate.core.model_baseclasses import CacheBaseClass
+from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig
 from h2integrate.converters.wind.tools.resource_tools import (
     average_wind_data_for_hubheight,
     weighted_average_wind_data_for_hubheight,
