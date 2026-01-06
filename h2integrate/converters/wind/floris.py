@@ -152,7 +152,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         self.add_output("total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity")
 
         self.add_output(
-            "capacity_factor", val=0.0, units="percent", desc="Wind farm capacity factor"
+            "capacity_factor", val=0.0, units="unitless", desc="Wind farm capacity factor"
         )
 
         super().setup()
