@@ -41,26 +41,6 @@ def calculate_air_density(elevation_m: float) -> float:
     return rho
 
 
-def calculate_air_density_losses(elevation_m: float) -> float:
-    """Calculate loss (%) from air density drop at site elevation.
-
-    Args:
-        elevation_m (float): site elevation in meters
-
-    Returns:
-        float: percentage loss associated with air density decrease at elevation.
-    """
-
-    if elevation_m <= 0.0:
-        return 0.0
-
-    air_density = calculate_air_density(elevation_m)
-    loss_ratio = 1 - (air_density / RHO_0)
-    loss_percent = loss_ratio * 100
-
-    return loss_percent
-
-
 def weighted_average_wind_data_for_hubheight(
     wind_resource_data: dict,
     bounding_resource_heights: tuple[int] | list[int],

@@ -8,6 +8,7 @@ from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, range_val
 from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig
 from h2integrate.converters.wind.tools.resource_tools import (
+    calculate_air_density,
     average_wind_data_for_hubheight,
     weighted_average_wind_data_for_hubheight,
 )
@@ -32,7 +33,7 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
         hub_height (float | int, optional): a value of -1 indicates to use the hub-height
             from the `floris_turbine_config`. Otherwise, is the turbine hub-height
             in meters. Defaults to -1.
-        floris_operation_model (str, optional): turbine operation model. Defaults to 'cosine-loss'.
+        operation_model (str, optional): turbine operation model. Defaults to 'cosine-loss'.
         default_turbulence_intensity (float): default turbulence intensity to use if not found
             in wind resource data.
         layout (dict): layout parameters dictionary.
@@ -61,7 +62,8 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
     default_turbulence_intensity: float = field()
     operational_losses: float = field(validator=range_val(0.0, 100.0))
     hub_height: float = field(default=-1, validator=validators.ge(-1))
-    floris_operation_model: str = field(default="cosine-loss")
+    adjust_air_density_for_elevation: bool = field(default=False)
+    operation_model: str = field(default="cosine-loss")
     layout: dict = field(default={})
     resource_data_averaging_method: str = field(
         default="weighted_average", validator=contains(["weighted_average", "average", "nearest"])
@@ -241,7 +243,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         turbine_design.update({"hub_height": inputs["hub_height"][0]})
 
         # update the operation model in the floris turbine config
-        turbine_design.update({"operation_model": self.config.floris_operation_model})
+        turbine_design.update({"operation_model": self.config.operation_model})
 
         # format resource data and input into model
         time_series = self.format_resource_data(
@@ -257,6 +259,14 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         floris_farm = {"layout_x": x_pos, "layout_y": y_pos, "turbine_type": [turbine_design]}
 
         floris_config["farm"].update(floris_farm)
+
+        # adjust air density
+        if (
+            self.config.adjust_air_density_for_elevation
+            and "elevation" in discrete_inputs["wind_resource_data"]
+        ):
+            rho = calculate_air_density(discrete_inputs["elevation"])
+            floris_config["flow_field"].update({"air_density": rho})
 
         # initialize FLORIS
         floris_config["flow_field"].update({"turbulence_intensities": []})

@@ -20,7 +20,7 @@ def floris_config():
         "floris_wake_config": floris_wake_config,
         "floris_turbine_config": floris_turbine_config,
         "default_turbulence_intensity": 0.06,
-        "floris_operation_model": "cosine-loss",
+        "operation_model": "cosine-loss",
         "hub_height": -1,
         "layout": {
             "layout_mode": "basicgrid",
