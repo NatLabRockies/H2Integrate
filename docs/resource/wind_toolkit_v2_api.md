@@ -35,3 +35,6 @@ This dataset allows for resource data to be downloaded for:
 | `day`      | X |
 | `hour`      | X |
 | `minute`      | X |
+| `start_time`| X |
+| `end_time`| X |
+| `dt`| X |

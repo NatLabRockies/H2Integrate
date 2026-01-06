@@ -44,6 +44,9 @@ The below variables are outputted as arrays, with a length equal to the simulati
 ## Additional Data: Data source
 - `data_tz` (int | float): timezone the data is in represented as an hour offset from UTC
 - `filepath` (str): filepath where the resource data was loaded from
+- `start_time` (str): the start time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `end_time` (str): the end time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `dt` (int | float): the timestep of resource data in seconds
 
 ## Additional Data: Time profile
 Time data may be outputted as arrays to represent the time profile of the resource data. These times should be represented in the timezone of `data_tz` (if outputted).
