@@ -265,7 +265,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
             self.config.adjust_air_density_for_elevation
             and "elevation" in discrete_inputs["wind_resource_data"]
         ):
-            rho = calculate_air_density(discrete_inputs["elevation"])
+            rho = calculate_air_density(discrete_inputs["wind_resource_data"]["elevation"])
             floris_config["flow_field"].update({"air_density": rho})
 
         # initialize FLORIS
