@@ -59,7 +59,7 @@ class PyomoRuleStorageMinOperatingCosts:
         self.charge_efficiency = dispatch_inputs.get("charge_efficiency", 0.94)
         self.discharge_commodity_efficiency = dispatch_inputs.get("discharge_efficiency", 0.94)
 
-        # Set charge and discharge rate equal to eachother for now
+        # Set charge and discharge rate equal to each other for now
         self.max_charge = dispatch_inputs["max_charge_rate"]
         self.max_discharge = dispatch_inputs["max_charge_rate"]
 
@@ -721,9 +721,9 @@ class PyomoRuleStorageMinOperatingCosts:
             return self.blocks[t].maximum_storage.value
 
     @maximum_storage.setter
-    def maximum_storage(self, capcity_value: float):
+    def maximum_storage(self, capacity_value: float):
         for t in self.blocks.index_set():
-            self.blocks[t].maximum_storage = round(capcity_value, self.round_digits)
+            self.blocks[t].maximum_storage = round(capacity_value, self.round_digits)
 
     @property
     def charge_efficiency(self) -> float:

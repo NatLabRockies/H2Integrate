@@ -117,7 +117,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
         # get technology group name
         self.tech_group_name = self.pathname.split(".")
 
-        # initalize dispatch inputs to None
+        # initialize dispatch inputs to None
         self.dispatch_options = None
 
         # create inputs for all pyomo object creation functions from all connected technologies
@@ -286,7 +286,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     self.update_time_series_parameters(
                         commodity_in=commodity_in, commodity_demand=demand_in
                     )
-                    # Run dispatch optimzation to minimize costs while meeting demand
+                    # Run dispatch optimization to minimize costs while meeting demand
                     self.solve_dispatch_model(
                         commodity_in,
                         self.config.system_commodity_interface_limit,

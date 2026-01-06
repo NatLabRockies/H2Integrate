@@ -136,7 +136,7 @@ class PyomoDispatchPlantRule:
     def create_min_operating_cost_expression(self):
         self._delete_objective()
 
-        def operationg_cost_objective_rule(m) -> float:
+        def operating_cost_objective_rule(m) -> float:
             obj = 0.0
             for tech in self.source_techs:
                 name = tech + "_rule"
@@ -148,9 +148,7 @@ class PyomoDispatchPlantRule:
             return obj
 
         # Set operating cost rule in Pyomo problem objective
-        self.model.objective = pyo.Objective(
-            rule=operationg_cost_objective_rule, sense=pyo.minimize
-        )
+        self.model.objective = pyo.Objective(rule=operating_cost_objective_rule, sense=pyo.minimize)
 
     def _delete_objective(self):
         if hasattr(self.model, "objective"):
