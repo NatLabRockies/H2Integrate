@@ -1,9 +1,11 @@
+import shutil
+
 import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import H2I_LIBRARY_DIR
+from h2integrate import ROOT_DIR, H2I_LIBRARY_DIR
 from h2integrate.core.utilities import load_yaml
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
@@ -29,6 +31,7 @@ def floris_config():
         },
         "operational_losses": 12.83,
         "enable_caching": False,
+        "cache_dir": None,
         "resource_data_averaging_method": "nearest",
     }
     return floris_performance_dict
@@ -58,15 +61,9 @@ def plant_config():
 
 
 def test_floris_wind_performance(plant_config, floris_config, subtests):
-    cost_dict = {
-        "capex_per_kW": 1000,  # overnight capital cost
-        "opex_per_kW_per_year": 5,  # fixed operations and maintenance expenses
-        "cost_year": 2022,
-    }
     tech_config_dict = {
         "model_inputs": {
             "performance_parameters": floris_config,
-            "cost_parameters": cost_dict,
         }
     }
 
@@ -109,3 +106,152 @@ def test_floris_wind_performance(plant_config, floris_config, subtests):
         assert pytest.approx(
             np.sum(prob.get_val("wind_plant.electricity_out", units="kW")), rel=1e-6
         ) == prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")
+
+
+def test_floris_caching_changed_config(plant_config, floris_config, subtests):
+    cache_dir = ROOT_DIR.parent / "test_cache_floris"
+
+    # delete cache dir if it exists
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
+
+    floris_config["enable_caching"] = True
+    floris_config["cache_dir"] = cache_dir
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": floris_config,
+        }
+    }
+
+    # Run FLORIS and get cache filename
+    prob = om.Problem()
+
+    wind_resource_config = plant_config["site"]["resource"]["wind_resource"]["resource_parameters"]
+    wind_resource = OpenMeteoHistoricalWindResource(
+        plant_config=plant_config,
+        resource_config=wind_resource_config,
+        driver_config={},
+    )
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    cache_filename_init = list(cache_dir.glob("*.pkl"))
+
+    with subtests.test("Check that cache file was created"):
+        assert len(cache_filename_init) == 1
+
+    # Modify something in the config and check that cache filename is different
+    floris_config["operational_losses"] = 10.0
+    prob = om.Problem()
+    wind_resource = OpenMeteoHistoricalWindResource(
+        plant_config=plant_config,
+        resource_config=wind_resource_config,
+        driver_config={},
+    )
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    cache_filenames = list(cache_dir.glob("*.pkl"))
+    cache_filename_new = [file for file in cache_filenames if file not in cache_filename_init]
+
+    with subtests.test("Check unique filename with modified config"):
+        assert len(cache_filename_new) > 0
+
+    with subtests.test("Check two cache files exist"):
+        assert len(cache_filenames) == 2
+
+    # Delete cache files and the testing cache dir
+    shutil.rmtree(cache_dir)
+
+
+def test_floris_caching_changed_inputs(plant_config, floris_config, subtests):
+    cache_dir = ROOT_DIR.parent / "test_cache_floris"
+
+    # delete cache dir if it exists
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
+
+    floris_config["enable_caching"] = True
+    floris_config["cache_dir"] = cache_dir
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": floris_config,
+        }
+    }
+
+    # Run FLORIS and get cache filename
+    prob = om.Problem()
+
+    wind_resource_config = plant_config["site"]["resource"]["wind_resource"]["resource_parameters"]
+    wind_resource = OpenMeteoHistoricalWindResource(
+        plant_config=plant_config,
+        resource_config=wind_resource_config,
+        driver_config={},
+    )
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    wind_resource_data = dict(prob.get_val("wind_resource.wind_resource_data"))
+
+    cache_filename_init = list(cache_dir.glob("*.pkl"))
+
+    with subtests.test("Check that cache file was created"):
+        assert len(cache_filename_init) == 1
+
+    # Modify the wind resource data, rerun floris, and check that a new file was created
+    # wind_resource_data['wind_speed_100m'][10] += 1 #this wont trigger a new cache file
+    wind_resource_data["site_lat"] = 44.04218107666016
+
+    prob = om.Problem()
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_plant", wind_plant)
+    prob.setup()
+    prob.set_val("wind_plant.wind_resource_data", wind_resource_data)
+    prob.run_model()
+
+    cache_filenames = list(cache_dir.glob("*.pkl"))
+    cache_filename_new = [file for file in cache_filenames if file not in cache_filename_init]
+
+    with subtests.test("Check unique filename with modified config"):
+        assert len(cache_filename_new) > 0
+
+    with subtests.test("Check two cache files exist"):
+        assert len(cache_filenames) == 2
+
+    # Delete cache files and the testing cache dir
+    shutil.rmtree(cache_dir)

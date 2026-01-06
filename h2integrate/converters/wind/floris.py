@@ -1,13 +1,12 @@
 import copy
-from pathlib import Path
 
-import dill
 import numpy as np
 from attrs import field, define, validators
 from floris import TimeSeries, FlorisModel
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs, make_cache_hash_filename
+from h2integrate.core.utilities import CacheBaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, range_val
+from h2integrate.core.model_baseclasses import CacheBaseClass
 from h2integrate.converters.wind.tools.resource_tools import (
     average_wind_data_for_hubheight,
     weighted_average_wind_data_for_hubheight,
@@ -20,7 +19,7 @@ from h2integrate.converters.wind.layout.simple_grid_layout import (
 
 
 @define
-class FlorisWindPlantPerformanceConfig(BaseConfig):
+class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
     """Configuration class for FlorisWindPlantPerformanceModel.
 
     Attributes:
@@ -67,12 +66,11 @@ class FlorisWindPlantPerformanceConfig(BaseConfig):
     resource_data_averaging_method: str = field(
         default="weighted_average", validator=contains(["weighted_average", "average", "nearest"])
     )
-    enable_caching: bool = field(default=True)
-    cache_dir: str | Path = field(default="cache")
     hybrid_turbine_design: bool = field(default=False)
 
     # if using multiple turbines, then need to specify resource reference height
     def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         n_turbine_types = len(self.floris_wake_config.get("farm", {}).get("turbine_type", []))
         n_pos = len(self.floris_wake_config.get("farm", {}).get("layout_x", []))
         if n_turbine_types > 1 and n_turbine_types != n_pos:
@@ -96,7 +94,7 @@ class FlorisWindPlantPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
-class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
+class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     """
     An OpenMDAO component that wraps a Floris model.
     It takes wind turbine model parameters and wind resource data as input and
@@ -104,7 +102,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
     """
 
     def setup(self):
-        super().setup()
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         performance_inputs = self.options["tech_config"]["model_inputs"]["performance_parameters"]
 
@@ -157,7 +155,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
             "capacity_factor", val=0.0, units="percent", desc="Wind farm capacity factor"
         )
 
-        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        super().setup()
 
         power_curve = self.config.floris_turbine_config.get("power_thrust_table").get("power")
         self.wind_turbine_rating_kW = np.max(power_curve)
@@ -222,26 +220,17 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
         # in the resource data.
         # would need to duplicate the ``calculate_air_density`` function from HOPP
 
-        # Check if the results for the current configuration are already cached
-        if self.config.enable_caching:
-            config_dict = self.config.as_dict()
-            config_dict.update({"wind_turbine_size_kw": self.wind_turbine_rating_kW})
-            cache_filename = make_cache_hash_filename(
-                config_dict, inputs, discrete_inputs, cache_dir=self.config.cache_dir
-            )
+        # 1. Check if the results for the current configuration are already cached
+        config_dict = self.config.as_dict()
+        config_dict.update({"wind_turbine_size_kw": self.wind_turbine_rating_kW})
+        loaded_results = self.load_outputs(
+            inputs, outputs, discrete_inputs, discrete_outputs={}, config_dict=config_dict
+        )
+        if loaded_results:
+            # Case has been run before and outputs have been set, can exit this function
+            return
 
-            if Path(cache_filename).exists():
-                # Load the cached results
-                cache_path = Path(cache_filename)
-                with cache_path.open("rb") as f:
-                    cached_data = dill.load(f)
-                outputs["electricity_out"] = cached_data["electricity_out"]
-                outputs["total_capacity"] = cached_data["total_capacity"]
-                outputs["total_electricity_produced"] = cached_data["total_electricity_produced"]
-                outputs["capacity_factor"] = cached_data["capacity_factor"]
-                return
-
-        # If caching is not enabled or a cache file does not exist, run FLORIS
+        # 2. If caching is not enabled or a cache file does not exist, run FLORIS
         n_turbs = int(np.round(inputs["num_turbines"][0]))
 
         # Copy main config files
@@ -285,6 +274,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
         operational_efficiency = (100 - self.config.operational_losses) / 100
         gen = power_farm * operational_efficiency / 1000  # kW
 
+        # set outputs
         outputs["electricity_out"] = gen
         outputs["total_capacity"] = n_turbs * self.wind_turbine_rating_kW
 
@@ -292,16 +282,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass):
         outputs["total_electricity_produced"] = np.sum(gen)
         outputs["capacity_factor"] = np.sum(gen) / max_production
 
-        # Cache the results for future use
-        if self.config.enable_caching:
-            cache_path = Path(cache_filename)
-            with cache_path.open("wb") as f:
-                floris_results = {
-                    "electricity_out": outputs["electricity_out"],
-                    "total_capacity": outputs["total_capacity"],
-                    "total_electricity_produced": outputs["total_electricity_produced"],
-                    "capacity_factor": outputs["capacity_factor"],
-                    "layout_x": x_pos,
-                    "layout_y": y_pos,
-                }
-                dill.dump(floris_results, f)
+        # 3. Cache the results for future use if enabled
+        self.cache_outputs(
+            inputs, outputs, discrete_inputs, discrete_outputs={}, config_dict=config_dict
+        )
