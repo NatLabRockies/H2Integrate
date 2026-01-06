@@ -1306,7 +1306,7 @@ def test_floris_example(subtests):
     with subtests.test("Capacity factor"):
         assert (
             pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
-            == 0.177610389263
+            == 17.7610389263
         )
 
 
