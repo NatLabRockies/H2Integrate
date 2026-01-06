@@ -1,0 +1,39 @@
+name: "driver_config"
+description: "This analysis runs a hybrid plant to match the first example in H2Integrate"
+
+general:
+  folder_output: outputs
+
+
+driver:
+  optimization:
+    flag: False
+    solver: COBYLA
+    tol: 0.01
+    catol: 15000
+    max_iter: 100
+    rhobeg: 0.1
+    debug_print: True
+
+design_variables:
+  electrolyzer:
+    max_feedstock_ratio:
+      flag: False
+      lower: 0.1
+      upper: 10.
+      units: unitless
+  ammonia:
+    max_feedstock_ratio:
+      flag: False
+      lower: 0.1
+      upper: 10.
+      units: unitless
+
+objective:
+  name: finance_subgroup_nh3.LCOA
+
+recorder:
+  flag: False
+  file: "size_mode_example.sql"
+  includes: ["*"]
+  excludes: ["wind_resource.wind_resource_data"]

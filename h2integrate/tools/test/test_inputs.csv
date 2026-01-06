@@ -2,4 +2,3 @@ Index 0,Index 1,Index 2,Index 3,Index 4,Index 5,Type,Float Test,Int Test,Bool Te
 technologies,solar,model_inputs,performance_parameters,pv_capacity_kWdc,,float,100000.,150000.,150000.,150000.
 technologies,electrolyzer,model_inputs,performance_parameters,n_clusters,,int,18,20,18,18
 technologies,electrolyzer,model_inputs,performance_parameters,include_degradation_penalty,,bool,TRUE,TRUE,FALSE,TRUE
-technologies,electrolyzer,model_inputs,performance_parameters,sizing,size_for,str,BOL,BOL,BOL,EOL

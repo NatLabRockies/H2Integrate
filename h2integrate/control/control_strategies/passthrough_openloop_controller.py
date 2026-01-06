@@ -5,7 +5,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.control.control_strategies.controller_baseclass import ControllerBaseClass
 
 
-@define
+@define(kw_only=True)
 class PassThroughOpenLoopControllerConfig(BaseConfig):
     commodity_name: str = field()
     commodity_units: str = field()

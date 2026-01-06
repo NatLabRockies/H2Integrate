@@ -6,7 +6,7 @@ from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_sh
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class GridPerformanceModelConfig(BaseConfig):
     """Configuration for the grid performance model.
 
@@ -131,7 +131,7 @@ class GridPerformanceModel(om.ExplicitComponent):
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
 
 
-@define
+@define(kw_only=True)
 class GridCostModelConfig(CostModelBaseConfig):
     """Configuration for the grid cost model.
 

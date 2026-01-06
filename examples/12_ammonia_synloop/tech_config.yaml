@@ -5,13 +5,16 @@ technologies:
   hopp:
     performance_model:
       model: "hopp"
-      config: !include tech_inputs/hopp_config_tx.yaml
     cost_model:
       model: "hopp"
-    electrolyzer_rating: 640. # MW
     model_inputs:
-      cost_parameters:
+      shared_parameters:
         cost_year: 2019
+      performance_parameters:
+        cache_dir: "cache"
+        enable_caching: True
+        hopp_config: !include tech_inputs/hopp_config_tx.yaml
+        electrolyzer_rating: 640. # MW
   electrolyzer:
     performance_model:
       model: "eco_pem_electrolyzer_performance"
@@ -23,10 +26,7 @@ technologies:
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
 
       performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
+        size_mode: "normal"
         n_clusters: 16
         cluster_rating_MW: 40
         eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
@@ -66,6 +66,7 @@ technologies:
         catalyst_consumption_rate: 0.000091295354067341
         catalyst_replacement_interval: 3
       performance_parameters:
+        size_mode: "normal"
         capacity_factor: 0.9
         energy_demand: 0.530645243
         heat_output: 0.8299956

@@ -123,7 +123,7 @@ def check_parameter_inputs(finance_params, plant_config):
     return fin_params
 
 
-@define
+@define(kw_only=True)
 class BasicProFASTParameterConfig(BaseConfig):
     """Configuration class for financial parameters used in ProFAST models.
 
@@ -286,7 +286,7 @@ class BasicProFASTParameterConfig(BaseConfig):
         return params
 
 
-@define
+@define(kw_only=True)
 class ProFASTDefaultCapitalItem(BaseConfig):
     """Default configuration for ProFAST capital cost items.
 
@@ -324,7 +324,7 @@ class ProFASTDefaultCapitalItem(BaseConfig):
         return d
 
 
-@define
+@define(kw_only=True)
 class ProFASTDefaultFixedCost(BaseConfig):
     """Default configuration for ProFAST fixed operating costs.
 
@@ -353,7 +353,7 @@ class ProFASTDefaultFixedCost(BaseConfig):
         return self.as_dict()
 
 
-@define
+@define(kw_only=True)
 class ProFASTDefaultVariableCost(BaseConfig):
     """Default configuration for ProFAST variable costs.
 
@@ -383,7 +383,7 @@ class ProFASTDefaultVariableCost(BaseConfig):
         return self.as_dict()
 
 
-@define
+@define(kw_only=True)
 class ProFASTDefaultCoproduct(BaseConfig):
     """Default configuration for ProFAST coproduct settings.
 
@@ -413,7 +413,7 @@ class ProFASTDefaultCoproduct(BaseConfig):
         return self.as_dict()
 
 
-@define
+@define(kw_only=True)
 class ProFASTDefaultIncentive(BaseConfig):
     """Default configuration for ProFAST production-based incentives.
 
@@ -523,12 +523,13 @@ class ProFastBase(om.ExplicitComponent):
 
         # Add production input (CO2 capture or total commodity produced)
         if self.options["commodity_type"] == "co2":
-            self.add_input("co2_capture_kgpy", val=0.0, units="kg/year")
+            self.add_input("co2_capture_kgpy", val=0.0, units="kg/year", require_connection=True)
         else:
             self.add_input(
                 f"total_{self.options['commodity_type']}_produced",
-                val=0.0,
+                val=-1.0,
                 units=commodity_units,
+                require_connection=True,
             )
 
         # Add inputs for CapEx, OpEx, and variable OpEx for each technology
@@ -539,9 +540,9 @@ class ProFastBase(om.ExplicitComponent):
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
             self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
 
-        # Include electrolyzer replacement time if applicable
-        if "electrolyzer" in tech_config:
-            self.add_input("electrolyzer_time_until_replacement", units="h")
+            # Include electrolyzer replacement time if applicable
+            if tech.startswith("electrolyzer"):
+                self.add_input(f"{tech}_time_until_replacement", units="h")
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -625,13 +626,11 @@ class ProFastBase(om.ExplicitComponent):
 
         # calculate capacity and total production based on commodity type
         if self.options["commodity_type"] != "co2":
-            capacity = float(inputs[f"total_{self.options['commodity_type']}_produced"][0]) / 365.0
-            total_production = float(inputs[f"total_{self.options['commodity_type']}_produced"][0])
+            capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
+            total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
         else:
-            capacity = float(inputs["co2_capture_kgpy"]) / 365.0
-            total_production = float(inputs["co2_capture_kgpy"])
-        if capacity == 0.0:
-            raise ValueError("Capacity cannot be zero")
+            capacity = inputs["co2_capture_kgpy"][0] / 365.0
+            total_production = inputs["co2_capture_kgpy"][0]
 
         # define profast parameters for capacity and utilization
         profast_params["capacity"] = capacity  # TODO: update to actual daily capacity

@@ -6,7 +6,7 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.converters.water_power.hydro_plant_baseclass import HydroPerformanceBaseClass
 
 
-@define
+@define(kw_only=True)
 class RunOfRiverHydroPerformanceConfig(BaseConfig):
     """Configuration class for the RunOfRiverHydroPerformanceComponent.
     This class defines the parameters for the run-of-river hydropower plant performance model.
@@ -63,7 +63,7 @@ class RunOfRiverHydroPerformanceModel(HydroPerformanceBaseClass):
         outputs["electricity_out"] = power_output
 
 
-@define
+@define(kw_only=True)
 class RunOfRiverHydroCostConfig(CostModelBaseConfig):
     """Configuration class for the RunOfRiverHydroCostComponent.
     This class defines the parameters for the run-of-river hydropower plant cost model.

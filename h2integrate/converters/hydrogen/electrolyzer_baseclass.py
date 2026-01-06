@@ -1,16 +1,15 @@
 import openmdao.api as om
 
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    ResizeablePerformanceModelBaseClass,
+)
 
 
-class ElectrolyzerPerformanceBaseClass(om.ExplicitComponent):
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
+class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        super().setup()
         # Define inputs for electricity and outputs for hydrogen and oxygen generation
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
         self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")

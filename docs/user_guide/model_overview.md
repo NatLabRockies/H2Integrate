@@ -167,8 +167,13 @@ Below summarizes the available performance, cost, and financial models for each 
 - `steel`: steel production
     - performance models:
         + `'steel_performance'`
+        + `'ng_eaf_performance_rosner'`
+        + `'h2_eaf_performance_rosner'`
     - combined cost and financial models:
         + `'steel_cost'`
+    - cost models:
+        + `'ng_eaf_cost_rosner'`
+        + `'h2_eaf_cost_rosner'`
 - `ammonia`: ammonia synthesis
     - performance models:
         + `'simple_ammonia_performance'`
@@ -215,6 +220,18 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'grid_performance'`
     - cost models:
         + `'grid_cost'`
+- `iron_ore`: iron ore mining and refining
+    - performance models:
+        + `'iron_mine_performance_martin'`
+    - cost models:
+        + `'iron_mine_cost_martin'`
+- `iron_dri`: iron ore direct reduction
+    - performance models:
+        + `'ng_dri_performance_rosner'`
+        + `'h2_dri_performance_rosner'`
+    - cost models:
+        + `'ng_dri_cost_rosner'`
+        + `'h2_dri_cost_rosner'`
 
 (transport-models)=
 ## Transport Models
@@ -223,7 +240,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'cable'`: specific to `electricity` commodity
 - `pipe`:
     - performance models:
-        + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas"
+        + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", "pig_iron", "reformer_catalyst", "water", "carbon", "iron_ore", and "lime"
 - `combiner`:
     - performance models:
         + `'combiner_performance'`: can be used for any commodity

@@ -5,7 +5,7 @@ from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class ATBWindPlantCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBWindCostModel.
     Recommended to use with wind models (Land-Based, Offshore and Distributed

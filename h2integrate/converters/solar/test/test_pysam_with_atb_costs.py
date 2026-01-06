@@ -148,7 +148,7 @@ def test_utility_pv_cost(
     prob.setup()
     prob.run_model()
 
-    pv_size_kWac = prob.get_val("pv_perf.capacity_kWac")[0]
+    pv_size_kWac = prob.get_val("pv_perf.system_capacity_AC")[0]
     capital_cost = prob.get_val("pv_cost.CapEx")[0]
     operating_cost = prob.get_val("pv_cost.OpEx")[0]
 

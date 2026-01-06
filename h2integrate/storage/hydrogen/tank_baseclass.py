@@ -55,7 +55,7 @@ class HydrogenTankPerformanceModel(om.ExplicitComponent):
         outputs["stored_hydrogen"] = initial_hydrogen + hydrogen_in - hydrogen_out
 
 
-@define
+@define(kw_only=True)
 class TankCostModelConfig(CostModelBaseConfig):
     total_capacity: float = field()
 

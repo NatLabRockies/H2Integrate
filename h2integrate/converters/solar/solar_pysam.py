@@ -6,7 +6,7 @@ from h2integrate.core.validators import contains, range_val_or_none
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 
-@define
+@define(kw_only=True)
 class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
     """Configuration class for design parameters of the solar pv plant.
         PYSAMSolarPlantPerformanceModel which uses the Pvwattsv8 module
@@ -149,12 +149,12 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             strict=False,
         )
         self.add_input(
-            "capacity_kWdc",
+            "system_capacity_DC",
             val=self.design_config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
-        self.add_output("capacity_kWac", val=0.0, units="kW", desc="PV rated capacity in AC")
+        self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
         self.add_output(
             "annual_energy",
             val=0.0,
@@ -282,7 +282,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.value("tilt", tilt_angle)
 
         # set the system capacity
-        self.system_model.value("system_capacity", inputs["capacity_kWdc"][0])
+        self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])
 
         solar_resource_data = discrete_inputs["solar_resource_data"]
         # format solar resource data into the necessary format for PySAM
@@ -296,5 +296,5 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-dc
         pv_capacity_kWdc = self.system_model.value("system_capacity")
         dc_ac_ratio = self.system_model.value("dc_ac_ratio")
-        outputs["capacity_kWac"] = pv_capacity_kWdc / dc_ac_ratio
+        outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["annual_energy"] = self.system_model.value("ac_annual")

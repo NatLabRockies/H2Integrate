@@ -12,7 +12,7 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.converters.iron.martin_transport.iron_transport import calc_iron_ship_cost
 
 
-@define
+@define(kw_only=True)
 class IronConfig(CostModelBaseConfig):
     """Configuration class for IronComponent.
 

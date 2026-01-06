@@ -9,7 +9,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains
 
 
-@define
+@define(kw_only=True)
 class MartinIronMinePerformanceConfig(BaseConfig):
     """Configuration class for MartinIronMinePerformanceComponent.
 

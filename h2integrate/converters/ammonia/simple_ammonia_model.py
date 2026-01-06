@@ -6,7 +6,7 @@ from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class AmmoniaPerformanceModelConfig(BaseConfig):
     """Configuration inputs for the ammonia performance model, including plant capacity and
     capacity factor.
@@ -49,7 +49,7 @@ class SimpleAmmoniaPerformanceModel(om.ExplicitComponent):
         outputs["total_ammonia_produced"] = ammonia_production_kgpy
 
 
-@define
+@define(kw_only=True)
 class AmmoniaCostModelConfig(CostModelBaseConfig):
     """
     Configuration inputs for the ammonia cost model, including plant capacity and

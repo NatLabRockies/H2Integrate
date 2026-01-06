@@ -55,10 +55,7 @@ finance_parameters:
   wind:
     expected_plant_cost: 'none'
 electrolyzer:
-  sizing:
-    resize_for_enduse: False
-    size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-    hydrogen_dmd:
+  size_mode: "normal"
   rating: 1160 # MW
   cluster_rating_MW: 40
   eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol

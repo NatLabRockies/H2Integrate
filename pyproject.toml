@@ -20,7 +20,7 @@ authors = [
   {name = "Cameron Irmas"},
   {name = "Sanjana Vijayshankar"},
   {name = "Nicholas Riccobono"},
-  {name = "Corey Frontin"},
+  {name = "Cory Frontin"},
   {name = "Caitlyn Clark"},
   {name = "Aaron Barker"},
   {name = "Abhineet Gupta"},
@@ -63,6 +63,7 @@ dependencies = [
     "rich>=13.7.0",
     "requests-cache",
     "retry_requests",
+    "turbine-models>=0.2.1"
 ]
 keywords = [
     "python3",

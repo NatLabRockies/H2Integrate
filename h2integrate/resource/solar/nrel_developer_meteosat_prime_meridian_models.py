@@ -7,7 +7,7 @@ from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
 
 
-@define
+@define(kw_only=True)
 class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-download/>`_.
@@ -55,7 +55,7 @@ class MeteosatPrimeMeridianSolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian TMY: PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tmy-download/>`_,

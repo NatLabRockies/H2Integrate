@@ -1,6 +1,7 @@
 import importlib.util
 
 import numpy as np
+import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
@@ -858,8 +859,12 @@ class H2IntegrateModel:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
 
-                # make the connection_name based on source, dest, item, type
-                connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
+                if transport_type in self.tech_names:
+                    # if the transport type is already a technology, skip creating a new component
+                    connection_name = f"{transport_type}"
+                else:
+                    # make the connection_name based on source, dest, item, type
+                    connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
 
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
@@ -878,12 +883,17 @@ class H2IntegrateModel:
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object
-                connection_component = self.supported_models[transport_type](
-                    transport_item=transport_item
-                )
+                # allow transport_type to be from self.tech_name
+                if transport_type in self.tech_names:
+                    # Connect the connection component to the destination technology
+                    pass
+                else:
+                    connection_component = self.supported_models[transport_type](
+                        transport_item=transport_item
+                    )
 
-                # Add the connection component to the model
-                self.plant.add_subsystem(connection_name, connection_component)
+                    # Add the connection component to the model
+                    self.plant.add_subsystem(connection_name, connection_component)
 
                 # Check if the source technology is a splitter
                 if "splitter" in source_tech:
@@ -1124,15 +1134,20 @@ class H2IntegrateModel:
 
         self.plant.options["auto_order"] = True
 
-        # Check if there are any connections FROM a finance group to ammonia
-        # This handles the case where LCOH is computed in the finance group and passed to ammonia
+        # Check if there are any loops in the technology interconnections
+        # If loops are present, add solvers to resolve the coupling
+        # Create a directed graph from the technology interconnections
+        G = nx.DiGraph()
         for connection in technology_interconnections:
-            if connection[0].startswith("finance_subgroup_") and connection[1] == "ammonia":
-                # If the connection is from a finance group, set solvers for the
-                # plant to resolve the coupling
-                self.plant.nonlinear_solver = om.NonlinearBlockGS()
-                self.plant.linear_solver = om.DirectSolver()
-                break
+            source = connection[0]
+            destination = connection[1]
+            G.add_edge(source, destination)
+
+        # Check if there are any cycles (loops) in the graph
+        if list(nx.simple_cycles(G)):
+            # If cycles are found, set solvers for the plant to resolve the coupling
+            self.plant.nonlinear_solver = om.NonlinearBlockGS()
+            self.plant.linear_solver = om.DirectSolver()
 
         # initialize dispatch rules connection list
         tech_to_dispatch_connections = self.plant_config.get("tech_to_dispatch_connections", [])

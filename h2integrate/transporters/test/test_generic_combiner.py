@@ -26,6 +26,20 @@ def combiner_tech_config_electricity():
 
 
 @fixture
+def combiner_tech_config_electricity_4_in():
+    elec_combiner_dict = {
+        "model_inputs": {
+            "performance_parameters": {
+                "commodity": "electricity",
+                "commodity_units": "kW",
+                "in_streams": 4,
+            }
+        }
+    }
+    return elec_combiner_dict
+
+
+@fixture
 def combiner_tech_config_hydrogen():
     h2_combiner_dict = {
         "model_inputs": {
@@ -110,6 +124,42 @@ def test_generic_combiner_performance_power(plant_config, combiner_tech_config_e
 
     prob.set_val("electricity_in1", electricity_input1, units="kW")
     prob.set_val("electricity_in2", electricity_input2, units="kW")
+    prob.run_model()
+
+    assert prob.get_val("electricity_out", units="kW") == approx(electricity_output, rel=1e-5)
+
+
+def test_generic_combiner_performance_power_4_in(
+    plant_config, combiner_tech_config_electricity_4_in
+):
+    prob = om.Problem()
+    comp = GenericCombinerPerformanceModel(
+        plant_config=plant_config,
+        tech_config=combiner_tech_config_electricity_4_in,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    ivc = om.IndepVarComp()
+    ivc.add_output("electricity_in1", val=np.zeros(8760), units="kW")
+    ivc.add_output("electricity_in2", val=np.zeros(8760), units="kW")
+    ivc.add_output("electricity_in3", val=np.zeros(8760), units="kW")
+    ivc.add_output("electricity_in4", val=np.zeros(8760), units="kW")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+
+    prob.setup()
+
+    electricity_input1 = rng.random(8760)
+    electricity_input2 = rng.random(8760)
+    electricity_input3 = rng.random(8760)
+    electricity_input4 = rng.random(8760)
+    electricity_output = (
+        electricity_input1 + electricity_input2 + electricity_input3 + electricity_input4
+    )
+
+    prob.set_val("electricity_in1", electricity_input1, units="kW")
+    prob.set_val("electricity_in2", electricity_input2, units="kW")
+    prob.set_val("electricity_in3", electricity_input3, units="kW")
+    prob.set_val("electricity_in4", electricity_input4, units="kW")
     prob.run_model()
 
     assert prob.get_val("electricity_out", units="kW") == approx(electricity_output, rel=1e-5)

@@ -5,7 +5,7 @@ from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import contains, gte_zero, range_val
 
 
-@define
+@define(kw_only=True)
 class BasicGridLayoutConfig(BaseConfig):
     """Configuration class for 'basicgrid' wind layout.
 

@@ -5,7 +5,7 @@ from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBUtilityPVCostModel with costs based on AC capacity.
     Recommended to use with utility-scale PV models. More information on
@@ -32,10 +32,10 @@ class ATBUtilityPVCostModel(CostModelBaseClass):
         )
         super().setup()
 
-        self.add_input("capacity_kWac", val=0.0, units="kW", desc="PV rated capacity in AC")
+        self.add_input("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capacity = inputs["capacity_kWac"][0]
+        capacity = inputs["system_capacity_AC"][0]
         capex = self.config.capex_per_kWac * capacity
         opex = self.config.opex_per_kWac_per_year * capacity
         outputs["CapEx"] = capex

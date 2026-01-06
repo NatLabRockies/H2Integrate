@@ -9,7 +9,7 @@ from h2integrate.converters.steel.steel_baseclass import (
 )
 
 
-@define
+@define(kw_only=True)
 class SteelPerformanceModelConfig(BaseConfig):
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
@@ -32,7 +32,7 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
         outputs["steel"] = steel_production_mtpy / len(inputs["electricity_in"])
 
 
-@define
+@define(kw_only=True)
 class SteelCostAndFinancialModelConfig(BaseConfig):
     installation_time: int = field()
     inflation_rate: float = field()

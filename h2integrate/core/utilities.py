@@ -114,7 +114,7 @@ def merge_shared_inputs(config, input_type):
         return config["shared_parameters"]
 
 
-@define
+@define(kw_only=True)
 class BaseConfig:
     """
     A Mixin class to allow for kwargs overloading when a data class doesn't
@@ -174,9 +174,48 @@ class BaseConfig:
         return attrs.asdict(self, filter=attr_filter, value_serializer=attr_serializer)
 
 
-@define
+@define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
+
+
+@define(kw_only=True)
+class ResizeablePerformanceModelBaseConfig(BaseConfig):
+    size_mode: str = field(default="normal")
+    flow_used_for_sizing: str | None = field(default=None)
+    max_feedstock_ratio: float = field(default=1.0)
+    max_commodity_ratio: float = field(default=1.0)
+
+    def __attrs_post_init__(self):
+        """Validate sizing parameters after initialization."""
+        valid_modes = ["normal", "resize_by_max_feedstock", "resize_by_max_commodity"]
+        if self.size_mode not in valid_modes:
+            raise ValueError(
+                f"Sizing mode '{self.size_mode}' is not a valid sizing mode. "
+                f"Options are {valid_modes}."
+            )
+
+        if self.size_mode != "normal":
+            if self.flow_used_for_sizing is None:
+                raise ValueError(
+                    "'flow_used_for_sizing' must be set when size_mode is "
+                    "'resize_by_max_feedstock' or 'resize_by_max_commodity'"
+                )
+
+
+@define(kw_only=True)
+class CacheBaseConfig(BaseConfig):
+    enable_caching: bool = field()
+    cache_dir: str | Path = field()
+
+    def __attrs_post_init__(self):
+        # Convert cache directory to Path object
+        if isinstance(self.cache_dir, str):
+            self.cache_dir = Path(self.cache_dir)
+
+        # Create a cache directory if it doesn't exist
+        if not self.cache_dir.exists():
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
 
 
 def attr_serializer(inst: type, field: Attribute, value: Any):
@@ -286,6 +325,8 @@ def dict_to_yaml_formatting(orig_dict):
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
                 if isinstance(orig_dict[key], (str, bool, int)):
+                    continue
+                if orig_dict[key] is None:
                     continue
                 if isinstance(orig_dict[key], (list, np.ndarray)):
                     if any(isinstance(v, dict) for v in val):
@@ -559,6 +600,23 @@ def write_yaml(
     yaml.allow_unicode = False
     with Path(foutput).open("w", encoding="utf-8") as f:
         yaml.dump(instance, f)
+
+
+def write_readable_yaml(instance: dict, foutput: str | Path):
+    """
+    Writes a dictionary to a YAML file using the yaml library.
+
+    Args:
+        instance (dict): Dictionary to be written to the YAML file.
+        foutput (str | Path): Path to the output YAML file.
+
+    Returns:
+        None
+    """
+    instance = dict_to_yaml_formatting(instance)
+
+    with Path(foutput).open("w", encoding="utf-8") as f:
+        yaml.dump(instance, f, sort_keys=False, encoding=None, default_flow_style=False)
 
 
 def make_unique_case_name(folder, proposed_fname, fext):

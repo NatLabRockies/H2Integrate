@@ -6,7 +6,7 @@ from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_sh
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class FeedstockPerformanceConfig(BaseConfig):
     """Config class for feedstock.
 
@@ -44,7 +44,7 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
         outputs[f"{feedstock_type}_out"] = np.full(n_timesteps, self.config.rated_capacity)
 
 
-@define
+@define(kw_only=True)
 class FeedstockCostConfig(CostModelBaseConfig):
     """Config class for feedstock.
 

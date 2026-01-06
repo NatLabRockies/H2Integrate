@@ -16,7 +16,7 @@ model_locs_fp = CD / "model_locations.yaml"
 model_locs = load_yaml(model_locs_fp)
 
 
-@define
+@define(kw_only=True)
 class IronPerformanceModelConfig:
     """
     Configuration inputs for the iron performance model.
@@ -51,7 +51,7 @@ class IronPerformanceModelConfig:
                     self.model[fieldname] = False
 
 
-@define
+@define(kw_only=True)
 class IronPerformanceModelOutputs:
     """
     Outputs from the iron performance model.
@@ -96,10 +96,10 @@ def run_size_iron_plant_performance(
     model_outputs = model.main(config)
     performances_df = model_outputs
 
-    return IronPerformanceModelOutputs(performances_df)
+    return IronPerformanceModelOutputs(performances_df=performances_df)
 
 
-@define
+@define(kw_only=True)
 class IronCostModelConfig:
     """
     Configuration inputs for the iron cost model.
@@ -136,7 +136,7 @@ class IronCostModelConfig:
                     self.model[fieldname] = False
 
 
-@define
+@define(kw_only=True)
 class IronCostModelOutputs:
     """
     Outputs from the iron cost model.
@@ -186,7 +186,7 @@ def run_iron_cost_model(config: IronCostModelConfig) -> IronCostModelOutputs:
     return IronCostModelOutputs(costs_df=model_outputs)
 
 
-@define
+@define(kw_only=True)
 class IronFinanceModelConfig(IronCostModelConfig):
     """
     Configuration inputs for the iron finance model.
@@ -227,7 +227,7 @@ class IronFinanceModelConfig(IronCostModelConfig):
                     self.model[fieldname] = False
 
 
-@define
+@define(kw_only=True)
 class IronFinanceModelOutputs:
     """
     Represents the outputs of the iron finance model, encapsulating the

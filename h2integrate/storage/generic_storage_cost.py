@@ -5,7 +5,7 @@ from h2integrate.core.validators import contains, gte_zero, range_val
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class GenericStorageCostConfig(CostModelBaseConfig):
     """Configuration class for the GenericStorageCostModel with costs based on storage
     capacity and charge rate for any commodity.

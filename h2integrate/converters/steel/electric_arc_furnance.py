@@ -17,7 +17,7 @@ from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 
-@define
+@define(kw_only=True)
 class EAFPlantBaseConfig(BaseConfig):
     eaf_type: str = field(
         kw_only=True, converter=(str.lower, str.strip), validator=contains(["h2", "ng"])
@@ -38,7 +38,7 @@ class EAFPlantBaseConfig(BaseConfig):
         return {"name": self.site_name}
 
 
-@define
+@define(kw_only=True)
 class EAFPlantPerformanceConfig(EAFPlantBaseConfig):
     def make_model_dict(self):
         keys = ["model_fp", "inputs_fp", "coeffs_fp", "refit_coeffs"]
@@ -88,7 +88,7 @@ class EAFPlantPerformanceComponent(om.ExplicitComponent):
         discrete_outputs["steel_plant_performance"] = iron_post_plant_performance.performances_df
 
 
-@define
+@define(kw_only=True)
 class EAFPlantCostConfig(EAFPlantBaseConfig):
     LCOE: float = field(kw_only=True)  # $/MWh
     LCOH: float = field(kw_only=True)  # $/kg
@@ -147,7 +147,7 @@ class EAFPlantCostComponent(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         steel_plant_performance = IronPerformanceModelOutputs(
-            discrete_inputs["steel_plant_performance"]
+            performances_df=discrete_inputs["steel_plant_performance"]
         )
 
         steel_plant_cost_inputs = {
@@ -244,7 +244,7 @@ class EAFPlantCostComponent(CostModelBaseClass):
 
         # TODO: make natural gas costs an input
         natural_gas_prices_MMBTU = coeff_dict["Natural Gas"]["values"][indices].astype(float)
-        natural_gas_prices_GJ = natural_gas_prices_MMBTU * 1.05506  # Convert to GJ
+        natural_gas_prices_GJ = natural_gas_prices_MMBTU / 1.05506  # Convert to GJ
 
         iron_ore_pellet_unitcost_tonne = inputs["LCOI_ore"][0]
         if inputs["iron_transport_cost"] > 0:

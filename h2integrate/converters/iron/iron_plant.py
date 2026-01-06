@@ -17,7 +17,7 @@ from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 
-@define
+@define(kw_only=True)
 class IronPlantBaseConfig(BaseConfig):
     winning_type: str = field(
         kw_only=True, converter=(str.lower, str.strip), validator=contains(["h2", "ng"])
@@ -45,7 +45,7 @@ class IronPlantBaseConfig(BaseConfig):
         return {"name": self.site_name}
 
 
-@define
+@define(kw_only=True)
 class IronPlantPerformanceConfig(IronPlantBaseConfig):
     def make_model_dict(self):
         keys = ["model_fp", "inputs_fp", "coeffs_fp", "refit_coeffs"]
@@ -67,7 +67,7 @@ class IronPlantPerformanceComponent(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
         )
-
+        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
         self.add_discrete_output(
             "iron_plant_performance", val=pd.DataFrame, desc="iron plant performance results"
         )
@@ -99,7 +99,7 @@ class IronPlantPerformanceComponent(om.ExplicitComponent):
         discrete_outputs["iron_plant_performance"] = iron_plant_performance.performances_df
 
 
-@define
+@define(kw_only=True)
 class IronPlantCostConfig(IronPlantBaseConfig):
     LCOE: float = field(kw_only=True)  # $/MWh
     LCOH: float = field(kw_only=True)  # $/kg
@@ -159,7 +159,7 @@ class IronPlantCostComponent(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         iron_plant_performance = IronPerformanceModelOutputs(
-            discrete_inputs["iron_plant_performance"]
+            performances_df=discrete_inputs["iron_plant_performance"]
         )
 
         iron_plant_cost_inputs = {
@@ -256,7 +256,7 @@ class IronPlantCostComponent(CostModelBaseClass):
 
         # TODO: make natural gas costs an input
         natural_gas_prices_MMBTU = coeff_dict["Natural Gas"]["values"][indices].astype(float)
-        natural_gas_prices_GJ = natural_gas_prices_MMBTU * 1.05506  # Convert to GJ
+        natural_gas_prices_GJ = natural_gas_prices_MMBTU / 1.05506  # Convert to GJ
 
         iron_ore_pellet_unitcost_tonne = inputs["price_iron_ore"]
         if inputs["iron_transport_cost"] > 0:

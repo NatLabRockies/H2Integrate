@@ -9,7 +9,7 @@ from h2integrate.resource.utilities.file_tools import check_resource_dir
 from h2integrate.resource.utilities.download_tools import download_from_api
 
 
-@define
+@define(kw_only=True)
 class ResourceBaseAPIConfig(BaseConfig):
     """Base configuration class for resource data downloaded from an API.
 
@@ -273,10 +273,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         if not self.config.use_fixed_resource_location:
             # update the resource data based on the input latitude and longitude
-            data = self.get_data(
-                float(inputs["latitude"]), float(inputs["longitude"]), first_call=False
-            )
+            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
             # update the stored resource data and site
-            self.resource_site = [float(inputs["latitude"]), float(inputs["longitude"])]
+            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
             self.resource_data = data
             discrete_outputs[f"{self.config.resource_type}_resource_data"] = data

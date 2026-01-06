@@ -5,7 +5,7 @@ from h2integrate.core.validators import contains, must_equal
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
-@define
+@define(kw_only=True)
 class SingliticoCostModelConfig(CostModelBaseConfig):
     """
     Configuration class for the ECOElectrolyzerPerformanceModel, outputs costs in 2021 USD.

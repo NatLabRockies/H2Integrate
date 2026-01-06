@@ -10,7 +10,7 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 n_timesteps = 8760
 
 
-@define
+@define(kw_only=True)
 class PaperMillConfig(BaseConfig):
     electricity_usage_rate: float = field()
 
@@ -45,7 +45,7 @@ class PaperMillPerformance(om.ExplicitComponent):
         outputs["paper"] = inputs["electricity_in"] * self.config.electricity_usage_rate
 
 
-@define
+@define(kw_only=True)
 class PaperMillCostConfig(CostModelBaseConfig):
     cost_per_tonne: float = field()
     opex_rate: float = field()

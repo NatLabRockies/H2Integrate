@@ -26,7 +26,7 @@ driver:
 
 design_variables:
   solar:
-    capacity_kWdc:
+    system_capacity_DC:
       flag: true
       lower: 5000.0
       upper: 5000000.0
@@ -131,7 +131,7 @@ driver:
     filename: "cases_to_run.csv" #input is specific to this generator
 ```
 
-The **filename** input is the filepath to the csv file to read cases from. The first row of the csv file should contain the names of the design variables. The rest of the rows should contain the values of that design variable you want to run (such as `solar.capacity_kWdc` or `electrolyzer.n_clusters`). **The values in the csv file are expected to be in the same units specified for that design variable**.
+The **filename** input is the filepath to the csv file to read cases from. The first row of the csv file should contain the names of the design variables. The rest of the rows should contain the values of that design variable you want to run (such as `solar.system_capacity_DC` or `electrolyzer.n_clusters`). **The values in the csv file are expected to be in the same units specified for that design variable**.
 
 ```{note}
 You should check the csv file for potential formatting issues before running a simulation. This can be done using the `check_file_format_for_csv_generator` method in `h2integrate/core/utilities.py`. Usage of this method is shown in the `20_solar_electrolyzer_doe` example in the `examples` folder.

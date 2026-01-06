@@ -6,7 +6,7 @@ from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import contains, range_val_or_none
 
 
-@define
+@define(kw_only=True)
 class GenericSplitterPerformanceConfig(BaseConfig):
     """Configuration class for the GenericSplitterPerformanceModel.
 

@@ -24,11 +24,7 @@ def test_wombat_model_outputs(subtests):
                     "shared_parameters": {
                         "location": "onshore",
                         "electrolyzer_capex": 1295,
-                        "sizing": {
-                            "resize_for_enduse": False,
-                            "size_for": "BOL",
-                            "hydrogen_dmd": None,
-                        },
+                        "size_mode": "normal",
                         "n_clusters": 1,
                         "cluster_rating_MW": 40,
                         "eol_eff_percent_loss": 13,
@@ -60,7 +56,7 @@ def test_wombat_model_outputs(subtests):
     with subtests.test("CapEx"):
         assert prob["CapEx"] == approx(51800000.0, rel=1e-2)
     with subtests.test("OpEx"):
-        assert prob["OpEx"] == approx(1015899.3984, rel=1e-2)
+        assert prob["OpEx"] == approx(1004502.975183, rel=1e-2)
     with subtests.test("percent_hydrogen_lost"):
         assert prob["percent_hydrogen_lost"] == approx(1.50371, rel=1e-2)
     with subtests.test("electrolyzer_availability"):
@@ -85,11 +81,7 @@ def test_wombat_error(subtests):
                     "shared_parameters": {
                         "location": "onshore",
                         "electrolyzer_capex": 1295,
-                        "sizing": {
-                            "resize_for_enduse": False,
-                            "size_for": "BOL",
-                            "hydrogen_dmd": None,
-                        },
+                        "size_mode": "normal",
                         "n_clusters": 0.75,
                         "cluster_rating_MW": 40,
                         "eol_eff_percent_loss": 13,

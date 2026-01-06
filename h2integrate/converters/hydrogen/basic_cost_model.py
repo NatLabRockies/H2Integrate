@@ -8,7 +8,7 @@ from h2integrate.core.validators import gt_zero, contains, must_equal
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
-@define
+@define(kw_only=True)
 class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
     """
     Configuration class for the basic_H2_cost_model which is based on costs from

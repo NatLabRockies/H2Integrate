@@ -4,7 +4,7 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 
 
-@define
+@define(kw_only=True)
 class DemandOpenLoopControlBaseConfig(BaseConfig):
     """Configuration for defining an open-loop demand profile.
 

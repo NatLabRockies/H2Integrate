@@ -13,7 +13,7 @@ from h2integrate.resource.utilities.nrel_developer_api_keys import (
 )
 
 
-@define
+@define(kw_only=True)
 class WTKNRELDeveloperAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Wind Toolkit Data V2 <https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/>`_.

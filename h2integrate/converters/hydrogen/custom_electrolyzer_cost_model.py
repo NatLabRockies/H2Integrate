@@ -5,7 +5,7 @@ from h2integrate.core.validators import gte_zero
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
-@define
+@define(kw_only=True)
 class CustomElectrolyzerCostModelConfig(CostModelBaseConfig):
     """Configuration class for the CustomElectrolyzerCostModel.
 

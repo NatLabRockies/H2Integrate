@@ -11,7 +11,7 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
-@define
+@define(kw_only=True)
 class MartinIronMineCostConfig(BaseConfig):
     """Configuration class for MartinIronMineCostComponent.
 

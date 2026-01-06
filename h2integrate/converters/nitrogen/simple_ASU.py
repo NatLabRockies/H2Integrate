@@ -8,7 +8,7 @@ from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class SimpleASUPerformanceConfig(BaseConfig):
     """Configuration for ASU model. To represent a cryogenic ASU, it is
     recommended to set the parameter `efficiency_kWh_pr_kg_N2` to 0.119.
@@ -263,7 +263,7 @@ def make_cost_unit_multiplier(unit_str):
     return conversion_multiplier, "mass"
 
 
-@define
+@define(kw_only=True)
 class SimpleASUCostConfig(CostModelBaseConfig):
     capex_usd_per_unit: float = field()
 

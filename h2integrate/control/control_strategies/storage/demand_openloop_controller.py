@@ -11,7 +11,7 @@ from h2integrate.control.control_strategies.demand_openloop_controller import (
 )
 
 
-@define
+@define(kw_only=True)
 class DemandOpenLoopStorageControllerConfig(DemandOpenLoopControlBaseConfig):
     """
     Configuration class for the DemandOpenLoopStorageController.
@@ -257,17 +257,17 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
             )
             raise UserWarning(msg)
 
-        max_capacity = inputs["max_capacity"]
+        max_capacity = inputs["max_capacity"].item()
         max_charge_percent = self.config.max_charge_percent
         min_charge_percent = self.config.min_charge_percent
         init_charge_percent = self.config.init_charge_percent
-        max_charge_rate = inputs["max_charge_rate"]
+        max_charge_rate = inputs["max_charge_rate"].item()
         if self.config.charge_equals_discharge:
-            max_discharge_rate = inputs["max_charge_rate"]
+            max_discharge_rate = inputs["max_charge_rate"].item()
         else:
-            max_discharge_rate = self.config.max_discharge_rate
-        charge_efficiency = self.config.charge_efficiency
-        discharge_efficiency = self.config.discharge_efficiency
+            max_discharge_rate = float(self.config.max_discharge_rate)
+        charge_efficiency = float(self.config.charge_efficiency)
+        discharge_efficiency = float(self.config.discharge_efficiency)
 
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
@@ -287,8 +287,8 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
             input_flow = inputs[f"{commodity}_in"][t]
 
             # Calculate the available charge/discharge capacity
-            available_charge = (max_charge_percent - soc) * max_capacity
-            available_discharge = (soc - min_charge_percent) * max_capacity
+            available_charge = float((max_charge_percent - soc) * max_capacity)
+            available_discharge = float((soc - min_charge_percent) * max_capacity)
 
             # Initialize persistent variables for curtailment and missed load
             unused_input = 0.0
@@ -304,6 +304,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
                 discharge = min(
                     discharge_needed, available_discharge, max_discharge_rate / discharge_efficiency
                 )
+
                 soc -= discharge / max_capacity  # soc is a ratio with value between 0 and 1
                 # output is as observed outside the storage, so we need to adjust `discharge` by
                 # applying `discharge_efficiency`.
@@ -312,6 +313,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
                 # Charge storage with unused input
                 # `unused_input` is as seen outside the storage
                 unused_input = input_flow - demand_t
+                unused_input = unused_input.item()
                 # `charge` is as seen by the storage, but the things being compared should all be as
                 # seen outside the storage so we need to adjust `available_charge` outside the
                 # storage view and the final result back into the storage view.
@@ -330,10 +332,10 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
 
             # Record the curtailment at the current time step. Adjust `charge` from storage view to
             # outside view for curtailment
-            unused_commodity_array[t] = max(0, float(unused_input - charge / charge_efficiency))
+            unused_commodity_array[t] = max(0.0, unused_input - charge / charge_efficiency)
 
             # Record the missed load at the current time step
-            unmet_demand_array[t] = max(0, (demand_t - output_array[t]))
+            unmet_demand_array[t] = max(0.0, (demand_t - output_array[t]))
 
         outputs[f"{commodity}_out"] = output_array
 

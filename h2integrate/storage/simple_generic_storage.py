@@ -4,7 +4,7 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 
 
-@define
+@define(kw_only=True)
 class SimpleGenericStorageConfig(BaseConfig):
     commodity_name: str = field()
     commodity_units: str = field()

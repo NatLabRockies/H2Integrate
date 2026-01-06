@@ -13,7 +13,7 @@ if TYPE_CHECKING:  # to avoid circular imports
     pass
 
 
-@define
+@define(kw_only=True)
 class PyomoControllerBaseConfig(BaseConfig):
     """
     Configuration data container for Pyomo-based storage / dispatch controllers.
@@ -678,7 +678,7 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         self.discharge_efficiency = efficiency
 
 
-@define
+@define(kw_only=True)
 class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(default=None)

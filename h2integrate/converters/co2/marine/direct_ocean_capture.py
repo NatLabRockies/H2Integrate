@@ -33,7 +33,7 @@ def setup_electrodialysis_inputs(config):
     )
 
 
-@define
+@define(kw_only=True)
 class DOCPerformanceConfig(MarineCarbonCapturePerformanceConfig):
     """Extended configuration for Direct Ocean Capture (DOC) performance model.
 
@@ -134,7 +134,7 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mCC"])
 
 
-@define
+@define(kw_only=True)
 class DOCCostModelConfig(DOCPerformanceConfig):
     """Configuration for the DOC cost model.
 

@@ -5,7 +5,7 @@ from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class ATBResComPVCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBResComPVCostModel with costs based on DC capacity.
     Recommended to use with commercial or residential PV models. More information on
@@ -37,14 +37,14 @@ class ATBResComPVCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input(
-            "capacity_kWdc",
+            "system_capacity_DC",
             val=self.config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capacity = inputs["capacity_kWdc"][0]
+        capacity = inputs["system_capacity_DC"][0]
         capex = self.config.capex_per_kWdc * capacity
         opex = self.config.opex_per_kWdc_per_year * capacity
         outputs["CapEx"] = capex

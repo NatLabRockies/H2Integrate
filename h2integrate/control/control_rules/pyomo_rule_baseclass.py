@@ -5,7 +5,7 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 
 
-@define
+@define(kw_only=True)
 class PyomoRuleBaseConfig(BaseConfig):
     """
     Configuration class for the PyomoRuleBaseConfig.

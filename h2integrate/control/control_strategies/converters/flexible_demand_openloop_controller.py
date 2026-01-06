@@ -8,7 +8,7 @@ from h2integrate.control.control_strategies.demand_openloop_controller import (
 )
 
 
-@define
+@define(kw_only=True)
 class FlexibleDemandOpenLoopConverterControllerConfig(DemandOpenLoopControlBaseConfig):
     """Configuration for defining a flexible demand open-loop controller.
 

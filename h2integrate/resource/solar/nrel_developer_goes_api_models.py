@@ -7,7 +7,7 @@ from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
 
 
-@define
+@define(kw_only=True)
 class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Aggregated PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
@@ -52,7 +52,7 @@ class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESConusAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Conus PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
@@ -100,7 +100,7 @@ class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
@@ -145,7 +145,7 @@ class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.

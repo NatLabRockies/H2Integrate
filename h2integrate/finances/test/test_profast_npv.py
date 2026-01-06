@@ -108,9 +108,11 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         commodity_type="electricity",
         description="no1",
     )
-    prob.model.add_subsystem("pf", pf)
+    ivc = om.IndepVarComp()
+    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()
-    prob.set_val("pf.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf.{variable}", cost, units=units)
@@ -150,9 +152,8 @@ def test_profast_npv_no1_change_sell_price(
         commodity_type="electricity",
         description="no1",
     )
-    prob.model.add_subsystem("pf", pf)
 
-    pf = ProFastNPV(
+    pf2 = ProFastNPV(
         driver_config={},
         plant_config=plant_config,
         tech_config=fake_filtered_tech_config,
@@ -160,17 +161,19 @@ def test_profast_npv_no1_change_sell_price(
         description="no1_expensive",
     )
 
-    prob.model.add_subsystem("pf2", pf)
+    ivc = om.IndepVarComp()
+    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf2", pf2, promotes=["total_electricity_produced"])
     prob.setup()
     # set inputs for 'pf' with commodity sell price of 0.04 USD/(kW*h)
-    prob.set_val("pf.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf.{variable}", cost, units=units)
 
     # set inputs for 'pf2' with commodity sell price of 0.07 USD/(kW*h)
     new_sell_price = 0.07
-    prob.set_val("pf2.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
     prob.set_val("pf2.sell_price_electricity_no1_expensive", new_sell_price, units="USD/(kW*h)")
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
@@ -232,9 +235,11 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
         commodity_type="electricity",
         description="no2",
     )
-    prob.model.add_subsystem("pf", pf)
+    ivc = om.IndepVarComp()
+    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()
-    prob.set_val("pf.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf.{variable}", cost, units=units)

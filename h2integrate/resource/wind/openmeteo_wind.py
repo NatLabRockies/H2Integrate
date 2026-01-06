@@ -12,7 +12,7 @@ from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
 
 
-@define
+@define(kw_only=True)
 class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.

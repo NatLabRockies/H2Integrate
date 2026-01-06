@@ -8,7 +8,7 @@ from h2integrate.converters.water.desal.desalination_baseclass import (
 )
 
 
-@define
+@define(kw_only=True)
 class ReverseOsmosisPerformanceModelConfig(BaseConfig):
     """Configuration class for the ReverseOsmosisDesalinationPerformanceModel.
 
@@ -100,7 +100,7 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         outputs["footprint"] = desal_size_m2
 
 
-@define
+@define(kw_only=True)
 class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ReverseOsmosisDesalinationCostModel.
 

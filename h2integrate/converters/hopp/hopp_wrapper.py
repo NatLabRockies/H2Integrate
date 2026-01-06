@@ -1,16 +1,20 @@
-import hashlib
-from pathlib import Path
-
-import dill
 import numpy as np
+from attrs import field, define
 from hopp.tools.dispatch.plot_tools import plot_battery_output, plot_generation_profile
 
-from h2integrate.core.utilities import CostModelBaseConfig
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.utilities import CacheBaseConfig, merge_shared_inputs
+from h2integrate.core.model_baseclasses import CacheBaseClass, CostModelBaseClass
 from h2integrate.converters.hopp.hopp_mgmt import run_hopp, setup_hopp
 
 
-class HOPPComponent(CostModelBaseClass):
+@define(kw_only=True)
+class HOPPComponentModelConfig(CacheBaseConfig):
+    hopp_config: dict = field()
+    cost_year: int = field(converter=int)
+    electrolyzer_rating: int | float | None = field(default=None)
+
+
+class HOPPComponent(CostModelBaseClass, CacheBaseClass):
     """
     A simple OpenMDAO component that represents a HOPP model.
 
@@ -22,41 +26,33 @@ class HOPPComponent(CostModelBaseClass):
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        config_dict = {
-            "cost_year": self.options["tech_config"]["model_inputs"]["cost_parameters"]["cost_year"]
-        }
-        self.config = CostModelBaseConfig.from_dict(config_dict)
+
+        self.config = HOPPComponentModelConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            strict=False,
+        )
+
         super().setup()
 
-        self.hopp_config = self.options["tech_config"]["performance_model"]["config"]
-
-        if "simulation_options" in self.hopp_config["config"]:
-            if "cache" in self.hopp_config["config"]["simulation_options"]:
-                self.cache = self.hopp_config["config"]["simulation_options"]["cache"]
-            else:
-                self.cache = True
-        else:
-            self.cache = True
-
-        if "wind" in self.hopp_config["technologies"]:
-            wind_turbine_rating_kw_init = self.hopp_config["technologies"]["wind"].get(
+        if "wind" in self.config.hopp_config["technologies"]:
+            wind_turbine_rating_kw_init = self.config.hopp_config["technologies"]["wind"].get(
                 "turbine_rating_kw", 0.0
             )
             self.add_input("wind_turbine_rating_kw", val=wind_turbine_rating_kw_init, units="kW")
 
-        if "pv" in self.hopp_config["technologies"]:
-            pv_capacity_kw_init = self.hopp_config["technologies"]["pv"].get(
+        if "pv" in self.config.hopp_config["technologies"]:
+            pv_capacity_kw_init = self.config.hopp_config["technologies"]["pv"].get(
                 "system_capacity_kw", 0.0
             )
             self.add_input("pv_capacity_kw", val=pv_capacity_kw_init, units="kW")
 
-        if "battery" in self.hopp_config["technologies"]:
-            battery_capacity_kw_init = self.hopp_config["technologies"]["battery"].get(
+        if "battery" in self.config.hopp_config["technologies"]:
+            battery_capacity_kw_init = self.config.hopp_config["technologies"]["battery"].get(
                 "system_capacity_kw", 4140.0
             )
             self.add_input("battery_capacity_kw", val=battery_capacity_kw_init, units="kW")
 
-            battery_capacity_kwh_init = self.hopp_config["technologies"]["battery"].get(
+            battery_capacity_kwh_init = self.config.hopp_config["technologies"]["battery"].get(
                 "system_capacity_kwh", 0.0
             )
             self.add_input("battery_capacity_kwh", val=battery_capacity_kwh_init, units="kW*h")
@@ -83,6 +79,14 @@ class HOPPComponent(CostModelBaseClass):
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # Check if the results for the current configuration are already cached
+        loaded_results = self.load_outputs(inputs, outputs, discrete_inputs)
+        if loaded_results:
+            # outputs have been set to the cached results, no need to run HOPP
+            return
+
+        # Run HOPP
+
         # Define the keys of interest from the HOPP results that we want to cache
         keys_of_interest = [
             "percent_load_missed",
@@ -93,81 +97,50 @@ class HOPPComponent(CostModelBaseClass):
             "opex",
         ]
 
-        if self.cache:
-            # Create a unique hash for the current configuration to use as a cache key
-            config_hash = hashlib.md5(
-                str(self.options["tech_config"]["performance_model"]["config"]).encode("utf-8")
-                + str(self.options["plant_config"]["plant"]["plant_life"]).encode("utf-8")
-            ).hexdigest()
-
-            # Create a cache directory if it doesn't exist
-            cache_dir = Path("cache")
-            if not cache_dir.exists():
-                cache_dir.mkdir(parents=True)
-            cache_file = f"cache/{config_hash}.pkl"
-
-        # Check if the results for the current configuration are already cached
-        if self.cache and Path(cache_file).exists():
-            # Load the cached results
-            cache_path = Path(cache_file)
-            with cache_path.open("rb") as f:
-                subset_of_hopp_results = dill.load(f)
+        if "pv" in self.config.hopp_config["technologies"]:
+            pv_capacity_kw = inputs["pv_capacity_kw"][0]
         else:
-            electrolyzer_rating = None
-            if "electrolyzer_rating" in self.options["tech_config"]:
-                electrolyzer_rating = self.options["tech_config"]["electrolyzer_rating"]
+            pv_capacity_kw = None
 
-            if "pv" in self.hopp_config["technologies"]:
-                pv_capacity_kw = float(inputs["pv_capacity_kw"])
-            else:
-                pv_capacity_kw = None
+        if "battery" in self.config.hopp_config["technologies"]:
+            battery_capacity_kw = inputs["battery_capacity_kw"][0]
+            battery_capacity_kwh = inputs["battery_capacity_kwh"][0]
+        else:
+            battery_capacity_kw = None
+            battery_capacity_kwh = None
 
-            if "battery" in self.hopp_config["technologies"]:
-                battery_capacity_kw = float(inputs["battery_capacity_kw"])
-                battery_capacity_kwh = float(inputs["battery_capacity_kwh"])
-            else:
-                battery_capacity_kw = None
-                battery_capacity_kwh = None
+        if "wind" in self.config.hopp_config["technologies"]:
+            wind_turbine_rating_kw = inputs["wind_turbine_rating_kw"][0]
+        else:
+            wind_turbine_rating_kw = None
 
-            if "wind" in self.hopp_config["technologies"]:
-                wind_turbine_rating_kw = float(inputs["wind_turbine_rating_kw"])
-            else:
-                wind_turbine_rating_kw = None
+        self.hybrid_interface = setup_hopp(
+            hopp_config=self.config.hopp_config,
+            wind_turbine_rating_kw=wind_turbine_rating_kw,
+            pv_rating_kw=pv_capacity_kw,
+            battery_rating_kw=battery_capacity_kw,
+            battery_rating_kwh=battery_capacity_kwh,
+            electrolyzer_rating=self.config.electrolyzer_rating,
+            n_timesteps=self.options["plant_config"]["plant"]["simulation"]["n_timesteps"],
+        )
 
-            self.hybrid_interface = setup_hopp(
-                hopp_config=self.options["tech_config"]["performance_model"]["config"],
-                wind_turbine_rating_kw=wind_turbine_rating_kw,
-                pv_rating_kw=pv_capacity_kw,
-                battery_rating_kw=battery_capacity_kw,
-                battery_rating_kwh=battery_capacity_kwh,
-                electrolyzer_rating=electrolyzer_rating,
-                n_timesteps=self.options["plant_config"]["plant"]["simulation"]["n_timesteps"],
-            )
+        # Run the HOPP model and get the results
+        hopp_results = run_hopp(
+            self.hybrid_interface,
+            self.options["plant_config"]["plant"]["plant_life"],
+            n_timesteps=self.options["plant_config"]["plant"]["simulation"]["n_timesteps"],
+        )
+        # Extract the subset of results we are interested in
+        subset_of_hopp_results = {key: hopp_results[key] for key in keys_of_interest}
 
-            # Run the HOPP model and get the results
-            hopp_results = run_hopp(
-                self.hybrid_interface,
-                self.options["plant_config"]["plant"]["plant_life"],
-                n_timesteps=self.options["plant_config"]["plant"]["simulation"]["n_timesteps"],
-            )
-            # Extract the subset of results we are interested in
-            subset_of_hopp_results = {key: hopp_results[key] for key in keys_of_interest}
-            # Cache the results for future use
-            if self.cache:
-                cache_path = Path(cache_file)
-                with cache_path.open("wb") as f:
-                    dill.dump(subset_of_hopp_results, f)
+        try:
+            system = self.hybrid_interface.system
+            plot_battery_output(system, start_day=180, plot_filename="battery_output.png")
+            plot_generation_profile(system, start_day=180, plot_filename="generation_profile.png")
+        except AttributeError:
+            pass
 
-            try:
-                system = self.hybrid_interface.system
-                plot_battery_output(system, start_day=180, plot_filename="battery_output.png")
-                plot_generation_profile(
-                    system, start_day=180, plot_filename="generation_profile.png"
-                )
-            except AttributeError:
-                pass
-
-        # Set the outputs from the cached or newly computed results
+        # Set the outputs
         outputs["percent_load_missed"] = subset_of_hopp_results["percent_load_missed"]
         outputs["curtailment_percent"] = subset_of_hopp_results["curtailment_percent"]
         outputs["aep"] = subset_of_hopp_results["annual_energies"]["hybrid"]
@@ -175,21 +148,21 @@ class HOPPComponent(CostModelBaseClass):
         outputs["CapEx"] = subset_of_hopp_results["capex"]
         outputs["OpEx"] = subset_of_hopp_results["opex"]
 
-        if "battery" in self.hopp_config["technologies"]:
+        if "battery" in self.config.hopp_config["technologies"]:
             outputs["battery_duration"] = (
                 inputs["battery_capacity_kwh"] / inputs["battery_capacity_kw"]
             )
 
-        if "desired_schedule" in self.hopp_config["site"]:
-            uphours = np.count_nonzero(self.hopp_config["site"]["desired_schedule"])
+        if "desired_schedule" in self.config.hopp_config["site"]:
+            uphours = np.count_nonzero(self.config.hopp_config["site"]["desired_schedule"])
         else:
             uphours = 8760
-        interconnect_kw = self.hopp_config["technologies"]["grid"]["interconnect_kw"]
+        interconnect_kw = self.config.hopp_config["technologies"]["grid"]["interconnect_kw"]
         interconnect_kwh = interconnect_kw * uphours
         outputs["annual_energy_to_interconnect_potential_ratio"] = outputs["aep"] / interconnect_kwh
 
         total_power_capacity = 0.0
-        for tech, tech_conf in self.hopp_config["technologies"].items():
+        for tech, tech_conf in self.config.hopp_config["technologies"].items():
             if tech == "wind":
                 num_turbines = tech_conf.get("num_turbines", 0)
                 turbine_rating_kw = tech_conf.get("turbine_rating_kw", 0.0)
@@ -198,3 +171,6 @@ class HOPPComponent(CostModelBaseClass):
                 total_power_capacity += tech_conf.get("system_capacity_kw", 0.0)
 
         outputs["power_capacity_to_interconnect_ratio"] = total_power_capacity / interconnect_kw
+
+        # Cache the results for future use if enabled
+        self.cache_outputs(inputs, outputs, discrete_inputs)

@@ -1,0 +1,228 @@
+site: #!include flatirons_site.yaml
+  data:
+    lat: 32.31714
+    lon: -100.18
+    elev: 762
+    year: 2013
+    tz: -6
+    site_boundaries:
+      verts:
+        - [0.0, 0.0]
+        - [0.0, 20000.0]
+        - [20000.0, 20000.0]
+        - [20000.0, 0.0]
+      verts_simple:
+        - [0.0, 0.0]
+        - [0.0, 20000.0]
+        - [20000.0, 20000.0]
+        - [20000.0, 0.0]
+  solar_resource_file: "tech_inputs/weather/solar/32.31714_-100.18_psmv3_60_2013.csv"
+  wind_resource_file: "tech_inputs/weather/wind/32.31714_-100.18_windtoolkit_2013_60min_100m_120m.srw"
+  wave_resource_file: ""
+  grid_resource_file: ""
+  hub_height: 115.0
+  capacity_hours: []
+  solar: true
+  wind: true
+  wave: false
+  wind_resource_origin: "WTK"
+technologies:
+  wind:
+    num_turbines: 148 # 175
+    turbine_rating_kw: 6000.0
+    operational_losses: 10.49
+    model_name: pysam
+    timestep: [0, 8760]
+    # floris_config: tech_inputs/floris_input_lbw_6MW.yaml
+    fin_model:
+      battery_system:
+        batt_replacement_schedule_percent: [0]
+        batt_bank_replacement: [0]
+        batt_replacement_option: 0
+        batt_computed_bank_capacity: 0
+        batt_meter_position: 0
+      system_costs:
+        om_fixed: [0]
+        om_production: [0]
+        om_capacity: [0]
+        om_batt_fixed_cost: 0
+        om_batt_variable_cost: [0]
+        om_batt_capacity_cost: 0
+        om_batt_replacement_cost: 0
+        om_replacement_cost_escal: 0
+      system_use_lifetime_output: 0
+      financial_parameters:
+        inflation_rate: 0.0 # real basis
+        real_discount_rate: 6.3 # real return based on 2024 ATB baseline workbook for land-based wind.
+        federal_tax_rate: 21.0 # https://taxsummaries.pwc.com/quick-charts/corporate-income-tax-cit-rates
+        state_tax_rate: 4.74 # 0.75 # https://comptroller.texas.gov/taxes/franchise/ --> The TX franchise tax should be applied to margin but is included in income tax here as an approximation
+        property_tax_rate: 1.47 # average effective real property tax rate in Texas https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/
+        insurance_rate: 1.0 # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        debt_percent: 72.4 # based on 2024 ATB for land-based wind
+        term_int_rate: 4.4 # based on 2024 ATB real interest rate for land-based onshore wind
+        months_working_reserve: 1
+        analysis_start_year: 2030
+        installation_months: 36
+        sales_tax_rate_state: 0.0 # 8.20 # average combined state and local sales tax in TX https://taxfoundation.org/location/texas/
+        admin_expense_percent_of_sales: 0.0 # H2FAST default
+        capital_gains_tax_rate: 15.0 # H2FAST default
+        debt_type: "Revolving debt" # H2FAST default
+        depreciation_method: "MACRS"
+        depreciation_period: 5 # years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+      cp_capacity_credit_percent: [0]
+      degradation: [0]
+      revenue:
+        ppa_price_input: [0.0] # cents/kWh
+        ppa_escalation: 0 # %
+  pv:
+    system_capacity_kw: 400000 # 750500
+    dc_degradation: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    fin_model:
+      battery_system:
+        batt_replacement_schedule_percent: [0]
+        batt_bank_replacement: [0]
+        batt_replacement_option: 0
+        batt_computed_bank_capacity: 0
+        batt_meter_position: 0
+      system_costs:
+        om_fixed: [0]
+        om_production: [0]
+        om_capacity: [0]
+        om_batt_fixed_cost: 0
+        om_batt_variable_cost: [0]
+        om_batt_capacity_cost: 0
+        om_batt_replacement_cost: 0
+        om_replacement_cost_escal: 0
+      system_use_lifetime_output: 0
+      financial_parameters:
+        inflation_rate: 0.0 # real basis
+        real_discount_rate: 5.9 # real return based on 2024 ATB baseline for utility-scale PV
+        federal_tax_rate: 21.0 # https://taxsummaries.pwc.com/quick-charts/corporate-income-tax-cit-rates
+        state_tax_rate: 4.74 # 0.75 # https://comptroller.texas.gov/taxes/franchise/ --> The TX franchise tax should be applied to margin but is included in income tax here as an approximation
+        property_tax_rate: 1.47 # average effective real property tax rate in Texas https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/
+        insurance_rate: 1.0 # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        debt_percent: 75.3 # based on 2024 ATB for utility-scale pv solar
+        term_int_rate: 4.4 # based on 2024 ATB real interest rate for utility-scale pv solar
+        months_working_reserve: 1
+        analysis_start_year: 2030
+        installation_months: 36
+        sales_tax_rate_state: 0.0 # 8.20 # average combined state and local sales tax in TX https://taxfoundation.org/location/texas/
+        admin_expense_percent_of_sales: 0.0 # H2FAST default
+        capital_gains_tax_rate: 15.0 # H2FAST default
+        debt_type: "Revolving debt" # H2FAST default
+        depreciation_method: "MACRS"
+        depreciation_period: 5 # years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+      cp_capacity_credit_percent: [0]
+      degradation: [0]
+      revenue:
+        ppa_price_input: [0.0] # cents/kWh
+        ppa_escalation: 0 # %
+  battery:
+    system_capacity_kwh: 96 # 375750
+    system_capacity_kw: 96 # 375750
+    minimum_SOC: 20.0
+    maximum_SOC: 100.0
+    initial_SOC: 90.0
+    fin_model:
+      battery_system:
+        batt_replacement_schedule_percent: [0]
+        batt_bank_replacement: [0]
+        batt_replacement_option: 0
+        batt_computed_bank_capacity: 0
+        batt_meter_position: 0
+      system_costs:
+        om_fixed: [0]
+        om_production: [0]
+        om_capacity: [0]
+        om_batt_fixed_cost: 0
+        om_batt_variable_cost: [0]
+        om_batt_capacity_cost: 0
+        om_batt_replacement_cost: 0
+        om_replacement_cost_escal: 0
+      system_use_lifetime_output: 0
+      financial_parameters:
+        inflation_rate: 0.0 # real basis
+        real_discount_rate: 6.6 # real return based on 2024 ATB baseline for utility-scale battery
+        federal_tax_rate: 21.0 # https://taxsummaries.pwc.com/quick-charts/corporate-income-tax-cit-rates
+        state_tax_rate: 4.74 # 0.75 # https://comptroller.texas.gov/taxes/franchise/ --> The TX franchise tax should be applied to margin but is included in income tax here as an approximation
+        property_tax_rate: 1.47 # average effective real property tax rate in Texas https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/
+        insurance_rate: 1.0 # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        debt_percent: 75.4 # based on 2024 ATB for utility-scale pv plus battery
+        term_int_rate: 4.4 # based on 2024 ATB real interest rate for utility-scale battery
+        months_working_reserve: 1
+        analysis_start_year: 2030
+        installation_months: 36
+        sales_tax_rate_state: 0.0 # 8.20 # average combined state and local sales tax in TX https://taxfoundation.org/location/texas/
+        admin_expense_percent_of_sales: 0.0 # H2FAST default
+        capital_gains_tax_rate: 15.0 # H2FAST default
+        debt_type: "Revolving debt" # H2FAST default
+        depreciation_method: "MACRS"
+        depreciation_period: 5 # years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+      cp_capacity_credit_percent: [0]
+      degradation: [0]
+      revenue:
+        ppa_price_input: [0.0] # cents/kWh
+        ppa_escalation: 0 # %
+  grid:
+    interconnect_kw: 2000000 # Set higher than rated generation capacity
+    fin_model:
+      battery_system:
+        batt_replacement_schedule_percent: [0]
+        batt_bank_replacement: [0]
+        batt_replacement_option: 0
+        batt_computed_bank_capacity: 0
+        batt_meter_position: 0
+      system_costs:
+        om_fixed: [0]
+        om_production: [0]
+        om_capacity: [0]
+        om_batt_fixed_cost: 0
+        om_batt_variable_cost: [0]
+        om_batt_capacity_cost: 0
+        om_batt_replacement_cost: 0
+        om_replacement_cost_escal: 0
+      system_use_lifetime_output: 0
+      financial_parameters:
+        inflation_rate: 0.0 # real basis
+        real_discount_rate: 6.3 # real return based on 2024 ATB baseline workbook for land-based wind.
+        federal_tax_rate: 21.0 # https://taxsummaries.pwc.com/quick-charts/corporate-income-tax-cit-rates
+        state_tax_rate: 4.74 # 0.75 # https://comptroller.texas.gov/taxes/franchise/ --> The TX franchise tax should be applied to margin but is included in income tax here as an approximation
+        property_tax_rate: 1.47 # average effective real property tax rate in Texas https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/
+        insurance_rate: 1.0 # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        debt_percent: 72.4 # based on 2024 ATB for land-based wind
+        term_int_rate: 4.4 # based on 2024 ATB real interest rate for land-based onshore wind
+        months_working_reserve: 1
+        analysis_start_year: 2030
+        installation_months: 36
+        sales_tax_rate_state: 0.0 # 8.20 # average combined state and local sales tax in TX https://taxfoundation.org/location/texas/
+        admin_expense_percent_of_sales: 0.0 # H2FAST default
+        capital_gains_tax_rate: 15.0 # H2FAST default
+        debt_type: "Revolving debt" # H2FAST default
+        depreciation_method: "MACRS"
+        depreciation_period: 5 # years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+      cp_capacity_credit_percent: [0]
+      degradation: [0]
+      revenue:
+        ppa_price_input: [0.0] # cents/kWh
+        ppa_escalation: 0 # %
+
+config:
+  simulation_options:
+    cache: true
+    wind:
+      skip_financial: false
+  dispatch_options:
+    battery_dispatch: load_following_heuristic # load_following_heuristic #heuristic
+    solver: cbc
+    n_look_ahead_periods: 48
+    grid_charging: false
+    pv_charging_only: false
+    include_lifecycle_count: false
+  cost_info:
+    wind_installed_cost_mw: 1380000 # (2022USD) 2025 costs in 2022 USD from NREL 2024 ATB for land-based wind. 2025 used as an overnight-capex lock-in date for 2030 operation
+    solar_installed_cost_mw: 1323000 # (2022USD) 2025 costs in 2022 USD from NREL 2024 ATB for utility-scale pv. 2025 used as an overnight-capex lock-in date for 2030 operation
+    storage_installed_cost_mwh: 310000 # (2022USD) 2025 battery costs in 2022 USD from NREL 2024 ATB for utility-scale battery storage. 2025 used as an overnight-capex lock-in date for 2030 operation
+    storage_installed_cost_mw: 311000 # (2022USD) 2025 battery costs in 2022 USD from NREL 2024 ATB for utility-scale battery storage. 2025 used as an overnight-capex lock-in date for 2030 operation
+    wind_om_per_kw: 29 # (2022USD) 2030 costs in 2022 USD from 2024 ATB for land-based wind
+    pv_om_per_kw:  18 # (2022USD) 2030 costs in 2022 USD from NREL 2024 ATB for utility-scale PV
+    battery_om_per_kw: 15.525 # (2022USD) based on 2.5 percent of battery capex/kW for a 1-hour battery using both power and energy costs above

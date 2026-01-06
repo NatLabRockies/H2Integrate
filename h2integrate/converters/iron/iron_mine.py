@@ -18,7 +18,7 @@ from h2integrate.converters.iron.martin_ore.variable_om_cost import martin_ore_v
 from h2integrate.converters.iron.rosner_ore.variable_om_cost import rosner_ore_variable_om_cost
 
 
-@define
+@define(kw_only=True)
 class IronMineBaseConfig(BaseConfig):
     mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
 
@@ -44,7 +44,7 @@ class IronMineBaseConfig(BaseConfig):
         return {"name": self.mine}
 
 
-@define
+@define(kw_only=True)
 class IronMinePerformanceConfig(IronMineBaseConfig):
     ore_cf_estimate: float = field(default=0.9, validator=range_val(0, 1))  # ore
 
@@ -97,7 +97,7 @@ class IronMinePerformanceComponent(om.ExplicitComponent):
         outputs["total_iron_ore_produced"] = ore_produced_mtpy
 
 
-@define
+@define(kw_only=True)
 class IronMineCostConfig(IronMineBaseConfig):
     LCOE: float = field(kw_only=True)  # $/MWh
     LCOH: float = field(kw_only=True)  # $/kg
@@ -146,7 +146,9 @@ class IronMineCostComponent(CostModelBaseClass):
         self.add_discrete_output("iron_mine_cost", val=pd.DataFrame, desc="iron mine cost results")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        ore_performance = IronPerformanceModelOutputs(discrete_inputs["iron_mine_performance"])
+        ore_performance = IronPerformanceModelOutputs(
+            performances_df=discrete_inputs["iron_mine_performance"]
+        )
 
         ore_cost_inputs = {
             "lcoe": inputs["LCOE"][0] / 1e3,

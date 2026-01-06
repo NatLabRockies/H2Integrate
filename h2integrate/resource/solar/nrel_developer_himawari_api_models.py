@@ -7,7 +7,7 @@ from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
 
 
-@define
+@define(kw_only=True)
 class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Himawari 2011-15: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari7-download/>`_.
@@ -53,7 +53,7 @@ class Himawari7SolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Himawari 2016-2020: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari-download/>`_.
@@ -99,7 +99,7 @@ class Himawari8SolarAPI(NRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Himawari TMY: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari-tmy-download/>`_.
