@@ -126,7 +126,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         return resource_specs
 
-    def add_resource_start_end_times(self, data):
+    def add_resource_start_end_times(self, data: dict):
         """Add resource data start time, end time, and timestep to the resource data dictionary.
         The start and end time are represented as strings formatted as "yyyy/mm/dd hh:mm:ss (tz)"
         and the timestep is represented in seconds.
