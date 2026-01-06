@@ -202,6 +202,21 @@ class ResizeablePerformanceModelBaseConfig(BaseConfig):
                 )
 
 
+@define(kw_only=True)
+class CacheBaseConfig(BaseConfig):
+    enable_caching: bool = field()
+    cache_dir: str | Path = field()
+
+    def __attrs_post_init__(self):
+        # Convert cache directory to Path object
+        if isinstance(self.cache_dir, str):
+            self.cache_dir = Path(self.cache_dir)
+
+        # Create a cache directory if it doesn't exist
+        if not self.cache_dir.exists():
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+
 def attr_serializer(inst: type, field: Attribute, value: Any):
     if isinstance(value, np.ndarray):
         return value.tolist()
@@ -309,6 +324,8 @@ def dict_to_yaml_formatting(orig_dict):
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
                 if isinstance(orig_dict[key], (str, bool, int)):
+                    continue
+                if orig_dict[key] is None:
                     continue
                 if isinstance(orig_dict[key], (list, np.ndarray)):
                     if any(isinstance(v, dict) for v in val):
@@ -582,6 +599,23 @@ def write_yaml(
     yaml.allow_unicode = False
     with Path(foutput).open("w", encoding="utf-8") as f:
         yaml.dump(instance, f)
+
+
+def write_readable_yaml(instance: dict, foutput: str | Path):
+    """
+    Writes a dictionary to a YAML file using the yaml library.
+
+    Args:
+        instance (dict): Dictionary to be written to the YAML file.
+        foutput (str | Path): Path to the output YAML file.
+
+    Returns:
+        None
+    """
+    instance = dict_to_yaml_formatting(instance)
+
+    with Path(foutput).open("w", encoding="utf-8") as f:
+        yaml.dump(instance, f, sort_keys=False, encoding=None, default_flow_style=False)
 
 
 def make_unique_case_name(folder, proposed_fname, fext):
