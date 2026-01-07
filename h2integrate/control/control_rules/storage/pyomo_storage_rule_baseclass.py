@@ -29,20 +29,6 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             mutable=True,
             units=pyo.units.hr,
         )
-        # pyomo_model.cost_per_charge = pyo.Param(
-        #     doc="Operating cost of " + self.block_set_name + " charging [$/MWh]",
-        #     default=0.0,
-        #     within=pyo.NonNegativeReals,
-        #     mutable=True,
-        #     units=pyo.units.USD / pyo.units.MWh,
-        # )
-        # pyomo_model.cost_per_discharge = pyo.Param(
-        #     doc="Operating cost of " + self.block_set_name + " discharging [$/MWh]",
-        #     default=0.0,
-        #     within=pyo.NonNegativeReals,
-        #     mutable=True,
-        #     units=pyo.units.USD / pyo.units.MWh,
-        # )
         pyomo_model.minimum_storage = pyo.Param(
             doc=pyomo_model.name
             + " minimum storage rating ["
@@ -226,23 +212,6 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             doc=pyomo_model.name + " state-of-charge inventory balance",
             rule=soc_inventory_rule,
         )
-
-        ##################################
-        # SOC Linking Constraints        #
-        ##################################
-
-        # TODO: Make work for pyomo optimization, not needed for heuristic method
-        # # Linking time periods together
-        # def storage_soc_linking_rule(m, t):
-        #     if t == m.blocks.index_set().first():
-        #         return m.blocks[t].soc0 == m.initial_soc
-        #     return m.blocks[t].soc0 == self.blocks[t - 1].soc
-
-        # pyomo_model.soc_linking = pyo.Constraint(
-        #     pyomo_model.blocks.index_set(),
-        #     doc=self.block_set_name + " state-of-charge block linking constraint",
-        #     rule=storage_soc_linking_rule,
-        # )
 
     def _create_ports(self, pyomo_model: pyo.ConcreteModel, t):
         """Create Pyomo ports for connecting the storage component.
