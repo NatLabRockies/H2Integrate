@@ -5,6 +5,7 @@
 - Added standlone iron DRI and steel EAF performance and cost models
 - Added capability to have transport models that require user input parameters
 - Add geologic hydrogen surface processing converter
+- Add optimal dispatch of storage for load following
 
 ## 0.5.1 [December 18, 2025]
 

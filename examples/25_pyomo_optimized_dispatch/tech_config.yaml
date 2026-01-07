@@ -1,5 +1,5 @@
 name: "technology_config"
-description: "This hybrid plant produces hydrogen"
+description: "This hybrid plant produces electricity from wind and battery storage."
 
 
 technologies:
