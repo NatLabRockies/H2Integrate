@@ -2,8 +2,8 @@ import numpy as np
 from attrs import field, define
 from hopp.tools.dispatch.plot_tools import plot_battery_output, plot_generation_profile
 
-from h2integrate.core.utilities import CacheBaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CacheBaseClass, CostModelBaseClass
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig, CostModelBaseClass
 from h2integrate.converters.hopp.hopp_mgmt import run_hopp, setup_hopp
 
 

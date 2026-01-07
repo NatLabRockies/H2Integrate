@@ -1,16 +1,14 @@
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import (
-    CostModelBaseConfig,
-    ResizeablePerformanceModelBaseConfig,
-    merge_shared_inputs,
-)
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, range_val
 from h2integrate.tools.constants import H_MW, N_MW
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
+    CostModelBaseConfig,
     ResizeablePerformanceModelBaseClass,
+    ResizeablePerformanceModelBaseConfig,
 )
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
