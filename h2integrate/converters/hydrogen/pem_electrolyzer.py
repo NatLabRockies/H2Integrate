@@ -3,8 +3,9 @@ import math
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import ResizeablePerformanceModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerPerformanceBaseClass

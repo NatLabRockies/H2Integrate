@@ -5,9 +5,9 @@ from attrs import field, define
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
 

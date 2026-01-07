@@ -11,7 +11,7 @@ import yaml
 import attrs
 import numpy as np
 import ruamel.yaml as ry
-from attrs import Attribute, field, define
+from attrs import Attribute, define
 
 from h2integrate import ROOT_DIR
 
@@ -171,35 +171,6 @@ class BaseConfig:
             dict: All key, value pairs required for class re-creation.
         """
         return attrs.asdict(self, filter=attr_filter, value_serializer=attr_serializer)
-
-
-@define(kw_only=True)
-class CostModelBaseConfig(BaseConfig):
-    cost_year: int = field(converter=int)
-
-
-@define(kw_only=True)
-class ResizeablePerformanceModelBaseConfig(BaseConfig):
-    size_mode: str = field(default="normal")
-    flow_used_for_sizing: str | None = field(default=None)
-    max_feedstock_ratio: float = field(default=1.0)
-    max_commodity_ratio: float = field(default=1.0)
-
-    def __attrs_post_init__(self):
-        """Validate sizing parameters after initialization."""
-        valid_modes = ["normal", "resize_by_max_feedstock", "resize_by_max_commodity"]
-        if self.size_mode not in valid_modes:
-            raise ValueError(
-                f"Sizing mode '{self.size_mode}' is not a valid sizing mode. "
-                f"Options are {valid_modes}."
-            )
-
-        if self.size_mode != "normal":
-            if self.flow_used_for_sizing is None:
-                raise ValueError(
-                    "'flow_used_for_sizing' must be set when size_mode is "
-                    "'resize_by_max_feedstock' or 'resize_by_max_commodity'"
-                )
 
 
 def attr_serializer(inst: type, field: Attribute, value: Any):
