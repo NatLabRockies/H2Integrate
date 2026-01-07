@@ -21,7 +21,7 @@ technologies:
         hub_height: 130.
         create_model_from: "default"
         config_name: "WindPowerSingleOwner"
-        pysam_options: !include pysam_options_8300MW.yaml
+        pysam_options: !include pysam_options_8.3MW.yaml
         run_recalculate_power_curve: False
         layout:
           layout_mode: "basicgrid"
