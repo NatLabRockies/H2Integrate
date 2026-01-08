@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import openmdao.api as om
 
+
 def check_get_units_for_var(case, var, electricity_base_unit: str, user_specified_unit=None):
     """Check the units for a variable within a case, with the following logic:
 
