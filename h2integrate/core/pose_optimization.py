@@ -525,7 +525,7 @@ class PoseOptimization:
                 opt_prob.model.recording_options["excludes"] = self.config["recorder"].get(
                     "excludes", ["*resource_data"]
                 )
-                return
+                return recorder_path
 
             if recorder_attachment == "driver":
                 recorder_options += [
