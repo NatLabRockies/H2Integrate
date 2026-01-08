@@ -1,10 +1,7 @@
-import numpy as np
-from matplotlib import pyplot as plt
-
 import openmdao.api as om
 from pathlib import Path
 import pandas as pd
-from h2integrate.tools.save_to_csv_partial import save_as_csv
+from h2integrate.postprocess.timeseries_to_csv import save_timeseries_vars_as_csv
 
 
 # set the path for the recorder from stuff specified in the driver_config.yaml
@@ -29,7 +26,7 @@ alternative_name_list = [
     "Wind Electricity (MW)",
 ]
 
-save_as_csv(
+save_timeseries_vars_as_csv(
     variable_list,
     units_list,
     cases[-1],

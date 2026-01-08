@@ -1,11 +1,8 @@
-import numpy as np
-from matplotlib import pyplot as plt
-
 import openmdao.api as om
 from pathlib import Path
 import pandas as pd
 
-def save_as_csv(variable_list, units_list, case, filename, alternative_name_list=None):
+def save_timeseries_vars_as_csv(variable_list, units_list, case, filename, alternative_name_list=None):
     data = pd.DataFrame()
     if alternative_name_list is None:
         alternative_name_list = [None]*len(variable_list)
@@ -59,7 +56,7 @@ if __name__ == "__main__":
         "Electrical Demand (MW)",
     ]
 
-    save_as_csv(
+    save_timeseries_vars_as_csv(
         variable_list,
         units_list,
         cases[-1],
