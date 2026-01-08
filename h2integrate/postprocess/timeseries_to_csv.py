@@ -25,13 +25,44 @@ def save_timeseries_vars_as_csv(
 
 
 def check_get_units_for_var(case, var, electricity_base_unit: str, user_specified_unit=None):
-    electricity_type_units = ["W", "kW", "MW", "GW"]
+    """Check the units for a variable within a case, with the following logic:
 
+    0) If ``user_specified_unit`` is a string, get the variable value in units of
+        ``user_specified_unit`` then continue to Step 5.
+        If ``user_specified_unit`` is None, continue to Step 1.
+    1) Get the default units of the variable. Continue to Step 2.
+    2) Check if the default units contain electricity units.
+        If the default units do contain an electricity unit, then continue to Step 3.
+        Otherwise, continue to Step 4.
+    3) Replace the default electricity unit in the default units with ``electricity_base_unit``.
+        Get the variable value in units of the updated units and continue to Step 5.
+    4) Get the variable value in the default units and continue to Step 5.
+    5) Return the variable value and the corresponding units.
+
+    Args:
+        case (om.recorders.case.Case): OpenMDAO case object.
+        var (str): variable name
+        electricity_base_unit (str): Units to save any electricity-based profiles in.
+            Must be either "W", "kW", "MW", or "GW".
+        user_specified_unit (str | None, optional): _description_. Defaults to None.
+
+    Returns:
+        2-element tuple containing
+
+        - **val** (np.ndarry | list | tuple): value of the `var` in units `var_unit`.
+        - **var_unit** (str): units that `val` is returned in.
+    """
+    electricity_type_units = ["W", "kW", "MW", "GW"]
+    # 0) check if user_specified_unit is not None
     if user_specified_unit is not None:
+        # Get the variable value in units of ``user_specified_unit``
         val = case.get_val(var, units=user_specified_unit)
         return val, user_specified_unit
 
+    # 1) Get the default units of the variable
     var_unit = case._get_units(var)
+
+    # 2) Check if the default units contain electricity units.
     is_electric = any(electricity_unit in var_unit for electricity_unit in electricity_type_units)
     if is_electric:
         var_electricity_unit = [
@@ -39,11 +70,12 @@ def check_get_units_for_var(case, var, electricity_base_unit: str, user_specifie
             for electricity_unit in electricity_type_units
             if electricity_unit in var_unit
         ]
+        # 3) Replace the default electricity unit in var_unit with electricity_base_unit
         new_var_unit = var_unit.replace(var_electricity_unit[-1], electricity_base_unit)
         val = case.get_val(var, units=new_var_unit)
         return val, new_var_unit
 
-    # get the value
+    # 4) Get the variable value in the default units
     val = case.get_val(var, units=var_unit)
     return val, var_unit
 
@@ -55,6 +87,36 @@ def save_case_timeseries_as_csv(
     vars_to_save: dict | list = {},
     save_to_file: bool = True,
 ):
+    """Summarize timeseries data from a case within an sql recorder file to a DataFrame
+    and save to csv file if `save_to_file` is True.
+
+    Each column is a variable, each row is a timestep.
+    Column names are formatted as:
+
+    - "{promoted variable name} ({units})" for continuous variables
+
+    Args:
+        sql_fpath (Path | str): Filepath to sql recorder file.
+        case_index (int, optional): Index of the case in the sql file to save results for.
+            Defaults to 0.
+        electricity_base_unit (str, optional): Units to save any electricity-based profiles in.
+            Must be either "W", "kW", "MW", or "GW". Defaults to "MW".
+        vars_to_save (dict | list, optional): An empty list or dictionary indicates to save
+            all the timeseries variables in the case. If a list, should be a list of variable names
+            to save. If a dictionary, should have keys of variable names and values of units for
+            the corresponding variable. Defaults to {}.
+        save_to_file (bool, optional): Whether to save the summary csv file to the same
+            folder as the sql file(s). Defaults to True.
+
+    Raises:
+        ValueError: if electricity_base_unit is not "W", "kW", "MW", or "GW".
+        FileNotFoundError: If the sql file does not exist or multiple sql files have the same name.
+        ValueError: If no valid timeseries variables are input with vars_to_save and
+            vars_to_save is not an empty list or dictionary.
+
+    Returns:
+        pd.DataFrame: summary of timeseries results from the sql file.
+    """
     electricity_type_units = ["W", "kW", "MW", "GW"]
     if electricity_base_unit not in electricity_type_units:
         msg = (
@@ -77,6 +139,7 @@ def save_case_timeseries_as_csv(
     if contains_meta_sql:
         # remove metadata file from filelist
         sql_files = [sql_file for sql_file in sql_files if "_meta" not in sql_file.suffix]
+
     # check that only one sql file was input
     if len(sql_files) > 1:
         msg = (
