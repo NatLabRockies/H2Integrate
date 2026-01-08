@@ -1,13 +1,15 @@
 import pandas as pd
 
-def save_timeseries_vars_as_csv(variable_list, units_list, case, filename, alternative_name_list=None):
+def save_timeseries_vars_as_csv(
+        variable_list, units_list, case, filename, alternative_name_list=None
+):
     data = pd.DataFrame()
     if alternative_name_list is None:
-        alternative_name_list = [None]*len(variable_list)
+        alternative_name_list = [None] * len(variable_list)
 
     for loc, var in enumerate(variable_list):
         if alternative_name_list[loc] is not None:
-            save_key = alternative_name_list[loc] # Formatting of this may need work
+            save_key = alternative_name_list[loc]
         else:
             name_list = var.split(".")
             name_list.append(units_list[loc])
