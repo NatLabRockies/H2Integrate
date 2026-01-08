@@ -54,6 +54,7 @@ def save_case_timeseries_as_csv(
     electricity_base_unit="MW",
     vars_to_save: dict | list = {},
     save_to_file: bool = True,
+    alternative_name_list: list | None = None,
 ):
     electricity_type_units = ["W", "kW", "MW", "GW"]
     if electricity_base_unit not in electricity_type_units:
@@ -143,6 +144,25 @@ def save_case_timeseries_as_csv(
                 )
                 var_to_units[var] = var_units
                 var_to_values[var] = var_val
+
+    if alternative_name_list is not None:
+        if len(alternative_name_list) != len(var_to_values):
+            raise ValueError(
+                "Length of alternative_name_list must match the number of variables being saved."
+            )
+
+        # map alternative names to variable names
+        alt_name_mapper = {
+            old_name: new_name if new_name is not None else old_name
+            for old_name, new_name in zip(var_to_values.keys(), alternative_name_list)
+        }
+        # update var_to_values and var_to_units with alternative names
+        var_to_values = {
+            alt_name_mapper[k]: v for k, v in var_to_values.items()
+        }
+        var_to_units = {
+            alt_name_mapper[k]: v for k, v in var_to_units.items()
+        }
 
     # rename columns to include units
     column_rename_mapper = {
