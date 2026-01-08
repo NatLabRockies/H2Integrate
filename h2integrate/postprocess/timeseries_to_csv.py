@@ -4,26 +4,6 @@ import numpy as np
 import pandas as pd
 import openmdao.api as om
 
-
-def save_timeseries_vars_as_csv(
-    variable_list, units_list, case, filename, alternative_name_list=None
-):
-    data = pd.DataFrame()
-    if alternative_name_list is None:
-        alternative_name_list = [None] * len(variable_list)
-
-    for loc, var in enumerate(variable_list):
-        if alternative_name_list[loc] is not None:
-            save_key = alternative_name_list[loc]
-        else:
-            name_list = var.split(".")
-            name_list.append(units_list[loc])
-            save_key = " ".join(name_list)
-        data[save_key] = case.get_val(var, units=units_list[loc])
-
-    data.to_csv(filename, index=False)
-
-
 def check_get_units_for_var(case, var, electricity_base_unit: str, user_specified_unit=None):
     """Check the units for a variable within a case, with the following logic:
 
@@ -225,12 +205,8 @@ def save_case_timeseries_as_csv(
             for old_name, new_name in zip(var_to_values.keys(), alternative_name_list)
         }
         # update var_to_values and var_to_units with alternative names
-        var_to_values = {
-            alt_name_mapper[k]: v for k, v in var_to_values.items()
-        }
-        var_to_units = {
-            alt_name_mapper[k]: v for k, v in var_to_units.items()
-        }
+        var_to_values = {alt_name_mapper[k]: v for k, v in var_to_values.items()}
+        var_to_units = {alt_name_mapper[k]: v for k, v in var_to_units.items()}
 
     # rename columns to include units
     column_rename_mapper = {
