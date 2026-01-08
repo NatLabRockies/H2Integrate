@@ -108,12 +108,16 @@ def save_case_timeseries_as_csv(
             the corresponding variable. Defaults to {}.
         save_to_file (bool, optional): Whether to save the summary csv file to the same
             folder as the sql file(s). Defaults to True.
+        alternative_name_list (list | None, optional): List of alternative names for the
+            variables being saved. If None, the promoted variable names are used. Defaults to None.
 
     Raises:
         ValueError: if electricity_base_unit is not "W", "kW", "MW", or "GW".
         FileNotFoundError: If the sql file does not exist or multiple sql files have the same name.
         ValueError: If no valid timeseries variables are input with vars_to_save and
             vars_to_save is not an empty list or dictionary.
+        ValueError: If the length of alternative_name_list does not match the number of variables
+            being saved.
 
     Returns:
         pd.DataFrame: summary of timeseries results from the sql file.
@@ -208,6 +212,7 @@ def save_case_timeseries_as_csv(
                 var_to_units[var] = var_units
                 var_to_values[var] = var_val
 
+    # check if alternative names for variables being saved were input
     if alternative_name_list is not None:
         if len(alternative_name_list) != len(var_to_values):
             raise ValueError(
