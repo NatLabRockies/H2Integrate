@@ -1,6 +1,5 @@
 import openmdao.api as om
 from pathlib import Path
-import pandas as pd
 from h2integrate.postprocess.timeseries_to_csv import save_timeseries_vars_as_csv
 
 
