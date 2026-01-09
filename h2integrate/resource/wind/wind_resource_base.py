@@ -14,7 +14,7 @@ class WindResourceBaseAPIModel(ResourceBaseAPIModel):
             "pressure": "atm",
             "precipitation_rate": "mm/h",
             "relative_humidity": "percent",
-            "is_day": "percent",
+            "is_day": "unitless",
         }
 
     def compare_units_and_correct(self, data, data_units):
