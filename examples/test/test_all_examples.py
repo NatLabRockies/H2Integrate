@@ -1263,11 +1263,11 @@ def test_sweeping_solar_sites_doe(subtests):
 def test_floris_example(subtests):
     from h2integrate.core.utilities import load_yaml
 
-    os.chdir(EXAMPLE_DIR / "floris_example")
+    os.chdir(EXAMPLE_DIR / "26_floris")
 
-    driver_config = load_yaml(EXAMPLE_DIR / "floris_example" / "driver_config.yaml")
-    tech_config = load_yaml(EXAMPLE_DIR / "floris_example" / "tech_config.yaml")
-    plant_config = load_yaml(EXAMPLE_DIR / "floris_example" / "plant_config.yaml")
+    driver_config = load_yaml(EXAMPLE_DIR / "26_floris" / "driver_config.yaml")
+    tech_config = load_yaml(EXAMPLE_DIR / "26_floris" / "tech_config.yaml")
+    plant_config = load_yaml(EXAMPLE_DIR / "26_floris" / "plant_config.yaml")
 
     h2i_config = {
         "name": "H2Integrate_config",

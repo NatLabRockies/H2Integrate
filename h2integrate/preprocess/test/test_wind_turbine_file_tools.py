@@ -101,7 +101,7 @@ def test_floris_turbine_export(subtests):
     floris_options = load_yaml(output_fpath)
 
     plant_config_path = EXAMPLE_DIR / "05_wind_h2_opt" / "plant_config.yaml"
-    tech_config_path = EXAMPLE_DIR / "floris_example" / "tech_config.yaml"
+    tech_config_path = EXAMPLE_DIR / "26_floris" / "tech_config.yaml"
 
     plant_config = load_plant_yaml(plant_config_path)
     tech_config = load_tech_yaml(tech_config_path)
