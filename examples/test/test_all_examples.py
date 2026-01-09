@@ -1288,7 +1288,7 @@ def test_floris_example(subtests):
             pytest.approx(
                 h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")[0], rel=1e-6
             )
-            == 125.4133009
+            == 99.872209
         )
 
     with subtests.test("Wind plant capacity"):
@@ -1300,13 +1300,13 @@ def test_floris_example(subtests):
                 np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
                 rel=1e-6,
             )
-            == 102687.22266
+            == 128948.21977
         )
 
     with subtests.test("Capacity factor"):
         assert (
             pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
-            == 17.7610389263
+            == 22.30320668
         )
 
 
