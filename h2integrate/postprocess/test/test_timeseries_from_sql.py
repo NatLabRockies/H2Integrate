@@ -84,7 +84,8 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
         ]
         assert all(c_name in res.columns.to_list() for c_name in expected_colnames)
 
-def test_alternative_names_list(subtests, run_example_02_sql_fpath):
+
+def test_alternative_column_names(subtests, run_example_02_sql_fpath):
     vars_to_save = {
         "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
         "hopp.electricity_out": {"alternative_name": "Plant Electricity Output"},
