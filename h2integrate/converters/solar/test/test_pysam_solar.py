@@ -255,3 +255,49 @@ def test_pvwatts_singleowner_withtilt(
 
     with subtests.test("Capacity in kW-DC"):
         assert pytest.approx(system_capacity_DC, rel=1e-6) == pv_design_dict["pv_capacity_kWdc"]
+
+
+def test_pvwatts_nonhourly_draft(subtests):
+    import numpy as np
+    import PySAM.Pvwattsv8 as Pvwatts
+    from PySAM.ResourceTools import SAM_CSV_to_solar_data
+
+    path = (
+        EXAMPLE_DIR / "01_onshore_steel_mn" / "weather" / "solar" / "47.5_-93.0_psmv3_60_2013.csv"
+    )
+
+    # run for 60 min
+    solar_data_60min = SAM_CSV_to_solar_data(path)
+    system_mod_60min = Pvwatts.default("PVWattsSingleOwner")
+    system_mod_60min.value("solar_resource_data", solar_data_60min)
+    system_mod_60min.execute(0)
+    gen_60min = np.array(system_mod_60min.Outputs.ac) / 1e3  # W to kW
+    annual_60min = system_mod_60min.Outputs.ac_annual  # kWh
+
+    # run at 15 minutes
+    solar_data_15min = {}
+    time_vars = ["minute"]
+    site_vars = ["tz", "elev", "lat", "lon"]
+
+    solar_data_15min = {k: solar_data_60min[k] for k in site_vars}
+    for var, vals in solar_data_60min.items():
+        if var not in time_vars and var not in site_vars:
+            data_15min = np.repeat(vals, 4)
+            solar_data_15min[var] = data_15min.tolist()
+            continue
+    minute_intervals = np.tile(np.linspace(0, 45, 4), 8760)
+    solar_data_15min["minute"] = minute_intervals.tolist()
+    system_mod_15min = Pvwatts.default("PVWattsSingleOwner")
+    system_mod_15min.value("solar_resource_data", solar_data_15min)
+    system_mod_15min.execute(0)
+    gen_15min = np.array(system_mod_15min.Outputs.ac) / 1e3  # W to kW
+    annual_15min = system_mod_15min.Outputs.ac_annual  # kWh
+
+    with subtests.test("60 min: sum of generation == AEP"):
+        assert pytest.approx(np.sum(gen_60min), rel=1e-6) == annual_60min
+
+    with subtests.test("15 min: sum of generation == AEP"):
+        assert pytest.approx(np.sum(gen_15min) * (15 / 60), rel=1e-6) == annual_15min
+
+    with subtests.test("15 min AEP = 60 min AEP"):
+        assert pytest.approx(annual_15min, rel=1e-2) == annual_60min
