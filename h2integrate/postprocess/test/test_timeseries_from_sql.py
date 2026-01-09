@@ -86,18 +86,10 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
 
 def test_alternative_names_list(subtests, run_example_02_sql_fpath):
     vars_to_save = {
-        "electrolyzer.hydrogen_out":{
-            "alternative_name": "Electrolyzer Hydrogen Output"
-        },
-        "hopp.electricity_out":{
-            "alternative_name": "Plant Electricity Output"
-        },
-        "ammonia.ammonia_out":{
-            "alternative_name": None
-        },
-        "h2_storage.hydrogen_out":{
-            "alternative_name": "H2 Storage Hydrogen Output"
-        },
+        "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
+        "hopp.electricity_out": {"alternative_name": "Plant Electricity Output"},
+        "ammonia.ammonia_out": {"alternative_name": None},
+        "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
     }
 
     res = save_case_timeseries_as_csv(
@@ -121,6 +113,4 @@ def test_alternative_names_list(subtests, run_example_02_sql_fpath):
 
     with subtests.test("All alternative names in dataframe"):
         colnames_no_units = [c.split("(")[0].strip() for c in res.columns.to_list()]
-        assert all(
-            alt_name in colnames_no_units for alt_name in expected_name_list
-        )
+        assert all(alt_name in colnames_no_units for alt_name in expected_name_list)
