@@ -67,7 +67,6 @@ def save_case_timeseries_as_csv(
     electricity_base_unit="MW",
     vars_to_save: dict | list = {},
     save_to_file: bool = True,
-    alternative_name_list: list | None = None,
 ):
     """Summarize timeseries data from a case within an sql recorder file to a DataFrame
     and save to csv file if `save_to_file` is True.
@@ -85,20 +84,17 @@ def save_case_timeseries_as_csv(
             Must be either "W", "kW", "MW", or "GW". Defaults to "MW".
         vars_to_save (dict | list, optional): An empty list or dictionary indicates to save
             all the timeseries variables in the case. If a list, should be a list of variable names
-            to save. If a dictionary, should have keys of variable names and values of units for
-            the corresponding variable. Defaults to {}.
+            to save. If a dictionary, should have keys of variable names and either values of units
+            for the corresponding variable or a dictionary containing the keys "units" and/or
+            "alternative_name". Defaults to {}.
         save_to_file (bool, optional): Whether to save the summary csv file to the same
             folder as the sql file(s). Defaults to True.
-        alternative_name_list (list | None, optional): List of alternative names for the
-            variables being saved. If None, the promoted variable names are used. Defaults to None.
 
     Raises:
         ValueError: if electricity_base_unit is not "W", "kW", "MW", or "GW".
         FileNotFoundError: If the sql file does not exist or multiple sql files have the same name.
         ValueError: If no valid timeseries variables are input with vars_to_save and
             vars_to_save is not an empty list or dictionary.
-        ValueError: If the length of alternative_name_list does not match the number of variables
-            being saved.
 
     Returns:
         pd.DataFrame: summary of timeseries results from the sql file.
@@ -161,6 +157,7 @@ def save_case_timeseries_as_csv(
     # initialize output dictionaries
     var_to_values = {}  # variable to the units
     var_to_units = {}  # variable to the value
+    var_to_alternative_names = []  # variable to the alternative name
     for var in var_list:
         if var in var_to_values:
             # don't duplicate data
@@ -184,30 +181,34 @@ def save_case_timeseries_as_csv(
         if isinstance(val, (np.ndarray, list, tuple)):
             if len(val) > 1:
                 user_units = None
-                if isinstance(vars_to_save, dict):
-                    user_units = vars_to_save.get(var, None)
+                alternative_name = None
+                # Only do this if vars_to_save is a dict and it is not empty
+                if vars_to_save and isinstance(vars_to_save, dict):
+                    # Only do this if the vars_to_save[var] is a dict for units and alternative name
+                    if isinstance(vars_to_save[var], dict):
+                        user_units = vars_to_save[var].get("units", None)
+                        alternative_name = vars_to_save[var].get("alternative_name", None)
+                    # Otherwise, just pull the units directly
+                    # This means that you can only specify units by itself, not alternative names
+                    # Should we make all of these be enteres as dicts then?
+                    else:
+                        user_units = vars_to_save.get(var, None)
 
                 var_val, var_units = check_get_units_for_var(
                     case, var, electricity_base_unit, user_specified_unit=user_units
                 )
                 var_to_units[var] = var_units
                 var_to_values[var] = var_val
+                var_to_alternative_names.append(alternative_name)
 
-    # check if alternative names for variables being saved were input
-    if alternative_name_list is not None:
-        if len(alternative_name_list) != len(var_to_values):
-            raise ValueError(
-                "Length of alternative_name_list must match the number of variables being saved."
-            )
-
-        # map alternative names to variable names
-        alt_name_mapper = {
-            old_name: new_name if new_name is not None else old_name
-            for old_name, new_name in zip(var_to_values.keys(), alternative_name_list)
-        }
-        # update var_to_values and var_to_units with alternative names
-        var_to_values = {alt_name_mapper[k]: v for k, v in var_to_values.items()}
-        var_to_units = {alt_name_mapper[k]: v for k, v in var_to_units.items()}
+    # map alternative names to variable names if not None
+    alt_name_mapper = {
+        old_name: new_name if new_name is not None else old_name
+        for old_name, new_name in zip(var_to_values.keys(), var_to_alternative_names)
+    }
+    # update var_to_values and var_to_units with alternative names
+    var_to_values = {alt_name_mapper[k]: v for k, v in var_to_values.items()}
+    var_to_units = {alt_name_mapper[k]: v for k, v in var_to_units.items()}
 
     # rename columns to include units
     column_rename_mapper = {
