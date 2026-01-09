@@ -30,7 +30,7 @@ def check_get_units_for_var(case, var, electricity_base_unit: str, user_specifie
     Returns:
         2-element tuple containing
 
-        - **val** (np.ndarry | list | tuple): value of the `var` in units `var_unit`.
+        - **val** (np.ndarray | list | tuple): value of the `var` in units `var_unit`.
         - **var_unit** (str): units that `val` is returned in.
     """
     electricity_type_units = ["W", "kW", "MW", "GW"]
@@ -58,6 +58,8 @@ def check_get_units_for_var(case, var, electricity_base_unit: str, user_specifie
 
     # 4) Get the variable value in the default units
     val = case.get_val(var, units=var_unit)
+
+    # 5) Return the variable value and the corresponding units
     return val, var_unit
 
 
@@ -125,8 +127,8 @@ def save_case_timeseries_as_csv(
     # check that only one sql file was input
     if len(sql_files) > 1:
         msg = (
-            f"{sql_fpath} points to {len(sql_files)} sql files, please specify the filepath "
-            "of a single sql file."
+            f"{sql_fpath} points to {len(sql_files)} different sql files, please specify the "
+            f"filepath of a single sql file."
         )
         raise FileNotFoundError(msg)
 
@@ -144,7 +146,7 @@ def save_case_timeseries_as_csv(
     var_list.sort()
 
     # if vars_to_save is not empty, then only include the variables in var_list
-    if bool(vars_to_save):
+    if vars_to_save:
         if isinstance(vars_to_save, dict):
             varnames_to_save = list(vars_to_save.keys())
             var_list = [v for v in var_list if v in varnames_to_save]
@@ -190,7 +192,7 @@ def save_case_timeseries_as_csv(
                         alternative_name = vars_to_save[var].get("alternative_name", None)
                     # Otherwise, just pull the units directly
                     # This means that you can only specify units by itself, not alternative names
-                    # Should we make all of these be enteres as dicts then?
+                    # Should we make all of these be entered as dicts then?
                     else:
                         user_units = vars_to_save.get(var, None)
 

@@ -448,8 +448,8 @@ class PoseOptimization:
                 for current optimization problem
 
         Returns:
-            opt_prob (openmdao problem instance): openmdao problem instance for
-                current optimization problem edited to include a set up recorder
+            recorder_path (Path or None): Path to the recorder file if recorder is enabled,
+                None otherwise
         """
         folder_output = self.config["general"]["folder_output"]
 
@@ -550,6 +550,7 @@ class PoseOptimization:
                     "excludes", ["*resource_data"]
                 )
             return recorder_path
+
         return None
 
     def set_restart(self, opt_prob):
