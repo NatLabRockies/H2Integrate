@@ -7,6 +7,7 @@ from pytest import fixture
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
     average_wind_data_for_hubheight,
+    estimate_wind_speed_with_curve_fit,
     weighted_average_wind_data_for_hubheight,
 )
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
@@ -155,3 +156,21 @@ def test_resource_unequal_weighted_averaging(wind_resource_data, subtests):
 
     with subtests.test("Avg Wind speed at t=0"):
         assert pytest.approx(weighted_avg_windspeed[0], rel=1e-6) == 16.56
+
+
+def test_wind_speed_curve_fit_estimate(wind_resource_data, subtests):
+    hub_height = 120
+
+    wind_speed_actual = wind_resource_data[f"wind_speed_{hub_height}m"]
+
+    with subtests.test("Estimated wind speed is close to actual, single curve fit"):
+        wind_speed_est = estimate_wind_speed_with_curve_fit(
+            wind_resource_data, [100, 120], hub_height, run_per_timestep=False
+        )
+        np.testing.assert_array_almost_equal(wind_speed_est, wind_speed_actual)
+
+    with subtests.test("Estimated wind speed is close to actual, multiple curve fit"):
+        wind_speed_est = estimate_wind_speed_with_curve_fit(
+            wind_resource_data, [100, 120], hub_height, run_per_timestep=True
+        )
+        np.testing.assert_array_almost_equal(wind_speed_est, wind_speed_actual)
