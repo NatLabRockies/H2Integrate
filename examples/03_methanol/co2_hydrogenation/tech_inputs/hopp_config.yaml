@@ -34,14 +34,14 @@ technologies:
     model_name: pysam #floris
     timestep: [0, 8760]
     # floris_config: !include floris_input_lbw_6MW.yaml
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
   pv:
     system_capacity_kw: 350000
     dc_degradation: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 200000 # Set higher than rated generation capacity
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
 
 config:
   simulation_options:
