@@ -31,7 +31,7 @@ technologies:
     turbine_rating_kw: 15000.0
     model_name: floris
     timestep: [0, 8760]
-    floris_config: !include floris/floris_input_osw_15MW.yaml
+    floris_config: !include ../../tech_inputs/floris/floris_input_osw_15MW.yaml
     fin_model: !include default_fin_config.yaml
   battery:
     system_capacity_kwh: 200000

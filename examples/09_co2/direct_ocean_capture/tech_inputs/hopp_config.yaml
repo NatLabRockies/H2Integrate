@@ -33,7 +33,7 @@ technologies:
     turbine_rating_kw: 15000.0
     model_name: floris
     timestep: [0, 8760]
-    floris_config: !include floris/floris_input_osw_15MW.yaml
+    floris_config: !include ../../tech_inputs/floris/floris_input_osw_15MW.yaml
     fin_model: !include default_fin_config.yaml
   wave:
     device_rating_kw: 286 #enough wave capacity for S1/S2
