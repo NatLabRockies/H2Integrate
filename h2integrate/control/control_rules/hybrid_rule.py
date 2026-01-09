@@ -33,20 +33,20 @@ class PyomoDispatchPlantRule:
         #     self.options["tech_config"]["model_inputs"]["dispatch_rule_parameters"]
         # )
 
-        self.source_techs = source_techs
-        self.options = dispatch_options
+        self.source_techs = source_techs  # self.pyomo_model
+        self.options = dispatch_options  # only using dispatch_options.time_weighting_factor
         self.power_source_gen_vars = {key: [] for key in index_set}
         self.tech_dispatch_models = tech_dispatch_models
         self.load_vars = {key: [] for key in index_set}
         self.ports = {key: [] for key in index_set}
         self.arcs = []
 
-        self.block_set_name = block_set_name
         self.round_digits = 4
 
-        self._model = pyomo_model
-        self._blocks = pyo.Block(index_set, rule=self.dispatch_block_rule)
-        setattr(self.model, self.block_set_name, self.blocks)
+        self.model = pyomo_model
+        self.blocks = pyo.Block(index_set, rule=self.dispatch_block_rule)
+
+        self.model.__setattr__(block_set_name, self.blocks)
 
     def dispatch_block_rule(self, hybrid, t):
         ##################################
@@ -68,19 +68,17 @@ class PyomoDispatchPlantRule:
         """Initialize parameters method."""
         self.time_weighting_factor = self.options.time_weighting_factor  # Discount factor
         for tech in self.source_techs:
-            name = tech + "_rule"
-            pyomo_block = getattr(self.tech_dispatch_models, name)
+            pyomo_block = self.tech_dispatch_models.__getattribute__(f"{tech}_rule")
             pyomo_block.initialize_parameters(commodity_in, commodity_demand, dispatch_params)
 
     def _create_variables_and_ports(self, hybrid, t):
         for tech in self.source_techs:
-            name = tech + "_rule"
-            pyomo_block = getattr(self.tech_dispatch_models, name)
-            gen_var, load_var = pyomo_block._create_hybrid_variables(hybrid, name)
+            pyomo_block = self.tech_dispatch_models.__getattribute__(f"{tech}_rule")
+            gen_var, load_var = pyomo_block._create_hybrid_variables(hybrid, f"{tech}_rule")
 
             self.power_source_gen_vars[t].append(gen_var)
             self.load_vars[t].append(load_var)
-            self.ports[t].append(pyomo_block._create_hybrid_port(hybrid, name))
+            self.ports[t].append(pyomo_block._create_hybrid_port(hybrid, f"{tech}_rule"))
 
     @staticmethod
     def _create_parameters(hybrid):
@@ -104,24 +102,24 @@ class PyomoDispatchPlantRule:
         )
 
     def create_arcs(self):
+        # Defining the mapping between battery to system level
+        #
         ##################################
         # Arcs                           #
         ##################################
         for tech in self.source_techs:
-            name = tech + "_rule"
-            pyomo_block = getattr(self.tech_dispatch_models, name)
+            pyomo_block = self.tech_dispatch_models.__getattribute__(f"{tech}_rule")
 
             def arc_rule(m, t):
                 source_port = pyomo_block.blocks[t].port
-                destination_port = getattr(self.blocks[t], name + "_port")
+                destination_port = self.blocks[t].__getattribute__(f"{tech}_rule_port")
                 return {"source": source_port, "destination": destination_port}
 
-            setattr(
-                self.model,
-                tech + "_hybrid_arc",
-                Arc(self.blocks.index_set(), rule=arc_rule),
-            )
-            self.arcs.append(getattr(self.model, tech + "_hybrid_arc"))
+            tech_hybrid_arc = Arc(self.blocks.index_set(), rule=arc_rule)
+            self.model.__setattr__(f"{tech}_hybrid_arc", tech_hybrid_arc)
+
+            tech_arc = self.model.__getattribute__(f"{tech}_hybrid_arc")
+            self.arcs.append(tech_arc)
 
         pyo.TransformationFactory("network.expand_arcs").apply_to(self.model)
 
@@ -130,7 +128,7 @@ class PyomoDispatchPlantRule:
     ):
         for tech in self.source_techs:
             name = tech + "_rule"
-            pyomo_block = getattr(self.tech_dispatch_models, name)
+            pyomo_block = self.tech_dispatch_models.__getattribute__(name)
             pyomo_block.update_time_series_parameters(start_time, commodity_in, commodity_demand)
 
     def create_min_operating_cost_expression(self):
@@ -142,7 +140,7 @@ class PyomoDispatchPlantRule:
                 name = tech + "_rule"
                 print("Obj function", name)
                 # Create the min_operating_cost expression for each technology
-                pyomo_block = getattr(self.tech_dispatch_models, name)
+                pyomo_block = self.tech_dispatch_models.__getattribute__(name)
                 # Add to the overall hybrid operating cost expression
                 obj += pyomo_block.min_operating_cost_objective(self.blocks, name)
             return obj
@@ -154,13 +152,16 @@ class PyomoDispatchPlantRule:
         if hasattr(self.model, "objective"):
             self.model.del_component(self.model.objective)
 
-    @property
-    def blocks(self) -> pyo.Block:
-        return self._blocks
+    # def get_block_value(self, var_name):
+    #     return [self.blocks[t].__getattribute__(var_name).value for t in self.blocks.index_set()]
 
-    @property
-    def model(self) -> pyo.ConcreteModel:
-        return self._model
+    # @property
+    # def blocks(self) -> pyo.Block:
+    #     return self._blocks
+
+    # @property
+    # def model(self) -> pyo.ConcreteModel:
+    #     return self._model
 
     @property
     def time_weighting_factor(self) -> float:
@@ -172,57 +173,41 @@ class PyomoDispatchPlantRule:
         for t in self.blocks.index_set():
             self.blocks[t].time_weighting_factor = round(weighting**t, self.round_digits)
 
-    @property
-    def time_weighting_factor_list(self) -> list:
-        return [self.blocks[t].time_weighting_factor.value for t in self.blocks.index_set()]
+    # @property
+    # def time_weighting_factor_list(self) -> list:
+    #     return [self.blocks[t].time_weighting_factor.value for t in self.blocks.index_set()]
 
     # Outputs
-    @property
-    def objective_value(self):
-        return pyo.value(self.model.objective)
-
-    @property
-    def get_production_value(self, tech_name, commodity_name):
-        return f"{tech_name}_{commodity_name}"
 
     # @property
-    # def pv_generation(self) -> list:
-    #     return [self.blocks[t].pv_generation.value for t in self.blocks.index_set()]
+    # def objective_value(self):
+    #     return pyo.value(self.model.objective)
 
     # @property
-    # def wind_generation(self) -> list:
-    #     return [self.blocks[t].wind_generation.value for t in self.blocks.index_set()]
+    # def get_production_value(self, tech_name, commodity_name):
+    #     return f"{tech_name}_{commodity_name}"
 
     # @property
-    # def wave_generation(self) -> list:
-    #     return [self.blocks[t].wave_generation.value for t in self.blocks.index_set()]
+    # def charge_commodity(self) -> list:
+    #     val = self.get_block_value("charge_commodity")
+    #     # below returns a lit of length 24 for 24 hours/timesteps
+    #     return val #[self.blocks[t].charge_commodity.value for t in self.blocks.index_set()]
 
     # @property
-    # def tidal_generation(self) -> list:
-    #     return [self.blocks[t].tidal_generation.value for t in self.blocks.index_set()]
+    # def discharge_commodity(self) -> list:
+    #     return [self.blocks[t].discharge_commodity.value for t in self.blocks.index_set()]
 
     # @property
-    # def generic_generation(self) -> list:
-    #     return [self.blocks[t].generic_generation.value for t in self.blocks.index_set()]
+    # def system_production(self) -> list:
+    #     return [self.blocks[t].system_production.value for t in self.blocks.index_set()]
 
-    @property
-    def charge_commodity(self) -> list:
-        return [self.blocks[t].charge_commodity.value for t in self.blocks.index_set()]
-
-    @property
-    def discharge_commodity(self) -> list:
-        return [self.blocks[t].discharge_commodity.value for t in self.blocks.index_set()]
-
-    @property
-    def system_production(self) -> list:
-        return [self.blocks[t].system_production.value for t in self.blocks.index_set()]
-
-    @property
-    def system_load(self) -> list:
-        return [self.blocks[t].system_load.value for t in self.blocks.index_set()]
+    # @property
+    # def system_load(self) -> list:
+    #     return [self.blocks[t].system_load.value for t in self.blocks.index_set()]
 
     @property
     def storage_commodity_out(self) -> list:
+        # THIS IS USED
         """Storage commodity out."""
         return [
             self.blocks[t].discharge_commodity.value - self.blocks[t].charge_commodity.value
