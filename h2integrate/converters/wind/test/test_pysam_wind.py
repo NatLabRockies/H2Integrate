@@ -3,6 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate import EXAMPLE_DIR
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
@@ -315,3 +316,69 @@ def test_wind_plant_pysam_change_n_turbines(
             pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
             == 2027210.444644157
         )
+
+
+def test_pysam_wind_nonhourly_draft(subtests):
+    import PySAM.Windpower as Windpower
+    from PySAM.ResourceTools import SRW_to_wind_data
+
+    # Run 60 min interval
+    path = (
+        EXAMPLE_DIR
+        / "01_onshore_steel_mn"
+        / "weather"
+        / "wind"
+        / "47.5_-93.0_windtoolkit_2013_60min_100m_120m.srw"
+    )
+    wind_data_60min = SRW_to_wind_data(path)
+
+    system_mod_60min = Windpower.default("WindPowerSingleOwner")
+    system_mod_60min.value("wind_resource_model_choice", 0)
+    system_mod_60min.value("wind_resource_data", wind_data_60min)
+    system_mod_60min.execute(0)
+
+    wd_init = np.array(wind_data_60min["data"])
+    for i in range(len(wd_init)):
+        if i == 0:
+            wind_data_15min = np.tile(wd_init[0], 4).reshape(4, 8)
+        else:
+            wind_data_15min = np.vstack([wind_data_15min, np.tile(wd_init[i], 4).reshape(4, 8)])
+
+    wind_data_15min_dict = {
+        "heights": wind_data_60min["heights"],
+        "fields": wind_data_60min["fields"],
+        "data": wind_data_15min.tolist(),
+    }
+    system_mod_15min = Windpower.default("WindPowerSingleOwner")
+    system_mod_15min.value("wind_resource_model_choice", 0)
+    system_mod_15min.value("wind_resource_data", wind_data_15min_dict)
+    system_mod_15min.execute(0)
+
+    with subtests.test("60 min: sum of generation == AEP"):
+        assert (
+            pytest.approx(np.sum(system_mod_60min.Outputs.gen), rel=1e-6)
+            == system_mod_60min.Outputs.annual_energy
+        )
+
+    with subtests.test("15 min: sum of generation == AEP"):
+        assert (
+            pytest.approx(np.sum(system_mod_15min.Outputs.gen) * (15 / 60), rel=1e-6)
+            == system_mod_15min.Outputs.annual_energy
+        )
+
+    with subtests.test("15 min AEP = 60 min AEP"):
+        assert (
+            pytest.approx(system_mod_15min.Outputs.annual_energy, rel=1e-6)
+            == system_mod_60min.Outputs.annual_energy
+        )
+
+    # prob = om.Problem()
+
+    # wind_plant = PYSAMWindPlantPerformanceModel(
+    #     plant_config=plant_config,
+    #     tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+    #     driver_config={},
+    # )
+
+    # plant_config['simulation']['dt'] = int(3600/4)
+    # plant_config['simulation']['n_timesteps'] = int(8760*4)
