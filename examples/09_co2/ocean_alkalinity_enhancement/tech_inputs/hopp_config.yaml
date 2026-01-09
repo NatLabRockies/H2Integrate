@@ -32,17 +32,17 @@ technologies:
     model_name: floris
     timestep: [0, 8760]
     floris_config: !include ../../tech_inputs/floris/floris_input_osw_15MW.yaml
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   battery:
     system_capacity_kwh: 200000
     system_capacity_kw: 50000
     minimum_SOC: 20.0
     maximum_SOC: 100.0
     initial_SOC: 90.0
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 362129.538
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
 
 config:
   dispatch_options:
