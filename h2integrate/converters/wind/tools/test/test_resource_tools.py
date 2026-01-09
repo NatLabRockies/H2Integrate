@@ -127,3 +127,31 @@ def test_resource_equal_weighted_averaging(wind_resource_data, subtests):
 
     with subtests.test("Avg Wind speed at t=0"):
         assert pytest.approx(avg_windspeed[0], rel=1e-6) == 15.78
+
+
+def test_resource_unequal_weighted_averaging(wind_resource_data, subtests):
+    hub_height = 135
+    weighted_avg_windspeed = weighted_average_wind_data_for_hubheight(
+        wind_resource_data, [100, 140], hub_height, "wind_speed"
+    )
+
+    lb_to_avg_diff = np.abs(weighted_avg_windspeed - wind_resource_data["wind_speed_100m"])
+
+    avg_to_ub_diff = np.abs(weighted_avg_windspeed - wind_resource_data["wind_speed_140m"])
+
+    i_nonzero_diff = np.argwhere(
+        (wind_resource_data["wind_speed_100m"] - wind_resource_data["wind_speed_140m"]) != 0
+    ).flatten()
+
+    # the weighted_avg_windspeed should be closer to the 140m height than the 100m
+    with subtests.test("Weighted avg wind speed is closer to 140m wind speed than 100m wind speed"):
+        np.testing.assert_array_less(avg_to_ub_diff[i_nonzero_diff], lb_to_avg_diff[i_nonzero_diff])
+
+    with subtests.test("Weighted avg wind speed at t=0 is greater than equal average"):
+        mean_ws = np.mean(
+            [wind_resource_data["wind_speed_100m"][0], wind_resource_data["wind_speed_140m"][0]]
+        )
+        assert weighted_avg_windspeed[0] > mean_ws
+
+    with subtests.test("Avg Wind speed at t=0"):
+        assert pytest.approx(weighted_avg_windspeed[0], rel=1e-6) == 16.56

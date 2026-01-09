@@ -75,8 +75,10 @@ def weighted_average_wind_data_for_hubheight(
         )
         raise ValueError(msg)
 
-    weight1 = np.abs(height_lower - hub_height)
-    weight2 = np.abs(height_upper - hub_height)
+    # weight1 is the weight applied to the lower-bound height
+    weight1 = np.abs(height_upper - hub_height)
+    # weight2 is the weight applied to the upper-bound height
+    weight2 = np.abs(height_lower - hub_height)
 
     weighted_wind_resource = (
         (weight1 * wind_resource_data[f"{wind_resource_spec}_{height_lower}m"])
