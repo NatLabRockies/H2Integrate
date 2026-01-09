@@ -4,7 +4,7 @@ from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.postprocess.timeseries_to_csv import save_case_timeseries_as_csv
+from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 @fixture
