@@ -6,6 +6,7 @@ from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -170,6 +171,7 @@ supported_models = {
     # Converters
     "atb_wind_cost": ATBWindPlantCostModel,
     "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
+    "floris_wind_plant_performance": FlorisWindPlantPerformanceModel,
     "pysam_solar_plant_performance": PYSAMSolarPlantPerformanceModel,
     "atb_utility_pv_cost": ATBUtilityPVCostModel,
     "atb_comm_res_pv_cost": ATBResComPVCostModel,

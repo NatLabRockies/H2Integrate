@@ -4,6 +4,7 @@ import openmdao.api as om
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.utilities import load_yaml
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.preprocess.wind_turbine_file_tools import (
@@ -97,6 +98,65 @@ def test_floris_turbine_export(subtests):
         assert output_fpath.exists()
         assert output_fpath.is_file()
 
-    # TODO: add test with floris model
-    # with subtests.test("File runs with FLORIS model"):
-    #     pass
+    floris_options = load_yaml(output_fpath)
+
+    plant_config_path = EXAMPLE_DIR / "05_wind_h2_opt" / "plant_config.yaml"
+    tech_config_path = EXAMPLE_DIR / "26_floris" / "tech_config.yaml"
+
+    plant_config = load_plant_yaml(plant_config_path)
+    tech_config = load_tech_yaml(tech_config_path)
+
+    updated_parameters = {
+        "hub_height": -1,
+        "floris_turbine_config": floris_options,
+    }
+
+    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"].update(
+        updated_parameters
+    )
+
+    prob = om.Problem()
+    wind_resource = WTKNRELDeveloperAPIWindResource(
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config["technologies"]["wind"],
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("File runs with Floris, check total capacity"):
+        assert (
+            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 600.0
+        )
+
+    with subtests.test("File runs with Floris, check turbine size"):
+        assert (
+            pytest.approx(prob.get_val("wind_plant.num_turbines", units="unitless"), rel=1e-6)
+            == 100
+        )
+
+    with subtests.test("File runs with Floris, check hub-height"):
+        assert pytest.approx(prob.get_val("wind_plant.hub_height", units="m"), rel=1e-6) == 140.0
+
+    with subtests.test("File runs with Floris, check capacity factor"):
+        assert (
+            pytest.approx(prob.get_val("wind_plant.capacity_factor", units="percent")[0], rel=1e-6)
+            == 53.556784
+        )
+
+    with subtests.test("File runs with Floris, check AEP"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.total_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+            )
+            == 2814944.574
+        )

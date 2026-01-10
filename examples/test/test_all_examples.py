@@ -1260,6 +1260,56 @@ def test_sweeping_solar_sites_doe(subtests):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
 
 
+def test_floris_example(subtests):
+    from h2integrate.core.utilities import load_yaml
+
+    os.chdir(EXAMPLE_DIR / "26_floris")
+
+    driver_config = load_yaml(EXAMPLE_DIR / "26_floris" / "driver_config.yaml")
+    tech_config = load_yaml(EXAMPLE_DIR / "26_floris" / "tech_config.yaml")
+    plant_config = load_yaml(EXAMPLE_DIR / "26_floris" / "plant_config.yaml")
+
+    h2i_config = {
+        "name": "H2Integrate_config",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    # Create a H2I model
+    h2i = H2IntegrateModel(h2i_config)
+
+    # Run the model
+    h2i.run()
+
+    with subtests.test("LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 99.872209
+        )
+
+    with subtests.test("Wind plant capacity"):
+        assert pytest.approx(h2i.prob.get_val("wind.total_capacity", units="MW"), rel=1e-6) == 66.0
+
+    with subtests.test("Total electricity production"):
+        assert (
+            pytest.approx(
+                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
+                rel=1e-6,
+            )
+            == 128948.21977
+        )
+
+    with subtests.test("Capacity factor"):
+        assert (
+            pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
+            == 22.30320668
+        )
+
+
 def test_24_solar_battery_grid_example(subtests):
     # NOTE: would be good to compare LCOE against the same example without grid selling
     # and see that LCOE reduces with grid selling
