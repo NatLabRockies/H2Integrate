@@ -582,12 +582,17 @@ def test_wind_wave_oae_example_with_finance(subtests):
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.09180
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 92.269663
         )
 
     with subtests.test("Check Carbon Credit"):
-        assert pytest.approx(model.prob.get_val("oae.carbon_credit_value"), rel=1e-3) == 569.5
+        assert (
+            pytest.approx(model.prob.get_val("oae.carbon_credit_value")[0], rel=1e-3) == 574.37466
+        )
 
 
 def test_natural_gas_example(subtests):
