@@ -32,10 +32,10 @@ technologies:
     model_name: floris
     floris_config: !include floris_v4_template.yaml
     resource_parse_method: "weighted_average" #weight wind resource data based on hub-height
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 100000.0
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
 
 config:
   cost_info:

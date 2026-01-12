@@ -33,11 +33,11 @@ technologies:
     turbine_rating_kw: 15000.0
     model_name: floris
     timestep: [0, 8760]
-    floris_config: !include floris/floris_input_osw_15MW.yaml
-    fin_model: !include default_fin_config.yaml
+    floris_config: !include ../../09_co2/tech_inputs/floris/floris_input_osw_15MW.yaml
+    fin_model: !include ../../09_co2/tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 362129.538
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../09_co2/tech_inputs/default_fin_config.yaml
 
 config:
   cost_info: # Costs from 2024 ATB floating technology Wind Class 12

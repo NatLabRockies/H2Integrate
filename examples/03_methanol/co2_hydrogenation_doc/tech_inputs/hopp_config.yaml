@@ -33,10 +33,10 @@ technologies:
     turbine_rating_kw: 15000.0
     model_name: pysam
     timestep: [0, 8760]
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 360000 # Set higher than rated generation capacity
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
 
 config:
   cost_info:
