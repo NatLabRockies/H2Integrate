@@ -182,10 +182,8 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     ]
                 # create pyomo block and set attr
                 blocks = pyomo.Block(index_set, rule=dispatch_block_rule_function)
-                print("HIII", blocks)
                 setattr(self.pyomo_model, source_tech, blocks)
                 self.source_techs.append(source_tech)
-                print(getattr(self.pyomo_model, source_tech))
             else:
                 continue
 
@@ -244,10 +242,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             Notes:
                 1. Arrays returned have length self.n_timesteps (full simulation period).
             """
-            # TODO: implement optional kwargs for this method
-            self.initialize_parameters(
-                inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
-            )
 
             # initialize outputs
             unmet_demand = np.zeros(self.n_timesteps)
@@ -260,6 +254,24 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             window_start_indices = list(range(0, self.n_timesteps, self.config.n_control_window))
 
             control_strategy = self.options["tech_config"]["control_strategy"]["model"]
+
+            # TODO: implement optional kwargs for this method: maybe this will remove if statement here
+            if "heuristic" in control_strategy:
+                # Initialize parameters for heruistic dispatch strategy
+                self.initialize_parameters()
+            elif "optimized" in control_strategy:
+                # Initialize parameters for optimized dispatch strategy
+                self.initialize_parameters(
+                inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
+                )
+
+            else:
+                raise (
+                    NotImplementedError(
+                        f"Control strategy '{control_strategy}' was given, \
+                        but has not been implemented yet."
+                    )
+                )
 
             # loop over all control windows, where t is the starting index of each window
             for t in window_start_indices:
@@ -698,29 +710,30 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         for t in self.blocks.index_set():
             self.blocks[t].maximum_soc = round(maximum_soc, self.round_digits)
 
-    # @property
-    # def charge_efficiency(self) -> float:
-    #     """Charge efficiency."""
-    #     for t in self.blocks.index_set():
-    #         return self.blocks[t].charge_efficiency.value
+    # Need these properties to define these values for methods in this class
+    @property
+    def charge_efficiency(self) -> float:
+        """Charge efficiency."""
+        for t in self.blocks.index_set():
+            return self.blocks[t].charge_efficiency.value
 
-    # @charge_efficiency.setter
-    # def charge_efficiency(self, efficiency: float):
-    #     efficiency = self._check_efficiency_value(efficiency)
-    #     for t in self.blocks.index_set():
-    #         self.blocks[t].charge_efficiency = round(efficiency, self.round_digits)
+    @charge_efficiency.setter
+    def charge_efficiency(self, efficiency: float):
+        efficiency = self._check_efficiency_value(efficiency)
+        for t in self.blocks.index_set():
+            self.blocks[t].charge_efficiency = round(efficiency, self.round_digits)
 
-    # @property
-    # def discharge_efficiency(self) -> float:
-    #     """Discharge efficiency."""
-    #     for t in self.blocks.index_set():
-    #         return self.blocks[t].discharge_efficiency.value
+    @property
+    def discharge_efficiency(self) -> float:
+        """Discharge efficiency."""
+        for t in self.blocks.index_set():
+            return self.blocks[t].discharge_efficiency.value
 
-    # @discharge_efficiency.setter
-    # def discharge_efficiency(self, efficiency: float):
-    #     efficiency = self._check_efficiency_value(efficiency)
-    #     for t in self.blocks.index_set():
-    #         self.blocks[t].discharge_efficiency = round(efficiency, self.round_digits)
+    @discharge_efficiency.setter
+    def discharge_efficiency(self, efficiency: float):
+        efficiency = self._check_efficiency_value(efficiency)
+        for t in self.blocks.index_set():
+            self.blocks[t].discharge_efficiency = round(efficiency, self.round_digits)
 
     # @property
     # def round_trip_efficiency(self) -> float:
