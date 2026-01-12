@@ -65,7 +65,7 @@ def check_get_units_for_var(case, var, electricity_base_unit: str, user_specifie
 
 def save_case_timeseries_as_csv(
     sql_fpath: Path | str,
-    case_index: int = 0,
+    case_index: int = -1,
     electricity_base_unit="MW",
     vars_to_save: dict | list = {},
     save_to_file: bool = True,
@@ -81,7 +81,7 @@ def save_case_timeseries_as_csv(
     Args:
         sql_fpath (Path | str): Filepath to sql recorder file.
         case_index (int, optional): Index of the case in the sql file to save results for.
-            Defaults to 0.
+            Defaults to -1.
         electricity_base_unit (str, optional): Units to save any electricity-based profiles in.
             Must be either "W", "kW", "MW", or "GW". Defaults to "MW".
         vars_to_save (dict | list, optional): An empty list or dictionary indicates to save
@@ -168,7 +168,7 @@ def save_case_timeseries_as_csv(
         # get the value
         val = case.get_val(var)
 
-        # Skip costs that are per year of plant life
+        # Skip costs that are per year of plant life (not per timestep)
         if "varopex" in var.lower() or "annual_fixed_costs" in var.lower():
             continue
 

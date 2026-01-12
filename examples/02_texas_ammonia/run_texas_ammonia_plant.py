@@ -13,13 +13,15 @@ h2i.post_process()
 # Save all timeseries data to a csv file
 timeseries_data = save_case_timeseries_as_csv(h2i.recorder_path, save_to_file=True)
 
-# Get a subset of timeseries data and don't save it to a csv file
+# Get a subset of timeseries data
 vars_to_save = [
     "electrolyzer.hydrogen_out",
     "hopp.electricity_out",
     "ammonia.ammonia_out",
     "h2_storage.hydrogen_out",
 ]
+
+# Don't save subset of timeseries to a csv file using save_to_file=False
 timeseries_data = save_case_timeseries_as_csv(
     h2i.recorder_path, vars_to_save=vars_to_save, save_to_file=False
 )

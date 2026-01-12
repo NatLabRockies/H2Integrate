@@ -25,7 +25,7 @@ def run_example_02_sql_fpath():
 
 
 def test_save_csv_all_results(subtests, run_example_02_sql_fpath):
-    expected_csv_fpath = EXAMPLE_DIR / "02_texas_ammonia" / "outputs" / "cases_Case0.csv"
+    expected_csv_fpath = EXAMPLE_DIR / "02_texas_ammonia" / "outputs" / "cases_Case-1.csv"
     res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
