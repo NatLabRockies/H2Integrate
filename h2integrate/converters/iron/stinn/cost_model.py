@@ -134,7 +134,7 @@ def main(config):
         config (object): Configuration object containing model inputs, including:
             cost_model (dict): Dictionary with the file path to cost coefficients.
             electrolysis_temp (float): Electrolysis temperature in degrees Celsius (°C).
-            pressure (float): System pressure.
+            intsalled capacity (float): Installed capacity in tonnes per year (t/y).
             production_rate (float): Production rate in kilograms per second (kg/s).
             electron_moles (int): Moles of electrons per mole of product.
             faraday_const (float): Faraday constant in coulombs per mole (C/mol).
@@ -149,7 +149,7 @@ def main(config):
 
     Returns:
         dict: A dictionary containing:
-            pre_costs (float): Pre-costs related to pressure and system preparation.
+            pre_costs (float): Pre-costs related to capacity and system preparation.
             electrowinning_costs (float): Costs associated with electrolysis
                 and power rectification.
             total_costs (float): Sum of pre-costs and electrowinning costs.
@@ -257,7 +257,7 @@ if __name__ == "__main__":
             self.cost_model = {"coeffs_fp": "cost_coeffs.csv", "inputs_fp": "table1.csv"}
             # Example values for each variable (replace with actual values)
             self.electrolysis_temp = 1000  # Temperature in °C, example value
-            self.capacity = 1.5  # Pressure, example value
+            self.capacity = 1.5  # Installed capacity (t/y)
             self.production_rate = 1.0  # Total production rate, kg/s
             self.electron_moles = 3  # Moles of electrons per mole of product, example value
             self.current_density = 5000  # Current density, A/m², example value
