@@ -24,7 +24,7 @@ site:
 technology_interconnections: [
   ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["iron_transport","iron_plant","iron_transport_cost"],
-  ["finance_subgroup_iron_ore","iron_plant","price_iron_ore_"],
+  ["finance_subgroup_iron_ore","iron_plant","price_iron_ore"],
 ]
 
 plant:
