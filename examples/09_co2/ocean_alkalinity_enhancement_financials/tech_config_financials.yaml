@@ -17,7 +17,7 @@ technologies:
         resource_data_averaging_method: "weighted_average" #"weighted_average", "average" or "nearest"
         operation_model: "cosine-loss" #turbine operation model
         default_turbulence_intensity: 0.06
-        enable_caching: False #whether to use cached results
+        enable_caching: True #whether to use cached results
         cache_dir: "cache" #directory to save or load cached data
         layout:
           layout_mode: "basicgrid"
