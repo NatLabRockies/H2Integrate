@@ -2,19 +2,6 @@ name: "technology_config"
 description: "This hybrid plant produces methanol"
 
 technologies:
-  # hopp:
-  #   performance_model:
-  #     model: "hopp"
-  #   cost_model:
-  #     model: "hopp"
-  #   model_inputs:
-  #     shared_parameters:
-  #       cost_year: 2019
-  #     performance_parameters:
-  #       cache_dir: "cache"
-  #       enable_caching: True
-  #       electrolyzer_rating: 156. # MW
-  #       hopp_config: !include tech_inputs/hopp_config.yaml
   wind:
     performance_model:
       model: "pysam_wind_plant_performance"
