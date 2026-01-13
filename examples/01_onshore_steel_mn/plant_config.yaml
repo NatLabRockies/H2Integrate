@@ -53,12 +53,12 @@ finance_parameters:
     electricity:
       commodity: "electricity"
       finance_groups: ["profast_model"]
-      technologies: ["hopp"]
+      technologies: ["hopp", "battery"]
     hydrogen:
       commodity: "hydrogen"
       commodity_desc: "delivered"
       finance_groups: ["profast_model"]
-      technologies: ["hopp", "electrolyzer", "h2_storage"]
+      technologies: ["hopp", "battery", "electrolyzer", "h2_storage"]
     steel:
       commodity: "steel"
       finance_groups: ["steel"]

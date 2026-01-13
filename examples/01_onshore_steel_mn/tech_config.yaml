@@ -48,7 +48,7 @@ technologies:
         commodity_units: "kW"
         energy_capex: 310 # $/kWh from 2024 ATB year 2025
         power_capex: 311 # $/kW from 2024 ATB year 2025
-        opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
+        opex_fraction: 0.024999840573439444
       control_parameters:
         commodity_storage_units: "kW"
         tech_name: "battery"

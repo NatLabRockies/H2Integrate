@@ -67,6 +67,11 @@ def test_simple_ammonia_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "02_texas_ammonia.yaml")
 
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
