@@ -33,7 +33,7 @@ technologies:
     operational_losses: 10.49
     model_name: floris
     timestep: [0, 8760]
-    floris_config: tech_inputs/floris_input_lbw_6MW.yaml
+    floris_config: !include ../../01_onshore_steel_mn/tech_inputs/floris_input_lbw_6MW.yaml
     fin_model:
       battery_system:
         batt_replacement_schedule_percent: [0]

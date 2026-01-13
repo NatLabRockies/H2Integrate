@@ -1,7 +1,0 @@
-name: "H2Integrate_config"
-
-system_summary: "This reference hybrid plant contains a hybrid plant in Texas that's producing ammonia"
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config.yaml"
-plant_config: "plant_config.yaml"
