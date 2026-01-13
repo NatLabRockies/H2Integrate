@@ -408,22 +408,32 @@ def test_splitter_wind_doc_h2_example(subtests):
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Check Electrical AEP"):
+        electrical_aep = model.prob.get_val(
+            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
+            units="MW*h/year",
+        )
+
+        assert pytest.approx(electrical_aep[0], rel=1e-3) == 511267.03627
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 10.25515911
+            == 9.82319908
         )
 
     with subtests.test("Check LCOC"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 14.19802243
+            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 13.655268
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.1385128
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 132.395036462
         )
 
 
@@ -549,12 +559,17 @@ def test_wind_wave_oae_example_with_finance(subtests):
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.09180
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 92.269663
         )
 
     with subtests.test("Check Carbon Credit"):
-        assert pytest.approx(model.prob.get_val("oae.carbon_credit_value"), rel=1e-3) == 569.5
+        assert (
+            pytest.approx(model.prob.get_val("oae.carbon_credit_value")[0], rel=1e-3) == 574.37466
+        )
 
 
 def test_natural_gas_example(subtests):
