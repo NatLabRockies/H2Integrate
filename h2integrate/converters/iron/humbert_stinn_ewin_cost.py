@@ -1,9 +1,9 @@
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, must_equal
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.converters.iron.stinn.cost_model import stinn_capex_calc, humbert_opex_calc
 
 
