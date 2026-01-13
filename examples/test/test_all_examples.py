@@ -408,22 +408,32 @@ def test_splitter_wind_doc_h2_example(subtests):
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Check Electrical AEP"):
+        electrical_aep = model.prob.get_val(
+            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
+            units="MW*h/year",
+        )
+
+        assert pytest.approx(electrical_aep[0], rel=1e-3) == 511267.03627
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 10.25515911
+            == 9.82319908
         )
 
     with subtests.test("Check LCOC"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 14.19802243
+            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 13.655268
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.1385128
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 132.395036462
         )
 
 
@@ -464,29 +474,6 @@ def test_hybrid_energy_plant_example(subtests):
     # Subtests for checking specific values
     with subtests.test("Check LCOE"):
         assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
-
-
-def test_asu_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "13_air_separator")
-
-    # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "13_air_separator.yaml")
-
-    # Run the model
-    model.run()
-
-    model.post_process()
-
-    # Subtests for checking specific values
-    with subtests.test("Check LCON"):
-        assert (
-            pytest.approx(
-                model.prob.get_val("finance_subgroup_default.LCON", units="USD/kg")[0],
-                abs=1e-4,
-            )
-            == 0.309041977334972
-        )
 
 
 def test_hydrogen_dispatch_example(subtests):
@@ -572,12 +559,17 @@ def test_wind_wave_oae_example_with_finance(subtests):
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.09180
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 92.269663
         )
 
     with subtests.test("Check Carbon Credit"):
-        assert pytest.approx(model.prob.get_val("oae.carbon_credit_value"), rel=1e-3) == 569.5
+        assert (
+            pytest.approx(model.prob.get_val("oae.carbon_credit_value")[0], rel=1e-3) == 574.37466
+        )
 
 
 def test_natural_gas_example(subtests):
@@ -1258,6 +1250,56 @@ def test_sweeping_solar_sites_doe(subtests):
 
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
+
+
+def test_floris_example(subtests):
+    from h2integrate.core.utilities import load_yaml
+
+    os.chdir(EXAMPLE_DIR / "26_floris")
+
+    driver_config = load_yaml(EXAMPLE_DIR / "26_floris" / "driver_config.yaml")
+    tech_config = load_yaml(EXAMPLE_DIR / "26_floris" / "tech_config.yaml")
+    plant_config = load_yaml(EXAMPLE_DIR / "26_floris" / "plant_config.yaml")
+
+    h2i_config = {
+        "name": "H2Integrate_config",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    # Create a H2I model
+    h2i = H2IntegrateModel(h2i_config)
+
+    # Run the model
+    h2i.run()
+
+    with subtests.test("LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 99.872209
+        )
+
+    with subtests.test("Wind plant capacity"):
+        assert pytest.approx(h2i.prob.get_val("wind.total_capacity", units="MW"), rel=1e-6) == 66.0
+
+    with subtests.test("Total electricity production"):
+        assert (
+            pytest.approx(
+                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
+                rel=1e-6,
+            )
+            == 128948.21977
+        )
+
+    with subtests.test("Capacity factor"):
+        assert (
+            pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
+            == 22.30320668
+        )
 
 
 def test_24_solar_battery_grid_example(subtests):

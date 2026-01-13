@@ -164,7 +164,7 @@ class CacheBaseConfig(BaseConfig):
             self.cache_dir = Path(self.cache_dir)
 
         # Create a cache directory if it doesn't exist
-        if not self.cache_dir.exists():
+        if self.enable_caching and not self.cache_dir.exists():
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
 

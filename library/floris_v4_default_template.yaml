@@ -15,14 +15,11 @@ solver:
 flow_field:
   air_density: 1.225
   reference_wind_height: -1
-  wind_directions:
-  - 270.0
+  wind_directions: []
   wind_shear: 0.33
-  wind_speeds:
-  - 8.0
+  wind_speeds: []
   wind_veer: 0.0
-  turbulence_intensities:
-  - 0.06
+
 wake:
   model_strings:
     combination_model: sosfs
@@ -88,13 +85,7 @@ wake:
     jensen:
       we: 0.05
 farm:
-  layout_x:
-    - 0.0
-  layout_y:
-    - 0.0
-  turbine_type:
-  - operation_model: cosine-loss
-    # hub_height: 115.0
-    # turbine_type: lbw_6MW
-    # rotor_diameter: 196.0
-    # TSR: 9.0
+  layout_x: []
+  layout_y: []
+  # turbine_type:
+  # - operation_model: cosine-loss

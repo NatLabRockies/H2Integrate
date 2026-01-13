@@ -1,0 +1,5 @@
+name: "driver_config"
+description: "This analysis runs a wind plant using FLORIS"
+
+general:
+  folder_output: floris_wind_outputs

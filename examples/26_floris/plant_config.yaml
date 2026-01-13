@@ -1,0 +1,54 @@
+name: "plant_config"
+description: ""
+
+site:
+  latitude: 44.04218
+  longitude: -95.19757
+
+  resources:
+    wind_resource:
+      resource_model: "openmeteo_wind_api"
+      resource_parameters:
+        resource_year: 2023
+
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['wind_resource', 'wind', 'wind_resource_data'],
+]
+
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+finance_parameters:
+  finance_groups:
+    finance_model: "ProFastComp"
+    model_inputs:
+      params:
+        analysis_start_year: 2032
+        installation_time: 36 # months
+        inflation_rate: 0.0 # 0 for nominal analysis
+        discount_rate: 0.09
+        debt_equity_ratio: 2.62
+        property_tax_and_insurance: 0.03 # percent of CAPEX
+        total_income_tax_rate: 0.257
+        capital_gains_tax_rate: 0.15 # H2FAST default
+        sales_tax_rate: 0.07375
+        debt_interest_rate: 0.07
+        debt_type: "Revolving debt" # can be "Revolving debt" or "One time loan".
+        loan_period_if_used: 0 # H2FAST default, not used for revolving debt
+        cash_onhand_months: 1 # H2FAST default
+        admin_expense: 0.00 # percent of sales H2FAST default
+      capital_items:
+        depr_type: "MACRS" # can be "MACRS" or "Straight line"
+        depr_period: 7 #years
+        refurb: [0.]
+  finance_subgroups:
+    electricity:
+      commodity: "electricity"
+      commodity_stream: "wind" #use the total electricity output from the combiner for the finance calc
+      technologies: ["wind"]
+  cost_adjustment_parameters:
+    cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
+    target_dollar_year: 2022
