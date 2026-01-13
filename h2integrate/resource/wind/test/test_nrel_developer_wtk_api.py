@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 import openmdao.api as om
@@ -89,7 +90,18 @@ def test_wind_resource_loaded_from_default_dir(plant_simulation_utc_start, site_
         assert len(temp_keys) == len(wspd_keys)
     with subtests.test("3 heights for pressure data"):
         assert len(pressure_keys) == 3
+    with subtests.test("Start time"):
+        assert wtk_data["start_time"] == "2012/01/01 00:30:00 (+0000)"
+    with subtests.test("Time step"):
+        assert wtk_data["dt"] == 3600
 
     data_keys = temp_keys + wdir_keys + wspd_keys + pressure_keys
     with subtests.test("resource data is 8760 in length"):
         assert all(len(wtk_data[k]) == 8760 for k in data_keys)
+
+    # check that minor changes to the data will create a unique hash
+    hash_init = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
+    wtk_data["start_time"] = "2013/01/01 00:30:00 (+0000)"
+    hash_modified = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
+    with subtests.test("Unique hash with modified start time"):
+        assert hash_init != hash_modified
