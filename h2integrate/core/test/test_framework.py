@@ -324,19 +324,19 @@ def test_resource_connection_error_missing_resource():
 
 def test_reports_turned_off():
     # Change the current working directory to the example's directory
-    os.chdir(examples_dir / "13_air_separator")
+    os.chdir(examples_dir / "07_run_of_river_plant")
 
     # Path to the original config files in the example directory
     orig_plant_config = Path.cwd() / "plant_config.yaml"
     orig_driver_config = Path.cwd() / "driver_config.yaml"
     orig_tech_config = Path.cwd() / "tech_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "13_air_separator.yaml"
+    orig_highlevel_yaml = Path.cwd() / "07_run_of_river.yaml"
 
     # Create temporary config files
     temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
     temp_driver_config = Path.cwd() / "temp_driver_config.yaml"
     temp_tech_config = Path.cwd() / "temp_tech_config.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_13_air_separator.yaml"
+    temp_highlevel_yaml = Path.cwd() / "temp_07_run_of_river.yaml"
 
     # Copy the original config files to temp files
     shutil.copy(orig_plant_config, temp_plant_config)

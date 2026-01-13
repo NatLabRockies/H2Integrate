@@ -72,3 +72,6 @@ def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config):
 
     with subtests.test("Check unique filename with modified config"):
         assert len(cache_filename_new) > 0
+
+    # Delete cache files and the testing cache dir
+    shutil.rmtree(cache_dir)

@@ -33,8 +33,8 @@ technologies:
     turbine_rating_kw: 15000.0
     model_name: floris
     timestep: [0, 8760]
-    floris_config: !include floris/floris_input_osw_15MW.yaml
-    fin_model: !include default_fin_config.yaml
+    floris_config: !include ../../tech_inputs/floris/floris_input_osw_15MW.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   wave:
     device_rating_kw: 286 #enough wave capacity for S1/S2
     wave_power_matrix:
@@ -60,7 +60,7 @@ technologies:
     - [9.250000, 0.000000, 0.000000, 0.000000, 0.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 242.100000, 204.100000, 0.000000]
     - [9.750000, 0.000000, 0.000000, 0.000000, 0.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 267.400000, 225.600000, 0.000000]
     num_devices: 108
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
     cost_inputs:
       reference_model_num: 3
       water_depth: 482
@@ -75,10 +75,10 @@ technologies:
     minimum_SOC: 20.0
     maximum_SOC: 100.0
     initial_SOC: 90.0
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 362129.538
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../tech_inputs/default_fin_config.yaml
 
 config:
   dispatch_options:
