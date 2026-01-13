@@ -7,6 +7,8 @@ technologies:
       model: "hopp"
     cost_model:
       model: "hopp"
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_converter"
     model_inputs:
       shared_parameters:
         cost_year: 2019
@@ -15,6 +17,44 @@ technologies:
         enable_caching: True
         hopp_config: !include tech_inputs/hopp_config.yaml
         electrolyzer_rating: 720. # MW
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
+  battery:
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_storage"
+    control_strategy:
+      model: "heuristic_load_following_controller"
+    performance_model:
+      model: "pysam_battery"
+    cost_model:
+      model: "atb_battery_cost"
+    model_inputs:
+      shared_parameters:
+        commodity_name: "electricity"
+        max_charge_rate: 375740.4 #kW
+        max_capacity: 375745.2 #kWh
+        n_control_window: 24
+        n_horizon_window: 48
+        init_charge_percent: 0.9
+        max_charge_percent: 1.0
+        min_charge_percent: 0.2
+        system_commodity_interface_limit: 1e12
+      performance_parameters:
+        system_model_source: "pysam"
+        chemistry: "LFPGraphite"
+      cost_parameters:
+        cost_year: 2019
+        commodity_units: "kW"
+        energy_capex: 310 # $/kWh from 2024 ATB year 2025
+        power_capex: 311 # $/kW from 2024 ATB year 2025
+        opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
+      control_parameters:
+        commodity_storage_units: "kW"
+        tech_name: "battery"
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
   electrolyzer:
     performance_model:
       model: "eco_pem_electrolyzer_performance"

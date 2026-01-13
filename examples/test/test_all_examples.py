@@ -16,6 +16,10 @@ def test_steel_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "01_onshore_steel_mn.yaml")
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 720.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 
     # Run the model
     model.run()
