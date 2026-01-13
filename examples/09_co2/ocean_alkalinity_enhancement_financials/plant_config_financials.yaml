@@ -4,6 +4,11 @@ description: "This plant is located in Puget Sound WA, USA"
 site:
   latitude: 48.153889
   longitude: -122.774111
+  resources:
+    wind_resource:
+      resource_model: "wind_toolkit_v2_api"
+      resource_parameters:
+        resource_year: 2013
 
 plant:
   plant_life: 20
@@ -13,9 +18,14 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "oae", "electricity", "cable"],
+  ["wind", "oae", "electricity", "cable"],
   ["finance_subgroup_electricity", "oae", "LCOE"]
   # etc
+]
+
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['wind_resource', 'wind', 'wind_resource_data'],
 ]
 
 finance_parameters:
@@ -44,7 +54,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
-      technologies: ["hopp"]
+      technologies: ["wind"]
     # oae:
     #   commodity: "co2"
     #   finance_groups: ["oae"]

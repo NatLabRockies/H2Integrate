@@ -133,6 +133,7 @@ Below summarizes the available performance, cost, and financial models for each 
 - `wind`: wind turbine
     - performance models:
         + `'pysam_wind_plant_performance'`
+        + `'floris_wind_plant_performance'`
     - cost models:
         + `'atb_wind_cost'`
 - `solar`: solar-PV panels

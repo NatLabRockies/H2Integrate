@@ -16,8 +16,8 @@ site: #!include flatirons_site.yaml
         - [0.0, 25000]
         - [25000, 25000]
         - [25000, 0.0]
-  solar_resource_file: "tech_inputs/weather/solar/32.31714_-100.18_psmv3_60_2013.csv"
-  wind_resource_file: "tech_inputs/weather/wind/32.31714_-100.18_windtoolkit_2013_60min_100m_120m.srw"
+  solar_resource_file: "../../02_texas_ammonia/tech_inputs/weather/solar/32.31714_-100.18_psmv3_60_2013.csv"
+  wind_resource_file: "../../02_texas_ammonia/tech_inputs/weather/wind/32.31714_-100.18_windtoolkit_2013_60min_100m_120m.srw"
   wave_resource_file: ""
   grid_resource_file: ""
   hub_height: 115.0
@@ -34,18 +34,17 @@ technologies:
     model_name: pysam #floris
     timestep: [0, 8760]
     # floris_config: !include floris_input_lbw_6MW.yaml
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
   pv:
     system_capacity_kw: 350000
     dc_degradation: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
   grid:
     interconnect_kw: 200000 # Set higher than rated generation capacity
-    fin_model: !include default_fin_config.yaml
+    fin_model: !include ../../01_onshore_steel_mn/tech_inputs/default_fin_config.yaml
 
 config:
   simulation_options:
-    cache: true
     wind:
       skip_financial: false
   dispatch_options:

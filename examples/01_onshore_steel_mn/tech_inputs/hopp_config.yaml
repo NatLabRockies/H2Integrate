@@ -52,7 +52,6 @@ technologies:
 
 config:
   simulation_options:
-    cache: true
     wind:
       skip_financial: false
   dispatch_options:
