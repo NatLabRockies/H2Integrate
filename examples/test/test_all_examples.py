@@ -383,7 +383,10 @@ def test_wind_wave_doc_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_doc.yaml")
-
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 340.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     # Run the model
     model.run()
 
@@ -393,7 +396,7 @@ def test_wind_wave_doc_example(subtests):
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 2.26955589
+            == 2.2665890992
         )
 
     with subtests.test("Check LCOE"):
