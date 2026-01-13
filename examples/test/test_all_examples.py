@@ -160,6 +160,11 @@ def test_ammonia_synloop_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "12_ammonia_synloop.yaml")
 
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -167,10 +172,16 @@ def test_ammonia_synloop_example(subtests):
 
     # Subtests for checking specific values
     with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-6) == 1.75469962e09
+        hopp_capex = model.prob.get_val("hopp.CapEx")
+        battery_capex = model.prob.get_val("battery.CapEx")
+        hopp_batt_capex = hopp_capex + battery_capex
+        assert pytest.approx(hopp_batt_capex, rel=1e-6) == 1.75469962e09
 
     with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-6) == 32953490.4
+        hopp_opex = model.prob.get_val("plant.hopp.hopp.OpEx")
+        battery_opex = model.prob.get_val("battery.OpEx")
+        hopp_batt_opex = hopp_opex + battery_opex
+        assert pytest.approx(hopp_batt_opex, rel=1e-6) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-6) == 6.00412524e08
@@ -535,6 +546,11 @@ def test_wind_wave_oae_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_oae.yaml")
 
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 330.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -544,7 +560,7 @@ def test_wind_wave_oae_example(subtests):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC"), rel=1e-3) == 37.82
+        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.48
 
     with subtests.test("Check LCOE"):
         assert (
