@@ -64,7 +64,7 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         self.add_output("output_capacity", val=0.0, units="kg/year")
 
     def compute(self, inputs, outputs):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Parse inputs
         elec_in = inputs["electricity_in"]
@@ -72,12 +72,6 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         pct_fe = inputs["ore_fe_wt_pct"]
         kwh_kg_fe = inputs["spec_energy_cons_fe"]
         cap_kw = inputs["capacity"] * 1000
-
-        # If no connected input, set ore / electricity to max needed
-        if self.get_source("electricity_in")[:9] == "_auto_ivc":
-            elec_in = np.full(n_timesteps, cap_kw)
-        if self.get_source("iron_ore_in")[:9] == "_auto_ivc":
-            ore_in = np.full(n_timesteps, cap_kw / kwh_kg_fe / pct_fe * 100)
 
         # Calculate max iron production for each input
         fe_from_ore = ore_in * pct_fe / 100
