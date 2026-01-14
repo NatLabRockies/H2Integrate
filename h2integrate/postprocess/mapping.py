@@ -283,25 +283,25 @@ def plot_geospatial_point_heat_map(
 
     gdfs_for_bounds = [results_gdf]
 
-    if all(v is None for v in [fig, ax, base_layer_gdf]):
-        # create new fig and ax objects (creating new map)
+    # Ensure fig, ax, and base_layer_gdf are all None or have values provided, not mixed
+    _check = [x is None for x in (fig, ax, base_layer_gdf)]
+    if all(_check):
         fig, ax = plt.subplots(
             1,
             figsize=map_preferences.figsize,
             constrained_layout=map_preferences.constrained_layout,
         )
-    elif all(v is not None for v in [fig, ax, base_layer_gdf]):
-        # Set figure and axes as current fig, ax objects (adding layer to existing map)
-        plt.figure(fig.number)
-        plt.sca(ax)
-        base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, results_gdf)
-        gdfs_for_bounds.extend(base_layer_gdf)
-    else:
+    elif any(_check):
         msg = (
             "The fig, ax, and base_layer_gdf arguments must be provided together to add a layer",
             "to an existing plot or all must be omitted/None to create a new plot",
         )
         raise ValueError(msg)
+    else:
+        plt.figure(fig.number)
+        plt.sca(ax)
+        base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, results_gdf)
+        gdfs_for_bounds.extend(base_layer_gdf)
 
     # Determine appropriate lower and upper bounds for the colormap and legend
     if map_preferences.colorbar_limits is None:
@@ -521,25 +521,25 @@ def plot_straight_line_shipping_routes(
 
     gdfs_for_bounds = [shipping_route_gdf]
 
-    if all(v is None for v in [fig, ax, base_layer_gdf]):
-        # create new fig and ax objects (creating new map)
+    # Ensure all of fig, ax, and base_layer_gdf are all None or have values provided, not mixed
+    _check = [x is None for x in (fig, ax, base_layer_gdf)]
+    if all(_check):
         fig, ax = plt.subplots(
             1,
             figsize=map_preferences.figsize,
             constrained_layout=map_preferences.constrained_layout,
         )
-    elif all(v is not None for v in [fig, ax, base_layer_gdf]):
-        # set figure and axes as current fig,ax objects
-        plt.figure(fig.number)
-        plt.sca(ax)
-        base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, shipping_route_gdf)
-        gdfs_for_bounds.extend(base_layer_gdf)
-    else:
+    elif any(_check):
         msg = (
             "The fig, ax, and base_layer_gdf arguments must be provided together to add a layer",
             "to an existing plot or all must be omitted/None to create a new plot",
         )
         raise ValueError(msg)
+    else:
+        plt.figure(fig.number)
+        plt.sca(ax)
+        base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, shipping_route_gdf)
+        gdfs_for_bounds.extend(base_layer_gdf)
 
     shipping_route_gdf.plot(
         ax=ax,
