@@ -253,9 +253,9 @@ def plot_geospatial_point_heat_map(
 
     case_results_fpath = find_file(case_results_fpath)
 
-    if (".csv") in case_results_fpath.suffix:
+    if ".csv" in case_results_fpath.suffix:
         results_df = pd.read_csv(case_results_fpath)
-    elif (".sql") in case_results_fpath.suffix:
+    elif ".sql" in case_results_fpath.suffix:
         results_df = convert_sql_to_csv_summary(case_results_fpath, save_sql_file_to_csv)
     else:
         raise TypeError(
@@ -491,7 +491,7 @@ def plot_straight_line_shipping_routes(
 
     shipping_coords_fpath = find_file(shipping_coords_fpath)
 
-    if (".csv") in shipping_coords_fpath.suffix:
+    if ".csv" in shipping_coords_fpath.suffix:
         shipping_coords_df = pd.read_csv(shipping_coords_fpath, index_col=0)
     else:
         raise TypeError(
