@@ -5,13 +5,17 @@ technologies:
   hopp:
     performance_model:
       model: "hopp"
-      config: !include tech_inputs/hopp_config.yaml
     cost_model:
       model: "hopp"
-    electrolyzer_rating: 156. # MW
     model_inputs:
-      cost_parameters:
+      shared_parameters:
         cost_year: 2019
+      performance_parameters:
+        cache_dir: "cache"
+        enable_caching: True
+        electrolyzer_rating: 156. # MW
+        hopp_config: !include tech_inputs/hopp_config.yaml
+
   electrolyzer:
     performance_model:
       model: "eco_pem_electrolyzer_performance"

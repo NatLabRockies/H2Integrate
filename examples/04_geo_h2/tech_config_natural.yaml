@@ -9,15 +9,17 @@ technologies:
       model: mathur_modified_geoh2_cost
     model_inputs:
       shared_parameters:
-        borehole_depth: 2000
+        borehole_depth: 300
         well_diameter: small
         well_geometry: vertical
       performance_parameters:
         rock_type: 'peridotite'
         grain_size: 0.01
-        site_prospectivity: 1
-        initial_wellhead_flow: 200
-        gas_reservoir_size: 35000
+        use_prospectivity: False
+        site_prospectivity: 0.7
+        wellhead_h2_concentration: 95
+        initial_wellhead_flow: 4000
+        gas_reservoir_size: 1000000
       cost_parameters:
         use_cost_curve: True
         test_drill_cost: 500000
@@ -31,3 +33,26 @@ technologies:
         contingency_pct: 50
         preprod_time: 6
         as_spent_ratio: 1.1
+  geoh2_well_surface:
+    performance_model:
+      model: aspen_geoh2_performance
+    cost_model:
+      model: aspen_geoh2_cost
+    model_inputs:
+      shared_parameters:
+        refit_coeffs: false
+        curve_input_fn: "aspen_results.csv"
+      performance_parameters:
+        size_from_wellhead_flow: True
+        max_flow_in: 0
+        perf_coeff_fn: "aspen_perf_coeffs.csv"
+      cost_parameters:
+        cost_year: 2022
+        cost_from_fit: True
+        custom_capex: 0
+        custom_opex: 0
+        cost_coeff_fn: "aspen_cost_coeffs.csv"
+        op_labor_rate: 69.52
+        overhead_rate: 0.5
+        electricity_price: 0.0832
+        water_price: 0.0

@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
@@ -17,6 +18,10 @@ def plant_config():
         },
         "plant": {
             "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
         },
         "finance_parameters": {
             "cost_adjustment_parameters": {
@@ -216,7 +221,7 @@ def test_iron_transport_cost_cleveland(plant_config, subtests):
     # land cost: 38.4320718826894 USD/tonne
     # water cost: 24.51091500406507 USD/tonne
     annual_ore_production = 12385.195376438356 * 365
-
+    hourly_ore_production = np.ones(8760) * annual_ore_production / 8760
     tech_config_chicago = {
         "model_inputs": {
             "performance_parameters": {
@@ -247,7 +252,7 @@ def test_iron_transport_cost_cleveland(plant_config, subtests):
 
     prob.setup()
 
-    prob.set_val("transport_cost.total_iron_ore_produced", annual_ore_production, units="t/year")
+    prob.set_val("transport_cost.iron_ore_in", hourly_ore_production, units="t/h")
 
     prob.run_model()
 

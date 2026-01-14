@@ -22,11 +22,20 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
+  # connect feedstocks to iron mine
   ["grid_feedstock","iron_mine","electricity","cable"],
   ["mine_feedstock","iron_mine","crude_ore","pipe"],
-  ["iron_mine","iron_transport","total_iron_ore_produced"],
-  ["iron_transport","iron_plant","iron_transport_cost"],
-  ["finance_subgroup_iron_ore","iron_plant","price_iron_ore"],
+  # connect feedstocks to iron plant
+  ["iron_mine","iron_plant","iron_ore","iron_transport"],
+  ["dri_grid_feedstock","iron_plant","electricity","cable"],
+  ["catalyst_feedstock","iron_plant","reformer_catalyst","pipe"],
+  ["water_feedstock","iron_plant","water","pipe"],
+  ["natural_gas_feedstock","iron_plant","natural_gas","pipe"],
+  # connect feedstocks to steel plant
+  ["eaf_grid_feedstock","steel_plant","electricity","cable"],
+  ["eaf_water_feedstock","steel_plant","water","pipe"],
+  ["eaf_natural_gas_feedstock","steel_plant","natural_gas","pipe"],
+  ["iron_plant","steel_plant","pig_iron","pipe"],
 ]
 
 plant:
@@ -65,8 +74,34 @@ finance_parameters:
     iron_ore:
       commodity: "iron_ore"
       commodity_stream: "iron_mine"
-      technologies: ["iron_mine"]
+      technologies: ["iron_mine", "grid_feedstock", "mine_feedstock"]
     pig_iron:
       commodity: "pig_iron"
       commodity_stream: "iron_plant"
-      technologies: ["iron_plant"] #
+      technologies:
+      - "iron_mine"
+      - "grid_feedstock"
+      - "mine_feedstock"
+      - "iron_transport"
+      - "iron_plant"
+      - "dri_grid_feedstock"
+      - "catalyst_feedstock"
+      - "water_feedstock"
+      - "natural_gas_feedstock"
+    steel:
+      commodity: "steel"
+      commodity_stream: "steel_plant"
+      technologies:
+      - "iron_mine"
+      - "grid_feedstock"
+      - "mine_feedstock"
+      - "iron_transport"
+      - "iron_plant"
+      - "dri_grid_feedstock"
+      - "catalyst_feedstock"
+      - "water_feedstock"
+      - "natural_gas_feedstock"
+      - "eaf_water_feedstock"
+      - "eaf_natural_gas_feedstock"
+      - "eaf_grid_feedstock"
+      - "steel_plant"

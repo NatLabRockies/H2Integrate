@@ -70,10 +70,48 @@ def test_baseline_iron_dri_costs_rosner_ng(
     plant_config, driver_config, iron_dri_config_rosner_ng, subtests
 ):
     expected_capex = 403808062.6981323
-    expected_var_om = 373666381.7736174
+    expected_var_om = 369445330.68402404
     expected_fixed_om = 60103761.59958463
     capacity = 3885.1917808219177
 
+    prob = om.Problem()
+    iron_dri_perf = IronPlantPerformanceComponent(
+        plant_config=plant_config,
+        tech_config=iron_dri_config_rosner_ng,
+        driver_config=driver_config,
+    )
+
+    iron_dri_cost = IronPlantCostComponent(
+        plant_config=plant_config,
+        tech_config=iron_dri_config_rosner_ng,
+        driver_config=driver_config,
+    )
+
+    prob.model.add_subsystem("dri_perf", iron_dri_perf, promotes=["*"])
+    prob.model.add_subsystem("dri_cost", iron_dri_cost, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    annual_pig_iron = prob.get_val("dri_perf.total_pig_iron_produced", units="t/year")
+    with subtests.test("Annual Ore"):
+        assert pytest.approx(annual_pig_iron[0] / 365, rel=1e-3) == capacity
+    with subtests.test("CapEx"):
+        assert pytest.approx(prob.get_val("dri_cost.CapEx")[0], rel=1e-6) == expected_capex
+    with subtests.test("OpEx"):
+        assert pytest.approx(prob.get_val("dri_cost.OpEx")[0], rel=1e-6) == expected_fixed_om
+    with subtests.test("VarOpEx"):
+        assert pytest.approx(prob.get_val("dri_cost.VarOpEx")[0], rel=1e-6) == expected_var_om
+
+
+def test_baseline_iron_dri_costs_rosner_h2(
+    plant_config, driver_config, iron_dri_config_rosner_ng, subtests
+):
+    expected_capex = 246546589.2914324
+    expected_var_om = 888529893.2442514
+    expected_fixed_om = 53360873.348792635
+    capacity = 3885.1917808219177
+
+    iron_dri_config_rosner_ng["model_inputs"]["shared_parameters"].update({"winning_type": "h2"})
     prob = om.Problem()
     iron_dri_perf = IronPlantPerformanceComponent(
         plant_config=plant_config,
