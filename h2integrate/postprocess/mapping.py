@@ -265,11 +265,14 @@ def plot_geospatial_point_heat_map(
         raise TypeError(msg)
 
     # Auto detect latitude and longitude column names if not provided as argument
-    if latitude_var_name is None:
-        latitude_var_name, _ = auto_detect_lat_long_columns(results_df)
-
-    if longitude_var_name is None:
-        _, longitude_var_name = auto_detect_lat_long_columns(results_df)
+    if all(x is None for x in (latitude_var_name, longitude_var_name)):
+        latitude_var_name, longitude_var_name = auto_detect_lat_long_columns(
+            results_df, which="both"
+        )
+    elif latitude_var_name is None:
+        latitude_var_name = auto_detect_lat_long_columns(results_df, which="lat")
+    elif longitude_var_name is None:
+        longitude_var_name = auto_detect_lat_long_columns(results_df, which="long")
 
     results_gdf = gpd.GeoDataFrame(
         results_df,
@@ -501,11 +504,14 @@ def plot_straight_line_shipping_routes(
         )
 
     # Auto detect latitude and longitude column names if not provided as argument
-    if latitude_var_name is None:
-        latitude_var_name, _ = auto_detect_lat_long_columns(shipping_coords_df)
-
-    if longitude_var_name is None:
-        _, longitude_var_name = auto_detect_lat_long_columns(shipping_coords_df)
+    if all(x is None for x in (latitude_var_name, longitude_var_name)):
+        latitude_var_name, longitude_var_name = auto_detect_lat_long_columns(
+            shipping_coords_df, which="both"
+        )
+    elif latitude_var_name is None:
+        latitude_var_name = auto_detect_lat_long_columns(shipping_coords_df, which="lat")
+    elif longitude_var_name is None:
+        longitude_var_name = auto_detect_lat_long_columns(shipping_coords_df, which="long")
 
     shipping_coords_df = shipping_coords_df[[longitude_var_name, latitude_var_name]]
     shipping_coords_dict = {
@@ -637,7 +643,7 @@ def calculate_geodataframe_total_bounds(*gdfs: gpd.GeoDataFrame | list[gpd.GeoDa
     return coord_range_dict
 
 
-def auto_detect_lat_long_columns(results_df: pd.DataFrame):
+def auto_detect_lat_long_columns(results_df: pd.DataFrame, which: str = "both"):
     """
     Auto detect latitude and longitude column names in a pandas DataFrame.
 
@@ -648,6 +654,8 @@ def auto_detect_lat_long_columns(results_df: pd.DataFrame):
     Args:
         results_df (pd.DataFrame): A pandas DataFrame containing latitude and longitude information
             within its columns.
+        which (str, optional): A string to specify which variables to attempt to autodetect.
+            Defaults to "both".
 
     Returns:
         latitude_var_name (str): The detected column name corresponding to latitude values.
@@ -658,34 +666,41 @@ def auto_detect_lat_long_columns(results_df: pd.DataFrame):
             columns are found for either coordinate, resulting in an ambiguous match.
     """
 
-    # regex expression provides case insensitive search of the keywords
-    keywords = ["lat", "latitude"]
-    regex = "(?i)" + "|".join(keywords)
-    # return dataframe column names that match regex expression
-    matching_columns = results_df.filter(regex=regex).columns
-    # raise error if unable to detect a singular latitude column
-    if len(matching_columns) == 0 or len(matching_columns) > 1:
-        msg = (
-            "Unable to automatically detect the latitude variable / column in the data.",
-            "Please specify the exact variable name using the latitude_var_name argument",
-        )
-        raise KeyError(msg)
+    if which not in ("lat", "long", "both"):
+        raise ValueError("which argument must be 'lat', 'long', or 'both'.")
 
-    latitude_var_name = str(matching_columns[0])
+    if which in ("lat", "both"):
+        latitude_var_name = None
+        keywords = ["lat", "latitude"]
+        regex = "(?i)" + "|".join(keywords)
+        matching_columns = results_df.filter(regex=regex).columns
+        if len(matching_columns) == 0 or len(matching_columns) > 1:
+            msg = (
+                "Unable to automatically detect the latitude variable / column in the data.",
+                "Please specify the exact variable name using the latitude_var_name argument",
+            )
+            raise KeyError(msg)
+        latitude_var_name = str(matching_columns[0])
 
-    keywords = ["lon", "long", "longitude"]
-    regex = "(?i)" + "|".join(keywords)
-    # return dataframe column names that match regex expression
-    matching_columns = results_df.filter(regex=regex).columns
-    # raise error if unable to detect a singular latitude column
-    if len(matching_columns) == 0 or len(matching_columns) > 1:
-        msg = (
-            "Unable to automatically detect the longitude variable / column in the data.",
-            "Please specify the exact variable name using the longitude_var_name argument",
-        )
-        raise KeyError(msg)
+    if which in ("long", "both"):
+        longitude_var_name = None
+        keywords = ["lon", "long", "longitude"]
+        regex = "(?i)" + "|".join(keywords)
+        matching_columns = results_df.filter(regex=regex).columns
+        if len(matching_columns) == 0 or len(matching_columns) > 1:
+            msg = (
+                "Unable to automatically detect the longitude variable / column in the data.",
+                "Please specify the exact variable name using the longitude_var_name argument",
+            )
+            raise KeyError(msg)
 
-    longitude_var_name = str(matching_columns[0])
+        longitude_var_name = str(matching_columns[0])
+
+    if which == "lat":
+        return latitude_var_name
+
+    if which == "long":
+        return longitude_var_name
 
     return latitude_var_name, longitude_var_name
 
