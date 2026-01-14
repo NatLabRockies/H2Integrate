@@ -55,7 +55,12 @@ def geoh2_subsurface_well():
             "site_prospectivity": 0.7,
             "wellhead_h2_concentration": 95,
             "initial_wellhead_flow": 4000,
+            "gas_flow_density": 0.1,
+            "ramp_up_time": 6,
+            "percent_increase_during_rampup": 0.05,
             "gas_reservoir_size": 1000000,
+            "use_arps_decline_curve": True,
+            "decline_fit_params": {"fit_name": "Eagle_Ford"},
         },
     }
     tech_config_dict = {"model_inputs": subsurface_perf_config}
