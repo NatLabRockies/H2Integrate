@@ -1357,7 +1357,7 @@ def test_27_iron_map_example(subtests):
     ex_27_out_dir = ex_27_dir / "ex_27_out"
     ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-    shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv.csv"
+    shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv"
     cases_sql_fpath = ex_27_out_dir / "cases.sql"
     cases_sql_fpath.unlink(missing_ok=True)
     cases_csv_fpath = ex_27_out_dir / "cases.csv"
@@ -1513,7 +1513,7 @@ def test_27_iron_map_example(subtests):
     ex_png_fpath.unlink(missing_ok=True)
     ex_27_out_dir.rmdir()
 
-    
+
 def test_natural_geoh2(subtests):
     os.chdir(EXAMPLE_DIR / "04_geo_h2")
 

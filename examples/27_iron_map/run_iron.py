@@ -1,8 +1,8 @@
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
-from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -21,7 +21,7 @@ save_plot_filepath.unlink(missing_ok=True)
 case_results_filepath = ex_27_out_dir / "cases.sql"
 ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
 shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv.csv"
+shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv"
 
 # Plot the LCOI results with geopandas and contextily
 # NOTE: you can swap './ex_27_out/cases.sql' with './ex_27_out/cases.csv' to read results from csv
