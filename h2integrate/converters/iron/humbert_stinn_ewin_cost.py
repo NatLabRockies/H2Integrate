@@ -1,3 +1,21 @@
+"""Iron electronwinning cost model based on Humbert et al. and Stinn and Allanore
+
+This module contains H2I cost configs and components for modeling iron electrowinning. It is
+based on the work of Humbert et al. (doi.org/10.1007/s40831-024-00878-3), which contains relevant
+iron electrowinning performance and cost data, and Stinn & Allanore (doi.org/10.1149.2/2.F06202IF),
+which presents an empirical capex model for electrowinning of many different metals based on many
+physical parameters of the electrowinning process. The capex model developed by Stinn & Allanore is
+imported from ./stinn/cost_model.py. This is combined with on
+
+This technology is selected in the tech_config as the cost_model
+"humbert_stinn_electrowinning_cost"
+
+Classes:
+    HumbertEwinCostConfig: Sets the required model_inputs fields.
+    HumbertEwinCostComponent: Defines initialize(), setup(), and compute() methods.
+
+"""
+
 import numpy as np
 from attrs import field, define
 
@@ -9,6 +27,17 @@ from h2integrate.converters.iron.stinn.cost_model import stinn_capex_calc, humbe
 
 @define
 class HumbertStinnEwinCostConfig(CostModelBaseConfig):
+    """Configuration class for the Humbert iron electrowinning performance model.
+
+    Args:
+        electrolysis_type (str): The type of electrowinning being performed. Options:
+            "ahe": Aqueous Hydroxide Electrolysis (AHE)
+            "mse": Molten Salt Electrolysis (MSE)
+            "moe": Molten Oxide Electrolysis (MOE)
+        cost_year (int): The dollar year of costs output by the model. Defaults to 2018, the dollar
+            year in which data was given in the Stinn paper
+    """
+
     electrolysis_type: str = field(
         kw_only=True, converter=(str.lower, str.strip), validator=contains(["ahe", "mse", "moe"])
     )  # product selection
@@ -17,9 +46,53 @@ class HumbertStinnEwinCostConfig(CostModelBaseConfig):
 
 
 class HumbertStinnEwinCostComponent(CostModelBaseClass):
-    """
-    Humbert: doi.org/10.1007/s40831-024-00878-3
-    Stinn: doi.org/10.1149.2/2.F06202IF
+    """OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
+
+    Default values for many inputs are set for 3 technology classes:
+        - Aqueous Hydroxide Electrolysis (AHE)
+        - Molten Salt Electrolysis (MSE)
+        - Molten Oxide Electrolysis (MOE)
+    All of these values come from the SI spreadsheet for the Humbert paper that can be downloaded
+    at doi.org/10.1007/s40831-024-00878-3 except for the default anode replacement interval.
+    These are exposed to OpenMDAO for potential future optimization/sensitivity analysis.
+
+    Inputs:
+        output_capacity (float):
+        iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
+        iron_transport_cost (float):
+        price_iron_ore (float)
+        electricity_in (array): Electric power input available in kW for each timestep.
+        price_electricity (float):
+        specific_energy_electrolysis (float): The specific electrical energy consumption required
+            to win pure iron (Fe) from iron ore - JUST the electrolysis step.
+        electrolysis_temp (float): Electrolysis temperature (°C).
+        electron_moles (float): Moles of electrons per mole of iron product.
+        current_density (float): Current density (A/m²).
+        electrode_area (float): Electrode area per cell (m²).
+        current_efficiency (float): Current efficiency (dimensionless).
+        cell_voltage (float): Cell operating voltage (V).
+        rectifier_lines (float): Number of rectifier lines.
+        positions (float): Labor rate (position-years/tonne).
+        NaOH_ratio (float): Ratio of NaOH consumed to Fe produced.
+        CaCl2_ratio (float): Ratio of CaCl2 consumed to Fe produced.
+        limestone_ratio (float): Ratio of limestone consumed to Fe produced.
+        anode_ratio (float): Ratio of annode mass to annual iron production.
+        anode_replacement_interval (float): Replacement interval of anodes (years)
+
+    Outputs:
+        CapEx (float): Total capital cost of the electrowinning plant (USD).
+        OpEx (float): Yearly operating expenses in USD/year which do NOT depend on plant output.
+        VarOpEx (float): Yearly operating expenses in USD/year which DO depend on plant output.
+        processing_capex (float): Portion of the capex that is apportioned to preprocessing of ore.
+        electrolysis_capex (float): Portion of the capex that is apportioned to electrolysis.
+        rectifier_capex (float): Portion of the capex that is apportioned to rectifiers.
+        labor_opex (float): Portion of the opex that is apportioned to labor.
+        NaOH_opex (float): Portion of the opex that is apportioned to NaOH.
+        CaCl2_opex (float): Portion of the opex that is apportioned to CaCl2.
+        limestone_opex (float): Portion of the opex that is apportioned to limestone.
+        anode_opex (float): Portion of the opex that is apportioned to anodes.
+        ore_opex (float): Portion of the opex that is apportioned to ore.
+        elec_opex (float): Portion of the opex that is apportioned to electricity.
     """
 
     def initialize(self):
@@ -37,7 +110,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         ewin_type = self.config.electrolysis_type
 
-        # Lookup specific inputs for electrowinning types from Humbert SI except where noted
+        # Lookup specific inputs for electrowinning types, mostly from the Humbert SI spreadsheet
+        # (noted where values did not come from this spreadsheet)
         if ewin_type == "ahe":
             # AHE - Capex
             T = 100  # Electrolysis temperature (°C)
@@ -47,8 +121,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             A = 250  # Electrode area per cell (m²)
             e = 0.66  # Current efficiency (dimensionless)
             N = 12  # Number of rectifier lines
-            # E_spec taken from Humbert Table 10 - average of Low and High estimates
-            E_spec = (1.869 + 2.72) / 2  # Specific energy of electrolysis (kWh/kg-Fe)
 
             # AHE - Opex
             positions = 739.2 / 2e6  # Labor rate (position-years/tonne)
@@ -68,8 +140,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             A = 250  # Electrode area per cell (m²)
             e = 0.66  # Current efficiency (dimensionless)
             N = 8  # Number of rectifier lines
-            # E_spec taken from Humbert Table 10 - average of Low and High estimates
-            E_spec = (1.81 + 2.08) / 2  # Specific energy of electrolysis (kWh/kg-Fe)
 
             # MSE - Opex
             positions = 499.2 / 2e6  # Labor rate (position-years/tonne)
@@ -89,8 +159,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             A = 30  # Electrode area per cell (m²)
             e = 0.95  # Current efficiency (dimensionless)
             N = 6  # Number of rectifier lines
-            # E_spec taken from Humbert Table 10 - average of Low and High estimates
-            E_spec = (2.89 + 4.45) / 2  # Specific energy of electrolysis (kWh/kg-Fe)
 
             # AHE - Opex
             positions = 230.4 / 2e6  # Labor rate (position-years/tonne)
@@ -108,6 +176,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("price_iron_ore", val=0.0, units="USD/Mg")
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
         self.add_input("price_electricity", val=0.0, units="USD/kW/h")
+        self.add_input("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
         # Set inputs for Stinn Capex model
         self.add_input("electrolysis_temp", val=T, units="C")
@@ -117,7 +186,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("current_efficiency", val=e, units=None)
         self.add_input("cell_voltage", val=V, units="V")
         self.add_input("rectifier_lines", val=N, units=None)
-        self.add_input("specific_energy", val=E_spec, units="kW*h/kg")
 
         # Set inputs for Humbert Opex model
         self.add_input("positions", val=positions, units="year/Mg")
@@ -150,7 +218,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         e = inputs["current_efficiency"]
         V = inputs["cell_voltage"]
         N = inputs["rectifier_lines"]
-        E_spec = inputs["specific_energy"]
+        E_spec = inputs["specific_energy_electrolysis"]
         P = inputs["output_capacity"]
         p = P * 1000 / 8760 / 3600  # kg/s
 
@@ -197,3 +265,13 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         )
         outputs["OpEx"] = np.sum(opex_breakdown)
         outputs["VarOpEx"] = np.sum(opex_breakdown[1:])
+        outputs["processing_capex"] = capex_breakdown[0]
+        outputs["electrolysis_capex"] = capex_breakdown[1]
+        outputs["rectifier_capex"] = capex_breakdown[2]
+        outputs["labor_opex"] = opex_breakdown[0]
+        outputs["NaOH_opex"] = opex_breakdown[1]
+        outputs["CaCl2_opex"] = opex_breakdown[2]
+        outputs["limestone_opex"] = opex_breakdown[3]
+        outputs["anode_opex"] = opex_breakdown[4]
+        outputs["ore_opex"] = opex_breakdown[5]
+        outputs["elec_opex"] = opex_breakdown[6]

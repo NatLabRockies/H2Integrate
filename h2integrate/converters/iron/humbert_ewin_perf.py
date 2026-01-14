@@ -1,13 +1,13 @@
 """Iron electronwinning performance model based on Humbert et al.
 
 This module contains H2I performance configs and components for modeling iron electrowinning. It is
-based of the work of Humbert et al. (doi.org/10.1007/s40831-024-00878-3) which reviews performance
+based on the work of Humbert et al. (doi.org/10.1007/s40831-024-00878-3) which reviews performance
 and TEA literature for three different types of iron electrowinning:
     - Aqueous Hydroxide Electrolysis (AHE)
     - Molten Salt Electrolysis (MSE)
     - Molten Oxide Electrolysis (MOE)
 
-This technology is selected in the tech_config as the performance_model.
+This technology is selected in the tech_config as the performance_model
 "humbert_electrowinning_performance"
 
 Classes:
@@ -81,22 +81,30 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         )
 
         ewin_type = self.config.electrolysis_type
-        # Lookup specific energy consumption from Humbert Table 10
+        # Look up performance parameters for each electrolysis type from Humbert Table 10
         if ewin_type == "ahe":
-            spec_energy_cons_lo = 2.781
-            spec_energy_cons_hi = 3.779
+            E_all_lo = 2.781
+            E_all_hi = 3.779
+            E_electrolysis_lo = 1.869
+            E_electrolysis_hi = 2.72
         elif ewin_type == "mse":
-            spec_energy_cons_lo = 2.720
-            spec_energy_cons_hi = 3.138
+            E_all_lo = 2.720
+            E_all_hi = 3.138
+            E_electrolysis_lo = 1.81
+            E_electrolysis_hi = 2.08
         elif ewin_type == "moe":
-            spec_energy_cons_lo = 2.89
-            spec_energy_cons_hi = 4.45
-        spec_energy_cons_fe = (spec_energy_cons_lo + spec_energy_cons_hi) / 2  # kWh/kg_Fe
+            E_all_lo = 2.89
+            E_all_hi = 4.45
+            E_electrolysis_lo = 2.89
+            E_electrolysis_hi = 4.45
+        E_all = (E_all_lo + E_all_hi) / 2  # kWh/kg_Fe
+        E_electrolysis = (E_electrolysis_lo + E_electrolysis_hi) / 2  # kWh/kg_Fe
 
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
         self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_input("ore_fe_wt_pct", val=self.config.ore_fe_wt_pct, units="percent")
-        self.add_input("spec_energy_cons_fe", val=spec_energy_cons_fe, units="kW*h/kg")
+        self.add_input("spec_energy_all", val=E_all, units="kW*h/kg")
+        self.add_input("spec_energy_electrolysis", val=E_electrolysis, units="kW*h/kg")
         self.add_input("capacity", val=self.config.capacity_mw, units="MW")
 
         self.add_output(
@@ -110,6 +118,7 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         self.add_output("sponge_iron_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("total_sponge_iron_produced", val=0.0, units="kg/year")
         self.add_output("output_capacity", val=0.0, units="kg/year")
+        self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
     def compute(self, inputs, outputs):
         self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -118,7 +127,8 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         elec_in = inputs["electricity_in"]
         ore_in = inputs["iron_ore_in"]
         pct_fe = inputs["ore_fe_wt_pct"]
-        kwh_kg_fe = inputs["spec_energy_cons_fe"]
+        kwh_kg_fe = inputs["spec_energy_all"]
+        kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]
         cap_kw = inputs["capacity"] * 1000
 
         # Calculate max iron production for each input
@@ -145,3 +155,4 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         outputs["electricity_consumed"] = elec_consume
         outputs["total_sponge_iron_produced"] = np.sum(fe_prod)
         outputs["output_capacity"] = cap_kw / kwh_kg_fe * 8760
+        outputs["specific_energy_electrolysis"] = kwh_kg_electrolysis
