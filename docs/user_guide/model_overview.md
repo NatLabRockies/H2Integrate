@@ -44,7 +44,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `hopp`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
-| `steel`          |  steel        | hydrogen |
+| `steel`          |  steel        | iron ore |
 | `ammonia`        |  ammonia      | nitrogen, hydrogen |
 | `doc`   |  co2     | electricity |
 | `oae`   |  co2     | electricity |
@@ -225,13 +225,18 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'iron_mine_performance_martin'`
     - cost models:
         + `'iron_mine_cost_martin'`
-- `iron_dri`: iron ore direct reduction
+- `iron_dri`: direct reduced iron
     - performance models:
         + `'ng_dri_performance_rosner'`
         + `'h2_dri_performance_rosner'`
     - cost models:
         + `'ng_dri_cost_rosner'`
         + `'h2_dri_cost_rosner'`
+- `iron_ewin`: iron electrowinning
+    - performance models:
+        + `'humbert_electrowinning_performance'`
+    - cost models:
+        + `'humbert_stinn_electrowinning_cost'`
 
 (transport-models)=
 ## Transport Models
