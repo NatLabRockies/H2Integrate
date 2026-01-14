@@ -305,8 +305,7 @@ def plot_geospatial_point_heat_map(
     if map_preferences.colorbar_limits is None:
         vmin, vmax = auto_colorbar_limits(results_gdf[metric_to_plot])
     else:
-        vmin = map_preferences.colorbar_limits[0]
-        vmax = map_preferences.colorbar_limits[1]
+        vmin, vmax = map_preferences.colorbar_limits
 
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
