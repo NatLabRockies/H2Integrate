@@ -278,9 +278,7 @@ def plot_geospatial_point_heat_map(
             crs=map_preferences.lat_long_crs,
         ),
         crs=map_preferences.lat_long_crs,
-    )
-
-    results_gdf = results_gdf.to_crs(map_preferences.web_map_crs)
+    ).to_crs(map_preferences.web_map_crs)
 
     gdfs_for_bounds = [results_gdf]
 
@@ -520,9 +518,7 @@ def plot_straight_line_shipping_routes(
 
     shipping_route_gdf = gpd.GeoDataFrame(
         geometry=[LineString(shipping_route_coords)], crs=map_preferences.lat_long_crs
-    )
-
-    shipping_route_gdf = shipping_route_gdf.to_crs(map_preferences.web_map_crs)
+    ).to_crs(map_preferences.web_map_crs)
 
     gdfs_for_bounds = [shipping_route_gdf]
 
