@@ -4,8 +4,11 @@ This module contains H2I cost configs and components for modeling iron electrowi
 based on the work of Humbert et al. (doi.org/10.1007/s40831-024-00878-3), which contains relevant
 iron electrowinning performance and cost data, and Stinn & Allanore (doi.org/10.1149.2/2.F06202IF),
 which presents an empirical capex model for electrowinning of many different metals based on many
-physical parameters of the electrowinning process. The capex model developed by Stinn & Allanore is
-imported from ./stinn/cost_model.py. This is combined with on
+physical parameters of the electrowinning process.
+
+
+
+The capex model developed by Stinn & Allanore is imported from ./stinn/cost_model.py
 
 This technology is selected in the tech_config as the cost_model
 "humbert_stinn_electrowinning_cost"

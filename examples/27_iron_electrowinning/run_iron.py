@@ -1,3 +1,18 @@
+"""Comparing three different iron electrowinning technologies
+
+This script runs an end-to-end iron production system (including the mine) and compareds the
+levelized cost of sponge_iron across three different iron electrowinning technologies to see
+how their costs compare:
+    - Aqueous Hydroxide Electrolysis (AHE)
+    - Molten Salt Electrolysis (MSE)
+    - Molten Oxide Electrolysis (MOE)
+
+New users may find it helpful to look at the tech_config.yaml (particularly the iron_plant) to see
+how the technologies were set up, as well as the  plant_config.yaml (particularly the
+technology_interconnections) to see how the technologies were connected.
+
+"""
+
 from pathlib import Path
 
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
