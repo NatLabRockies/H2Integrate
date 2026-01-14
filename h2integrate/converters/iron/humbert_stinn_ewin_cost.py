@@ -6,7 +6,7 @@ iron electrowinning performance and cost data, and Stinn & Allanore (doi.org/10.
 which presents an empirical capex model for electrowinning of many different metals based on many
 physical parameters of the electrowinning process.
 
-
+The opex model developed by Humbert et al. is imported from ./humbert/cost_model.py
 
 The capex model developed by Stinn & Allanore is imported from ./stinn/cost_model.py
 
@@ -25,7 +25,8 @@ from attrs import field, define
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
-from h2integrate.converters.iron.stinn.cost_model import stinn_capex_calc, humbert_opex_calc
+from h2integrate.converters.iron.stinn.cost_model import stinn_capex_calc
+from h2integrate.converters.iron.humbert.cost_model import humbert_opex_calc
 
 
 @define
