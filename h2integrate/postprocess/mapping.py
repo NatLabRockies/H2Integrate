@@ -397,8 +397,6 @@ def plot_geospatial_point_heat_map(
         plt.show()
 
     if save_plot_fpath is not None:
-        if isinstance(save_plot_fpath, str):
-            save_plot_fpath = Path(save_plot_fpath)
         fig.savefig(save_plot_fpath)
 
     return fig, ax, results_gdf
@@ -572,8 +570,6 @@ def plot_straight_line_shipping_routes(
         plt.show()
 
     if save_plot_fpath is not None:
-        if isinstance(save_plot_fpath, str):
-            save_plot_fpath = Path(save_plot_fpath)
         fig.savefig(save_plot_fpath)
 
     return fig, ax, shipping_route_gdf
