@@ -1,8 +1,8 @@
 name: "technology_config"
-description: "This hybrid plant produces iron"
+description: "Set up technology for an iron mine/iron electrowinning system"
 
 technologies:
-  grid_feedstock: #electricity feedstock for iron ore
+  grid_feedstock: #electricity feedstock for iron ore - comes from grid
     performance_model:
       model: "feedstock_performance"
     cost_model:
@@ -12,14 +12,14 @@ technologies:
         feedstock_type: "electricity"
         units: "MW"
       performance_parameters:
-        rated_capacity: 30. # MW, need 27.913 MW per timestep for iron ore
+        rated_capacity: 30.
       cost_parameters:
         cost_year: 2022
         price: 58.02 #USD/MW
         annual_cost: 0.
         start_up_cost: 0.
 
-  mine_feedstock: #iron ore feedstock
+  mine_feedstock: #crude iron ore feedstock - comes from the ground
     performance_model:
       model: "feedstock_performance"
     cost_model:
@@ -29,14 +29,14 @@ technologies:
         feedstock_type: "crude_ore"
         units: "t/h"
       performance_parameters:
-        rated_capacity: 2000. # need 828.50385048 t/h
+        rated_capacity: 2000.
       cost_parameters:
         cost_year: 2022
         price: 0.0
         annual_cost: 0.
         start_up_cost: 0.
 
-  iron_mine:
+  iron_mine: # iron mine - turns crude_iron into iron_ore
     performance_model:
       model: "iron_mine_performance_martin"
     cost_model:
@@ -47,7 +47,7 @@ technologies:
         taconite_pellet_type: "drg"
         max_ore_production_rate_tonnes_per_hr: 250
 
-  iron_transport:
+  iron_transport: # ship iron_ore from iron_mine to iron_plant
     performance_model:
       model: "iron_transport_performance"
     cost_model:
@@ -60,7 +60,7 @@ technologies:
         transport_year: 2022
         cost_year: 2022
 
-  ewin_grid_feedstock: #electricity feedstock for iron dri
+  ewin_grid_feedstock: #electricity feedstock for iron electrowinning
     performance_model:
       model: "feedstock_performance"
     cost_model:
@@ -77,7 +77,7 @@ technologies:
         annual_cost: 0.
         start_up_cost: 0.
 
-  iron_plant:
+  iron_plant: # iron plant - turns iron_ore into sponge_iron
     performance_model:
       model: "humbert_electrowinning_performance"
     cost_model:

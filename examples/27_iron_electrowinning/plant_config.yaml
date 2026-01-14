@@ -1,5 +1,5 @@
 name: "plant_config"
-description: "This plant is located in MN, USA..."
+description: "Configures an iron electrowinning system."
 
 site:
   latitude: 41.717
@@ -17,16 +17,16 @@ site:
     }
   ]
 
-
-# array of arrays containing left-to-right technology
-# interconnections; can support bidirectional connections
-# with the reverse definition.
-# this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  # connect feedstocks to iron mine
+  # Connect feedstocks to iron mine.
+  # Requires `electricity` and `crude ore`.
+  # Both are set up as generic feedstock components - see tech_config.
   ["grid_feedstock","iron_mine","electricity","cable"],
   ["mine_feedstock","iron_mine","crude_ore","pipe"],
-  # connect feedstocks to iron plant
+  # Connect feedstocks to iron electrowinning plant.
+  # Requires `electricity` and `iron_ore`.
+  # Electricity is set up as generic feedstock component,
+  # but iron_ore is set up as an output of an iron_mine.
   ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["ewin_grid_feedstock","iron_plant","electricity","cable"],
 ]
