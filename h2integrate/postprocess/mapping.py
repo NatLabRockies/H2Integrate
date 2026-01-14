@@ -718,22 +718,17 @@ def validate_gdfs_are_same_crs(
         ValueError: If any provided GeoDataFrame does not share the same CRS as ``results_gdf``.
     """
 
-    if isinstance(base_layer_gdf, (list, tuple)):
-        for gdf in base_layer_gdf:
-            if gdf.crs != results_gdf.crs:
-                msg = (
-                    f"base_layer_gdf(s) CRS ({gdf.crs}) must match the new layers plotting CRS",
-                    f"({results_gdf.crs})",
-                )
-                raise ValueError(msg)
-    else:
-        if base_layer_gdf.crs != results_gdf.crs:
+    base_layer_gdf = (
+        base_layer_gdf if isinstance(base_layer_gdf, (list, tuple)) else [base_layer_gdf]
+    )
+
+    for gdf in base_layer_gdf:
+        if gdf.crs != results_gdf.crs:
             msg = (
-                f"base_layer_gdf(s) CRS ({base_layer_gdf.crs}) must match the new layers plotting",
-                f"CRS ({results_gdf.crs})",
+                f"base_layer_gdf(s) CRS ({gdf.crs}) must match the new layers plotting CRS",
+                f"({results_gdf.crs})",
             )
             raise ValueError(msg)
-        base_layer_gdf = [base_layer_gdf]
 
     return base_layer_gdf
 
