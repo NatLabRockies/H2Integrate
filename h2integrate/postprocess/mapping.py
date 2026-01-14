@@ -180,7 +180,7 @@ def plot_geospatial_point_heat_map(
     | None = None,
     show_plot: bool = False,
     save_plot_fpath: Path | str | None = None,
-    map_preferences: dict | GeospatialMapConfig | None = {},
+    map_preferences: dict | GeospatialMapConfig | None = None,
     save_sql_file_to_csv: bool = False,
 ):
     """
@@ -240,19 +240,21 @@ def plot_geospatial_point_heat_map(
         TypeError: If the provided case_results_fpath is of the wront type (not .csv or .sql)
         ValueError: If only a subset of fig, ax, and base_layer_gdf is provided when adding a layer.
     """
-    # Check if map_preferences is a dictionary and load as GeospatialMapConfig.from_dict()
-    # Loads default values and checks for any erroneous / extraneous keys
-    if isinstance(map_preferences, dict):
-        map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
 
-    # Load data
+    match map_preferences:
+        case None:
+            map_preferences = GeospatialMapConfig
+        case dict():
+            map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
+        case _:
+            raise TypeError(
+                "map_preferences must be a dictionary, GeospatialMapConfig, or None type object"
+            )
+
     case_results_fpath = find_file(case_results_fpath)
 
-    # If case_results_fpath is a .csv file read in with pandas
     if (".csv") in case_results_fpath.suffix:
         results_df = pd.read_csv(case_results_fpath)
-    # Else if case_results_fpath is a path to the SQL recorder(s) (H2IntegrateModel.recorder_path)
-    # defined in the driver_config.yaml, read in with convert_sql_to_csv_summary()
     elif (".sql") in case_results_fpath.suffix:
         results_df = convert_sql_to_csv_summary(case_results_fpath, save_sql_file_to_csv)
     else:
@@ -268,7 +270,6 @@ def plot_geospatial_point_heat_map(
     if longitude_var_name is None:
         _, longitude_var_name = auto_detect_lat_long_columns(results_df)
 
-    # Create GeoDataFrame with results_df
     results_gdf = gpd.GeoDataFrame(
         results_df,
         geometry=gpd.points_from_xy(
@@ -279,32 +280,23 @@ def plot_geospatial_point_heat_map(
         crs=map_preferences.lat_long_crs,
     )
 
-    # Convert coordinates to typical Web Mercator project CRS (EPSG:3857) for plotting
     results_gdf = results_gdf.to_crs(map_preferences.web_map_crs)
 
-    # Create list variable to hold all gdfs for calculating basemap bounds
     gdfs_for_bounds = [results_gdf]
 
-    # Check if fig, ax, and base_layer_gdf are all None
     if all(v is None for v in [fig, ax, base_layer_gdf]):
-        # Then create new fig and ax objects (creating new map)
+        # create new fig and ax objects (creating new map)
         fig, ax = plt.subplots(
             1,
             figsize=map_preferences.figsize,
             constrained_layout=map_preferences.constrained_layout,
         )
-
-    # Else if fig, ax, and base_layer_gdf are all not None
     elif all(v is not None for v in [fig, ax, base_layer_gdf]):
-        # Then set figure and axes as current fig, ax objects (adding layer to existing map)
+        # Set figure and axes as current fig, ax objects (adding layer to existing map)
         plt.figure(fig.number)
         plt.sca(ax)
-        # Validate base_layer_gdf(s) is in the same CRS as the results_gdf
         base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, results_gdf)
-        # Extend gdf_for_bounds with base_layer_gdf(s) provided
         gdfs_for_bounds.extend(base_layer_gdf)
-
-    # Else fig, ax, and base_layer_gdf not provided as a full set
     else:
         raise ValueError(
             """The fig, ax, and base_layer_gdf arguments must be provided together to add a layer to
@@ -312,18 +304,14 @@ def plot_geospatial_point_heat_map(
         )
 
     # Determine appropriate lower and upper bounds for the colormap and legend
-    # If no colorbar_limits provided, attempt to automatically set limits
     if map_preferences.colorbar_limits is None:
         vmin, vmax = auto_colorbar_limits(results_gdf[metric_to_plot])
-    # Otherwise use colorbar_limits provided
     else:
         vmin = map_preferences.colorbar_limits[0]
         vmax = map_preferences.colorbar_limits[1]
 
-    # Create normalized value-to-color mapping object for the colormap and legend
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
-    # Plot point heat map layer
     results_gdf.plot(
         ax=ax,
         column=metric_to_plot,
@@ -347,10 +335,8 @@ def plot_geospatial_point_heat_map(
         borderpad=map_preferences.colorbar_borderpad,
     )
 
-    # Create scalar mappable object for color bar legend
     sm = plt.cm.ScalarMappable(cmap=map_preferences.colormap, norm=norm)
 
-    # plot the color bar legend
     cbar = plt.colorbar(
         sm,
         cax=inset_ax,
@@ -358,7 +344,6 @@ def plot_geospatial_point_heat_map(
         orientation=map_preferences.colorbar_orientation,
     )
 
-    # set color bar legend label
     cbar.set_label(
         map_preferences.colorbar_label,
         bbox={
@@ -376,8 +361,6 @@ def plot_geospatial_point_heat_map(
     )
 
     # format color bar legend offset text and position (exp notation for values if applicable)
-    # By default, this is set such that if the values of the colorbar legend are smaller or larger
-    # than -3,4 decimal places (0.001-9999) then use exponential notation
     cbar.formatter.set_scientific(map_preferences.colorbar_tick_label_use_exp_notation)
     cbar.formatter.set_powerlimits(map_preferences.colorbar_tick_label_exp_notation_decimal_limit)
 
@@ -385,8 +368,6 @@ def plot_geospatial_point_heat_map(
     offset_text.set_fontsize(map_preferences.colorbar_tick_label_font_size)
 
     # Dynamically set the exponential notation text x position based on the colorbar's width
-    # Defaults to +2.5% relative to the colorbar width, normalized to the inset axis of the colorbar
-    # Ex: colorbar_width = 20%, dynamic offset = (22.5/20) = 1.125
     # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
     colorbar_width = float(map_preferences.colorbar_width[:-1])
     dyn_exp_notation_x_offset = (colorbar_width + 2.5) / colorbar_width
@@ -395,10 +376,8 @@ def plot_geospatial_point_heat_map(
     # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
     cbar.ax.xaxis.OFFSETTEXTPAD = -24
 
-    # Calculate appropriate bounds for map based on coordinates of data used in plots
     coord_range_dict = calculate_geodataframe_total_bounds(*gdfs_for_bounds)
 
-    # Set basemap extent based on calculated bounds and padding fractions
     left_pad = coord_range_dict["x_range"] * map_preferences.basemap_leftpad
     right_pad = coord_range_dict["x_range"] * map_preferences.basemap_rightpad
     upper_pad = coord_range_dict["y_range"] * map_preferences.basemap_upperpad
@@ -409,7 +388,6 @@ def plot_geospatial_point_heat_map(
     ax.set_axis_off()
     ax.set_title(map_preferences.figure_title)
 
-    # Plot basemap with contextily
     ctx.add_basemap(
         ax,
         crs=map_preferences.web_map_crs,
@@ -417,12 +395,10 @@ def plot_geospatial_point_heat_map(
         zoom=map_preferences.basemap_zoom,
     )
 
-    # Show the plot if show_plot == True
     # NOTE: when plotting multiple layers, set this to True only when plotting the last layer
     if show_plot:
         plt.show()
 
-    # Save figure if save_plot_fpath is present
     if save_plot_fpath is not None:
         if isinstance(save_plot_fpath, str):
             save_plot_fpath = Path(save_plot_fpath)
@@ -445,7 +421,7 @@ def plot_straight_line_shipping_routes(
     | None = None,
     show_plot: bool = False,
     save_plot_fpath: Path | str | None = None,
-    map_preferences: dict | GeospatialMapConfig | None = {},
+    map_preferences: dict | GeospatialMapConfig | None = None,
 ):
     """
     Plot straight-line shipping or transport routes between a sequence of locations using latitude
@@ -508,18 +484,20 @@ def plot_straight_line_shipping_routes(
 
     """
 
-    # Check if map_preferences is a dictionary and load as GeospatialMapConfig.from_dict()
-    # Loads default values and checks for any erroneous / extraneous keys
-    if isinstance(map_preferences, dict):
-        map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
+    match map_preferences:
+        case None:
+            map_preferences = GeospatialMapConfig
+        case dict():
+            map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
+        case _:
+            raise TypeError(
+                "map_preferences must be a dictionary, GeospatialMapConfig, or None type object"
+            )
 
-    # Load data
     shipping_coords_fpath = find_file(shipping_coords_fpath)
 
-    # If case_results_fpath is a .csv file read in with pandas
     if (".csv") in shipping_coords_fpath.suffix:
         shipping_coords_df = pd.read_csv(shipping_coords_fpath, index_col=0)
-
     else:
         raise TypeError(
             f"The provided filepath {shipping_coords_fpath} is of the wrong type, must be a .csv"
@@ -532,53 +510,41 @@ def plot_straight_line_shipping_routes(
     if longitude_var_name is None:
         _, longitude_var_name = auto_detect_lat_long_columns(shipping_coords_df)
 
-    # Order columns so tuples created in dict below are (long,lat) ordered pairs
     shipping_coords_df = shipping_coords_df[[longitude_var_name, latitude_var_name]]
     shipping_coords_dict = {
         key: tuple(value.values())
         for key, value in shipping_coords_df.to_dict(orient="index").items()
     }
 
-    # Create list of coordinates to trace shipping route
     shipping_route_coords = [shipping_coords_dict[str(city)] for city in shipping_route]
 
-    # Create GeoDataFrame with shipping_route_coords
     shipping_route_gdf = gpd.GeoDataFrame(
         geometry=[LineString(shipping_route_coords)], crs=map_preferences.lat_long_crs
     )
 
-    # Convert coordinates to typical Web Mercator project CRS (EPSG:3857) for plotting
     shipping_route_gdf = shipping_route_gdf.to_crs(map_preferences.web_map_crs)
 
-    # Create list variable to hold all gdfs for calculating basemap bounds
     gdfs_for_bounds = [shipping_route_gdf]
 
-    # Check if fig, ax, and base_layer_gdf are all None
     if all(v is None for v in [fig, ax, base_layer_gdf]):
+        # create new fig and ax objects (creating new map)
         fig, ax = plt.subplots(
             1,
             figsize=map_preferences.figsize,
             constrained_layout=map_preferences.constrained_layout,
         )
-
-    # Else if fig, ax, and base_layer_gdf are all not None
     elif all(v is not None for v in [fig, ax, base_layer_gdf]):
         # set figure and axes as current fig,ax objects
         plt.figure(fig.number)
         plt.sca(ax)
-        # Validate base_layer_gdf(s) is in the same CRS as the results_gdf
         base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, shipping_route_gdf)
-        # Extend gdf_for_bounds with base_layer_gdf(s) provided
         gdfs_for_bounds.extend(base_layer_gdf)
-
-    # Else fig, ax, and base_layer_gdf not provided as a full set
     else:
         raise ValueError(
             """The fig, ax, and base_layer_gdf arguments must be provided together to add a layer to
             an existing plot or all must be omitted/None to create a new plot"""
         )
 
-    # Plot straight line shipping layer
     shipping_route_gdf.plot(
         ax=ax,
         linestyle=map_preferences.linestyle,
@@ -587,10 +553,8 @@ def plot_straight_line_shipping_routes(
         zorder=map_preferences.zorder,
     )
 
-    # Calculate appropriate bounds for map based on coordinates of data used in plots
     coord_range_dict = calculate_geodataframe_total_bounds(*gdfs_for_bounds)
 
-    # Set basemap extent based on calculated bounds and padding fractions
     left_pad = coord_range_dict["x_range"] * map_preferences.basemap_leftpad
     right_pad = coord_range_dict["x_range"] * map_preferences.basemap_rightpad
     upper_pad = coord_range_dict["y_range"] * map_preferences.basemap_upperpad
@@ -601,7 +565,6 @@ def plot_straight_line_shipping_routes(
     ax.set_axis_off()
     ax.set_title(map_preferences.figure_title)
 
-    # Add basemap tiles with contextily
     ctx.add_basemap(
         ax,
         crs=map_preferences.web_map_crs,
@@ -613,7 +576,6 @@ def plot_straight_line_shipping_routes(
     if show_plot:
         plt.show()
 
-    # Save figure if save_plot_fpath is present
     if save_plot_fpath is not None:
         if isinstance(save_plot_fpath, str):
             save_plot_fpath = Path(save_plot_fpath)
@@ -651,11 +613,9 @@ def calculate_geodataframe_total_bounds(*gdfs: gpd.GeoDataFrame | list[gpd.GeoDa
 
     """
 
-    # raise error if no gdf is provided as keyword argument
     if not gdfs:
         raise ValueError("Must provide at least one GeoDataFrame.")
 
-    # Validate all gdfs are in the same CRS
     base_crs = gdfs[0].crs
     for gdf in gdfs:
         if gdf.crs != base_crs:
@@ -671,7 +631,6 @@ def calculate_geodataframe_total_bounds(*gdfs: gpd.GeoDataFrame | list[gpd.GeoDa
     x_range = max_x - min_x
     y_range = max_y - min_y
 
-    # Construct dictionary with relevant values
     coord_range_dict = {
         "min_x": min_x,
         "min_y": min_y,
@@ -761,7 +720,6 @@ def validate_gdfs_are_same_crs(
         ValueError: If any provided GeoDataFrame does not share the same CRS as ``results_gdf``.
     """
 
-    # Validate base_layer_gdf(s) is in the same CRS as the results_gdf
     if isinstance(base_layer_gdf, (list, tuple)):
         for gdf in base_layer_gdf:
             if gdf.crs != results_gdf.crs:
@@ -769,7 +727,7 @@ def validate_gdfs_are_same_crs(
                     f"""base_layer_gdf(s) CRS ({gdf.crs}) must match the new layers plotting CRS
                     ({results_gdf.crs})"""
                 )
-    else:  # single GeoDataFrame
+    else:
         if base_layer_gdf.crs != results_gdf.crs:
             raise ValueError(
                 f"""base_layer_gdf(s) CRS ({base_layer_gdf.crs}) must match the new layers
@@ -822,15 +780,12 @@ def auto_colorbar_limits(values: gpd.GeoSeries | pd.Series | np.ndarray):
         (41.9, 42.1)
     """
 
-    # Convert input to numpy array and filter out any non-finite numbers (NaN, inf)
     values = np.asarray(values)
     values = values[np.isfinite(values)]
 
-    # Raise ValueError if values no valid data (metric_to_plot)
     if values.size == 0:
         raise ValueError("Cannot determine colorbar limits from empty or non-finite data.")
 
-    # Determine min, max, and range of values
     data_min = values.min()
     data_max = values.max()
     data_range = abs(data_max - data_min)
@@ -839,13 +794,10 @@ def auto_colorbar_limits(values: gpd.GeoSeries | pd.Series | np.ndarray):
     if np.isclose(data_min, data_max):
         return data_min - 0.1, data_max + 0.1
 
-    # Determine order of magnitude of data_range
     magnitude = math.floor(math.log10(data_range))
-    # Create multiplier value based off of magnitude
     multiplier = 10 ** (-magnitude)
 
-    # Scale data_min / data_max, round to nearest decimal to remove excess floating point precision
-    # take floor / ceil, and rescale to original magnitude
+    # Scale, round to nearest decimal to remove excess floating point precision and rescale
     vmin = math.floor(round(data_min * multiplier, 1)) / multiplier
     vmax = math.ceil(round(data_max * multiplier, 1)) / multiplier
 
