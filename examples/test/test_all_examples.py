@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
-from h2integrate import EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -1341,7 +1341,7 @@ def test_24_solar_battery_grid_example(subtests):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
-def test_26_iron_map_example(subtests):
+def test_27_iron_map_example(subtests):
     import geopandas as gpd
     import matplotlib
 
@@ -1350,18 +1350,22 @@ def test_26_iron_map_example(subtests):
         plot_straight_line_shipping_routes,
     )
 
-    os.chdir(EXAMPLE_DIR / "26_iron_map")
+    os.chdir(EXAMPLE_DIR / "27_iron_map")
 
-    # Define output filepaths and delete them if they exist
-    ex_26_out_dir = Path.cwd() / "ex_26_out"
-    cases_sql_fpath = ex_26_out_dir / "cases.sql"
+    # Define filepaths
+    ex_27_dir = Path.cwd()
+    ex_27_out_dir = ex_27_dir / "ex_27_out"
+    ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
+    shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+    shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv.csv"
+    cases_sql_fpath = ex_27_out_dir / "cases.sql"
     cases_sql_fpath.unlink(missing_ok=True)
-    cases_csv_fpath = ex_26_out_dir / "cases.csv"
+    cases_csv_fpath = ex_27_out_dir / "cases.csv"
     cases_csv_fpath.unlink(missing_ok=True)
-    ex_png_fpath = ex_26_out_dir / "example_26_iron_map.png"
+    ex_png_fpath = ex_27_out_dir / "example_27_iron_map.png"
     ex_png_fpath.unlink(missing_ok=True)
 
-    # Create and run model, save results in 26_iron_map/ex_26_out/cases.sql
+    # Create and run model, save results in 27_iron_map/ex_27_out/cases.sql
     model = H2IntegrateModel(Path.cwd() / "iron_map.yaml")
     model.run()
 
@@ -1370,7 +1374,7 @@ def test_26_iron_map_example(subtests):
 
     # Plot LCOI results from cases.sql file, save sql data to csv
     fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
-        case_results_fpath="./ex_26_out/cases.sql",
+        case_results_fpath=cases_sql_fpath,
         metric_to_plot="iron.LCOI (USD/kg)",
         map_preferences={
             "figsize": (10, 8),
@@ -1381,7 +1385,7 @@ def test_26_iron_map_example(subtests):
     )
     # Add a layer for example ore cost prices from select mines
     fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
-        case_results_fpath="./example_ore_prices.csv",
+        case_results_fpath=ore_prices_filepath,
         metric_to_plot="ore_cost_per_kg",
         map_preferences={
             "colormap": "Greens",
@@ -1396,7 +1400,7 @@ def test_26_iron_map_example(subtests):
     )
     # Add a layer for example waterway shipping cost from select mines to select ports
     fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
-        case_results_fpath="./example_shipping_prices.csv",
+        case_results_fpath=shipping_prices_filepath,
         metric_to_plot="shipping_cost_per_kg",
         map_preferences={
             "colormap": "Greys",
@@ -1445,7 +1449,7 @@ def test_26_iron_map_example(subtests):
 
     # Add cleveland route as layer
     fig, ax, transport_layer1_gdf = plot_straight_line_shipping_routes(
-        shipping_coords_fpath="./example_shipping_coords.csv",
+        shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=cleveland_route,
         map_preferences={},
         fig=fig,
@@ -1454,7 +1458,7 @@ def test_26_iron_map_example(subtests):
     )
     # Add buffalo route as layer
     fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
-        shipping_coords_fpath="./example_shipping_coords.csv",
+        shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=buffalo_route,
         map_preferences={},
         fig=fig,
@@ -1468,7 +1472,7 @@ def test_26_iron_map_example(subtests):
     )
     # Add chicago route as layer
     fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
-        shipping_coords_fpath="./example_shipping_coords.csv",
+        shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=chicago_route,
         map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
         fig=fig,
@@ -1480,7 +1484,7 @@ def test_26_iron_map_example(subtests):
             transport_layer1_gdf,
             transport_layer2_gdf,
         ],
-        save_plot_fpath="./ex_26_out/example_26_iron_map.png",
+        save_plot_fpath=ex_png_fpath,
     )
 
     with subtests.test("Check cases.sql results saved as cases.csv"):
@@ -1500,14 +1504,14 @@ def test_26_iron_map_example(subtests):
             lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
         ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
 
-    with subtests.test("Check example_26_iron_map.png was saved"):
-        assert (ex_png_fpath).is_file(), "example_26_iron_map.png file not found"
+    with subtests.test("Check example_27_iron_map.png was saved"):
+        assert (ex_png_fpath).is_file(), "example_27_iron_map.png file not found"
 
     # Clean up any output files/dirs created
     cases_sql_fpath.unlink(missing_ok=True)
     cases_csv_fpath.unlink(missing_ok=True)
     ex_png_fpath.unlink(missing_ok=True)
-    ex_26_out_dir.rmdir()
+    ex_27_out_dir.rmdir()
 
     
 def test_natural_geoh2(subtests):

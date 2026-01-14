@@ -2,20 +2,31 @@ from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model
 # NOTE:
-# If this example has already been run and the cases.csv and cases.sql file is saved in ./ex_26_out.
+# If this example has already been run and the cases.csv and cases.sql file is saved in ./ex_27_out.
 # You may comment out the following two lines to avoid long runtimes
 model = H2IntegrateModel("iron_map.yaml")
 model.run()
 
+# Define filepaths
+ex_27_dir = EXAMPLE_DIR / "27_iron_map"
+ex_27_out_dir = EXAMPLE_DIR / "27_iron_map/ex_27_out"
+save_plot_filepath = ex_27_out_dir / "example_27_iron_map.png"
+save_plot_filepath.unlink(missing_ok=True)
+case_results_filepath = ex_27_out_dir / "cases.sql"
+ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
+shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv.csv"
+
 # Plot the LCOI results with geopandas and contextily
-# NOTE: you can swap './ex_26_out/cases.sql' with './ex_26_out/cases.csv' to read results from csv
+# NOTE: you can swap './ex_27_out/cases.sql' with './ex_27_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath="./ex_26_out/cases.sql",
+    case_results_fpath=case_results_filepath,
     metric_to_plot="iron.LCOI (USD/kg)",
     map_preferences={
         "figsize": (10, 8),
@@ -27,7 +38,7 @@ fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
 
 # Add a layer for example ore cost prices from select mines
 fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath="./example_ore_prices.csv",
+    case_results_fpath=ore_prices_filepath,
     metric_to_plot="ore_cost_per_kg",
     map_preferences={
         "colormap": "Greens",
@@ -43,7 +54,7 @@ fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
 
 # Add a layer for example waterway shipping cost from select mines to select ports
 fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath="./example_shipping_prices.csv",
+    case_results_fpath=shipping_prices_filepath,
     metric_to_plot="shipping_cost_per_kg",
     map_preferences={
         "colormap": "Greys",
@@ -94,7 +105,7 @@ chicago_route = [
 
 # Add cleveland route as layer
 fig, ax, transport_layer1_gdf = plot_straight_line_shipping_routes(
-    shipping_coords_fpath="./example_shipping_coords.csv",
+    shipping_coords_fpath=shipping_coords_filepath,
     shipping_route=cleveland_route,
     map_preferences={},
     fig=fig,
@@ -104,7 +115,7 @@ fig, ax, transport_layer1_gdf = plot_straight_line_shipping_routes(
 
 # Add buffalo route as layer
 fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
-    shipping_coords_fpath="./example_shipping_coords.csv",
+    shipping_coords_fpath=shipping_coords_filepath,
     shipping_route=buffalo_route,
     map_preferences={},
     fig=fig,
@@ -119,7 +130,7 @@ fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
 
 # Add chicago route as layer
 fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
-    shipping_coords_fpath="./example_shipping_coords.csv",
+    shipping_coords_fpath=shipping_coords_filepath,
     shipping_route=chicago_route,
     map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
     fig=fig,
@@ -132,5 +143,5 @@ fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
         transport_layer2_gdf,
     ],
     show_plot=True,
-    save_plot_fpath="./ex_26_out/example_26_iron_map.png",
+    save_plot_fpath=save_plot_filepath,
 )
