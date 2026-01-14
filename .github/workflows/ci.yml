@@ -36,7 +36,7 @@ jobs:
             pip install ".[develop]"
             pip install git+https://github.com/NREL/MarineCarbonManagement.git
           else
-            pip install ".[develop]"
+            pip install ".[develop,gis]"
           fi
       - name: Create env file
         run: |
