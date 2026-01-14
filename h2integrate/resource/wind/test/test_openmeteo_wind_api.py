@@ -102,6 +102,10 @@ def test_wind_resource_web_download(
         assert all(len(wind_data[k]) == 8760 for k in data_keys)
     with subtests.test("theres 12 timeseries data keys"):
         assert len(data_keys) == 12
+    with subtests.test("Start time"):
+        assert wind_data["start_time"] == "2023/01/01 00:00:00 (+0000)"
+    with subtests.test("Time step"):
+        assert wind_data["dt"] == 3600
 
 
 def test_wind_resource_h2i_download(
@@ -139,3 +143,7 @@ def test_wind_resource_h2i_download(
         assert all(len(wind_data[k]) == 8760 for k in data_keys)
     with subtests.test("theres 13 timeseries data keys"):
         assert len(data_keys) == 13
+    with subtests.test("Start time"):
+        assert wind_data["start_time"] == "2023/01/01 00:00:00 (-0600)"
+    with subtests.test("Time step"):
+        assert wind_data["dt"] == 3600

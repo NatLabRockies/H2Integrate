@@ -56,3 +56,6 @@ For the himawari_tmy_solar_v3_api model, the resource_year should be specified a
 | `day`      | X |
 | `hour`      | X |
 | `minute`      | X |
+| `start_time`| X |
+| `end_time`| X |
+| `dt`| X |
