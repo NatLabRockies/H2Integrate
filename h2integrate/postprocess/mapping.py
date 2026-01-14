@@ -258,10 +258,11 @@ def plot_geospatial_point_heat_map(
     elif ".sql" in case_results_fpath.suffix:
         results_df = convert_sql_to_csv_summary(case_results_fpath, save_sql_file_to_csv)
     else:
-        raise TypeError(
-            f"""The provided filepath {case_results_fpath} is of the wrong type, must be a .csv or
-            the .sql file defined in the driver_config.yaml (H2IntegrateModel.recorder_path)"""
+        msg = (
+            f"The provided filepath {case_results_fpath} is of the wrong type, must be a .csv",
+            "or the .sql file defined in the driver_config.yaml (H2IntegrateModel.recorder_path)",
         )
+        raise TypeError(msg)
 
     # Auto detect latitude and longitude column names if not provided as argument
     if latitude_var_name is None:
@@ -296,10 +297,11 @@ def plot_geospatial_point_heat_map(
         base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, results_gdf)
         gdfs_for_bounds.extend(base_layer_gdf)
     else:
-        raise ValueError(
-            """The fig, ax, and base_layer_gdf arguments must be provided together to add a layer to
-            an existing plot or all must be omitted/None to create a new plot"""
+        msg = (
+            "The fig, ax, and base_layer_gdf arguments must be provided together to add a layer",
+            "to an existing plot or all must be omitted/None to create a new plot",
         )
+        raise ValueError(msg)
 
     # Determine appropriate lower and upper bounds for the colormap and legend
     if map_preferences.colorbar_limits is None:
@@ -533,10 +535,11 @@ def plot_straight_line_shipping_routes(
         base_layer_gdf = validate_gdfs_are_same_crs(base_layer_gdf, shipping_route_gdf)
         gdfs_for_bounds.extend(base_layer_gdf)
     else:
-        raise ValueError(
-            """The fig, ax, and base_layer_gdf arguments must be provided together to add a layer to
-            an existing plot or all must be omitted/None to create a new plot"""
+        msg = (
+            "The fig, ax, and base_layer_gdf arguments must be provided together to add a layer",
+            "to an existing plot or all must be omitted/None to create a new plot",
         )
+        raise ValueError(msg)
 
     shipping_route_gdf.plot(
         ax=ax,
@@ -662,10 +665,12 @@ def auto_detect_lat_long_columns(results_df: pd.DataFrame):
     matching_columns = results_df.filter(regex=regex).columns
     # raise error if unable to detect a singular latitude column
     if len(matching_columns) == 0 or len(matching_columns) > 1:
-        raise KeyError(
-            """Unable to automatically detect the latitude variable / column in the data. Please
-            specify the exact variable / column name using the latitude_var_name argument"""
+        msg = (
+            "Unable to automatically detect the latitude variable / column in the data.",
+            "Please specify the exact variable name using the latitude_var_name argument",
         )
+        raise KeyError(msg)
+
     latitude_var_name = str(matching_columns[0])
 
     keywords = ["lon", "long", "longitude"]
@@ -674,10 +679,12 @@ def auto_detect_lat_long_columns(results_df: pd.DataFrame):
     matching_columns = results_df.filter(regex=regex).columns
     # raise error if unable to detect a singular latitude column
     if len(matching_columns) == 0 or len(matching_columns) > 1:
-        raise KeyError(
-            """Unable to automatically detect the longitude variable / column in the data. Please
-            specify the exact variable / column name using the longitude_var_name argument"""
+        msg = (
+            "Unable to automatically detect the longitude variable / column in the data.",
+            "Please specify the exact variable name using the longitude_var_name argument",
         )
+        raise KeyError(msg)
+
     longitude_var_name = str(matching_columns[0])
 
     return latitude_var_name, longitude_var_name
@@ -714,16 +721,18 @@ def validate_gdfs_are_same_crs(
     if isinstance(base_layer_gdf, (list, tuple)):
         for gdf in base_layer_gdf:
             if gdf.crs != results_gdf.crs:
-                raise ValueError(
-                    f"""base_layer_gdf(s) CRS ({gdf.crs}) must match the new layers plotting CRS
-                    ({results_gdf.crs})"""
+                msg = (
+                    f"base_layer_gdf(s) CRS ({gdf.crs}) must match the new layers plotting CRS",
+                    f"({results_gdf.crs})",
                 )
+                raise ValueError(msg)
     else:
         if base_layer_gdf.crs != results_gdf.crs:
-            raise ValueError(
-                f"""base_layer_gdf(s) CRS ({base_layer_gdf.crs}) must match the new layers
-                plotting CRS ({results_gdf.crs})"""
+            msg = (
+                f"base_layer_gdf(s) CRS ({base_layer_gdf.crs}) must match the new layers plotting",
+                f"CRS ({results_gdf.crs})",
             )
+            raise ValueError(msg)
         base_layer_gdf = [base_layer_gdf]
 
     return base_layer_gdf
