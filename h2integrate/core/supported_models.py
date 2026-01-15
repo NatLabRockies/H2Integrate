@@ -1,4 +1,4 @@
-from h2integrate.core.sites import BoundarySiteComponent, SiteLocationComponent
+from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.resource.river import RiverResource
 from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 from h2integrate.transporters.pipe import PipePerformanceModel
@@ -158,7 +158,6 @@ from h2integrate.control.control_strategies.converters.flexible_demand_openloop_
 supported_models = {
     # Sites
     "location": SiteLocationComponent,
-    "boundary": BoundarySiteComponent,
     # Resources
     "river_resource": RiverResource,
     "wind_toolkit_v2_api": WTKNRELDeveloperAPIWindResource,

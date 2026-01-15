@@ -1,4 +1,3 @@
-import numpy as np
 from attrs import field, define
 
 from h2integrate.core.model_baseclasses import SiteBaseConfig, SiteBaseComponent
@@ -27,34 +26,3 @@ class SiteLocationComponent(SiteBaseComponent):
     def set_outputs(self):
         # latitude and longitude are set as outputs in ``SiteBaseComponent.__init__()``
         self.add_output("elevation", val=self.config.elevation, units="m")
-
-
-@define
-class BoundarySiteComponentConfig(SiteBaseConfig):
-    """Configuration class for defining a site component with BoundarySiteComponent.
-
-    Attributes:
-        latitude (float, optional): latitude in degrees North of the Equator.
-            Must be between -90 and 90. Defaults to 0.0
-        longitude (float, optional): longitude in degrees East of the Prime Meridian.
-            Must be between -180 and 180. Defaults to 0.
-        elevation (float, optional): elevation of the site in meters. Defaults to 0.0
-        boundaries (list, optional): boundary position coordinates in meters.
-    """
-
-    elevation: float | int = field(default=0.0)
-    boundaries: list = field(default=[])
-
-
-class BoundarySiteComponent(SiteBaseComponent):
-    def __init__(self, site_config: dict, name=None, val=1.0, **kwargs):
-        self.config = BoundarySiteComponentConfig.from_dict(site_config)
-        super().__init__(name, val, **kwargs)
-
-    def set_outputs(self):
-        # latitude and longitude are set as outputs in ``SiteBaseComponent.__init__()``
-        self.add_output("elevation", val=self.config.elevation, units="m")
-
-        for i, boundary in enumerate(self.config.boundaries):
-            self.add_output(f"boundary_{i}_x", val=np.array(boundary.get("x", [])))
-            self.add_output(f"boundary_{i}_y", val=np.array(boundary.get("y", [])))
