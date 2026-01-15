@@ -8,7 +8,7 @@ driver:
   optimization:
     flag: True
     solver: COBYLA
-    tol: 0.1
+    tol: 0.001
     catol: 15000
     max_iter: 100
     rhobeg: 10
@@ -19,15 +19,8 @@ design_variables:
     n_clusters:
       flag: True
       lower: 2.
-      upper: 100.
+      upper: 40.
       units: unitless
-
-constraints:
-  electrolyzer:
-    total_hydrogen_produced:
-      flag: True
-      lower: 60500000.
-      units: kg/year
 
 objective:
   name: finance_subgroup_hydrogen.LCOH
