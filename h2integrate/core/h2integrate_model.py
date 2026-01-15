@@ -320,7 +320,7 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
-        if "site_groups" not in self.plant_config:
+        if "sites" not in self.plant_config:
             if "site" in self.plant_config:
                 site_params = {
                     k: v for k, v in self.plant_config["site"].items() if k != "resources"
@@ -331,12 +331,12 @@ class H2IntegrateModel:
             else:
                 site_params = {}
             other_plant_inputs = {k: v for k, v in self.plant_config.items() if k != "site"}
-            plant_config_dict = {"site_groups": {"site": site_params}} | other_plant_inputs
+            plant_config_dict = {"sites": {"site": site_params}} | other_plant_inputs
 
         else:
             plant_config_dict = self.plant_config.copy()
 
-        for site_name, site_info in plant_config_dict["site_groups"].items():
+        for site_name, site_info in plant_config_dict["sites"].items():
             plant_config_reorg = {
                 "site": site_info,
                 "plant": plant_config_dict["plant"],
@@ -988,9 +988,9 @@ class H2IntegrateModel:
 
         if "site" in self.plant_config:
             resource_models = self.plant_config.get("site", {}).get("resources", {})
-        if "site_groups" in self.plant_config:
+        if "sites" in self.plant_config:
             resource_models = {}
-            for site_grp, site_grp_inputs in self.plant_config["site_groups"].items():
+            for site_grp, site_grp_inputs in self.plant_config["sites"].items():
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}-{resource_key}"] = resource_params
 

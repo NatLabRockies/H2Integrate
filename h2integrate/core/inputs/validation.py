@@ -140,8 +140,8 @@ def load_tech_yaml(finput):
 def load_plant_yaml(finput):
     plant_config = _validate(finput, fschema_plant)
 
-    if "site" not in plant_config and "site_groups" not in plant_config:
-        msg = "Missing attribute site or site_groups in plant_config"
+    if "site" not in plant_config and "sites" not in plant_config:
+        msg = "Missing attribute site or sites in plant_config"
         raise ValueError(msg)
     if int(plant_config["plant"]["simulation"]["n_timesteps"]) != 8760:
         msg = (

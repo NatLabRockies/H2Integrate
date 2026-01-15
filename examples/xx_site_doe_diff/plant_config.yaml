@@ -1,7 +1,7 @@
 name: "plant_config"
 description: "This plant uses solar resource data from 2012"
 
-site_groups:
+sites:
   wind_site:
     latitude: 34.22
     longitude: -102.75
