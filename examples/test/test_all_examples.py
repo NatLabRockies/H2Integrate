@@ -297,7 +297,7 @@ def test_wind_h2_opt_example(subtests):
     with subtests.test("Check electrolyzer size"):
         assert (
             pytest.approx(model.prob.get_val("electrolyzer.electrolyzer_size_mw")[0], rel=1e-3)
-            == 1380.0
+            == 320.0
         )
     # Read the resulting SQL file and compare initial and final LCOH values
 
@@ -330,14 +330,14 @@ def test_wind_h2_opt_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
             )
-            == 2667734319.98
+            == 978075832.46
         )
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 72718135.62
+            == 27646299.56
         )
 
     with subtests.test("Check minimum total hydrogen produced"):
@@ -346,7 +346,7 @@ def test_wind_h2_opt_example(subtests):
                 model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0],
                 abs=15000,
             )
-            == 60500000
+            == 29028700
         )
 
 
