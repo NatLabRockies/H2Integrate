@@ -4,6 +4,7 @@ import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
+from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import (
     get_path,
     find_file,
@@ -322,21 +323,15 @@ class H2IntegrateModel:
         if "site_groups" not in self.plant_config:
             if "site" in self.plant_config:
                 site_params = {
-                    k: v
-                    for k, v in self.plant_config["site"].items()
-                    if k != "resources" and k != "site_model"
+                    k: v for k, v in self.plant_config["site"].items() if k != "resources"
                 }
-                site_reorg = {
-                    "site_model": self.plant_config["site"].get("site_model", "location"),
-                    "site_parameters": site_params,
-                }
+
                 if "resources" in self.plant_config["site"]:
-                    site_reorg.update({"resources": self.plant_config["site"].get("resources")})
+                    site_params.update({"resources": self.plant_config["site"].get("resources")})
             else:
-                other_plant_inputs = {k: v for k, v in self.plant_config.items() if k != "site"}
-                site_reorg = {}
+                site_params = {}
             other_plant_inputs = {k: v for k, v in self.plant_config.items() if k != "site"}
-            plant_config_dict = {"site_groups": {"site": site_reorg}} | other_plant_inputs
+            plant_config_dict = {"site_groups": {"site": site_params}} | other_plant_inputs
 
         else:
             plant_config_dict = self.plant_config.copy()
@@ -354,12 +349,9 @@ class H2IntegrateModel:
         site_group = om.Group()
 
         # Create a site-level component
-        site_inputs = {
-            k: v for k, v in site_config.items() if k != "resources" and k != "site_model"
-        }
-        site_component = self.supported_models[site_config.get("site_model", "location")](
-            site_inputs
-        )
+        site_inputs = {k: v for k, v in site_config.items() if k != "resources"}
+        site_component = SiteLocationComponent(site_inputs)
+
         site_group.add_subsystem("site_component", site_component, promotes=["*"])
 
         # Add the site resource components

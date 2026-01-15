@@ -3,7 +3,6 @@ description: "This plant uses solar resource data from 2012"
 
 site_groups:
   wind_site:
-    site_model: "location"
     latitude: 34.22
     longitude: -102.75
     resources:
@@ -13,7 +12,6 @@ site_groups:
           resource_year: 2012
           use_fixed_resource_location: False
   solar_site:
-    site_model: "location"
     latitude: 34.22
     longitude: -102.75
     resources:
