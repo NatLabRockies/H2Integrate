@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import requests_cache
 import openmeteo_requests
@@ -362,6 +363,12 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
                 ghi = data_dict.pop("ghi_instant")
                 data_dict["ghi"] = ghi
                 pass
+
+        # check if albedo is only NaNs and remove if so
+        if "surface_albedo" in data_dict:
+            if all(c for c in np.isnan(data_dict["surface_albedo"])):
+                data_dict.pop("surface_albedo")
+
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
