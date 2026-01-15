@@ -4,9 +4,8 @@ description: "This plant uses solar resource data from 2012"
 site_groups:
   wind_site:
     site_model: "location"
-    site_parameters:
-      latitude: 34.22
-      longitude: -102.75
+    latitude: 34.22
+    longitude: -102.75
     resources:
       wind_resource:
         resource_model: "wind_toolkit_v2_api"
@@ -15,9 +14,8 @@ site_groups:
           use_fixed_resource_location: False
   solar_site:
     site_model: "location"
-    site_parameters:
-      latitude: 34.22
-      longitude: -102.75
+    latitude: 34.22
+    longitude: -102.75
     resources:
       solar_resource:
         resource_model: "goes_aggregated_solar_v4_api"

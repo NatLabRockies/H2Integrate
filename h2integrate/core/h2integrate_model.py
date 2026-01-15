@@ -343,7 +343,7 @@ class H2IntegrateModel:
 
         for site_name, site_info in plant_config_dict["site_groups"].items():
             plant_config_reorg = {
-                "site": site_info["site_parameters"],
+                "site": site_info,
                 "plant": plant_config_dict["plant"],
             }
 
@@ -354,8 +354,11 @@ class H2IntegrateModel:
         site_group = om.Group()
 
         # Create a site-level component
+        site_inputs = {
+            k: v for k, v in site_config.items() if k != "resources" and k != "site_model"
+        }
         site_component = self.supported_models[site_config.get("site_model", "location")](
-            site_config.get("site_parameters", {})
+            site_inputs
         )
         site_group.add_subsystem("site_component", site_component, promotes=["*"])
 

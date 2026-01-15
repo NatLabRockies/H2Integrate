@@ -4,9 +4,8 @@ description: "This plant is located in MN, USA..."
 site_groups:
   solar_site:
     site_model: "location"
-    site_parameters:
-      latitude: 30.6617
-      longitude: -101.7096
+    latitude: 30.6617
+    longitude: -101.7096
     resources:
       solar_resource:
         resource_model: "goes_aggregated_solar_v4_api"
@@ -16,9 +15,8 @@ site_groups:
           resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
   wind_site:
     site_model: "location"
-    site_parameters:
-      latitude: 35.2018863
-      longitude: -101.945027
+    latitude: 35.2018863
+    longitude: -101.945027
     resources:
       wind_resource:
         resource_model: "wind_toolkit_v2_api"
