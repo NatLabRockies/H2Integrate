@@ -6,7 +6,7 @@ import pandas as pd
 import geopandas as gpd
 import contextily as ctx
 import matplotlib.pyplot as plt
-from attrs import field, define
+from attrs import field, define, converters, validators
 from xyzservices import TileProvider
 from shapely.geometry import LineString
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -148,7 +148,20 @@ class GeospatialMapConfig(BaseConfig):
     colorbar_bbox_to_anchor: tuple[float, ...] = field(default=(0.75, 0.97, 1.0, 1.0))
     colorbar_borderpad: float = field(default=0.0)
     colorbar_orientation: str = field(default="horizontal")
-    colorbar_limits: tuple[float, ...] | None = field(default=None)
+    colorbar_limits: tuple[float, float] | None = field(
+        default=None,
+        converter=converters.optional(tuple),
+        validator=validators.optional(
+            [
+                validators.max_len(2),
+                validators.min_len(2),
+                validators.deep_iterable(
+                    member_validator=validators.instance_of(float),
+                    iterable_validator=validators.instance_of(tuple),
+                ),
+            ]
+        ),
+    )
     colorbar_tick_location: str = field(default="bottom")
     colorbar_tick_direction: str = field(default="inout")
     colorbar_tick_label_font_size: float = field(default=8.0)
