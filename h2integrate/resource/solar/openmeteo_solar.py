@@ -317,9 +317,17 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             "rain": "precipitable_water",
             "surface_pressure": "pressure",
             "albedo": "surface_albedo",
+            # below aren't downloaded in this API call but may available
+            # in a user-provided file
+            "diffuse_radiation_instant": "dhi_instant",  #
+            "direct_normal_irradiance_instant": "dni_instant",
+            "shortwave_radiation_instant": "ghi_instant",
         }
         for c in data_cols_init:
             units = c.split("(")[-1].strip(")").replace("°", "deg").replace("%", "unitless")
+            units = (
+                units.replace("undefined", "unitless").replace("m²", "m**2").replace("degC", "C")
+            )
 
             new_c = c.split("(")[0].replace("air", "").replace("at ", "")
             new_c = new_c.replace(f"({units})", "").strip().replace(" ", "_").replace("__", "_")
@@ -328,7 +336,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             old_c = c.split("(")[0].strip()
 
             # don't include data that isn't relevant for solar data
-            if old_c not in self.hourly_solar_data_to_units:
+            if old_c not in self.hourly_solar_data_to_units and "instant" not in old_c:
                 continue
 
             if old_c in data_variable_name_mapper:
@@ -337,7 +345,23 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             data_rename_mapper.update({c: new_c})
             data_units.update({new_c: units})
         data = data.rename(columns=data_rename_mapper)
+
         data_dict = {c: data[c].astype(float).values for x, c in data_rename_mapper.items()}
+        # only include _instant data if non-instant data isn't provided
+        if any("_instant" in c for c in list(data_dict.keys())):
+            if "dhi_instant" in data_dict and "dhi" not in data_dict:
+                # only have instant dhi data, so use dhi_instant as dhi
+                dhi = data_dict.pop("dhi_instant")
+                data_dict["dhi"] = dhi
+            if "dni_instant" in data_dict and "dni" not in data_dict:
+                # only have instant dni data, so use dni_instant as dni
+                dni = data_dict.pop("dni_instant")
+                data_dict["dni"] = dni
+            if "ghi_instant" in data_dict and "ghi" not in data_dict:
+                # only have instant ghi data, so use ghi_instant as ghi
+                ghi = data_dict.pop("ghi_instant")
+                data_dict["ghi"] = ghi
+                pass
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
