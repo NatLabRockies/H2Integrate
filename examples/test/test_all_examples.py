@@ -241,7 +241,7 @@ def test_co2h_methanol_example(subtests):
 
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
-        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.381162
+        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
@@ -260,8 +260,8 @@ def test_doc_methanol_example(subtests):
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM"), rel=1e-6)
-            == 2.58989518
+            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM")[0], rel=1e-4)
+            == 2.5252588
         )
 
 

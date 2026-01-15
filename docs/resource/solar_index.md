@@ -38,8 +38,8 @@ Not all solar resource models will output all the data keys listed below. Please
 (primary-data-solar-resource-timeseries)=
 ## Primary Data: Solar Resource Timeseries
 The below variables are outputted as arrays, with a length equal to the simulation duration. The naming convention and standardized units of solar resource variables are listed below:
-- `solar_direction`: solar direction in degrees (units are 'deg')
-- `solar_speed`: solar speed in meters per second (units are 'm/s')
+- `wind_direction`: wind direction in degrees (units are 'deg')
+- `wind_speed`: wind speed in meters per second (units are 'm/s')
 - `temperature`: air temperature in Celsius (units are 'C')
 - `pressure`: air pressure in millibar (units are 'mbar')
 - `relative_humidity`: relative humidity represented as a percentage (units are 'percent')
