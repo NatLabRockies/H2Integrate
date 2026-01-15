@@ -28,8 +28,8 @@ technologies:
             row_phase_offset: 0.0
             layout_shape: "square"
       cost_parameters:
-        capex_per_kW: 5390.0
-        opex_per_kW_per_year: 52.0
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
         cost_year: 2019
 
   solar:
