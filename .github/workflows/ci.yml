@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install git+https://github.com/NREL/HOPP@develop
           if [ "${{ matrix.optional }}" = "true" ]; then
-            pip install ".[develop]"
+            pip install ".[develop,gis]"
             pip install git+https://github.com/NREL/MarineCarbonManagement.git
           else
             pip install ".[develop,gis]"
