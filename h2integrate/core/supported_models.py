@@ -7,6 +7,7 @@ from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -126,6 +127,10 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
+from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
+    AspenGeoH2SurfaceCostModel,
+    AspenGeoH2SurfacePerformanceModel,
+)
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
 )
@@ -170,6 +175,7 @@ supported_models = {
     # Converters
     "atb_wind_cost": ATBWindPlantCostModel,
     "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
+    "floris_wind_plant_performance": FlorisWindPlantPerformanceModel,
     "pysam_solar_plant_performance": PYSAMSolarPlantPerformanceModel,
     "atb_utility_pv_cost": ATBUtilityPVCostModel,
     "atb_comm_res_pv_cost": ATBResComPVCostModel,
@@ -220,6 +226,8 @@ supported_models = {
     "simple_natural_geoh2_performance": NaturalGeoH2PerformanceModel,
     "templeton_serpentinization_geoh2_performance": StimulatedGeoH2PerformanceModel,
     "mathur_modified_geoh2_cost": GeoH2SubsurfaceCostModel,
+    "aspen_geoh2_performance": AspenGeoH2SurfacePerformanceModel,
+    "aspen_geoh2_cost": AspenGeoH2SurfaceCostModel,
     "natural_gas_performance": NaturalGasPerformanceModel,
     "natural_gas_cost": NaturalGasCostModel,
     # Transport

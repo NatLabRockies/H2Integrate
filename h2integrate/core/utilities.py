@@ -11,7 +11,7 @@ import yaml
 import attrs
 import numpy as np
 import ruamel.yaml as ry
-from attrs import Attribute, field, define
+from attrs import Attribute, define
 
 from h2integrate import ROOT_DIR
 
@@ -173,35 +173,6 @@ class BaseConfig:
         return attrs.asdict(self, filter=attr_filter, value_serializer=attr_serializer)
 
 
-@define(kw_only=True)
-class CostModelBaseConfig(BaseConfig):
-    cost_year: int = field(converter=int)
-
-
-@define(kw_only=True)
-class ResizeablePerformanceModelBaseConfig(BaseConfig):
-    size_mode: str = field(default="normal")
-    flow_used_for_sizing: str | None = field(default=None)
-    max_feedstock_ratio: float = field(default=1.0)
-    max_commodity_ratio: float = field(default=1.0)
-
-    def __attrs_post_init__(self):
-        """Validate sizing parameters after initialization."""
-        valid_modes = ["normal", "resize_by_max_feedstock", "resize_by_max_commodity"]
-        if self.size_mode not in valid_modes:
-            raise ValueError(
-                f"Sizing mode '{self.size_mode}' is not a valid sizing mode. "
-                f"Options are {valid_modes}."
-            )
-
-        if self.size_mode != "normal":
-            if self.flow_used_for_sizing is None:
-                raise ValueError(
-                    "'flow_used_for_sizing' must be set when size_mode is "
-                    "'resize_by_max_feedstock' or 'resize_by_max_commodity'"
-                )
-
-
 def attr_serializer(inst: type, field: Attribute, value: Any):
     if isinstance(value, np.ndarray):
         return value.tolist()
@@ -309,6 +280,8 @@ def dict_to_yaml_formatting(orig_dict):
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
                 if isinstance(orig_dict[key], (str, bool, int)):
+                    continue
+                if orig_dict[key] is None:
                     continue
                 if isinstance(orig_dict[key], (list, np.ndarray)):
                     if any(isinstance(v, dict) for v in val):
@@ -582,6 +555,23 @@ def write_yaml(
     yaml.allow_unicode = False
     with Path(foutput).open("w", encoding="utf-8") as f:
         yaml.dump(instance, f)
+
+
+def write_readable_yaml(instance: dict, foutput: str | Path):
+    """
+    Writes a dictionary to a YAML file using the yaml library.
+
+    Args:
+        instance (dict): Dictionary to be written to the YAML file.
+        foutput (str | Path): Path to the output YAML file.
+
+    Returns:
+        None
+    """
+    instance = dict_to_yaml_formatting(instance)
+
+    with Path(foutput).open("w", encoding="utf-8") as f:
+        yaml.dump(instance, f, sort_keys=False, encoding=None, default_flow_style=False)
 
 
 def make_unique_case_name(folder, proposed_fname, fext):
