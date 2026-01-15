@@ -13,7 +13,8 @@
 - [Meteosat Prime Meridian PSM v4 API](solar_resource:msg_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
     - "meteosat_solar_v4_api"
     - "meteosat_tmy_solar_v4_api"
-
+- [OpenMeteo Historical Weather API](solar_resource:openmeteo_historical): this model does not require an NREL API key, the available model is:
+    - "openmeteo_solar_api"
 
 ```{note}
 Please refer to the [`Setting Environment Variables`](environment_variables:setting-environment-variables) doc page for information on setting up an NREL API key if you haven't yet.
