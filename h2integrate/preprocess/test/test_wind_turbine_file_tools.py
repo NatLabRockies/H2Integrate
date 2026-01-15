@@ -74,7 +74,7 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 600.0
+            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 300.0
         )
 
     with subtests.test("File runs with WindPower, check turbine size"):
@@ -86,7 +86,7 @@ def test_pysam_turbine_export(subtests):
     with subtests.test("File runs with WindPower, check AEP"):
         assert (
             pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/yr")[0], rel=1e-6)
-            == 2783152.10
+            == 1391425.64
         )
 
 

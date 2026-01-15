@@ -2,19 +2,47 @@ name: "technology_config"
 description: "This hybrid plant produces methanol"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
+      model: "pysam_wind_plant_performance"
     cost_model:
-      model: "hopp"
+      model: "atb_wind_cost"
     model_inputs:
-      shared_parameters:
-        cost_year: 2019
       performance_parameters:
-        cache_dir: "cache"
-        enable_caching: True
-        hopp_config: !include tech_inputs/hopp_config.yaml
-
+        num_turbines: 24
+        turbine_rating_kw: 15000
+        rotor_diameter: 240.
+        hub_height: 115.
+        create_model_from: "default"
+        config_name: "WindPowerSingleOwner"
+        run_recalculate_power_curve: True
+        pysam_options:
+          Turbine:
+            wind_resource_shear: 0.14
+          Farm:
+            wind_farm_wake_model: 0.0
+            wind_resource_turbulence_coeff: 0.1
+          Losses:
+            elec_eff_loss: 1.79442 # less than 1.81, greater than 1.75
+          Resource:
+            weibull_k_factor: 2.0
+            weibull_reference_height: 50.0
+            weibull_wind_speed: 7.25
+            wind_resource_model_choice: 0.0
+          Uncertainty:
+            total_uncert: 12.085
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
+      cost_parameters:
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
+        cost_year: 2019
   electricity_splitter:
     performance_model:
       model: "splitter_performance"
