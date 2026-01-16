@@ -117,7 +117,7 @@ ENV/
 *.db-wal
 *n2.html
 
-# H2Integrate structure specific
+# H2Integrate test, documentation, and examples outputs
 tests/h2integrate/data/*
 tests/h2integrate/output.txt
 tests/h2integrate/test_hydrogen/data/*
@@ -130,6 +130,7 @@ tests/h2integrate/test_hydrogen/output/
 **/run_*_out/
 *_out/
 **/test_*_out/
+docs/misc_resources/wind_electrolyzer/
 
 output*
 snopt_history.txt
