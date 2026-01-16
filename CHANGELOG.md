@@ -1,5 +1,7 @@
 # Changelog
+
 ## 0.5.x [TBD]
+
 - Updates models for NumPy version 2.4.0
 - Update test values for WOMBAT update to 0.13.0
 - Added standalone iron DRI and steel EAF performance and cost models
@@ -7,6 +9,9 @@
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
 - Minor reorg for profast tools
+- Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
+- Updated the contributing documentation to clarify what developers should expect for including
+  executable content in the documentation.
 
 ## 0.5.1 [December 18, 2025]
 
