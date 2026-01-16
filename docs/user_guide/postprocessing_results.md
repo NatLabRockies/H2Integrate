@@ -89,7 +89,7 @@ This will print the total hydrogen produced by the electrolyzer in kg.
 The `get_val` method is used to access the value of the variable in the `prob` object.
 The `units` argument is used to specify the units of the value to be returned.
 
-### Saving the outputs
+### Saving outputs
 
 The time series outputs can be saved to a csv output using the `save_case_timeseries_as_csv` function. If no variables are specified, then the function saves all time series variables in the simulation. Otherwise, the specified variables are saves.
 Here is an example of how to save time series results:

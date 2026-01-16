@@ -12,12 +12,12 @@ demand_profile = np.ones(8760) * 640.0
 model.setup()
 model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 # Run the model
-h2i.run()
+model.run()
 
-h2i.post_process()
+model.post_process()
 
 # Save all timeseries data to a csv file
-timeseries_data = save_case_timeseries_as_csv(h2i.recorder_path)
+timeseries_data = save_case_timeseries_as_csv(model.recorder_path)
 
 # Get a subset of timeseries data
 vars_to_save = [
@@ -29,5 +29,5 @@ vars_to_save = [
 
 # Don't save subset of timeseries to a csv file using save_to_file=False
 timeseries_data = save_case_timeseries_as_csv(
-    h2i.recorder_path, vars_to_save=vars_to_save, save_to_file=False
+    model.recorder_path, vars_to_save=vars_to_save, save_to_file=False
 )
