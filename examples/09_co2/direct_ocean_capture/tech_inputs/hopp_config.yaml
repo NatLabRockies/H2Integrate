@@ -20,21 +20,13 @@ site:
     urdb_label: "5ca4d1175457a39b23b3d45e"
   hub_height: 150.0
   solar: false
-  wind: true
+  wind: false
   wave: true
-  wind_resource_file: "./weather_data/43.807_-124.816_windtoolkit_2010_60min_140m_160m.srw"
   wave_resource_file: "./weather_data/wave_lat43.81_lon-124.82__2010.csv"
   grid_resource_file: ""
 
 # Technologies
 technologies:
-  wind:
-    num_turbines: 22 #The rest of capacity passed S1/S2
-    turbine_rating_kw: 15000.0
-    model_name: floris
-    timestep: [0, 8760]
-    floris_config: !include ../../tech_inputs/floris/floris_input_osw_15MW.yaml
-    fin_model: !include ../../tech_inputs/default_fin_config.yaml
   wave:
     device_rating_kw: 286 #enough wave capacity for S1/S2
     wave_power_matrix:
@@ -74,6 +66,4 @@ technologies:
     fin_model: !include ../../tech_inputs/default_fin_config.yaml
 
 config:
-  cost_info: # Costs from 2024 ATB floating technology Wind Class 12
-    wind_installed_cost_mw: 9390000 # based on 2024 ATB moderate case wind class 12 for offshore wind year 2030
-    wind_om_per_kw: 72  # based on 2024 ATB moderate case wind class 12 for offshore wind year 2030
+  cost_info:

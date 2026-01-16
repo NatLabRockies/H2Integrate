@@ -466,13 +466,16 @@ def test_wind_wave_doc_example(subtests):
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 2.2665890992
+            == 1.803343170781246
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.330057
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 243.723825
         )
 
 
@@ -619,12 +622,15 @@ def test_wind_wave_oae_example(subtests):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.48
+        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.156
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.367
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 263.130
         )
 
 
