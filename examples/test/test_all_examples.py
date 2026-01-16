@@ -26,6 +26,30 @@ def test_steel_example(subtests):
 
     model.post_process()
     # Subtests for checking specific values
+    with subtests.test("Check total adjusted CapEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_capex_adjusted")[0], rel=1e-3
+            )
+            == 4314364438.840067
+        )
+    with subtests.test("Check total adjusted OpEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_opex_adjusted")[0], rel=1e-3
+            )
+            == 75831805.27785796
+        )
+
+    with subtests.test("Check LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 90.8231905486079
+        )
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(
@@ -78,11 +102,19 @@ def test_simple_ammonia_example(subtests):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-3) == 1.75469962e09
+    with subtests.test("Check Wind+PV CapEx"):
+        wind_pv_capex = (
+            model.prob.get_val("wind.CapEx", units="USD")[0]
+            + model.prob.get_val("solar.CapEx", units="USD")[0]
+        )
+        assert pytest.approx(wind_pv_capex, rel=1e-3) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-3) == 32953490.4
+    with subtests.test("Check Wind+PV OpEx"):
+        wind_pv_opex = (
+            model.prob.get_val("wind.OpEx", units="USD/yr")[0]
+            + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
+        )
+        assert pytest.approx(wind_pv_opex, rel=1e-3) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-3) == 6.00412524e08
