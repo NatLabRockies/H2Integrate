@@ -59,6 +59,7 @@ parts:
   - file: control/control_overview
   - file: control/open-loop_controllers
   - file: control/pyomo_controllers
+  - file: control/controller_demonstrations
 
 - caption: Finance Models
   chapters:
