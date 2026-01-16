@@ -8,6 +8,7 @@
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
 - Minor reorg for profast tools
+- Removed hydrogen tank cost and performance models that were unused
 
 ## 0.5.1 [December 18, 2025]
 

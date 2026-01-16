@@ -40,10 +40,6 @@ from h2integrate.converters.iron.iron_transport import (
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
-from h2integrate.storage.hydrogen.tank_baseclass import (
-    HydrogenTankCostModel,
-    HydrogenTankPerformanceModel,
-)
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
     HydrogenEAFPlantCostComponent,
@@ -241,8 +237,6 @@ supported_models = {
     "summer": GenericSummerPerformanceModel,
     # Storage
     "pysam_battery": PySAMBatteryPerformanceModel,
-    "hydrogen_tank_performance": HydrogenTankPerformanceModel,
-    "hydrogen_tank_cost": HydrogenTankCostModel,
     "storage_auto_sizing": StorageAutoSizingModel,
     "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
     "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,
