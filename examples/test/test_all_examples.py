@@ -26,6 +26,17 @@ def test_steel_example(subtests):
 
     model.post_process()
     # Subtests for checking specific values
+    with subtests.test("Check total electricity produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity.total_electricity_produced", units="MW*h/yr"
+                )[0],
+                rel=1e-3,
+            )
+            == 5901098.278035271
+        )
+
     with subtests.test("Check total adjusted CapEx (electricity)"):
         assert (
             pytest.approx(
@@ -48,6 +59,12 @@ def test_steel_example(subtests):
                 rel=1e-3,
             )
             == 90.8231905486079
+        )
+
+    with subtests.test("Check H2 Storage capacity"):
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.max_capacity", units="kg"), rel=1e-3)
+            == 2559669.7759292
         )
 
     with subtests.test("Check LCOH"):
