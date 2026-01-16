@@ -131,6 +131,7 @@ tests/h2integrate/test_hydrogen/output/
 *_out/
 **/test_*_out/
 docs/misc_resources/wind_electrolyzer/
+docs/_autosummary
 
 output*
 snopt_history.txt
