@@ -13,6 +13,9 @@
 - Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
 - Updated the contributing documentation to clarify what developers should expect for including
   executable content in the documentation.
+- Converted the example notebooks to documentation examples, and maintain a basic working example
+  in the examples folder:
+  - `examples/14_wind_hydrogen_dispatch/hydrogren_dispatch.ipynb` -> `docs/control/controller_demonstrations.md`
 
 ## 0.5.1 [December 18, 2025]
 
