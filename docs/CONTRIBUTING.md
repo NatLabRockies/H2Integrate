@@ -46,6 +46,25 @@ If the browser appears to be out of date from what you expected to be built, ple
 3. Delete the `_build` folder and rebuild the docs
 ```
 
+### Writing Executable Content
+
+All executable content, such as Jupyter notebooks, should be converted to the executable markdown
+format used by Jupyter Book. For users that prefer to develop examples in Jupyter notebooks, then
+Jupytext (separate installation required) can be used to convert their work using the following
+command. For more details, please see their documentation:
+https://jupytext.readthedocs.io/en/latest/using-cli.html.
+
+```bash
+jupytext notebook.ipynb --to myst
+```
+
+Similarly, any documentation example that users wish to interact with can be converted to a notebook
+using the following command.
+
+```bash
+jupytext notebook.md --to .ipynb
+```
+
 ## Tests
 
 The test suite can be run using `pytest tests/h2integrate`. Individual test files can be run by specifying them:
