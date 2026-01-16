@@ -22,85 +22,6 @@ F = 96485.3321  # Faraday constant: Electric charge per mole of electrons (Farad
 M = 0.055845  # Fe molar mass (kg/mol)
 
 
-def stinn_capex_calc(T, P, p, z, j, A, e, Q, V, N):
-    """
-    Equation (7) from Stinn: doi.org/10.1149.2/2.F06202IF
-    default values for coefficients defined as globals
-    """
-    # Default coefficents
-    a1n = 51010
-    a1d = -3.82e-03
-    a1t = -631
-    a2n = 5634000
-    a2d = -7.1e-03
-    a2t = 349
-    a3n = 750000
-    e1 = 0.8
-    e2 = 0.9
-    e3 = 0.15
-    e4 = 0.5
-
-    # Alpha coefficients
-    a1 = a1n / (1 + np.exp(a1d * (T - a1t)))
-    a2 = a2n / (1 + np.exp(a2d * (T - a2t)))
-    a3 = a3n * Q
-
-    # Pre-costs calculation
-    pre_costs = a1 * P**e1
-
-    # Electrolysis and product handling contribution to total cost
-    electrolysis_product_handling = a2 * ((p * z * F) / (j * A * e * M)) ** e2
-
-    # Power rectifying contribution
-    power_rectifying_contribution = a3 * V**e3 * N**e4
-
-    return pre_costs, electrolysis_product_handling, power_rectifying_contribution, a1, a2, a3
-
-
-def humbert_opex_calc(
-    capacity,
-    positions,
-    NaOH_ratio,
-    CaCl2_ratio,
-    limestone_ratio,
-    anode_ratio,
-    anode_interval,
-    ore_in,
-    ore_price,
-    elec_in,
-    elec_price,
-):
-    """
-    Calculations in Excel spreadsheet SI of Humbert doi.org/10.1149.2/2.F06202IF
-    """
-    # Default costs - adjusted to 2018 to match Stinn via CPI
-    labor_rate = 55.90  # USD/person-hour
-    NaOH_cost = 415.179  # USD/tonne
-    CaCl2_cost = 207.59  # USD/tonne
-    limestone_cost = 0
-    anode_cost = 1660.716  # USD/tonne
-    hours = 2000  # hours/position-year
-
-    # All linear OpEx for now - TODO: apply scaling models
-    labor_opex = labor_rate * capacity * positions * hours  # Labor OpEx USD/year
-    NaOH_varopex = NaOH_ratio * capacity * NaOH_cost  # NaOH VarOpEx USD/year
-    CaCl2_varopex = CaCl2_ratio * capacity * CaCl2_cost  # CaCl2 VarOpEx USD/year
-    limestone_varopex = limestone_ratio * capacity * limestone_cost  # CaCl2 VarOpEx USD/year
-    anode_varopex = anode_ratio * capacity * anode_cost / anode_interval  # Anode VarOpEx USD/year
-    ore_varopex = np.sum(ore_in * ore_price, keepdims=True)  # Ore VarOpEx USD/year
-    elec_varopex = np.sum(elec_in * elec_price, keepdims=True)  # Electricity VarOpEx USD/year
-
-    return (
-        labor_opex,
-        NaOH_varopex,
-        CaCl2_varopex,
-        limestone_varopex,
-        anode_varopex,
-        ore_varopex,
-        elec_varopex,
-    )
-
-
 def plot_capex_calc(
     a1n, a1d, a1t, a2n, a2d, a2t, a3n, e1, e2, e3, e4, T, P, p, z, F, j, A, e, M, Q, V, N
 ):
@@ -134,7 +55,7 @@ def main(config):
         config (object): Configuration object containing model inputs, including:
             cost_model (dict): Dictionary with the file path to cost coefficients.
             electrolysis_temp (float): Electrolysis temperature in degrees Celsius (°C).
-            intsalled capacity (float): Installed capacity in tonnes per year (t/y).
+            capacity (float): Installed capacity in tonnes per year (t/y).
             production_rate (float): Production rate in kilograms per second (kg/s).
             electron_moles (int): Moles of electrons per mole of product.
             faraday_const (float): Faraday constant in coulombs per mole (C/mol).

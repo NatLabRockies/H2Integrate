@@ -1488,30 +1488,33 @@ def test_21_iron_dri_eaf_example(subtests):
 
 
 def test_27_iron_electrowinning_example(subtests):
-    from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
-
     os.chdir(EXAMPLE_DIR / "27_iron_electrowinning")
 
     model = H2IntegrateModel("27_iron_electrowinning.yaml")
 
-    # Load cases
-    case_file = Path("test_inputs.csv")
-    cases = load_tech_config_cases(case_file)
-
     with subtests.test("Value check on AHE"):
-        model = modify_tech_config(model, cases["AHE"])
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "ahe"
+        model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
         assert pytest.approx(lcoi, rel=1e-4) == 1.057242764725443
 
     with subtests.test("Value check on MSE"):
-        model = modify_tech_config(model, cases["MSE"])
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "mse"
+        model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
         assert pytest.approx(lcoi, rel=1e-4) == 2.2103327773319883
 
     with subtests.test("Value check on MOE"):
-        model = modify_tech_config(model, cases["MOE"])
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "moe"
+        model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
         assert pytest.approx(lcoi, rel=1e-4) == 1.1525394007265573

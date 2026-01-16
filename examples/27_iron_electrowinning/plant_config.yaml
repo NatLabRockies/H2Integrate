@@ -5,18 +5,6 @@ site:
   latitude: 41.717
   longitude: -88.398
 
-  # array of polygons defining boundaries with x/y coords
-  boundaries: [
-    {
-      x: [0.0, 1000.0, 1000.0, 0.0],
-      y: [0.0, 0.0, 100.0, 1000.0],
-    },
-    {
-      x: [2000.0, 2500.0, 2000.0],
-      y: [2000.0, 2000.0, 2500.0],
-    }
-  ]
-
 technology_interconnections: [
   # Connect feedstocks to iron mine.
   # Requires `electricity` and `crude ore`.

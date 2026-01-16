@@ -25,8 +25,6 @@ from attrs import field, define
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
-from h2integrate.converters.iron.stinn.cost_model import stinn_capex_calc
-from h2integrate.converters.iron.humbert.cost_model import humbert_opex_calc
 
 
 @define
@@ -60,6 +58,10 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
     at doi.org/10.1007/s40831-024-00878-3 except for the default anode replacement interval.
     These are exposed to OpenMDAO for potential future optimization/sensitivity analysis.
 
+    We calculate both CapEx and OpEx in this component.
+    CapEx is calculated using the Stinn & Allanore model.
+    OpEx is calculated using the Humbert et al. model.
+
     Inputs:
         output_capacity (float):
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
@@ -80,7 +82,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         NaOH_ratio (float): Ratio of NaOH consumed to Fe produced.
         CaCl2_ratio (float): Ratio of CaCl2 consumed to Fe produced.
         limestone_ratio (float): Ratio of limestone consumed to Fe produced.
-        anode_ratio (float): Ratio of annode mass to annual iron production.
+        anode_ratio (float): Ratio of anode mass to annual iron production.
         anode_replacement_interval (float): Replacement interval of anodes (years)
 
     Outputs:
@@ -131,7 +133,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             NaOH_ratio = 25130.2 * 0.1 / 2e6  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
             limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
-            anode_ratio = 0  # Ratio of annode mass to annual iron production
+            anode_ratio = 0  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
 
@@ -150,7 +152,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 23138 * 0.1 / 2e6  # Ratio of CaCl2 consumption to annual iron production
             limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
-            anode_ratio = 1589.3 / 2e6  # Ratio of annode mass to annual iron production
+            anode_ratio = 1589.3 / 2e6  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
 
@@ -169,7 +171,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
             limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
-            anode_ratio = 8365.6 / 2e6  # Ratio of annode mass to annual iron production
+            anode_ratio = 8365.6 / 2e6  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
 
@@ -191,6 +193,11 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("cell_voltage", val=V, units="V")
         self.add_input("rectifier_lines", val=N, units=None)
 
+        # Set outputs for Stinn Capex model
+        self.add_output("processing_capex", val=0.0, units="USD")
+        self.add_output("electrolysis_capex", val=0.0, units="USD")
+        self.add_output("rectifier_capex", val=0.0, units="USD")
+
         # Set inputs for Humbert Opex model
         self.add_input("positions", val=positions, units="year/Mg")
         self.add_input("NaOH_ratio", val=NaOH_ratio, units=None)
@@ -198,11 +205,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("limestone_ratio", val=limestone_ratio, units=None)
         self.add_input("anode_ratio", val=anode_ratio, units=None)
         self.add_input("anode_replacement_interval", val=anode_replace_int, units="year")
-
-        # Set outputs for Stinn Capex model
-        self.add_output("processing_capex", val=0.0, units="USD")
-        self.add_output("electrolysis_capex", val=0.0, units="USD")
-        self.add_output("rectifier_capex", val=0.0, units="USD")
 
         # Set outputs for Humbert Opex model
         self.add_output("labor_opex", val=0.0, units="USD/year")
@@ -214,7 +216,11 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_output("elec_opex", val=0.0, units="USD/year")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # Parse inputs for Stinn Capex model
+        # Physical constants
+        F = 96485.3321  # Faraday constant: Electric charge per mole of electrons (C/mol)
+        M = 0.055845  # Fe molar mass (kg/mol)
+
+        # Parse inputs for Stinn Capex model (doi.org/10.1149/2.F06202IF)
         T = inputs["electrolysis_temp"]
         z = inputs["electron_moles"]
         j = inputs["current_density"]
@@ -233,11 +239,41 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         N_cell = P * 1e6 / P_cell  # number of cells [-]
         Q = Q_cell * N_cell / 1e6  # total installed power [MW]
 
-        # Execute Stinn capex model
-        capex_breakdown = stinn_capex_calc(T, P, p, z, j, A, e, Q, V, N)
-        outputs["CapEx"] = np.sum(capex_breakdown[:3])
+        # Stinn Capex model - Equation (7) from doi.org/10.1149/2.F06202IF
+        # Default coefficients
+        a1n = 51010
+        a1d = -3.82e-03
+        a1t = -631
+        a2n = 5634000
+        a2d = -7.1e-03
+        a2t = 349
+        a3n = 750000
+        e1 = 0.8
+        e2 = 0.9
+        e3 = 0.15
+        e4 = 0.5
 
-        # Parse inputs for Humbert Opex model
+        # Alpha coefficients
+        a1 = a1n / (1 + np.exp(a1d * (T - a1t)))
+        a2 = a2n / (1 + np.exp(a2d * (T - a2t)))
+        a3 = a3n * Q
+
+        # Pre-costs calculation
+        processing_capex = a1 * P**e1
+
+        # Electrolysis and product handling contribution to total cost
+        electrolysis_capex = a2 * ((p * z * F) / (j * A * e * M)) ** e2
+
+        # Power rectifying contribution
+        rectifier_capex = a3 * V**e3 * N**e4
+
+        # Capex outputs
+        outputs["CapEx"] = processing_capex + electrolysis_capex + rectifier_capex
+        outputs["processing_capex"] = processing_capex
+        outputs["electrolysis_capex"] = electrolysis_capex
+        outputs["rectifier_capex"] = rectifier_capex
+
+        # Parse inputs for Humbert Opex model (doi.org/10.1007/s40831-024-00878-3)
         positions = inputs["positions"]
         NaOH_ratio = inputs["NaOH_ratio"]
         CaCl2_ratio = inputs["CaCl2_ratio"]
@@ -253,29 +289,35 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         # Add ore transport cost TODO: turn iron_transport into proper transporter
         ore_price += ore_transport_cost
 
-        # Execute Humbert opex model
-        opex_breakdown = humbert_opex_calc(
-            P,
-            positions,
-            NaOH_ratio,
-            CaCl2_ratio,
-            limestone_ratio,
-            anode_ratio,
-            anode_interval,
-            ore_in,
-            ore_price,
-            elec_in,
-            elec_price,
+        # Humbert Opex model - from SI spreadsheet (doi.org/10.1007/s40831-024-00878-3)
+        # Default costs - adjusted to 2018 to match Stinn via CPI
+        labor_rate = 55.90  # USD/person-hour
+        NaOH_cost = 415.179  # USD/tonne
+        CaCl2_cost = 207.59  # USD/tonne
+        limestone_cost = 0
+        anode_cost = 1660.716  # USD/tonne
+        hours = 2000  # hours/position-year
+
+        # All linear OpEx for now - TODO: apply scaling models
+        labor_opex = labor_rate * P * positions * hours  # Labor OpEx USD/year
+        NaOH_opex = NaOH_ratio * P * NaOH_cost  # NaOH VarOpEx USD/year
+        CaCl2_opex = CaCl2_ratio * P * CaCl2_cost  # CaCl2 VarOpEx USD/year
+        limestone_opex = limestone_ratio * P * limestone_cost  # Limestone VarOpEx USD/year
+        anode_opex = anode_ratio * P * anode_cost / anode_interval  # Anode VarOpEx USD/year
+        ore_opex = np.sum(ore_in * ore_price, keepdims=True)  # Ore VarOpEx USD/year
+        elec_opex = np.sum(elec_in * elec_price, keepdims=True)  # Electricity VarOpEx USD/year
+
+        # Opex outputs
+        outputs["OpEx"] = (
+            labor_opex + NaOH_opex + CaCl2_opex + limestone_opex + anode_opex + ore_opex + elec_opex
         )
-        outputs["OpEx"] = np.sum(opex_breakdown)
-        outputs["VarOpEx"] = np.sum(opex_breakdown[1:])
-        outputs["processing_capex"] = capex_breakdown[0]
-        outputs["electrolysis_capex"] = capex_breakdown[1]
-        outputs["rectifier_capex"] = capex_breakdown[2]
-        outputs["labor_opex"] = opex_breakdown[0]
-        outputs["NaOH_opex"] = opex_breakdown[1]
-        outputs["CaCl2_opex"] = opex_breakdown[2]
-        outputs["limestone_opex"] = opex_breakdown[3]
-        outputs["anode_opex"] = opex_breakdown[4]
-        outputs["ore_opex"] = opex_breakdown[5]
-        outputs["elec_opex"] = opex_breakdown[6]
+        outputs["VarOpEx"] = (
+            NaOH_opex + CaCl2_opex + limestone_opex + anode_opex + ore_opex + elec_opex
+        )
+        outputs["labor_opex"] = labor_opex
+        outputs["NaOH_opex"] = NaOH_opex
+        outputs["CaCl2_opex"] = CaCl2_opex
+        outputs["limestone_opex"] = limestone_opex
+        outputs["anode_opex"] = anode_opex
+        outputs["ore_opex"] = ore_opex
+        outputs["elec_opex"] = elec_opex
