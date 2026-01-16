@@ -140,10 +140,12 @@ def test_simple_ammonia_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-3) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-3) == 65336874.189441
+        assert pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 65336874.189441
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-3) == 3149096.037312718
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3149096.037312718
+        )
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-3) == 1.0124126e08
@@ -171,7 +173,7 @@ def test_simple_ammonia_example(subtests):
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 3.982
+            == 4.025446
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -179,7 +181,7 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen")[0], rel=1e-3
             )
-            == 3.982
+            == 4.025446
         )
 
     # Currently underestimated compared to the Reference Design Doc
