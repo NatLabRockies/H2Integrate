@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import yaml
+import numpy as np
 import pytest
 
 from h2integrate import EXAMPLE_DIR
@@ -208,9 +209,9 @@ def test_technology_connections():
 
     new_connection = (["finance_subgroup_electricity", "steel", ("LCOE", "electricity_cost")],)
     new_tech_interconnections = (
-        plant_config_data["technology_interconnections"][0:3]
+        plant_config_data["technology_interconnections"][0:4]
         + list(new_connection)
-        + [plant_config_data["technology_interconnections"][3]]
+        + [plant_config_data["technology_interconnections"][4]]
     )
     plant_config_data["technology_interconnections"] = new_tech_interconnections
 
@@ -230,7 +231,9 @@ def test_technology_connections():
         yaml.safe_dump(highlevel_data, f)
 
     h2i_model = H2IntegrateModel(temp_highlevel_yaml)
-
+    demand_profile = np.ones(8760) * 720.0
+    h2i_model.setup()
+    h2i_model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     h2i_model.run()
 
     # Clean up temporary YAML files

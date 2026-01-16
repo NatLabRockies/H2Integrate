@@ -8,6 +8,7 @@
 - Add baseclass for caching functionality
 - Minor reorg for profast tools
 - Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
+- Removed hydrogen tank cost and performance models that were unused
 
 ## 0.5.1 [December 18, 2025]
 
