@@ -52,7 +52,7 @@ technologies:
     - [9.250000, 0.000000, 0.000000, 0.000000, 0.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 242.100000, 204.100000, 0.000000]
     - [9.750000, 0.000000, 0.000000, 0.000000, 0.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 286.000000, 267.400000, 225.600000, 0.000000]
     num_devices: 108
-    fin_model: !include ../../tech_inputs/default_fin_config.yaml
+    fin_model: !include default_fin_config.yaml
     cost_inputs:
       reference_model_num: 3
       water_depth: 482
@@ -63,7 +63,7 @@ technologies:
       cable_system_overbuild: 20
   grid:
     interconnect_kw: 362129.538
-    fin_model: !include ../../tech_inputs/default_fin_config.yaml
+    fin_model: !include default_fin_config.yaml
 
 config:
   cost_info:
