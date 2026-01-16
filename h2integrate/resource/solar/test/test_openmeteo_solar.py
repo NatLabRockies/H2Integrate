@@ -84,8 +84,8 @@ def test_solar_resource_h2i_download(
         assert pytest.approx(solar_data["elevation"], rel=1e-6) == 449
     with subtests.test("resource data is 8760 in length"):
         assert all(len(solar_data[k]) == 8760 for k in data_keys)
-    with subtests.test("theres 17 timeseries data keys"):
-        assert len(data_keys) == 17
+    with subtests.test("theres 16 timeseries data keys"):
+        assert len(data_keys) == 16
     with subtests.test("Start time"):
         assert solar_data["start_time"] == "2023/01/01 00:00:00 (+0000)"
     with subtests.test("Time step"):
