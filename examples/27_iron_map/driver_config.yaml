@@ -13,7 +13,7 @@ driver:
     debug_print: true
     generator: "csvgen"
     filename: "ned_reduced_sitelist.csv"
-    run_parallel: true
+    run_parallel: False
 design_variables:
   site:
     latitude:
