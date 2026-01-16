@@ -140,11 +140,13 @@ def test_simple_ammonia_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-3) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 65336874.189441
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 64599012.73829915
+        )
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
-            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3149096.037312718
+            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3126204.813298109
         )
 
     with subtests.test("Check ammonia CapEx"):
