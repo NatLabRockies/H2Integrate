@@ -9,6 +9,7 @@
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
 - Minor reorg for profast tools
+- Removed hydrogen tank cost and performance models that were unused
 - Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
 - Updated the contributing documentation to clarify what developers should expect for including
   executable content in the documentation.
