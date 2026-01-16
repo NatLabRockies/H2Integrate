@@ -3,7 +3,8 @@
 One of the key features of H2Integrate is the ability to perform a design of experiments (DOE) for hybrid energy systems.
 
 The design of experiments process uses the `driver_config.yaml` file to define the design sweep, including the design variables, constraints, and objective functions.
-Detailed information on setting up the `driver_config.yaml` file can be found [here](https://h2integrate.readthedocs.io/en/latest/user_guide/design_optimization_in_h2i.html)
+Detailed information on setting up the `driver_config.yaml` file can be found in the
+[user guide](https://h2integrate.readthedocs.io/en/latest/user_guide/design_optimization_in_h2i.html)
 
 ## Driver config file
 
@@ -53,7 +54,9 @@ recorder:
 ```
 
 ## Types of Generators
+
 H2Integrate currently supports the following types of generators:
+
 - ["uniform"](#uniform): uses the `UniformGenerator` generator
 - ["fullfact"](#fullfactorial): uses the `FullFactorialGenerator` generator
 - ["plackettburman"](#plackettburman): uses the `PlackettBurmanGenerator` generator
@@ -75,6 +78,7 @@ driver:
 ```
 
 ### FullFactorial
+
 ```yaml
 driver:
   design_of_experiments:
@@ -86,13 +90,15 @@ driver:
 The **levels** input is the number of evenly spaced levels between each design variable lower and upper bound.
 
 You can check the values that will be used for a specific design variable by running:
+
 ```python
 import numpy as np
+
 design_variable_values = np.linspace(lower_bound,upper_bound,levels)
 ```
 
-
 ### PlackettBurman
+
 ```yaml
 driver:
   design_of_experiments:
@@ -101,6 +107,7 @@ driver:
 ```
 
 ### BoxBehnken
+
 ```yaml
 driver:
   design_of_experiments:
@@ -109,6 +116,7 @@ driver:
 ```
 
 ### LatinHypercube
+
 ```yaml
 driver:
   design_of_experiments:
@@ -119,8 +127,8 @@ driver:
     seed: #input is specific to this generator
 ```
 
-
 ### CSV
+
 This method is useful if there are specific combinations of designs variables that you want to sweep. An example is shown here:
 
 ```yaml
