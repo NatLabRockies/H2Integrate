@@ -17,7 +17,7 @@ h2i.run()
 h2i.post_process()
 
 # Save all timeseries data to a csv file
-timeseries_data = save_case_timeseries_as_csv(h2i.recorder_path, save_to_file=True)
+timeseries_data = save_case_timeseries_as_csv(h2i.recorder_path)
 
 # Get a subset of timeseries data
 vars_to_save = [
