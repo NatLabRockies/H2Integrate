@@ -69,7 +69,7 @@ ax[1].plot(
     linestyle="--",
     label="Eletrical Demand (MW)",
 )
-ax[1].set_ylim([-7e2, 7e2])
+ax[1].set_ylim([-1e2, 2.5e2])
 ax[1].set_ylabel("Electricity Hourly (MW)")
 ax[1].set_xlabel("Timestep (hr)")
 

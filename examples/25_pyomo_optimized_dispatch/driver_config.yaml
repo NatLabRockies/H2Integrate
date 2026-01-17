@@ -1,5 +1,5 @@
 name: "driver_config"
-description: "This analysis runs a hybrid plant to meet an electrical load."
+description: "This analysis runs a hybrid plant to dispatch storage optimally to meet an electrical load."
 
 general:
   folder_output: outputs

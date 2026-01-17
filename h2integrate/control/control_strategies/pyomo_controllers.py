@@ -275,7 +275,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
             # loop over all control windows, where t is the starting index of each window
             for t in window_start_indices:
-                print("Iteration tracker:", t)
+
                 # get the inputs over the current control window
                 commodity_in = inputs[self.config.commodity_name + "_in"][
                     t : t + self.config.n_control_window
@@ -294,15 +294,16 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     )
 
                 elif "optimized" in control_strategy:
+                    # Progress report
+                    if t % (self.n_timesteps // 4) < self.n_control_window:
+                        percentage = round((t / self.n_timesteps) * 100)
+                        print(f"{percentage}% done with dispatch")
                     # Update time series parameters for the optimization method
                     self.update_time_series_parameters(
                         commodity_in=commodity_in, commodity_demand=demand_in
                     )
                     # Run dispatch optimization to minimize costs while meeting demand
                     self.solve_dispatch_model(
-                        commodity_in,
-                        self.config.system_commodity_interface_limit,
-                        demand_in,
                         start_time=t,
                         n_days=self.n_timesteps // 24,
                     )
@@ -855,7 +856,7 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
         return dispatch_inputs
 
 
-class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
+class OptimizedDispatchController(PyomoControllerBaseClass):
     """Operates the battery based on heuristic rules to meet the demand profile based power
         available from power generation profiles and power demand profile.
 
@@ -892,6 +893,8 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
         if self.config.discharge_efficiency is not None:
             self.discharge_efficiency = self.config.discharge_efficiency
 
+        self.n_control_window = self.config.n_control_window
+
         # Is this the best place to put this???
         self.commodity_info = {
             "commodity_name": self.config.commodity_name,
@@ -903,11 +906,14 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
 
         self.dispatch_inputs = self.config.make_dispatch_inputs()
 
-        # self.n_control_window = self.config.n_control_window
-        # self.n_horizon_window = self.config.n_control_window
-
-    # Initialize parameters for optimization model
     def initialize_parameters(self, commodity_in, commodity_demand):
+        """Initialize parameters for optimization model
+
+        Args:
+            commodity_in (list): List of generated commodity in for this time slice.
+            commodity_demand (list): The demanded commodity for this time slice.
+
+        """
         # Where pyomo model communicates with the rest of the controller
         # self.hybrid_dispatch_model is the pyomo model, this is the thing in hybrid_rule
         self.hybrid_dispatch_model = self._create_dispatch_optimization_model()
@@ -918,27 +924,30 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
         # this is where dispatch problem state is made, this is used in the solver call
         self.problem_state = DispatchProblemState()
 
-        # hybrid_dispatch_rule is the thing where you can access variables from
+        # hybrid_dispatch_rule is the thing where you can access variables and hybrid_rule \
+        #  functions from
         self.hybrid_dispatch_rule.initialize_parameters(
             commodity_in, commodity_demand, self.dispatch_inputs
         )
 
-    def update_time_series_parameters(self, start_time=0, commodity_in=None, commodity_demand=None):
-        # Where pyomo model communicates with the rest of the controller
+    def update_time_series_parameters(self, commodity_in=None, commodity_demand=None):
+        """Updates the pyomo optimization problem with parameters that change with time
+
+        Args:
+            commodity_in (list): List of generated commodity in for this time slice.
+            commodity_demand (list): The demanded commodity for this time slice.
+
+        """
         self.hybrid_dispatch_rule.update_time_series_parameters(
-            start_time, commodity_in, commodity_demand
+            commodity_in, commodity_demand
         )
 
     def solve_dispatch_model(
         self,
-        commodity_in: list,
-        system_commodity_interface_limit: list,
-        commodity_demand: list,
         start_time: int = 0,
         n_days: int = 0,
     ):
-        """Sets charge and discharge power of battery dispatch using fixed_dispatch attribute
-            and enforces available generation and charge/discharge limits.
+        """Sets charge and discharge power of battery dispatch from the optimized dispatch results
 
         Args:
             commodity_in (list): List of generated commodity in.
@@ -948,21 +957,15 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
 
         """
 
-        # self.problem_state = DispatchProblemState()
         solver_results = self.glpk_solve()
         self.problem_state.store_problem_metrics(
             solver_results, start_time, n_days, pyomo.value(self.hybrid_dispatch_model.objective)
         )
 
-        # TODO: Check that these function calls are appropriate for optimization model
-        # self.check_commodity_in_discharge_limit(commodity_in, system_commodity_interface_limit)
-        # self._set_commodity_fraction_limits(commodity_in, system_commodity_interface_limit)
-        # self._heuristic_method(commodity_in, commodity_demand)
-        # self._fix_dispatch_model_variables()
-
     def _create_dispatch_optimization_model(self):
         """
-        Creates monolith dispatch model
+        Creates monolith dispatch model by creating pyomo models for each technology, then
+        aggregating them into hybrid_rule
         """
         model = pyomo.ConcreteModel(name="hybrid_dispatch")
         #################################
@@ -974,7 +977,6 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
         )
         for tech in self.source_techs:
             if tech == self.dispatch_tech[0]:
-                # tech.dispatch = PyomoRuleStorageMinOperatingCosts()
                 dispatch = PyomoRuleStorageMinOperatingCosts(
                     self.commodity_info,
                     model,
@@ -989,12 +991,9 @@ class OptimizedDispatchController(SimpleBatteryControllerHeuristic):
                     model.forecast_horizon,
                     block_set_name=f"{tech}_rule",
                 )
-                # tech.dispatch = PyomoDispatchGenericConverterMinOperatingCosts()
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
 
-        #################################
-        # Blocks (technologies)         #
-        #################################
+        # Create hybrid pyomo model, inputting indivdual technology models
         self.hybrid_dispatch_rule = PyomoDispatchPlantRule(
             model, model.forecast_horizon, self.source_techs, self.pyomo_model, self.config
         )
