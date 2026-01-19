@@ -320,26 +320,10 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
-        if "sites" not in self.plant_config:
-            if "site" in self.plant_config:
-                site_params = {
-                    k: v for k, v in self.plant_config["site"].items() if k != "resources"
-                }
-
-                if "resources" in self.plant_config["site"]:
-                    site_params.update({"resources": self.plant_config["site"].get("resources")})
-            else:
-                site_params = {}
-            other_plant_inputs = {k: v for k, v in self.plant_config.items() if k != "site"}
-            plant_config_dict = {"sites": {"site": site_params}} | other_plant_inputs
-
-        else:
-            plant_config_dict = self.plant_config.copy()
-
-        for site_name, site_info in plant_config_dict["sites"].items():
+        for site_name, site_info in self.plant_config["sites"].items():
             plant_config_reorg = {
                 "site": site_info,
-                "plant": plant_config_dict["plant"],
+                "plant": self.plant_config["plant"],
             }
 
             site_group = self.create_site_group(plant_config_reorg, site_info)
@@ -986,8 +970,6 @@ class H2IntegrateModel:
 
         resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
 
-        if "site" in self.plant_config:
-            resource_models = self.plant_config.get("site", {}).get("resources", {})
         if "sites" in self.plant_config:
             resource_models = {}
             for site_grp, site_grp_inputs in self.plant_config["sites"].items():
@@ -1036,10 +1018,7 @@ class H2IntegrateModel:
             resource_name, tech_name, variable = connection
 
             # Connect the resource output to the technology input
-            if "." in resource_name:
-                self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
-            else:
-                self.model.connect(f"site.{resource_name}.{variable}", f"{tech_name}.{variable}")
+            self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
