@@ -21,7 +21,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 rerun_model = False
 if rerun_model:
     model = H2IntegrateModel("iron_map.yaml")
-model.run()
+    model.run()
 
 # Define filepaths
 ex_27_dir = EXAMPLE_DIR / "27_iron_map"
