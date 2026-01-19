@@ -14,8 +14,13 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "doc", "electricity", "cable"],
+  ["hopp", "battery", "electricity", "cable"],
+  ["battery", "doc", "electricity", "cable"],
   # etc
+]
+tech_to_dispatch_connections: [
+  ["hopp", "battery"],
+  ["battery", "battery"],
 ]
 
 finance_parameters:
@@ -47,7 +52,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
-      technologies: ["hopp"]
+      technologies: ["hopp", "battery"]
     co2:
       commodity: "co2"
-      technologies: ["hopp", "doc"]
+      technologies: ["hopp", "battery", "doc"]

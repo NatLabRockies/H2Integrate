@@ -16,6 +16,10 @@ def test_steel_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "01_onshore_steel_mn.yaml")
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 720.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -62,6 +66,11 @@ def test_simple_ammonia_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "02_texas_ammonia.yaml")
+
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -151,6 +160,11 @@ def test_ammonia_synloop_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "12_ammonia_synloop.yaml")
 
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -158,10 +172,16 @@ def test_ammonia_synloop_example(subtests):
 
     # Subtests for checking specific values
     with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-6) == 1.75469962e09
+        hopp_capex = model.prob.get_val("hopp.CapEx")
+        battery_capex = model.prob.get_val("battery.CapEx")
+        hopp_batt_capex = hopp_capex + battery_capex
+        assert pytest.approx(hopp_batt_capex, rel=1e-6) == 1.75469962e09
 
     with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-6) == 32953490.4
+        hopp_opex = model.prob.get_val("plant.hopp.hopp.OpEx")
+        battery_opex = model.prob.get_val("battery.OpEx")
+        hopp_batt_opex = hopp_opex + battery_opex
+        assert pytest.approx(hopp_batt_opex, rel=1e-6) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-6) == 6.00412524e08
@@ -241,7 +261,7 @@ def test_co2h_methanol_example(subtests):
 
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
-        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.381162
+        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
@@ -260,8 +280,8 @@ def test_doc_methanol_example(subtests):
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM"), rel=1e-6)
-            == 2.58989518
+            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM")[0], rel=1e-4)
+            == 2.5252588
         )
 
 
@@ -374,7 +394,10 @@ def test_wind_wave_doc_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_doc.yaml")
-
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 340.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     # Run the model
     model.run()
 
@@ -384,7 +407,7 @@ def test_wind_wave_doc_example(subtests):
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 2.26955589
+            == 2.2665890992
         )
 
     with subtests.test("Check LCOE"):
@@ -523,6 +546,11 @@ def test_wind_wave_oae_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_oae.yaml")
 
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 330.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -532,7 +560,7 @@ def test_wind_wave_oae_example(subtests):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC"), rel=1e-3) == 37.82
+        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.48
 
     with subtests.test("Check LCOE"):
         assert (

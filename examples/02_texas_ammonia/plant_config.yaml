@@ -11,13 +11,17 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "electrolyzer", "electricity", "cable"],
+  ["hopp","battery","electricity", "cable"],
+  ["battery", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
   ["h2_storage", "ammonia", "hydrogen", "pipe"],
   ["finance_subgroup_hydrogen", "ammonia", "LCOH"],
   # etc
 ]
-
+tech_to_dispatch_connections: [
+  ["hopp", "battery"],
+  ["battery", "battery"],
+]
 plant:
   plant_life: 30
 
@@ -53,10 +57,10 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
-      technologies: ["hopp"]
+      technologies: ["hopp", "battery"]
     hydrogen:
       commodity: "hydrogen"
-      technologies: ["hopp", "electrolyzer", "h2_storage"]
+      technologies: ["hopp", "battery", "electrolyzer", "h2_storage"]
     ammonia:
       commodity: "ammonia"
-      technologies: ["hopp", "electrolyzer", "h2_storage", "ammonia"]
+      technologies: ["hopp", "battery", "electrolyzer", "h2_storage", "ammonia"]

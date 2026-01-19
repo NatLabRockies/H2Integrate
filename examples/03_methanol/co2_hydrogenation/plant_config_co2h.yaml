@@ -3,18 +3,34 @@ description: "This plant is located west of the Wolf Hollow II NGCC power plant 
 
 sites:
   site:
-    latitude: 32.34
-    longitude: -98.27
-
+    latitude: 32.31714
+    longitude: -100.18
+    resources:
+      wind_resource:
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2013
+      solar_resource:
+        resource_model: "goes_aggregated_solar_v4_api"
+        resource_parameters:
+          resource_year: 2013
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "electrolyzer", "electricity", "cable"],
+  ["wind", "combiner", "electricity", "cable"], #source_tech, dest_tech, transport_item, transport_type = connection
+  ["solar", "combiner", "electricity", "cable"],
+  ["combiner", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "methanol", "hydrogen", "pipe"],
   ["finance_subgroup_electricity", "methanol", "LCOE"],
   ["finance_subgroup_hydrogen", "methanol", "LCOH"],
+]
+
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
+  ["site.solar_resource", "solar", "solar_resource_data"]
 ]
 
 plant:
@@ -46,10 +62,10 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
-      technologies: ["hopp"]
+      technologies: ["wind","solar"]
     hydrogen:
       commodity: "hydrogen"
-      technologies: ["hopp", "electrolyzer"]
+      technologies: ["wind","solar", "electrolyzer"]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022
