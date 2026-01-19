@@ -1,11 +1,13 @@
 """Use built in H2I mapping tools to plot a 3-step iron mining, transport, and reduction process.
 
-This example is focused not on the use of the main H2I model tools, but the post-processing mapping functions.
-The H2I model has already been run over several locations, with the data saved and tracked as a .csv in `./ex_27_out`.
-To run the model yourself, change the boolean `rerun_model` at the top of the script to `True`.
+This example is focused not on the use of the main H2I model tools, but the post-processing mapping
+functions. The H2I model has already been run over several locations, with the data saved and
+tracked as a .csv in `./ex_27_out`. To run the model yourself, change the boolean `rerun_model` at
+the top of the script to `True`.
 Warning: this may take some time (up to a few minutes) depending on your PC's processing capability.
 
 """
+
 from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
