@@ -119,9 +119,9 @@ def test_floris_turbine_export(subtests):
         "floris_turbine_config": floris_options,
     }
 
-    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"].update(
-        updated_parameters
-    )
+    tech_config["technologies"]["distributed_wind_plant"]["model_inputs"][
+        "performance_parameters"
+    ].update(updated_parameters)
 
     prob = om.Problem()
     wind_resource = WTKNRELDeveloperAPIWindResource(
@@ -134,7 +134,7 @@ def test_floris_turbine_export(subtests):
 
     wind_plant = FlorisWindPlantPerformanceModel(
         plant_config=plant_config,
-        tech_config=tech_config["technologies"]["wind"],
+        tech_config=tech_config["technologies"]["distributed_wind_plant"],
         driver_config={},
     )
 
