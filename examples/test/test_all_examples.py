@@ -1303,30 +1303,117 @@ def test_floris_example(subtests):
     # Run the model
     h2i.run()
 
-    with subtests.test("LCOE"):
+    with subtests.test("Distributed LCOE"):
         assert (
             pytest.approx(
-                h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")[0], rel=1e-6
+                h2i.prob.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")[0], rel=1e-6
             )
             == 99.872209
         )
-
-    with subtests.test("Wind plant capacity"):
-        assert pytest.approx(h2i.prob.get_val("wind.total_capacity", units="MW"), rel=1e-6) == 66.0
-
-    with subtests.test("Total electricity production"):
+    with subtests.test("Utility LCOE"):
         assert (
             pytest.approx(
-                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
+                h2i.prob.get_val("finance_subgroup_utility.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 54.2709437311
+        )
+
+    with subtests.test("Total LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_total_electricity.LCOE", units="USD/MW/h")[0],
+                rel=1e-6,
+            )
+            == 65.2444127137
+        )
+
+    with subtests.test("Distributed wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.total_capacity", units="MW"), rel=1e-6
+            )
+            == 66.0
+        )
+
+    with subtests.test("Total distributed electricity production"):
+        assert (
+            pytest.approx(
+                np.sum(
+                    h2i.prob.get_val(
+                        "distributed_wind_plant.total_electricity_produced", units="MW*h/yr"
+                    )
+                ),
                 rel=1e-6,
             )
             == 128948.21977
         )
 
-    with subtests.test("Capacity factor"):
+    with subtests.test("Total utility electricity production"):
         assert (
-            pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.electricity_out", units="MW").sum(), rel=1e-6
+            )
+            == 406908.03381618496
+        )
+
+    with subtests.test("Distributed wind capacity factor"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.capacity_factor", units="percent")[0],
+                rel=1e-6,
+            )
             == 22.30320668
+        )
+
+    with subtests.test("Utility wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.total_capacity", units="MW"), rel=1e-6
+            )
+            == 120.0
+        )
+
+    with subtests.test("Distributed wind site location"):
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.latitude"), rel=1e-6) == 44.04218
+        )
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.longitude"), rel=1e-6)
+            == -95.19757
+        )
+
+    with subtests.test("Distributed wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 44.04218
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -95.19757
+        )
+
+    with subtests.test("Utility wind site location"):
+        assert pytest.approx(h2i.prob.get_val("utility_wind_site.latitude"), rel=1e-6) == 35.2018863
+        assert (
+            pytest.approx(h2i.prob.get_val("utility_wind_site.longitude"), rel=1e-6) == -101.945027
+        )
+
+    with subtests.test("Utility wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 35.2018863
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -101.945027
         )
 
 
