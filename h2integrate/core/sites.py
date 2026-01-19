@@ -18,7 +18,7 @@ class SiteBaseComponent(om.IndepVarComp):
         super().__init__(name, val, **kwargs)
 
         self.add_output("latitude", val=self.config.latitude, units="deg")
-        self.add_output("longitude", val=self.config.latitude, units="deg")
+        self.add_output("longitude", val=self.config.longitude, units="deg")
 
         self.set_outputs()
 
