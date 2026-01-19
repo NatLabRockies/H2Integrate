@@ -15,6 +15,7 @@ parts:
   - file: user_guide/model_overview
   - file: user_guide/how_to_set_up_an_analysis
   - file: user_guide/connecting_technologies
+  - file: user_guide/defining_sites_and_resources
   - file: user_guide/design_optimization_in_h2i
   - file: user_guide/design_of_experiments_in_h2i
   - file: user_guide/postprocessing_results
