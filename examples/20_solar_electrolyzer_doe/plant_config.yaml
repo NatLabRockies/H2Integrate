@@ -1,16 +1,17 @@
 name: "plant_config"
 description: "This plant uses solar resource data from 2012"
 
-site:
-  latitude: 34.22
-  longitude: -102.75
+sites:
+  site:
+    latitude: 34.22
+    longitude: -102.75
 
-  resources:
-    solar_resource:
-      resource_model: "goes_aggregated_solar_v4_api"
-      resource_parameters:
-        resource_year: 2012
-        resource_filename: "34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv"
+    resources:
+      solar_resource:
+        resource_model: "goes_aggregated_solar_v4_api"
+        resource_parameters:
+          resource_year: 2012
+          resource_filename: "34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv"
 
 # array of arrays containing left-to-right technology
 technology_interconnections: [
@@ -19,7 +20,7 @@ technology_interconnections: [
 
 resource_to_tech_connections: [
   # connect the solar resource to the solar technology
-  ['solar_resource', 'solar', 'solar_resource_data'],
+  ['site.solar_resource', 'solar', 'solar_resource_data'],
 ]
 
 plant:

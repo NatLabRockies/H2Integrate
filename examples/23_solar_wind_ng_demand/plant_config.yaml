@@ -1,22 +1,23 @@
 name: plant_config
 description: This plant is located in Texas, USA.
 
-site:
-  latitude: 30.6617
-  longitude: -101.7096
-  year: 2013
+sites:
+  site:
+    latitude: 30.6617
+    longitude: -101.7096
+    year: 2013
 
-  resources:
-    wind_resource:
-      resource_model: wind_toolkit_v2_api
-      resource_parameters:
-        resource_year: 2013
-    solar_resource:
-      resource_model: goes_aggregated_solar_v4_api
-      resource_parameters:
-        resource_year: 2013
-        resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
-        resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
+    resources:
+      wind_resource:
+        resource_model: wind_toolkit_v2_api
+        resource_parameters:
+          resource_year: 2013
+      solar_resource:
+        resource_model: goes_aggregated_solar_v4_api
+        resource_parameters:
+          resource_year: 2013
+          resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
+          resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
 
 
 # array of arrays containing left-to-right technology
@@ -33,8 +34,8 @@ technology_interconnections: [
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
-  ['solar_resource', 'solar', 'solar_resource_data']
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
+  ['site.solar_resource', 'solar', 'solar_resource_data']
 ]
 
 

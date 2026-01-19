@@ -1,15 +1,16 @@
 name: "plant_config"
 description: "This plant is located in Kansas"
 
-site:
-  latitude: 32.34
-  longitude: -98.27
+sites:
+  site:
+    latitude: 32.34
+    longitude: -98.27
 
-  resources:
-    river_resource:
-      resource_model: "river_resource"
-      resource_parameters:
-        filename: "river_data.csv"
+    resources:
+      river_resource:
+        resource_model: "river_resource"
+        resource_parameters:
+          filename: "river_data.csv"
 
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
@@ -24,7 +25,7 @@ technology_interconnections: [
 # array of arrays containing left-to-right resource interconnections;
 resource_to_tech_connections: [
   # connect the river resource to the run-of-river hydro technology
-  ['river_resource', 'river', 'discharge'],
+  ['site.river_resource', 'river', 'discharge'],
 ]
 
 plant:

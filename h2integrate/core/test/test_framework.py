@@ -296,7 +296,7 @@ def test_resource_connection_error_missing_resource():
     plant_config_data = load_plant_yaml(temp_plant_config)
 
     # Remove resource
-    plant_config_data["site"]["resources"].pop("wind_resource")
+    plant_config_data["sites"]["site"]["resources"].pop("wind_resource")
 
     # Save the modified tech_config YAML back
     with temp_plant_config.open("w") as f:

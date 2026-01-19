@@ -1,19 +1,20 @@
 name: "plant_config"
 description: ""
 
-site:
-  latitude: 44.04218
-  longitude: -95.19757
+sites:
+  site:
+    latitude: 44.04218
+    longitude: -95.19757
 
-  resources:
-    wind_resource:
-      resource_model: "openmeteo_wind_api"
-      resource_parameters:
-        resource_year: 2023
+    resources:
+      wind_resource:
+        resource_model: "openmeteo_wind_api"
+        resource_parameters:
+          resource_year: 2023
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 
 plant:
