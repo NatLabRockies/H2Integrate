@@ -320,19 +320,46 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
+        """
+        Create and configure site component(s) for the system.
+
+        This method initializes a site group for each site provided in
+        ``self.plant_config["sites"]``.
+
+        This method creates an OpenMDAO Group for each site that contains the location definition
+        and resources models (if provided in the configuration) for that site.
+        """
+        # Loop through each site defined in the plant config
         for site_name, site_info in self.plant_config["sites"].items():
+            # Reorganize the plant config to be formatted as expected by the
+            # resource models
             plant_config_reorg = {
                 "site": site_info,
                 "plant": self.plant_config["plant"],
             }
 
+            # Create the site group and resource models
             site_group = self.create_site_group(plant_config_reorg, site_info)
+
+            # Add the site group to the system model
             self.model.add_subsystem(site_name, site_group)
 
     def create_site_group(self, plant_config_dict: dict, site_config: dict):
+        """
+        Create and configure a site Group for the input site configuration.
+
+        Args:
+            plant_config_dict (dict): The plant config dictionary formatted for the resource models
+            site_config (dict): Information that defines each site, such as latitude,
+                longitude, and resource models.
+
+        Returns:
+            om.Group: OpenMDAO group for a site
+        """
+        # Initialize the site group
         site_group = om.Group()
 
-        # Create a site-level component
+        # Create a site location component (defines latitude, longitude, etc)
         site_inputs = {k: v for k, v in site_config.items() if k != "resources"}
         site_component = SiteLocationComponent(site_inputs)
 
