@@ -3,8 +3,8 @@ description: "This plant uses solar resource data from 2012"
 
 sites:
   wind_site:
-    latitude: 34.22
-    longitude: -102.75
+    latitude: 35.2018863
+    longitude: -101.945027
     resources:
       wind_resource:
         resource_model: "wind_toolkit_v2_api"
