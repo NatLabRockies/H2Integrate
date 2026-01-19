@@ -18,7 +18,9 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 # NOTE:
 # If this example has already been run and the cases.csv and cases.sql file is saved in ./ex_27_out.
 # You may comment out the following two lines to avoid long runtimes
-model = H2IntegrateModel("iron_map.yaml")
+rerun_model = False
+if rerun_model:
+    model = H2IntegrateModel("iron_map.yaml")
 model.run()
 
 # Define filepaths
