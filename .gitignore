@@ -127,6 +127,7 @@ examples/h2integrate/*/data
 examples/h2integrate/*/figures
 examples/*/*_new.*
 examples/*/*[0-9].*
+*wind_electrolyzer/
 tests/h2integrate/reports/
 tests/h2integrate/test_hydrogen/output/
 **/run_*_out/
