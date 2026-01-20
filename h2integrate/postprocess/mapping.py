@@ -148,7 +148,7 @@ class GeospatialMapConfig(BaseConfig):
     colorbar_bbox_to_anchor: tuple[float, ...] = field(default=(0.75, 0.97, 1.0, 1.0))
     colorbar_borderpad: float = field(default=0.0)
     colorbar_orientation: str = field(default="horizontal")
-    colorbar_limits: tuple[float, float] | None = field(
+    colorbar_limits: tuple[float, float] | tuple[int, int] | None = field(
         default=None,
         converter=converters.optional(tuple),
         validator=validators.optional(
@@ -156,7 +156,7 @@ class GeospatialMapConfig(BaseConfig):
                 validators.max_len(2),
                 validators.min_len(2),
                 validators.deep_iterable(
-                    member_validator=validators.instance_of(float),
+                    member_validator=validators.instance_of((float, int)),
                     iterable_validator=validators.instance_of(tuple),
                 ),
             ]
