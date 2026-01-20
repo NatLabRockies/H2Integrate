@@ -185,7 +185,6 @@ Next, we'll import the required models and functions to complete run a successfu
 # Import necessary methods and packages
 from pathlib import Path
 
-from hopp.utilities.utilities import load_yaml
 from h2integrate.core.utilities import check_file_format_for_csv_generator, load_yaml
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.core.h2integrate_model import H2IntegrateModel
