@@ -256,7 +256,7 @@ def plot_geospatial_point_heat_map(
 
     match map_preferences:
         case None:
-            map_preferences = GeospatialMapConfig
+            map_preferences = GeospatialMapConfig()
         case dict():
             map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
         case _:
@@ -499,7 +499,7 @@ def plot_straight_line_shipping_routes(
 
     match map_preferences:
         case None:
-            map_preferences = GeospatialMapConfig
+            map_preferences = GeospatialMapConfig()
         case dict():
             map_preferences = GeospatialMapConfig.from_dict(map_preferences, strict=True)
         case _:
