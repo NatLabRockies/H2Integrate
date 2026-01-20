@@ -4,6 +4,8 @@ When running H2Integrate simulations across a range of site locations, GeoPandas
 
 Currently all GIS and GeoPandas mapping functionality lives in `/H2Integrate/h2integrate/postprocess/mapping.py`
 
+Note: to leverage this functionality users must install H2Integrate with the `gis` or `examples` modifier. ie: `pip install ".[examples]"` or `pip install ".[develop,gis]"`
+
 ## Create a multi-layer geospatial point heat map with simple straight line transport routes
 
 An example use case, mirroring the simulation and workflow in /examples/26_iron_map/run_iron.py, we can use GeoPandas and Contextily to create a multi-layer point heat map which displays the level costs of iron ore pellets from select mines, simplified waterway shipping routes and associated costs to transport the iron ore pellets, and the final levelized cost of iron production via Hydrogen DRI across a range of site locations.
