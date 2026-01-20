@@ -2,7 +2,7 @@
 
 When running H2Integrate simulations across a range of site locations, GeoPandas can be leveraged to plot results and create maps with multiple layers. Contextily is leveraged to add visually pleasing open source basemaps.
 
-Currently all GIS and GeoPandas mapping functionality lives in /H2Integrate/h2integrate/postprocess/mapping.py
+Currently all GIS and GeoPandas mapping functionality lives in `/H2Integrate/h2integrate/postprocess/mapping.py`
 
 ## Create a multi-layer geospatial point heat map with simple straight line transport routes
 
