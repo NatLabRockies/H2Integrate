@@ -21,7 +21,7 @@ parts:
   - file: user_guide/recording_and_loading_data
   - file: user_guide/how_to_interface_with_user_defined_model
   - file: user_guide/how_to_run_several_cases_in_sequence
-  - file: ../examples/25_sizing_modes/run_size_modes
+  - file: user_guide/run_size_modes
 
 - caption: Technology Models
   chapters:
