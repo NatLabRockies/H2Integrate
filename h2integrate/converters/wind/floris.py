@@ -286,7 +286,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
 
         max_production = n_turbs * self.wind_turbine_rating_kW * len(gen) * (self.dt / 3600)
         outputs["total_electricity_produced"] = np.sum(gen) * (self.dt / 3600)
-        outputs["capacity_factor"] = np.sum(gen) / max_production
+        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
         # NOTE: below is not flexible
         hours_per_year = 8760
         hours_simulated = (self.dt / 3600) * self.n_timesteps
