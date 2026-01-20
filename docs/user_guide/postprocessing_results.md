@@ -92,8 +92,10 @@ The `units` argument is used to specify the units of the value to be returned.
 ### Saving outputs
 
 The time series outputs can be saved to a csv output using the `save_case_timeseries_as_csv` function. If no variables are specified, then the function saves all time series variables in the simulation. Otherwise, the specified variables are saves.
-Here is an example of how to save time series results:
+An example of how to save time series results is shown in `examples/02_texas_ammonia/run_texas_ammonia_plant.py`:
+
 ```python
+from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 # Create a H2Integrate model
@@ -121,5 +123,5 @@ timeseries_data = save_case_timeseries_as_csv(
 )
 
 ```
-This example starts by saving all time series outputs to a csv file. Then, it specifies specific variables to pull out and outputs them as a dictionary (not a csv) when `save_to_file=False`
 
+This example starts by saving all time series outputs to a csv file. Then, it specifies specific variables to pull out and outputs them as a dictionary (not a csv) when `save_to_file=False`.
