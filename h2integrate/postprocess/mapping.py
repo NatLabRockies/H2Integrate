@@ -3,8 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-import contextily as ctx
 import matplotlib.pyplot as plt
 from attrs import field, define, converters, validators
 from xyzservices import TileProvider
@@ -13,6 +11,18 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from h2integrate.core.utilities import BaseConfig, find_file
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+
+
+try:
+    import geopandas as gpd
+    import contextily as ctx
+
+except ImportError as exc:
+    msg = (
+        "Failed to import geopandas or contextily.",
+        "H2Integrate must be installed with the `gis` or `examples` modifier",
+    )
+    raise ImportError(msg) from exc
 
 
 @define
