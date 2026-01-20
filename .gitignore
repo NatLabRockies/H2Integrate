@@ -125,6 +125,8 @@ tests/h2integrate/test_hydrogen/output.txt
 *speed_dir_data.csv
 examples/h2integrate/*/data
 examples/h2integrate/*/figures
+examples/*/*_new.*
+examples/*/*[0-9].*
 tests/h2integrate/reports/
 tests/h2integrate/test_hydrogen/output/
 **/run_*_out/
