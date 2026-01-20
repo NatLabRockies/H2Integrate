@@ -96,7 +96,7 @@ def test_pvwatts_singleowner_notilt(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced")[0]
     system_capacity_AC = prob.get_val("pv_perf.system_capacity_AC")[0]
     system_capacity_DC = prob.get_val("pv_perf.system_capacity_DC")[0]
 
@@ -177,7 +177,7 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
     prob.model.set_val("solar_resource.longitude", -102.75)
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced")[0]
     system_capacity_AC = prob.get_val("pv_perf.system_capacity_AC")[0]
     system_capacity_DC = prob.get_val("pv_perf.system_capacity_DC")[0]
 
@@ -240,7 +240,7 @@ def test_pvwatts_singleowner_withtilt(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced")[0]
     system_capacity_AC = prob.get_val("pv_perf.system_capacity_AC")[0]
     system_capacity_DC = prob.get_val("pv_perf.system_capacity_DC")[0]
 
