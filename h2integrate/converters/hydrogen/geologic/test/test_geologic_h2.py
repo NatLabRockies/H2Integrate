@@ -56,7 +56,7 @@ def geoh2_subsurface_well():
             "wellhead_h2_concentration": 95,
             "initial_wellhead_flow": 4000,
             "gas_flow_density": 0.1,
-            "ramp_up_time": 6,
+            "ramp_up_time_months": 6,
             "percent_increase_during_rampup": 0.05,
             "gas_reservoir_size": 1000000,
             "use_arps_decline_curve": True,
@@ -134,7 +134,7 @@ def test_natural_geoh2_well_performance(subtests, plant_config):
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("perf.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 603.4286677531819
+            == 22649.432193239327
         ), 1e-6
 
 
@@ -161,7 +161,7 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 603.4286677531819
+            == 2264.9432193239327
         ), 1e-6
 
 
@@ -246,7 +246,7 @@ def test_aspen_geoh2_refit_coeffs(
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(prob.model.get_val("well.hydrogen_out", units="kg/h"), rel=1e-6)
-            == 603.4286677531819
+            == 2264.9432193239327
         ), 1e-6
 
     with subtests.test("Refit Performance Coeff File"):

@@ -194,6 +194,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
                 # convert from m3/h to million standard cubic feet per hour (MMSCF/h)
                 ramp_up_flow_mmscf = ramp_up_flow_m3 / 28316.846592  # 1 MMSCF = 28316.846592 m3
 
+                # fits for MMSCF/h based on flow rates Figure 7 in Tang et al. (2024)
                 fit_name = self.config.decline_fit_params["fit_name"]
                 if fit_name == "Eagle_Ford":
                     Di = 0.000157
@@ -221,16 +222,6 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
             decline_profile = np.linspace(ramp_up_flow, 0, remaining_steps)
 
         wh_flow_profile = np.concatenate((ramp_up_profile, decline_profile))
-        # plot the wellhead flow profile for debugging
-        import matplotlib.pyplot as plt
-
-        plt.plot(wh_flow_profile)
-        plt.xlabel("Time (hours)")
-        plt.ylabel("Wellhead Gas Flow (kg/h)")
-        plt.title("Wellhead Gas Flow Profile Over Well Lifetime")
-        plt.grid()
-        plt.show()
-        ##############
 
         # Calculated hydrogen flow out
         balance_mw = 23.32  # Note: this is based on Aspen models in aspen_surface_processing.py
@@ -247,14 +238,21 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         outputs["wellhead_gas_out_natural"] = wh_flow_profile[:n_timesteps]
         outputs["wellhead_gas_out"] = wh_flow_profile[:n_timesteps]
         outputs["hydrogen_out"] = avg_h2_flow[:n_timesteps]
-        outputs["max_wellhead_gas"] = init_wh_flow
+        outputs["max_wellhead_gas"] = ramp_up_flow
+        # this is lifetime flow which decreases over time
         outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
 
     def arps_decline_curve_fit(self, t, qi, Di, b):
-        """Arps decline model.
+        """Arps decline curve model based on Arps (1945)
+            https://doi.org/10.2118/945228-G.
 
-        Relevant literature: https://doi.org/10.1016/j.jngse.2021.103818
+        Other Relevant literature:
+            Tang et al. (2024) https://doi.org/10.1016/j.jngse.2021.103818
+            Adapted the Arps model from Table 2 to fit the
+            monthly gas rates from Figure 7 to characterize natural hydrogen
+            well production decline for the three oil shale wells
+            (Bakken, Eagle Ford and Permian).
 
         Args:
             t (np.array): Well production duration from max production.
