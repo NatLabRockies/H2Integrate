@@ -112,16 +112,14 @@ def test_wind_plant_costs_with_pysam(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     capex = prob.get_val("wind_cost.CapEx")
     opex = prob.get_val("wind_cost.OpEx")
 
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 

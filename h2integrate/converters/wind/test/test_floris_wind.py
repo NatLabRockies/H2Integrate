@@ -115,14 +115,16 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
 
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="kW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="kW")[0], rel=1e-6
+            )
             == 660 * 20
         )
 
     with subtests.test("AEP"):
         assert (
             pytest.approx(
-                prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")[0],
+                prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0],
                 rel=1e-6,
             )
             == 36471.03023616864 * 1e3
@@ -131,7 +133,7 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
     with subtests.test("total electricity_out"):
         assert pytest.approx(
             np.sum(prob.get_val("wind_plant.electricity_out", units="kW")), rel=1e-6
-        ) == prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")
+        ) == prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")
 
 
 def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, subtests):
@@ -318,17 +320,19 @@ def test_floris_wind_performance_air_dens(plant_config_wtk, floris_config, subte
 
     wind_resource_data = dict(prob.get_val("wind_resource.wind_resource_data"))
 
-    initial_aep = prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")[0]
+    initial_aep = prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0]
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="kW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="kW")[0], rel=1e-6
+            )
             == 660 * 20
         )
 
     with subtests.test("AEP"):
         assert (
             pytest.approx(
-                prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")[0],
+                prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0],
                 rel=1e-6,
             )
             == 37007.33639643173 * 1e3
@@ -337,7 +341,7 @@ def test_floris_wind_performance_air_dens(plant_config_wtk, floris_config, subte
     with subtests.test("total electricity_out"):
         assert pytest.approx(
             np.sum(prob.get_val("wind_plant.electricity_out", units="kW")), rel=1e-6
-        ) == prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")
+        ) == prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")
 
     # Add elevation to the resource data and rerun floris
     floris_config["adjust_air_density_for_elevation"] = True
@@ -356,7 +360,7 @@ def test_floris_wind_performance_air_dens(plant_config_wtk, floris_config, subte
     prob.set_val("wind_plant.wind_resource_data", wind_resource_data)
     prob.run_model()
 
-    adjusted_aep = prob.get_val("wind_plant.total_electricity_produced", units="kW*h/year")[0]
+    adjusted_aep = prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0]
     with subtests.test("reduced AEP with air density adjustment"):
         assert adjusted_aep < initial_aep
 

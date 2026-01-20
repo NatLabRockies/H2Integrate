@@ -38,7 +38,7 @@ class ATBWindPlantCostModel(CostModelBaseClass):
             Configuration object containing per-kW cost parameters for CapEx and OpEx.
 
     Inputs:
-        total_capacity (float):
+        rated_electricity_production (float):
             Rated capacity of the wind farm [kW].
 
     Outputs:
@@ -54,11 +54,16 @@ class ATBWindPlantCostModel(CostModelBaseClass):
         )
         super().setup()
 
-        self.add_input("total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity in kW")
+        self.add_input(
+            "rated_electricity_production",
+            val=0.0,
+            units="kW",
+            desc="Wind farm rated capacity in kW",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capex = self.config.capex_per_kW * inputs["total_capacity"]
-        opex = self.config.opex_per_kW_per_year * inputs["total_capacity"]
+        capex = self.config.capex_per_kW * inputs["rated_electricity_production"]
+        opex = self.config.opex_per_kW_per_year * inputs["rated_electricity_production"]
 
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex

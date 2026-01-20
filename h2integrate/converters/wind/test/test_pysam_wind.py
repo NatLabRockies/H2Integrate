@@ -93,24 +93,25 @@ def test_wind_plant_pysam_no_changes_from_setup(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
-            prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
         ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
 
     with subtests.test("wind AEP value"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
             == 1014129.048439629
         )
 
@@ -144,24 +145,25 @@ def test_wind_plant_pysam_change_hub_height(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
-            prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
         ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
 
     with subtests.test("wind AEP value"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
             == 1037360.7950548842
         )
 
@@ -195,24 +197,25 @@ def test_wind_plant_pysam_change_rotor_diameter(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
-            prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
         ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
 
     with subtests.test("wind AEP value"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
             == 916820.0472438652
         )
 
@@ -245,24 +248,25 @@ def test_wind_plant_pysam_change_turbine_rating(
 
     expected_farm_capacity_MW = wind_plant_config["num_turbines"] * new_rating_MW
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
-            prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
         ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
 
     with subtests.test("wind AEP value"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
             == 968681.3512372728
         )
 
@@ -295,23 +299,24 @@ def test_wind_plant_pysam_change_n_turbines(
 
     expected_farm_capacity_MW = new_num_turbines * wind_plant_config["turbine_rating_kw"] / 1e3
 
-    prob.get_val("wind_plant.electricity_out")
-    prob.get_val("wind_plant.annual_energy")
-    prob.get_val("wind_plant.total_capacity")
-
     with subtests.test("wind farm capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
             == expected_farm_capacity_MW
         )
 
     with subtests.test("wind AEP matches electricity out"):
         assert pytest.approx(
-            prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
         ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
 
     with subtests.test("wind AEP value"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/year")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
             == 2027210.444644157
         )
