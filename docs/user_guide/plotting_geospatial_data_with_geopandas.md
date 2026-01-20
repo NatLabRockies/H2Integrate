@@ -4,7 +4,7 @@ When running H2Integrate simulations across a range of site locations, GeoPandas
 
 Currently all GIS and GeoPandas mapping functionality lives in `/H2Integrate/h2integrate/postprocess/mapping.py`
 
-Note: to leverage this functionality users must install H2Integrate with the `gis` or `examples` modifier. ie: `pip install ".[examples]"` or `pip install ".[develop,gis]"`
+Note: to leverage this functionality users must install H2Integrate with the `gis` or `examples` modifier. ie: `pip install ".[examples]"` or `pip install ".[develop,gis]"`.
 
 ## Create a multi-layer geospatial point heat map with simple straight line transport routes
 
