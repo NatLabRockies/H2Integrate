@@ -16,6 +16,10 @@
 - Converted the example notebooks to documentation examples, and maintain a basic working example
   in the examples folder:
   - `examples/14_wind_hydrogen_dispatch/hydrogren_dispatch.ipynb` -> `docs/control/controller_demonstrations.md`
+  - `examples/20_solar_electrolyzer_doe/run_csv_doe.ipynb` content added to `docs/user_guide/design_of_experiments_in_h2i.md`
+  - `examples/25_sizing_modes/run_size_modes.ipynb` -> `docs/user_guide/run_size_modes.md`
+- `.gitignore` is updated to be more inclusive of example output data.
+- Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught.
 
 ## 0.5.1 [December 18, 2025]
 
