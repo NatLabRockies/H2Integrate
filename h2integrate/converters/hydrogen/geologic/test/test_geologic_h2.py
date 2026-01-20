@@ -96,6 +96,48 @@ def aspen_geoh2_config():
     return {"model_inputs": model_inputs}
 
 
+def test_natural_geoh2_well_performance(subtests, plant_config):
+    subsurface_perf_config = {
+        "shared_parameters": {
+            "borehole_depth": 300,
+            "well_diameter": "small",
+            "well_geometry": "vertical",
+        },
+        "performance_parameters": {
+            "rock_type": "peridotite",
+            "grain_size": 0.01,
+            "use_prospectivity": False,
+            "site_prospectivity": 0.7,
+            "wellhead_h2_concentration": 95,
+            "initial_wellhead_flow": 40000,
+            "gas_flow_density": 0.11741,
+            "ramp_up_time_months": 6,
+            "percent_increase_during_rampup": 0.05,
+            "gas_reservoir_size": 10000000,
+            "use_arps_decline_curve": True,
+            "decline_fit_params": {"fit_name": "Eagle_Ford"},
+        },
+    }
+    tech_config_dict = {"model_inputs": subsurface_perf_config}
+    subsurface_comp = NaturalGeoH2PerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob = om.Problem()
+    prob.model.add_subsystem("perf", subsurface_comp, promotes=["*"])
+
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("Well hydrogen production"):
+        assert (
+            pytest.approx(np.mean(prob.model.get_val("perf.hydrogen_out", units="kg/h")), rel=1e-6)
+            == 603.4286677531819
+        ), 1e-6
+
+
 def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config):
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(

@@ -177,7 +177,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         # Apply ramp-up assumed linear increase
         ramp_up_steps = int(ramp_up_time * (n_timesteps / 12))  # hrs
         if ramp_up_steps > 0:
-            ramp_up_flow = init_wh_flow * (1 + percent_increase / 100)
+            ramp_up_flow = init_wh_flow * (1 + percent_increase / 1)
             ramp_up_profile = np.linspace(init_wh_flow, ramp_up_flow, ramp_up_steps)
         else:
             ramp_up_flow = init_wh_flow
@@ -192,7 +192,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
                 # decline curves from literature is in million standard cubic feet per hour
                 ramp_up_flow_m3 = ramp_up_flow / inputs["gas_flow_density"]  # m3/h
                 # convert from m3/h to million standard cubic feet per hour (MMSCF/h)
-                ramp_up_flow_mmscf = ramp_up_flow_m3 / 28.3168 / 1e6
+                ramp_up_flow_mmscf = ramp_up_flow_m3 / 28316.846592  # 1 MMSCF = 28316.846592 m3
 
                 fit_name = self.config.decline_fit_params["fit_name"]
                 if fit_name == "Eagle_Ford":
@@ -210,6 +210,8 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
                         'Eagle_Ford', 'Permian', or 'Bakken'."
                     raise ValueError(msg)
                 decline_profile = self.arps_decline_curve_fit(t, ramp_up_flow_mmscf, Di, b)
+                # convert back to kg/h from MMSCF/h
+                decline_profile = decline_profile * 28316.846592 * inputs["gas_flow_density"]
             else:
                 Di = self.config.decline_fit_params.get("Di")
                 b = self.config.decline_fit_params.get("b")
@@ -219,6 +221,16 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
             decline_profile = np.linspace(ramp_up_flow, 0, remaining_steps)
 
         wh_flow_profile = np.concatenate((ramp_up_profile, decline_profile))
+        # plot the wellhead flow profile for debugging
+        import matplotlib.pyplot as plt
+
+        plt.plot(wh_flow_profile)
+        plt.xlabel("Time (hours)")
+        plt.ylabel("Wellhead Gas Flow (kg/h)")
+        plt.title("Wellhead Gas Flow Profile Over Well Lifetime")
+        plt.grid()
+        plt.show()
+        ##############
 
         # Calculated hydrogen flow out
         balance_mw = 23.32  # Note: this is based on Aspen models in aspen_surface_processing.py
@@ -253,7 +265,6 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         Returns:
             (np.array): Production rate at time t.
         """
-        qi = 0
         if np.isclose(b, 0):
             return qi * np.exp(-Di * t)
         else:
