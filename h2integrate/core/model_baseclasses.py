@@ -403,10 +403,18 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # self.commodity_amount_units = "kW*h"
         # super().setup()
 
+        # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        # dt is seconds per timestep
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-
+        hours_per_year = 8760
+        # hours simulated is the number of hours in a simulation
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+        # fraction_of_year_simulated is the ratio of simulation length to length of year
+        # and may be used to estimate annual performance from simulation performance
+        self.fraction_of_year_simulated = hours_simulated / hours_per_year
         self.set_outputs()
 
     def set_outputs(self):
@@ -421,14 +429,16 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.add_output(
             f"total_{self.commodity}_produced", val=0.0, units=self.commodity_amount_units
         )
-        # annual performance estimates
+        # annual performance estimate for commodity produced
         self.add_output(
             f"annual_{self.commodity}_produced",
             val=0.0,
             shape=self.plant_life,
             units=f"({self.commodity_amount_units})/year",
         )
+        # lifetime estimate of item replacements, represented as a fraction of the capacity.
         self.add_output("replacement_schedule", val=0.0, shape=self.plant_life, units="unitless")
+        # capacity factor is the ratio of actual production / maximum production possible
         self.add_output(
             "capacity_factor",
             val=0.0,
@@ -436,10 +446,12 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             units="unitless",
             desc="Capacity factor",
         )
-        # system design info
+        # rated/maximum commodity production, this would be used to calculate the maximum
+        # production possible over the simulation
         self.add_output(
             f"rated_{self.commodity}_production", val=0.0, units=self.commodity_rate_units
         )
+        # operational life of the technology if the technology cannot be replaced
         self.add_output("operational_life", val=self.plant_life, units="yr")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
