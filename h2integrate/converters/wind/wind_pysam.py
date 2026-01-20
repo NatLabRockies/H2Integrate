@@ -474,12 +474,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         # outputs["annual_energy"] = self.system_model.Outputs.annual_energy
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
         outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
-        rated_electricity_production_for_sim = (
+        max_production = (
             self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
         )
-        outputs["capacity_factor"] = (
-            outputs["total_electricity_produced"] / rated_electricity_production_for_sim
-        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(
