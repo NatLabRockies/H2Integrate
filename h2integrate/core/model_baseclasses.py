@@ -382,3 +382,71 @@ class CacheBaseClass(om.ExplicitComponent):
         # self.cache_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
 
         raise NotImplementedError("This method should be implemented in a subclass.")
+
+
+class PerformanceModelBaseClass(om.ExplicitComponent):
+    def initialize(self):
+        self.options.declare("driver_config", types=dict)
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("tech_config", types=dict)
+
+    def setup(self):
+        # Below should be done in subclass that produces hydrogen
+        # self.commodity = "hydrogen"
+        # self.commodity_rate_units = "kg/h"
+        # self.commodity_amount_units = "kg"
+        # super().setup()
+
+        # Below should be done in subclass that produces electricity
+        # self.commodity = "electricity"
+        # self.commodity_rate_units = "kW"
+        # self.commodity_amount_units = "kW*h"
+        # super().setup()
+
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
+        self.set_outputs()
+
+    def set_outputs(self):
+        # timeseries profiles
+        self.add_output(
+            f"{self.commodity}_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        # sum over simulation
+        self.add_output(
+            f"total_{self.commodity}_produced", val=0.0, units=self.commodity_amount_units
+        )
+        # annual performance estimates
+        self.add_output(
+            f"annual_{self.commodity}_produced",
+            val=0.0,
+            shape=self.plant_life,
+            units=f"({self.commodity_amount_units})/year",
+        )
+        self.add_output("replacement_schedule", val=0.0, shape=self.plant_life, units="unitless")
+        self.add_output(
+            "capacity_factor",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Capacity factor",
+        )
+        # system design info
+        self.add_output(
+            f"rated_{self.commodity}_production", val=0.0, units=self.commodity_rate_units
+        )
+        self.add_output("operational_life", val=self.plant_life, units="yr")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        """
+        Computation for the OM component.
+
+        For a template class this is not implement and raises an error.
+        """
+
+        raise NotImplementedError("This method should be implemented in a subclass.")
