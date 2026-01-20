@@ -253,7 +253,7 @@ Let's see the updates to combinations.
 updated_driver = update_defaults(
   driver_config["driver"],
   "filename",
-  EXAMPLE_DIR / new_csv_filename.name,
+  str(EXAMPLE_DIR / new_csv_filename.name),
 )
 driver_config["driver"].update(updated_driver)
 
