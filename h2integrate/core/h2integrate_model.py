@@ -1095,7 +1095,7 @@ class H2IntegrateModel:
                         if "electrolyzer" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 

@@ -529,6 +529,7 @@ class ProFastBase(om.ExplicitComponent):
                 f"total_{self.options['commodity_type']}_produced",
                 val=-1.0,
                 units=commodity_units,
+                shape_by_conn=True,
                 require_connection=True,
             )
 
