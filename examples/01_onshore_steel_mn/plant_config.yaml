@@ -4,26 +4,45 @@ description: "This plant is located in MN, USA..."
 site:
   latitude: 47.5233
   longitude: -92.5366
+  resources:
+    wind_resource:
+      resource_model: "wind_toolkit_v2_api"
+      resource_parameters:
+        resource_year: 2013
 
+    solar_resource:
+      resource_model: "goes_aggregated_solar_v4_api"
+      resource_parameters:
+        resource_year: 2013
+        resource_filename: "47.5_-93.0_psmv3_60_2013.csv"
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp","battery","electricity", "cable"],
+  ["wind","combiner","electricity","cable"],
+  ["solar","combiner","electricity","cable"],
+  ["combiner","battery","electricity", "cable"],
   ["battery", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
   ["finance_subgroup_hydrogen", "steel", ["LCOH_delivered", "LCOH"]],
-  ["hopp", "steel", "electricity", "cable"],
+  ["combiner", "steel", "electricity", "cable"],
   # etc
 ]
 tech_to_dispatch_connections: [
-  ["hopp", "battery"],
+  ["combiner", "battery"],
   ["battery", "battery"],
+]
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['wind_resource', 'wind', 'wind_resource_data'],
+  ['solar_resource', 'solar', 'solar_resource_data'],
 ]
 
 plant:
   plant_life: 30
+  simulation:
+    timezone: -6
 
 finance_parameters:
   finance_groups:
@@ -53,12 +72,12 @@ finance_parameters:
     electricity:
       commodity: "electricity"
       finance_groups: ["profast_model"]
-      technologies: ["hopp", "battery"]
+      technologies: ["wind", "solar", "battery"]
     hydrogen:
       commodity: "hydrogen"
       commodity_desc: "delivered"
       finance_groups: ["profast_model"]
-      technologies: ["hopp", "battery", "electrolyzer", "h2_storage"]
+      technologies: ["wind", "solar", "battery", "electrolyzer", "h2_storage"]
     steel:
       commodity: "steel"
       finance_groups: ["steel"]

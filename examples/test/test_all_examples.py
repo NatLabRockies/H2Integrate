@@ -26,23 +26,64 @@ def test_steel_example(subtests):
 
     model.post_process()
     # Subtests for checking specific values
+    with subtests.test("Check total electricity produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity.total_electricity_produced", units="MW*h/yr"
+                )[0],
+                rel=1e-3,
+            )
+            == 5901098.278035271
+        )
+
+    with subtests.test("Check total adjusted CapEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_capex_adjusted")[0], rel=1e-3
+            )
+            == 4314364438.840067
+        )
+    with subtests.test("Check total adjusted OpEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_opex_adjusted")[0], rel=1e-3
+            )
+            == 75831805.27785796
+        )
+
+    with subtests.test("Check LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 90.8231905486079
+        )
+
+    with subtests.test("Check H2 Storage capacity"):
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.max_capacity", units="kg"), rel=1e-3)
+            == 2559669.7759292
+        )
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered")[0], rel=1e-3
             )
-            == 7.4937685542
+            == 8.270362492342693
         )
 
     with subtests.test("Check LCOS"):
-        assert pytest.approx(model.prob.get_val("steel.LCOS")[0], rel=1e-3) == 1213.87728644
+        assert pytest.approx(model.prob.get_val("steel.LCOS")[0], rel=1e-3) == 1266.6193378846617
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
             )
-            == 5.10869916e09
+            == 5129491338.670795
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -50,7 +91,7 @@ def test_steel_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 97524697.65173519
+            == 98169205.81687717
         )
 
     with subtests.test("Check steel CapEx"):
@@ -78,11 +119,19 @@ def test_simple_ammonia_example(subtests):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-3) == 1.75469962e09
+    with subtests.test("Check Wind+PV CapEx"):
+        wind_pv_capex = (
+            model.prob.get_val("wind.CapEx", units="USD")[0]
+            + model.prob.get_val("solar.CapEx", units="USD")[0]
+        )
+        assert pytest.approx(wind_pv_capex, rel=1e-3) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-3) == 32953490.4
+    with subtests.test("Check Wind+PV OpEx"):
+        wind_pv_opex = (
+            model.prob.get_val("wind.OpEx", units="USD/yr")[0]
+            + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
+        )
+        assert pytest.approx(wind_pv_opex, rel=1e-3) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-3) == 6.00412524e08
@@ -91,10 +140,14 @@ def test_simple_ammonia_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-3) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-3) == 65336874.189441
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 64599012.73829915
+        )
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-3) == 3149096.037312718
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3126204.813298109
+        )
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-3) == 1.0124126e08
@@ -122,7 +175,7 @@ def test_simple_ammonia_example(subtests):
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 3.982
+            == 4.025446
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -130,7 +183,7 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen")[0], rel=1e-3
             )
-            == 3.982
+            == 4.025446
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -172,16 +225,22 @@ def test_ammonia_synloop_example(subtests):
 
     # Subtests for checking specific values
     with subtests.test("Check HOPP CapEx"):
-        hopp_capex = model.prob.get_val("hopp.CapEx")
+        wind_pv_capex = (
+            model.prob.get_val("wind.CapEx", units="USD")[0]
+            + model.prob.get_val("solar.CapEx", units="USD")[0]
+        )
         battery_capex = model.prob.get_val("battery.CapEx")
-        hopp_batt_capex = hopp_capex + battery_capex
-        assert pytest.approx(hopp_batt_capex, rel=1e-6) == 1.75469962e09
+        re_capex = wind_pv_capex + battery_capex
+        assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
     with subtests.test("Check HOPP OpEx"):
-        hopp_opex = model.prob.get_val("plant.hopp.hopp.OpEx")
+        wind_pv_opex = (
+            model.prob.get_val("wind.OpEx", units="USD/yr")[0]
+            + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
+        )
         battery_opex = model.prob.get_val("battery.OpEx")
-        hopp_batt_opex = hopp_opex + battery_opex
-        assert pytest.approx(hopp_batt_opex, rel=1e-6) == 32953490.4
+        re_opex = wind_pv_opex + battery_opex
+        assert pytest.approx(re_opex, rel=1e-6) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-6) == 6.00412524e08
@@ -190,23 +249,23 @@ def test_ammonia_synloop_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-6) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 65337437.18075897
+        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 64553014.22218219
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 3149096.037312718
+        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 3124778.867314414
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25712447.0
+        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25737370.661763854
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted")[0], rel=1e-6
             )
-            == 3.7289e09
+            == 3728034379.0699997
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -214,19 +273,19 @@ def test_ammonia_synloop_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted")[0], rel=1e-6
             )
-            == 79746130.53956798
+            == 79744581.00552343
         )
 
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_h2.LCOH")[0], rel=1e-6)
-            == 3.981693202109977
+            == 4.025385101169759
         )
 
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_nh3.LCOA")[0], rel=1e-6)
-            == 1.2201640214384049
+            == 1.2310335361130984
         )
 
 
@@ -407,13 +466,16 @@ def test_wind_wave_doc_example(subtests):
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 2.2665890992
+            == 1.803343170781246
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.330057
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 243.723825
         )
 
 
@@ -560,12 +622,15 @@ def test_wind_wave_oae_example(subtests):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.48
+        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.156
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.367
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 263.130
         )
 
 
