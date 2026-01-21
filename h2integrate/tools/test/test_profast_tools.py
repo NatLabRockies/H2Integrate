@@ -6,10 +6,10 @@ from hopp.utilities.utilities import load_yaml
 
 from h2integrate.tools.profast_tools import (
     run_profast,
+    convert_pf_to_dict,
     make_price_breakdown,
     create_and_populate_profast,
 )
-from h2integrate.tools.profast_reverse_tools import convert_pf_to_dict
 
 
 @fixture

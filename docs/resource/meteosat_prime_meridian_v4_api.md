@@ -54,3 +54,6 @@ For the `meteosat_tmy_solar_v4_api` model, the `resource_year` should be specifi
 | `day`      | X |
 | `hour`      | X |
 | `minute`      | X |
+| `start_time`| X |
+| `end_time`| X |
+| `dt`| X |

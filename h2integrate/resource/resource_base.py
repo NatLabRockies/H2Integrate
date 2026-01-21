@@ -1,6 +1,8 @@
 from pathlib import Path
+from datetime import timezone, timedelta
 
 import numpy as np
+import pandas as pd
 import openmdao.api as om
 from attrs import field, define
 
@@ -124,6 +126,57 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         return resource_specs
 
+    def add_resource_start_end_times(self, data: dict):
+        """Add resource data start time, end time, and timestep to the resource data dictionary.
+
+        The start and end time are represented as strings formatted as "yyyy/mm/dd hh:mm:ss (tz)"
+        and the timestep is represented in seconds.
+
+        Args:
+            data (dict): dictionary of resource data
+
+        Returns:
+            data (dict): resource data dictionary with added time strings, modified in place
+        """
+
+        time_keys = ["year", "month", "day", "hour", "minute", "second"]
+        time_dict = {k: data.get(k) for k in time_keys if k in data}
+
+        # If no time information is in the resource data, return the dictionary unchanged
+        if not bool(time_dict):
+            return data
+
+        df = pd.to_datetime(time_dict)
+
+        # If theres not enough time information, return the dictionary unchanged
+        if len(df) <= 1:
+            return data
+
+        start_date = df.iloc[0].strftime("%Y/%m/%d %H:%M:%S")
+        end_date = df.iloc[-1].strftime("%Y/%m/%d %H:%M:%S")
+
+        # Get resource time interval
+        dt = df.iloc[1] - df.iloc[0]
+
+        # Get timezone string
+        tz_utc_offset = timedelta(hours=data.get("data_tz", 0))
+        tz = timezone(offset=tz_utc_offset)
+        tz_str = str(tz).replace("UTC", "").replace(":", "")
+        if tz_str == "":
+            tz_str = "+0000"
+
+        # Create dictionary of time information with dt in seconds
+        time_start_end_info = {
+            "start_time": f"{start_date} ({tz_str})",
+            "end_time": f"{end_date} ({tz_str})",
+            "dt": dt.seconds,
+        }
+
+        # Update resource data with time information
+        data.update(time_start_end_info)
+
+        return data
+
     def create_filename(self, latitude, longitude):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
 
@@ -224,9 +277,11 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if self.resource_data is not None:
                 return self.resource_data
 
-        # 1) check if user provided data, return that
+        # 1) check if user provided data, add start and end times if so
+        # and return the data
         if bool(self.config.resource_data):
-            return self.config.resource_data
+            data = self.add_resource_start_end_times(self.config.resource_data)
+            return data
 
         # check if user provided directory or filename
         provided_filename = False if self.config.resource_filename == "" else True
@@ -252,6 +307,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if filepath.is_file():
             self.filepath = filepath
             data = self.load_data(filepath)
+            data = self.add_resource_start_end_times(data)
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -264,11 +320,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()`
             data = self.load_data(filepath)
+            data = self.add_resource_start_end_times(data)
             return data
-        if not success:
-            raise ValueError("Did not successfully download data")
 
-        raise ValueError("Unexpected situation occurred while trying to load data")
+        if not success:
+            raise ValueError("Did not successfully download resource data.")
+
+        raise ValueError("Unexpected situation occurred while trying to load resource data.")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         if not self.config.use_fixed_resource_location:

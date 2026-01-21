@@ -8,10 +8,7 @@ technologies:
     cost_model:
       model: "atb_wind_cost"
     dispatch_rule_set:
-      model: "pyomo_generic_converter"
-    resource:
-      type: "pysam_wind"
-      wind_speed: 9.
+      model: "pyomo_dispatch_generic_converter"
     model_inputs:
       performance_parameters:
         num_turbines: 100
