@@ -36,7 +36,7 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_generic_storage"
+      model: "pyomo_dispatch_generic_storage"
     control_strategy:
       model: "heuristic_load_following_controller"
     performance_model:
@@ -65,8 +65,5 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
       control_parameters:
-        # commodity_storage_units: "kW"
         tech_name: "battery"
-      # dispatch_rule_parameters:
-      #   commodity_name: "electricity"
-      #   commodity_storage_units: "kW"
+

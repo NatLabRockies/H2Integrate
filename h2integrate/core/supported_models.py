@@ -256,8 +256,8 @@ supported_models = {
     "demand_open_loop_converter_controller": DemandOpenLoopConverterController,
     "flexible_demand_open_loop_converter_controller": FlexibleDemandOpenLoopConverterController,
     # Dispatch
-    "pyomo_generic_converter": PyomoDispatchGenericConverter,
-    "pyomo_generic_storage": PyomoRuleStorageBaseclass,
+    "pyomo_dispatch_generic_converter": PyomoDispatchGenericConverter,
+    "pyomo_dispatch_generic_storage": PyomoRuleStorageBaseclass,
     "pyomo_battery_min_operating_cost": PyomoRuleStorageMinOperatingCosts,
     "pyomo_generic_converter_min_operating_cost": PyomoDispatchGenericConverterMinOperatingCosts,
     # Feedstock
