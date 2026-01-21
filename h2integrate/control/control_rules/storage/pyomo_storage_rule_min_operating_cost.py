@@ -18,6 +18,7 @@ class PyomoRuleStorageMinOperatingCosts:
         self.block_set_name = block_set_name
         self.commodity_name = commodity_info["commodity_name"]
         self.commodity_storage_units = commodity_info["commodity_storage_units"]
+        pyo.units.load_definitions_from_strings(["USD = [currency]"])
 
         self.model = pyomo_model
         self.blocks = pyo.Block(index_set, rule=self.dispatch_block_rule_function)
