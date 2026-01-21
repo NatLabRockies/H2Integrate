@@ -7,7 +7,7 @@ This guide covers how to define sites, resource models, amd connect resource dat
 
 The `sites` section of the plant configuration file defines the sites included in the analysis, their location parameters (latitude and longitude), and the resource models used for each site.
 The yaml file is organized into sections for each site included in the analysis under the `sites` heading.
-Here is an example of a site is defining a wind resource model.
+Here is an example of a site that is defining a wind resource model.
 
 ```yaml
 sites:
@@ -27,7 +27,7 @@ Further information on the available resource models can be found [here](https:/
 ## Resource to technology connections overview
 
 The `resource_to_tech_connections` section in your plant configuration file defines how different technologies are connected to sites and the resource data for that site.
-This is how the H2I framework establishes the necessary OpenMDAO connections between your sites and technologies based on these specifications.
+The H2I framework establishes the necessary OpenMDAO connections between your sites and technologies based on these specifications.
 
 Resource to technology connections are defined as an array of 3-element arrays in your `plant_config.yaml`:
 
@@ -44,7 +44,7 @@ resource_to_tech_connections: [
 - **variable_name**: The resource variable name to pass from the site to the technology ("wind_resource_data" for wind technology models, and "solar_resource_data" for solar technology models.)
 
 
-There are different use-cases for defining sites and resources, the following sections will go over various examples of defining sites and resource models.
+The following sections will go over various examples and use-cases for defining sites and resource models.
 
 ### Single site without resource
 If none of the technologies in the technology configuration require resource data, then `resource_to_tech_connections` is not included in the plant configuration file and `resources` are not defined for the site defined under `sites`.
