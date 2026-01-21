@@ -8,7 +8,7 @@ technologies:
     cost_model:
       model: "atb_wind_cost"
     dispatch_rule_set:
-      model: "pyomo_generic_converter"
+      model: "pyomo_dispatch_generic_converter"
     resource:
       type: "pysam_wind"
       wind_speed: 9.
@@ -39,7 +39,7 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_generic_storage"
+      model: "pyomo_dispatch_generic_storage"
     control_strategy:
       model: "heuristic_load_following_controller"
     performance_model:
@@ -48,6 +48,8 @@ technologies:
       model: "atb_battery_cost"
     model_inputs:
       shared_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
         max_charge_rate: 100000
         max_capacity: 500000
         n_control_window: 24
@@ -65,9 +67,5 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
       control_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
         tech_name: "wrong_tech_name"
-      dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+

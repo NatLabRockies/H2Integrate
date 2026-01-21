@@ -304,7 +304,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
                 "tech_to_dispatch_connections"
             ]:
                 if any(intended_dispatch_tech in name for name in self.tech_group_name):
-                    self.add_discrete_input("pyomo_solver", val=dummy_function)
+                    self.add_discrete_input("pyomo_dispatch_solver", val=dummy_function)
                     break
 
         self.unmet_demand = 0.0
@@ -365,9 +365,9 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         self.system_model.value("input_power", 0.0)
         self.system_model.execute(0)
 
-        if "pyomo_solver" in discrete_inputs:
+        if "pyomo_dispatch_solver" in discrete_inputs:
             # Simulate the battery with provided dispatch inputs
-            dispatch = discrete_inputs["pyomo_solver"]
+            dispatch = discrete_inputs["pyomo_dispatch_solver"]
             kwargs = {
                 "time_step_duration": self.dt_hr,
                 "control_variable": self.config.control_variable,
