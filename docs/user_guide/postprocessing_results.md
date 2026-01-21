@@ -91,25 +91,35 @@ The `units` argument is used to specify the units of the value to be returned.
 
 ### Saving outputs
 
-The time series outputs can be saved to a csv output using the `save_case_timeseries_as_csv` function. If no variables are specified, then the function saves all time series variables in the simulation. Otherwise, the specified variables are saves.
-An example of how to save time series results is shown in `examples/02_texas_ammonia/run_texas_ammonia_plant.py`:
+The time series outputs can be saved to a csv output using the `save_case_timeseries_as_csv` function. If no variables are specified, then the function saves all time series variables in the simulation. Otherwise, the specified variables are saved.
+
+The `vars_to_save` argument supports three different input formats:
+
+1. **List of variable names** - saves variables with their default units
+2. **Dictionary with units** - keys are variable names, values are the desired units
+3. **Dictionary with options** - keys are variable names, values are dictionaries with `"units"` and/or `"alternative_name"` keys
+
+#### Example 1: Save all timeseries data
 
 ```python
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
-# Create a H2Integrate model
+# Create and run a H2Integrate model
 model = H2IntegrateModel("top_level_config.yaml")
-
-# Run the model
 model.run()
-
 model.post_process()
 
 # Save all timeseries data to a csv file
-timeseries_data = save_case_timeseries_as_csv(h2i.recorder_path)
+timeseries_data = save_case_timeseries_as_csv(model.recorder_path)
+```
 
-# Get a subset of timeseries data
+#### Example 2: Specify variables as a list
+
+When providing a list of variable names, the function uses the default units for each variable.
+
+```python
+# Get a subset of timeseries data using a list of variable names
 output_vars = [
     "electrolyzer.hydrogen_out",
     "hopp.electricity_out",
@@ -119,9 +129,46 @@ output_vars = [
 
 # Don't save subset of timeseries to a csv file using save_to_file=False
 timeseries_data = save_case_timeseries_as_csv(
-    h2i.recorder_path, vars_to_save=output_vars, save_to_file=False
+    model.recorder_path, vars_to_save=output_vars, save_to_file=False
 )
-
 ```
 
-This example starts by saving all time series outputs to a csv file. Then, it specifies specific variables to pull out and outputs them as a dictionary (not a csv) when `save_to_file=False`.
+#### Example 3: Specify variables with custom units
+
+When providing a dictionary with variable names as keys and unit strings as values, the function converts each variable to the specified units.
+
+```python
+# Specify variables with custom units
+vars_with_units = {
+    "ammonia.hydrogen_in": "kg/h",
+    "h2_storage.hydrogen_in": "kg/h",
+    "electrolyzer.electricity_in": "kW",
+}
+
+timeseries_data = save_case_timeseries_as_csv(
+    model.recorder_path, vars_to_save=vars_with_units, save_to_file=False
+)
+```
+
+#### Example 4: Specify variables with alternative column names
+
+When providing a dictionary with variable names as keys and dictionaries as values, you can specify both custom units and alternative column names for the output DataFrame.
+
+```python
+# Specify variables with alternative names and/or units
+vars_with_options = {
+    "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
+    "hopp.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
+    "ammonia.ammonia_out": {"alternative_name": None},  # Uses default variable name
+    "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
+}
+
+timeseries_data = save_case_timeseries_as_csv(
+    model.recorder_path, vars_to_save=vars_with_options, save_to_file=False
+)
+# Resulting columns: "Electrolyzer Hydrogen Output (kg/h)", "Plant Electricity Output (kW)", etc.
+```
+
+```{note}
+The `electricity_base_unit` argument (default: `"MW"`) controls the units used for electricity-based variables when no specific units are provided. Valid options are `"W"`, `"kW"`, `"MW"`, or `"GW"`.
+```
