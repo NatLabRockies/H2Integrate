@@ -262,7 +262,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             elif "optimized" in control_strategy:
                 # Initialize parameters for optimized dispatch strategy
                 self.initialize_parameters(
-                inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
+                    inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
                 )
 
             else:
@@ -275,7 +275,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
             # loop over all control windows, where t is the starting index of each window
             for t in window_start_indices:
-
                 # get the inputs over the current control window
                 commodity_in = inputs[self.config.commodity_name + "_in"][
                     t : t + self.config.n_control_window
@@ -937,9 +936,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             commodity_demand (list): The demanded commodity for this time slice.
 
         """
-        self.hybrid_dispatch_rule.update_time_series_parameters(
-            commodity_in, commodity_demand
-        )
+        self.hybrid_dispatch_rule.update_time_series_parameters(commodity_in, commodity_demand)
 
     def solve_dispatch_model(
         self,
