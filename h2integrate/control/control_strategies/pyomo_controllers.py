@@ -315,7 +315,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                             but has not been implemented yet."
                         )
                     )
-                    # TODO: implement optimized solutions; this is where pyomo_model would be used
 
                 # run the performance/simulation model for the current control window
                 # using the dispatch commands
