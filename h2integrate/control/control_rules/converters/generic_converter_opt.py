@@ -100,7 +100,7 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
     def _create_parameters(self, pyomo_model: pyo.ConcreteModel):
         """Create generic converter Pyomo parameters to add to the Pyomo model instance.
 
-        This method defines converter parameters such as available production and the 
+        This method defines converter parameters such as available production and the
         cost per generation for the technology
 
         Args:

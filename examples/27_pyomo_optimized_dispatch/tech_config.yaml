@@ -64,7 +64,7 @@ technologies:
         commodity_storage_units: "kW"
         cost_per_charge: 0.0027
         cost_per_discharge: 0.003
-        commodity_met_value: 0.01       
+        commodity_met_value: 0.01
         cost_per_production: 0.001
       performance_parameters:
         system_model_source: "pysam"

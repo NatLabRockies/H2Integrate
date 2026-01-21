@@ -4,8 +4,8 @@ import openmdao.api as om
 
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.control.control_strategies.pyomo_controllers import (
-    HeuristicLoadFollowingController,
     OptimizedDispatchController,
+    HeuristicLoadFollowingController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
@@ -401,6 +401,7 @@ def test_heuristic_load_following_battery_dispatch(subtests):
             == prob.get_val("battery.unused_electricity_out")[:5]
         )
 
+
 # The previous subtests seem to cover basic battery dispatch behavior (max and min SOC)
 # The following tests will address the optimized dispatch calculation
 
@@ -418,38 +419,38 @@ def test_optimized_load_following_battery_dispatch(subtests):
     demand_in = np.ones(8760) * 6000.0
 
     tech_config["technologies"]["battery"] = {
-            "dispatch_rule_set": {"model": "pyomo_generic_storage"},
-            "control_strategy": {"model": "optimized_dispatch_controller"},
-            "performance_model": {"model": "pysam_battery"},
-            "model_inputs": {
-                "shared_parameters": {
-                    "max_charge_rate": 50000,
-                    "max_capacity": 200000,
-                    "n_control_window": 24,
-                    "n_horizon_window": 48,
-                    "init_charge_percent": 0.5,
-                    "max_charge_percent": 0.9,
-                    "min_charge_percent": 0.1,
-                    "commodity_name": "electricity",
-                    "commodity_storage_units": "kW",
-                    "time_weighting_factor": 0.995,
-                    "charge_efficiency": 0.95,
-                    "discharge_efficiency": 0.95,
-                    "cost_per_charge": 0.0027,
-                    "cost_per_discharge": 0.003,
-                    "cost_per_production": 0.001,
-                    "commodity_met_value": 0.01,
-                },
-                "performance_parameters": {
-                    "system_model_source": "pysam",
-                    "chemistry": "LFPGraphite",
-                    "control_variable": "input_power",
-                },
-                "control_parameters": {
-                    "tech_name": "battery",
-                    "system_commodity_interface_limit": 1e12,
-                },
+        "dispatch_rule_set": {"model": "pyomo_generic_storage"},
+        "control_strategy": {"model": "optimized_dispatch_controller"},
+        "performance_model": {"model": "pysam_battery"},
+        "model_inputs": {
+            "shared_parameters": {
+                "max_charge_rate": 50000,
+                "max_capacity": 200000,
+                "n_control_window": 24,
+                "n_horizon_window": 48,
+                "init_charge_percent": 0.5,
+                "max_charge_percent": 0.9,
+                "min_charge_percent": 0.1,
+                "commodity_name": "electricity",
+                "commodity_storage_units": "kW",
+                "time_weighting_factor": 0.995,
+                "charge_efficiency": 0.95,
+                "discharge_efficiency": 0.95,
+                "cost_per_charge": 0.0027,
+                "cost_per_discharge": 0.003,
+                "cost_per_production": 0.001,
+                "commodity_met_value": 0.01,
             },
+            "performance_parameters": {
+                "system_model_source": "pysam",
+                "chemistry": "LFPGraphite",
+                "control_variable": "input_power",
+            },
+            "control_parameters": {
+                "tech_name": "battery",
+                "system_commodity_interface_limit": 1e12,
+            },
+        },
     }
 
     # Setup the OpenMDAO problem and add subsystems

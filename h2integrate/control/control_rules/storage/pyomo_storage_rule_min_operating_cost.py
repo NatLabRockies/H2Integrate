@@ -57,7 +57,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
         # System parameters
         self.commodity_load_demand = [commodity_demand[t] for t in self.blocks.index_set()]
-        # This should not be set to the commodity_demand. Any way to set it to the production 
+        # This should not be set to the commodity_demand. Any way to set it to the production
         # capacity of the plant?
         self.load_production_limit = [commodity_demand[t] for t in self.blocks.index_set()]
         self._set_initial_soc_constraint()
@@ -379,7 +379,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
     def _set_initial_soc_constraint(self):
         """
-        This method links the SOC between the end of one control period and the beginning 
+        This method links the SOC between the end of one control period and the beginning
         of the next control period.
         """
         ##################################

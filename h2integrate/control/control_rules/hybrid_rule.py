@@ -5,6 +5,7 @@ from pyomo.network import Arc
 class PyomoDispatchPlantRule:
     """Class defining Pyomo model and rule for the optimized dispatch for load following
     for the overal optimization problem describing the system."""
+
     def __init__(
         self,
         pyomo_model: pyo.ConcreteModel,
@@ -14,7 +15,6 @@ class PyomoDispatchPlantRule:
         dispatch_options: dict,
         block_set_name: str = "hybrid",
     ):
-
         self.source_techs = source_techs  # self.pyomo_model
         self.options = dispatch_options  # only using dispatch_options.time_weighting_factor
         self.power_source_gen_vars = {key: [] for key in index_set}
@@ -147,9 +147,7 @@ class PyomoDispatchPlantRule:
 
         pyo.TransformationFactory("network.expand_arcs").apply_to(self.model)
 
-    def update_time_series_parameters(
-        self, commodity_in=list, commodity_demand=list
-    ):
+    def update_time_series_parameters(self, commodity_in=list, commodity_demand=list):
         """
         Updates the pyomo optimization problem with parameters that change with time
 
@@ -163,7 +161,7 @@ class PyomoDispatchPlantRule:
         for tech in self.source_techs:
             name = tech + "_rule"
             pyomo_block = self.tech_dispatch_models.__getattribute__(name)
-            pyomo_block.update_time_series_parameters( commodity_in, commodity_demand)
+            pyomo_block.update_time_series_parameters(commodity_in, commodity_demand)
 
     def create_min_operating_cost_expression(self):
         """

@@ -68,4 +68,3 @@ technologies:
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
       control_parameters:
         tech_name: "wrong_tech_name"
-
