@@ -29,7 +29,7 @@ def test_save_csv_all_results(subtests, run_example_02_sql_fpath):
     res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
-        assert len(res.columns.to_list()) == 26
+        assert len(res.columns.to_list()) == 35
 
     with subtests.test("Check number of rows"):
         assert len(res) == 8760
@@ -41,7 +41,7 @@ def test_save_csv_all_results(subtests, run_example_02_sql_fpath):
 def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
     vars_to_save = [
         "electrolyzer.hydrogen_out",
-        "hopp.electricity_out",
+        "combiner.electricity_out",
         "ammonia.ammonia_out",
         "h2_storage.hydrogen_out",
     ]
@@ -88,7 +88,7 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
 def test_alternative_column_names(subtests, run_example_02_sql_fpath):
     vars_to_save = {
         "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
-        "hopp.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
+        "combiner.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
         "ammonia.ammonia_out": {"alternative_name": None},
         "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
     }
