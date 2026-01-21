@@ -146,3 +146,4 @@ resource_to_tech_connections: [
 
 Some examples that define multiple sites with resources are:
 - `examples/15_wind_solar_electrolyzer/plant_config.yaml`
+- `examples/27_site_doe_diff/plant_config.yaml`

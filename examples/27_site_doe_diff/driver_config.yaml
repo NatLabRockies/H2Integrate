@@ -2,7 +2,7 @@ description: Driver config for CSVGen design of experiments
 name: driver_config
 
 general:
-  folder_output: ex_23_out
+  folder_output: ex_27_out
   create_om_reports: false
 driver:
   design_of_experiments:

@@ -1640,17 +1640,17 @@ def test_21_iron_dri_eaf_example(subtests):
 
 
 def test_sweeping_different_resource_sites_doe(subtests):
-    os.chdir(EXAMPLE_DIR / "xx_site_doe_diff")
+    os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
     import pandas as pd
 
     # Create the model
-    model = H2IntegrateModel("23_wind_solar_site_doe.yaml")
+    model = H2IntegrateModel("27_wind_solar_site_doe.yaml")
 
     # # Run the model
     model.run()
 
     # Specify the filepath to the sql file, the folder and filename are in the driver_config
-    sql_fpath = EXAMPLE_DIR / "xx_site_doe_diff" / "ex_23_out" / "cases.sql"
+    sql_fpath = EXAMPLE_DIR / "27_site_doe_diff" / "ex_27_out" / "cases.sql"
 
     # load the cases
     cr = om.CaseReader(sql_fpath)
