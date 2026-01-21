@@ -1,3 +1,5 @@
+import shutil
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -74,7 +76,10 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 300.0
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == 300.0
         )
 
     with subtests.test("File runs with WindPower, check turbine size"):
@@ -85,7 +90,9 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check AEP"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/yr")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+            )
             == 1391425.64
         )
 
@@ -106,9 +113,13 @@ def test_floris_turbine_export(subtests):
     plant_config = load_plant_yaml(plant_config_path)
     tech_config = load_tech_yaml(tech_config_path)
 
+    cache_dir = tech_config_path.parent / "test_cache"
+
     updated_parameters = {
         "hub_height": -1,
         "floris_turbine_config": floris_options,
+        "enable_caching": True,
+        "cache_dir": cache_dir,
     }
 
     tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"].update(
@@ -135,7 +146,10 @@ def test_floris_turbine_export(subtests):
 
     with subtests.test("File runs with Floris, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 600.0
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == 600.0
         )
 
     with subtests.test("File runs with Floris, check turbine size"):
@@ -153,10 +167,22 @@ def test_floris_turbine_export(subtests):
             == 53.556784
         )
 
-    with subtests.test("File runs with Floris, check AEP"):
+    with subtests.test("File runs with Floris, check total electricity produced"):
         assert (
             pytest.approx(
-                prob.get_val("wind_plant.total_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+                prob.get_val("wind_plant.total_electricity_produced", units="MW*h")[0], rel=1e-6
             )
             == 2814944.574
         )
+
+    with subtests.test("File runs with Floris, check AEP"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+            )
+            == 2814944.574
+        )
+
+    # delete cache dir if it exists
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
