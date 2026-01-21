@@ -1245,9 +1245,9 @@ def test_sweeping_solar_sites_doe(subtests):
     for ci, case in enumerate(cases):
         solar_resource_data = case.get_val("site.solar_resource.solar_resource_data")
         lat_lon = f"{case.get_val('site.latitude')[0]} {case.get_val('site.longitude')[0]}"
-        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"]
-        aep = case.get_val("solar.annual_energy", units="MW*h/yr")
-        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")
+        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
+        aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
+        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
 
         site_res = pd.DataFrame(
             [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
@@ -1312,12 +1312,17 @@ def test_floris_example(subtests):
         )
 
     with subtests.test("Wind plant capacity"):
-        assert pytest.approx(h2i.prob.get_val("wind.total_capacity", units="MW"), rel=1e-6) == 66.0
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("wind.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == 66.0
+        )
 
     with subtests.test("Total electricity production"):
         assert (
             pytest.approx(
-                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
+                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h")),
                 rel=1e-6,
             )
             == 128948.21977
