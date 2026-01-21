@@ -24,7 +24,7 @@ timeseries_data = save_case_timeseries_as_csv(model.recorder_path)
 # Get a subset of timeseries data
 vars_to_save = [
     "electrolyzer.hydrogen_out",
-    "hopp.electricity_out",
+    "combiner.electricity_out",
     "ammonia.ammonia_out",
     "h2_storage.hydrogen_out",
 ]
