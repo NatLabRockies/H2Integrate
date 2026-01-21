@@ -178,7 +178,7 @@ for connection in model.plant_config["technology_interconnections"]:
 ```
 
 When we run this example the electrolyzer is sized to 640 MW (as set by the config), although the electricity profile going in has a max of over 1000 MW.
-The LCOH is $4.49/kg H2 and the LCOA is $1.35/kg NH3.
+The LCOH is \$4.49/kg H2 and the LCOA is \$1.35/kg NH3.
 
 ```{code-cell} ipython3
 # Run the model
@@ -202,7 +202,7 @@ for value in [
 
 In this case, the electrolyzer will be sized to match the maximum `electricity_in` coming from HOPP.
 This increases the electrolyzer size to 1080 MW, the smallest multiple of 40 MW (the cluster size) matching the max HOPP power output of 1048 MW.
-This increases the LCOH to $4.80/kg H2, and increases the LCOA to $1.54/kg NH3, since electrolyzer is now oversized to utilize all of the HOPP electricity at peak output but thus has a lower hydrogen production capacity factor.
+This increases the LCOH to \$4.80/kg H2, and increases the LCOA to \$1.54/kg NH3, since electrolyzer is now oversized to utilize all of the HOPP electricity at peak output but thus has a lower hydrogen production capacity factor.
 
 ```{code-cell} ipython3
 # Create a H2Integrate model, modifying tech_config as necessary
@@ -240,7 +240,7 @@ for value in [
 In this case, the electrolyzer will be sized to match the maximum hydrogen capacity of the ammonia plant.
 This requires the `technology_interconnections` entry to send the `max_hydrogen_capacity` from the ammonia plant to the electrolyzer.
 This decreases the electrolyzer size to 560 MW, the closest multiple of 40 MW (the cluster size) that will ensure an h2 production capacity that matches the ammonia plant's h2 intake at its max ammonia production capacity.
-This increases the LCOH to $4.64/kg H2, but reduces the LCOA to $1.30/kg NH3, since electrolyzer size was matched to ammonia production but not HOPP.
+This increases the LCOH to \$4.64/kg H2, but reduces the LCOA to \$1.30/kg NH3, since electrolyzer size was matched to ammonia production but not HOPP.
 
 ```{code-cell} ipython3
 # Create a H2Integrate model, modifying tech_config and plant_config as necessary
@@ -282,7 +282,7 @@ for value in [
 
 ## Using optimizer with multiple connections
 
-With both `electrolyzer` and `ammonia` in `size_by_max_feedstock` mode, the COBYLA optimizer can co-optimize the `max_feedstock_ratio` variables to minimize LCOA to $1.20/kg. This is achieved at a capacity factor of approximately 55% in both the electrolyzer and the ammonia plant.
+With both `electrolyzer` and `ammonia` in `size_by_max_feedstock` mode, the COBYLA optimizer can co-optimize the `max_feedstock_ratio` variables to minimize LCOA to \$1.20/kg. This is achieved at a capacity factor of approximately 55% in both the electrolyzer and the ammonia plant.
 
 ```{code-cell} ipython3
 # Create a H2Integrate model, modifying tech_config and driver_config as necessary
