@@ -2,24 +2,24 @@ name: "plant_config"
 description: "This plant uses solar resource data from 2012"
 
 sites:
-  wind_site:
+  wind_site: #name of the site for the wind technology
     latitude: 35.2018863
     longitude: -101.945027
     resources:
-      wind_resource:
+      wind_resource: #name of the resource model for the wind_site
         resource_model: "wind_toolkit_v2_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: False
-  solar_site:
+          use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
+  solar_site: #name of the site for the solar technology
     latitude: 34.22
     longitude: -102.75
     resources:
-      solar_resource:
+      solar_resource: #name of the resource model for the solar_site
         resource_model: "goes_aggregated_solar_v4_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: False
+          use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology

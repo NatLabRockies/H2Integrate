@@ -38,10 +38,13 @@ resource_to_tech_connections: [
 ]
 ```
 
-- **site_name**: Name of the site for the resource model
-- **resource_name**: Name of the resource model outputting the resource data
-- **tech_name**: Name of the technology receiving the input resourec data
-- **variable_name**: The resource variable name to pass from the site to the technology ("wind_resource_data" for wind technology models, and "solar_resource_data" for solar technology models.)
+- **site_name**: Name of the site for the resource model. Many examples with one site have a site name of 'site', but this name is defined by the user ('wind_site' is the site name in the above example).
+- **resource_name**: Name of the resource model outputting the resource data. This can be any name defined by the user ('wind_resource' is the name of the resource model in the above example).
+- **tech_name**: Name of the technology receiving the input resource data. This should be the name of a technology defined in the technology configuration file (the technology is named 'wind' in the above example).
+- **variable_name**: The resource variable name to pass from the site to the technology, this entry is not user defined. The variable names for different resource and corresponding technology models are:
+    - "wind_resource_data" for wind technology models and wind resource models
+    - "solar_resource_data" for solar technology models and solar resource models
+    - "discharge" for river resource models and water power technology models
 
 
 The following sections will go over various examples and use-cases for defining sites and resource models.
@@ -81,6 +84,7 @@ resource_to_tech_connections: [
 ```
 
 Some examples that define a single site with a single resource are:
+- `examples/03_methanol/co2_hydrogenation_doc/plant_config_co2h.yaml`
 - `examples/07_run_of_river_plant/plant_config.yaml`
 - `examples/08_wind_electrolyzer/plant_config.yaml`
 - `examples/10_electrolyzer_om/plant_config.yaml`
@@ -113,37 +117,39 @@ resource_to_tech_connections: [
 ```
 
 Some examples that define a single site with multiple resources are:
+- `examples/01_onshore_steel_mn/plant_config.yaml`
+- `examples/02_texas_ammonia/plant_config.yaml`
+- `examples/03_methanol/co2_hydrogenation/plant_config_co2h.yaml`
 - `examples/23_solar_wind_ng_demand/plant_config.yaml`
 
 ### Multiple sites with resources
-If multiple technologies (named `"wind"` and `"solar"` in this example) require resource data from different locations, then the `sites` configuration and `resource_to_tech_connections` may look like:
+If multiple technologies, named `"distributed_wind_plant"` and `"utility_wind_plant"` in this example (examples/26_floris), require resource data from different locations, then the `sites` configuration and `resource_to_tech_connections` may look like:
 ```yaml
 sites:
-    wind_site: #site name for wind resource
-        latitude: 34.22
-        longitude: -102.75
-        resources:
-            wind_resource: #resource model name for wind resource
-                resource_model: "wind_toolkit_v2_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True
-    solar_site: #site name for solar resource
-        latitude: 34.30
-        longitude: -102.80
-        resources:
-            solar_resource: #resource model name for solar resource
-                resource_model: "goes_aggregated_solar_v4_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True
+  distributed_wind_site: #name of distributed site
+    latitude: 44.04218
+    longitude: -95.19757
+    resources:
+      wind_resource: #resource model name for distributed_wind_site
+        resource_model: "openmeteo_wind_api"
+        resource_parameters:
+          resource_year: 2023
+  utility_wind_site: # name of utility site
+    latitude: 35.2018863
+    longitude: -101.945027
+    resources:
+      wind_resource: #resource model name for utility_wind_site
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
 resource_to_tech_connections: [
   # formatted as [site_name.resource_name, tech_name, variable_name],
-  ['wind_site.wind_resource','wind','wind_resource_data'],
-  ['solar_site.solar_resource','solar','solar_resource_data'],
+  ['distributed_wind_site.wind_resource', 'distributed_wind_plant', 'wind_resource_data'],
+  ['utility_wind_site.wind_resource', 'utility_wind_plant', 'wind_resource_data'],
 ]
 ```
 
 Some examples that define multiple sites with resources are:
 - `examples/15_wind_solar_electrolyzer/plant_config.yaml`
+- `examples/26_floris/plant_config.yaml`
 - `examples/27_site_doe_diff/plant_config.yaml`
