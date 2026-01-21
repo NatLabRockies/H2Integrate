@@ -110,7 +110,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
         Adds discrete inputs named 'dispatch_block_rule_function' (and variants
         suffixed with source tech names for cross-tech connections) plus a
-        discrete output 'pyomo_solver' that will hold the assembled
+        discrete output 'pyomo_dispatch_solver' that will hold the assembled
         callable after compute().
         """
 
@@ -139,7 +139,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
         # create output for the pyomo control model
         self.add_discrete_output(
-            "pyomo_solver",
+            "pyomo_dispatch_solver",
             val=dummy_function,
             desc="callable: fully formed pyomo model and execution logic to be run \
                 by owning technologies performance model",
@@ -147,7 +147,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Build Pyomo model blocks and assign the dispatch solver."""
-        discrete_outputs["pyomo_solver"] = self.pyomo_setup(discrete_inputs)
+        discrete_outputs["pyomo_dispatch_solver"] = self.pyomo_setup(discrete_inputs)
 
     def pyomo_setup(self, discrete_inputs):
         """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
@@ -188,7 +188,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 continue
 
         # define dispatch solver
-        def pyomo_solver(
+        def pyomo_dispatch_solver(
             performance_model: callable,
             performance_model_kwargs,
             inputs,
@@ -344,7 +344,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
             return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
 
-        return pyomo_solver
+        return pyomo_dispatch_solver
 
     @staticmethod
     def dispatch_block_rule(block, t):
@@ -1005,7 +1005,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         self.config.max_capacity = inputs["storage_capacity"][0]
         self.config.max_charge_rate = inputs["max_charge_rate"][0]
 
-        discrete_outputs["pyomo_solver"] = self.pyomo_setup(discrete_inputs)
+        discrete_outputs["pyomo_dispatch_solver"] = self.pyomo_setup(discrete_inputs)
 
     @staticmethod
     def glpk_solve_call(
