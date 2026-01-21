@@ -4,8 +4,8 @@ import openmdao.api as om
 
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.control.control_strategies.pyomo_controllers import (
-    OptimizedDispatchController,
     HeuristicLoadFollowingController,
+    OptimizedDispatchController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
@@ -35,7 +35,7 @@ tech_config = {
     "description": "...",
     "technologies": {
         "battery": {
-            "dispatch_rule_set": {"model": "pyomo_generic_storage"},
+            "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
             "control_strategy": {"model": "heuristic_load_following_controller"},
             "performance_model": {"model": "pysam_battery"},
             "model_inputs": {
@@ -419,7 +419,7 @@ def test_optimized_load_following_battery_dispatch(subtests):
     demand_in = np.ones(8760) * 6000.0
 
     tech_config["technologies"]["battery"] = {
-        "dispatch_rule_set": {"model": "pyomo_generic_storage"},
+        "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
         "control_strategy": {"model": "optimized_dispatch_controller"},
         "performance_model": {"model": "pysam_battery"},
         "model_inputs": {
