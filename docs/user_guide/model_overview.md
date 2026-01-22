@@ -167,10 +167,10 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'BasicElectrolyzerCostModel'`
 - `geoh2_well_subsurface`: geologic hydrogen well subsurface
     - performance models:
-        + `'simple_natural_geoh2_performance'`
-        + `'templeton_serpentinization_geoh2_performance'`
+        + `'NaturalGeoH2PerformanceModel'`
+        + `'StimulatedGeoH2PerformanceModel'`
     - cost models:
-        + `'mathur_modified_geoh2_cost'`
+        + `'GeoH2SubsurfaceCostModel'`
 - `steel`: steel production
     - performance models:
         + `'SteelPerformanceModel'`
