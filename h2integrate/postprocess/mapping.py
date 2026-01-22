@@ -203,6 +203,7 @@ def plot_geospatial_point_heat_map(
     | None = None,
     show_plot: bool = False,
     save_plot_fpath: Path | str | None = None,
+    save_plot_dpi: float | None = 100.0,
     map_preferences: dict | GeospatialMapConfig | None = None,
     save_sql_file_to_csv: bool = False,
 ):
@@ -244,6 +245,8 @@ def plot_geospatial_point_heat_map(
             is added. Defaults to False.
         save_plot_fpath (Path | str, optional): A string or Path object specifying where to save the
             generated plot. If None, the plot is not saved. Defaults to None.
+        save_plot_dpi (float, otpional): A float specifying the dots per inch resolution of the
+            saved figure. Defaults to 100.
         map_preferences (dict | GeospatialMapConfig, optional): A dictionary or GeospatialMapConfig
             object defining formatting and plotting preferences for GeoPandas, matplotlib, and
             contextily. Defaults to {}.
@@ -424,8 +427,12 @@ def plot_geospatial_point_heat_map(
     if show_plot:
         plt.show()
 
-    if save_plot_fpath is not None:
-        fig.savefig(save_plot_fpath)
+    if Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
+        fig.savefig(fname=save_plot_fpath)
+    elif save_plot_fpath is None:
+        pass
+    else:
+        fig.savefig(fname=save_plot_fpath, dpi=save_plot_dpi)
 
     return fig, ax, results_gdf
 
@@ -444,6 +451,7 @@ def plot_straight_line_shipping_routes(
     | None = None,
     show_plot: bool = False,
     save_plot_fpath: Path | str | None = None,
+    save_plot_dpi: float | None = 100.0,
     map_preferences: dict | GeospatialMapConfig | None = None,
 ):
     """
@@ -488,6 +496,8 @@ def plot_straight_line_shipping_routes(
             is added. Defaults to False.
         save_plot_fpath (Path | str, optional): A string or Path object specifying where to save the
             generated plot. If None, the plot is not saved. Defaults to None.
+        save_plot_dpi (float, otpional): A float specifying the dots per inch resolution of the
+            saved figure. Defaults to 100.
         map_preferences (dict | GeospatialMapConfig, optional): A dictionary or GeospatialMapConfig
             object defining formatting and plotting preferences for GeoPandas, matplotlib, and
             contextily. Defaults to {}.
@@ -601,8 +611,12 @@ def plot_straight_line_shipping_routes(
     if show_plot:
         plt.show()
 
-    if save_plot_fpath is not None:
-        fig.savefig(save_plot_fpath)
+    if Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
+        fig.savefig(fname=save_plot_fpath)
+    elif save_plot_fpath is None:
+        pass
+    else:
+        fig.savefig(fname=save_plot_fpath, dpi=save_plot_dpi)
 
     return fig, ax, shipping_route_gdf
 

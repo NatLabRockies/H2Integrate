@@ -18,8 +18,9 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 # Create H2Integrate model
 # NOTE:
-# If this example has already been run and the cases.csv and cases.sql file is saved in ./ex_27_out.
-# You may comment out the following two lines to avoid long runtimes
+# If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_27_out,
+# you may leave rerun_model = False to save on run time.
+# Otherwise, set rerun_model = True to produce the cases.csv / cases.sql results files
 rerun_model = False
 if rerun_model:
     model = H2IntegrateModel("iron_map.yaml")
