@@ -831,7 +831,7 @@ def auto_colorbar_limits(values: gpd.GeoSeries | pd.Series | np.ndarray):
 
     try:
         values = values[np.isfinite(values)]
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise ValueError(
             "Cannot determine colorbar limits from empty data or non-finite data."
         ) from exc
