@@ -680,7 +680,7 @@ def calculate_geodataframe_total_bounds(*gdfs: gpd.GeoDataFrame | list[gpd.GeoDa
     return coord_range_dict
 
 
-def auto_detect_lat_long_columns(results_df: pd.DataFrame, which: str = "both"):
+def auto_detect_lat_long_columns(results_df: pd.DataFrame | gpd.GeoDataFrame, which: str = "both"):
     """
     Auto detect latitude and longitude column names in a pandas DataFrame.
 
@@ -828,17 +828,23 @@ def auto_colorbar_limits(values: gpd.GeoSeries | pd.Series | np.ndarray):
     """
 
     values = np.asarray(values)
-    values = values[np.isfinite(values)]
+
+    try:
+        values = values[np.isfinite(values)]
+    except ValueError as exc:
+        raise ValueError(
+            "Cannot determine colorbar limits from empty data or non-finite data."
+        ) from exc
 
     if values.size == 0:
-        raise ValueError("Cannot determine colorbar limits from empty or non-finite data.")
+        raise ValueError("Cannot determine colorbar limits from empty data or non-finite data.")
 
     data_min = values.min()
     data_max = values.max()
     data_range = abs(data_max - data_min)
 
     # Handle small ranges of data, abs(data_max-data_min) <= 1e-5
-    if np.isclose(data_min, data_max):
+    if np.isclose(data_min, data_max, atol=1e-5):
         return data_min - 0.1, data_max + 0.1
 
     magnitude = math.floor(math.log10(data_range))
