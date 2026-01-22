@@ -157,4 +157,5 @@ fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
     ],
     show_plot=True,
     save_plot_fpath=save_plot_filepath,
+    save_plot_dpi=600,
 )
