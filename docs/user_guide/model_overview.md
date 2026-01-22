@@ -263,8 +263,8 @@ Below summarizes the available performance, cost, and financial models for each 
     - cost models:
         + `'LinedRockCavernStorageCostModel'`
         + `'SaltCavernStorageCostModel'`
-        + `'mch_tol_h2_storage_cost'`
-        + `'buried_pipe_h2_storage_cost'`
+        + `'MCHTOLStorageCostModel'`
+        + `'PipeStorageCostModel'`
 - `generic_storage`: any resource storage
     - performance models:
         + `'simple_generic_storage'`
