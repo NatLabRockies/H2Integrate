@@ -41,7 +41,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `wind`           |  electricity  | wind resource |
 | `solar`          |  electricity  | solar resource |
 | `river`          |  electricity  | river resource |
-| `HOPPComponent`           |  electricity  | N/A |
+| `hopp`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
 | `steel`          |  steel        | hydrogen |
@@ -68,7 +68,7 @@ When the Primary Commodity is electricity, those converters are considered elect
 
 | Technology        | Transport Commodity |
 | :---------------- | :---------------: |
-| `cable`         |  electricity      |
+| `CablePerformanceModel`         |  electricity      |
 | `pipe`      |  most mass-based commodities         |
 | `combiner`      | Any    |
 | `splitter` |  Any|
@@ -242,9 +242,9 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (transport-models)=
 ## Transport Models
-- `cable`
+- `CablePerformanceModel`
     - performance models:
-        + `'cable'`: specific to `electricity` commodity
+        + `'CablePerformanceModel'`: specific to `electricity` commodity
 - `pipe`:
     - performance models:
         + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", "pig_iron", "reformer_catalyst", "water", "carbon", "iron_ore", and "lime"

@@ -17,8 +17,8 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind","battery","electricity", "cable"],
-  ["battery", "oae", "electricity", "cable"],
+  ["wind","battery","electricity", "CablePerformanceModel"],
+  ["battery", "oae", "electricity", "CablePerformanceModel"],
   # etc
 ]
 tech_to_dispatch_connections: [

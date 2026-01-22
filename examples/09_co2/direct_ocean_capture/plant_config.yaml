@@ -16,10 +16,10 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "combiner", "electricity", "cable"],
-  ["wind", "combiner", "electricity", "cable"],
-  ["combiner", "battery", "electricity", "cable"],
-  ["battery", "doc", "electricity", "cable"],
+  ["hopp", "combiner", "electricity", "CablePerformanceModel"],
+  ["wind", "combiner", "electricity", "CablePerformanceModel"],
+  ["combiner", "battery", "electricity", "CablePerformanceModel"],
+  ["battery", "doc", "electricity", "CablePerformanceModel"],
   # etc
 ]
 tech_to_dispatch_connections: [

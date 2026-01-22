@@ -19,7 +19,7 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "paper_mill", "electricity", "cable"],
+  ["wind", "paper_mill", "electricity", "CablePerformanceModel"],
   # etc
 ]
 resource_to_tech_connections: [

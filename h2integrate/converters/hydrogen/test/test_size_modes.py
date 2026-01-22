@@ -62,7 +62,7 @@ def test_resize_by_max_commodity(subtests):
     ] = 1.0
     input_config["technology_config"] = tech_config
     plant_config["technology_interconnections"] = [
-        ["hopp", "electrolyzer", "electricity", "cable"],
+        ["hopp", "electrolyzer", "electricity", "CablePerformanceModel"],
         ["electrolyzer", "ammonia", "hydrogen", "pipe"],
         ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
     ]

@@ -18,7 +18,7 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "oae", "electricity", "cable"],
+  ["wind", "oae", "electricity", "CablePerformanceModel"],
   ["finance_subgroup_electricity", "oae", "LCOE"]
   # etc
 ]

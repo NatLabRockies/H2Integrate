@@ -20,10 +20,10 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind","combiner","electricity","cable"],
-  ["solar","combiner","electricity","cable"],
-  ["combiner","battery","electricity", "cable"],
-  ["battery", "electrolyzer", "electricity", "cable"],
+  ["wind","combiner","electricity","CablePerformanceModel"],
+  ["solar","combiner","electricity","CablePerformanceModel"],
+  ["combiner","battery","electricity", "CablePerformanceModel"],
+  ["battery", "electrolyzer", "electricity", "CablePerformanceModel"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
   ["h2_storage", "ammonia", "hydrogen", "pipe"],
   # etc

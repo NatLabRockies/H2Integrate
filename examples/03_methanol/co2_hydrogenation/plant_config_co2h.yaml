@@ -18,9 +18,9 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "combiner", "electricity", "cable"], #source_tech, dest_tech, transport_item, transport_type = connection
-  ["solar", "combiner", "electricity", "cable"],
-  ["combiner", "electrolyzer", "electricity", "cable"],
+  ["wind", "combiner", "electricity", "CablePerformanceModel"], #source_tech, dest_tech, transport_item, transport_type = connection
+  ["solar", "combiner", "electricity", "CablePerformanceModel"],
+  ["combiner", "electrolyzer", "electricity", "CablePerformanceModel"],
   ["electrolyzer", "methanol", "hydrogen", "pipe"],
   ["finance_subgroup_electricity", "methanol", "LCOE"],
   ["finance_subgroup_hydrogen", "methanol", "LCOH"],

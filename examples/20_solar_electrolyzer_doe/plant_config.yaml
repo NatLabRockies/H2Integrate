@@ -15,7 +15,7 @@ site:
 
 # array of arrays containing left-to-right technology
 technology_interconnections: [
-  ["solar", "electrolyzer", "electricity", "cable"], #connect solar power to electrolyzer
+  ["solar", "electrolyzer", "electricity", "CablePerformanceModel"], #connect solar power to electrolyzer
 ]
 
 resource_to_tech_connections: [

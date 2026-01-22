@@ -79,7 +79,7 @@ Solar → Battery → [Grid Buy (purchases) | Grid Sell (sales)]
 
 ```yaml
 technology_interconnections: [
-  ["solar", "battery", "electricity", "cable"],
+  ["solar", "battery", "electricity", "CablePerformanceModel"],
   ["battery", "grid_buy", ["electricity_unmet_demand", "electricity_demand"]],
   ["battery", "grid_sell", ["electricity_unused_commodity", "electricity_in"]]
 ]
