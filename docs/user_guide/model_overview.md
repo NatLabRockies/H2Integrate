@@ -268,7 +268,7 @@ Below summarizes the available performance, cost, and financial models for each 
 - `generic_storage`: any resource storage
     - performance models:
         + `'simple_generic_storage'`
-        + `'storage_auto_sizing'`
+        + `'StorageAutoSizingModel'`
     - cost models:
         + `'generic_storage_cost'`
 - `battery`: battery storage

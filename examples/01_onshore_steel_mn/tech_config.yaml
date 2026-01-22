@@ -130,7 +130,7 @@ technologies:
 
   h2_storage:
     performance_model:
-      model: "storage_auto_sizing"
+      model: "StorageAutoSizingModel"
     control_strategy:
       model: "pass_through_controller"
     cost_model:

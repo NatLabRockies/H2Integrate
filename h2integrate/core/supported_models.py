@@ -233,7 +233,7 @@ supported_models = {
     "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
     # Storage
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
-    "storage_auto_sizing": StorageAutoSizingModel,
+    "StorageAutoSizingModel": StorageAutoSizingModel,
     "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
     "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,
     "mch_tol_h2_storage_cost": MCHTOLStorageCostModel,
