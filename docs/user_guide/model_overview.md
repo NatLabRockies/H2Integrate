@@ -214,9 +214,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'SimpleASUCostModel'`
 - `desal`: water desalination
     - performance models:
-        + `'reverse_osmosis_desalination_performance'`
+        + `'ReverseOsmosisPerformanceModel'`
     - cost models:
-        + `'reverse_osmosis_desalination_cost'`
+        + `'ReverseOsmosisCostModel'`
 - `natural_gas`: natural gas combined cycle and combustion turbine
     - performance models:
         + `'natural_gas_performance'`

@@ -21,7 +21,7 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `ocean_alkalinity_enhancement_cost` | 2024 |
 | `ocean_alkalinity_enhancement_cost_financial` | 2024 |
 | `steel_cost`            |  2022    |
-| `reverse_osmosis_desalination_cost` | 2013 |
+| `ReverseOsmosisCostModel` | 2013 |
 | `synloop_ammonia_cost`  |  N/A (adjusts costs to `target_dollar_year` within cost model)  |
 
 (cost-models-with-user-input-cost-year)=
