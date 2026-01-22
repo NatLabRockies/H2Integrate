@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from datetime import timezone, timedelta
 
@@ -319,6 +320,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             else:
                 filename = self.create_filename(latitude, longitude)
                 filepath = resource_dir / filename
+
+        # Check if the filename was provided by the user and the site hasn't changed
+        if provided_filename and not site_changed:
+            # If the user-provided filename wasn't found, throw a warning
+            if not filepath.is_file():
+                msg = (
+                    f"User provided resource filename {self.config.resource_filename} "
+                    f"not found in {resource_dir}. Data will be downloaded for this site."
+                )
+                warnings.warn(msg, UserWarning)
 
         # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
         # filepath, load data using `load_data()`
