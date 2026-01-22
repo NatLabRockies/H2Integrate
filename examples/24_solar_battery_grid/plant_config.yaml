@@ -23,7 +23,7 @@ site:
 # - grid_buy: purchases electricity to meet unmet demand (upstream)
 # - grid_sell: sells excess electricity back to grid (downstream)
 technology_interconnections: [
-    ["solar", "battery", "electricity", "CablePerformanceModel"], # connect solar to battery
+    ["solar", "battery", "electricity", "cable"], # connect solar to battery
     ["battery", "grid_buy", ["electricity_unmet_demand", "electricity_demand"]], # connect battery demand to grid buying
     ["battery", "grid_sell", ["electricity_unused_commodity", "electricity_in"]] # connect battery surplus to grid selling
 ]

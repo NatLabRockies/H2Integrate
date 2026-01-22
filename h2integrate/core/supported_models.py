@@ -223,7 +223,7 @@ supported_models = {
     "NaturalGasPerformanceModel": NaturalGasPerformanceModel,
     "NaturalGasCostModel": NaturalGasCostModel,
     # Transport
-    "CablePerformanceModel": CablePerformanceModel,
+    "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
     "combiner_performance": GenericCombinerPerformanceModel,
     "splitter_performance": GenericSplitterPerformanceModel,

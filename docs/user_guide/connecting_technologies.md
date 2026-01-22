@@ -31,7 +31,7 @@ There are two connection formats:
 - **source_tech**: Name of the technology providing the output
 - **destination_tech**: Name of the technology receiving the input
 - **variable_name**: The type of variable being transported (e.g., "electricity", "hydrogen", "ammonia")
-- **transport_type**: The transport component to use (e.g., "CablePerformanceModel", "pipeline")
+- **transport_type**: The transport component to use (e.g., "cable", "pipeline")
 
 #### 3-element connections (direct connections)
 ##### Same shared parameter name
@@ -71,9 +71,9 @@ H2Integrate processes these connections in the `connect_technologies()` method o
 For a simple splitter configuration:
 ```yaml
 technology_interconnections: [
-  ["wind_farm", "electricity_splitter", "electricity", "CablePerformanceModel"],
-  ["electricity_splitter", "electrolyzer", "electricity", "CablePerformanceModel"],
-  ["electricity_splitter", "doc", "electricity", "CablePerformanceModel"],
+  ["wind_farm", "electricity_splitter", "electricity", "cable"],
+  ["electricity_splitter", "electrolyzer", "electricity", "cable"],
+  ["electricity_splitter", "doc", "electricity", "cable"],
 ]
 ```
 
@@ -123,9 +123,9 @@ The relationship is straightforward: `<commidty_name>_out = <commidty_name>_in1 
 
 ```yaml
 technology_interconnections: [
-  ["wind_farm", "combiner", "electricity", "CablePerformanceModel"],
-  ["solar_farm", "combiner", "electricity", "CablePerformanceModel"],
-  ["combiner", "electrolyzer", "electricity", "CablePerformanceModel"],
+  ["wind_farm", "combiner", "electricity", "cable"],
+  ["solar_farm", "combiner", "electricity", "cable"],
+  ["combiner", "electrolyzer", "electricity", "cable"],
 ]
 ```
 
@@ -203,9 +203,9 @@ The `prescribed_electricity_to_priority_tech` parameter can be provided as eithe
 
 ```yaml
 technology_interconnections: [
-  ["offshore_wind", "electricity_splitter", "electricity", "CablePerformanceModel"],
-  ["electricity_splitter", "doc", "electricity", "CablePerformanceModel"],      # first output
-  ["electricity_splitter", "electrolyzer", "electricity", "CablePerformanceModel"],    # second output
+  ["offshore_wind", "electricity_splitter", "electricity", "cable"],
+  ["electricity_splitter", "doc", "electricity", "cable"],      # first output
+  ["electricity_splitter", "electrolyzer", "electricity", "cable"],    # second output
 ]
 ```
 

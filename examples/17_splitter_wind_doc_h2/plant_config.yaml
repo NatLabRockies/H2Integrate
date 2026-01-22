@@ -20,9 +20,9 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "electricity_splitter", "electricity", "CablePerformanceModel"],
-  ["electricity_splitter", "doc", "electricity", "CablePerformanceModel"],
-  ["electricity_splitter", "electrolyzer", "electricity", "CablePerformanceModel"],
+  ["wind", "electricity_splitter", "electricity", "cable"],
+  ["electricity_splitter", "doc", "electricity", "cable"],
+  ["electricity_splitter", "electrolyzer", "electricity", "cable"],
 ]
 
 resource_to_tech_connections: [

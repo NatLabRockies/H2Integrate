@@ -22,7 +22,7 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp","electrolyzer","electricity","CablePerformanceModel"],
+  ["hopp","electrolyzer","electricity","cable"],
   ["electrolyzer", "ammonia", "hydrogen", "pipe"],
 ]
 

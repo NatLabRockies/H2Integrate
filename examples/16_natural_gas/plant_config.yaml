@@ -22,7 +22,7 @@ site:
 # and not connected to additional technologies.
 # hence the empty array.
 technology_interconnections: [
-    ["solar", "battery", "electricity", "CablePerformanceModel"], #connect solar to battery
+    ["solar", "battery", "electricity", "cable"], #connect solar to battery
     ["ng_feedstock", "natural_gas_plant", "natural_gas", "pipe"], #connect NG feedstock to NG plant
     ["battery", "natural_gas_plant", ["electricity_unmet_demand","electricity_demand"]], #connect electricity demand to NG feedstock
 ]

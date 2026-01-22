@@ -36,8 +36,8 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "combiner", "electricity", "CablePerformanceModel"], #source_tech, dest_tech, transport_item, transport_type = connection
-  ["solar", "combiner", "electricity", "CablePerformanceModel"],
+  ["wind", "combiner", "electricity", "cable"], #source_tech, dest_tech, transport_item, transport_type = connection
+  ["solar", "combiner", "electricity", "cable"],
   ["ng_feedstock", "natural_gas_plant", "natural_gas", "pipe"], #connect NG feedstock to NG plant
   ["combiner", "electrical_load_demand", ["electricity_out", "electricity_in"]], # subtract wind and solar from demand
   ["electrical_load_demand", "natural_gas_plant", ["electricity_unmet_demand", "electricity_demand"]], #give remaining load demand to natural gas plant

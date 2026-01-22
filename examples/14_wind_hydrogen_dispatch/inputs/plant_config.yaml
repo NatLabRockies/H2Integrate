@@ -17,7 +17,7 @@ site:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["wind", "electrolyzer", "electricity", "CablePerformanceModel"],
+  ["wind", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
 ]
 
