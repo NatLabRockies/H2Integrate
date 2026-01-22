@@ -1,7 +1,7 @@
 import pytest
 import openmdao.api as om
 
-from h2integrate.converters.hydrogen.CustomElectrolyzerCostModel_model import (
+from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
 
