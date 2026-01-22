@@ -234,8 +234,8 @@ supported_models = {
     # Storage
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
-    "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
-    "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,
+    "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
+    "SaltCavernStorageCostModel": SaltCavernStorageCostModel,
     "mch_tol_h2_storage_cost": MCHTOLStorageCostModel,
     "buried_pipe_h2_storage_cost": PipeStorageCostModel,
     "atb_battery_cost": ATBBatteryCostModel,

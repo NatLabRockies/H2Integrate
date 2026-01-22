@@ -132,7 +132,7 @@ technologies:
     control_strategy:
       model: "pass_through_controller"
     cost_model:
-      model: "salt_cavern_h2_storage_cost"
+      model: "SaltCavernStorageCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"

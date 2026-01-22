@@ -261,8 +261,8 @@ Below summarizes the available performance, cost, and financial models for each 
     - performance models:
         + `'hydrogen_tank_performance'`
     - cost models:
-        + `'lined_rock_cavern_h2_storage_cost'`
-        + `'salt_cavern_h2_storage_cost'`
+        + `'LinedRockCavernStorageCostModel'`
+        + `'SaltCavernStorageCostModel'`
         + `'mch_tol_h2_storage_cost'`
         + `'buried_pipe_h2_storage_cost'`
 - `generic_storage`: any resource storage
