@@ -130,9 +130,9 @@ technologies:
 
   iron_plant:
     performance_model:
-      model: "ng_dri_performance_rosner"
+      model: "NaturalGasIronReductionPlantPerformanceComponent"
     cost_model:
-      model: "ng_dri_cost_rosner"
+      model: "NaturalGasIronReductionPlantCostComponent"
     model_inputs:
       shared_parameters:
         pig_iron_production_rate_tonnes_per_hr: 161.8829908675799 #equivalent to 1418095 t/yr

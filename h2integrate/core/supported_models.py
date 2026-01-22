@@ -188,10 +188,10 @@ supported_models = {
     "IronPlantCostComponent": IronPlantCostComponent,
     "MartinIronMinePerformanceComponent": MartinIronMinePerformanceComponent,  # standalone model
     "MartinIronMineCostComponent": MartinIronMineCostComponent,  # standalone model
-    "ng_dri_performance_rosner": NaturalGasIronReductionPlantPerformanceComponent,
-    "ng_dri_cost_rosner": NaturalGasIronReductionPlantCostComponent,  # standalone model
-    "h2_dri_performance_rosner": HydrogenIronReductionPlantPerformanceComponent,
-    "h2_dri_cost_rosner": HydrogenIronReductionPlantCostComponent,  # standalone model
+    "NaturalGasIronReductionPlantPerformanceComponent": NaturalGasIronReductionPlantPerformanceComponent,  # noqa: E501
+    "NaturalGasIronReductionPlantCostComponent": NaturalGasIronReductionPlantCostComponent,  # standalone model  # noqa: E501
+    "HydrogenIronReductionPlantPerformanceComponent": HydrogenIronReductionPlantPerformanceComponent,  # noqa: E501
+    "HydrogenIronReductionPlantCostComponent": HydrogenIronReductionPlantCostComponent,  # standalone model  # noqa: E501
     "ng_eaf_performance_rosner": NaturalGasEAFPlantPerformanceComponent,
     "ng_eaf_cost_rosner": NaturalGasEAFPlantCostComponent,  # standalone model
     "h2_eaf_performance_rosner": HydrogenEAFPlantPerformanceComponent,

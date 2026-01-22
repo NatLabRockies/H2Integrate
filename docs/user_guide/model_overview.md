@@ -234,11 +234,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'MartinIronMineCostComponent'`
 - `iron_dri`: iron ore direct reduction
     - performance models:
-        + `'ng_dri_performance_rosner'`
-        + `'h2_dri_performance_rosner'`
+        + `'NaturalGasIronReductionPlantPerformanceComponent'`
+        + `'HydrogenIronReductionPlantPerformanceComponent'`
     - cost models:
-        + `'ng_dri_cost_rosner'`
-        + `'h2_dri_cost_rosner'`
+        + `'NaturalGasIronReductionPlantCostComponent'`
+        + `'HydrogenIronReductionPlantCostComponent'`
 
 (transport-models)=
 ## Transport Models
