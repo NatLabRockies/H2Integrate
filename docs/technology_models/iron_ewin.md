@@ -1,6 +1,6 @@
 # Iron electrowinning models
 
-H2I contains models to simulate to separation of mostly pure iron from iron oxides.
+H2I contains iron electrowinning models to simulate the reduction of iron oxide to pure iron and removal of impurities.
 The main input feedstock is iron ore, while the output commodity is "sponge iron", i.e. iron that is typically brittle ("spongey") and contains less carbon than most steel alloys.
 This sponge iron can then be used in an electric arc furnace (EAF) to produce steel.
 
@@ -22,6 +22,8 @@ These authors use both cost data and physical parameters from existing studies t
 This model is applied in the `humbert_stinn_electrowinning_cost` cost model.
 
 To use this model, specify `"humbert_electrowinning_performance"` as the performance model and `"humbert_stinn_electrowinning_cost"` as the cost model.
+The performance model will Humbert et al.'s energy consumption data to consume electricity as a feedstock and feed this information to the cost model.
+The cost model will calculate capex costs based on the Stinn correlations and opex costs based on the Humbert SI.
 
 ## Shared Parameters
 

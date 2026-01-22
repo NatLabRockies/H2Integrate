@@ -2,8 +2,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
 from h2integrate.converters.iron.humbert_stinn_ewin_cost import HumbertStinnEwinCostComponent
 
@@ -26,12 +24,6 @@ def plant_config():
         },
     }
     return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "27_iron_electrowinning" / "driver_config.yaml")
-    return driver_config
 
 
 @fixture
@@ -67,7 +59,7 @@ def feedstocks_dict():
     return feedstocks_dict
 
 
-def setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict):
+def setup_and_run(plant_config, tech_config, feedstocks_dict):
     prob = om.Problem()
 
     iron_ewin_perf = HumbertEwinPerformanceComponent(
@@ -98,9 +90,7 @@ def setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict):
     return capex, fopex, vopex
 
 
-def test_humbert_stinn_ewin_cost_component(
-    plant_config, driver_config, tech_config, feedstocks_dict, subtests
-):
+def test_humbert_stinn_ewin_cost_component(plant_config, tech_config, feedstocks_dict, subtests):
     expected_capex_ahe = 6038571901.89  # USD
     expected_fopex_ahe = 67050786.5  # USD/year
     expected_vopex_ahe = 835954.89  # USD/year
@@ -112,7 +102,7 @@ def test_humbert_stinn_ewin_cost_component(
     expected_vopex_moe = 3316122.05  # USD/year
 
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "ahe"
-    capex, fopex, vopex = setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict)
+    capex, fopex, vopex = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("ahe_capex"):
         assert (
             pytest.approx(
@@ -138,7 +128,7 @@ def test_humbert_stinn_ewin_cost_component(
             == expected_vopex_ahe
         )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "mse"
-    capex, fopex, vopex = setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict)
+    capex, fopex, vopex = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("mse_capex"):
         assert (
             pytest.approx(
@@ -164,7 +154,7 @@ def test_humbert_stinn_ewin_cost_component(
             == expected_vopex_mse
         )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "moe"
-    capex, fopex, vopex = setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict)
+    capex, fopex, vopex = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("moe_capex"):
         assert (
             pytest.approx(

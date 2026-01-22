@@ -24,6 +24,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, must_equal
+from h2integrate.tools.constants import FE_MW, faraday
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -217,8 +218,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Physical constants
-        F = 96485.3321  # Faraday constant: Electric charge per mole of electrons (C/mol)
-        M = 0.055845  # Fe molar mass (kg/mol)
+        F = faraday  # Faraday constant: Electric charge per mole of electrons (C/mol)
+        M = FE_MW / 1000  # Fe molar mass (kg/mol)
 
         # Parse inputs for Stinn Capex model (doi.org/10.1149/2.F06202IF)
         T = inputs["electrolysis_temp"]

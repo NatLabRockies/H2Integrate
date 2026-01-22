@@ -2,8 +2,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
 from h2integrate.converters.iron.humbert_stinn_ewin_cost import HumbertStinnEwinCostComponent
 
@@ -26,12 +24,6 @@ def plant_config():
         },
     }
     return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "27_iron_electrowinning" / "driver_config.yaml")
-    return driver_config
 
 
 @fixture
@@ -67,7 +59,7 @@ def feedstocks_dict():
     return feedstocks_dict
 
 
-def setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict):
+def setup_and_run(plant_config, tech_config, feedstocks_dict):
     prob = om.Problem()
 
     iron_ewin_perf = HumbertEwinPerformanceComponent(
@@ -98,9 +90,7 @@ def setup_and_run(plant_config, driver_config, tech_config, feedstocks_dict):
     return elec_consumed, iron_out, iron_cap
 
 
-def test_humbert_ewin_performance_component(
-    plant_config, driver_config, tech_config, feedstocks_dict, subtests
-):
+def test_humbert_ewin_performance_component(plant_config, tech_config, feedstocks_dict, subtests):
     expected_elec_consumption_ahe = 506978.45  # kW
     expected_elec_consumption_mse = 452725.57  # kW
     expected_elec_consumption_moe = 567259.43  # kW
@@ -112,9 +102,7 @@ def test_humbert_ewin_performance_component(
     expected_output_capacity_moe = 1432152588.56  # kg/y
 
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "ahe"
-    elec_consumed, iron_out, iron_cap = setup_and_run(
-        plant_config, driver_config, tech_config, feedstocks_dict
-    )
+    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("ahe_electricity"):
         assert (
             pytest.approx(
@@ -140,9 +128,7 @@ def test_humbert_ewin_performance_component(
             == expected_output_capacity_ahe
         )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "mse"
-    elec_consumed, iron_out, iron_cap = setup_and_run(
-        plant_config, driver_config, tech_config, feedstocks_dict
-    )
+    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("mse_electricity"):
         assert (
             pytest.approx(
@@ -168,9 +154,7 @@ def test_humbert_ewin_performance_component(
             == expected_output_capacity_mse
         )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "moe"
-    elec_consumed, iron_out, iron_cap = setup_and_run(
-        plant_config, driver_config, tech_config, feedstocks_dict
-    )
+    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
     with subtests.test("moe_electricity"):
         assert (
             pytest.approx(

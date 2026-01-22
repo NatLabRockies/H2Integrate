@@ -51,7 +51,7 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
     Inputs:
         electricity_in (array): Electric power input available in kW for each timestep.
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
-        ore_fe_wt_pct (float): The iron content of the ore coming in, expressed as a percentage.
+        ore_fe_concentration (float): The iron content of the ore coming in, given as a percentage.
         spec_energy_cons_fe (float): The specific electrical energy consumption required to win
             pure iron (Fe) from iron ore. These are currently calculated as averages between the
             high and low stated values in Table 10 of Humbert et al., but this is exposed as an
@@ -102,7 +102,7 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
 
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
         self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("ore_fe_wt_pct", val=self.config.ore_fe_wt_pct, units="percent")
+        self.add_input("ore_fe_concentration", val=self.config.ore_fe_wt_pct, units="percent")
         self.add_input("spec_energy_all", val=E_all, units="kW*h/kg")
         self.add_input("spec_energy_electrolysis", val=E_electrolysis, units="kW*h/kg")
         self.add_input("capacity", val=self.config.capacity_mw, units="MW")
@@ -126,7 +126,7 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         # Parse inputs
         elec_in = inputs["electricity_in"]
         ore_in = inputs["iron_ore_in"]
-        pct_fe = inputs["ore_fe_wt_pct"]
+        pct_fe = inputs["ore_fe_concentration"]
         kwh_kg_fe = inputs["spec_energy_all"]
         kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]
         cap_kw = inputs["capacity"] * 1000
@@ -135,15 +135,22 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         fe_from_ore = ore_in * pct_fe / 100
         fe_from_elec = elec_in / kwh_kg_fe
 
-        # Limiting iron production per hour by each input
+        # Limit iron production per hour by each input
         fe_prod = np.minimum.reduce([fe_from_ore, fe_from_elec])
+
+        # If production is limited by available ore at any timestep i, limiters[i] = 0
+        # If limited by electricity, limiters[i] = 1
         limiters = np.argmin([fe_from_ore, fe_from_elec], axis=0)
 
         # Limiting iron production per hour by capacity
         fe_prod = np.minimum.reduce([fe_prod, np.full(len(fe_prod), cap_kw / kwh_kg_fe)])
+
+        # If capacity limits production at any timestep i, cap_lim[i] = 1
+        # Otherwise, cap_lim[i] = 0
         cap_lim = 1 - np.argmax([fe_prod, np.full(len(fe_prod), cap_kw / kwh_kg_fe)], axis=0)
 
         # Determine what the limiting factor is for each hour
+        # At each timestep: 0 = iron ore, 1 = electricity, 2 = capacity
         limiters = np.maximum.reduce([cap_lim * 2, limiters])
         outputs["limiting_input"] = limiters
 
