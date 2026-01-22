@@ -182,8 +182,8 @@ supported_models = {
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
     "IronComponent": IronComponent,
-    "iron_mine_performance": IronMinePerformanceComponent,
-    "iron_mine_cost": IronMineCostComponent,
+    "IronMinePerformanceComponent": IronMinePerformanceComponent,
+    "IronMineCostComponent": IronMineCostComponent,
     "iron_plant_performance": IronPlantPerformanceComponent,
     "iron_plant_cost": IronPlantCostComponent,
     "iron_mine_performance_martin": MartinIronMinePerformanceComponent,  # standalone model

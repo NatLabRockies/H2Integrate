@@ -4,9 +4,9 @@ description: "This hybrid plant produces iron"
 technologies:
   iron_mine:
     performance_model:
-      model: "iron_mine_performance"
+      model: "IronMinePerformanceComponent"
     cost_model:
-      model: "iron_mine_cost"
+      model: "IronMineCostComponent"
     model_inputs:
       shared_parameters:
         mine: "Northshore"
