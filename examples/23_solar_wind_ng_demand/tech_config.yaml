@@ -81,9 +81,9 @@ technologies:
 
   natural_gas_plant:
     performance_model:
-      model: natural_gas_performance
+      model: NaturalGasPerformanceModel
     cost_model:
-      model: natural_gas_cost
+      model: NaturalGasCostModel
     model_inputs:
       shared_parameters:
         heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC

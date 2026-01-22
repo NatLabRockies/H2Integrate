@@ -219,9 +219,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'ReverseOsmosisCostModel'`
 - `natural_gas`: natural gas combined cycle and combustion turbine
     - performance models:
-        + `'natural_gas_performance'`
+        + `'NaturalGasPerformanceModel'`
     - cost_models:
-        + `'natural_gas_cost'`
+        + `'NaturalGasCostModel'`
 - `grid`: electricity grid connection
     - performance models:
         + `'grid_performance'`

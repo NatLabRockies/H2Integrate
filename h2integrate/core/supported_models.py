@@ -220,8 +220,8 @@ supported_models = {
     "GeoH2SubsurfaceCostModel": GeoH2SubsurfaceCostModel,
     "AspenGeoH2SurfacePerformanceModel": AspenGeoH2SurfacePerformanceModel,
     "AspenGeoH2SurfaceCostModel": AspenGeoH2SurfaceCostModel,
-    "natural_gas_performance": NaturalGasPerformanceModel,
-    "natural_gas_cost": NaturalGasCostModel,
+    "NaturalGasPerformanceModel": NaturalGasPerformanceModel,
+    "NaturalGasCostModel": NaturalGasCostModel,
     # Transport
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
