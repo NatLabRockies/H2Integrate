@@ -31,7 +31,7 @@ def battery_tech_config_kW():
     battery_inputs = {
         "performance_model": {"model": "SimpleGenericStorage"},
         "cost_model": {"model": "ATBBatteryCostModel"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
@@ -64,7 +64,7 @@ def battery_tech_config_MW():
     battery_inputs = {
         "performance_model": {"model": "SimpleGenericStorage"},
         "cost_model": {"model": "ATBBatteryCostModel"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",

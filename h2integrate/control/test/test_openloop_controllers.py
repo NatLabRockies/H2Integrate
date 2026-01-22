@@ -59,7 +59,7 @@ def test_pass_through_controller(subtests):
     )
 
     prob.model.add_subsystem(
-        "pass_through_controller",
+        "PassThroughOpenLoopController",
         PassThroughOpenLoopController(
             plant_config={}, tech_config=tech_config["technologies"]["h2_storage"]
         ),
@@ -107,7 +107,7 @@ def test_storage_demand_controller(subtests):
     plant_config = {"plant": {"simulation": {"n_timesteps": 10}}}
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "demand_open_loop_storage_controller"
+        "DemandOpenLoopStorageController"
     )
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["control_parameters"] = {
@@ -135,7 +135,7 @@ def test_storage_demand_controller(subtests):
     )
 
     prob.model.add_subsystem(
-        "demand_open_loop_storage_controller",
+        "DemandOpenLoopStorageController",
         DemandOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
@@ -182,7 +182,7 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
     plant_config = {"plant": {"simulation": {"n_timesteps": 10}}}
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "demand_open_loop_storage_controller"
+        "DemandOpenLoopStorageController"
     )
     tech_config["technologies"]["h2_storage"]["model_inputs"]["control_parameters"] = {
         "max_capacity": 10.0,  # kg
@@ -276,7 +276,7 @@ def test_generic_storage_demand_controller(subtests):
             "model": "SimpleGenericStorage",
         },
         "control_strategy": {
-            "model": "demand_open_loop_storage_controller",
+            "model": "DemandOpenLoopStorageController",
         },
         "model_inputs": {
             "shared_parameters": {
@@ -310,7 +310,7 @@ def test_generic_storage_demand_controller(subtests):
     )
 
     prob.model.add_subsystem(
-        "demand_open_loop_storage_controller",
+        "DemandOpenLoopStorageController",
         DemandOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
@@ -359,7 +359,7 @@ def test_demand_converter_controller(subtests):
 
     tech_config["technologies"]["load"] = {
         "control_strategy": {
-            "model": "demand_open_loop_converter_controller",
+            "model": "DemandOpenLoopConverterController",
         },
         "model_inputs": {
             "control_parameters": {
@@ -382,7 +382,7 @@ def test_demand_converter_controller(subtests):
     )
 
     prob.model.add_subsystem(
-        "demand_open_loop_storage_controller",
+        "DemandOpenLoopStorageController",
         DemandOpenLoopConverterController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["load"]
         ),
@@ -430,7 +430,7 @@ def test_flexible_demand_converter_controller(subtests, variable_h2_production_p
     min_demand_kg = 2.5
     tech_config["technologies"]["load"] = {
         "control_strategy": {
-            "model": "flexible_demand_open_loop_converter_controller",
+            "model": "FlexibleDemandOpenLoopConverterController",
         },
         "model_inputs": {
             "control_parameters": {
@@ -463,7 +463,7 @@ def test_flexible_demand_converter_controller(subtests, variable_h2_production_p
     )
 
     prob.model.add_subsystem(
-        "demand_open_loop_storage_controller",
+        "DemandOpenLoopStorageController",
         FlexibleDemandOpenLoopConverterController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["load"]
         ),
@@ -540,7 +540,7 @@ def test_flexible_demand_converter_controller_min_utilization(
     min_demand_kg = 2.5
     tech_config["technologies"]["load"] = {
         "control_strategy": {
-            "model": "flexible_demand_open_loop_converter_controller",
+            "model": "FlexibleDemandOpenLoopConverterController",
         },
         "model_inputs": {
             "control_parameters": {
@@ -573,7 +573,7 @@ def test_flexible_demand_converter_controller_min_utilization(
     )
 
     prob.model.add_subsystem(
-        "demand_open_loop_storage_controller",
+        "DemandOpenLoopStorageController",
         FlexibleDemandOpenLoopConverterController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["load"]
         ),

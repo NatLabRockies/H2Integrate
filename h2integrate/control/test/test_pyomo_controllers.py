@@ -35,7 +35,7 @@ tech_config = {
     "technologies": {
         "battery": {
             "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
-            "control_strategy": {"model": "heuristic_load_following_controller"},
+            "control_strategy": {"model": "HeuristicLoadFollowingController"},
             "performance_model": {"model": "PySAMBatteryPerformanceModel"},
             "model_inputs": {
                 "shared_parameters": {

@@ -57,7 +57,7 @@ technologies:
     cost_model:
       model: "LinedRockCavernStorageCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"

@@ -242,11 +242,11 @@ supported_models = {
     "GenericStorageCostModel": GenericStorageCostModel,
     "SimpleGenericStorage": SimpleGenericStorage,
     # Control
-    "pass_through_controller": PassThroughOpenLoopController,
-    "demand_open_loop_storage_controller": DemandOpenLoopStorageController,
-    "heuristic_load_following_controller": HeuristicLoadFollowingController,
-    "demand_open_loop_converter_controller": DemandOpenLoopConverterController,
-    "flexible_demand_open_loop_converter_controller": FlexibleDemandOpenLoopConverterController,
+    "PassThroughOpenLoopController": PassThroughOpenLoopController,
+    "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
+    "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
+    "DemandOpenLoopConverterController": DemandOpenLoopConverterController,
+    "FlexibleDemandOpenLoopConverterController": FlexibleDemandOpenLoopConverterController,
     # Dispatch
     "pyomo_dispatch_generic_converter": PyomoDispatchGenericConverter,
     "pyomo_dispatch_generic_storage": PyomoRuleStorageBaseclass,

@@ -247,7 +247,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 ]
                 demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
 
-                if "heuristic" in control_strategy:
+                if control_strategy == "HeuristicLoadFollowingController":
                     # determine dispatch commands for the current control window
                     # using the heuristic method
                     self.set_fixed_dispatch(

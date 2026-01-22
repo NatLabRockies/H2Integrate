@@ -74,7 +74,7 @@ technologies:
     dispatch_rule_set:
       model: "pyomo_dispatch_generic_storage"
     control_strategy:
-      model: "heuristic_load_following_controller"
+      model: "HeuristicLoadFollowingController"
     performance_model:
       model: "PySAMBatteryPerformanceModel"
     cost_model:
@@ -132,7 +132,7 @@ technologies:
     performance_model:
       model: "StorageAutoSizingModel"
     control_strategy:
-      model: "pass_through_controller"
+      model: "PassThroughOpenLoopController"
     cost_model:
       model: "LinedRockCavernStorageCostModel"
     model_inputs:

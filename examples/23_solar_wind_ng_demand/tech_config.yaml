@@ -96,7 +96,7 @@ technologies:
 
   electrical_load_demand:
       control_strategy:
-        model: demand_open_loop_converter_controller
+        model: DemandOpenLoopConverterController
       model_inputs:
         control_parameters:
           commodity_name: electricity

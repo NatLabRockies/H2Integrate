@@ -4,7 +4,7 @@ description: "This hybrid plant produces hydrogen"
 technologies:
   h2_storage:
     control_strategy:
-      model: "pass_through_controller"
+      model: "PassThroughOpenLoopController"
     performance_model:
       model: "StorageAutoSizingModel"
     cost_model:
