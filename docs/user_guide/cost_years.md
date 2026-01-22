@@ -18,8 +18,8 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `h2_storage` for geologic storage or buried pipe | 2018 |
 | `simple_ammonia_cost`   |  2022    |
 | `DOCCostModel` | 2023 |
-| `ocean_alkalinity_enhancement_cost` | 2024 |
-| `ocean_alkalinity_enhancement_cost_financial` | 2024 |
+| `OAECostModel` | 2024 |
+| `OAECostAndFinancialModel` | 2024 |
 | `SteelCostAndFinancialModel`            |  2022    |
 | `ReverseOsmosisCostModel` | 2013 |
 | `AmmoniaSynLoopCostModel`  |  N/A (adjusts costs to `target_dollar_year` within cost model)  |

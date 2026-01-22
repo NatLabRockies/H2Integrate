@@ -33,9 +33,9 @@ technologies:
         cost_year: 2022
   oae:
     performance_model:
-      model: "ocean_alkalinity_enhancement_performance"
+      model: "OAEPerformanceModel"
     finance_model:
-      model: "ocean_alkalinity_enhancement_cost_financial"
+      model: "OAECostAndFinancialModel"
     model_inputs:
       performance_parameters:
         number_ed_min: 1

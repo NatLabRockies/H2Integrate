@@ -195,11 +195,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'DOCCostModel'`
 - `oae`: ocean alkalinity enhancement
     - performance models:
-        + `'ocean_alkalinity_enhancement_performance'`
+        + `'OAEPerformanceModel'`
     - cost models:
-        + `'ocean_alkalinity_enhancement_cost'`
+        + `'OAECostModel'`
     - financial models:
-        + `'ocean_alkalinity_enhancement_cost_financial'`
+        + `'OAECostAndFinancialModel'`
 - `methanol`: methanol synthesis
     - performance models:
         + `'SMRMethanolPlantPerformanceModel'`
