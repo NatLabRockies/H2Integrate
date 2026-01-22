@@ -124,5 +124,5 @@ cases = list(cr.get_cases())
 # as variables to exclude in the driver_config file
 
 cases[0].get_val("finance_subgroup_default.LCOE",units="USD/(kW*h)")
-cases[0].get_val("solar.capacity_kWdc",units="MW")
+cases[0].get_val("solar.system_capacity_DC",units="MW")
 ```

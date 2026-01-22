@@ -6,6 +6,7 @@ from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -27,17 +28,25 @@ from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
 from h2integrate.transporters.generic_splitter import GenericSplitterPerformanceModel
+from h2integrate.converters.iron.iron_dri_plant import (
+    HydrogenIronReductionPlantCostComponent,
+    NaturalGasIronReductionPlantCostComponent,
+    HydrogenIronReductionPlantPerformanceComponent,
+    NaturalGasIronReductionPlantPerformanceComponent,
+)
 from h2integrate.converters.iron.iron_transport import (
     IronTransportCostComponent,
     IronTransportPerformanceComponent,
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
-from h2integrate.storage.hydrogen.tank_baseclass import (
-    HydrogenTankCostModel,
-    HydrogenTankPerformanceModel,
-)
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
+from h2integrate.converters.steel.steel_eaf_plant import (
+    HydrogenEAFPlantCostComponent,
+    NaturalGasEAFPlantCostComponent,
+    HydrogenEAFPlantPerformanceComponent,
+    NaturalGasEAFPlantPerformanceComponent,
+)
 from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
 from h2integrate.storage.hydrogen.h2_storage_cost import (
     PipeStorageCostModel,
@@ -113,6 +122,10 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
+from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
+    AspenGeoH2SurfaceCostModel,
+    AspenGeoH2SurfacePerformanceModel,
+)
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
 )
@@ -154,6 +167,7 @@ supported_models = {
     # Converters
     "atb_wind_cost": ATBWindPlantCostModel,
     "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
+    "floris_wind_plant_performance": FlorisWindPlantPerformanceModel,
     "pysam_solar_plant_performance": PYSAMSolarPlantPerformanceModel,
     "atb_utility_pv_cost": ATBUtilityPVCostModel,
     "atb_comm_res_pv_cost": ATBResComPVCostModel,
@@ -174,6 +188,14 @@ supported_models = {
     "iron_plant_cost": IronPlantCostComponent,
     "iron_mine_performance_martin": MartinIronMinePerformanceComponent,  # standalone model
     "iron_mine_cost_martin": MartinIronMineCostComponent,  # standalone model
+    "ng_dri_performance_rosner": NaturalGasIronReductionPlantPerformanceComponent,
+    "ng_dri_cost_rosner": NaturalGasIronReductionPlantCostComponent,  # standalone model
+    "h2_dri_performance_rosner": HydrogenIronReductionPlantPerformanceComponent,
+    "h2_dri_cost_rosner": HydrogenIronReductionPlantCostComponent,  # standalone model
+    "ng_eaf_performance_rosner": NaturalGasEAFPlantPerformanceComponent,
+    "ng_eaf_cost_rosner": NaturalGasEAFPlantCostComponent,  # standalone model
+    "h2_eaf_performance_rosner": HydrogenEAFPlantPerformanceComponent,
+    "h2_eaf_cost_rosner": HydrogenEAFPlantCostComponent,  # standalone model
     "reverse_osmosis_desalination_performance": ReverseOsmosisPerformanceModel,
     "reverse_osmosis_desalination_cost": ReverseOsmosisCostModel,
     "simple_ammonia_performance": SimpleAmmoniaPerformanceModel,
@@ -196,6 +218,8 @@ supported_models = {
     "simple_natural_geoh2_performance": NaturalGeoH2PerformanceModel,
     "templeton_serpentinization_geoh2_performance": StimulatedGeoH2PerformanceModel,
     "mathur_modified_geoh2_cost": GeoH2SubsurfaceCostModel,
+    "aspen_geoh2_performance": AspenGeoH2SurfacePerformanceModel,
+    "aspen_geoh2_cost": AspenGeoH2SurfaceCostModel,
     "natural_gas_performance": NaturalGasPerformanceModel,
     "natural_gas_cost": NaturalGasCostModel,
     # Transport
@@ -209,8 +233,6 @@ supported_models = {
     "summer": GenericSummerPerformanceModel,
     # Storage
     "pysam_battery": PySAMBatteryPerformanceModel,
-    "hydrogen_tank_performance": HydrogenTankPerformanceModel,
-    "hydrogen_tank_cost": HydrogenTankCostModel,
     "storage_auto_sizing": StorageAutoSizingModel,
     "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
     "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,

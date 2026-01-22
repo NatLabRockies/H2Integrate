@@ -1,8 +1,8 @@
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)
@@ -37,14 +37,14 @@ class ATBResComPVCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input(
-            "capacity_kWdc",
+            "system_capacity_DC",
             val=self.config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capacity = inputs["capacity_kWdc"][0]
+        capacity = inputs["system_capacity_DC"][0]
         capex = self.config.capex_per_kWdc * capacity
         opex = self.config.opex_per_kWdc_per_year * capacity
         outputs["CapEx"] = capex

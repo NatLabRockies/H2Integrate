@@ -58,3 +58,6 @@ For the goes_tmy_v4_api model, the resource_year should be specified as a string
 | `day`      | X |
 | `hour`      | X |
 | `minute`      | X |
+| `start_time`| X |
+| `end_time`| X |
+| `dt`| X |

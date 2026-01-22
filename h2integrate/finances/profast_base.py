@@ -540,9 +540,9 @@ class ProFastBase(om.ExplicitComponent):
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
             self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
 
-        # Include electrolyzer replacement time if applicable
-        if "electrolyzer" in tech_config:
-            self.add_input("electrolyzer_time_until_replacement", units="h")
+            # Include electrolyzer replacement time if applicable
+            if tech.startswith("electrolyzer"):
+                self.add_input(f"{tech}_time_until_replacement", units="h")
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -626,11 +626,11 @@ class ProFastBase(om.ExplicitComponent):
 
         # calculate capacity and total production based on commodity type
         if self.options["commodity_type"] != "co2":
-            capacity = float(inputs[f"total_{self.options['commodity_type']}_produced"][0]) / 365.0
-            total_production = float(inputs[f"total_{self.options['commodity_type']}_produced"][0])
+            capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
+            total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
         else:
-            capacity = float(inputs["co2_capture_kgpy"]) / 365.0
-            total_production = float(inputs["co2_capture_kgpy"])
+            capacity = inputs["co2_capture_kgpy"][0] / 365.0
+            total_production = inputs["co2_capture_kgpy"][0]
 
         # define profast parameters for capacity and utilization
         profast_params["capacity"] = capacity  # TODO: update to actual daily capacity

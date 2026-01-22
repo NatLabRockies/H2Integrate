@@ -83,4 +83,4 @@ def size_electrolyzer_for_hydrogen_demand(
             / 1000
         )
 
-    return electrolyzer_capacity_MW
+    return electrolyzer_capacity_MW.item()

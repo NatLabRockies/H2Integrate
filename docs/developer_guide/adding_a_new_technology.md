@@ -140,11 +140,11 @@ class ATBUtilityPVCostModel(CostModelBaseClass):
         super().setup()
 
         # add extra inputs or outputs for the cost model
-        self.add_input("capacity_kWac", val=0.0, units="kW", desc="PV rated capacity in AC")
+        self.add_input("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # calculate CapEx and OpEx in USD
-        capacity = inputs["capacity_kWac"][0]
+        capacity = inputs["system_capacity_AC"][0]
         capex = self.config.capex_per_kWac * capacity
         opex = self.config.opex_per_kWac_per_year * capacity
         outputs["CapEx"] = capex
@@ -211,6 +211,14 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         super().setup()
         self.add_output('efficiency', val=0.0, desc='Average efficiency of the electrolyzer')
 ```
+
+### Caching results for expensive computations
+
+If your technology involves computationally expensive calculations, you can leverage the caching functionality built into the H2Integrate model baseclasses.
+This allows you to save the results of expensive computations to disk and load them in future runs, avoiding the need to recompute them.
+To use this functionality, you need to ensure that your model inherits from the appropriate baseclass (`CacheBaseClass`) and that caching is enabled in your model's configuration.
+You can then enable caching by setting the `enable_caching` flag to `True` in your model's `tech_config` file.
+Please see the `hopp_wrapper.py` file for an example of how to implement caching in your model.
 
 ### Models where the performance and cost are tightly coupled
 
