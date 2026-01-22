@@ -427,10 +427,10 @@ def plot_geospatial_point_heat_map(
     if show_plot:
         plt.show()
 
-    if Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
-        fig.savefig(fname=save_plot_fpath)
-    elif save_plot_fpath is None:
+    if save_plot_fpath is None:
         pass
+    elif Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
+        fig.savefig(fname=save_plot_fpath)
     else:
         fig.savefig(fname=save_plot_fpath, dpi=save_plot_dpi)
 
@@ -611,10 +611,10 @@ def plot_straight_line_shipping_routes(
     if show_plot:
         plt.show()
 
-    if Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
-        fig.savefig(fname=save_plot_fpath)
-    elif save_plot_fpath is None:
+    if save_plot_fpath is None:
         pass
+    elif Path(save_plot_fpath).suffix in (".pdf", ".svg", ".eps", ".ps"):
+        fig.savefig(fname=save_plot_fpath)
     else:
         fig.savefig(fname=save_plot_fpath, dpi=save_plot_dpi)
 
