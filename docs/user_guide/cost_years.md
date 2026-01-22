@@ -36,7 +36,7 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `SimpleASUCostModel` |
 | `HOPPComponent`            |
 | `RunOfRiverHydroCostModel` |
-| `smr_methanol_plant_cost` |
+| `SMRMethanolPlantCostModel` |
 | `stimulated_geoh2_cost` |
 | `natural_geoh2_cost`    |
 | `WOMBATElectrolyzerModel`                |

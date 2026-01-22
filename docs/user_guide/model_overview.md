@@ -202,9 +202,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'ocean_alkalinity_enhancement_cost_financial'`
 - `methanol`: methanol synthesis
     - performance models:
-        + `'smr_methanol_plant_performance'`
+        + `'SMRMethanolPlantPerformanceModel'`
     - cost models:
-        + `'smr_methanol_plant_cost'`
+        + `'SMRMethanolPlantCostModel'`
     - financial models:
         + `'methanol_plant_financial'`
 - `air_separator`: nitrogen separation from air
