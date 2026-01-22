@@ -61,7 +61,7 @@ technologies:
     performance_model:
       model: "combiner_performance"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -72,7 +72,7 @@ technologies:
 
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
       model: "HeuristicLoadFollowingController"
     performance_model:

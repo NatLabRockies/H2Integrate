@@ -10,7 +10,7 @@ An example of an N2 diagram for a system using the pyomo control framework for h
 
 (heuristic-load-following-controller)=
 ## Heuristic Load Following Controller
-The pyomo control framework currently supports only a simple heuristic method, `HeuristicLoadFollowingController`, but we plan to extend the framework to be able to run a full dispatch optimization using a pyomo solver. When using the pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `pyomo_dispatch_generic_converter` for generating technologies, and `pyomo_dispatch_generic_storage` for storage technologies. More complex rule sets may be developed as needed.
+The pyomo control framework currently supports only a simple heuristic method, `HeuristicLoadFollowingController`, but we plan to extend the framework to be able to run a full dispatch optimization using a pyomo solver. When using the pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `PyomoDispatchGenericConverter` for generating technologies, and `PyomoRuleStorageBaseclass` for storage technologies. More complex rule sets may be developed as needed.
 
 For an example of how to use the pyomo control framework with the `HeuristicLoadFollowingController`, see
 - `examples/18_pyomo_heuristic_wind_battery_dispatch`

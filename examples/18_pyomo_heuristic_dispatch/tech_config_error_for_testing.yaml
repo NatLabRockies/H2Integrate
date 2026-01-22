@@ -8,7 +8,7 @@ technologies:
     cost_model:
       model: "ATBWindPlantCostModel"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     resource:
       type: "pysam_wind"
       wind_speed: 9.
@@ -39,7 +39,7 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
       model: "HeuristicLoadFollowingController"
     performance_model:
