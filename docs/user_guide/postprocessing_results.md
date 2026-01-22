@@ -45,9 +45,9 @@ plant
     ProFastComp_1
       LCOE                            [0.09795931]          USD/(kW*h)   finance_subgroup_default.LCOE
   steel
-    steel_performance
+    SteelPerformanceModel
       steel                           |9615.91147134|       t/year     steel.steel
-    steel_cost
+    SteelCostAndFinancialModel
       CapEx                           [5.78060014e+08]      USD        steel.CapEx
       OpEx                            [1.0129052e+08]       USD/year   steel.OpEx
       LCOS                            [1213.87728644]       USD/t      steel.LCOS

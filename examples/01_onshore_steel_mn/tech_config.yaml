@@ -148,11 +148,11 @@ technologies:
 
   steel:
     performance_model:
-      model: "steel_performance"
+      model: "SteelPerformanceModel"
     cost_model:
-      model: "steel_cost"
+      model: "SteelCostAndFinancialModel"
     finance_model:
-      model: "steel_cost"
+      model: "SteelCostAndFinancialModel"
     model_inputs:
       shared_parameters:
         capacity_factor: 0.9

@@ -20,7 +20,7 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `direct_ocean_capture_cost` | 2023 |
 | `ocean_alkalinity_enhancement_cost` | 2024 |
 | `ocean_alkalinity_enhancement_cost_financial` | 2024 |
-| `steel_cost`            |  2022    |
+| `SteelCostAndFinancialModel`            |  2022    |
 | `ReverseOsmosisCostModel` | 2013 |
 | `AmmoniaSynLoopCostModel`  |  N/A (adjusts costs to `target_dollar_year` within cost model)  |
 

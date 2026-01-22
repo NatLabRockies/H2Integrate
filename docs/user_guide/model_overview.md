@@ -173,11 +173,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'mathur_modified_geoh2_cost'`
 - `steel`: steel production
     - performance models:
-        + `'steel_performance'`
+        + `'SteelPerformanceModel'`
         + `'NaturalGasEAFPlantPerformanceComponent'`
         + `'HydrogenEAFPlantPerformanceComponent'`
     - combined cost and financial models:
-        + `'steel_cost'`
+        + `'SteelCostAndFinancialModel'`
     - cost models:
         + `'NaturalGasEAFPlantCostComponent'`
         + `'HydrogenEAFPlantCostComponent'`
