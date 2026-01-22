@@ -154,9 +154,9 @@ technologies:
         opex_fraction: .000001 # percent of capex
   methanol:
     performance_model:
-      model: "co2h_methanol_plant_performance"
+      model: "CO2HMethanolPlantPerformanceModel"
     cost_model:
-      model: "co2h_methanol_plant_cost"
+      model: "CO2HMethanolPlantCostModel"
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 94731053.0605257
