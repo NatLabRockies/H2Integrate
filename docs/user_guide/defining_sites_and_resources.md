@@ -11,15 +11,15 @@ Here is an example of a site that is defining a wind resource model.
 
 ```yaml
 sites:
-    wind_site: #site name
-        latitude: 34.22
-        longitude: -102.75
-        resources:
-            wind_resource: #resource model name
-                resource_model: "wind_toolkit_v2_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True # this is the default
+  wind_site: #site name
+    latitude: 34.22
+    longitude: -102.75
+    resources:
+      wind_resource: #resource model name
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: True # this is the default
 ```
 
 Further information on the available resource models can be found [here](https://h2integrate.readthedocs.io/en/latest/resource/resource_index.html)
@@ -34,7 +34,7 @@ Resource to technology connections are defined as an array of 3-element arrays i
 ```yaml
 resource_to_tech_connections: [
   [site_name.resource_name, tech_name, variable_name],
-  ['wind_site.wind_resource','wind','wind_resource_data'],
+  ['wind_site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 ```
 
@@ -50,7 +50,7 @@ resource_to_tech_connections: [
 The following sections will go over various examples and use-cases for defining sites and resource models.
 
 ### Single site without resource
-If none of the technologies in the technology configuration require resource data, then `resource_to_tech_connections` is not included in the plant configuration file and `resources` are not defined for the site defined under `sites`.
+If none of the technologies in the technology configuration require resource data, then you do not need to include `resource_to_tech_connections` in the plant configuration file and `resources` do not need to be defined for the site defined under `sites`.
 
 An example `sites` configuration may look like:
 ```yaml
@@ -68,18 +68,18 @@ Some examples that define a single site without resource data are:
 If a single technology (named `"wind"` in this example) requires resource data, then the `sites` configuration and `resource_to_tech_connections` may look like:
 ```yaml
 sites:
-    wind_site: #site name
-        latitude: 34.22
-        longitude: -102.75
-        resources:
-            wind_resource: #resource model name
-                resource_model: "wind_toolkit_v2_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True
+  wind_site: #site name
+    latitude: 34.22
+    longitude: -102.75
+    resources:
+      wind_resource: #resource model name
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: True
 resource_to_tech_connections: [
   # formatted as [site_name.resource_name, tech_name, variable_name],
-  ['wind_site.wind_resource','wind','wind_resource_data'],
+  ['wind_site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 ```
 
@@ -95,24 +95,24 @@ Some examples that define a single site with a single resource are:
 If multiple technologies (named `"wind"` and `"solar"` in this example) require resource data from the same location, then the `sites` configuration and `resource_to_tech_connections` may look like:
 ```yaml
 sites:
-    site_A: #site name
-        latitude: 34.22
-        longitude: -102.75
-        resources:
-            wind_resource: #resource model name for wind resource
-                resource_model: "wind_toolkit_v2_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True
-            solar_resource: #resource model name for solar resource
-                resource_model: "goes_aggregated_solar_v4_api"
-                resource_parameters:
-                    resource_year: 2012
-                    use_fixed_resource_location: True
+  site_A: #site name
+    latitude: 34.22
+    longitude: -102.75
+    resources:
+      wind_resource: #resource model name for wind resource
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: True
+      solar_resource: #resource model name for solar resource
+        resource_model: "goes_aggregated_solar_v4_api"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: True
 resource_to_tech_connections: [
   # formatted as [site_name.resource_name, tech_name, variable_name],
-  ['site_A.wind_resource','wind','wind_resource_data'],
-  ['site_A.solar_resource','solar','solar_resource_data'],
+  ['site_A.wind_resource', 'wind', 'wind_resource_data'],
+  ['site_A.solar_resource', 'solar', 'solar_resource_data'],
 ]
 ```
 
