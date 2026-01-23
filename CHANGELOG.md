@@ -6,6 +6,7 @@
 - Added capability to have transport models that require user input parameters
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
+- Added postprocessing function to save timeseries
 - Minor reorg for profast tools
 - Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
 - Removed hydrogen tank cost and performance models that were unused
