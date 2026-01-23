@@ -54,6 +54,7 @@ parts:
       - file: resource/goes_solar_v4_api
       - file: resource/himawari_v3_api
       - file: resource/meteosat_prime_meridian_v4_api
+      - file: resource/openmeteo_solar_archive
 
 - caption: Control
   chapters:
