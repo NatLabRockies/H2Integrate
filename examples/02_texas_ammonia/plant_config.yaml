@@ -42,7 +42,7 @@ plant:
 
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       save_profast_config: True
       save_profast_results: False

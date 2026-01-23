@@ -19,7 +19,7 @@ plant:
 
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     commodity: "methanol"
     model_inputs:
       params:

@@ -30,7 +30,7 @@ resource_to_tech_connections: [
 finance_parameters:
   finance_groups:
     lcoe_financials:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032
@@ -52,7 +52,7 @@ finance_parameters:
             depr_period: 5 # 5  years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
             refurb: [0.]
     lcoh_financials:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032

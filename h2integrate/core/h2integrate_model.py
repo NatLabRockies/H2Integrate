@@ -584,7 +584,7 @@ class H2IntegrateModel:
 
             >>> self.plant_config["finance_parameters"]["finance_group"] = {
             ...     "commodity": "hydrogen",
-            ...     "finance_model": "ProFastComp",
+            ...     "finance_model": "ProFastLCO",
             ...     "model_inputs": {"discount_rate": 0.08},
             ... }
             >>> self.create_finance_model()

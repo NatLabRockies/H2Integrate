@@ -17,7 +17,7 @@ class TestProFastComp(unittest.TestCase):
     def setUp(self):
         self.plant_config = {
             "finance_parameters": {
-                "finance_model": "ProFastComp",
+                "finance_model": "ProFastLCO",
                 "model_inputs": {
                     "params": {
                         "analysis_start_year": 2022,
@@ -112,7 +112,7 @@ class TestProFastComp(unittest.TestCase):
         finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
         plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
         plant_config_filtered.update({"finance_parameters": finance_inputs})
-        # Run ProFastComp with loaded configs
+        # Run ProFastLCO with loaded configs
         prob = om.Problem()
         comp = ProFastLCO(
             plant_config=plant_config_filtered,
@@ -247,7 +247,7 @@ def test_profast_config_provided():
     }
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -341,7 +341,7 @@ def test_parameter_validation_clashing_values():
 
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -432,7 +432,7 @@ def test_parameter_validation_duplicate_parameters():
 
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -475,5 +475,5 @@ def test_parameter_validation_duplicate_parameters():
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     # Should raise ValueError during setup due to clashing values
-    with pytest.raises(ValueError, match="Duplicate entries found in ProFastComp params"):
+    with pytest.raises(ValueError, match="Duplicate entries found in ProFastLCO params"):
         prob.setup()

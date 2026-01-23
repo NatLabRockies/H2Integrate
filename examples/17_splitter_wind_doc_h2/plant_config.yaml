@@ -31,7 +31,7 @@ resource_to_tech_connections: [
 ]
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

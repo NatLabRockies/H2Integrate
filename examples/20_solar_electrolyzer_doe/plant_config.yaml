@@ -33,7 +33,7 @@ plant:
 finance_parameters:
   finance_groups:
     optimistic:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032
@@ -55,7 +55,7 @@ finance_parameters:
           depr_period: 5 # 5  years
           refurb: [0.]
     conservative:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032

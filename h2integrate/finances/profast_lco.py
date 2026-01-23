@@ -140,7 +140,7 @@ class ProFastLCO(ProFastBase):
         if save_results or save_config:
             output_dir = self.options["driver_config"]["general"]["folder_output"]
             fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastComp"
+                "profast_output_description", "ProFastLCO"
             )
 
             fbasename = f"{fdesc}_{self.output_txt}"

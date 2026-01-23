@@ -257,7 +257,7 @@ supported_models = {
     "GridPerformanceModel": GridPerformanceModel,
     "GridCostModel": GridCostModel,
     # Finance
-    "ProFastComp": ProFastLCO,
+    "ProFastLCO": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
 }
