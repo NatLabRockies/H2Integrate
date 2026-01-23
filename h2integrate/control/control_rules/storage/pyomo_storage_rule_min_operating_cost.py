@@ -58,9 +58,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
         # System parameters
         self.commodity_load_demand = [commodity_demand[t] for t in self.blocks.index_set()]
-        # This should not be set to the commodity_demand. Any way to set it to the production
-        # capacity of the plant?
-        self.load_production_limit = [commodity_demand[t] for t in self.blocks.index_set()]
+
         self._set_initial_soc_constraint()
 
     def dispatch_block_rule_function(self, pyomo_model: pyo.ConcreteModel, tech_name: str):
@@ -212,13 +210,6 @@ class PyomoRuleStorageMinOperatingCosts:
         )
         pyomo_model.commodity_load_demand = pyo.Param(
             doc=f"Load demand for the commodity [{self.commodity_storage_units}]",
-            default=1000.0,
-            within=pyo.NonNegativeReals,
-            mutable=True,
-            units=pyo_commodity_storage_unit,
-        )
-        pyomo_model.load_production_limit = pyo.Param(
-            doc=f"Production limit for load [{self.commodity_storage_units}]",
             default=1000.0,
             within=pyo.NonNegativeReals,
             mutable=True,
@@ -432,9 +423,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
     # Update time series parameters for next optimization window
     def update_time_series_parameters(
-        self,
-        commodity_in: list,
-        commodity_demand: list,
+        self, commodity_in: list, commodity_demand: list, updated_initial_soc: None
     ):
         """Updates the pyomo optimization problem with parameters that change with time
 
@@ -445,7 +434,7 @@ class PyomoRuleStorageMinOperatingCosts:
         """
         self.time_duration = [1.0] * len(self.blocks.index_set())
         self.commodity_load_demand = [commodity_demand[t] for t in self.blocks.index_set()]
-        self.load_production_limit = [commodity_demand[t] for t in self.blocks.index_set()]
+        self.model.initial_soc = updated_initial_soc
 
     # Objective functions
     def min_operating_cost_objective(self, hybrid_blocks, tech_name: str):
@@ -666,18 +655,6 @@ class PyomoRuleStorageMinOperatingCosts:
         if len(commodity_demand) == len(self.blocks):
             for t, limit in zip(self.blocks, commodity_demand):
                 self.blocks[t].commodity_load_demand.set_value(round(limit, self.round_digits))
-        else:
-            raise ValueError("'commodity_demand' list must be the same length as time horizon")
-
-    @property
-    def load_production_limit(self) -> list:
-        return [self.blocks[t].load_production_limit.value for t in self.blocks.index_set()]
-
-    @load_production_limit.setter
-    def load_production_limit(self, commodity_demand: list):
-        if len(commodity_demand) == len(self.blocks):
-            for t, limit in zip(self.blocks, commodity_demand):
-                self.blocks[t].load_production_limit.set_value(round(limit, self.round_digits))
         else:
             raise ValueError("'commodity_demand' list must be the same length as time horizon")
 

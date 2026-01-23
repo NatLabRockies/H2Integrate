@@ -147,9 +147,7 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
 
     # Update time series parameters for next optimization window
     def update_time_series_parameters(
-        self,
-        commodity_in: list,
-        commodity_demand: list,
+        self, commodity_in: list, commodity_demand: list, updated_initial_soc: float
     ):
         """Updates the pyomo optimization problem with parameters that change with time
 

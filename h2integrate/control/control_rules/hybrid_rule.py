@@ -147,7 +147,9 @@ class PyomoDispatchPlantRule:
 
         pyo.TransformationFactory("network.expand_arcs").apply_to(self.model)
 
-    def update_time_series_parameters(self, commodity_in=list, commodity_demand=list):
+    def update_time_series_parameters(
+        self, commodity_in=list, commodity_demand=list, updated_initial_soc=float
+    ):
         """
         Updates the pyomo optimization problem with parameters that change with time
 
@@ -161,7 +163,9 @@ class PyomoDispatchPlantRule:
         for tech in self.source_techs:
             name = tech + "_rule"
             pyomo_block = self.tech_dispatch_models.__getattribute__(name)
-            pyomo_block.update_time_series_parameters(commodity_in, commodity_demand)
+            pyomo_block.update_time_series_parameters(
+                commodity_in, commodity_demand, updated_initial_soc
+            )
 
     def create_min_operating_cost_expression(self):
         """

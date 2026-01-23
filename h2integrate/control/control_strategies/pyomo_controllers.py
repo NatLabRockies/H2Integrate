@@ -299,7 +299,9 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                         print(f"{percentage}% done with dispatch")
                     # Update time series parameters for the optimization method
                     self.update_time_series_parameters(
-                        commodity_in=commodity_in, commodity_demand=demand_in
+                        commodity_in=commodity_in,
+                        commodity_demand=demand_in,
+                        updated_initial_soc=self.updated_initial_soc,
                     )
                     # Run dispatch optimization to minimize costs while meeting demand
                     self.solve_dispatch_model(
@@ -322,7 +324,14 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     **performance_model_kwargs,
                     sim_start_index=t,
                 )
+                # print("Storage commands: ", self.storage_dispatch_commands)
+                # print("Battery performance: ", storage_commodity_out_control_window)
+                # print("Battery SOC: ", soc_control_window)
+                # print("power in: ", commodity_in)
+                self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
+                # if "optimized" in control_strategy:
 
+                #     jkjk
                 # get a list of all time indices belonging to the current control window
                 window_indices = list(range(t, t + self.config.n_control_window))
 
@@ -892,6 +901,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             self.discharge_efficiency = self.config.discharge_efficiency
 
         self.n_control_window = self.config.n_control_window
+        self.updated_initial_soc = self.config.init_charge_percent
 
         # Is this the best place to put this???
         self.commodity_info = {
@@ -928,7 +938,9 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             commodity_in, commodity_demand, self.dispatch_inputs
         )
 
-    def update_time_series_parameters(self, commodity_in=None, commodity_demand=None):
+    def update_time_series_parameters(
+        self, commodity_in=None, commodity_demand=None, updated_initial_soc=None
+    ):
         """Updates the pyomo optimization problem with parameters that change with time
 
         Args:
@@ -936,7 +948,10 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             commodity_demand (list): The demanded commodity for this time slice.
 
         """
-        self.hybrid_dispatch_rule.update_time_series_parameters(commodity_in, commodity_demand)
+        print("HIIII", updated_initial_soc)
+        self.hybrid_dispatch_rule.update_time_series_parameters(
+            commodity_in, commodity_demand, updated_initial_soc
+        )
 
     def solve_dispatch_model(
         self,
