@@ -284,7 +284,7 @@ def is_electricity_producer(tech_name: str) -> bool:
         "solar",
         "pv",
         "river",
-        "HOPPComponent",
+        "hopp",
         "natural_gas_plant",
         "grid_buy",
     ]
