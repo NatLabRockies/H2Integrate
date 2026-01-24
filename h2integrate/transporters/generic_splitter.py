@@ -127,18 +127,18 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             units=self.config.commodity_units,
             desc=f"{self.config.commodity} output to the second technology",
         )
-        self.add_output(
-            f"total_{self.config.commodity}_produced1",
-            val=-1.0,
-            units=self.config.commodity_units,
-            desc=f"Total {self.config.commodity} output to the first technology",
-        )
-        self.add_output(
-            f"total_{self.config.commodity}_produced2",
-            val=-1.0,
-            units=self.config.commodity_units,
-            desc=f"Total {self.config.commodity} output to the second technology",
-        )
+        # self.add_output(
+        #     f"total_{self.config.commodity}_produced1",
+        #     val=-1.0,
+        #     units=self.config.commodity_units,
+        #     desc=f"Total {self.config.commodity} output to the first technology",
+        # )
+        # self.add_output(
+        #     f"total_{self.config.commodity}_produced2",
+        #     val=-1.0,
+        #     units=self.config.commodity_units,
+        #     desc=f"Total {self.config.commodity} output to the second technology",
+        # )
 
     def compute(self, inputs, outputs):
         commodity_in = inputs[f"{self.config.commodity}_in"]
@@ -158,13 +158,6 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             requested_amount = np.maximum(0.0, prescribed_to_priority)
             commodity_to_priority = np.minimum(requested_amount, available_commodity)
             commodity_to_other = commodity_in - commodity_to_priority
-        total_priority = np.sum(commodity_to_priority)
-        total_other = np.sum(commodity_to_other)
-        # Need to do this in case _out is different units than _producced
-        frac_priority = total_priority / (total_priority + total_other)
-        total_produced = inputs[f"total_{self.config.commodity}_produced"]
-        total_priority = total_produced * frac_priority
-        total_other = total_produced * (1 - frac_priority)
 
         # Determine which output gets priority allocation based on plant config
         # This requires mapping priority_tech to output1 or output2
@@ -172,5 +165,3 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         # TODO: This mapping logic should be enhanced based on plant configuration
         outputs[f"{self.config.commodity}_out1"] = commodity_to_priority
         outputs[f"{self.config.commodity}_out2"] = commodity_to_other
-        outputs[f"total_{self.config.commodity}_produced1"] = total_priority
-        outputs[f"total_{self.config.commodity}_produced2"] = total_other

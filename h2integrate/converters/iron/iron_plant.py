@@ -264,7 +264,7 @@ class IronPlantCostComponent(CostModelBaseClass):
             ore_profit_pct = inputs["ore_profit_pct"][0]
             iron_ore_pellet_unitcost_tonne = (
                 iron_ore_pellet_unitcost_tonne + iron_transport_cost_tonne
-            ) * (1 + ore_profit_pct * 0 / 100)
+            ) * (1 + ore_profit_pct / 100)
 
         v_start = years.index(self.config.operational_year) - years.index(analysis_start) + 1
         variable_om += perf_ds["Raw Water Withdrawal"] * raw_water_unitcost_tonne

@@ -3,7 +3,6 @@ description: "This hybrid plant produces iron"
 
 technologies:
   grid_feedstock: #electricity feedstock for iron ore
-  grid_feedstock: #electricity feedstock for iron ore
     performance_model:
       model: "feedstock_performance"
     cost_model:
@@ -16,7 +15,7 @@ technologies:
         rated_capacity: 100. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
         cost_year: 2022
-        price: 0. #USD/MW
+        price: 58.02 #USD/MW
         annual_cost: 0.
         start_up_cost: 0.
 
@@ -37,25 +36,6 @@ technologies:
         annual_cost: 0.
         start_up_cost: 0.
 
-  ore_feedstock: #iron ore feedstock
-    performance_model:
-      model: "feedstock_performance"
-    cost_model:
-      model: "feedstock_cost"
-    model_inputs:
-      shared_parameters:
-        feedstock_type: "iron_ore"
-        units: "t/h"
-      performance_parameters:
-        rated_capacity: 2000. # need 828.50385048 t/h
-        rated_capacity: 2000. # need 828.50385048 t/h
-      cost_parameters:
-        cost_year: 2022
-        price: 0.0
-        annual_cost: 0.
-        start_up_cost: 0.
-
-
   iron_mine:
     performance_model:
       model: "iron_mine_performance_martin"
@@ -66,6 +46,7 @@ technologies:
         mine: "Northshore"
         taconite_pellet_type: "drg"
         max_ore_production_rate_tonnes_per_hr: 516.0497610311598
+
 
   ore_splitter:
     performance_model:
@@ -89,6 +70,25 @@ technologies:
       cost_parameters:
         transport_year: 2022
         cost_year: 2022
+
+
+  ore_feedstock: #iron ore feedstock
+    performance_model:
+      model: "feedstock_performance"
+    cost_model:
+      model: "feedstock_cost"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "iron_ore"
+        units: "t/h"
+      performance_parameters:
+        rated_capacity: 2000. # need 828.50385048 t/h
+        rated_capacity: 2000. # need 828.50385048 t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.
 
   natural_gas_feedstock:
     performance_model:
@@ -172,6 +172,7 @@ technologies:
         skilled_labor_cost: 40.85 #2022 USD/hr
         unskilled_labor_cost: 30.0 #2022 USD/hr
 
+
   eaf_grid_feedstock: #electricity feedstock for EAF
     performance_model:
       model: "feedstock_performance"
@@ -222,24 +223,6 @@ technologies:
         rated_capacity: 280. # need 276.5242929731515 MMBtu at each timestep
         rated_capacity: 280. # need 276.5242929731515 MMBtu at each timestep
       cost_parameters:
-        cost_year: 2022
-        price: 4.0 #USD 4.0/MMBtu
-        annual_cost: 0.
-        start_up_cost: 0.
-
-  steel_plant:
-    performance_model:
-      model: "ng_eaf_performance_rosner"
-    cost_model:
-      model: "ng_eaf_cost_rosner"
-    model_inputs:
-      shared_parameters:
-        steel_production_rate_tonnes_per_hr: 135.8187214611872 #equivalent to 1189772 t/yr
-      performance_parameters:
-        water_density: 1000 #kg/m3
-      cost_parameters:
-        skilled_labor_cost: 40.85 #2022 USD/hr
-        unskilled_labor_cost: 30.0 #2022 USD/hr
         cost_year: 2022
         price: 4.0 #USD 4.0/MMBtu
         annual_cost: 0.

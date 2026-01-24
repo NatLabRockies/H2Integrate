@@ -1,12 +1,14 @@
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
-# Create H2Integrate models - comparing old and new
+# Create H2Integrate model
 model = H2IntegrateModel("21_iron.yaml")
-model_old = H2IntegrateModel("21_iron_old.yaml")
 
 # Load cases
 case_file = Path("test_inputs.csv")
@@ -20,43 +22,28 @@ casenames = [
     "Case 4",
 ]
 lcois = []
-lcois_old = []
 capexes = []
 fopexes = []
 vopexes = []
-capexes_old = []
-fopexes_old = []
-vopexes_old = []
 
 for casename in casenames:
     model = modify_tech_config(model, cases[casename])
-    model_old = modify_tech_config(model_old, cases[casename])
     model.run()
-    model_old.run()
-    model.post_process()
-    model_old.post_process()
     lcois.append(float(model.model.get_val("finance_subgroup_pig_iron.price_pig_iron")[0]))
-    lcois_old.append(float(model_old.model.get_val("finance_subgroup_pig_iron.price_pig_iron")[0]))
     capexes.append(float(model.model.get_val("finance_subgroup_pig_iron.total_capex_adjusted")[0]))
-    capexes_old.append(
-        float(model_old.model.get_val("finance_subgroup_pig_iron.total_capex_adjusted")[0])
-    )
     fopexes.append(float(model.model.get_val("finance_subgroup_pig_iron.total_opex_adjusted")[0]))
-    fopexes_old.append(
-        float(model_old.model.get_val("finance_subgroup_pig_iron.total_opex_adjusted")[0])
-    )
     vopexes.append(
         float(model.model.get_val("finance_subgroup_pig_iron.total_varopex_adjusted")[0])
     )
-    vopexes_old.append(
-        float(model_old.model.get_val("finance_subgroup_pig_iron.total_varopex_adjusted")[0])
-    )
-# Compare the LCOIs from iron_wrapper and modular iron
-print(capexes)
-print(capexes_old)
-print(fopexes)
-print(fopexes_old)
-print(vopexes)
-print(vopexes_old)
-print(lcois)
-print(lcois_old)
+
+# Compare the Capex, Fixed Opex, and Variable Opex across the 4 cases
+columns = [
+    "Capex [Million USD]",
+    "Fixed Opex [Million USD/year]",
+    "Variable Opex [Million USD/year]",
+    "LCOI [USD/kg]",
+]
+df = pd.DataFrame(
+    np.transpose(np.vstack([capexes, fopexes, vopexes, lcois])), index=casenames, columns=columns
+)
+print(df)

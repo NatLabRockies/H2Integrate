@@ -5,46 +5,28 @@ site:
   latitude: 41.717
   longitude: -88.398
 
-  # array of polygons defining boundaries with x/y coords
-  boundaries: [
-    {
-      x: [0.0, 1000.0, 1000.0, 0.0],
-      y: [0.0, 0.0, 100.0, 1000.0],
-    },
-    {
-      x: [2000.0, 2500.0, 2000.0],
-      y: [2000.0, 2000.0, 2500.0],
-    }
-  ]
-
-# array of arrays containing left-to-right technology
-# interconnections; can support bidirectional connections
-# with the reverse definition.
-# this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  # connect feedstocks to iron mine
+  # Connect feedstocks to iron mine.
   ["grid_feedstock","iron_mine","electricity","cable"],
   ["mine_feedstock","iron_mine","crude_ore","pipe"],
-  # connect iron mine to iron transport
-  #TODO: update after updated transport model is integrated
+  # Connect iron_ore price to ore_feedstock
+  ["finance_subgroup_iron_ore","ore_feedstock",["price_iron_ore","price"]],
+  # Connect iron_ore flow to iron transport - need to split off how much the iron_plant needs
   ["iron_mine","ore_splitter","iron_ore","pipe"],
   ["iron_mine","ore_splitter","total_iron_ore_produced"],
   ["iron_plant","ore_splitter",["iron_ore_consumed","prescribed_commodity_to_priority_tech"]],
   ["ore_splitter","iron_transport","iron_ore","pipe"],
-  # connect iron ore price to feedstock
-  ["finance_subgroup_iron_ore","ore_feedstock",["price_iron_ore","price"]],
-  # connect feedstocks to iron plant
+  # Connect feedstocks to iron plant
   ["ore_feedstock","iron_plant","iron_ore","pipe"],
   ["dri_grid_feedstock","iron_plant","electricity","cable"],
   ["catalyst_feedstock","iron_plant","reformer_catalyst","pipe"],
   ["water_feedstock","iron_plant","water","pipe"],
   ["natural_gas_feedstock","iron_plant","natural_gas","pipe"],
-  # connect feedstocks to steel plant
+  # Connect feedstocks to steel plant
   ["eaf_grid_feedstock","steel_plant","electricity","cable"],
   ["eaf_water_feedstock","steel_plant","water","pipe"],
   ["eaf_natural_gas_feedstock","steel_plant","natural_gas","pipe"],
   ["iron_plant","steel_plant","pig_iron","pipe"],
-  # ["iron_transport","iron_plant","iron_transport_cost"],
 ]
 
 plant:

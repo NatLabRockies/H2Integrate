@@ -195,13 +195,6 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.add_output("ore_profit_margin", val=0.0, units="USD/t")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # ore_consumed = inputs["iron_ore_consumed"]
-        # ore_consumed_sum = np.sum(ore_consumed)
-        # if ore_consumed_sum > 0:
-        #     total_ore = ore_consumed_sum
-        # else:
-        #     total_ore = inputs["total_iron_ore_produced"]
-
         water_coeff_dict = load_top_down_coeffs(
             ["Barge Shipping Cost"], cost_year=self.config.cost_year
         )
