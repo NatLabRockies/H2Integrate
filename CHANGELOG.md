@@ -9,6 +9,12 @@
 - Added postprocessing function to save timeseries
 - Minor reorg for profast tools
 - Removed hydrogen tank cost and performance models that were unused
+- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations.
+  - Cleans up unnecessary ignore rules in the ruff settings.
+  - Removes duplicate dependency listings, and alphabetizes for legibility with NLR packages
+    listed at the bottom.
+  - Remove unused dependencies.
+  - Fixes typos for skipped folders.
 
 ## 0.5.1 [December 18, 2025]
 
