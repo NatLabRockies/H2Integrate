@@ -955,7 +955,7 @@ class H2IntegrateModel:
             elif len(connection) == 3:
                 # connect directly from source to dest
                 source_tech, dest_tech, connected_parameter = connection
-                if isinstance(connected_parameter, (tuple, list)):
+                if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
                     self.plant.connect(
                         f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"

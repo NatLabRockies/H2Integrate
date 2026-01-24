@@ -57,7 +57,7 @@ def create_xdsm_from_config(config, output_file="connections_xdsm"):
         else:
             source, destination, data, label = conn
 
-        if isinstance(data, (list, tuple)) and len(data) >= 2:
+        if isinstance(data, list | tuple) and len(data) >= 2:
             data = f"{data[0]} as {data[1]}"
 
         if len(conn) == 3:
@@ -272,27 +272,27 @@ def dict_to_yaml_formatting(orig_dict):
         else:
             if isinstance(key, list):
                 for i, k in enumerate(key):
-                    if isinstance(orig_dict[k], (str, bool, int)):
+                    if isinstance(orig_dict[k], str | bool | int):
                         orig_dict[k] = orig_dict.get(k, []) + val[i]
-                    elif isinstance(orig_dict[k], (list, np.ndarray)):
+                    elif isinstance(orig_dict[k], list | np.ndarray):
                         orig_dict[k] = np.array(val, dtype=float).tolist()
                     else:
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
-                if isinstance(orig_dict[key], (str, bool, int)):
+                if isinstance(orig_dict[key], str | bool | int):
                     continue
                 if orig_dict[key] is None:
                     continue
-                if isinstance(orig_dict[key], (list, np.ndarray)):
+                if isinstance(orig_dict[key], list | np.ndarray):
                     if any(isinstance(v, dict) for v in val):
                         for vii, v in enumerate(val):
                             if isinstance(v, dict):
                                 new_val = dict_to_yaml_formatting(v)
                             else:
-                                new_val = v if isinstance(v, (str, bool, int)) else float(v)
+                                new_val = v if isinstance(v, str | bool | int) else float(v)
                             orig_dict[key][vii] = new_val
                     else:
-                        new_val = [v if isinstance(v, (str, bool, int)) else float(v) for v in val]
+                        new_val = [v if isinstance(v, str | bool | int) else float(v) for v in val]
                         orig_dict[key] = new_val
                 else:
                     orig_dict[key] = float(val)
@@ -493,7 +493,7 @@ def remove_numpy(fst_vt: dict) -> dict:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = conversions[data_type](
                         current_value
                     )
-                elif isinstance(current_value, (list, tuple)):
+                elif isinstance(current_value, list | tuple):
                     for i, item in enumerate(current_value):
                         current_value[i] = remove_numpy(item)
 
@@ -784,7 +784,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
     def _mean(val):
         if isinstance(val, np.ndarray):
             return "nan" if val.size == 0 else f"{np.mean(val)}"
-        if isinstance(val, (int, float, np.number)):
+        if isinstance(val, int | float | np.number):
             return f"{val}"
         return "n/a"
 
@@ -856,7 +856,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
             shape_meta = meta.get("shape", "")
             if var == "cost_year":
                 shape_str = "n/a"
-            elif isinstance(shape_meta, (tuple, list)) and len(shape_meta) > 0:
+            elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
                 shape_str = str(shape_meta[0])
             else:
                 shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
@@ -892,7 +892,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
                     "n/a"
                     if name.split(".")[-1] == "cost_year"
                     else meta.get("shape")[0]
-                    if isinstance(meta.get("shape"), (tuple, list)) and len(meta.get("shape")) > 0
+                    if isinstance(meta.get("shape"), tuple | list) and len(meta.get("shape")) > 0
                     else ""
                     if meta.get("shape") in (None, "", ())
                     else meta.get("shape")
