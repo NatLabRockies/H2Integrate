@@ -1,0 +1,65 @@
+name: "technology_config"
+description: "This plant produces electricity from a solar-PV system"
+
+technologies:
+  wind:
+    performance_model:
+      model: "pysam_wind_plant_performance"
+    cost_model:
+      model: "atb_wind_cost"
+    model_inputs:
+      performance_parameters:
+        num_turbines: 100
+        turbine_rating_kw: 6000
+        rotor_diameter: 170.
+        hub_height: 115.
+        create_model_from: "default"
+        config_name: "WindPowerSingleOwner"
+        pysam_options: !include pysam_options_6MW.yaml
+        run_recalculate_power_curve: False
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
+      cost_parameters:
+        capex_per_kW: 1500.0
+        opex_per_kW_per_year: 45
+        cost_year: 2019
+  solar:
+    performance_model:
+      model: "pysam_solar_plant_performance"
+    cost_model:
+      model: "atb_utility_pv_cost"
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 400000
+        dc_ac_ratio: 1.34
+        create_model_from: "new"
+        tilt_angle_func: "lat-func"
+        pysam_options:
+          SystemDesign:
+            gcr: 0.3
+            array_type: 2
+            bifaciality: 0.65
+            inv_eff: 96.0
+            losses: 14.6
+            module_type: 1
+            azimuth: 180
+            rotlim: 45
+          SolarResource:
+            albedo_default: 0.2
+      cost_parameters:
+        capex_per_kWac: 1367 #2022 costs from ATB 2024 v3
+        opex_per_kWac_per_year: 24 #2022 costs from ATB 2024 v3
+        cost_year: 2022
+  combiner:
+    performance_model:
+      model: "combiner_performance"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_units: "kW"

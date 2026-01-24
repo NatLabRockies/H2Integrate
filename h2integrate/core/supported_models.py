@@ -39,6 +39,7 @@ from h2integrate.converters.iron.iron_transport import (
     IronTransportPerformanceComponent,
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
+from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
@@ -166,6 +167,7 @@ supported_models = {
     "himawari7_solar_v3_api": Himawari7SolarAPI,
     "himawari8_solar_v3_api": Himawari8SolarAPI,
     "himawari_tmy_solar_v3_api": HimawariTMYSolarAPI,
+    "openmeteo_solar_api": OpenMeteoHistoricalSolarResource,
     # Converters
     "atb_wind_cost": ATBWindPlantCostModel,
     "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
