@@ -80,6 +80,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
             "surface_pressure": "hPa",
             "precipitation": "mm/h",
             "relative_humidity_2m": "unitless",
+            "is_day": "percent",
         }
         # get the data dictionary
         data = self.get_data(self.config.latitude, self.config.longitude)
@@ -319,6 +320,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
             if old_c not in self.hourly_wind_data_to_units:
                 continue
 
+            if "is_day" in c:
+                data_rename_mapper.update({c: "is_day"})
+                data_units.update({"is_day": "percent"})
+
             if "surface" in c:
                 new_c += "_0m"
                 new_c = new_c.replace("surface", "").replace("__", "").strip("_")
@@ -333,6 +338,3 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass

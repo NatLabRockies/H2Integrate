@@ -6,6 +6,7 @@ from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -38,11 +39,8 @@ from h2integrate.converters.iron.iron_transport import (
     IronTransportPerformanceComponent,
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
+from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
-from h2integrate.storage.hydrogen.tank_baseclass import (
-    HydrogenTankCostModel,
-    HydrogenTankPerformanceModel,
-)
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
     HydrogenEAFPlantCostComponent,
@@ -167,9 +165,11 @@ supported_models = {
     "himawari7_solar_v3_api": Himawari7SolarAPI,
     "himawari8_solar_v3_api": Himawari8SolarAPI,
     "himawari_tmy_solar_v3_api": HimawariTMYSolarAPI,
+    "openmeteo_solar_api": OpenMeteoHistoricalSolarResource,
     # Converters
     "atb_wind_cost": ATBWindPlantCostModel,
     "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
+    "floris_wind_plant_performance": FlorisWindPlantPerformanceModel,
     "pysam_solar_plant_performance": PYSAMSolarPlantPerformanceModel,
     "atb_utility_pv_cost": ATBUtilityPVCostModel,
     "atb_comm_res_pv_cost": ATBResComPVCostModel,
@@ -235,8 +235,6 @@ supported_models = {
     "summer": GenericSummerPerformanceModel,
     # Storage
     "pysam_battery": PySAMBatteryPerformanceModel,
-    "hydrogen_tank_performance": HydrogenTankPerformanceModel,
-    "hydrogen_tank_cost": HydrogenTankCostModel,
     "storage_auto_sizing": StorageAutoSizingModel,
     "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
     "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,

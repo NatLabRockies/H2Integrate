@@ -4,11 +4,11 @@ from pathlib import Path
 from attrs import field, define
 from hopp.utilities import load_yaml
 
-import h2integrate.tools.profast_reverse_tools as rev_pf_tools
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+import h2integrate.tools.profast_tools as pf_tools
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, range_val
 from h2integrate.converters.iron.iron import run_iron_full_model
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.converters.iron.martin_transport.iron_transport import calc_iron_ship_cost
 
 
@@ -23,7 +23,7 @@ class IronConfig(CostModelBaseConfig):
             Options are "Hibbing", "Northshore", "United", "Minorca" or "Tilden".
         iron_ore_product_selection (str): iron ore pellet type.
             Options are "drg_taconite_pellets" or "std_taconite_pellets".
-        reduced_iron_product_selection (str): material for iron electrwinning process.
+        reduced_iron_product_selection (str): material for iron electrowinning process.
             Options are "h2_dri" or "ng_dri"
         structural_iron_product_selection (str): iron processing method.
             Options are "eaf_steel" or "none".
@@ -209,10 +209,10 @@ class IronComponent(CostModelBaseClass):
                     "The product selection for the iron post module must be either \
                     'ng_eaf' or 'h2_eaf'"
                 )
-            pf_config = rev_pf_tools.make_pf_config_from_profast(
+            pf_config = pf_tools.make_pf_config_from_profast(
                 iron_win_finance.pf
             )  # dictionary of profast objects
-            pf_dict = rev_pf_tools.convert_pf_res_to_pf_config(
+            pf_dict = pf_tools.convert_pf_res_to_pf_config(
                 copy.deepcopy(pf_config)
             )  # profast dictionary of values
             iron_post_config["iron"]["finances"]["pf"] = pf_dict

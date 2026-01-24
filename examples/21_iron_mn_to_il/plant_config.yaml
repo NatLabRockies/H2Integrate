@@ -1,9 +1,10 @@
 name: "plant_config"
 description: "This plant is located in MN, USA..."
 
-site:
-  latitude: 41.717
-  longitude: -88.398
+sites:
+  site:
+    latitude: 41.717
+    longitude: -88.398
 
 technology_interconnections: [
   # Connect feedstocks to iron mine.

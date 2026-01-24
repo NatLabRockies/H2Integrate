@@ -13,7 +13,8 @@
 - [Meteosat Prime Meridian PSM v4 API](solar_resource:msg_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
     - "meteosat_solar_v4_api"
     - "meteosat_tmy_solar_v4_api"
-
+- [OpenMeteo Historical Weather API](solar_resource:openmeteo_historical): this model does not require an NREL API key, the available model is:
+    - "openmeteo_solar_api"
 
 ```{note}
 Please refer to the [`Setting Environment Variables`](environment_variables:setting-environment-variables) doc page for information on setting up an NREL API key if you haven't yet.
@@ -37,8 +38,8 @@ Not all solar resource models will output all the data keys listed below. Please
 (primary-data-solar-resource-timeseries)=
 ## Primary Data: Solar Resource Timeseries
 The below variables are outputted as arrays, with a length equal to the simulation duration. The naming convention and standardized units of solar resource variables are listed below:
-- `solar_direction`: solar direction in degrees (units are 'deg')
-- `solar_speed`: solar speed in meters per second (units are 'm/s')
+- `wind_direction`: wind direction in degrees (units are 'deg')
+- `wind_speed`: wind speed in meters per second (units are 'm/s')
 - `temperature`: air temperature in Celsius (units are 'C')
 - `pressure`: air pressure in millibar (units are 'mbar')
 - `relative_humidity`: relative humidity represented as a percentage (units are 'percent')
@@ -66,6 +67,9 @@ The below variables are outputted as arrays, with a length equal to the simulati
 ## Additional Data: Data source
 - `data_tz` (int | float): timezone the data is in represented as an hour offset from UTC
 - `filepath` (str): filepath where the resource data was loaded from
+- `start_time` (str): the start time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `end_time` (str): the end time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `dt` (int | float): the timestep of resource data in seconds
 
 (additional-data-time-profile)=
 ## Additional Data: Time profile

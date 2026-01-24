@@ -1,8 +1,8 @@
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.converters.water_power.hydro_plant_baseclass import HydroPerformanceBaseClass
 
 

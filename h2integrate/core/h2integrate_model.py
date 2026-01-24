@@ -1,10 +1,10 @@
 import importlib.util
 
-import numpy as np
 import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
+from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import (
     get_path,
     find_file,
@@ -320,21 +320,48 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
+        """
+        Create and configure site component(s) for the system.
+
+        This method initializes a site group for each site provided in
+        ``self.plant_config["sites"]``.
+
+        This method creates an OpenMDAO Group for each site that contains the location definition
+        and resources models (if provided in the configuration) for that site.
+        """
+        # Loop through each site defined in the plant config
+        for site_name, site_info in self.plant_config["sites"].items():
+            # Reorganize the plant config to be formatted as expected by the
+            # resource models
+            plant_config_reorg = {
+                "site": site_info,
+                "plant": self.plant_config["plant"],
+            }
+
+            # Create the site group and resource models
+            site_group = self.create_site_group(plant_config_reorg, site_info)
+
+            # Add the site group to the system model
+            self.model.add_subsystem(site_name, site_group)
+
+    def create_site_group(self, plant_config_dict: dict, site_config: dict):
+        """
+        Create and configure a site Group for the input site configuration.
+
+        Args:
+            plant_config_dict (dict): The plant config dictionary formatted for the resource models
+            site_config (dict): Information that defines each site, such as latitude,
+                longitude, and resource models.
+
+        Returns:
+            om.Group: OpenMDAO group for a site
+        """
+        # Initialize the site group
         site_group = om.Group()
 
-        # Create a site-level component
-        site_config = self.plant_config.get("site", {})
-        site_component = om.IndepVarComp()
-        site_component.add_output("latitude", val=site_config.get("latitude", 0.0), units="deg")
-        site_component.add_output("longitude", val=site_config.get("longitude", 0.0), units="deg")
-        site_component.add_output("elevation_m", val=site_config.get("elevation_m", 0.0), units="m")
-
-        # Add boundaries if they exist
-        site_config = self.plant_config.get("site", {})
-        boundaries = site_config.get("boundaries", [])
-        for i, boundary in enumerate(boundaries):
-            site_component.add_output(f"boundary_{i}_x", val=np.array(boundary.get("x", [])))
-            site_component.add_output(f"boundary_{i}_y", val=np.array(boundary.get("y", [])))
+        # Create a site location component (defines latitude, longitude, etc)
+        site_inputs = {k: v for k, v in site_config.items() if k != "resources"}
+        site_component = SiteLocationComponent(site_inputs)
 
         site_group.add_subsystem("site_component", site_component, promotes=["*"])
 
@@ -346,15 +373,14 @@ class H2IntegrateModel:
                 resource_class = self.supported_models.get(resource_model)
                 if resource_class:
                     resource_component = resource_class(
-                        plant_config=self.plant_config,
+                        plant_config=plant_config_dict,
                         resource_config=resource_inputs,
                         driver_config=self.driver_config,
                     )
                     site_group.add_subsystem(
                         resource_name, resource_component, promotes_inputs=["latitude", "longitude"]
                     )
-
-        self.model.add_subsystem("site", site_group)
+        return site_group
 
     def create_plant_model(self):
         """
@@ -971,7 +997,12 @@ class H2IntegrateModel:
 
         resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
 
-        resource_models = self.plant_config.get("site", {}).get("resources", {})
+        if "sites" in self.plant_config:
+            resource_models = {}
+            for site_grp, site_grp_inputs in self.plant_config["sites"].items():
+                for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
+                    resource_models[f"{site_grp}-{resource_key}"] = resource_params
+
         resource_source_connections = [c[0] for c in resource_to_tech_connections]
         # Check if there is a missing resource to tech connection or missing resource model
         if len(resource_models) != len(resource_source_connections):
@@ -1014,7 +1045,7 @@ class H2IntegrateModel:
             resource_name, tech_name, variable = connection
 
             # Connect the resource output to the technology input
-            self.model.connect(f"site.{resource_name}.{variable}", f"{tech_name}.{variable}")
+            self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None

@@ -5,12 +5,12 @@ import numpy as np
 from h2integrate.core.utilities import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
+    convert_pf_to_dict,
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
 from h2integrate.finances.profast_base import ProFastBase
 from h2integrate.core.inputs.validation import write_yaml
-from h2integrate.tools.profast_reverse_tools import convert_pf_to_dict
 
 
 class ProFastLCO(ProFastBase):
