@@ -817,8 +817,8 @@ def test_wind_solar_electrolyzer_example(subtests):
     model = H2IntegrateModel(Path.cwd() / "15_wind_solar_electrolyzer.yaml")
     model.run()
 
-    solar_fpath = model.model.get_val("site.solar_resource.solar_resource_data")["filepath"]
-    wind_fpath = model.model.get_val("site.wind_resource.wind_resource_data")["filepath"]
+    solar_fpath = model.model.get_val("solar_site.solar_resource.solar_resource_data")["filepath"]
+    wind_fpath = model.model.get_val("wind_site.wind_resource.wind_resource_data")["filepath"]
 
     with subtests.test("Wind resource file"):
         assert Path(wind_fpath).name == "35.2018863_-101.945027_2012_wtk_v2_60min_utc_tz.csv"
@@ -1368,30 +1368,117 @@ def test_floris_example(subtests):
     # Run the model
     h2i.run()
 
-    with subtests.test("LCOE"):
+    with subtests.test("Distributed LCOE"):
         assert (
             pytest.approx(
-                h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")[0], rel=1e-6
+                h2i.prob.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")[0], rel=1e-6
             )
             == 99.872209
         )
-
-    with subtests.test("Wind plant capacity"):
-        assert pytest.approx(h2i.prob.get_val("wind.total_capacity", units="MW"), rel=1e-6) == 66.0
-
-    with subtests.test("Total electricity production"):
+    with subtests.test("Utility LCOE"):
         assert (
             pytest.approx(
-                np.sum(h2i.prob.get_val("wind.total_electricity_produced", units="MW*h/yr")),
+                h2i.prob.get_val("finance_subgroup_utility.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 54.2709437311
+        )
+
+    with subtests.test("Total LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_total_electricity.LCOE", units="USD/MW/h")[0],
+                rel=1e-6,
+            )
+            == 65.2444127137
+        )
+
+    with subtests.test("Distributed wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.total_capacity", units="MW"), rel=1e-6
+            )
+            == 66.0
+        )
+
+    with subtests.test("Total distributed electricity production"):
+        assert (
+            pytest.approx(
+                np.sum(
+                    h2i.prob.get_val(
+                        "distributed_wind_plant.total_electricity_produced", units="MW*h/yr"
+                    )
+                ),
                 rel=1e-6,
             )
             == 128948.21977
         )
 
-    with subtests.test("Capacity factor"):
+    with subtests.test("Total utility electricity production"):
         assert (
-            pytest.approx(h2i.prob.get_val("wind.capacity_factor", units="percent")[0], rel=1e-6)
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.electricity_out", units="MW").sum(), rel=1e-6
+            )
+            == 406908.03381618496
+        )
+
+    with subtests.test("Distributed wind capacity factor"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.capacity_factor", units="percent")[0],
+                rel=1e-6,
+            )
             == 22.30320668
+        )
+
+    with subtests.test("Utility wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.total_capacity", units="MW"), rel=1e-6
+            )
+            == 120.0
+        )
+
+    with subtests.test("Distributed wind site location"):
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.latitude"), rel=1e-6) == 44.04218
+        )
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.longitude"), rel=1e-6)
+            == -95.19757
+        )
+
+    with subtests.test("Distributed wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 44.04218
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -95.19757
+        )
+
+    with subtests.test("Utility wind site location"):
+        assert pytest.approx(h2i.prob.get_val("utility_wind_site.latitude"), rel=1e-6) == 35.2018863
+        assert (
+            pytest.approx(h2i.prob.get_val("utility_wind_site.longitude"), rel=1e-6) == -101.945027
+        )
+
+    with subtests.test("Utility wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 35.2018863
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -101.945027
         )
 
 
@@ -1550,3 +1637,112 @@ def test_21_iron_dri_eaf_example(subtests):
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
         assert pytest.approx(lcos, rel=1e-4) == 524.8228189073025
+
+
+def test_sweeping_different_resource_sites_doe(subtests):
+    os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
+    import pandas as pd
+
+    # Create the model
+    model = H2IntegrateModel("27_wind_solar_site_doe.yaml")
+
+    # # Run the model
+    model.run()
+
+    # Specify the filepath to the sql file, the folder and filename are in the driver_config
+    sql_fpath = EXAMPLE_DIR / "27_site_doe_diff" / "ex_27_out" / "cases.sql"
+
+    # load the cases
+    cr = om.CaseReader(sql_fpath)
+
+    cases = list(cr.get_cases())
+
+    res_df = pd.DataFrame()
+    for ci, case in enumerate(cases):
+        solar_resource_data = case.get_val("solar_site.solar_resource.solar_resource_data")
+        wind_resource_data = case.get_val("wind_site.wind_resource.wind_resource_data")
+        with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
+            assert (
+                pytest.approx(case.get_val("solar_site.solar_resource.latitude"), abs=0.1)
+                == solar_resource_data["site_lat"]
+            )
+        with subtests.test(f"Case {ci}: Wind resource latitude matches site latitude"):
+            assert (
+                pytest.approx(case.get_val("wind_site.wind_resource.latitude"), abs=0.1)
+                == wind_resource_data["site_lat"]
+            )
+
+        s_lat = case.get_val("solar_site.solar_resource.latitude")[0]
+        s_lon = case.get_val("solar_site.solar_resource.longitude")[0]
+        solar_lat_lon = f"{s_lat} {s_lon}"
+        w_lat = case.get_val("wind_site.wind_resource.latitude")[0]
+        w_lon = case.get_val("wind_site.wind_resource.longitude")[0]
+        wind_lat_lon = f"{w_lat} {w_lon}"
+
+        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
+
+        solar_aep = np.sum(case.get_val("solar.electricity_out", units="MW"))
+        solar_lcoe = case.get_val("finance_subgroup_solar.LCOE", units="USD/(MW*h)")[0]
+
+        wind_aep = np.sum(case.get_val("wind.electricity_out", units="MW"))
+        wind_lcoe = case.get_val("finance_subgroup_wind.LCOE", units="USD/(MW*h)")[0]
+
+        combiner_aep = np.sum(case.get_val("combiner.electricity_out", units="MW"))
+        combiner_lcoe = case.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+
+        index_cols = [
+            "solar site",
+            "wind site",
+            "solar AEP",
+            "solar LCOE",
+            "solar size",
+            "wind AEP",
+            "wind LCOE",
+            "combiner AEP",
+            "combiner LCOE",
+        ]
+        vals = [
+            solar_lat_lon,
+            wind_lat_lon,
+            solar_aep,
+            solar_lcoe,
+            solar_capacity,
+            wind_aep,
+            wind_lcoe,
+            combiner_aep,
+            combiner_lcoe,
+        ]
+
+        site_res = pd.DataFrame(vals, index=index_cols, columns=[ci]).T
+
+        res_df = pd.concat([site_res, res_df], axis=0)
+
+    with subtests.test("Two unique solar capacities"):
+        solar_sizes = list(set(res_df["solar site"].to_list()))
+        assert len(solar_sizes) == 2
+
+    with subtests.test("Two unique solar sites"):
+        solar_locations = list(set(res_df["solar site"]))
+        assert len(solar_locations) == 2
+
+    with subtests.test("Two unique wind sites"):
+        wind_locations = list(set(res_df["wind site"]))
+        assert len(wind_locations) == 2
+
+    with subtests.test("Unique solar AEPS"):
+        assert len(list(set(res_df["solar AEP"].to_list()))) == 4
+
+    with subtests.test("Unique solar LCOEs"):
+        assert len(list(set(res_df["solar LCOE"].to_list()))) == 4
+
+    with subtests.test("Unique wind AEPS"):
+        assert len(list(set(res_df["wind AEP"].to_list()))) == 2
+
+    with subtests.test("Unique wind LCOEs"):
+        assert len(list(set(res_df["wind LCOE"].to_list()))) == 2
+
+    with subtests.test("Unique combiner AEPS"):
+        assert len(list(set(res_df["combiner AEP"].to_list()))) == len(res_df)
+
+    with subtests.test("Unique LCOEs per case"):
+        assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
