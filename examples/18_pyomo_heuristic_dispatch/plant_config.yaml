@@ -1,15 +1,16 @@
 name: "plant_config"
 description: "This plant is located in TX, USA..."
 
-site:
-  latitude: 35.2018863
-  longitude: -101.945027
+sites:
+  site:
+    latitude: 35.2018863
+    longitude: -101.945027
 
-  resources:
-    wind_resource:
-      resource_model: "wind_toolkit_v2_api"
-      resource_parameters:
-        resource_year: 2012
+    resources:
+      wind_resource:
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
 
 plant:
   plant_life: 30
@@ -32,7 +33,7 @@ tech_to_dispatch_connections: [
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 
 finance_parameters:

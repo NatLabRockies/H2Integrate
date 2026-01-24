@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import requests_cache
 import openmeteo_requests
@@ -9,12 +10,12 @@ from retry_requests import retry
 
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
 
 
 @define(kw_only=True)
-class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
-    """Configuration class to download wind resource data from
+class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
+    """Configuration class to download solar resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
     Args:
@@ -31,28 +32,28 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
         dataset_desc (str): description of the dataset, used in file naming.
             For this dataset, the `dataset_desc` is "openmeteo_archive".
         resource_type (str): type of resource data downloaded, used in folder naming.
-            For this dataset, the `resource_type` is "wind".
+            For this dataset, the `resource_type` is "solar".
         valid_intervals (list[int]): time interval(s) in minutes that resource data can be
             downloaded in. For this dataset, `valid_intervals` is 60 minutes.
 
     """
 
     resource_year: int = field(converter=int, validator=range_val(1940, datetime.now().year - 1))
-    dataset_desc: str = "openmeteo_archive"
-    resource_type: str = "wind"
+    dataset_desc: str = "openmeteo_archive_solar"
+    resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
 
-class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
+class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
     def setup(self):
-        # create the input dictionary for OpenMeteoHistoricalWindAPIConfig
+        # create the input dictionary for OpenMeteoHistoricalSolarAPIConfig
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(resource_specs)
+        self.config = OpenMeteoHistoricalSolarAPIConfig.from_dict(resource_specs)
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -71,16 +72,22 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
 
         super().setup()
 
-        self.hourly_wind_data_to_units = {
+        self.hourly_solar_data_to_units = {
             "wind_speed_10m": "m/s",
-            "wind_speed_100m": "m/s",
             "wind_direction_10m": "deg",
-            "wind_direction_100m": "deg",
-            "temperature_2m": "degC",
-            "surface_pressure": "hPa",
-            "precipitation": "mm/h",
-            "relative_humidity_2m": "unitless",
-            "is_day": "percent",
+            "temperature_2m": "C",
+            "surface_pressure": "hPa",  # TODO check units
+            # "precipitation": "mm/h", #TODO: check units
+            "relative_humidity_2m": "percent",  # ranges between 0 and 100
+            "shortwave_radiation": "W/m**2",  # "ghi": "W/m**2",
+            "direct_normal_irradiance": "W/m**2",  # "dni": "W/m**2",
+            "diffuse_radiation": "W/m**2",  # "dhi": "W/m**2",
+            "dew_point_2m": "C",
+            # "surface_albedo": "percent",
+            # "solar_zenith_angle": "deg",
+            "snow_depth": "m",
+            "rain": "mm",  # "precipitable_water": "cm",
+            "albedo": "percent",
         }
         # get the data dictionary
         data = self.get_data(self.config.latitude, self.config.longitude)
@@ -88,7 +95,9 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         self.resource_data = data
 
         # add resource data dictionary as an out
-        self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
+        self.add_discrete_output(
+            "solar_resource_data", val=data, desc="Dict of solar resource data"
+        )
 
     def create_filename(self, latitude, longitude):
         """Create default filename to save downloaded data to. Filename is formatted as
@@ -126,13 +135,12 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         """
         start_year = int(self.config.resource_year - 1)
         end_year = int(self.config.resource_year + 1)
-
         input_data = {
             "latitude": latitude,
             "longitude": longitude,
             "start_date": f"{start_year}-12-31",  # format is "%Y-%m-%d"
             "end_date": f"{end_year}-01-01",  # format is "%Y-%m-%d"
-            "hourly": list(self.hourly_wind_data_to_units.keys()),
+            "hourly": list(self.hourly_solar_data_to_units.keys()),
             "wind_speed_unit": "ms",
             "temperature_unit": "celsius",
             "precipitation_unit": "mm",
@@ -163,13 +171,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
 
         # Make data
         for i, varname in enumerate(url["hourly"]):
-            ts_data.update(
-                {
-                    f"{varname} ({self.hourly_wind_data_to_units[varname]})": hourly_data.Variables(
-                        i
-                    ).ValuesAsNumpy()
-                }
-            )
+            vals = hourly_data.Variables(i).ValuesAsNumpy()
+            ts_data.update({f"{varname} ({self.hourly_solar_data_to_units[varname]})": vals})
 
         # Make time column in ISO 8601 format
         time_data = pd.date_range(
@@ -229,8 +232,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in WindResourceBaseAPIModel.
-        2) is converted to standardized units described in WindResourceBaseAPIModel.
+        1) follows naming convention described in SolarResourceBaseAPIModel.
+        2) is converted to standardized units described in SolarResourceBaseAPIModel.
 
         This method does the following steps:
 
@@ -284,7 +287,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         # convert data to standardized units
         data, data_units = self.compare_units_and_correct(data, data_units)
 
-        # update wind resource data with site data
+        # update solar resource data with site data
         data.update(site_data)
 
         return data
@@ -308,33 +311,64 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data_cols_init = [c for c in data.columns.to_list() if c not in time_cols]
         data_rename_mapper = {}
         data_units = {}
+        data_variable_name_mapper = {
+            "shortwave_radiation": "ghi",
+            "direct_normal_irradiance": "dni",
+            "diffuse_radiation": "dhi",
+            "rain": "precipitable_water",
+            "surface_pressure": "pressure",
+            "albedo": "surface_albedo",
+            # below aren't downloaded in this API call but may available
+            # in a user-provided file
+            "diffuse_radiation_instant": "dhi_instant",  #
+            "direct_normal_irradiance_instant": "dni_instant",
+            "shortwave_radiation_instant": "ghi_instant",
+        }
         for c in data_cols_init:
             units = c.split("(")[-1].strip(")").replace("°", "deg").replace("%", "unitless")
+            units = (
+                units.replace("undefined", "unitless").replace("m²", "m**2").replace("degC", "C")
+            )
 
             new_c = c.split("(")[0].replace("air", "").replace("at ", "")
             new_c = new_c.replace(f"({units})", "").strip().replace(" ", "_").replace("__", "_")
+            new_c = new_c.replace("_10m", "").replace("_2m", "")
 
             old_c = c.split("(")[0].strip()
 
-            # don't include data that isn't relevant for wind data
-            if old_c not in self.hourly_wind_data_to_units:
+            # don't include data that isn't relevant for solar data
+            if old_c not in self.hourly_solar_data_to_units and "instant" not in old_c:
                 continue
 
-            if "is_day" in c:
-                data_rename_mapper.update({c: "is_day"})
-                data_units.update({"is_day": "percent"})
-
-            if "surface" in c:
-                new_c += "_0m"
-                new_c = new_c.replace("surface", "").replace("__", "").strip("_")
-            if "precipitation" in c and "mm" in units:
-                units = "mm/h"
-                new_c = "precipitation_rate_0m"  # TODO: check how others name this
+            if old_c in data_variable_name_mapper:
+                new_c = data_variable_name_mapper[old_c]
 
             data_rename_mapper.update({c: new_c})
             data_units.update({new_c: units})
         data = data.rename(columns=data_rename_mapper)
+
         data_dict = {c: data[c].astype(float).values for x, c in data_rename_mapper.items()}
+        # only include _instant data if non-instant data isn't provided
+        if any("_instant" in c for c in list(data_dict.keys())):
+            if "dhi_instant" in data_dict and "dhi" not in data_dict:
+                # only have instant dhi data, so use dhi_instant as dhi
+                dhi = data_dict.pop("dhi_instant")
+                data_dict["dhi"] = dhi
+            if "dni_instant" in data_dict and "dni" not in data_dict:
+                # only have instant dni data, so use dni_instant as dni
+                dni = data_dict.pop("dni_instant")
+                data_dict["dni"] = dni
+            if "ghi_instant" in data_dict and "ghi" not in data_dict:
+                # only have instant ghi data, so use ghi_instant as ghi
+                ghi = data_dict.pop("ghi_instant")
+                data_dict["ghi"] = ghi
+                pass
+
+        # check if albedo is only NaNs and remove if so
+        if "surface_albedo" in data_dict:
+            if all(c for c in np.isnan(data_dict["surface_albedo"])):
+                data_dict.pop("surface_albedo")
+
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
