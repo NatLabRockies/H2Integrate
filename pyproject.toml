@@ -225,8 +225,6 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["E501", "D104", "F401", "F403"]  # NOTE: F403 discouraged
 "tests/*" = ["D100", "D101", "D102", "D103"]
-"h2integrate/to_organize/gradient_free.py" = ["NPY002"]  # TODO: new NumPy needs to be addressed
-"h2integrate/to_organize/inputs_py.py" = ["F821"]  # TODO: there are zero inputs, but many vars
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true
