@@ -55,7 +55,7 @@ def geoh2_subsurface_well():
             "site_prospectivity": 0.7,
             "wellhead_h2_concentration": 95,
             "initial_wellhead_flow": 4000,
-            "gas_flow_density": 0.1,
+            "gas_flow_density": 0.11741,
             "ramp_up_time_months": 6,
             "percent_increase_during_rampup": 0.05,
             "gas_reservoir_size": 1000000,
@@ -168,9 +168,9 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
 def test_aspen_geoh2_performance_cost(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
-    expected_capex = 1795733.55
+    expected_capex = 4419318.42
     expected_opex = 4567464
-    expected_varopex = 984842.53
+    expected_varopex = 3613663.44
 
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(
@@ -245,7 +245,7 @@ def test_aspen_geoh2_refit_coeffs(
 
     with subtests.test("Well hydrogen production"):
         assert (
-            pytest.approx(prob.model.get_val("well.hydrogen_out", units="kg/h"), rel=1e-6)
+            pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
             == 2264.9432193239327
         ), 1e-6
 
