@@ -55,7 +55,7 @@ dependencies = [
   "ruamel.yaml",
   "scipy",
   "orbit-nrel",
-  "floris==4.3",
+  "floris",
   "hopp>=3.3.0",
   "turbine-models>=0.2.1",
   "wombat>=0.13.1",
