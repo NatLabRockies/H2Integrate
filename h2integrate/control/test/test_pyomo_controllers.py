@@ -452,9 +452,27 @@ def test_optimized_load_following_battery_dispatch(subtests):
             },
         },
     }
+    tech_config["technologies"]["combiner"] = {
+        "performance_model": {"model": "combiner_performance"},
+        "dispatch_rule_set": {"model": "pyomo_dispatch_generic_converter"},
+        "model_inputs": {
+            "performance_parameters": {
+                "commodity": "electricity",
+                "commodity_units": "kW",
+            },
+            "dispatch_rule_parameters": {
+                "commodity_name": "electricity",
+                "commodity_storage_units": "kW",
+            },
+        },
+    }
 
     # Can't find the electricity in because it's not in the tech to tech connections.
     plant_config["plant"]["simulation"]["n_timesteps"] = 72
+    # plant_config["tech_to_dispatch_connections"] =  [
+    #     ["combiner", "battery"],
+    #     ["battery", "battery"],
+    # ],
 
     # Setup the OpenMDAO problem and add subsystems
     prob = om.Problem()
@@ -487,6 +505,7 @@ def test_optimized_load_following_battery_dispatch(subtests):
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
     prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery_optimized_dispatch_controller.source_techs", ["combiner", "battery"])
 
     # Run the model
     prob.run_model()
