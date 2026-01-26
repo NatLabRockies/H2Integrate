@@ -418,6 +418,23 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.set_outputs()
 
     def set_outputs(self):
+        # Check that the required attributes have been instantiated
+        required = ("commodity", "commodity_rate_units", "commodity_amount_units")
+        missing = [el for el in required if not hasattr(self, el)]
+
+        if missing:
+            # Throw error if any attributes are missing.
+            cls_name = self.msginfo.split("<class ")[-1].strip("<>")
+            missing = ", ".join(missing)
+            msg = (
+                f"{cls_name} is missing the following required attributes: {missing}."
+                f"Please ensure that the attributes: {missing}"
+                f"are set in the `setup()` method of {cls_name}."
+                "Further documentation can be found in the `PerformanceModelBaseClass` "
+                "documentation."
+            )
+            raise NotImplementedError(msg)
+
         # timeseries profiles
         self.add_output(
             f"{self.commodity}_out",
