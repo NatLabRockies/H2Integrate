@@ -12,9 +12,11 @@ from h2integrate.converters.iron.iron_transport import (
 @fixture
 def plant_config():
     plant_config = {
-        "site": {
-            "latitude": 41.717,
-            "longitude": -88.398,
+        "sites": {
+            "site": {
+                "latitude": 41.717,
+                "longitude": -88.398,
+            },
         },
         "plant": {
             "plant_life": 30,

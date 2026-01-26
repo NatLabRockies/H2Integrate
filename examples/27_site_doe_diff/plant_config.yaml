@@ -2,25 +2,35 @@ name: "plant_config"
 description: "This plant uses solar resource data from 2012"
 
 sites:
-  site:
+  wind_site: #name of the site for the wind technology
+    latitude: 35.2018863
+    longitude: -101.945027
+    resources:
+      wind_resource: #name of the resource model for the wind_site
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
+  solar_site: #name of the site for the solar technology
     latitude: 34.22
     longitude: -102.75
-
     resources:
-      solar_resource:
+      solar_resource: #name of the resource model for the solar_site
         resource_model: "goes_aggregated_solar_v4_api"
         resource_parameters:
           resource_year: 2012
-          resource_filename: "34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv"
-
-# array of arrays containing left-to-right technology
-technology_interconnections: [
-  ["solar", "electrolyzer", "electricity", "cable"], #connect solar power to electrolyzer
-]
+          use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
 
 resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['wind_site.wind_resource', 'wind', 'wind_resource_data'],
   # connect the solar resource to the solar technology
-  ['site.solar_resource', 'solar', 'solar_resource_data'],
+  ['solar_site.solar_resource', 'solar', 'solar_resource_data'],
+]
+
+technology_interconnections: [
+  ["wind", "combiner", "electricity", "cable"], #source_tech, dest_tech, transport_item, transport_type = connection
+  ["solar", "combiner", "electricity", "cable"],
 ]
 
 plant:
@@ -54,40 +64,23 @@ finance_parameters:
           depr_type: "MACRS" # can be "MACRS" or "Straight line"
           depr_period: 5 # 5  years
           refurb: [0.]
-    conservative:
-      finance_model: "ProFastComp"
-      model_inputs:
-        params:
-          analysis_start_year: 2032
-          installation_time: 36 # months
-          inflation_rate: 0.0 # 0 for nominal analysis
-          discount_rate: 0.0948
-          debt_equity_ratio: 1.72
-          property_tax_and_insurance: 0.015
-          total_income_tax_rate: 0.2574
-          capital_gains_tax_rate: 0.15
-          sales_tax_rate: 0.00
-          debt_interest_rate: 0.046
-          debt_type: "Revolving debt" # can be "Revolving debt" or "One time loan"
-          loan_period_if_used: 0 # Not used for "Revolving debt"
-          cash_onhand_months: 1
-          admin_expense: 0.00 # percent of sales
-        capital_items:
-          depr_type: "MACRS" # can be "MACRS" or "Straight line"
-          depr_period: 5
-          refurb: [0.]
 
   finance_subgroups:
-    electricity:
+    solar:
       commodity: "electricity"
       commodity_stream: "solar"
-      finance_groups: ["optimistic", "conservative"]
+      finance_groups: ["optimistic"]
       technologies: ["solar"]
-    hydrogen:
-      commodity: "hydrogen"
-      commodity_stream: "electrolyzer"
-      finance_groups: ["optimistic", "conservative"]
-      technologies: ["solar","electrolyzer"]
+    wind:
+      commodity: "electricity"
+      commodity_stream: "wind"
+      finance_groups: ["optimistic"]
+      technologies: ["wind"]
+    electricity:
+      commodity: "electricity"
+      commodity_stream: "combiner"
+      finance_groups: ["optimistic"]
+      technologies: ["wind","solar"]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022
