@@ -232,13 +232,13 @@ updated_parameters = {
     "floris_turbine_config": floris_options,
 }
 
-# Update wind performance parameters in the tech config
-tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"].update(
+# Update distributed wind+ performance parameters in the tech config
+tech_config["technologies"]["distributed_wind_plant"]["model_inputs"]["performance_parameters"].update(
     updated_parameters
 )
 
 # The technology input for the updated wind turbine model
-tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]
+tech_config["technologies"]["distributed_wind_plant"]["model_inputs"]["performance_parameters"]
 ```
 
 Step 3: Run H2I with the updated tech_config dictionary for the Vestas 1.65 MW turbine
@@ -258,6 +258,6 @@ h2i = H2IntegrateModel(h2i_config)
 h2i.run()
 
 # Get LCOE of wind plant
-wind_lcoe = h2i.model.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h")
+wind_lcoe = h2i.model.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")
 print(f"Wind LCOE is ${wind_lcoe[0]:.2f}/MWh")
 ```
