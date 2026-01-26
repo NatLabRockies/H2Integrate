@@ -324,11 +324,12 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     **performance_model_kwargs,
                     sim_start_index=t,
                 )
+                self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
                 # print("Storage commands: ", self.storage_dispatch_commands)
                 # print("Battery performance: ", storage_commodity_out_control_window)
                 # print("Battery SOC: ", soc_control_window)
                 # print("power in: ", commodity_in)
-                self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
+
                 # if "optimized" in control_strategy:
 
                 #     jkjk
@@ -948,7 +949,6 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             commodity_demand (list): The demanded commodity for this time slice.
 
         """
-        print("HIIII", updated_initial_soc)
         self.hybrid_dispatch_rule.update_time_series_parameters(
             commodity_in, commodity_demand, updated_initial_soc
         )
