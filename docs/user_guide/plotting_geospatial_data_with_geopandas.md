@@ -8,7 +8,7 @@ Note: to leverage this functionality users must install H2Integrate with the `gi
 
 ## Create a multi-layer geospatial point heat map with simple straight line transport routes
 
-An example use case, mirroring the simulation and workflow in /examples/26_iron_map/run_iron.py, we can use GeoPandas and Contextily to create a multi-layer point heat map which displays the level costs of iron ore pellets from select mines, simplified waterway shipping routes and associated costs to transport the iron ore pellets, and the final levelized cost of iron production via Hydrogen DRI across a range of site locations.
+An example use case, mirroring the simulation and workflow in /examples/28_iron_map/run_iron.py, we can use GeoPandas and Contextily to create a multi-layer point heat map which displays the level costs of iron ore pellets from select mines, simplified waterway shipping routes and associated costs to transport the iron ore pellets, and the final levelized cost of iron production via Hydrogen DRI across a range of site locations.
 
 In this example the configuration .yaml files are set such that a design of experiments is run across multiple site locations (latitude,longitude) read in from the "ned_reduced"sitelist.csv" which contains precomputed levelized cost of electricity (LCOE) and levelized cost of hydrogen (LCOH) at each location. This information is then used to calculate the levelized cost of iron production via hydrogen DRI at these locations. Upon running the model, results are saved to a "cases.sql" file.
 
@@ -27,9 +27,9 @@ Here is an example of how we can then uses the results in cases.sql to plot a mu
 
 ```python
 # Plot the LCOI results with geopandas and contextily
-# NOTE: you can swap './ex_26_out/cases.sql' with './ex_26_out/cases.csv' to read results from csv
+# NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath="./ex_26_out/cases.sql",
+    case_results_fpath="./ex_28_out/cases.sql",
     metric_to_plot="iron.LCOI (USD/kg)",
     map_preferences={
         "figsize": (10, 8),
@@ -146,10 +146,10 @@ fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
         transport_layer2_gdf,
     ],
     show_plot=True,
-    save_plot_fpath="./ex_26_out/example_26_iron_map.png",
+    save_plot_fpath="./ex_28_out/example_28_iron_map.png",
 )
 ```
 
 After running the above code, a display window will show the image and the image will be saved to the specified `save_plot_fpath`.
 
-![example_26_iron_map.png](./figures/example_26_iron_map.png)
+![example_28_iron_map.png](./figures/example_28_iron_map.png)

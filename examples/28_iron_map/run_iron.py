@@ -2,7 +2,7 @@
 
 This example is focused not on the use of the main H2I model tools, but the post-processing mapping
 functions. The H2I model has already been run over several locations, with the data saved and
-tracked as a .csv in `./ex_27_out`. To run the model yourself, change the boolean `rerun_model` at
+tracked as a .csv in `./ex_28_out`. To run the model yourself, change the boolean `rerun_model` at
 the top of the script to `True`.
 Warning: this may take some time (up to a few minutes) depending on your PC's processing capability.
 
@@ -18,7 +18,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 # Create H2Integrate model
 # NOTE:
-# If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_27_out,
+# If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_28_out,
 # you may leave rerun_model = False to save on run time.
 # Otherwise, set rerun_model = True to produce the cases.csv / cases.sql results files
 rerun_model = False
@@ -27,17 +27,17 @@ if rerun_model:
     model.run()
 
 # Define filepaths
-ex_27_dir = EXAMPLE_DIR / "27_iron_map"
-ex_27_out_dir = EXAMPLE_DIR / "27_iron_map/ex_27_out"
-save_plot_filepath = ex_27_out_dir / "example_27_iron_map.png"
+ex_28_dir = EXAMPLE_DIR / "28_iron_map"
+ex_28_out_dir = EXAMPLE_DIR / "28_iron_map/ex_28_out"
+save_plot_filepath = ex_28_out_dir / "example_28_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
-case_results_filepath = ex_27_out_dir / "cases.csv"
-ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
+case_results_filepath = ex_28_out_dir / "cases.csv"
+ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
 shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv"
+shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
 
 # Plot the LCOI results with geopandas and contextily
-# NOTE: you can swap './ex_27_out/cases.sql' with './ex_27_out/cases.csv' to read results from csv
+# NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=case_results_filepath,
     metric_to_plot="iron.LCOI (USD/kg)",

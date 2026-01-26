@@ -5,7 +5,7 @@ general:
   folder_output: outputs
 
 general:
-  folder_output: ex_27_out
+  folder_output: ex_28_out
   create_om_reports: false
 driver:
   design_of_experiments:

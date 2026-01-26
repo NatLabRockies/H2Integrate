@@ -1521,7 +1521,7 @@ def test_24_solar_battery_grid_example(subtests):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
-def test_27_iron_map_example(subtests):
+def test_28_iron_map_example(subtests):
     import geopandas as gpd
     import matplotlib
 
@@ -1530,16 +1530,16 @@ def test_27_iron_map_example(subtests):
         plot_straight_line_shipping_routes,
     )
 
-    os.chdir(EXAMPLE_DIR / "27_iron_map")
+    os.chdir(EXAMPLE_DIR / "28_iron_map")
 
     # Define filepaths
-    ex_27_dir = Path.cwd()
-    ex_27_out_dir = ex_27_dir / "ex_27_out"
-    ore_prices_filepath = ex_27_dir / "example_ore_prices.csv"
+    ex_28_dir = Path.cwd()
+    ex_28_out_dir = ex_28_dir / "ex_28_out"
+    ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-    shipping_prices_filepath = ex_27_dir / "example_shipping_prices.csv"
-    cases_csv_fpath = ex_27_out_dir / "cases.csv"
-    ex_png_fpath = ex_27_out_dir / "example_27_iron_map.png"
+    shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
+    cases_csv_fpath = ex_28_out_dir / "cases.csv"
+    ex_png_fpath = ex_28_out_dir / "example_28_iron_map.png"
     ex_png_fpath.unlink(missing_ok=True)
 
     # Plot LCOI results from cases.sql file, save sql data to csv
@@ -1670,8 +1670,8 @@ def test_27_iron_map_example(subtests):
             lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
         ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
 
-    with subtests.test("Check example_27_iron_map.png was saved"):
-        assert (ex_png_fpath).is_file(), "example_27_iron_map.png file not found"
+    with subtests.test("Check example_28_iron_map.png was saved"):
+        assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"
 
     # Clean up any output files/dirs created
     ex_png_fpath.unlink(missing_ok=True)
