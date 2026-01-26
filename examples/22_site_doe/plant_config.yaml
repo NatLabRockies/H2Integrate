@@ -6,12 +6,12 @@ sites:
     latitude: 34.22
     longitude: -102.75
 
-  resources:
-    solar_resource:
-      resource_model: "GOESAggregatedSolarAPI"
-      resource_parameters:
-        resource_year: 2012
-        use_fixed_resource_location: False #set to False since sweeping sites
+    resources:
+      solar_resource:
+        resource_model: "GOESAggregatedSolarAPI"
+        resource_parameters:
+          resource_year: 2012
+          use_fixed_resource_location: False #set to False since sweeping sites
 
 resource_to_tech_connections: [
   # connect the solar resource to the solar technology

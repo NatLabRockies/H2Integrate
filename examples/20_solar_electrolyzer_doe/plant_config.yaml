@@ -6,12 +6,12 @@ sites:
     latitude: 34.22
     longitude: -102.75
 
-  resources:
-    solar_resource:
-      resource_model: "GOESAggregatedSolarAPI"
-      resource_parameters:
-        resource_year: 2012
-        resource_filename: "34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv"
+    resources:
+      solar_resource:
+        resource_model: "GOESAggregatedSolarAPI"
+        resource_parameters:
+          resource_year: 2012
+          resource_filename: "34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv"
 
 # array of arrays containing left-to-right technology
 technology_interconnections: [

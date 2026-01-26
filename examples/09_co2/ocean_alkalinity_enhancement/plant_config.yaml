@@ -6,11 +6,11 @@ sites:
     latitude: 43.807
     longitude: -124.81
 
-  resources:
-      wind_resource:
-        resource_model: "WTKNRELDeveloperAPIWindResource"
-        resource_parameters:
-          resource_year: 2010
+    resources:
+        wind_resource:
+          resource_model: "WTKNRELDeveloperAPIWindResource"
+          resource_parameters:
+            resource_year: 2010
 
 
 # array of arrays containing left-to-right technology

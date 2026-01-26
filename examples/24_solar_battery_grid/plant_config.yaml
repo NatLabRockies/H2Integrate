@@ -6,13 +6,13 @@ sites:
     latitude: 32.34
     longitude: -98.27
 
-  resources:
-    solar_resource:
-      resource_model: "GOESAggregatedSolarAPI"
-      resource_parameters:
-        resource_year: 2013
-        resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
-        resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
+    resources:
+      solar_resource:
+        resource_model: "GOESAggregatedSolarAPI"
+        resource_parameters:
+          resource_year: 2013
+          resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
+          resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
 
 
 # array of arrays containing left-to-right technology

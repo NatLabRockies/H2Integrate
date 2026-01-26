@@ -6,11 +6,11 @@ sites:
     latitude: 35.2018863
     longitude: -101.945027
 
-  resources:
-    wind_resource:
-      resource_model: "WTKNRELDeveloperAPIWindResource"
-      resource_parameters:
-        resource_year: 2012
+    resources:
+      wind_resource:
+        resource_model: "WTKNRELDeveloperAPIWindResource"
+        resource_parameters:
+          resource_year: 2012
 
 plant:
   plant_life: 30
