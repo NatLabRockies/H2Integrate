@@ -124,12 +124,17 @@ tests/h2integrate/test_hydrogen/data/*
 tests/h2integrate/test_hydrogen/output.txt
 *speed_dir_data.csv
 examples/h2integrate/*/data
+examples/**/*data/
 examples/h2integrate/*/figures
+examples/*/*_output_dir/
+examples/*/*.sqlite
 tests/h2integrate/reports/
 tests/h2integrate/test_hydrogen/output/
 **/run_*_out/
+**/*_run/
 *_out/
 **/test_*_out/
+**/wind_electrolyzer/*
 
 output*
 snopt_history.txt
