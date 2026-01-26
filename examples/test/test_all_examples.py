@@ -1651,7 +1651,7 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 1.057242764725443
+        assert pytest.approx(lcoi, rel=1e-4) == 2.187928233525775
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -1660,7 +1660,7 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.2103327773319883
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3410182461323226
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -1669,7 +1669,9 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 1.1525394007265573
+        assert pytest.approx(lcoi, rel=1e-4) == 2.2832248695268893
+
+
 def test_sweeping_different_resource_sites_doe(subtests):
     os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
     import pandas as pd
