@@ -6,7 +6,9 @@
 - Added capability to have transport models that require user input parameters
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
+- Added postprocessing function to save timeseries
 - Minor reorg for profast tools
+- Removed hydrogen tank cost and performance models that were unused
 
 ## 0.5.1 [December 18, 2025]
 

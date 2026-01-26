@@ -41,6 +41,9 @@ def test_pysam_turbine_export(subtests):
     plant_config = load_plant_yaml(plant_config_path)
     tech_config = load_tech_yaml(tech_config_path)
 
+    plant_config_for_resource = {k: v for k, v in plant_config.items() if k != "sites"}
+    plant_config_for_resource.update(plant_config["sites"])
+
     updated_parameters = {
         "turbine_rating_kw": np.max(
             pysam_options["Turbine"].get("wind_turbine_powercurve_powerout")
@@ -56,8 +59,10 @@ def test_pysam_turbine_export(subtests):
 
     prob = om.Problem()
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        plant_config=plant_config_for_resource,
+        resource_config=plant_config["sites"]["site"]["resources"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
@@ -74,7 +79,7 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 600.0
+            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 300.0
         )
 
     with subtests.test("File runs with WindPower, check turbine size"):
@@ -86,7 +91,7 @@ def test_pysam_turbine_export(subtests):
     with subtests.test("File runs with WindPower, check AEP"):
         assert (
             pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/yr")[0], rel=1e-6)
-            == 2783152.10
+            == 1391425.64
         )
 
 
@@ -106,25 +111,30 @@ def test_floris_turbine_export(subtests):
     plant_config = load_plant_yaml(plant_config_path)
     tech_config = load_tech_yaml(tech_config_path)
 
+    plant_config_for_resource = {k: v for k, v in plant_config.items() if k != "sites"}
+    plant_config_for_resource.update(plant_config["sites"])
+
     updated_parameters = {
         "hub_height": -1,
         "floris_turbine_config": floris_options,
     }
 
-    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"].update(
-        updated_parameters
-    )
+    tech_config["technologies"]["distributed_wind_plant"]["model_inputs"][
+        "performance_parameters"
+    ].update(updated_parameters)
 
     prob = om.Problem()
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        plant_config=plant_config_for_resource,
+        resource_config=plant_config["sites"]["site"]["resources"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = FlorisWindPlantPerformanceModel(
         plant_config=plant_config,
-        tech_config=tech_config["technologies"]["wind"],
+        tech_config=tech_config["technologies"]["distributed_wind_plant"],
         driver_config={},
     )
 

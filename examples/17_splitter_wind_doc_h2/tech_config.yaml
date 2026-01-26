@@ -31,18 +31,6 @@ technologies:
         capex_per_kW: 5390.0
         opex_per_kW_per_year: 52.0
         cost_year: 2022
-  # hopp:
-  #   performance_model:
-  #     model: "hopp"
-  #   cost_model:
-  #     model: "hopp"
-  #   model_inputs:
-  #     shared_parameters:
-  #       cost_year: 2022
-  #     performance_parameters:
-  #       cache_dir: "cache"
-  #       enable_caching: False
-  #       hopp_config: !include tech_inputs/hopp_config.yaml
 
   electricity_splitter:
     performance_model:
