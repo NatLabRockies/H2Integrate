@@ -163,7 +163,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["efficiency"] = H2_Results["Sim: Average Efficiency [%-HHV]"]
         refurb_schedule = np.zeros(self.plant_life)
         if np.isnan(H2_Results["Time Until Replacement [hrs]"]):
-            refurb_period = 80000
+            refurb_period = 80000 / (24 * 365)
         else:
             refurb_period = round(float(H2_Results["Time Until Replacement [hrs]"]) / (24 * 365))
         refurb_schedule[refurb_period : self.plant_life : refurb_period] = 1
