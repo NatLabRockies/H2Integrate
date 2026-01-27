@@ -24,6 +24,12 @@ The modeling approach in this performance model is informed by:
 - [Gelman et al. (USGS)](https://doi.org/10.3133/pp1900)
 - [Tang et al. (Southwest Petroleum University)](https://doi.org/10.1016/j.petsci.2024.07.029)
 
+The natural geologic hydrogen model is able to model well decline over time and there are two methods of decline.
+1. If not specified or `use_arps_decline_curve` is `False`: the decline rate will be linear over the lifetime of the well as defined in the attribute `plant_config["plant"]["plant_life"]`
+2. If `use_arps_decline_curve` is `True`: The well production will decline according to the Arps model as defined in [Tang et al. (Southwest Petroleum University)](https://doi.org/10.1016/j.petsci.2024.07.029). There are several options for using the decline curve to model well production.
+    1. `decline_fit_params` is a dictionary where a user can specify the decline rate and loss rate. It should be noted that typically the modeling of these decline rates are monthly. This model uses hourly timesteps so the decline and loss rate should be modified accordingly.
+    2. `decline_fit_params["fit_name"]` is an optional string that can be specified within the `decline_fit_params` dictionary that will model a decline rate similar to those noted at either the "Bakken", "Eagle Ford" or "Permian" shale wells documented in [Tang et al. (Southwest Petroleum University)](https://doi.org/10.1016/j.petsci.2024.07.029) Figure 7.
+
 (templeton-serpentinization-geoh2-performance)=
 ### Templeton Serpentinization GeoH2 Performance
 

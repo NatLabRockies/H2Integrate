@@ -7,6 +7,7 @@
 - Add geologic hydrogen surface processing converter
 - Add baseclass for caching functionality
 - Minor reorg for profast tools
+- Add Arps decline rate to natural geologic hydrogen model
 
 ## 0.5.1 [December 18, 2025]
 
