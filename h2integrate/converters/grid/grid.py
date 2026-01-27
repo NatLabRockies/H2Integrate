@@ -195,7 +195,7 @@ class GridCostModel(CostModelBaseClass):
         # Add buy price input if configured
         if self.config.electricity_buy_price is not None:
             buy_price = self.config.electricity_buy_price
-            if isinstance(buy_price, (list, np.ndarray)):
+            if isinstance(buy_price, list | np.ndarray):
                 if len(buy_price) != n_timesteps:
                     raise ValueError(
                         f"electricity_buy_price length ({len(buy_price)}) "
@@ -226,7 +226,7 @@ class GridCostModel(CostModelBaseClass):
         # Add sell price input if configured
         if self.config.electricity_sell_price is not None:
             sell_price = self.config.electricity_sell_price
-            if isinstance(sell_price, (list, np.ndarray)):
+            if isinstance(sell_price, list | np.ndarray):
                 if len(sell_price) != n_timesteps:
                     raise ValueError(
                         f"electricity_sell_price length ({len(sell_price)}) "
