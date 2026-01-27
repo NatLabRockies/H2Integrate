@@ -7,7 +7,9 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 plant_config = {
     "name": "plant_config",
     "description": "...",
-    "site": {"latitude": 35.2018863, "longitude": -101.945027},
+    "sites": {
+        "site": {"latitude": 35.2018863, "longitude": -101.945027},
+    },
     "plant": {
         "plant_life": 1,
         "grid_connection": False,
