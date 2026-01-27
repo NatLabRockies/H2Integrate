@@ -10,7 +10,7 @@ Note: to leverage this functionality users must install H2Integrate with the `gi
 
 An example use case, mirroring the simulation and workflow in /examples/28_iron_map/run_iron.py, we can use GeoPandas and Contextily to create a multi-layer point heat map which displays the level costs of iron ore pellets from select mines, simplified waterway shipping routes and associated costs to transport the iron ore pellets, and the final levelized cost of iron production via Hydrogen DRI across a range of site locations.
 
-In this example the configuration .yaml files are set such that a design of experiments is run across multiple site locations (latitude,longitude) read in from the "ned_reduced"sitelist.csv" which contains precomputed levelized cost of electricity (LCOE) and levelized cost of hydrogen (LCOH) at each location. This information is then used to calculate the levelized cost of iron production via hydrogen DRI at these locations. Upon running the model, results are saved to a "cases.sql" file.
+In this example the configuration .yaml files are set such that a design of experiments is run across multiple site locations (latitude,longitude) read in from the "ned_reduced_sitelist.csv" which contains precomputed levelized cost of electricity (LCOE) and levelized cost of hydrogen (LCOH) at each location. This information is then used to calculate the levelized cost of iron production via hydrogen DRI at these locations. Upon running the model, results are saved to a "cases.sql" file.
 
 ```python
 from h2integrate.postprocess.mapping import (
