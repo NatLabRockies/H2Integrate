@@ -1,0 +1,6 @@
+name: "driver_config"
+description: "Driver configuration for multivariable streams example"
+
+general:
+  folder_output: outputs
+  create_om_reports: false

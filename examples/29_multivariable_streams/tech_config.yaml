@@ -1,0 +1,29 @@
+name: "technology_config"
+description: >
+  Technology configuration for multivariable streams example.
+  This example uses two dummy components that produce and consume
+  a wellhead_gas multivariable stream.
+
+technologies:
+  gas_producer:
+    performance_model:
+      model: "dummy_gas_producer_performance"
+    cost_model:
+      model: "dummy_gas_producer_cost"
+    model_inputs:
+      performance_parameters:
+        base_flow_rate: 150.0  # kg/hr
+        base_temperature: 310.0  # K
+        base_pressure: 12.0  # bar
+      cost_parameters:
+        cost_year: 2024
+
+  gas_consumer:
+    performance_model:
+      model: "dummy_gas_consumer_performance"
+    cost_model:
+      model: "dummy_gas_consumer_cost"
+    model_inputs:
+      performance_parameters: {}
+      cost_parameters:
+        cost_year: 2024

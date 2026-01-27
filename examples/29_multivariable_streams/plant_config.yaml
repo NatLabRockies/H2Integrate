@@ -1,0 +1,16 @@
+name: "plant_config"
+description: "Demonstrates multivariable streams connecting a gas producer to consumer"
+
+# Multivariable stream connections: specifying 'wellhead_gas' as the
+# connected_parameter automatically expands to connect all constituent
+# variables (gas_flow, hydrogen_fraction, oxygen_fraction, gas_temperature,
+# gas_pressure) from source to destination.
+technology_interconnections: [
+  ["gas_producer", "gas_consumer", "wellhead_gas"],
+]
+
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    timezone: -6
