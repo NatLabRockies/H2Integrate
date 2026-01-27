@@ -15,7 +15,7 @@ technologies:
         rated_capacity: 70. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
         cost_year: 2022
-        price: 58.02 #USD/MW
+        price: 0. # Electricity costs are already priced in to current mine model
         annual_cost: 0.
         start_up_cost: 0.
 
