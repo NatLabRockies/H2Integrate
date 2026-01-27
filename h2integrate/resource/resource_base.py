@@ -352,10 +352,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             data = self.add_resource_start_end_times(data)
             return data
 
-        if not success:
+        else:
             raise ValueError("Did not successfully download resource data.")
-
-        raise ValueError("Unexpected situation occurred while trying to load resource data.")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         if not self.config.use_fixed_resource_location:
