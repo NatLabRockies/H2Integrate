@@ -22,6 +22,15 @@ GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submi
   [Google style](https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html).
 * When you start working on a pull request, start by creating a new branch pointing at the latest
   commit on [main](https://github.com/NREL/H2Integrate).
+* Code formatting is enforced using pre-commit hooks and is required for any code pushed up to the repository. The pre-commit package is included in the developer install of the repository. The pre-commit hooks can be installed by running
+```bash
+pre-commit install
+```
+in the repository directory. This will automatically run the pre-commit formatting hooks when code changes are committed. If you are having difficulty committing code after it has been reformatted by these hooks, try using the commit command
+```bash
+git commit -am "<Your commit message here>"
+```
+which will re-add the reformatted files to the commit.
 * The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NREL/H2Integrate/blob/main/LICENSE).
 
 ## Documentation
