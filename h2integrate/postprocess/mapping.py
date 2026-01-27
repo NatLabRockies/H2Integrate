@@ -19,8 +19,8 @@ try:
 
 except ImportError as exc:
     msg = (
-        "Failed to import geopandas or contextily.",
-        "H2Integrate must be installed with the `gis` or `examples` modifier",
+        "Failed to import geopandas or contextily. "
+        "H2Integrate must be installed with the `gis` or `examples` modifier"
     )
     raise ImportError(msg) from exc
 
@@ -29,7 +29,7 @@ except ImportError as exc:
 class GeospatialMapConfig(BaseConfig):
     """
     Configuration class for plot_geospatial_point_heat_map and plot_straight_line_shipping_routes
-    function's argument map_preferences. Represents necessary paramaters for formatting and
+    function's argument map_preferences. Represents necessary parameters for formatting and
     plotting with GeoPandas, matplotlib, and contextily.
 
     Args:
@@ -245,7 +245,7 @@ def plot_geospatial_point_heat_map(
             is added. Defaults to False.
         save_plot_fpath (Path | str, optional): A string or Path object specifying where to save the
             generated plot. If None, the plot is not saved. Defaults to None.
-        save_plot_dpi (float, otpional): A float specifying the dots per inch resolution of the
+        save_plot_dpi (float, optional): A float specifying the dots per inch resolution of the
             saved figure. Defaults to 100.
         map_preferences (dict | GeospatialMapConfig, optional): A dictionary or GeospatialMapConfig
             object defining formatting and plotting preferences for GeoPandas, matplotlib, and
@@ -263,7 +263,7 @@ def plot_geospatial_point_heat_map(
             This can be passed back into the function to add additional layers.
 
     Raises:
-        TypeError: If the provided case_results_fpath is of the wront type (not .csv or .sql)
+        TypeError: If the provided case_results_fpath is of the wrong type (not .csv or .sql)
         ValueError: If only a subset of fig, ax, and base_layer_gdf is provided when adding a layer.
     """
 
@@ -771,7 +771,7 @@ def validate_gdfs_are_same_crs(
     """
 
     base_layer_gdf = (
-        base_layer_gdf if isinstance(base_layer_gdf, (list, tuple)) else [base_layer_gdf]
+        base_layer_gdf if isinstance(base_layer_gdf, list | tuple) else [base_layer_gdf]
     )
 
     for gdf in base_layer_gdf:
