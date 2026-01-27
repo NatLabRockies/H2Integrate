@@ -35,7 +35,8 @@ class SimpleAmmoniaPerformanceModel(om.ExplicitComponent):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
@@ -100,7 +101,8 @@ class SimpleAmmoniaCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = AmmoniaCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         # Inputs for cost model configuration

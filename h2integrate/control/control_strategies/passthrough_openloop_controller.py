@@ -23,7 +23,8 @@ class PassThroughOpenLoopController(ControllerBaseClass):
 
     def setup(self):
         self.config = PassThroughOpenLoopControllerConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(

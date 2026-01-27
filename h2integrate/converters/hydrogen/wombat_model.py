@@ -38,7 +38,8 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
     def setup(self):
         super().setup()
         self.config = WOMBATModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         self.add_output("capacity_factor", val=0.0, units=None)

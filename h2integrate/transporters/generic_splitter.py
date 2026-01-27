@@ -78,7 +78,8 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     def setup(self):
         # Initialize config from tech config
         self.config = GenericSplitterPerformanceConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["performance_parameters"]
+            self.options["tech_config"]["model_inputs"]["performance_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
