@@ -50,7 +50,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
         self.initial_soc = dispatch_inputs["initial_soc_percent"]
         self.charge_efficiency = dispatch_inputs.get("charge_efficiency", 0.94)
-        self.discharge_commodity_efficiency = dispatch_inputs.get("discharge_efficiency", 0.94)
+        self.discharge_efficiency = dispatch_inputs.get("discharge_efficiency", 0.94)
 
         # Set charge and discharge rate equal to each other for now
         self.set_timeseries_parameter("max_charge", dispatch_inputs["max_charge_rate"])
@@ -435,6 +435,7 @@ class PyomoRuleStorageMinOperatingCosts:
         self.time_duration = [1.0] * len(self.blocks.index_set())
         self.commodity_load_demand = [commodity_demand[t] for t in self.blocks.index_set()]
         self.model.initial_soc = updated_initial_soc
+        self.initial_soc = updated_initial_soc
 
     # Objective functions
     def min_operating_cost_objective(self, hybrid_blocks, tech_name: str):

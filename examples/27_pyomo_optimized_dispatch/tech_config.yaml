@@ -62,7 +62,7 @@ technologies:
         charge_efficiency: 0.95
         discharge_efficiency: 0.95
         commodity_storage_units: "kW"
-        cost_per_charge: 0.04
+        cost_per_charge: 0.03
         cost_per_discharge: 0.05
         commodity_met_value: 0.1
         cost_per_production: 0.0

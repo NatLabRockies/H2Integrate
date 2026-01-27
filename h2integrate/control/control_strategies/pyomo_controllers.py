@@ -324,15 +324,9 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     **performance_model_kwargs,
                     sim_start_index=t,
                 )
+                # update SOC for next time window
                 self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
-                # print("Storage commands: ", self.storage_dispatch_commands)
-                # print("Battery performance: ", storage_commodity_out_control_window)
-                # print("Battery SOC: ", soc_control_window)
-                # print("power in: ", commodity_in)
 
-                # if "optimized" in control_strategy:
-
-                #     jkjk
                 # get a list of all time indices belonging to the current control window
                 window_indices = list(range(t, t + self.config.n_control_window))
 
@@ -895,11 +889,6 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         super().setup()
-
-        if self.config.charge_efficiency is not None:
-            self.charge_efficiency = self.config.charge_efficiency
-        if self.config.discharge_efficiency is not None:
-            self.discharge_efficiency = self.config.discharge_efficiency
 
         self.n_control_window = self.config.n_control_window
         self.updated_initial_soc = self.config.init_charge_percent

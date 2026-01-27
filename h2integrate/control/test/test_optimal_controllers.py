@@ -53,8 +53,8 @@ tech_config = {
                     "time_weighting_factor": 0.995,
                     "charge_efficiency": 0.95,
                     "discharge_efficiency": 0.95,
-                    "cost_per_charge": 0.04,
-                    "cost_per_discharge": 0.05,
+                    "cost_per_charge": 0.004,
+                    "cost_per_discharge": 0.005,
                     "cost_per_production": 0.0,
                     "commodity_met_value": 0.1,
                 },
@@ -89,7 +89,7 @@ tech_config = {
 
 
 def test_min_operating_cost_load_following_battery_dispatch(subtests):
-    # Fabricate some oscillating power generation data: 0 kW for the first 12 hours, 10000 kW for
+    # Fabricate some oscillating power generation data: 1000 kW for the first 12 hours, 10000 kW for
     # the second twelve hours, and repeat that daily cycle over a year.
     n_look_ahead_half = int(24 / 2)
 
@@ -109,38 +109,6 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
         }
     )
 
-    # prob.model.add_subsystem(
-    #     "combiner",
-    #     GenericCombinerPerformanceModel(plant_config=plant_config,
-    #       tech_config=tech_config["technologies"]["combiner"],
-    #     ),
-    #     promotes=["*"]
-    # )
-
-    # prob.model.add_subsystem(
-    #     "pyomo_generic_storage",
-    #     PyomoRuleStorageBaseclass(
-    #         plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
-    #     ),
-    #     promotes=["*"],
-    # )
-
-    # prob.model.add_subsystem(
-    #     "battery_optimized_dispatch_controller",
-    #     OptimizedDispatchController(
-    #         plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
-    #     ),
-    #     promotes=["*"],
-    # )
-
-    # prob.model.add_subsystem(
-    #     "battery",
-    #     PySAMBatteryPerformanceModel(
-    #         plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
-    #     ),
-    #     promotes=["*"],
-    # )
-
     # Setup the system and required values
     model.setup()
     model.prob.set_val("combiner.electricity_in1", electricity_in)
@@ -152,18 +120,18 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
     # Test the case where the charging/discharging cycle remains within the max and min SOC limits
     # Check the expected outputs to actual outputs
     expected_electricity_out = [
-        5999.99995059,
-        5990.56676743,
-        5990.138959,
-        5989.64831176,
-        5989.08548217,
-        5988.44193888,
-        5987.70577962,
-        5986.86071125,
-        5985.88493352,
-        5984.7496388,
-        5983.41717191,
-        5981.839478,
+        5999.99997732,
+        5992.25494845,
+        5991.96052468,
+        5991.63342842,
+        5991.26824325,
+        5990.86174194,
+        5990.40961477,
+        5989.90607785,
+        5989.34362595,
+        5988.71271658,
+        5988.00134229,
+        5987.19448473,
         6000.0,
         6000.0,
         6000.0,
@@ -205,20 +173,59 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
         -3993.73788536,
     ]
 
-    np.array(
+    expected_battery_soc = [
+        49.87479765,
+        47.50390223,
+        45.12932011,
+        42.75108798,
+        40.3682277,
+        37.9797332,
+        35.58459541,
+        33.18174418,
+        30.76997461,
+        28.34786178,
+        25.91365422,
+        23.4651282,
+        25.4168656,
+        27.36180226,
+        29.29938411,
+        31.23051435,
+        33.15594392,
+        35.07630244,
+        36.99212221,
+        38.90385706,
+        40.81189705,
+        42.71658006,
+        44.61820098,
+        46.517019,
+        44.14026872,
+        41.75708657,
+        39.3692475,
+        36.97562686,
+        34.57512794,
+        32.16658699,
+        29.7486839,
+        27.31984419,
+        24.87811568,
+        22.42099596,
+        19.94517118,
+        17.44609219,
+    ]
+
+    expected_unmet_demand = np.array(
         [
-            4.93562475e-05,
-            9.43323257e00,
-            9.86104099e00,
-            1.03516883e01,
-            1.09145178e01,
-            1.15580611e01,
-            1.22942204e01,
-            1.31392889e01,
-            1.41150664e01,
-            1.52503612e01,
-            1.65828282e01,
-            1.81605218e01,
+            2.26821512e-05,
+            7.74505155,
+            8.03947532,
+            8.36657158,
+            8.73175675,
+            9.13825806,
+            9.59038523,
+            1.00939222e01,
+            1.06563740e01,
+            1.12872834e01,
+            1.19986577e01,
+            1.28055153e01,
             0.00000000e00,
             0.00000000e00,
             0.00000000e00,
@@ -234,7 +241,7 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
         ]
     )
 
-    np.array(
+    expected_unused_electricity = np.array(
         [
             0.0,
             0.0,
@@ -248,18 +255,18 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
             0.0,
             0.0,
             0.0,
-            11.37764445,
-            10.76421514,
-            10.23167373,
-            9.73829458,
-            9.28323883,
-            8.86426912,
-            8.47856327,
-            8.12315078,
-            7.79514283,
-            7.49184426,
-            7.21079852,
-            6.94979705,
+            9.71882314,
+            9.25649269,
+            8.84342545,
+            8.46178756,
+            8.10924068,
+            7.78330178,
+            7.48153876,
+            7.20166441,
+            6.94158323,
+            6.69939964,
+            6.47341535,
+            6.26211464,
         ]
     )
 
@@ -275,363 +282,64 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
             == model.prob.get_val("battery.battery_electricity_discharge")[0:24]
         )
 
-    # with subtests.test("Check SOC"):
-    #     assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC")[0:24]
+    # Check a longer portion of SOC to make sure SOC is getting linked between optimization periods
+    with subtests.test("Check SOC"):
+        assert pytest.approx(expected_battery_soc) == model.prob.get_val("battery.SOC")[0:36]
 
-    # with subtests.test("Check unmet_demand"):
-    #     assert (
-    #         pytest.approx(expected_unmet_demand_out, abs=1e-4)
-    #         == prob.get_val("battery.unmet_electricity_demand_out")[0:24]
-    #     )
+    with subtests.test("Check unmet_demand"):
+        assert (
+            pytest.approx(expected_unmet_demand, abs=1e-4)
+            == model.prob.get_val("battery.unmet_electricity_demand_out")[0:24]
+        )
 
-    # with subtests.test("Check unused_electricity_out"):
-    #     assert (
-    #         pytest.approx(expected_unused_commodity_out)
-    #         == prob.get_val("battery.unused_electricity_out")[0:24]
-    #     )
+    with subtests.test("Check unused_electricity_out"):
+        assert (
+            pytest.approx(expected_unused_electricity)
+            == model.prob.get_val("battery.unused_electricity_out")[0:24]
+        )
 
-    # # Test the case where the battery is discharged to its lower SOC limit
-    # electricity_in = np.zeros(8760)
-    # demand_in = np.ones(8760) * 30000
+    # Test the case where the battery efficiency is lower
+    tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][
+        "charge_efficiency"
+    ] = 0.632
+    tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][
+        "discharge_efficiency"
+    ] = 0.632
 
-    # # Setup the system and required values
-    # prob.setup()
-    # prob.set_val("battery.electricity_in", electricity_in)
-    # prob.set_val("battery.electricity_demand", demand_in)
+    model = H2IntegrateModel(
+        {
+            "driver_config": driver_config,
+            "technology_config": tech_config,
+            "plant_config": plant_config,
+        }
+    )
 
-    # # Run the model
-    # prob.run_model()
+    # Setup the system and required values
+    model.setup()
+    model.prob.set_val("combiner.electricity_in1", electricity_in)
+    model.prob.set_val("battery.electricity_demand", demand_in)
 
-    # expected_electricity_out = np.array(
-    #     [3.00000000e04, 2.99305601e04, 2.48145097e04, 4.97901621e00, 3.04065390e01]
-    # )
-    # expected_battery_electricity_discharge = expected_electricity_out
-    # expected_SOC = np.array([37.69010284, 22.89921133, 10.00249593, 10.01524461, 10.03556385])
-    # expected_unmet_demand_out = np.array(
-    #     [
-    #         9.43691703e-09,
-    #         6.94398578e01,
-    #         5.18549025244965e03,
-    #         2.999502098378662e04,
-    #         2.9969593461021406e04,
-    #     ]
-    # )
-    # expected_unused_commodity_out = np.zeros(5)
+    # Run the model
+    model.prob.run_model()
 
-    # with subtests.test("Check electricity_out for min SOC"):
-    #     assert (
-    #         pytest.approx(expected_electricity_out) == prob.get_val("battery.electricity_out")[:5]
-    #     )
+    expected_electricity_out = [
+        5999.99997732,
+        5992.25494845,
+        5991.96052468,
+        5991.63342842,
+        5991.26824325,
+        5990.86174194,
+        5990.40961477,
+        5989.90607785,
+        5989.34362595,
+        5988.71271658,
+        1558.72773849,
+        1000.0,
+    ]
 
-    # with subtests.test("Check battery_electricity_discharge for min SOC"):
-    #     assert (
-    #         pytest.approx(expected_battery_electricity_discharge)
-    #         == prob.get_val("battery.battery_electricity_discharge")[:5]
-    #     )
-
-    # with subtests.test("Check SOC for min SOC"):
-    #     assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC")[:5]
-
-    # with subtests.test("Check unmet_demand for min SOC"):
-    #     assert (
-    #         pytest.approx(expected_unmet_demand_out, abs=1e-6)
-    #         == prob.get_val("battery.unmet_electricity_demand_out")[:5]
-    #     )
-
-    # with subtests.test("Check unused_commodity_out for min SOC"):
-    #     assert (
-    #         pytest.approx(expected_unused_commodity_out)
-    #         == prob.get_val("battery.unused_electricity_out")[:5]
-    #     )
-
-    # # Test the case where the battery is charged to its upper SOC limit
-    # electricity_in = np.ones(8760) * 30000.0
-    # demand_in = np.zeros(8760)
-
-    # # Setup the system and required values
-    # prob.setup()
-    # prob.set_val("battery.electricity_in", electricity_in)
-    # prob.set_val("battery.electricity_demand", demand_in)
-
-    # # Run the model
-    # prob.run_model()
-
-    # expected_electricity_out = [-0.008477085, 0.0, 0.0, 0.0, 0.0]
-
-    # # TODO reevaluate the output here
-    # expected_battery_electricity_discharge = np.array(
-    #     [-30000.00847709, -29973.58679719, -21109.22734423, 0.0, 0.0]
-    # )
-
-    # # expected_SOC = [66.00200558, 79.43840635, 90.0, 90.0, 90.0]
-    # expected_SOC = np.array([66.00200558, 79.43840635, 89.02326413, 89.02326413, 89.02326413])
-    # expected_unmet_demand_out = np.array([0.00847709, 0.0, 0.0, 0.0, 0.0])
-    # expected_unused_commodity_out = np.array(
-    #     [0.00000000e00, 2.64132028e01, 8.89077266e03, 3.04088135e04, 3.00564087e04]
-    # )
-    # # I think this is the right expected_electricity_out since the battery won't
-    # # be discharging in this instance
-    # # expected_electricity_out = [0.0, 0.0, 0.0, 0.0, 0.0]
-    # # # expected_electricity_out = [0.0, 0.0, 6150.14483911, 30000.0, 30000.0]
-    # # expected_battery_electricity_discharge = [-30000.00847705, -29973.58679681,
-    # # -23310.54620182, 0.0, 0.0]
-    # # expected_SOC = [66.00200558, 79.43840635, 90.0, 90.0, 90.0]
-    # # expected_unmet_demand_out = np.zeros(5)
-    # # expected_unused_commodity_out = [0.0, 0.0, 6150.14483911, 30000.0, 30000.0]
-
-    # abs_tol = 1e-6
-    # rel_tol = 1e-1
-    # with subtests.test("Check electricity_out for max SOC"):
-    #     assert (
-    #         pytest.approx(expected_electricity_out, abs=abs_tol, rel=rel_tol)
-    #         == prob.get_val("battery.electricity_out")[:5]
-    #     )
-
-    # with subtests.test("Check battery_electricity_discharge for max SOC"):
-    #     assert (
-    #         pytest.approx(expected_battery_electricity_discharge, abs=abs_tol, rel=rel_tol)
-    #         == prob.get_val("battery.battery_electricity_discharge")[:5]
-    #     )
-
-    # with subtests.test("Check SOC for max SOC"):
-    #     assert pytest.approx(expected_SOC, abs=abs_tol) == prob.get_val("battery.SOC")[:5]
-
-    # with subtests.test("Check unmet_demand for max SOC"):
-    #     assert (
-    #         pytest.approx(expected_unmet_demand_out, abs=abs_tol)
-    #         == prob.get_val("battery.unmet_electricity_demand_out")[:5]
-    #     )
-
-    # with subtests.test("Check unused_commodity_out for max SOC"):
-    #     assert (
-    #         pytest.approx(expected_unused_commodity_out, abs=abs_tol, rel=rel_tol)
-    #         == prob.get_val("battery.unused_electricity_out")[:5]
-    #     )
-
-
-# The previous subtests seem to cover basic battery dispatch behavior (max and min SOC)
-# The following tests will address the optimized dispatch calculation
-
-
-# def test_optimized_load_following_battery_dispatch(subtests):
-#     # Fabricate some oscillating power generation data: 0 kW for the first 12 hours, 10000 kW for
-#     # the second twelve hours, and repeat that daily cycle over a year.
-#     n_look_ahead_half = int(24 / 2)
-
-#     electricity_in = np.concatenate(
-#         (np.ones(n_look_ahead_half) * 1000, np.ones(n_look_ahead_half) * 100000)
-#     )
-#     electricity_in = np.tile(electricity_in, 3)
-
-#     demand_in = np.ones(72) * 6000.0
-
-#     tech_config["technologies"]["battery"] = {
-#         "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
-#         "control_strategy": {"model": "optimized_dispatch_controller"},
-#         "performance_model": {"model": "pysam_battery"},
-#         "model_inputs": {
-#             "shared_parameters": {
-#                 "max_charge_rate": 50000,
-#                 "max_capacity": 200000,
-#                 "n_control_window": 24,
-#                 "n_horizon_window": 48,
-#                 "init_charge_percent": 0.5,
-#                 "max_charge_percent": 0.9,
-#                 "min_charge_percent": 0.1,
-#                 "commodity_name": "electricity",
-#                 "commodity_storage_units": "kW",
-#                 "time_weighting_factor": 0.995,
-#                 "charge_efficiency": 0.95,
-#                 "discharge_efficiency": 0.95,
-#                 "cost_per_charge": 0.04,
-#                 "cost_per_discharge": 0.05,
-#                 "cost_per_production": 0.0,
-#                 "commodity_met_value": 0.1,
-#             },
-#             "performance_parameters": {
-#                 "system_model_source": "pysam",
-#                 "chemistry": "LFPGraphite",
-#                 "control_variable": "input_power",
-#             },
-#             "control_parameters": {
-#                 "tech_name": "battery",
-#                 "system_commodity_interface_limit": 1e12,
-#             },
-#         },
-#     }
-#     tech_config["technologies"]["combiner"] = {
-#         "performance_model": {"model": "combiner_performance"},
-#         "dispatch_rule_set": {"model": "pyomo_dispatch_generic_converter"},
-#         "model_inputs": {
-#             "performance_parameters": {
-#                 "commodity": "electricity",
-#                 "commodity_units": "kW",
-#             },
-#             "dispatch_rule_parameters": {
-#                 "commodity_name": "electricity",
-#                 "commodity_storage_units": "kW",
-#             },
-#         },
-#     }
-
-#     # Can't find the electricity in because it's not in the tech to tech connections.
-#     plant_config["plant"]["simulation"]["n_timesteps"] = 72
-#     plant_config["tech_to_dispatch_connections"] =  [
-#         ["combiner", "battery"],
-#         ["battery", "battery"],
-#     ],
-
-#     # Setup the OpenMDAO problem and add subsystems
-#     prob = om.Problem()
-
-#     prob.model.add_subsystem(
-#         "pyomo_generic_storage",
-#         PyomoRuleStorageBaseclass(
-#             plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
-#         ),
-#         promotes=["*"],
-#     )
-
-#     prob.model.add_subsystem(
-#         "battery_optimized_dispatch_controller",
-#         OptimizedDispatchController(
-#             plant_config=plant_config, tech_config=tech_config["technologies"]
-#         ),
-#         promotes=["*"],
-#     )
-
-#     prob.model.add_subsystem(
-#         "battery",
-#         PySAMBatteryPerformanceModel(
-#             plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
-#         ),
-#         promotes=["*"],
-#     )
-
-#     # Setup the system and required values
-#     prob.setup()
-#     prob.set_val("battery.electricity_in", electricity_in)
-#     prob.set_val("battery.electricity_demand", demand_in)
-#     # prob.set_val("battery_optimized_dispatch_controller.source_techs", ["combiner", "battery"])
-
-#     # Run the model
-#     prob.run_model()
-
-#     # Test the case where the charging/discharging cycle remains within the max and min SOC limits
-#     # Check the expected outputs to actual outputs
-#     expected_electricity_out = [
-#         5999.99995059,
-#         5990.56676743,
-#         5990.138959,
-#         5989.64831176,
-#         5989.08548217,
-#         5988.44193888,
-#         5987.70577962,
-#         5986.86071125,
-#         5985.88493352,
-#         5984.7496388,
-#         5983.41717191,
-#         5981.839478,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#         6000.0,
-#     ]
-
-#     np.array(
-#         [
-#             4.93562475e-05,
-#             9.43323257e00,
-#             9.86104099e00,
-#             1.03516883e01,
-#             1.09145178e01,
-#             1.15580611e01,
-#             1.22942204e01,
-#             1.31392889e01,
-#             1.41150664e01,
-#             1.52503612e01,
-#             1.65828282e01,
-#             1.81605218e01,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#             0.00000000e00,
-#         ]
-#     )
-
-#     np.array(
-#         [
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             0.0,
-#             11.37764445,
-#             10.76421514,
-#             10.23167373,
-#             9.73829458,
-#             9.28323883,
-#             8.86426912,
-#             8.47856327,
-#             8.12315078,
-#             7.79514283,
-#             7.49184426,
-#             7.21079852,
-#             6.94979705,
-#         ]
-#     )
-
-#     print("Electricity out", prob.get_val("battery.electricity_out"))
-#     print("Battery out", prob.get_val("battery.battery_electricity_discharge"))
-#     print("unmet demand", prob.get_val("battery.unmet_electricity_demand_out"))
-#     print("Unused electricity", prob.get_val("battery.unused_electricity_out"))
-
-#     with subtests.test("Check electricity_out"):
-#         assert (
-#             pytest.approx(expected_electricity_out) ==
-#               prob.get_val("battery.electricity_out")[0:24]
-#         )
-
-#     # with subtests.test("Check battery_electricity_discharge"):
-#     #     assert (
-#     #         pytest.approx(expected_battery_electricity_discharge)
-#     #         == prob.get_val("battery.battery_electricity_discharge")[0:24]
-#     #     )
-
-#     # with subtests.test("Check SOC"):
-#     #     assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC")[0:24]
-
-#     # with subtests.test("Check unmet_demand"):
-#     #     assert (
-#     #         pytest.approx(expected_unmet_demand_out, abs=1e-4)
-#     #         == prob.get_val("battery.unmet_electricity_demand_out")[0:24]
-#     #     )
-
-#     # with subtests.test("Check unused_electricity_out"):
-#     #     assert (
-#     #         pytest.approx(expected_unused_commodity_out)
-#     #         == prob.get_val("battery.unused_electricity_out")[0:24]
-#     #     )
+    # Make sure output changes if efficiency is changed
+    with subtests.test("Check electricity_out for different efficiency"):
+        assert (
+            pytest.approx(expected_electricity_out)
+            == model.prob.get_val("battery.electricity_out")[:12]
+        )

@@ -76,3 +76,57 @@ ax[1].set_xlabel("Timestep (hr)")
 plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
 plt.savefig("plot.png", dpi=300)
+
+fig, ax = plt.subplots(1, 1, sharex=True)
+
+start_hour = 0
+end_hour = 200
+
+ax.plot(
+    range(start_hour, end_hour),
+    model.prob.get_val("battery.SOC", units="percent")[start_hour:end_hour] / 100,
+    label="SOC",
+)
+ax.plot(
+    range(start_hour, end_hour),
+    model.prob.get_val("battery.battery_electricity_discharge", units="MW")[start_hour:end_hour]
+    / 100,
+    linestyle="-.",
+    label="Battery Electricity Out (MW)",
+)
+ax.set_ylabel("SOC (%)")
+# ax.set_ylim([0, 110])
+ax.axhline(y=0.0, linestyle=":", color="k", alpha=0.5, label="Zero")
+ax.legend()
+
+plt.legend(ncol=2, frameon=False)
+plt.tight_layout()
+plt.savefig("plot_battery_behavior-1.png", dpi=300)
+print(model.prob.get_val("battery.SOC", units="percent")[8700:8760] / 100)
+
+fig, ax = plt.subplots(1, 1, sharex=True)
+
+start_hour = 8600
+end_hour = 8760
+
+ax.plot(
+    range(start_hour, end_hour),
+    model.prob.get_val("battery.SOC", units="percent")[start_hour:end_hour] / 100,
+    label="SOC",
+)
+ax.plot(
+    range(start_hour, end_hour),
+    model.prob.get_val("battery.battery_electricity_discharge", units="MW")[start_hour:end_hour]
+    / 100,
+    linestyle="-.",
+    label="Battery Electricity Out (MW)",
+)
+ax.set_ylabel("SOC (%)")
+# ax.set_ylim([0, 110])
+ax.axhline(y=0.0, linestyle=":", color="k", alpha=0.5, label="Zero")
+ax.legend()
+
+plt.legend(ncol=2, frameon=False)
+plt.tight_layout()
+plt.savefig("plot_battery_behavior_end-1.png", dpi=300)
+print(model.prob.get_val("battery.SOC", units="percent")[8700:8760] / 100)
