@@ -13,7 +13,7 @@ cost:
   martin_ore:
     compatible_tech: ['h2_dri','ng_dri']
     model: 'h2integrate.converters.iron.martin_ore.cost_model'
-    inputs: 'cost_inputs_old.csv'
+    inputs: 'cost_inputs.csv'
     coeffs: 'cost_coeffs.csv'
   rosner:
     compatible_tech: ['h2_dri','ng_dri']

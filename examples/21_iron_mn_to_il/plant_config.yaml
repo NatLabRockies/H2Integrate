@@ -13,8 +13,6 @@ technology_interconnections: [
   # Connect iron_ore price and processed_ore_feedstock to iron_transport
   ["finance_subgroup_iron_ore","processed_ore_feedstock",["price_iron_ore","price"]],
   ["processed_ore_feedstock","iron_plant","iron_ore","iron_transport"],
-  # 'iron_transport.iron_ore_in' is connected to 'processed_ore_feedstock_source.iron_ore_out'
-  # but it SHOULD be connected to 'processed_ore_feedstock_source.iron_ore_consumed'
   ["dri_grid_feedstock","iron_plant","electricity","cable"],
   ["catalyst_feedstock","iron_plant","reformer_catalyst","pipe"],
   ["water_feedstock","iron_plant","water","pipe"],
