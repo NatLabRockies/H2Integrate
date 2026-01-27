@@ -173,14 +173,14 @@ def save_case_timeseries_as_csv(
             continue
 
         # skip discrete inputs/outputs (like resource data)
-        if isinstance(val, (dict, pd.DataFrame, pd.Series)):
+        if isinstance(val, dict | pd.DataFrame | pd.Series):
             continue
 
         # skip scalar data
-        if isinstance(val, (int, float, str, bool)):
+        if isinstance(val, int | float | str | bool):
             continue
 
-        if isinstance(val, (np.ndarray, list, tuple)):
+        if isinstance(val, np.ndarray | list | tuple):
             if len(val) > 1:
                 user_units = None
                 alternative_name = None

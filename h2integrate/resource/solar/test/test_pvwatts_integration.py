@@ -3,6 +3,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
+from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.resource.solar.nrel_developer_himawari_api_models import (
     Himawari7SolarAPI,
     Himawari8SolarAPI,
@@ -176,6 +177,23 @@ def himawari8_site_config():
     return himawari8_site
 
 
+@fixture
+def openmeteo_site_config():
+    site = {
+        "latitude": 44.04218,
+        "longitude": -95.19757,
+        "resources": {
+            "solar_resource": {
+                "resource_model": "openmeteo_solar_api",
+                "resource_parameters": {
+                    "resource_year": 2023,
+                },
+            }
+        },
+    }
+    return site
+
+
 def test_pvwatts_with_himawari7(
     pysam_performance_model, plant_simulation_config, himawari7_site_config, subtests
 ):
@@ -346,3 +364,37 @@ def test_pvwatts_with_meteosat_pm_tmy(
     with subtests.test("Site longitude"):
         resource_lat = prob.get_val("pv_perf.solar_resource_data").get("site_lon", 0)
         assert pytest.approx(resource_lat, rel=1e-3) == tmy_site_config["longitude"]
+
+
+def test_pvwatts_with_openmeteo_solar(
+    pysam_performance_model, plant_simulation_config, openmeteo_site_config, subtests
+):
+    plant_config = {
+        "site": openmeteo_site_config,
+        "plant": plant_simulation_config,
+    }
+
+    prob = om.Problem()
+    resource_comp = OpenMeteoHistoricalSolarResource(
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("solar_resource", resource_comp, promotes=["*"])
+    prob.model.add_subsystem("pv_perf", pysam_performance_model, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+
+    with subtests.test("AEP"):
+        assert pytest.approx(aep, rel=1e-6) == 443558.17053592583
+
+    with subtests.test("Site latitude"):
+        resource_lat = prob.get_val("pv_perf.solar_resource_data").get("site_lat", 0)
+        assert pytest.approx(resource_lat, rel=1e-3) == openmeteo_site_config["latitude"]
+
+    with subtests.test("Site longitude"):
+        resource_lat = prob.get_val("pv_perf.solar_resource_data").get("site_lon", 0)
+        assert pytest.approx(resource_lat, rel=1e-3) == openmeteo_site_config["longitude"]

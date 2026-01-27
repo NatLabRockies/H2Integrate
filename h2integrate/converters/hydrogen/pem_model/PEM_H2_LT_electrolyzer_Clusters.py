@@ -21,6 +21,7 @@ Energy: 1 kg H2 --> 16 kWh
 """
 
 import sys
+import warnings
 
 import numpy as np
 import scipy
@@ -673,6 +674,7 @@ class PEM_H2_Clusters:
         # curve_coeff, curve_cov = scipy.optimize.curve_fit(
         #     calc_current, (powers, temps_C), currents, p0=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
         # )  # updates IV curve coeff
+        warnings.filterwarnings("ignore", category=scipy.optimize.OptimizeWarning)
         curve_coeff, curve_cov = scipy.optimize.curve_fit(
             calc_current,
             (df["Power"][temp_oi_idx].values, df["Temp"][temp_oi_idx].values),

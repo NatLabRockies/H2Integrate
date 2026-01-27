@@ -1,0 +1,47 @@
+name: "driver_config"
+description: "This analysis runs a hybrid plant to match the first example in H2Integrate"
+
+general:
+  folder_output: outputs
+
+general:
+  folder_output: ex_28_out
+  create_om_reports: false
+driver:
+  design_of_experiments:
+    flag: true
+    debug_print: true
+    generator: "csvgen"
+    filename: "ned_reduced_sitelist.csv"
+    run_parallel: False
+design_variables:
+  site:
+    latitude:
+      flag: True
+      units: "deg"
+      lower: -90.0
+      upper: 90.0
+    longitude:
+      flag: True
+      units: "deg"
+      lower: -180.0
+      upper: 180.0
+  iron:
+    LCOE:
+      flag: True
+      units: "USD/MW/h"
+      lower: 0
+      upper: 100
+    LCOH:
+      flag: True
+      units: "USD/kg"
+      lower: 0
+      upper: 10
+objective:
+  name: iron.LCOI
+recorder:
+    file: cases.sql
+    overwrite_recorder: true
+    flag: true
+    includes: ['site.latitude','site.longitude','iron.LCOI']
+    excludes: ['*']

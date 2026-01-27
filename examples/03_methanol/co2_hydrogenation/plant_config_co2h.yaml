@@ -1,18 +1,19 @@
 name: "plant_config"
 description: "This plant is located west of the Wolf Hollow II NGCC power plant in Texas"
 
-site:
-  latitude: 32.31714
-  longitude: -100.18
-  resources:
-    wind_resource:
-      resource_model: "wind_toolkit_v2_api"
-      resource_parameters:
-        resource_year: 2013
-    solar_resource:
-      resource_model: "goes_aggregated_solar_v4_api"
-      resource_parameters:
-        resource_year: 2013
+sites:
+  site:
+    latitude: 32.31714
+    longitude: -100.18
+    resources:
+      wind_resource:
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2013
+      solar_resource:
+        resource_model: "goes_aggregated_solar_v4_api"
+        resource_parameters:
+          resource_year: 2013
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
@@ -28,8 +29,8 @@ technology_interconnections: [
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
-  ["solar_resource", "solar", "solar_resource_data"]
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
+  ["site.solar_resource", "solar", "solar_resource_data"]
 ]
 
 plant:

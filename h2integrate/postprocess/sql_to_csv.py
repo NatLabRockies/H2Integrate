@@ -45,12 +45,12 @@ def summarize_case(case, return_units=False):
         val = case.get_val(var)
 
         # if discrete variable, don't include units
-        if isinstance(val, (int, float, str, bool)):
+        if isinstance(val, int | float | str | bool):
             var_to_values.update({var: val})
             continue
 
         # skip resource data
-        if isinstance(val, (dict, pd.DataFrame, pd.Series)):
+        if isinstance(val, dict | pd.DataFrame | pd.Series):
             continue
 
         # save variable om for first year

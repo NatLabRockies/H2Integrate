@@ -83,11 +83,11 @@ def simple_types(indict: dict) -> dict:
             return convert(value.tolist())
         elif isinstance(value, dict):
             return {key: convert(value) for key, value in value.items()}
-        elif isinstance(value, (list, tuple, set)):
+        elif isinstance(value, list | tuple | set):
             return [convert(item) for item in value]  # treat all as list
         elif isinstance(value, (np.generic)):
             return value.item()  # convert numpy primitives to python primitive underlying
-        elif isinstance(value, (float, int, bool, str)):
+        elif isinstance(value, float | int | bool | str):
             return value  # this should be the end case
         else:
             return ""
