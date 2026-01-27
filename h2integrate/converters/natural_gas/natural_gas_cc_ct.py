@@ -1,10 +1,13 @@
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, gte_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define(kw_only=True)
@@ -29,7 +32,7 @@ class NaturalGasPerformanceConfig(BaseConfig):
     heat_rate_mmbtu_per_mwh: float = field(validator=gt_zero)
 
 
-class NaturalGasPerformanceModel(om.ExplicitComponent):
+class NaturalGasPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for natural gas power plants.
 
@@ -59,6 +62,11 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        self.commodity = "electricity"
+        self.commodity_rate_units = "MW"
+        self.commodity_amount_units = "MW*h"
+        super().setup()
+
         self.config = NaturalGasPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -74,13 +82,13 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
         )
 
         # Add electricity output
-        self.add_output(
-            "electricity_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="MW",
-            desc="Electricity output from natural gas plant",
-        )
+        # self.add_output(
+        #     "electricity_out",
+        #     val=0.0,
+        #     shape=n_timesteps,
+        #     units="MW",
+        #     desc="Electricity output from natural gas plant",
+        # )
 
         # Add heat_rate as an OpenMDAO input with config value as default
         self.add_input(
@@ -100,10 +108,10 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
 
         # Default the electricity demand input as the rated capacity
         self.add_input(
-            "electricity_demand",
+            f"{self.commodity}_demand",
             val=self.config.system_capacity_mw,
             shape=n_timesteps,
-            units="MW",
+            units=self.commodity_rate_units,
             desc="Electricity demand for natural gas plant",
         )
 
@@ -158,6 +166,16 @@ class NaturalGasPerformanceModel(om.ExplicitComponent):
 
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
+
+        outputs["rated_electricity_production"] = inputs["system_capacity"]
+
+        max_production = inputs["system_capacity"] * len(electricity_out) * (self.dt / 3600)
+
+        outputs["total_electricity_produced"] = np.sum(electricity_out) * (self.dt / 3600)
+        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
+        outputs["annual_electricity_produced"] = (
+            outputs["total_electricity_produced"] * self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
