@@ -24,46 +24,9 @@ Detailed information on setting up the `driver_config.yaml` file can be found in
 The driver config file defines the analysis type and the optimization or design of experiments settings.
 For completeness, here is an example of a driver config file for a design of experiments problem:
 
-```yaml
-name: "driver_config"
-description: "Runs a design sweep"
-
-general:
-  folder_output: outputs
-
-driver:
-  design_of_experiments:
-    flag: True
-    generator: "csvgen" #type of generator to use
-    filename: "" #this input is specific to the "csvgen" generator
-    debug_print: False
-
-design_variables:
-  solar:
-    system_capacity_DC:
-      flag: true
-      lower: 5000.0
-      upper: 5000000.0
-      units: "kW"
-  electrolyzer:
-    n_clusters:
-      flag: true
-      lower: 1
-      upper: 25
-      units: "unitless"
-
-constraints: #constraints are not used within the design of experiments run
-# but are accessible in the recorder file as constraint variables
-
-objective: #the objective is not used within the design of experiments run
-# but is accessible in the recorder file as the objective
-  name: finance_subgroup_hydrogen.LCOH
-
-recorder:
-  file: "cases.sql"
-  flag: True
-  includes: ["*"]
-  excludes: ['*_resource*']
+```{literalinclude} ../../examples/22_site_doe/driver_config.yaml
+:language: yaml
+:linenos: true
 ```
 
 ## Types of Generators
@@ -164,7 +127,7 @@ This `csvgen` generator example reflects the work to produce the `examples/20_so
 example.
 
 We use the `examples/20_solar_electrolyzer_doe/driver_config.yaml` to run a design of experiments for
-varying combinations of solar power and hydrogen electrolzer capacities.
+varying combinations of solar power and hydrogen electrolyzer capacities.
 
 ```{literalinclude} ../../examples/20_solar_electrolyzer_doe/driver_config.yaml
 :language: yaml
@@ -173,7 +136,7 @@ varying combinations of solar power and hydrogen electrolzer capacities.
 :lines: 4-26
 ```
 
-The different combinations of solar and electrolzyer capacities are listed in the csv file `examples/20_solar_electrolyzer_doe/csv_doe_cases.csv`:
+The different combinations of solar and electrolyzer capacities are listed in the csv file `examples/20_solar_electrolyzer_doe/csv_doe_cases.csv`:
 
 ```{literalinclude} ../../examples/20_solar_electrolyzer_doe/csv_doe_cases.csv
 :language: csv
@@ -193,7 +156,7 @@ from h2integrate.core.inputs.validation import load_driver_yaml, write_yaml
 
 ##### Setup and first attempt
 
-First, we need to update the relative file refrerences to ensure the demonstration works.
+First, we need to update the relative file references to ensure the demonstration works.
 
 ```{code-cell} ipython3
 EXAMPLE_DIR = Path("../../examples/20_solar_electrolyzer_doe").resolve()

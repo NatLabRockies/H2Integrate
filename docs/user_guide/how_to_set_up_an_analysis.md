@@ -23,14 +23,9 @@ The top-level config file is the main entry point for H2Integrate.
 Its main purpose is to define the analysis type and the configuration files for the different components of the analysis.
 Here is an example of a top-level config file:
 
-```yaml
-name: H2Integrate_config
-
-system_summary: This reference hybrid plant is located in Minnesota and contains wind, solar, and battery storage technologies. The system is designed to produce hydrogen using an electrolyzer and also produce steel using a grid-connected plant.
-
-driver_config: driver_config.yaml
-technology_config: tech_config.yaml
-plant_config: plant_config.yaml
+```{literalinclude} ../../examples/08_wind_electrolyzer/wind_plant_electrolyzer.yaml
+:language: yaml
+:linenos: true
 ```
 
 The top-level config file contains the following keys:
@@ -60,12 +55,9 @@ More information about file handling in H2I can be found [here](https://h2integr
 The driver config file defines the analysis type and the optimization settings.
 If you are running a basic analysis and not an optimization, the driver config file is quite straightforward and might look like this:
 
-```yaml
-name: driver_config
-description: This analysis runs a hybrid plant to match the first example in H2Integrate
-
-general:
-  folder_output: outputs
+```{literalinclude} ../../examples/08_wind_electrolyzer/driver_config.yaml
+:language: yaml
+:linenos: true
 ```
 
 If you are running an optimization, the driver config file will contain additional keys to define the optimization settings, including design variables, constraints, and objective functions.
@@ -75,48 +67,16 @@ Further details of more complex instances of the driver config file can be found
 
 The technology config file defines the technologies included in the analysis, their modeling parameters, and the performance, cost, and financial models used for each technology.
 The yaml file is organized into sections for each technology included in the analysis under the `technologies` heading.
-Here is an example of part of a technology config that is defining an energy system with only one technology, an electrolyzer:
+Here is an example of a technology config that is defining an energy system with wind and electrolyzer technologies:
 
-```yaml
-name: technology_config
-description: This hybrid plant produces steel
-
-technologies:
-  electrolyzer:
-    performance_model:
-      model: eco_pem_electrolyzer_performance
-    cost_model:
-      model: eco_pem_electrolyzer_cost
-    model_inputs:
-      shared_parameters:
-        location: onshore
-        electrolyzer_capex: 2000 # $/kW overnight installed capital costs
-
-      performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: BOL #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
-        n_clusters: 13
-        cluster_rating_MW: 40
-        eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 77600 #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
-
-      cost_parameters:
-        cost_model: singlitico2021
-
-      financial_parameters:
-        capital_items:
-          depr_period: 7
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
+```{literalinclude} ../../examples/08_wind_electrolyzer/tech_config.yaml
+:language: yaml
+:linenos: true
 ```
 
-Here, we have defined a electrolyzer model that uses the built-in `eco_pem_electrolyzer_performance` and `eco_pem_electrolyzer_cost` models.
+Here, we have defined a wind plant using the `pysam_wind_plant_performance` and `atb_wind_cost` models, and an electrolyzer using the `eco_pem_electrolyzer_performance` and `singlitico_electrolyzer_cost` models.
 The `performance_model` and `cost_model` keys define the models used for the performance and cost calculations, respectively.
 The `model_inputs` key contains the inputs for the models, which are organized into sections for shared parameters, performance parameters, cost parameters, and financial parameters.
-Here, we do not define the `financial_model` key, so the default financial model from ProFAST is used.
 
 The `shared_parameters` section contains parameters that are common to all models, such as the rating and location of the technology.
 These values are defined once in the `shared_parameters` section and are used by all models that reference them.
@@ -138,59 +98,24 @@ The different models are defined in the `supported_models.py` file in the `h2int
 
 The plant config file defines the system configuration, any parameters that might be shared across technologies, and how the technologies are connected together.
 
-Here is a snippet of an example plant config file:
+Here is an example plant config file:
 
-```yaml
-name: plant_config
-description: This plant is located in MN, USA
-
-site:
-  latitude: 47.5233
-  longitude: -92.5366
-  elevation_m: 439.0
-
-# array of arrays containing left-to-right technology
-# interconnections; can support bidirectional connections
-# with the reverse definition.
-# this will naturally grow as we mature the interconnected tech
-technology_interconnections: [
-  ["wind", "electrolyzer", "electricity", "cable"],
-  ["electrolyzer", "h2_storage", "efficiency"],
-  ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
-  ["finance_subgroup_1", "steel", "LCOH"],
-  ["wind", "steel", "electricity", "cable"],
-  # etc
-]
-
-plant:
-  plant_life: 30
-  grid_connection: False # option, can be turned on or off
-  ppa_price: 0.025 # $/kWh
-  hybrid_electricity_estimated_cf: 0.492
-
-
-finance_parameters:
-  finance_model: "ProFastComp"
-  model_inputs:
-    params:
-      analysis_start_year: 2032
-      installation_time: 36 # months
-  cost_adjustment_parameters:
-    target_dollar_year: 2022
-    cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
-  inflation_rate: 0.0 # 0 for nominal analysis
-...
+```{literalinclude} ../../examples/08_wind_electrolyzer/plant_config.yaml
+:language: yaml
+:linenos: true
 ```
 
-The `site` section contains the site parameters, such as the latitude, longitude, elevation, and time zone.
-The `plant` section contains the plant parameters, such as the plant life, grid connection, PPA price, and installation time.
+The `sites` section contains the site parameters, such as the latitude and longitude, and defines the resources available at each site (e.g., wind or solar resource data).
+The `plant` section contains the plant parameters, such as the plant life.
 The `finance_parameters` section contains the financial parameters used across the plant, such as the inflation rates, financing terms, and other financial parameters.
 
-The `technology_interconnections` section contains the interconnections between the technologies in the system and is the most complex part of the plant config file.
-The interconnections are defined as an list of lists, where each sub-list defines a connection between two technologies.
+The `technology_interconnections` section contains the interconnections between the technologies in the system.
+The interconnections are defined as a list of lists, where each sub-list defines a connection between two technologies.
 The first entry in the list is the technology that is providing the input to the next technology in the list.
-If the list is length 4, then the third entry in the list is what's passing passed via a transporter of the type defined in the fourth entry.
+If the list is length 4, then the third entry in the list is what's being passed via a transporter of the type defined in the fourth entry.
 If the list is length 3, then the third entry in the list is what is connected directly between the technologies.
+
+The `resource_to_tech_connections` section defines how resources (like wind or solar data) are connected to the technologies that use them.
 
 ```{note}
 For more information on how to define and interpret technology interconnections, see the {ref}`connecting_technologies` page.

@@ -54,37 +54,12 @@ tech_config = load_tech_yaml(tech_config_path)
 
 This example uses the "pysam_wind_plant_performance" performance model for the wind plant. Currently, the performance model is using an 8.3MW wind turbine with a rotor diameter of 196 meters and a hub-height of 130 meters. This information is defined in the `tech_config` file:
 
-```yaml
-technologies:
-  wind:
-    performance_model:
-      model: "pysam_wind_plant_performance"
-    cost_model:
-      model: "atb_wind_cost"
-    model_inputs:
-      performance_parameters:
-        num_turbines: 100
-        turbine_rating_kw: 8300
-        rotor_diameter: 196.
-        hub_height: 130.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
-        pysam_options: !include "pysam_options_8.3MW.yaml"
-        run_recalculate_power_curve: False
-        layout:
-          layout_mode: "basicgrid"
-          layout_options:
-            row_D_spacing: 10.0
-            turbine_D_spacing: 10.0
-            rotation_angle_deg: 0.0
-            row_phase_offset: 0.0
-            layout_shape: "square"
-      cost_parameters:
-        capex_per_kW: 1500.0
-        opex_per_kW_per_year: 45
-        cost_year: 2019
+```{literalinclude} ../../examples/08_wind_electrolyzer/tech_config.yaml
+:language: yaml
+:lineno-start: 4
+:linenos: true
+:lines: 4-31
 ```
-
 
 If we want to replace the 8.3 MW turbine with the NREL 5 MW turbine, we can do so using the `export_turbine_to_pysam_format()` function:
 
