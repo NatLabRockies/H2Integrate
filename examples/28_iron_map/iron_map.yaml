@@ -1,0 +1,7 @@
+name: "H2Integrate_config"
+
+system_summary: "This reference hybrid plant is located in Minnesota and contains wind, solar, and battery storage technologies. The system is designed to produce hydrogen using an electrolyzer and also produce steel using a grid-connected plant."
+
+driver_config: "driver_config.yaml"
+technology_config: "tech_config.yaml"
+plant_config: "plant_config.yaml"

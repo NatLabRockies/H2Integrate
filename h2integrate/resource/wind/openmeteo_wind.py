@@ -338,6 +338,3 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass

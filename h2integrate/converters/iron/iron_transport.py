@@ -77,8 +77,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         return land_transport_distance
 
     def compute(self, inputs, outputs):
-        lat = self.options["plant_config"].get("site", {}).get("latitude")
-        lon = self.options["plant_config"].get("site", {}).get("longitude")
+        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
+        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
         site_location = (lat, lon)
         shipping_coord_fpath = (
             ROOT_DIR / "converters" / "iron" / "martin_transport" / "shipping_coords.csv"
