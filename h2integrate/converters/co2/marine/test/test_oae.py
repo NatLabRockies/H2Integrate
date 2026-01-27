@@ -41,10 +41,11 @@ class TestOAEPerformanceModel(unittest.TestCase):
 
         plant_config = {
             "plant": {
+                "plant_life": 30,
                 "simulation": {
                     "n_timesteps": 8760,
                     "dt": 3600,
-                }
+                },
             }
         }
 
@@ -91,7 +92,16 @@ class TestOAEPerformanceModelNoMCM(unittest.TestCase):
         )
 
         try:
-            self.model = OAEPerformanceModel(plant_config={}, tech_config={})
+            plant_config = {
+                "plant": {
+                    "plant_life": 30,
+                    "simulation": {
+                        "n_timesteps": 8760,
+                        "dt": 3600,
+                    },
+                }
+            }
+            self.model = OAEPerformanceModel(plant_config=plant_config, tech_config={})
         except ImportError as e:
             self.assertIn(
                 "The `mcm` package is required to use the Ocean Alkalinity Enhancement model."

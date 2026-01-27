@@ -216,7 +216,7 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
         outputs["co2_out"] = oae_outputs.OAE_outputs["mass_CO2_absorbed"]
         outputs["rated_co2_production"] = max(range_outputs.S1["mass_CO2_absorbed"])  # kg/h
-        outputs["total_co2_produced"] = outputs["co2_out"]
+        outputs["total_co2_produced"] = outputs["co2_out"].sum()
 
         max_production = outputs["rated_co2_production"] * len(outputs["co2_out"])
         outputs["annual_co2_produced"] = (

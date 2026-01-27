@@ -34,6 +34,15 @@ class TestDOCPerformanceModel(unittest.TestCase):
                 },
             },
         }
+        plant_config = {
+            "plant": {
+                "plant_life": 30,
+                "simulation": {
+                    "n_timesteps": 8760,  # Default number of timesteps for the simulation
+                    "dt": 3600,
+                },
+            },
+        }
 
         driver_config = {
             "general": {
@@ -42,7 +51,7 @@ class TestDOCPerformanceModel(unittest.TestCase):
         }
 
         doc_model = DOCPerformanceModel(
-            driver_config=driver_config, plant_config={}, tech_config=self.config
+            driver_config=driver_config, plant_config=plant_config, tech_config=self.config
         )
         self.prob = om.Problem(model=om.Group())
         self.prob.model.add_subsystem("DOC", doc_model, promotes=["*"])
@@ -78,7 +87,16 @@ class TestDOCPerformanceModelNoMCM(unittest.TestCase):
         from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
 
         try:
-            self.model = DOCPerformanceModel(plant_config={}, tech_config={})
+            plant_config = {
+                "plant": {
+                    "plant_life": 30,
+                    "simulation": {
+                        "n_timesteps": 8760,  # Default number of timesteps for the simulation
+                        "dt": 3600,
+                    },
+                },
+            }
+            self.model = DOCPerformanceModel(plant_config=plant_config, tech_config={})
         except ImportError as e:
             self.assertIn(
                 "The `mcm` package is required to use the Direct Ocean Capture model."
