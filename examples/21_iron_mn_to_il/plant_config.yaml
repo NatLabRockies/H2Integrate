@@ -8,17 +8,13 @@ sites:
 
 technology_interconnections: [
   # Connect feedstocks to iron mine.
-  ["grid_feedstock","iron_mine","electricity","cable"],
-  ["mine_feedstock","iron_mine","crude_ore","pipe"],
-  # Connect iron_ore price to ore_feedstock
-  ["finance_subgroup_iron_ore","ore_feedstock",["price_iron_ore","price"]],
-  # Connect iron_ore flow to iron transport - need to split off how much the iron_plant needs
-  ["iron_mine","ore_splitter","iron_ore","pipe"],
-  ["iron_mine","ore_splitter","total_iron_ore_produced"],
-  ["iron_plant","ore_splitter",["iron_ore_consumed","prescribed_commodity_to_priority_tech"]],
-  ["ore_splitter","iron_transport","iron_ore","pipe"],
-  # Connect feedstocks to iron plant
-  ["ore_feedstock","iron_plant","iron_ore","pipe"],
+  ["mine_electricity_feedstock","iron_mine","electricity","cable"],
+  ["mine_crude_ore_feedstock","iron_mine","crude_ore","pipe"],
+  # Connect iron_ore price and processed_ore_feedstock to iron_transport
+  ["finance_subgroup_iron_ore","processed_ore_feedstock",["price_iron_ore","price"]],
+  ["processed_ore_feedstock","iron_plant","iron_ore","iron_transport"],
+  # 'iron_transport.iron_ore_in' is connected to 'processed_ore_feedstock_source.iron_ore_out'
+  # but it SHOULD be connected to 'processed_ore_feedstock_source.iron_ore_consumed'
   ["dri_grid_feedstock","iron_plant","electricity","cable"],
   ["catalyst_feedstock","iron_plant","reformer_catalyst","pipe"],
   ["water_feedstock","iron_plant","water","pipe"],
@@ -66,13 +62,12 @@ finance_parameters:
     iron_ore:
       commodity: "iron_ore"
       commodity_stream: "iron_mine"
-      technologies: ["iron_mine", "grid_feedstock", "mine_feedstock"]
-      technologies: ["iron_mine", "grid_feedstock", "mine_feedstock"]
+      technologies: ["iron_mine", "mine_electricity_feedstock", "mine_crude_ore_feedstock"]
     pig_iron:
       commodity: "pig_iron"
       commodity_stream: "iron_plant"
       technologies:
-      - "ore_feedstock"
+      - "processed_ore_feedstock"
       - "iron_transport"
       - "iron_plant"
       - "dri_grid_feedstock"
@@ -83,7 +78,7 @@ finance_parameters:
       commodity: "steel"
       commodity_stream: "steel_plant"
       technologies:
-      - "ore_feedstock"
+      - "processed_ore_feedstock"
       - "iron_transport"
       - "iron_plant"
       - "dri_grid_feedstock"

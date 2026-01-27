@@ -63,10 +63,8 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
 
     The priority_tech parameter determines which technology receives the primary allocation.
     The outputs are:
-    - {commodity}_out1: profile of commodity sent to the first technology
-    - {commodity}_out2: profile of commodity sent to the second technology
-    - total_{commodity}_produced1: total commodity sent to the first technology
-    - total_{commodity}_produced2: total commodity sent to the second technology
+    - {commodity}_out1: commodity sent to the first technology
+    - {commodity}_out2: commodity sent to the second technology
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
@@ -88,12 +86,6 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             val=0.0,
             shape_by_conn=True,
             units=self.config.commodity_units,
-        )
-        self.add_input(
-            f"total_{self.config.commodity}_produced",
-            val=-1.0,
-            units=self.config.commodity_units,
-            desc=f"Total {self.config.commodity} input to the splitter",
         )
 
         split_mode = self.config.split_mode
@@ -127,18 +119,6 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             units=self.config.commodity_units,
             desc=f"{self.config.commodity} output to the second technology",
         )
-        # self.add_output(
-        #     f"total_{self.config.commodity}_produced1",
-        #     val=-1.0,
-        #     units=self.config.commodity_units,
-        #     desc=f"Total {self.config.commodity} output to the first technology",
-        # )
-        # self.add_output(
-        #     f"total_{self.config.commodity}_produced2",
-        #     val=-1.0,
-        #     units=self.config.commodity_units,
-        #     desc=f"Total {self.config.commodity} output to the second technology",
-        # )
 
     def compute(self, inputs, outputs):
         commodity_in = inputs[f"{self.config.commodity}_in"]
