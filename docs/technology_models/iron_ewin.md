@@ -25,23 +25,34 @@ To use this model, specify `"humbert_electrowinning_performance"` as the perform
 The performance model will Humbert et al.'s energy consumption data to consume electricity as a feedstock and feed this information to the cost model.
 The cost model will calculate capex costs based on the Stinn correlations and opex costs based on the Humbert SI.
 
-## Shared Parameters
+## Performance Model
 
-- `electrolysis_type`: The type of electrolysis used for electrowinning. Options are:
-    - `"ahe"`: Aqueous Hydroxide Electrolysis
-    - `"mse"`: Molten Salt Electrolysis
-    - `"moe"`: Molten Oxide Electrolysis
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinConfig
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
 
-# Performance Parameters
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponent
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
 
-- `ore_fe_wt_pct`: The percentage by weight of iron in the input ore.
-- `capacity_mw`: The electrical capacity in MW of the electrowinning plant.
+## Cost Model
 
-## Cost Parameters
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostConfig
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
 
-None. The `cost_year` is automatically set to 2018 to match the Stinn/Allanore source values. Be sure to set `target_dollar_year` in the `finanace_parameters` to match your desired output dollar year in the finance calculations.
-
-## Required Feedstocks
-
-- `iron_ore_in`: Iron ore to be used for electrowinning.
-- `electricity_in`: Electricity used to reduce iron ore to sponge iron.
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```

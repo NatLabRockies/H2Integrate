@@ -52,9 +52,11 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
     """OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
 
     Default values for many inputs are set for 3 technology classes:
-        - Aqueous Hydroxide Electrolysis (AHE)
-        - Molten Salt Electrolysis (MSE)
-        - Molten Oxide Electrolysis (MOE)
+
+    - Aqueous Hydroxide Electrolysis (AHE)
+    - Molten Salt Electrolysis (MSE)
+    - Molten Oxide Electrolysis (MOE)
+
     All of these values come from the SI spreadsheet for the Humbert paper that can be downloaded
     at doi.org/10.1007/s40831-024-00878-3 except for the default anode replacement interval.
     These are exposed to OpenMDAO for potential future optimization/sensitivity analysis.
@@ -63,13 +65,15 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
     CapEx is calculated using the Stinn & Allanore model.
     OpEx is calculated using the Humbert et al. model.
 
-    Inputs:
-        output_capacity (float):
+    Attributes:
+        OpenMDAO Inputs:
+
+        output_capacity (float): Maximum annual iron production capacity in kg/year.
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
-        iron_transport_cost (float):
-        price_iron_ore (float)
+        iron_transport_cost (float): Cost to transport iron ore in USD/kg.
+        price_iron_ore (float): Price of iron ore in USD/kg.
         electricity_in (array): Electric power input available in kW for each timestep.
-        price_electricity (float):
+        price_electricity (float): Price of electricity in USD/kWh.
         specific_energy_electrolysis (float): The specific electrical energy consumption required
             to win pure iron (Fe) from iron ore - JUST the electrolysis step.
         electrolysis_temp (float): Electrolysis temperature (°C).
@@ -84,9 +88,10 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         CaCl2_ratio (float): Ratio of CaCl2 consumed to Fe produced.
         limestone_ratio (float): Ratio of limestone consumed to Fe produced.
         anode_ratio (float): Ratio of anode mass to annual iron production.
-        anode_replacement_interval (float): Replacement interval of anodes (years)
+        anode_replacement_interval (float): Replacement interval of anodes (years).
 
-    Outputs:
+        OpenMDAO Outputs:
+
         CapEx (float): Total capital cost of the electrowinning plant (USD).
         OpEx (float): Yearly operating expenses in USD/year which do NOT depend on plant output.
         VarOpEx (float): Yearly operating expenses in USD/year which DO depend on plant output.
@@ -100,6 +105,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         anode_opex (float): Portion of the opex that is apportioned to anodes.
         ore_opex (float): Portion of the opex that is apportioned to ore.
         elec_opex (float): Portion of the opex that is apportioned to electricity.
+
     """
 
     def initialize(self):

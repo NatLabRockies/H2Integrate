@@ -48,7 +48,9 @@ class HumbertEwinConfig(BaseConfig):
 class HumbertEwinPerformanceComponent(om.ExplicitComponent):
     """OpenMDAO component for the Humbert iron electrowinning performance model.
 
-    Inputs:
+    Attributes:
+        OpenMDAO Inputs:
+
         electricity_in (array): Electric power input available in kW for each timestep.
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
         ore_fe_concentration (float): The iron content of the ore coming in, given as a percentage.
@@ -58,7 +60,8 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
             OpenMDAO variable to probe the effect of specific energy consumption on iron cost.
         capacity (float): The electrical capacity of the electrowinning plant in MW.
 
-    Outputs:
+        OpenMDAO Outputs:
+
         electricity_consumed (array): Electric power consumption in kW for each timestep.
         limiting_input (array): An array of integers indicating which input is the limiting factor
             for iron production at each timestep: 0 = iron ore, 1 = electricity, 2 = capacity
