@@ -10,41 +10,28 @@ properties:
   description:
     type: string
     description: Description of the plant configuration
-  site:
+  sites:
     type: object
     properties:
-      latitude:
-        type: number
-        description: Latitude of the site in decimal degrees
-        minimum: -90
-        maximum: 90
-      longitude:
-        type: number
-        description: Longitude of the site in decimal degrees
-        minimum: -180
-        maximum: 180
-      elevation_m:
-        type: number
-        description: Elevation of the site in meters
-        minimum: 0
-      boundaries:
-        type: array
-        description: Array of polygons defining boundaries with x/y coordinates
-        items:
-          type: object
-          properties:
-            x:
-              type: array
-              items:
-                type: number
-              description: X coordinates of the boundary polygon
-            y:
-              type: array
-              items:
-                type: number
-              description: Y coordinates of the boundary polygon
-          required: ["x", "y"]
-    required: ["latitude", "longitude"]
+      site:
+        type: object
+        default: {}
+        properties:
+          latitude:
+            type: number
+            description: Latitude of the site in decimal degrees
+            minimum: -90
+            maximum: 90
+          longitude:
+            type: number
+            description: Longitude of the site in decimal degrees
+            minimum: -180
+            maximum: 180
+          elevation:
+            type: number
+            description: Elevation of the site in meters
+            minimum: 0
+          required: ["latitude", "longitude"]
   plant:
     type: object
     properties:
@@ -88,4 +75,4 @@ properties:
 required:
   - name
   - description
-  - site
+  - sites

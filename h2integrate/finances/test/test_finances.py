@@ -127,8 +127,8 @@ class TestProFastComp(unittest.TestCase):
 
         prob.setup()
 
-        prob.set_val("capex_adjusted_hopp", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_hopp", 2.0e4, units="USD/year")
+        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
         prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
         prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
         prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
@@ -151,7 +151,7 @@ class TestProFastComp(unittest.TestCase):
 
         # Only include HOPP and electrolyzer in metrics
         plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
-            "hopp",
+            "wind",
             "steel",
         ]
         finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
@@ -172,8 +172,8 @@ class TestProFastComp(unittest.TestCase):
 
         prob.setup()
 
-        prob.set_val("capex_adjusted_hopp", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_hopp", 2.0e4, units="USD/year")
+        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
         prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
         prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
         prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")

@@ -1,19 +1,34 @@
 name: "plant_config"
 description: ""
 
-site:
-  latitude: 44.04218
-  longitude: -95.19757
+sites:
+  distributed_wind_site: #name of the site for the distributed_wind_plant technology
+    latitude: 44.04218
+    longitude: -95.19757
+    resources:
+      wind_resource: #name of the resource model for this site
+        resource_model: "openmeteo_wind_api"
+        resource_parameters:
+          resource_year: 2023
+  utility_wind_site: #name of the site for the utility_wind_plant technology
+    latitude: 35.2018863
+    longitude: -101.945027
+    resources:
+      wind_resource: #name of the resource model for this site
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2012
 
-  resources:
-    wind_resource:
-      resource_model: "openmeteo_wind_api"
-      resource_parameters:
-        resource_year: 2023
+technology_interconnections: [
+  ["utility_wind_plant", "combiner", "electricity", "cable"], #source_tech, dest_tech, transport_item, transport_type = connection
+  ["distributed_wind_plant", "combiner", "electricity", "cable"],
+]
 
 resource_to_tech_connections: [
-  # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
+  # connect the wind resource at the distributed_wind_site to the distributed_wind_plant technology
+  ['distributed_wind_site.wind_resource', 'distributed_wind_plant', 'wind_resource_data'],
+  # connect the wind resource at the utility_wind_site to the utility_wind_plant technology
+  ['utility_wind_site.wind_resource', 'utility_wind_plant', 'wind_resource_data'],
 ]
 
 plant:
@@ -45,10 +60,18 @@ finance_parameters:
         depr_period: 7 #years
         refurb: [0.]
   finance_subgroups:
-    electricity:
+    distributed:
       commodity: "electricity"
-      commodity_stream: "wind" #use the total electricity output from the combiner for the finance calc
-      technologies: ["wind"]
+      commodity_stream: "distributed_wind_plant" #use the total electricity output from the combiner for the finance calc
+      technologies: ["distributed_wind_plant"]
+    utility:
+      commodity: "electricity"
+      commodity_stream: "utility_wind_plant" #use the total electricity output from the combiner for the finance calc
+      technologies: ["utility_wind_plant"]
+    total_electricity:
+      commodity: "electricity"
+      commodity_stream: "combiner" #use the total electricity output from the combiner for the finance calc
+      technologies: ["distributed_wind_plant", "utility_wind_plant"]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022
