@@ -10,6 +10,7 @@ plant_config = {
         "plant_life": 30,
         "simulation": {
             "n_timesteps": 8760,  # Default number of timesteps for the simulation
+            "dt": 3600,
         },
     },
 }
@@ -41,7 +42,7 @@ def test_simple_ASU_performance_model_set_capacity_kW(subtests):
     prob.set_val("asu_perf.electricity_in", e_profile_in_kW.tolist(), units="kW")
     prob.run_model()
     # Dummy expected values
-    max_n2_mfr = prob.get_val("asu_perf.rated_N2_kg_pr_hr")[0]
+    max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production", units="kg/h")[0]
     max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
@@ -80,7 +81,7 @@ def test_simple_ASU_performance_model_size_for_demand(subtests):
     prob.set_val("asu_perf.nitrogen_in", n2_dmd_kg_pr_hr.tolist(), units="kg/h")
     prob.run_model()
     # Dummy expected values
-    max_n2_mfr = prob.get_val("asu_perf.rated_N2_kg_pr_hr")[0]
+    max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production", units="kg/h")[0]
     max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
@@ -132,7 +133,7 @@ def test_simple_ASU_cost_model_usd_pr_kw(subtests):
 
     # Set required inputs
     prob.set_val("asu_cost.ASU_capacity_kW", rated_power_kW, units="kW")
-    prob.set_val("asu_cost.rated_N2_kg_pr_hr", rated_N2_mfr, units="kg/h")
+    prob.set_val("asu_cost.rated_nitrogen_production", rated_N2_mfr, units="kg/h")
     prob.run_model()
 
     expected_outputs = {
@@ -177,7 +178,7 @@ def test_simple_ASU_cost_model_usd_pr_mw(subtests):
 
     # Set required inputs
     prob.set_val("asu_cost.ASU_capacity_kW", rated_power_kW, units="kW")
-    prob.set_val("asu_cost.rated_N2_kg_pr_hr", rated_N2_mfr, units="kg/h")
+    prob.set_val("asu_cost.rated_nitrogen_production", rated_N2_mfr, units="kg/h")
     prob.run_model()
 
     expected_outputs = {
@@ -233,7 +234,7 @@ def test_simple_ASU_performance_and_cost_size_for_demand(subtests):
     prob.set_val("asu_perf.nitrogen_in", n2_dmd_kg_pr_hr.tolist(), units="kg/h")
     prob.run_model()
     # Dummy expected values
-    max_n2_mfr = prob.get_val("asu_perf.rated_N2_kg_pr_hr")[0]
+    max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production")[0]
     max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
