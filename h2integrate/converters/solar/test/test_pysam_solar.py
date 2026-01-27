@@ -92,13 +92,14 @@ def test_pvwatts_outputs(basic_pysam_options, solar_resource_dict, plant_config,
     plant_life = int(plant_config["plant"]["plant_life"])
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
 
-    base_outputs = ["capacity_factor", "replacement_schedule", "operational_life"]
-    base_outputs += [
-        f"rated_{commodity}_production",
-        f"annual_{commodity}_produced",
-        f"total_{commodity}_produced",
-        f"{commodity}_out",
-    ]
+    # Below are the base outputs that should be tested
+    # base_outputs = ["capacity_factor", "replacement_schedule", "operational_life"]
+    # base_outputs += [
+    #     f"rated_{commodity}_production",
+    #     f"annual_{commodity}_produced",
+    #     f"total_{commodity}_produced",
+    #     f"{commodity}_out",
+    # ]
 
     # Check that replacement schedule is between 0 and 1
     with subtests.test("0 <= replacement_schedule <=1"):
