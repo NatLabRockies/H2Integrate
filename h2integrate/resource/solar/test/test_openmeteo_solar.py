@@ -77,7 +77,7 @@ def test_solar_resource_h2i_download(
             == "44.04218_-95.19757_2023_openmeteo_archive_solar_60min_utc_tz.csv"
         )
 
-    data_keys = [k for k, v in solar_data.items() if not isinstance(v, (float, int, str))]
+    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str)]
     with subtests.test("Data timezone"):
         assert pytest.approx(solar_data["data_tz"], rel=1e-6) == 0
     with subtests.test("Site Elevation"):

@@ -68,7 +68,7 @@ class PyomoControllerBaseConfig(BaseConfig):
     def __attrs_post_init__(self):
         if isinstance(self.system_commodity_interface_limit, str):
             self.system_commodity_interface_limit = float(self.system_commodity_interface_limit)
-        if isinstance(self.system_commodity_interface_limit, (float, int)):
+        if isinstance(self.system_commodity_interface_limit, float | int):
             self.system_commodity_interface_limit = [
                 self.system_commodity_interface_limit
             ] * self.n_control_window
