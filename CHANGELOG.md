@@ -28,7 +28,7 @@
     listed at the bottom.
   - Remove unused dependencies.
   - Fixes typos for skipped folders.
-  - Add Arps decline rate to natural geologic hydrogen model
+- Add Arps decline rate to natural geologic hydrogen model
 
 ## 0.5.1 [December 18, 2025]
 
