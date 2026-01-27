@@ -99,7 +99,14 @@ develop = [
     "ruff",
     "sphinxcontrib-napoleon"
 ]
-examples = ["jupyterlab"]
+examples = [
+  "jupyterlab",
+  "h2integrate[gis]"
+]
+gis = [
+  "geopandas",
+  "contextily"
+]
 all = ["h2integrate[develop,examples]"]
 
 [tool.setuptools]
