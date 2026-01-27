@@ -1,9 +1,12 @@
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define(kw_only=True)
@@ -17,7 +20,7 @@ class GridPerformanceModelConfig(BaseConfig):
     interconnection_size: float = field()  # kW
 
 
-class GridPerformanceModel(om.ExplicitComponent):
+class GridPerformanceModel(PerformanceModelBaseClass):
     """Model a grid interconnection point.
 
     The grid is treated as the interconnection point itself:
@@ -48,6 +51,10 @@ class GridPerformanceModel(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
+        super().setup()
         self.config = GridPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
@@ -58,7 +65,7 @@ class GridPerformanceModel(om.ExplicitComponent):
         self.add_input(
             "interconnection_size",
             val=self.config.interconnection_size,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Maximum power capacity for grid connection",
         )
 
@@ -67,7 +74,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_in",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity flowing into grid interconnection point (selling to grid)",
         )
 
@@ -76,18 +83,18 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_demand",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity demand from downstream technologies",
         )
 
         # Electricity flowing OUT OF the grid (buying from grid)
-        self.add_output(
-            "electricity_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="kW",
-            desc="Electricity flowing out of grid interconnection point (buying from grid)",
-        )
+        # self.add_output(
+        #     "electricity_out",
+        #     val=0.0,
+        #     shape=n_timesteps,
+        #     units=self.commodity_rate_units,
+        #     desc="Electricity flowing out of grid interconnection point (buying from grid)",
+        # )
 
         self.add_output(
             "electricity_sold",
@@ -101,7 +108,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_unmet_demand",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity demand that is not met",
         )
 
@@ -109,7 +116,7 @@ class GridPerformanceModel(om.ExplicitComponent):
             "electricity_excess",
             val=0.0,
             shape=n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity that was not sold due to interconnection limits",
         )
 
@@ -129,6 +136,18 @@ class GridPerformanceModel(om.ExplicitComponent):
 
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
+
+        max_production = (
+            inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
+        )
+        outputs["rated_electricity_production"] = inputs["interconnection_size"]
+        outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
+            self.dt / 3600
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
+        outputs["annual_electricity_produced"] = (
+            outputs["total_electricity_produced"] * self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
