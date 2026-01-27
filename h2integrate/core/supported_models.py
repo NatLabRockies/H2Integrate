@@ -90,6 +90,12 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
 )
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
+from h2integrate.converters.natural_gas.dummy_gas_components import (
+    DummyGasConsumerCost,
+    DummyGasProducerCost,
+    DummyGasConsumerPerformance,
+    DummyGasProducerPerformance,
+)
 from h2integrate.control.control_strategies.pyomo_controllers import (
     HeuristicLoadFollowingController,
 )
@@ -258,10 +264,55 @@ supported_models = {
     # Grid
     "grid_performance": GridPerformanceModel,
     "grid_cost": GridCostModel,
+    # Dummy components for multivariable stream demonstrations
+    "dummy_gas_producer_performance": DummyGasProducerPerformance,
+    "dummy_gas_producer_cost": DummyGasProducerCost,
+    "dummy_gas_consumer_performance": DummyGasConsumerPerformance,
+    "dummy_gas_consumer_cost": DummyGasConsumerCost,
     # Finance
     "ProFastComp": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
+}
+
+
+multivariable_streams = {
+    "wellhead_gas": {
+        "gas_flow": {
+            "units": "kg/hr",
+            "desc": "Total mass flow rate of gas in the stream",
+        },
+        "hydrogen_fraction": {
+            "units": "unitless",
+            "desc": "Fraction of hydrogen in the gas stream",
+        },
+        "oxygen_fraction": {
+            "units": "unitless",
+            "desc": "Fraction of oxygen in the gas stream",
+        },
+        "gas_temperature": {
+            "units": "K",
+            "desc": "Temperature of the gas stream",
+        },
+        "gas_pressure": {
+            "units": "bar",
+            "desc": "Pressure of the gas stream",
+        },
+    },
+    "electricity_ac": {
+        "ac_power": {
+            "units": "kW",
+            "desc": "AC power of the electricity stream",
+        },
+        "voltage": {
+            "units": "V",
+            "desc": "Voltage of the electricity stream",
+        },
+        "frequency": {
+            "units": "Hz",
+            "desc": "Frequency of the electricity stream",
+        },
+    },
 }
 
 
