@@ -1,5 +1,5 @@
 import openmdao.api as om
-from pytest import approx
+from pytest import approx, fixture
 
 from h2integrate.converters.water.desal.desalination import (
     ReverseOsmosisCostModel,
@@ -7,7 +7,20 @@ from h2integrate.converters.water.desal.desalination import (
 )
 
 
-def test_brackish_performance(subtests):
+@fixture
+def plant_config():
+    plant = {
+        "plant_life": 30,
+        "simulation": {
+            "dt": 3600,
+            "n_timesteps": 8760,
+        },
+    }
+
+    return {"plant": plant}
+
+
+def test_brackish_performance(plant_config, subtests):
     tech_config = {
         "model_inputs": {
             "performance_parameters": {
@@ -19,14 +32,14 @@ def test_brackish_performance(subtests):
     }
 
     prob = om.Problem()
-    comp = ReverseOsmosisPerformanceModel(tech_config=tech_config)
+    comp = ReverseOsmosisPerformanceModel(plant_config=plant_config, tech_config=tech_config)
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     prob.setup()
     prob.run_model()
 
     with subtests.test("fresh water"):
-        assert prob["water"] == approx(10.03, rel=1e-5)
+        assert prob["water_out"] == approx(10.03, rel=1e-5)
     with subtests.test("mass"):
         assert prob["mass"] == approx(3477.43, rel=1e-3)
     with subtests.test("footprint"):
@@ -37,7 +50,7 @@ def test_brackish_performance(subtests):
         assert prob["electricity_in"] == approx(15.04, rel=1e-3)
 
 
-def test_seawater_performance(subtests):
+def test_seawater_performance(plant_config, subtests):
     tech_config = {
         "model_inputs": {
             "performance_parameters": {
@@ -49,14 +62,14 @@ def test_seawater_performance(subtests):
     }
 
     prob = om.Problem()
-    comp = ReverseOsmosisPerformanceModel(tech_config=tech_config)
+    comp = ReverseOsmosisPerformanceModel(plant_config=plant_config, tech_config=tech_config)
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     prob.setup()
     prob.run_model()
 
     with subtests.test("fresh water"):
-        assert prob["water"] == approx(10.03, rel=1e-5)
+        assert prob["water_out"] == approx(10.03, rel=1e-5)
     with subtests.test("mass"):
         assert prob["mass"] == approx(3477.43, rel=1e-3)
     with subtests.test("footprint"):
@@ -82,6 +95,7 @@ def test_ro_desalination_cost(subtests):
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,
+                "dt": 3600,
             },
         },
     }

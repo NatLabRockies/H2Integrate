@@ -94,7 +94,16 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         desal_mass_kg = freshwater_m3_per_hr * 346.7  # [kg]
         desal_size_m2 = freshwater_m3_per_hr * 0.467  # [m^2]
 
-        outputs["water"] = freshwater_m3_per_hr
+        outputs["water_out"] = freshwater_m3_per_hr
+        outputs["total_water_produced"] = outputs["water_out"].sum()
+        outputs["rated_water_production"] = outputs["water_out"].max()
+        outputs["capacity_factor"] = outputs["total_water_produced"] / (
+            outputs["rated_water_production"] * len(outputs["water_out"])
+        )
+        outputs["annual_water_produced"] = (
+            outputs["total_water_produced"] * self.fraction_of_year_simulated
+        )
+
         outputs["electricity_in"] = desal_power
         outputs["feedwater"] = feedwater_m3_per_hr
         outputs["mass"] = desal_mass_kg
