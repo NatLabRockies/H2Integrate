@@ -1,9 +1,12 @@
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import must_equal
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define(kw_only=True)
@@ -21,7 +24,7 @@ class AmmoniaPerformanceModelConfig(BaseConfig):
     plant_capacity_factor: float = field()
 
 
-class SimpleAmmoniaPerformanceModel(om.ExplicitComponent):
+class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an ammonia plant.
     Computes annual ammonia production based on plant capacity and capacity factor.
@@ -33,20 +36,30 @@ class SimpleAmmoniaPerformanceModel(om.ExplicitComponent):
         self.options.declare("driver_config", types=dict)
 
     def setup(self):
+        self.commodity = "ammonia"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
+        super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
+        # self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
+        # self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
 
     def compute(self, inputs, outputs):
         ammonia_production_kgpy = (
             self.config.plant_capacity_kgpy * self.config.plant_capacity_factor
         )
         outputs["ammonia_out"] = ammonia_production_kgpy / len(inputs["hydrogen_in"])
+        outputs["capacity_factor"] = self.config.plant_capacity_factor
+
         outputs["total_ammonia_produced"] = ammonia_production_kgpy
+        outputs["annual_ammonia_produced"] = (
+            outputs["total_ammonia_produced"] * self.fraction_of_year_simulated
+        )
+        outputs["rated_ammonia_production"] = self.config.plant_capacity_kgpy / 8760
 
 
 @define(kw_only=True)
