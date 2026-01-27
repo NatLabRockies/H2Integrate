@@ -101,8 +101,7 @@ ax.legend()
 
 plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
-plt.savefig("plot_battery_behavior-1.png", dpi=300)
-print(model.prob.get_val("battery.SOC", units="percent")[8700:8760] / 100)
+plt.savefig("plot_battery_behavior.png", dpi=300)
 
 fig, ax = plt.subplots(1, 1, sharex=True)
 
@@ -128,5 +127,4 @@ ax.legend()
 
 plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
-plt.savefig("plot_battery_behavior_end-1.png", dpi=300)
-print(model.prob.get_val("battery.SOC", units="percent")[8700:8760] / 100)
+plt.savefig("plot_battery_behavior_end.png", dpi=300)
