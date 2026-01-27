@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
-import openmdao.api as om
 from attrs import field, define
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -30,13 +30,12 @@ class MartinIronMinePerformanceConfig(BaseConfig):
     mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
 
 
-class MartinIronMinePerformanceComponent(om.ExplicitComponent):
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
+class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
     def setup(self):
+        self.commodity = "iron_ore"
+        self.commodity_rate_units = "t/h"
+        self.commodity_amount_units = "t"
+        super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MartinIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -47,7 +46,7 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
             "system_capacity",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
             units="t/h",
-            desc="Annual ore production capacity",
+            desc="Ore production capacity",
         )
 
         # Add electricity input, default to 0 --> set using feedstock component
@@ -93,20 +92,20 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
             desc="Electricity consumed",
         )
 
-        self.add_output(
-            "iron_ore_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="t/h",
-            desc="Iron ore pellets produced",
-        )
+        # self.add_output(
+        #     "iron_ore_out",
+        #     val=0.0,
+        #     shape=n_timesteps,
+        #     units="t/h",
+        #     desc="Iron ore pellets produced",
+        # )
 
-        self.add_output(
-            "total_iron_ore_produced",
-            val=1.0,
-            units="t/year",
-            desc="Total iron ore pellets produced anually",
-        )
+        # self.add_output(
+        #     "total_iron_ore_produced",
+        #     val=1.0,
+        #     units="t/year",
+        #     desc="Total iron ore pellets produced anually",
+        # )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "martin_ore" / "perf_coeffs.csv"
         # martin ore performance model
@@ -246,5 +245,12 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
 
         outputs["iron_ore_out"] = processed_ore_production
         outputs["total_iron_ore_produced"] = np.sum(processed_ore_production)
+        outputs["annual_iron_ore_produced"] = (
+            outputs["total_iron_ore_produced"] * self.fraction_of_year_simulated
+        )
+        outputs["rated_iron_ore_production"] = inputs["system_capacity"]
+        outputs["capacity_factor"] = outputs["total_iron_ore_produced"] / (
+            outputs["rated_iron_ore_production"] * self.n_timesteps
+        )
         outputs["electricity_consumed"] = energy_consumed
         outputs["crude_ore_consumed"] = crude_ore_consumption
