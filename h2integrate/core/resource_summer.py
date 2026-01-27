@@ -1,7 +1,7 @@
 import numpy as np
 import openmdao.api as om
 
-from h2integrate.core.supported_models import is_electricity_producer
+from h2integrate.core.commodity_stream_definitions import is_electricity_producer
 
 
 class ElectricitySumComp(om.ExplicitComponent):

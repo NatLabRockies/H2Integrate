@@ -9,31 +9,7 @@ connection feature. They produce and consume wellhead_gas streams with
 import numpy as np
 import openmdao.api as om
 
-
-# Define wellhead_gas stream locally to avoid circular import
-# This mirrors the definition in supported_models.py
-WELLHEAD_GAS_STREAM = {
-    "gas_flow": {
-        "units": "kg/h",
-        "desc": "Total mass flow rate of gas in the stream",
-    },
-    "hydrogen_fraction": {
-        "units": "unitless",
-        "desc": "Fraction of hydrogen in the gas stream",
-    },
-    "oxygen_fraction": {
-        "units": "unitless",
-        "desc": "Fraction of oxygen in the gas stream",
-    },
-    "gas_temperature": {
-        "units": "K",
-        "desc": "Temperature of the gas stream",
-    },
-    "gas_pressure": {
-        "units": "bar",
-        "desc": "Pressure of the gas stream",
-    },
-}
+from h2integrate.core.commodity_stream_definitions import multivariable_streams
 
 
 class DummyGasProducerPerformance(om.ExplicitComponent):
@@ -56,15 +32,12 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add all wellhead_gas stream outputs
-        for var_name, var_props in WELLHEAD_GAS_STREAM.items():
-            units = var_props.get("units")
-            if units == "unitless":
-                units = None
+        for var_name, var_props in multivariable_streams["wellhead_gas"].items():
             self.add_output(
                 f"{var_name}_out",
                 val=0.0,
                 shape=n_timesteps,
-                units=units,
+                units=var_props.get("units"),
                 desc=var_props.get("desc", ""),
             )
 
@@ -120,15 +93,12 @@ class DummyGasConsumerPerformance(om.ExplicitComponent):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add all wellhead_gas stream inputs
-        for var_name, var_props in WELLHEAD_GAS_STREAM.items():
-            units = var_props.get("units")
-            if units == "unitless":
-                units = None
+        for var_name, var_props in multivariable_streams["wellhead_gas"].items():
             self.add_input(
                 f"{var_name}_in",
                 val=0.0,
                 shape=n_timesteps,
-                units=units,
+                units=var_props.get("units"),
                 desc=var_props.get("desc", ""),
             )
 

@@ -14,14 +14,14 @@ from h2integrate.core.utilities import (
 )
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.resource_summer import ElectricitySumComp
-from h2integrate.core.supported_models import (
-    supported_models,
-    multivariable_streams,
-    is_electricity_producer,
-)
+from h2integrate.core.supported_models import supported_models
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+from h2integrate.core.commodity_stream_definitions import (
+    multivariable_streams,
+    is_electricity_producer,
+)
 
 
 try:
