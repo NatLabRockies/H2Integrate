@@ -177,7 +177,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         # Apply ramp-up assumed linear increase
         ramp_up_steps = int(ramp_up_time * (n_timesteps / 12))  # hrs
         if ramp_up_steps > 0:
-            ramp_up_flow = init_wh_flow * (1 + percent_increase / 1)
+            ramp_up_flow = init_wh_flow * ((100 + percent_increase) / 100)
             ramp_up_profile = np.linspace(init_wh_flow, ramp_up_flow, ramp_up_steps)
         else:
             ramp_up_flow = init_wh_flow
