@@ -140,6 +140,9 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     """
 
     def setup(self):
+        self.commodity = "ammonia"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaSynLoopPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
@@ -150,13 +153,13 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="MW")
 
-        self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
+        # self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("electricity_out", val=0.0, shape=n_timesteps, units="MW")
         self.add_output("heat_out", val=0.0, shape=n_timesteps, units="kW*h/kg")
         self.add_output("catalyst_mass", val=0.0, units="kg")
-        self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
+        # self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_electricity_consumed", val=0.0, units="kW*h/year")
@@ -164,7 +167,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             "limiting_input", val=0, shape_by_conn=True, copy_shape="hydrogen_in", units=None
         )
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
-        self.add_output("ammonia_capacity_factor", val=0.0, units="unitless")
+        # self.add_output("ammonia_capacity_factor", val=0.0, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values
@@ -273,7 +276,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["max_hydrogen_capacity"] = h2_cap
 
         # Calculate capacity factor
-        outputs["ammonia_capacity_factor"] = np.mean(nh3_prod) / nh3_cap
+        outputs["capacity_factor"] = np.mean(nh3_prod) / nh3_cap
+
+        outputs["rated_ammonia_production"] = nh3_cap
+        outputs["annual_ammonia_produced"] = (
+            outputs["total_ammonia_produced"] * self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
@@ -419,8 +427,9 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
         super().setup()
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
-        self.add_input("total_ammonia_produced", val=0.0, units="kg/year")
+        self.add_input("annual_ammonia_produced", val=0.0, shape=plant_life, units="kg/year")
         self.add_input("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_input("total_nitrogen_consumed", val=0.0, units="kg/year")
         self.add_input("total_electricity_consumed", val=0.0, units="kW*h/year")

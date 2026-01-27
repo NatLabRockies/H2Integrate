@@ -43,10 +43,11 @@ def make_synloop_config():
 def test_ammonia_synloop_limiting_cases(subtests):
     config = make_synloop_config()
     plant_info = {
+        "plant_life": 30,
         "simulation": {
             "n_timesteps": 4,  # Using 4 timesteps for this test
             "dt": 3600,
-        }
+        },
     }
 
     # Each test is a single array of 4 hours, each with a different limiting case
