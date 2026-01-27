@@ -97,7 +97,8 @@ develop = [
     "pytest",
     "pytest-subtests",
     "ruff",
-    "sphinxcontrib-napoleon"
+    "sphinxcontrib-napoleon",
+    "h2integrate[gis]"
 ]
 examples = [
   "jupyterlab",
