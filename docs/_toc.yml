@@ -23,6 +23,7 @@ parts:
   - file: user_guide/how_to_interface_with_user_defined_model
   - file: user_guide/how_to_run_several_cases_in_sequence
   - file: user_guide/run_size_modes
+  - file: user_guide/plotting_geospatial_data_with_geopandas
 
 - caption: Technology Models
   chapters:

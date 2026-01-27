@@ -10,6 +10,7 @@
 - Add baseclass for caching functionality
 - Added postprocessing function to save timeseries
 - Minor reorg for profast tools
+- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
 - Removed hydrogen tank cost and performance models that were unused
 - Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
 - Updated the contributing documentation to clarify what developers should expect for including
@@ -21,6 +22,12 @@
   - `examples/25_sizing_modes/run_size_modes.ipynb` -> `docs/user_guide/run_size_modes.md`
 - `.gitignore` is updated to be more inclusive of example output data.
 - Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught.
+- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations.
+  - Cleans up unnecessary ignore rules in the ruff settings.
+  - Removes duplicate dependency listings, and alphabetizes for legibility with NLR packages
+    listed at the bottom.
+  - Remove unused dependencies.
+  - Fixes typos for skipped folders.
 
 ## 0.5.1 [December 18, 2025]
 

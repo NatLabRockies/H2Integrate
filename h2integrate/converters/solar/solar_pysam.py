@@ -267,7 +267,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         for old_key, values in solar_resource_data.items():
             if old_key in resource_name_mapper:
                 new_key = resource_name_mapper[old_key]
-                if not isinstance(values, (float, int, str, bool)):
+                if not isinstance(values, float | int | str | bool):
                     reformatted_data.update({new_key: values.astype(float).tolist()})
                 else:
                     reformatted_data.update({new_key: values})
