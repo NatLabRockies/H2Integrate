@@ -47,12 +47,12 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
 
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("plant_capacity_kgpy", units="kg/year", val=self.config.plant_capacity_kgpy)
-        self.add_input("capacity_factor", units="unitless", val=self.config.capacity_factor)
+        self.add_input("input_capacity_factor", units="unitless", val=self.config.capacity_factor)
         self.add_input("co2e_emit_ratio", units="kg/kg", val=self.config.co2e_emit_ratio)
         self.add_input("h2o_consume_ratio", units="kg/kg", val=self.config.h2o_consume_ratio)
 
         # self.add_output("methanol_out", units="kg/h", shape=n_timesteps)
-        self.add_output("total_methanol_produced", units="kg/year")
+        # self.add_output("total_methanol_produced", units="kg/year")
         self.add_output("co2e_emissions", units="kg/h", shape=n_timesteps)
         self.add_output("h2o_consumption", units="kg/h", shape=n_timesteps)
 

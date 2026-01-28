@@ -112,7 +112,7 @@ def test_pvwatts_outputs(basic_pysam_options, solar_resource_dict, plant_config,
     # Check that capacity factor is between 0 and 1 with units of "unitless"
     with subtests.test("0 <= capacity_factor (unitless) <=1"):
         assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
-        assert np.all(prob.get_val("capacity_factor", units="unitless") <= 1)
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
 
     # Check that capacity factor is between 1 and 100 with units of "percent"
     with subtests.test("1 <= capacity_factor (percent) <=1"):
