@@ -18,7 +18,7 @@ class StorageSizingModelConfig(BaseConfig):
     """
 
     commodity_name: str = field(default="hydrogen")
-    commodity_units: str = field(default="kg/h")
+    commodity_units: str = field(default="kg/h")  # TODO: update to commodity_rate_units
     demand_profile: int | float | list = field(default=0.0)
 
 
