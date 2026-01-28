@@ -7,7 +7,7 @@ The Simple Generic Storage model provides a flexible framework for modeling vari
 The Simple Generic Storage model consists of two main components:
 
 1. **SimpleGenericStorage**: A minimal component that defines the input interface for the storage system
-2. **DemandOpenLoopController**: The core logic component that handles storage operations, state of charge calculations, and resource management
+2. **DemandOpenLoopStorageController**: The core logic component that handles storage operations, state of charge calculations, and resource management
 
 This architecture allows the storage system to work with any resource type by simply configuring the resource name and units, making it quite versatile.
 

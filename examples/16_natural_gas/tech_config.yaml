@@ -36,7 +36,7 @@ technologies:
     cost_model:
       model: "atb_battery_cost"
     control_strategy:
-      model: "demand_open_loop_controller"
+      model: "demand_open_loop_storage_controller"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"

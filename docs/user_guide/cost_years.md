@@ -40,7 +40,6 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `stimulated_geoh2_cost` |
 | `natural_geoh2_cost`    |
 | `wombat`                |
-| `hydrogen_tank_cost`    |
 | `custom_electrolyzer_cost` |
 
 ### Example tech_config input for user-input cost year

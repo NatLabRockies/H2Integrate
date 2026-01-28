@@ -9,7 +9,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains
 
 
-@define
+@define(kw_only=True)
 class MartinIronMinePerformanceConfig(BaseConfig):
     """Configuration class for MartinIronMinePerformanceComponent.
 
@@ -108,9 +108,7 @@ class MartinIronMinePerformanceComponent(om.ExplicitComponent):
             desc="Total iron ore pellets produced anually",
         )
 
-        coeff_fpath = (
-            ROOT_DIR / "simulation" / "technologies" / "iron" / "martin_ore" / "perf_coeffs.csv"
-        )
+        coeff_fpath = ROOT_DIR / "converters" / "iron" / "martin_ore" / "perf_coeffs.csv"
         # martin ore performance model
         coeff_df = pd.read_csv(coeff_fpath, index_col=0)
         self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)

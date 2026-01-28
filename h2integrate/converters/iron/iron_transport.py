@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 import openmdao.api as om
@@ -8,10 +10,10 @@ from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains, range_val
 from h2integrate.core.model_baseclasses import CostModelBaseClass
-from h2integrate.simulation.technologies.iron.load_top_down_coeffs import load_top_down_coeffs
+from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 
-@define
+@define(kw_only=True)
 class IronTransportPerformanceConfig(BaseConfig):
     find_closest_ship_site: bool = field()
     shipment_site: str = field(
@@ -37,7 +39,6 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
         )
-
         self.add_output("land_transport_distance", val=0.0, units="km")
         self.add_output("water_transport_distance", val=0.0, units="km")
         self.add_output("total_transport_distance", val=0.0, units="km")
@@ -76,16 +77,11 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         return land_transport_distance
 
     def compute(self, inputs, outputs):
-        lat = self.options["plant_config"].get("site", {}).get("latitude")
-        lon = self.options["plant_config"].get("site", {}).get("longitude")
+        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
+        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
         site_location = (lat, lon)
         shipping_coord_fpath = (
-            ROOT_DIR
-            / "simulation"
-            / "technologies"
-            / "iron"
-            / "martin_transport"
-            / "shipping_coords.csv"
+            ROOT_DIR / "converters" / "iron" / "martin_transport" / "shipping_coords.csv"
         )
         shipping_locations = pd.read_csv(shipping_coord_fpath, index_col="Unnamed: 0")
 
@@ -159,7 +155,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             outputs["water_transport_distance"] = water_distance_km
 
 
-@define
+@define(kw_only=True)
 class IronTransportCostConfig(BaseConfig):
     transport_year: int = field(converter=int, validator=range_val(2022, 2065))
     cost_year: int = field(converter=int, validator=range_val(2010, 2024))
@@ -172,24 +168,29 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
         target_dollar_year = self.options["plant_config"]["finance_parameters"][
             "cost_adjustment_parameters"
         ]["target_dollar_year"]
 
-        config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+        config_dict = merge_shared_inputs(
+            copy.deepcopy(self.options["tech_config"]["model_inputs"]), "cost"
+        )
         config_dict.update({"cost_year": target_dollar_year})
 
         self.config = IronTransportCostConfig.from_dict(
             config_dict,
-            strict=False,
+            strict=True,
         )
         super().setup()
 
         self.add_input("land_transport_distance", val=0.0, units="mi")
         self.add_input("water_transport_distance", val=0.0, units="mi")
         self.add_input("total_transport_distance", val=0.0, units="mi")
-        self.add_input("total_iron_ore_produced", val=0.0, units="t/year")
+        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
 
+        self.add_output("iron_ore_out", val=0.0, shape=n_timesteps, units="t/h")
         self.add_output("iron_transport_cost", val=0.0, units="USD/t")
         self.add_output("ore_profit_margin", val=0.0, units="USD/t")
 
@@ -205,7 +206,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         water_ship_cost_dol_per_ton = (
             water_ship_cost_dol_tonne_mi * inputs["water_transport_distance"]
         )
-        water_ship_cost_USD = inputs["total_iron_ore_produced"] * water_ship_cost_dol_per_ton
+        water_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * water_ship_cost_dol_per_ton
 
         land_coeff_dict = load_top_down_coeffs(
             ["Land Shipping Cost"], cost_year=self.config.cost_year
@@ -214,7 +215,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         land_ship_cost_dol_tonne_mi = land_coeff_dict["Land Shipping Cost"]["values"][land_year_idx]
 
         land_ship_cost_dol_per_ton = land_ship_cost_dol_tonne_mi * inputs["land_transport_distance"]
-        land_ship_cost_USD = inputs["total_iron_ore_produced"] * land_ship_cost_dol_per_ton
+        land_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * land_ship_cost_dol_per_ton
 
         total_shipment_cost = water_ship_cost_USD + land_ship_cost_USD
 
@@ -224,5 +225,6 @@ class IronTransportCostComponent(CostModelBaseClass):
             pm_year_idx
         ]
 
-        outputs["iron_transport_cost"] = total_shipment_cost / inputs["total_iron_ore_produced"]
+        outputs["iron_ore_out"] = inputs["iron_ore_in"]  # assume lossless
+        outputs["iron_transport_cost"] = total_shipment_cost / np.sum(inputs["iron_ore_in"])
         outputs["VarOpEx"] = total_shipment_cost

@@ -1,0 +1,40 @@
+description: Driver config for CSVGen design of experiments
+name: driver_config
+
+general:
+  folder_output: ex_22_out
+  create_om_reports: false
+driver:
+  design_of_experiments:
+    flag: true
+    debug_print: true
+    generator: "csvgen"
+    filename: "site_solar_doe.csv"
+    run_parallel: false
+design_variables:
+  solar:
+    system_capacity_DC:
+      flag: true
+      lower: 5000.0
+      upper: 75000.0
+      units: "kW"
+  site:
+    latitude:
+      flag: True
+      units: "deg"
+      lower: -90.0
+      upper: 90.0
+    longitude:
+      flag: True
+      units: "deg"
+      lower: -180.0
+      upper: 180.0
+
+objective:
+  name: finance_subgroup_electricity.LCOE_optimistic
+recorder:
+    file: cases.sql
+    overwrite_recorder: true
+    flag: true
+    includes: ['*']
+    excludes: ['*wind_resource*']

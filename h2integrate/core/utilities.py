@@ -11,7 +11,7 @@ import yaml
 import attrs
 import numpy as np
 import ruamel.yaml as ry
-from attrs import Attribute, field, define
+from attrs import Attribute, define
 
 from h2integrate import ROOT_DIR
 
@@ -57,7 +57,7 @@ def create_xdsm_from_config(config, output_file="connections_xdsm"):
         else:
             source, destination, data, label = conn
 
-        if isinstance(data, (list, tuple)) and len(data) >= 2:
+        if isinstance(data, list | tuple) and len(data) >= 2:
             data = f"{data[0]} as {data[1]}"
 
         if len(conn) == 3:
@@ -113,7 +113,7 @@ def merge_shared_inputs(config, input_type):
         return config["shared_parameters"]
 
 
-@define
+@define(kw_only=True)
 class BaseConfig:
     """
     A Mixin class to allow for kwargs overloading when a data class doesn't
@@ -171,11 +171,6 @@ class BaseConfig:
             dict: All key, value pairs required for class re-creation.
         """
         return attrs.asdict(self, filter=attr_filter, value_serializer=attr_serializer)
-
-
-@define
-class CostModelBaseConfig(BaseConfig):
-    cost_year: int = field(converter=int)
 
 
 def attr_serializer(inst: type, field: Attribute, value: Any):
@@ -277,25 +272,27 @@ def dict_to_yaml_formatting(orig_dict):
         else:
             if isinstance(key, list):
                 for i, k in enumerate(key):
-                    if isinstance(orig_dict[k], (str, bool, int)):
+                    if isinstance(orig_dict[k], str | bool | int):
                         orig_dict[k] = orig_dict.get(k, []) + val[i]
-                    elif isinstance(orig_dict[k], (list, np.ndarray)):
+                    elif isinstance(orig_dict[k], list | np.ndarray):
                         orig_dict[k] = np.array(val, dtype=float).tolist()
                     else:
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
-                if isinstance(orig_dict[key], (str, bool, int)):
+                if isinstance(orig_dict[key], str | bool | int):
                     continue
-                if isinstance(orig_dict[key], (list, np.ndarray)):
+                if orig_dict[key] is None:
+                    continue
+                if isinstance(orig_dict[key], list | np.ndarray):
                     if any(isinstance(v, dict) for v in val):
                         for vii, v in enumerate(val):
                             if isinstance(v, dict):
                                 new_val = dict_to_yaml_formatting(v)
                             else:
-                                new_val = v if isinstance(v, (str, bool, int)) else float(v)
+                                new_val = v if isinstance(v, str | bool | int) else float(v)
                             orig_dict[key][vii] = new_val
                     else:
-                        new_val = [v if isinstance(v, (str, bool, int)) else float(v) for v in val]
+                        new_val = [v if isinstance(v, str | bool | int) else float(v) for v in val]
                         orig_dict[key] = new_val
                 else:
                     orig_dict[key] = float(val)
@@ -496,7 +493,7 @@ def remove_numpy(fst_vt: dict) -> dict:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = conversions[data_type](
                         current_value
                     )
-                elif isinstance(current_value, (list, tuple)):
+                elif isinstance(current_value, list | tuple):
                     for i, item in enumerate(current_value):
                         current_value[i] = remove_numpy(item)
 
@@ -558,6 +555,23 @@ def write_yaml(
     yaml.allow_unicode = False
     with Path(foutput).open("w", encoding="utf-8") as f:
         yaml.dump(instance, f)
+
+
+def write_readable_yaml(instance: dict, foutput: str | Path):
+    """
+    Writes a dictionary to a YAML file using the yaml library.
+
+    Args:
+        instance (dict): Dictionary to be written to the YAML file.
+        foutput (str | Path): Path to the output YAML file.
+
+    Returns:
+        None
+    """
+    instance = dict_to_yaml_formatting(instance)
+
+    with Path(foutput).open("w", encoding="utf-8") as f:
+        yaml.dump(instance, f, sort_keys=False, encoding=None, default_flow_style=False)
 
 
 def make_unique_case_name(folder, proposed_fname, fext):
@@ -770,7 +784,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
     def _mean(val):
         if isinstance(val, np.ndarray):
             return "nan" if val.size == 0 else f"{np.mean(val)}"
-        if isinstance(val, (int, float, np.number)):
+        if isinstance(val, int | float | np.number):
             return f"{val}"
         return "n/a"
 
@@ -811,10 +825,25 @@ def print_results(model, includes=None, excludes=None, show_units=True):
             mean_raw = _mean(meta.get("val"))
             try:
                 val = float(mean_raw)
-                if abs(val) >= 1e5:
-                    mean_val = f"{val:,.2f}"
+                units_val_raw = meta.get("units")
+                # Format as integer if units are 'year' or variable name is 'cost_year'
+                if units_val_raw == "year" or var == "cost_year":
+                    mean_val = str(int(val))
+                elif abs(val) >= 1e5:
+                    formatted = f"{val:,.2f}"
+                    mean_val = formatted.rstrip("0")
+                    if mean_val.endswith("."):
+                        mean_val = mean_val  # Keep e.g. "520." format
+                    else:
+                        mean_val = mean_val + "." if "." not in mean_val else mean_val
                 else:
-                    mean_val = f"{val:,.4f}"
+                    formatted = f"{val:,.4f}"
+                    mean_val = formatted.rstrip("0")
+                    # Ensure we end with "." if all decimals were zeros
+                    if mean_val.endswith("."):
+                        pass  # Keep as e.g. "520." or "0."
+                    elif "." not in mean_val:
+                        mean_val = mean_val + "."
             except (ValueError, TypeError):
                 mean_val = str(mean_raw)
             units_val = (
@@ -827,7 +856,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
             shape_meta = meta.get("shape", "")
             if var == "cost_year":
                 shape_str = "n/a"
-            elif isinstance(shape_meta, (tuple, list)) and len(shape_meta) > 0:
+            elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
                 shape_str = str(shape_meta[0])
             else:
                 shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
@@ -863,7 +892,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
                     "n/a"
                     if name.split(".")[-1] == "cost_year"
                     else meta.get("shape")[0]
-                    if isinstance(meta.get("shape"), (tuple, list)) and len(meta.get("shape")) > 0
+                    if isinstance(meta.get("shape"), tuple | list) and len(meta.get("shape")) > 0
                     else ""
                     if meta.get("shape") in (None, "", ())
                     else meta.get("shape")

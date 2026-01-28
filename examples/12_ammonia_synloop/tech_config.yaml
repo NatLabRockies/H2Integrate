@@ -2,16 +2,107 @@ name: "technology_config"
 description: "This hybrid plant produces ammonia"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
-      config: !include tech_inputs/hopp_config_tx.yaml
+      model: "floris_wind_plant_performance"
     cost_model:
-      model: "hopp"
-    electrolyzer_rating: 640. # MW
+      model: "atb_wind_cost"
     model_inputs:
+      performance_parameters:
+        num_turbines: 148 #number of turbines in the farm
+        hub_height: 115.0 # turbine hub-height
+        operational_losses: 10.49 #percentage of non-wake losses
+        floris_wake_config: !include "floris_v4_default_template.yaml" #floris wake model file
+        floris_turbine_config: !include "floris_turbine_NREL_6MW_170.yaml" #turbine model file formatted for floris
+        resource_data_averaging_method: "average" #"weighted_average", "average" or "nearest"
+        operation_model: "cosine-loss" #turbine operation model
+        default_turbulence_intensity: 0.06
+        enable_caching: True #whether to use cached results
+        cache_dir: "cache" #directory to save or load cached data
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
+      cost_parameters:
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
+        cost_year: 2019
+
+  solar:
+    performance_model:
+      model: "pysam_solar_plant_performance"
+    cost_model:
+      model: "atb_comm_res_pv_cost"
+    model_inputs:
+      shared_parameters:
+        pv_capacity_kWdc: 400000 #400 MWdc
+      performance_parameters:
+        dc_ac_ratio: 1.3
+        create_model_from: "default"
+        config_name: "PVWattsSingleOwner"
+        tilt_angle_func: "lat-func"
+        pysam_options:
+          SystemDesign:
+            inv_eff: 96.0
+            module_type: 0 #19% efficiency
+            losses: 14.08 #dc losses
+          Lifetime:
+            dc_degradation: [0]
+      cost_parameters:
+        capex_per_kWdc: 1323
+        opex_per_kWdc_per_year: 18
+        cost_year: 2019
+  combiner:
+    performance_model:
+      model: "combiner_performance"
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_converter"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_units: "kW"
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
+  battery:
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_storage"
+    control_strategy:
+      model: "heuristic_load_following_controller"
+    performance_model:
+      model: "pysam_battery"
+    cost_model:
+      model: "atb_battery_cost"
+    model_inputs:
+      shared_parameters:
+        commodity_name: "electricity"
+        max_charge_rate: 96.0 #kW
+        max_capacity: 96.0 #kWh
+        n_control_window: 24
+        n_horizon_window: 48
+        init_charge_percent: 0.9
+        max_charge_percent: 1.0
+        min_charge_percent: 0.2
+        system_commodity_interface_limit: 1e12
+      performance_parameters:
+        system_model_source: "pysam"
+        chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2019
+        commodity_units: "kW"
+        energy_capex: 310 # $/kWh from 2024 ATB year 2025
+        power_capex: 311 # $/kW from 2024 ATB year 2025
+        opex_fraction: 0.025
+      control_parameters:
+        commodity_storage_units: "kW"
+        tech_name: "battery"
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
   electrolyzer:
     performance_model:
       model: "eco_pem_electrolyzer_performance"
@@ -23,13 +114,9 @@ technologies:
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
 
       performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
+        size_mode: "normal"
         n_clusters: 16
         cluster_rating_MW: 40
-        pem_control_type: 'basic'
         eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000 #number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: True #include degradation
@@ -67,6 +154,7 @@ technologies:
         catalyst_consumption_rate: 0.000091295354067341
         catalyst_replacement_interval: 3
       performance_parameters:
+        size_mode: "normal"
         capacity_factor: 0.9
         energy_demand: 0.530645243
         heat_output: 0.8299956

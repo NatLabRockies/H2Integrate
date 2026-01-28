@@ -2,14 +2,46 @@ name: "technology_config"
 description: "This hybrid plant produces methanol"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
-      config: !include tech_inputs/hopp_config.yaml
+      model: "pysam_wind_plant_performance"
     cost_model:
-      model: "hopp"
+      model: "atb_wind_cost"
     model_inputs:
+      performance_parameters:
+        num_turbines: 24
+        turbine_rating_kw: 15000
+        rotor_diameter: 240.
+        hub_height: 115.
+        create_model_from: "default"
+        config_name: "WindPowerSingleOwner"
+        run_recalculate_power_curve: True
+        pysam_options:
+          Turbine:
+            wind_resource_shear: 0.14
+          Farm:
+            wind_farm_wake_model: 0.0
+            wind_resource_turbulence_coeff: 0.1
+          Losses:
+            elec_eff_loss: 1.79442 # less than 1.81, greater than 1.75
+          Resource:
+            weibull_k_factor: 2.0
+            weibull_reference_height: 50.0
+            weibull_wind_speed: 7.25
+            wind_resource_model_choice: 0.0
+          Uncertainty:
+            total_uncert: 12.085
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
       cost_parameters:
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
         cost_year: 2019
   electricity_splitter:
     performance_model:
@@ -30,13 +62,9 @@ technologies:
         location: "onshore"
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
       performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
+        size_mode: "normal"
         n_clusters: 4
         cluster_rating_MW: 40
-        pem_control_type: 'basic'
         eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000 #number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: True #include degradation
@@ -51,7 +79,7 @@ technologies:
     cost_model:
       model: "generic_storage_cost"
     control_strategy:
-      model: "demand_open_loop_controller"
+      model: "demand_open_loop_storage_controller"
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"
@@ -104,7 +132,7 @@ technologies:
     cost_model:
       model: "generic_storage_cost"
     control_strategy:
-      model: "demand_open_loop_controller"
+      model: "demand_open_loop_storage_controller"
     model_inputs:
       shared_parameters:
         commodity_name: "co2"

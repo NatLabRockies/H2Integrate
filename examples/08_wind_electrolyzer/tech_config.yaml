@@ -40,13 +40,9 @@ technologies:
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022
 
       performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
+        size_mode: "normal"
         n_clusters: 13 #should be 12.5 to get 500 MW
         cluster_rating_MW: 40
-        pem_control_type: 'basic'
         eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000. #number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: True #include degradation

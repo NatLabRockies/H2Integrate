@@ -1,19 +1,30 @@
 name: "plant_config"
 description: "This plant is located of the coast of Galveston in Texas"
 
-site:
-  latitude: 29.2
-  longitude: -94.6
+sites:
+  site:
+    latitude: 29.2
+    longitude: -94.6
+    resources:
+      wind_resource:
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2013
 
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "electricity_splitter", "electricity", "cable"],
+  ["wind", "electricity_splitter", "electricity", "cable"],
   ["electricity_splitter", "doc", "electricity", "cable"],
   ["electricity_splitter", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
   ["h2_storage", "methanol", "hydrogen", "pipe"],
   ["doc", "co2_storage", "co2", "pipe"],
   ["co2_storage","methanol","co2","pipe"],
+]
+
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 
 plant:

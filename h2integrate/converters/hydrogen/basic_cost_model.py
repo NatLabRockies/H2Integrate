@@ -1,14 +1,15 @@
+import warnings
+
+import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
-from h2integrate.simulation.technologies.hydrogen.electrolysis.H2_cost_model import (
-    basic_H2_cost_model,
-)
 
 
-@define
+@define(kw_only=True)
 class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
     """
     Configuration class for the basic_H2_cost_model which is based on costs from
@@ -49,11 +50,11 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # unpack inputs
-        plant_config = self.options["plant_config"]
+        self.options["plant_config"]
 
-        total_hydrogen_produced = float(inputs["total_hydrogen_produced"])
-        electrolyzer_size_mw = inputs["electrolyzer_rating_mw"][0]
-        useful_life = plant_config["plant"]["plant_life"]
+        electrolyzer_size_mw = float(inputs["electrolyzer_size_mw"][0])
+        electrical_generation_timeseries_kw = inputs["electricity_in"]
+        electrolyzer_capex_kw = self.config.electrolyzer_capex
 
         # run hydrogen production cost model - from hopp examples
         if self.config.location == "onshore":
@@ -61,25 +62,92 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
         else:
             offshore = 1
 
-        (
-            electrolyzer_total_capital_cost,
-            electrolyzer_OM_cost,
-            electrolyzer_capex_kw,
-            time_between_replacement,
-            h2_tax_credit,
-            h2_itc,
-        ) = basic_H2_cost_model(
-            self.config.electrolyzer_capex,
-            self.config.time_between_replacement,
-            electrolyzer_size_mw,
-            useful_life,
-            inputs["electricity_in"],
-            total_hydrogen_produced,
-            0.0,
-            0.0,
-            include_refurb_in_opex=False,
-            offshore=offshore,
+        # Basic cost modeling for a PEM electrolyzer.
+        # Looking at cost projections for PEM electrolyzers over years 2022, 2025, 2030, 2035.
+        # Electricity costs are calculated outside of hydrogen cost model
+
+        # Basic information in our analysis
+        kw_continuous = electrolyzer_size_mw * 1000
+
+        # Capacity factor
+        avg_generation = np.mean(electrical_generation_timeseries_kw)  # Avg Generation
+        cap_factor = avg_generation / kw_continuous
+
+        if cap_factor > 1.0:
+            cap_factor = 1.0
+            warnings.warn(
+                "Electrolyzer capacity factor would be greater than 1 with provided energy profile."
+                " Capacity factor has been reduced to 1 for electrolyzer cost estimate purposes."
+            )
+
+        # Hydrogen Production Cost From PEM Electrolysis - 2019 (HFTO Program Record)
+        # https://www.hydrogen.energy.gov/pdfs/19009_h2_production_cost_pem_electrolysis_2019.pdf
+
+        # Capital costs provide by Hydrogen Production Cost From PEM Electrolysis - 2019 (HFTO
+        # Program Record)
+        mechanical_bop_cost = 36  # [$/kW] for a compressor
+        electrical_bop_cost = 82  # [$/kW] for a rectifier
+
+        # Installed capital cost
+        stack_installation_factor = 12 / 100  # [%] for stack cost
+        elec_installation_factor = 12 / 100  # [%] and electrical BOP
+
+        # scale installation fraction if offshore (see Singlitico 2021 https://doi.org/10.1016/j.rset.2021.100005)
+        stack_installation_factor *= 1 + offshore
+        elec_installation_factor *= 1 + offshore
+
+        # mechanical BOP install cost = 0%
+
+        # Indirect capital cost as a percentage of installed capital cost
+        site_prep = 2 / 100  # [%]
+        engineering_design = 10 / 100  # [%]
+        project_contingency = 15 / 100  # [%]
+        permitting = 15 / 100  # [%]
+        land = 250000  # [$]
+
+        total_direct_electrolyzer_cost_kw = (
+            (electrolyzer_capex_kw * (1 + stack_installation_factor))
+            + mechanical_bop_cost
+            + (electrical_bop_cost * (1 + elec_installation_factor))
         )
+
+        # Assign CapEx for electrolyzer from capacity based installed CapEx
+        electrolyzer_total_installed_capex = (
+            total_direct_electrolyzer_cost_kw * electrolyzer_size_mw * 1000
+        )
+
+        # Add indirect capital costs
+        electrolyzer_total_capital_cost = (
+            (
+                (site_prep + engineering_design + project_contingency + permitting)
+                * electrolyzer_total_installed_capex
+            )
+            + land
+            + electrolyzer_total_installed_capex
+        )
+
+        # O&M costs
+        # https://www.sciencedirect.com/science/article/pii/S2542435121003068
+        # for 700 MW electrolyzer (https://www.hydrogen.energy.gov/pdfs/19009_h2_production_cost_pem_electrolysis_2019.pdf)
+        h2_FOM_kg = 0.24  # [$/kg]
+
+        # linearly scaled current central fixed O&M for a 700MW electrolyzer up to a
+        # 1000MW electrolyzer
+        scaled_h2_FOM_kg = h2_FOM_kg * electrolyzer_size_mw / 700
+
+        h2_FOM_kWh = scaled_h2_FOM_kg / 55.5  # [$/kWh] used 55.5 kWh/kg for efficiency
+        fixed_OM = h2_FOM_kWh * 8760  # [$/kW-y]
+        property_tax_insurance = 1.5 / 100  # [% of Cap/y]
+        variable_OM = 1.30  # [$/MWh]
+
+        # Total O&M costs [% of installed cap/year]
+        total_OM_costs = (
+            fixed_OM + (property_tax_insurance * total_direct_electrolyzer_cost_kw)
+        ) / total_direct_electrolyzer_cost_kw + (
+            variable_OM / 1000 * 8760 * (cap_factor / total_direct_electrolyzer_cost_kw)
+        )
+
+        electrolyzer_OM_cost = electrolyzer_total_installed_capex * total_OM_costs  # Capacity based
 
         outputs["CapEx"] = electrolyzer_total_capital_cost
         outputs["OpEx"] = electrolyzer_OM_cost

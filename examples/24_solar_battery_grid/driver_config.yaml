@@ -1,0 +1,5 @@
+name: "driver_config"
+description: "This analysis runs solar and battery storage systems with buying and selling electricity to the grid"
+
+general:
+  folder_output: outputs

@@ -135,7 +135,7 @@ varname                               val                  units      prom_name
 ------------------------------------  -------------------  ---------  -------------------------------------------------------------
 <...cut for brevity...>
     ProFastComp_0
-      LCOE                            [0.09009908]         USD/kW/h   finance_subgroup_default.LCOE
+      LCOE                            [0.09009908]         USD/(kW*h)   finance_subgroup_default.LCOE
     ProFastComp_1
       LCOH                            [4.63528661]         USD/kg     finance_subgroup_default.LCOH
 ```

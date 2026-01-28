@@ -3,7 +3,9 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
-from h2integrate.control.control_strategies.openloop_controllers import DemandOpenLoopController
+from h2integrate.control.control_strategies.storage.demand_openloop_controller import (
+    DemandOpenLoopStorageController,
+)
 
 
 @fixture
@@ -29,7 +31,7 @@ def battery_tech_config_kW():
     battery_inputs = {
         "performance_model": {"model": "simple_generic_storage"},
         "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_controller"},
+        "control_strategy": {"model": "demand_open_loop_storage_controller"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
@@ -62,7 +64,7 @@ def battery_tech_config_MW():
     battery_inputs = {
         "performance_model": {"model": "simple_generic_storage"},
         "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_controller"},
+        "control_strategy": {"model": "demand_open_loop_storage_controller"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
@@ -102,7 +104,7 @@ def test_integrated_battery_cost_kW(
         promotes=["*"],
     )
 
-    controller = DemandOpenLoopController(
+    controller = DemandOpenLoopStorageController(
         plant_config=plant_config, tech_config=battery_tech_config_kW
     )
 
@@ -142,7 +144,7 @@ def test_integrated_battery_cost_MW(
 
     electricity_profile_MW = electricity_profile_kW / 1e3
 
-    controller = DemandOpenLoopController(
+    controller = DemandOpenLoopStorageController(
         plant_config=plant_config, tech_config=battery_tech_config_MW
     )
 

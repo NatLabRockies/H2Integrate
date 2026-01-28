@@ -13,7 +13,7 @@ from h2integrate.converters.methanol.methanol_baseclass import (
 )
 
 
-@define
+@define(kw_only=True)
 class CO2HPerformanceConfig(MethanolPerformanceConfig):
     meoh_syn_cat_consume_ratio: float = field()
     ng_consume_ratio: float = field()
@@ -122,7 +122,7 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         outputs["electricity_consume"] = meoh_prod * elec_ratio
 
 
-@define
+@define(kw_only=True)
 class CO2HCostConfig(MethanolCostConfig):
     ng_lhv: float = field()
     meoh_syn_cat_price: float = field()

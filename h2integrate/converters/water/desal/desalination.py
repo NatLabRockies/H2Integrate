@@ -1,14 +1,15 @@
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.water.desal.desalination_baseclass import (
     DesalinationCostBaseClass,
     DesalinationPerformanceBaseClass,
 )
 
 
-@define
+@define(kw_only=True)
 class ReverseOsmosisPerformanceModelConfig(BaseConfig):
     """Configuration class for the ReverseOsmosisDesalinationPerformanceModel.
 
@@ -100,7 +101,7 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         outputs["footprint"] = desal_size_m2
 
 
-@define
+@define(kw_only=True)
 class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ReverseOsmosisDesalinationCostModel.
 

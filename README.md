@@ -4,6 +4,7 @@
 ![CI Tests](https://github.com/NREL/H2Integrate/actions/workflows/ci.yml/badge.svg)
 [![image](https://img.shields.io/pypi/pyversions/H2Integrate.svg)](https://pypi.python.org/pypi/H2Integrate)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![DOI:10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903149.svg)](https://zenodo.org/records/17903149)
 
 [![DOI 10.1088/1742-6596/2767/8/082019](https://img.shields.io/badge/DOI-10.1088%2F1742--6596%2F2767%2F8%2F082019-brightgreen?link=[https://doi.org/10.1088/1742-6596/2767/8/082019](https://doi.org/10.1088/1742-6596/2767/8/082019))](https://iopscience.iop.org/article/10.1088/1742-6596/2767/8/082019/pdf)
 [![DOI 10.1088/1742-6596/2767/6/062017](https://img.shields.io/badge/DOI-10.1088%2F1742--6596%2F2767%2F6%2F062017-brightgreen?link=[https://doi.org/10.1088/1742-6596/2767/6/062017](https://doi.org/10.1088/1742-6596/2767/6/062017))](https://iopscience.iop.org/article/10.1088/1742-6596/2767/6/062017/pdf)
@@ -12,6 +13,42 @@
 H2Integrate is an open-source Python package for modeling and designing hybrid energy systems producing electricity, hydrogen, ammonia, steel, and other products.
 
 Note: The current version of H2Integrate is under active development and may be missing features that existed previously. H2Integrate v0.2.0 is the last version that uses the prior framework.
+
+## Software Citation
+
+```bibtex
+@software{brunik_2025_17903150,
+  author = {Brunik, Kaitlin and
+    Grant, Elenya and
+    Thomas, Jared and
+    Starke, Genevieve M and
+    Martin, Jonathan and
+    Ramos, Dakota and
+    Koleva, Mariya and
+    Reznicek, Evan and
+    Hammond, Rob and
+    Stanislawski, Brooke and
+    Kiefer, Charlie and
+    Irmas, Cameron and
+    Vijayshankar, Sanjana and
+    Riccobono, Nicholas and
+    Frontin, Cory and
+    Clark, Caitlyn and
+    Barker, Aaron and
+    Gupta, Abhineet and
+    Kee, Benjamin (Jamie) and
+    King, Jennifer and
+    Jasa, John and
+    Bay, Christopher},
+  title = {H2Integrate: Holistic Hybrids Optimization and Design Tool},
+  month = dec,
+  year = 2025,
+  publisher = {Zenodo},
+  version = {0.4.0},
+  doi = {10.5281/zenodo.17903150},
+  url = {https://doi.org/10.5281/zenodo.17903150},
+}
+```
 
 ## Publications where H2Integrate has been used
 

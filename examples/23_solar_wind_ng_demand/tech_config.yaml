@@ -1,0 +1,112 @@
+name: technology_config
+description: This plant produces electricity with wind, solar, and a natural gas power plant to meet a fixed electrical load demand.
+
+technologies:
+  wind:
+    performance_model:
+      model: pysam_wind_plant_performance
+    cost_model:
+      model: atb_wind_cost
+    model_inputs:
+      performance_parameters:
+        num_turbines: 20
+        turbine_rating_kw: 6000
+        hub_height: 115
+        rotor_diameter: 170
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        pysam_options:
+          Farm:
+            wind_farm_wake_model: 0
+          Losses:
+            ops_strategies_loss: 10.0
+        layout:
+          layout_mode: basicgrid
+          layout_options:
+            row_D_spacing: 5.0
+            turbine_D_spacing: 5.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: square
+      cost_parameters:
+        capex_per_kW: 1300
+        opex_per_kW_per_year: 39
+        cost_year: 2022
+
+  solar:
+    performance_model:
+      model: pysam_solar_plant_performance
+    cost_model:
+      model: atb_utility_pv_cost
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 100000 #100 MWdc
+        dc_ac_ratio: 1.34
+        create_model_from: new
+        tilt_angle_func: none
+        tilt: 0
+        pysam_options:
+          SystemDesign:
+            gcr: 0.3
+            array_type: 2
+            bifaciality: 0.65
+            inv_eff: 96.0
+            losses: 14.6
+            module_type: 1
+            azimuth: 180
+            rotlim: 45
+          SolarResource:
+            albedo_default: 0.2
+      cost_parameters:
+        capex_per_kWac: 1193
+        opex_per_kWac_per_year: 18
+        cost_year: 2024
+
+  ng_feedstock:
+    performance_model:
+      model: feedstock_performance
+    cost_model:
+      model: feedstock_cost
+    model_inputs:
+      shared_parameters:
+        feedstock_type: natural_gas
+        units: MMBtu
+      performance_parameters:
+        rated_capacity: 750. #MMBtu
+      cost_parameters:
+        cost_year: 2023
+        price: 4.2 #USD/MMBtu
+        annual_cost: 0.
+        start_up_cost: 0.
+
+  natural_gas_plant:
+    performance_model:
+      model: natural_gas_performance
+    cost_model:
+      model: natural_gas_cost
+    model_inputs:
+      shared_parameters:
+        heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
+        system_capacity_mw: 100. #MW
+      cost_parameters:
+        capex_per_kw: 1000  # $/kW - typical for NGCC
+        fixed_opex_per_kw_per_year: 10.0  # $/kW/year
+        variable_opex_per_mwh: 0.0  # $/MWh
+        cost_year: 2023
+
+  electrical_load_demand:
+      control_strategy:
+        model: demand_open_loop_converter_controller
+      model_inputs:
+        control_parameters:
+          commodity_name: electricity
+          commodity_units: kW
+          demand_profile: 100000 #100 MW
+
+  combiner:
+    performance_model:
+      model: combiner_performance
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_units: kW

@@ -22,6 +22,15 @@ GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submi
   [Google style](https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html).
 * When you start working on a pull request, start by creating a new branch pointing at the latest
   commit on [main](https://github.com/NREL/H2Integrate).
+* Code formatting is enforced using pre-commit hooks and is required for any code pushed up to the repository. The pre-commit package is included in the developer install of the repository. The pre-commit hooks can be installed by running
+```bash
+pre-commit install
+```
+in the repository directory. This will automatically run the pre-commit formatting hooks when code changes are committed. If you are having difficulty committing code after it has been reformatted by these hooks, try using the commit command
+```bash
+git commit -am "<Your commit message here>"
+```
+which will re-add the reformatted files to the commit.
 * The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NREL/H2Integrate/blob/main/LICENSE).
 
 ## Documentation
@@ -40,10 +49,29 @@ In addition to generating the documentation, be sure to check the results by ope
 path in your browser: `file:///<path-to-h2integrate>/H2Integrate/docs/_build/html/index.html`.
 
 ```{note}
-If the browser appears to be out of date from what you expected to built, please try the following, roughly in order:
+If the browser appears to be out of date from what you expected to be built, please try the following, roughly in order:
 1. Reload the page a few times
 2. Clear your browser's cache and open the page again.
 3. Delete the `_build` folder and rebuild the docs
+```
+
+### Writing Executable Content
+
+All executable content, such as Jupyter notebooks, should be converted to the executable markdown
+format used by Jupyter Book. For users that prefer to develop examples in Jupyter notebooks, then
+Jupytext (separate installation required) can be used to convert their work using the following
+command. For more details, please see their documentation:
+https://jupytext.readthedocs.io/en/latest/using-cli.html.
+
+```bash
+jupytext notebook.ipynb --to myst
+```
+
+Similarly, any documentation example that users wish to interact with can be converted to a notebook
+using the following command.
+
+```bash
+jupytext notebook.md --to .ipynb
 ```
 
 ## Tests

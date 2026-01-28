@@ -1,0 +1,31 @@
+name: "technology_config"
+description: "This plant produces electricity from a solar-PV system"
+
+technologies:
+  solar:
+    performance_model:
+      model: "pysam_solar_plant_performance"
+    cost_model:
+      model: "atb_utility_pv_cost"
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 400000
+        dc_ac_ratio: 1.34
+        create_model_from: "new"
+        tilt_angle_func: "lat-func"
+        pysam_options:
+          SystemDesign:
+            gcr: 0.3
+            array_type: 2
+            bifaciality: 0.65
+            inv_eff: 96.0
+            losses: 14.6
+            module_type: 1
+            azimuth: 180
+            rotlim: 45
+          SolarResource:
+            albedo_default: 0.2
+      cost_parameters:
+        capex_per_kWac: 1367 #2022 costs from ATB 2024 v3
+        opex_per_kWac_per_year: 24 #2022 costs from ATB 2024 v3
+        cost_year: 2022

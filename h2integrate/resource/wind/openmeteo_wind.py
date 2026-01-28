@@ -12,7 +12,7 @@ from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
 
 
-@define
+@define(kw_only=True)
 class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
@@ -48,23 +48,8 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
 
 class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
     def setup(self):
-        super().setup()
-
-        # create the input dictionary for WTKNRELDeveloperAPIConfig
-        resource_specs = self.options["resource_config"]
-        # set the default latitude, longitude, and resource_year from the site_config
-        resource_specs.setdefault("latitude", self.site_config["latitude"])
-        resource_specs.setdefault("longitude", self.site_config["longitude"])
-        resource_specs.setdefault("resource_year", self.site_config.get("year", None))
-
-        # set the default resource_dir from a directory that can be
-        # specified in site_config['resources']['resource_dir']
-        resource_specs.setdefault(
-            "resource_dir", self.site_config["resources"].get("resource_dir", None)
-        )
-
-        # default timezone to UTC because 'timezone' was removed from the plant config schema
-        resource_specs.setdefault("timezone", self.sim_config.get("timezone", 0))
+        # create the input dictionary for OpenMeteoHistoricalWindAPIConfig
+        resource_specs = self.helper_setup_method()
 
         # create the resource config
         self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(resource_specs)
@@ -84,6 +69,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
             else:
                 self.interval = int(min(self.config.valid_intervals))
 
+        super().setup()
+
         self.hourly_wind_data_to_units = {
             "wind_speed_10m": "m/s",
             "wind_speed_100m": "m/s",
@@ -93,17 +80,24 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
             "surface_pressure": "hPa",
             "precipitation": "mm/h",
             "relative_humidity_2m": "unitless",
+            "is_day": "percent",
         }
         # get the data dictionary
-        data = self.get_data()
+        data = self.get_data(self.config.latitude, self.config.longitude)
+
+        self.resource_data = data
 
         # add resource data dictionary as an out
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_filename(self):
+    def create_filename(self, latitude, longitude):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_openmeteo_archive_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
@@ -115,13 +109,17 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{self.config.latitude}_{self.config.longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{self.config.resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self):
+    def create_url(self, latitude, longitude):
         """Create url for data download.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
 
         Returns:
             str: url to use for API call.
@@ -130,8 +128,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         end_year = int(self.config.resource_year + 1)
 
         input_data = {
-            "latitude": self.config.latitude,
-            "longitude": self.config.longitude,
+            "latitude": latitude,
+            "longitude": longitude,
             "start_date": f"{start_year}-12-31",  # format is "%Y-%m-%d"
             "end_date": f"{end_year}-01-01",  # format is "%Y-%m-%d"
             "hourly": list(self.hourly_wind_data_to_units.keys()),
@@ -322,6 +320,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
             if old_c not in self.hourly_wind_data_to_units:
                 continue
 
+            if "is_day" in c:
+                data_rename_mapper.update({c: "is_day"})
+                data_units.update({"is_day": "percent"})
+
             if "surface" in c:
                 new_c += "_0m"
                 new_c = new_c.replace("surface", "").replace("__", "").strip("_")
@@ -336,6 +338,3 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass

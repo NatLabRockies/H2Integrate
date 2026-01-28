@@ -4,12 +4,10 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nrel_developer_goes_api_base import (
-    GOESNRELDeveloperAPISolarResourceBase,
-)
+from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
 
 
-@define
+@define(kw_only=True)
 class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Aggregated PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
@@ -44,7 +42,7 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESAggregatedSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
+class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -54,7 +52,7 @@ class GOESAggregatedSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESConusAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Conus PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
@@ -90,7 +88,7 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESConusSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
+class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -102,7 +100,7 @@ class GOESConusSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
@@ -137,7 +135,7 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESFullDiscSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
+class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -147,7 +145,7 @@ class GOESFullDiscSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
         super().setup()
 
 
-@define
+@define(kw_only=True)
 class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
@@ -206,7 +204,7 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "goes_tgy_v4"
 
 
-class GOESTMYSolarAPI(GOESNRELDeveloperAPISolarResourceBase):
+class GOESTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 

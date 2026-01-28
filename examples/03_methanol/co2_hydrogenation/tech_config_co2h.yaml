@@ -2,16 +2,56 @@ name: "technology_config"
 description: "This hybrid plant produces methanol"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
-      config: !include tech_inputs/hopp_config.yaml
+      model: "pysam_wind_plant_performance"
     cost_model:
-      model: "hopp"
-    electrolyzer_rating: 156. # MW
+      model: "atb_wind_cost"
     model_inputs:
+      performance_parameters:
+        num_turbines: 29
+        turbine_rating_kw: 6000
+        rotor_diameter: 100.
+        hub_height: 115.
+        create_model_from: "default"
+        config_name: "WindPowerSingleOwner"
+        run_recalculate_power_curve: True
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
       cost_parameters:
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
         cost_year: 2019
+  solar:
+    performance_model:
+      model: "pysam_solar_plant_performance"
+    cost_model:
+      model: "atb_comm_res_pv_cost"
+    model_inputs:
+      shared_parameters:
+        pv_capacity_kWdc: 350000 #350 MWdc
+      performance_parameters:
+        dc_ac_ratio: 1.3
+        create_model_from: "default"
+        config_name: "PVWattsSingleOwner"
+        tilt_angle_func: "lat-func"
+      cost_parameters:
+        capex_per_kWdc: 1323
+        opex_per_kWdc_per_year: 18
+        cost_year: 2019
+  combiner:
+    performance_model:
+      model: "combiner_performance"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_units: "kW"
   electrolyzer:
     performance_model:
       model: "eco_pem_electrolyzer_performance"
@@ -22,13 +62,9 @@ technologies:
         location: "onshore"
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
       performance_parameters:
-        sizing:
-          resize_for_enduse: False
-          size_for: 'BOL' #'BOL' (generous) or 'EOL' (conservative)
-          hydrogen_dmd:
+        size_mode: "normal"
         n_clusters: 4
         cluster_rating_MW: 39
-        pem_control_type: 'basic'
         eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000 #number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: True #include degradation

@@ -1,36 +1,92 @@
 # Changelog
 
-## 0.4.x [TBD]
-- Added `tools/run_cases.py` with tools to run different `tech_config` cases from a spreadsheet, with new docs page to describe: docs/user_guide/how_to_run_several_cases_in_sequence.md
-- Added capability for user-defined finance models in the H2Integrate framework
-- Added an optimized offshore methanol production case to examples/03_methanol/co2_hydrogenation_doc
-- Updated setting up recorder in `PoseOptimization`
-- Added resource models to make solar resource API calls to the NREL Developer GOES dataset
-- Added framework to run heuristic load following dispatch for storage technologies
-- Added PySAM battery model as a storage technology performance model
-- Added `create_om_reports` option to driver config to enable/disable OpenMDAO reports (N2 diagrams, etc.)
-- Added design of experiment functionality
-- Added "csvgen" as generator type for design of experiments
-- Added PySAM Windpower performance model to simulate wind.
-- Added `simple_grid_layout.py` for wind plant layout modeling, can model square or rectangular layouts.
-- Added ability to visualize the wind plant layout for PySAM Windpower model using `post_process(show_plots=True)`.
-- Added Wind Annual Technology Baseline cost model `atb_wind_cost.py`.
-- Updated inputs for the `ATBBatteryCostModel` and `DemandOpenLoopController` so storage capacity and charge rate can be design variables
-- Created `ProFastBase`, a base class for the `ProFastLCO` and `ProFastNPV` models
-- Added `ProFastNPV`, a finance model using ProFAST to calculate NPV of the commodity
-- Moved `compute()` from `ProFastBase` to `ProFastLCO`.
-- Added `NumpyFinancialNPV`, a finance model that uses NumPy Financial npv to calculate the npv from the cash flows
-- Add feature for natural gas plant converter to take electricity demand as an input and added system capacity as an input
-- Added wind resource model for API calls to Open-Meteo archive
-- Added `load_yaml()` function and flexibility to input a config dictionary to H2IntegrateModel rather than a filepath
-- Fixed stoichiometry mistake in ammonia synloop
-- Removed `boundaries` from the necessary keys in `plant_config` validation
-- Improved the readability of the postprocessing printout
-- Split out cost models from coupled hydrogen storage performance and cost model
-- Added storage auto-sizing performance model based on storage sizing calculations that existed in the coupled hydrogen storage performance and cost model
-- Move geologic hydrogen models into specific geoh2 subsurface converters
-- Added standalone iron mine performance and cost model
+## 0.5.x [TBD]
+- Updates models for NumPy version 2.4.0
+- Update test values for WOMBAT update to 0.13.0
+- Added standalone iron DRI and steel EAF performance and cost models
+- Added capability to have transport models that require user input parameters
+- Add geologic hydrogen surface processing converter
+- Add baseclass for caching functionality
+- Added postprocessing function to save timeseries
+- Minor reorg for profast tools
+- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
+- Removed hydrogen tank cost and performance models that were unused
+- Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
+- Updated the contributing documentation to clarify what developers should expect for including
+  executable content in the documentation.
+- Converted the example notebooks to documentation examples, and maintain a basic working example
+  in the examples folder:
+  - `examples/14_wind_hydrogen_dispatch/hydrogren_dispatch.ipynb` -> `docs/control/controller_demonstrations.md`
+  - `examples/20_solar_electrolyzer_doe/run_csv_doe.ipynb` content added to `docs/user_guide/design_of_experiments_in_h2i.md`
+  - `examples/25_sizing_modes/run_size_modes.ipynb` -> `docs/user_guide/run_size_modes.md`
+- `.gitignore` is updated to be more inclusive of example output data.
+- Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught.
+- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations.
+  - Cleans up unnecessary ignore rules in the ruff settings.
+  - Removes duplicate dependency listings, and alphabetizes for legibility with NLR packages
+    listed at the bottom.
+  - Remove unused dependencies.
+  - Fixes typos for skipped folders.
+  - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
 - Added Ard as a combined performance and cost model
+
+## 0.5.1 [December 18, 2025]
+
+- Fixed tagged version number for release
+
+## 0.5.0 [December 18, 2025]
+
+### New Features and Technology Models
+
+- Added PySAM Windpower performance model to simulate wind [PR 306](https://github.com/NREL/H2Integrate/pull/306)
+- Added `simple_grid_layout.py` for wind plant layout modeling, can model square or rectangular layouts [PR 306](https://github.com/NREL/H2Integrate/pull/306)
+- Added ability to visualize the wind plant layout for PySAM Windpower model using `post_process(show_plots=True)` [PR 306](https://github.com/NREL/H2Integrate/pull/306)
+- Added Wind Annual Technology Baseline cost model `atb_wind_cost.py` [PR 306](https://github.com/NREL/H2Integrate/pull/306)
+- Added resource models to make solar resource API calls to the NREL Developer GOES dataset [PR 279](https://github.com/NREL/H2Integrate/pull/279)
+- Added solar resource models for Meteosat Prime Meridian and Himawari datasets available through NSRDB [PR 377](https://github.com/NREL/H2Integrate/pull/377)
+- Added wind resource model for API calls to Open-Meteo archive [PR 332](https://github.com/NREL/H2Integrate/pull/332)
+- Added PySAM battery model as a storage technology performance model [PR 211](https://github.com/NREL/H2Integrate/pull/211)
+- Added framework to run heuristic load following dispatch for storage technologies [PR 211](https://github.com/NREL/H2Integrate/pull/211)
+- Added storage auto-sizing performance model based on storage sizing calculations that existed in the coupled hydrogen storage performance and cost model [PR 324](https://github.com/NREL/H2Integrate/pull/324)
+- Added grid converter performance and cost model which can be used to buy, sell, or buy and sell electricity to/from the grid [PR 340](https://github.com/NREL/H2Integrate/pull/340)
+- Add feature for natural gas plant converter to take electricity demand as an input and added system capacity as an input [PR 334](https://github.com/NREL/H2Integrate/pull/334)
+- Added standalone iron mine performance and cost model [PR 364](https://github.com/NREL/H2Integrate/pull/364)
+- Add open-loop load demand controllers: `DemandOpenLoopConverterController` and `FlexibleDemandOpenLoopConverterController` [PR 328](https://github.com/NREL/H2Integrate/pull/328)
+
+### Improvements and Refactoring
+
+- Updated inputs for the `ATBBatteryCostModel` and `DemandOpenLoopController` so storage capacity and charge rate can be design variables [PR 290](https://github.com/NREL/H2Integrate/pull/290)
+- Split out cost models from coupled hydrogen storage performance and cost model [PR 324](https://github.com/NREL/H2Integrate/pull/324)
+- Created `ProFastBase`, a base class for the `ProFastLCO` and `ProFastNPV` models [PR 310](https://github.com/NREL/H2Integrate/pull/310)
+- Added `ProFastNPV`, a finance model using ProFAST to calculate NPV of the commodity [PR 310](https://github.com/NREL/H2Integrate/pull/310)
+- Moved `compute()` from `ProFastBase` to `ProFastLCO` [PR 310](https://github.com/NREL/H2Integrate/pull/310)
+- Added `NumpyFinancialNPV`, a finance model that uses NumPy Financial npv to calculate the npv from the cash flows [PR 310](https://github.com/NREL/H2Integrate/pull/310)
+- Added capability for user-defined finance models in the H2Integrate framework [PR 247](https://github.com/NREL/H2Integrate/pull/247)
+- Enabled dynamic plant component sizing modes through the resizeable model class `ResizeablePerformanceModelBaseClass` [PR 198](https://github.com/NREL/H2Integrate/pull/198)
+- Move geologic hydrogen models into specific geoh2 subsurface converters [PR 367](https://github.com/NREL/H2Integrate/pull/367)
+- Updated generic combiner to accept any number of inflow streams instead of just 2 [PR 406](https://github.com/NREL/H2Integrate/pull/406)
+- Allow multiple instances of the same electricity producing technologies using prefix-based matching [PR 397](https://github.com/NREL/H2Integrate/pull/397)
+- Allow multiple instances of custom models in the same hybrid system [PR 397](https://github.com/NREL/H2Integrate/pull/397)
+- Removed a large portion of the old GreenHEART code that was no longer being used [PR 384](https://github.com/NREL/H2Integrate/pull/384)
+- Moved high-level tests to the appropriate directory and removed defunct tests [PR 412](https://github.com/NREL/H2Integrate/pull/412)
+
+### Configuration and Optimization
+
+- Added `tools/run_cases.py` with tools to run different `tech_config` cases from a spreadsheet, with new docs page to describe: docs/user_guide/how_to_run_several_cases_in_sequence.md [PR 242](https://github.com/NREL/H2Integrate/pull/242)
+- Updated setting up recorder in `PoseOptimization` [PR 291](https://github.com/NREL/H2Integrate/pull/291)
+- Added `create_om_reports` option to driver config to enable/disable OpenMDAO reports (N2 diagrams, etc.) [PR 308](https://github.com/NREL/H2Integrate/pull/308)
+- Added design of experiment functionality [PR 314](https://github.com/NREL/H2Integrate/pull/314)
+- Added "csvgen" as generator type for design of experiments [PR 314](https://github.com/NREL/H2Integrate/pull/314)
+- Added `load_yaml()` function and flexibility to input a config dictionary to H2IntegrateModel rather than a filepath [PR 313](https://github.com/NREL/H2Integrate/pull/313)
+- Removed `boundaries` from the necessary keys in `plant_config` validation [PR 361](https://github.com/NREL/H2Integrate/pull/361)
+- Added ability for latitude and longitude to be design variables in design sweep [PR 336](https://github.com/NREL/H2Integrate/pull/336)
+
+### Documentation, Examples, and Miscellaneous
+
+- Added an optimized offshore methanol production case to examples/03_methanol/co2_hydrogenation_doc [PR 137](https://github.com/NREL/H2Integrate/pull/137)
+- Improved the readability of the postprocessing printout [PR 361](https://github.com/NREL/H2Integrate/pull/361)
+- Improved readability of the postprocessing printout by simplifying numerical representation, especially for years [PR 378](https://github.com/NREL/H2Integrate/pull/378)
+- Fixed stoichiometry mistake in ammonia synloop [PR 363](https://github.com/NREL/H2Integrate/pull/363)
 
 ## 0.4.0 [October 1, 2025]
 

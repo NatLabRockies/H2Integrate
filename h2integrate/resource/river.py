@@ -7,7 +7,7 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 
 
-@define
+@define(kw_only=True)
 class RiverResourceConfig(BaseConfig):
     filename: str | Path = field()
 
@@ -48,6 +48,10 @@ class RiverResource(om.ExplicitComponent):
     def setup(self):
         # Define inputs and outputs
         self.config = RiverResourceConfig.from_dict(self.options["resource_config"])
+        site_config = self.options["plant_config"]["site"]
+
+        self.add_input("latitude", site_config.get("latitude", 0.0), units="deg")
+        self.add_input("longitude", site_config.get("longitude", 0.0), units="deg")
         self.add_output("discharge", shape=8760, val=0.0, units="ft**3/s")
 
     def compute(self, inputs, outputs):

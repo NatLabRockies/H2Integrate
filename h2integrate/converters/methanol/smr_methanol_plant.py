@@ -13,7 +13,7 @@ from h2integrate.converters.methanol.methanol_baseclass import (
 )
 
 
-@define
+@define(kw_only=True)
 class SMRPerformanceConfig(MethanolPerformanceConfig):
     meoh_syn_cat_consume_ratio: float = field()
     meoh_atr_cat_consume_ratio: float = field()
@@ -106,7 +106,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         outputs["electricity_out"] = meoh_prod * elec_ratio
 
 
-@define
+@define(kw_only=True)
 class SMRCostConfig(MethanolCostConfig):
     ng_lhv: float = field()
     meoh_syn_cat_price: float = field()

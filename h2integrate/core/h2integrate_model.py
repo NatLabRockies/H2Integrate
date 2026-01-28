@@ -1,9 +1,10 @@
 import importlib.util
 
-import numpy as np
+import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
+from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import (
     get_path,
     find_file,
@@ -13,7 +14,7 @@ from h2integrate.core.utilities import (
 )
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.resource_summer import ElectricitySumComp
-from h2integrate.core.supported_models import supported_models, electricity_producing_techs
+from h2integrate.core.supported_models import supported_models, is_electricity_producer
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
@@ -205,10 +206,34 @@ class H2IntegrateModel:
                 Defaults to "". Should be "finance_" if looking for custom general finance models.
         """
 
+        included_custom_models = {}
+
         for name, config in model_config.items():
             for model_type in model_types:
                 if model_type in config:
                     model_name = config[model_type].get(f"{prefix}model")
+
+                    # Don't create new custom model or raise an error if the current custom model
+                    # has already been processed. This can happen if there are 2 or more instances
+                    # of the same custom model. Also check that all instances of the same custom
+                    # model tech name use the same class definition.
+                    if model_name in included_custom_models:
+                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        if (
+                            model_class_name
+                            != included_custom_models[model_name]["model_class_name"]
+                        ):
+                            raise (
+                                ValueError(
+                                    "User has specified two custom models using the same model"
+                                    "name ({model_name}), but with different model classes. "
+                                    "Technologies defined with different classes must have "
+                                    "different technology names."
+                                )
+                            )
+                        else:
+                            continue
+
                     if (model_name not in self.supported_models) and (model_name is not None):
                         model_class_name = config[model_type].get(f"{prefix}model_class_name")
                         model_location = config[model_type].get(f"{prefix}model_location")
@@ -238,6 +263,11 @@ class H2IntegrateModel:
 
                         # Add the custom model to the supported models dictionary
                         self.supported_models[model_name] = custom_model_class
+
+                        # Add the custom model to custom models dictionary
+                        included_custom_models[model_name] = {
+                            "model_class_name": model_class_name,
+                        }
 
                     else:
                         if (
@@ -290,21 +320,48 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
+        """
+        Create and configure site component(s) for the system.
+
+        This method initializes a site group for each site provided in
+        ``self.plant_config["sites"]``.
+
+        This method creates an OpenMDAO Group for each site that contains the location definition
+        and resources models (if provided in the configuration) for that site.
+        """
+        # Loop through each site defined in the plant config
+        for site_name, site_info in self.plant_config["sites"].items():
+            # Reorganize the plant config to be formatted as expected by the
+            # resource models
+            plant_config_reorg = {
+                "site": site_info,
+                "plant": self.plant_config["plant"],
+            }
+
+            # Create the site group and resource models
+            site_group = self.create_site_group(plant_config_reorg, site_info)
+
+            # Add the site group to the system model
+            self.model.add_subsystem(site_name, site_group)
+
+    def create_site_group(self, plant_config_dict: dict, site_config: dict):
+        """
+        Create and configure a site Group for the input site configuration.
+
+        Args:
+            plant_config_dict (dict): The plant config dictionary formatted for the resource models
+            site_config (dict): Information that defines each site, such as latitude,
+                longitude, and resource models.
+
+        Returns:
+            om.Group: OpenMDAO group for a site
+        """
+        # Initialize the site group
         site_group = om.Group()
 
-        # Create a site-level component
-        site_config = self.plant_config.get("site", {})
-        site_component = om.IndepVarComp()
-        site_component.add_output("latitude", val=site_config.get("latitude", 0.0))
-        site_component.add_output("longitude", val=site_config.get("longitude", 0.0))
-        site_component.add_output("elevation_m", val=site_config.get("elevation_m", 0.0))
-
-        # Add boundaries if they exist
-        site_config = self.plant_config.get("site", {})
-        boundaries = site_config.get("boundaries", [])
-        for i, boundary in enumerate(boundaries):
-            site_component.add_output(f"boundary_{i}_x", val=np.array(boundary.get("x", [])))
-            site_component.add_output(f"boundary_{i}_y", val=np.array(boundary.get("y", [])))
+        # Create a site location component (defines latitude, longitude, etc)
+        site_inputs = {k: v for k, v in site_config.items() if k != "resources"}
+        site_component = SiteLocationComponent(site_inputs)
 
         site_group.add_subsystem("site_component", site_component, promotes=["*"])
 
@@ -316,13 +373,14 @@ class H2IntegrateModel:
                 resource_class = self.supported_models.get(resource_model)
                 if resource_class:
                     resource_component = resource_class(
-                        plant_config=self.plant_config,
+                        plant_config=plant_config_dict,
                         resource_config=resource_inputs,
                         driver_config=self.driver_config,
                     )
-                    site_group.add_subsystem(resource_name, resource_component)
-
-        self.model.add_subsystem("site", site_group, promotes=["*"])
+                    site_group.add_subsystem(
+                        resource_name, resource_component, promotes_inputs=["latitude", "longitude"]
+                    )
+        return site_group
 
     def create_plant_model(self):
         """
@@ -358,6 +416,13 @@ class H2IntegrateModel:
             "wind_plant_ard",
             "iron",
         ]
+
+        if any(tech == "site" for tech in self.technology_config["technologies"]):
+            msg = (
+                "'site' is an invalid technology name and is reserved for top-level "
+                "variables. Please change the technology name to something else."
+            )
+            raise NameError(msg)
 
         # Create a technology group for each technology
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
@@ -440,8 +505,6 @@ class H2IntegrateModel:
                         else:
                             plural_model_type_name = model_type + "s"
                         getattr(self, plural_model_type_name).append(om_model_object)
-                    elif model_type == "performance_model":
-                        raise KeyError("Model definition requires 'performance_model'.")
 
                 # Process the finance models
                 if "finance_model" in individual_tech_config:
@@ -828,8 +891,12 @@ class H2IntegrateModel:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
 
-                # make the connection_name based on source, dest, item, type
-                connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
+                if transport_type in self.tech_names:
+                    # if the transport type is already a technology, skip creating a new component
+                    connection_name = f"{transport_type}"
+                else:
+                    # make the connection_name based on source, dest, item, type
+                    connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
 
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
@@ -848,12 +915,17 @@ class H2IntegrateModel:
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object
-                connection_component = self.supported_models[transport_type](
-                    transport_item=transport_item
-                )
+                # allow transport_type to be from self.tech_name
+                if transport_type in self.tech_names:
+                    # Connect the connection component to the destination technology
+                    pass
+                else:
+                    connection_component = self.supported_models[transport_type](
+                        transport_item=transport_item
+                    )
 
-                # Add the connection component to the model
-                self.plant.add_subsystem(connection_name, connection_component)
+                    # Add the connection component to the model
+                    self.plant.add_subsystem(connection_name, connection_component)
 
                 # Check if the source technology is a splitter
                 if "splitter" in source_tech:
@@ -915,7 +987,7 @@ class H2IntegrateModel:
             elif len(connection) == 3:
                 # connect directly from source to dest
                 source_tech, dest_tech, connected_parameter = connection
-                if isinstance(connected_parameter, (tuple, list)):
+                if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
                     self.plant.connect(
                         f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
@@ -931,7 +1003,12 @@ class H2IntegrateModel:
 
         resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
 
-        resource_models = self.plant_config.get("site", {}).get("resources", {})
+        if "sites" in self.plant_config:
+            resource_models = {}
+            for site_grp, site_grp_inputs in self.plant_config["sites"].items():
+                for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
+                    resource_models[f"{site_grp}-{resource_key}"] = resource_params
+
         resource_source_connections = [c[0] for c in resource_to_tech_connections]
         # Check if there is a missing resource to tech connection or missing resource model
         if len(resource_models) != len(resource_source_connections):
@@ -1008,7 +1085,7 @@ class H2IntegrateModel:
                     # and in this finance group
                     for tech_name in tech_configs.keys():
                         if (
-                            tech_name in electricity_producing_techs
+                            is_electricity_producer(tech_name)
                             and primary_commodity_type == "electricity"
                         ):
                             self.plant.connect(
@@ -1094,15 +1171,20 @@ class H2IntegrateModel:
 
         self.plant.options["auto_order"] = True
 
-        # Check if there are any connections FROM a finance group to ammonia
-        # This handles the case where LCOH is computed in the finance group and passed to ammonia
+        # Check if there are any loops in the technology interconnections
+        # If loops are present, add solvers to resolve the coupling
+        # Create a directed graph from the technology interconnections
+        G = nx.DiGraph()
         for connection in technology_interconnections:
-            if connection[0].startswith("finance_subgroup_") and connection[1] == "ammonia":
-                # If the connection is from a finance group, set solvers for the
-                # plant to resolve the coupling
-                self.plant.nonlinear_solver = om.NonlinearBlockGS()
-                self.plant.linear_solver = om.DirectSolver()
-                break
+            source = connection[0]
+            destination = connection[1]
+            G.add_edge(source, destination)
+
+        # Check if there are any cycles (loops) in the graph
+        if list(nx.simple_cycles(G)):
+            # If cycles are found, set solvers for the plant to resolve the coupling
+            self.plant.nonlinear_solver = om.NonlinearBlockGS()
+            self.plant.linear_solver = om.DirectSolver()
 
         # initialize dispatch rules connection list
         tech_to_dispatch_connections = self.plant_config.get("tech_to_dispatch_connections", [])

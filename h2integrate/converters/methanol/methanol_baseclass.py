@@ -6,7 +6,7 @@ from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class MethanolPerformanceConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
     plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
@@ -52,7 +52,7 @@ class MethanolPerformanceBaseClass(om.ExplicitComponent):
         self.add_output("h2o_consumption", units="kg/h", shape=n_timesteps)
 
 
-@define
+@define(kw_only=True)
 class MethanolCostConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
     plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
@@ -100,7 +100,7 @@ class MethanolCostBaseClass(CostModelBaseClass):
         self.add_output("Variable_OpEx", units="USD/year")
 
 
-@define
+@define(kw_only=True)
 class MethanolFinanceConfig(BaseConfig):
     tasc_toc_multiplier: float = field()
     fixed_charge_rate: float = field()

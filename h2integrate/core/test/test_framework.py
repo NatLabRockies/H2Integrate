@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import yaml
+import numpy as np
 import pytest
 
 from h2integrate import EXAMPLE_DIR
@@ -50,15 +51,60 @@ def test_custom_model_name_clash(subtests):
     with temp_highlevel_yaml.open("w") as f:
         yaml.safe_dump(highlevel_data, f)
 
-    # Assert that a ValueError is raised with the expected message when running the model
-    error_msg = (
-        r"Custom model_class_name or model_location specified for 'basic_electrolyzer_cost', "
-        r"but 'basic_electrolyzer_cost' is a built-in H2Integrate model\. "
-        r"Using built-in model instead is not allowed\. "
-        r"If you want to use a custom model, please rename it in your configuration\."
-    )
-    with pytest.raises(ValueError, match=error_msg):
-        H2IntegrateModel(temp_highlevel_yaml)
+    with subtests.test("custom model name should not match built-in model names"):
+        # Assert that a ValueError is raised with the expected message when running the model
+        error_msg = (
+            r"Custom model_class_name or model_location specified for 'basic_electrolyzer_cost', "
+            r"but 'basic_electrolyzer_cost' is a built-in H2Integrate model\. "
+            r"Using built-in model instead is not allowed\. "
+            r"If you want to use a custom model, please rename it in your configuration\."
+        )
+        with pytest.raises(ValueError, match=error_msg):
+            H2IntegrateModel(temp_highlevel_yaml)
+
+    with subtests.test(
+        "custom models must use different model names for different class definitions"
+    ):
+        # Load the tech_config YAML content
+        tech_config_data = load_tech_yaml(temp_tech_config)
+
+        tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
+            "model": "new_electrolyzer_cost",
+            "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
+        }
+
+        from copy import deepcopy
+
+        tech_config_data["technologies"]["electrolyzer2"] = deepcopy(
+            tech_config_data["technologies"]["electrolyzer"]
+        )
+        tech_config_data["technologies"]["electrolyzer2"]["cost_model"] = {
+            "model": "new_electrolyzer_cost",
+            "model_class_name": "DummyClass",
+            "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
+        }
+        # Save the modified tech_config YAML back
+        with temp_tech_config.open("w") as f:
+            yaml.safe_dump(tech_config_data, f)
+
+        # Load the high-level YAML content
+        with temp_highlevel_yaml.open() as f:
+            highlevel_data = yaml.safe_load(f)
+
+        # Modify the high-level YAML to point to the temp tech_config file
+        highlevel_data["technology_config"] = str(temp_tech_config.name)
+
+        # Save the modified high-level YAML back
+        with temp_highlevel_yaml.open("w") as f:
+            yaml.safe_dump(highlevel_data, f)
+
+        # Assert that a ValueError is raised with the expected message when running the model
+        error_msg = (
+            r"User has specified two custom models using the same model"
+            r"name ('new_electrolyzer_cost'), but with different model classes\. "
+            r"Technologies defined with different"
+            r"classes must have different technology names\."
+        )
 
     # Clean up temporary YAML files
     temp_tech_config.unlink(missing_ok=True)
@@ -163,9 +209,9 @@ def test_technology_connections():
 
     new_connection = (["finance_subgroup_electricity", "steel", ("LCOE", "electricity_cost")],)
     new_tech_interconnections = (
-        plant_config_data["technology_interconnections"][0:3]
+        plant_config_data["technology_interconnections"][0:4]
         + list(new_connection)
-        + [plant_config_data["technology_interconnections"][3]]
+        + [plant_config_data["technology_interconnections"][4]]
     )
     plant_config_data["technology_interconnections"] = new_tech_interconnections
 
@@ -185,7 +231,9 @@ def test_technology_connections():
         yaml.safe_dump(highlevel_data, f)
 
     h2i_model = H2IntegrateModel(temp_highlevel_yaml)
-
+    demand_profile = np.ones(8760) * 720.0
+    h2i_model.setup()
+    h2i_model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     h2i_model.run()
 
     # Clean up temporary YAML files
@@ -251,7 +299,7 @@ def test_resource_connection_error_missing_resource():
     plant_config_data = load_plant_yaml(temp_plant_config)
 
     # Remove resource
-    plant_config_data["site"]["resources"].pop("wind_resource")
+    plant_config_data["sites"]["site"]["resources"].pop("wind_resource")
 
     # Save the modified tech_config YAML back
     with temp_plant_config.open("w") as f:
@@ -279,19 +327,19 @@ def test_resource_connection_error_missing_resource():
 
 def test_reports_turned_off():
     # Change the current working directory to the example's directory
-    os.chdir(examples_dir / "13_air_separator")
+    os.chdir(examples_dir / "07_run_of_river_plant")
 
     # Path to the original config files in the example directory
     orig_plant_config = Path.cwd() / "plant_config.yaml"
     orig_driver_config = Path.cwd() / "driver_config.yaml"
     orig_tech_config = Path.cwd() / "tech_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "13_air_separator.yaml"
+    orig_highlevel_yaml = Path.cwd() / "07_run_of_river.yaml"
 
     # Create temporary config files
     temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
     temp_driver_config = Path.cwd() / "temp_driver_config.yaml"
     temp_tech_config = Path.cwd() / "temp_tech_config.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_13_air_separator.yaml"
+    temp_highlevel_yaml = Path.cwd() / "temp_07_run_of_river.yaml"
 
     # Copy the original config files to temp files
     shutil.copy(orig_plant_config, temp_plant_config)

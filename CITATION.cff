@@ -1,0 +1,200 @@
+abstract: <p>H2Integrate is an open-source Python package for modeling and designing
+  hybrid energy systems producing electricity, hydrogen, ammonia, steel, and other
+  products.</p>
+authors:
+- family-names: Brunik
+  given-names: Kaitlin
+  orcid: 0009-0006-8764-2672
+- affiliation: National Renewable Energy Laboratory
+  family-names: Grant
+  given-names: Elenya
+  orcid: 0000-0003-1939-011X
+- affiliation: National Renewable Energy Laboratory
+  family-names: Thomas
+  given-names: Jared
+  orcid: 0000-0001-6668-2276
+- affiliation: National Renewable Energy Laboratory
+  family-names: Starke
+  given-names: Genevieve M
+  orcid: 0000-0001-9554-8455
+- affiliation: National Renewable Energy Laboratory
+  family-names: Martin
+  given-names: Jonathan
+  orcid: 0000-0002-1239-6300
+- affiliation: National Renewable Energy Laboratory
+  family-names: Ramos
+  given-names: Dakota
+  orcid: 0000-0003-1258-7681
+- affiliation: National Renewable Energy Laboratory
+  family-names: Koleva
+  given-names: Mariya
+  orcid: 0000-0003-1387-6477
+- affiliation: National Renewable Energy Laboratory
+  family-names: Reznicek
+  given-names: Evan
+  orcid: 0000-0002-7456-1199
+- affiliation: National Renewable Energy Laboratory
+  family-names: Hammond
+  given-names: Rob
+  orcid: 0000-0003-4476-6406
+- affiliation: National Renewable Energy Laboratory
+  family-names: Stanislawski
+  given-names: Brooke
+  orcid: 0000-0003-3146-0053
+- family-names: Kiefer
+  given-names: Charlie
+- family-names: Irmas
+  given-names: Cameron
+- affiliation: National Renewable Energy Laboratory
+  family-names: Vijayshankar
+  given-names: Sanjana
+  orcid: 0009-0009-6867-5075
+- affiliation: National Renewable Energy Laboratory
+  family-names: Riccobono
+  given-names: Nicholas
+- affiliation: National Renewable Energy Laboratory
+  family-names: Frontin
+  given-names: Cory
+  orcid: 0000-0002-9375-7488
+- family-names: Clark
+  given-names: Caitlyn
+  orcid: 0000-0002-5203-7329
+- family-names: Barker
+  given-names: Aaron
+  orcid: 0000-0003-3570-1424
+- affiliation: National Renewable Energy Laboratory
+  family-names: Gupta
+  given-names: Abhineet
+  orcid: 0000-0003-3383-3490
+- affiliation: National Renewable Energy Laboratory
+  family-names: Kee
+  given-names: Benjamin (Jamie)
+  orcid: 0000-0003-0852-8582
+- affiliation: National Renewable Energy Laboratory
+  family-names: King
+  given-names: Jennifer
+  orcid: 0000-0001-6219-0098
+- affiliation: National Renewable Energy Laboratory
+  family-names: Jasa
+  given-names: John
+  orcid: 0000-0001-5442-2792
+- affiliation: National Renewable Energy Laboratory
+  family-names: Bay
+  given-names: Christopher
+  orcid: 0000-0002-2658-5559
+- affiliation: National Renewable Energy Laboratory
+  family-names: Jasa
+  given-names: John
+  orcid: 0000-0001-5442-2792
+- affiliation: National Renewable Energy Laboratory
+  family-names: King
+  given-names: Jennifer
+  orcid: 0000-0001-6219-0098
+- affiliation: National Renewable Energy Laboratory
+  family-names: Bay
+  given-names: Christopher
+  orcid: 0000-0002-2658-5559
+- affiliation: National Renewable Energy Laboratory
+  family-names: Brunik
+  given-names: Kaitlin
+  orcid: 0009-0006-8764-2672
+- affiliation: National Renewable Energy Laboratory
+  family-names: Grant
+  given-names: Elenya
+  orcid: 0000-0003-1939-011X
+- affiliation: National Renewable Energy Laboratory
+  family-names: Starke
+  given-names: Genevieve M
+  orcid: 0000-0001-9554-8455
+- affiliation: National Renewable Energy Laboratory
+  family-names: Martin
+  given-names: Jonathan
+  orcid: 0000-0002-1239-6300
+- affiliation: National Renewable Energy Laboratory
+  family-names: Ramos
+  given-names: Dakota
+  orcid: 0000-0003-1258-7681
+- affiliation: National Renewable Energy Laboratory
+  family-names: Thomas
+  given-names: Jared
+  orcid: 0000-0001-6668-2276
+- affiliation: National Renewable Energy Laboratory
+  family-names: Reznicek
+  given-names: Evan
+  orcid: 0000-0002-7456-1199
+- affiliation: National Renewable Energy Laboratory
+  family-names: Hammond
+  given-names: Rob
+  orcid: 0000-0003-4476-6406
+- affiliation: National Renewable Energy Laboratory
+  family-names: Stanislawski
+  given-names: Brooke
+  orcid: 0000-0003-3146-0053
+- affiliation: National Renewable Energy Laboratory
+  family-names: Kiefer
+  given-names: Charlie
+- family-names: Irmas
+  given-names: Cameron
+- affiliation: National Renewable Energy Laboratory
+  family-names: Vijayshankar
+  given-names: Sanjana
+  orcid: 0009-0009-6867-5075
+- affiliation: National Renewable Energy Laboratory
+  family-names: Riccobono
+  given-names: Nicholas
+- affiliation: National Renewable Energy Laboratory
+  family-names: Frontin
+  given-names: Cory
+  orcid: 0000-0002-9375-7488
+- affiliation: National Renewable Energy Laboratory
+  family-names: Clark
+  given-names: Caitlyn
+  orcid: 0000-0002-5203-7329
+- family-names: Barker
+  given-names: Aaron
+  orcid: 0000-0003-3570-1424
+- affiliation: National Renewable Energy Laboratory
+  family-names: Gupta
+  given-names: Abhineet
+  orcid: 0000-0003-3383-3490
+- affiliation: National Renewable Energy Laboratory
+  family-names: Kee
+  given-names: Benjamin (Jamie)
+  orcid: 0000-0003-0852-8582
+- affiliation: National Renewable Energy Laboratory
+  family-names: Koleva
+  given-names: Mariya
+  orcid: 0000-0003-1387-6477
+cff-version: 1.2.0
+date-released: '2025-12-11'
+doi: 10.5281/zenodo.17903150
+keywords:
+- euroscivoc:1169
+- Renewable energy
+- euroscivoc:1691
+- Hydrogen energy
+- gemet:concept/7842
+- Software
+- gemet:concept/14894
+- Software development
+- euroscivoc:1687
+- Hybrid energy
+- gemet:concept/9335
+- Wind power
+- euroscivoc:1695
+- Wind power
+- gemet:concept/7906
+- Solar energy
+- energy generation
+- gemet:concept/2744
+- Energy storage
+- euroscivoc:1171
+- Energy conversion
+- energy dispatch
+- design optimization
+license:
+- bsd-3-clause
+message: If you use this software, please cite it using the metadata from this file.
+title: 'H2Integrate: Holistic Hybrids Optimization and Design Tool'
+type: software
+version: 0.4.0

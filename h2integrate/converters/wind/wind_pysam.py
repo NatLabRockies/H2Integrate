@@ -16,7 +16,7 @@ from h2integrate.converters.wind.layout.simple_grid_layout import (
 )
 
 
-@define
+@define(kw_only=True)
 class PySAMPowerCurveCalculationInputs(BaseConfig):
     """Inputs for the ``calculate_powercurve()`` function in the PySAM Windpower module.
     The PySAM documentation of the inputs for this function can be found
@@ -50,7 +50,7 @@ class PySAMPowerCurveCalculationInputs(BaseConfig):
     )
 
 
-@define
+@define(kw_only=True)
 class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
     """Configuration class for PYSAMWindPlantPerformanceModel.
 

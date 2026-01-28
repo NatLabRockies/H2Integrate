@@ -3,14 +3,14 @@ import openmdao.api as om
 import numpy_financial as npf
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 n_timesteps = 8760
 
 
-@define
+@define(kw_only=True)
 class PaperMillConfig(BaseConfig):
     electricity_usage_rate: float = field()
 
@@ -45,7 +45,7 @@ class PaperMillPerformance(om.ExplicitComponent):
         outputs["paper"] = inputs["electricity_in"] * self.config.electricity_usage_rate
 
 
-@define
+@define(kw_only=True)
 class PaperMillCostConfig(CostModelBaseConfig):
     cost_per_tonne: float = field()
     opex_rate: float = field()

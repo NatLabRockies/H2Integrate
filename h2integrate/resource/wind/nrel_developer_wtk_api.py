@@ -13,7 +13,7 @@ from h2integrate.resource.utilities.nrel_developer_api_keys import (
 )
 
 
-@define
+@define(kw_only=True)
 class WTKNRELDeveloperAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Wind Toolkit Data V2 <https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/>`_.
@@ -49,23 +49,8 @@ class WTKNRELDeveloperAPIConfig(ResourceBaseAPIConfig):
 
 class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
     def setup(self):
-        super().setup()
-
         # create the input dictionary for WTKNRELDeveloperAPIConfig
-        resource_specs = self.options["resource_config"]
-        # set the default latitude, longitude, and resource_year from the site_config
-        resource_specs.setdefault("latitude", self.site_config["latitude"])
-        resource_specs.setdefault("longitude", self.site_config["longitude"])
-        resource_specs.setdefault("resource_year", self.site_config.get("year", None))
-
-        # set the default resource_dir from a directory that can be
-        # specified in site_config['resources']['resource_dir']
-        resource_specs.setdefault(
-            "resource_dir", self.site_config["resources"].get("resource_dir", None)
-        )
-
-        # default timezone to UTC because 'timezone' was removed from the plant config schema
-        resource_specs.setdefault("timezone", self.sim_config.get("timezone", 0))
+        resource_specs = self.helper_setup_method()
 
         # create the resource config
         self.config = WTKNRELDeveloperAPIConfig.from_dict(resource_specs)
@@ -85,16 +70,24 @@ class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
             else:
                 self.interval = int(min(self.config.valid_intervals))
 
-        # get the data dictionary
-        data = self.get_data()
+        super().setup()
 
-        # add resource data dictionary as an out
+        # get the data dictionary
+        data = self.get_data(self.config.latitude, self.config.longitude)
+
+        self.resource_data = data
+
+        # add resource data dictionary as an output
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_filename(self):
+    def create_filename(self, latitude, longitude):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_wtk_v2_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
@@ -106,19 +99,23 @@ class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{self.config.latitude}_{self.config.longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{self.config.resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self):
+    def create_url(self, latitude, longitude):
         """Create url for data download.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
 
         Returns:
             str: url to use for API call.
         """
         input_data = {
-            "wkt": f"POINT({self.config.longitude} {self.config.latitude})",
+            "wkt": f"POINT({longitude} {latitude})",
             "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
@@ -217,6 +214,3 @@ class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols}
         data_dict.update(data_time_dict)
         return data_dict, data_units
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass

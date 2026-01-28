@@ -1,0 +1,86 @@
+name: "technology_config"
+description: "This plant produces electricity from natural gas using a combined cycle turbine"
+
+technologies:
+  solar:
+    performance_model:
+      model: "pysam_solar_plant_performance"
+    cost_model:
+      model: "atb_utility_pv_cost"
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 200000 #200 MWdc
+        dc_ac_ratio: 1.34
+        create_model_from: "new"
+        tilt_angle_func: "none"
+        tilt: 0
+        pysam_options:
+          SystemDesign:
+            gcr: 0.3
+            array_type: 2
+            bifaciality: 0.65
+            inv_eff: 96.0
+            losses: 14.6
+            module_type: 1
+            azimuth: 180
+            rotlim: 45
+          SolarResource:
+            albedo_default: 0.2
+      cost_parameters:
+        capex_per_kWac: 1193
+        opex_per_kWac_per_year: 18
+        cost_year: 2024
+  battery:
+    performance_model:
+      model: "simple_generic_storage"
+    cost_model:
+      model: "atb_battery_cost"
+    control_strategy:
+      model: "demand_open_loop_storage_controller"
+    model_inputs:
+      shared_parameters:
+        commodity_name: "electricity"
+        commodity_units: "kW"
+        max_charge_rate: 25000.0  # kW/time step, 25 MW
+        max_capacity: 200000.0  # kWh, 200 MWh
+      control_parameters:
+        max_charge_percent: 1.0  # percent as decimal
+        min_charge_percent: 0.1  # percent as decimal
+        init_charge_percent: 0.1  # percent as decimal
+        max_discharge_rate: 25000.0  # kW/time step
+        charge_efficiency: 1.0 # percent as decimal
+        discharge_efficiency: 1.0 # percent as decimal
+        demand_profile: 100000 #kW, 100 MW
+      cost_parameters:
+        cost_year: 2022
+        energy_capex: 300 # $/kWh
+        power_capex: 100 # $/kW
+        opex_fraction: 0.05 # percent of capex
+  grid_buy:
+    performance_model:
+      model: "grid_performance"
+    cost_model:
+      model: "grid_cost"
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e6  # kW
+      cost_parameters:
+        cost_year: 2022
+        electricity_buy_price: 0.10 # $/kWh - only buying, no selling
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost
+  grid_sell:
+    performance_model:
+      model: "grid_performance"
+    cost_model:
+      model: "grid_cost"
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e6  # kW
+      cost_parameters:
+        cost_year: 2022
+        electricity_sell_price: 0.0 # $/kWh - only selling, no buying
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost

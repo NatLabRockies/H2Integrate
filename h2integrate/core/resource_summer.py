@@ -1,7 +1,7 @@
 import numpy as np
 import openmdao.api as om
 
-from h2integrate.core.supported_models import electricity_producing_techs
+from h2integrate.core.supported_models import is_electricity_producer
 
 
 class ElectricitySumComp(om.ExplicitComponent):
@@ -15,7 +15,7 @@ class ElectricitySumComp(om.ExplicitComponent):
     def setup(self):
         # Add inputs for each electricity producing technology
         for tech in self.options["tech_configs"]:
-            if tech in electricity_producing_techs:
+            if is_electricity_producer(tech):
                 self.add_input(
                     f"electricity_{tech}",
                     shape=8760,
@@ -33,11 +33,11 @@ class ElectricitySumComp(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
-        # Sum up all electricity streams for technologies in electricity_producing_techs
+        # Sum up all electricity streams for electricity-producing technologies
         outputs["total_electricity_produced"] = np.sum(
             [
                 inputs[f"electricity_{tech}"]
                 for tech in self.options["tech_configs"]
-                if tech in electricity_producing_techs
+                if is_electricity_producer(tech)
             ]
         )

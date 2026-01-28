@@ -2,15 +2,77 @@ name: "technology_config"
 description: "This plant has offshore wind and battery connected to a ocean alkalinity enhancement device"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
-      config: !include tech_inputs/hopp_config.yaml
+      model: "floris_wind_plant_performance"
     cost_model:
-      model: "hopp"
+      model: "atb_wind_cost"
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_converter"
     model_inputs:
+      performance_parameters:
+        num_turbines: 22 #number of turbines in the farm
+        hub_height: 150.0 # turbine hub-height
+        operational_losses: 12.83 #percentage of non-wake losses
+        floris_wake_config: !include "floris_v4_default_template.yaml" #floris wake model file
+        floris_turbine_config: !include "floris_turbine_osw_15MW.yaml" #turbine model file formatted for floris
+        resource_data_averaging_method: "average" #"weighted_average", "average" or "nearest"
+        operation_model: "cosine-loss" #turbine operation model
+        default_turbulence_intensity: 0.06
+        enable_caching: True #whether to use cached results
+        cache_dir: "cache" #directory to save or load cached data
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
+      cost_parameters:
+        capex_per_kW: 9390
+        opex_per_kW_per_year: 72
+        cost_year: 2022
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
+
+
+  battery:
+    dispatch_rule_set:
+      model: "pyomo_dispatch_generic_storage"
+    control_strategy:
+      model: "heuristic_load_following_controller"
+    performance_model:
+      model: "pysam_battery"
+    cost_model:
+      model: "atb_battery_cost"
+    model_inputs:
+      shared_parameters:
+        commodity_name: "electricity"
+        max_charge_rate: 50000 #kW
+        max_capacity: 200000 #kWh
+        n_control_window: 24
+        n_horizon_window: 48
+        init_charge_percent: 0.9
+        max_charge_percent: 1.0
+        min_charge_percent: 0.2
+        system_commodity_interface_limit: 1e12
+      performance_parameters:
+        system_model_source: "pysam"
+        chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2022
+        commodity_units: "kW"
+        energy_capex: 246 # $/kWh from 2024 ATB year 2025
+        power_capex: 317 # $/kW from 2024 ATB year 2025
+        opex_fraction: 0.02536510376633359
+      control_parameters:
+        commodity_storage_units: "kW"
+        tech_name: "battery"
+      dispatch_rule_parameters:
+        commodity_name: "electricity"
+        commodity_storage_units: "kW"
   oae:
     performance_model:
       model: "ocean_alkalinity_enhancement_performance"

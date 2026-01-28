@@ -7,7 +7,7 @@ from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class MCHTOLStorageCostModelConfig(BaseConfig):
     """Config class for MCHTOLStorageCostModel
 

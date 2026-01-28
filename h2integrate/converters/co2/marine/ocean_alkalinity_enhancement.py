@@ -29,7 +29,7 @@ def setup_ocean_alkalinity_enhancement_inputs(config):
     )
 
 
-@define
+@define(kw_only=True)
 class OAEPerformanceConfig(MarineCarbonCapturePerformanceConfig):
     """Extended configuration for Ocean Alkalinity Enhancement (OAE) performance model.
 
@@ -233,7 +233,7 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         outputs["unused_energy"] = oae_outputs.OAE_outputs["P_xs"]
 
 
-@define
+@define(kw_only=True)
 class OAECostModelConfig(BaseConfig):
     """Configuration for the OAE cost model.
 

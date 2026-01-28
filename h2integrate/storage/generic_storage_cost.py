@@ -1,11 +1,11 @@
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, gte_zero, range_val
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
-@define
+@define(kw_only=True)
 class GenericStorageCostConfig(CostModelBaseConfig):
     """Configuration class for the GenericStorageCostModel with costs based on storage
     capacity and charge rate for any commodity.

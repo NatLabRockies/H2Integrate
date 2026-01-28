@@ -5,7 +5,7 @@ from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
-@define
+@define(kw_only=True)
 class MarineCarbonCapturePerformanceConfig(BaseConfig):
     """Configuration options for marine carbon capture performance modeling.
 

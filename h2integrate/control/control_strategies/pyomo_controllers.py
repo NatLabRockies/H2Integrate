@@ -13,7 +13,7 @@ if TYPE_CHECKING:  # to avoid circular imports
     pass
 
 
-@define
+@define(kw_only=True)
 class PyomoControllerBaseConfig(BaseConfig):
     """
     Configuration data container for Pyomo-based storage / dispatch controllers.
@@ -68,7 +68,7 @@ class PyomoControllerBaseConfig(BaseConfig):
     def __attrs_post_init__(self):
         if isinstance(self.system_commodity_interface_limit, str):
             self.system_commodity_interface_limit = float(self.system_commodity_interface_limit)
-        if isinstance(self.system_commodity_interface_limit, (float, int)):
+        if isinstance(self.system_commodity_interface_limit, float | int):
             self.system_commodity_interface_limit = [
                 self.system_commodity_interface_limit
             ] * self.n_control_window
@@ -678,7 +678,7 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         self.discharge_efficiency = efficiency
 
 
-@define
+@define(kw_only=True)
 class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(default=None)

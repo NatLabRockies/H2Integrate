@@ -6,13 +6,13 @@ from wombat import Simulation
 from wombat.core.library import load_yaml
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.converters.hydrogen.eco_tools_pem_electrolyzer import (
+from h2integrate.converters.hydrogen.pem_electrolyzer import (
     ECOElectrolyzerPerformanceModel,
     ECOElectrolyzerPerformanceModelConfig,
 )
 
 
-@define
+@define(kw_only=True)
 class WOMBATModelConfig(ECOElectrolyzerPerformanceModelConfig):
     """
     library_path: Path to the WOMBAT library directory, relative from this file
@@ -63,7 +63,7 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        super().compute(inputs, outputs)
+        super().compute(inputs, outputs, discrete_inputs, discrete_outputs)
 
         # Ensure library_path is a Path object
         library_path = self.config.library_path

@@ -6,7 +6,7 @@ from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import gt_zero, range_val
 
 
-@define
+@define(kw_only=True)
 class SimpleLCOFinanceConfig(BaseConfig):
     discount_rate: float = field(validator=range_val(0, 1))
     plant_life: int = field(converter=int, validator=gt_zero)

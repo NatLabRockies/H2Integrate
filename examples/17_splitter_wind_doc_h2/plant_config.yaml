@@ -1,30 +1,33 @@
 name: "plant_config"
 description: "This plant is located in OR, USA"
 
-site:
-  latitude: 43.807
-  longitude: -124.816
-  elevation_m: 439.0
+sites:
+  site:
+    latitude: 43.807
+    longitude: -124.81
+    resources:
+      wind_resource:
+        resource_model: "wind_toolkit_v2_api"
+        resource_parameters:
+          resource_year: 2010
 
 plant:
   plant_life: 30
-  grid_connection: False # option, can be turned on or off
-  ppa_price: 0.025 # $/kWh based on 2022 land based wind market report (ERCOT area ppa prices) https://www.energy.gov/sites/default/files/2022-08/land_based_wind_market_report_2202.pdf
-  hybrid_electricity_estimated_cf: 0.492 #should equal 1 if grid_connection = True
-  atb_year: 2030
-  cost_year: 2022
-  installation_time: 36 # months
 
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["hopp", "electricity_splitter", "electricity", "cable"],
+  ["wind", "electricity_splitter", "electricity", "cable"],
   ["electricity_splitter", "doc", "electricity", "cable"],
   ["electricity_splitter", "electrolyzer", "electricity", "cable"],
 ]
 
+resource_to_tech_connections: [
+  # connect the wind resource to the wind technology
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
+]
 finance_parameters:
   finance_groups:
     finance_model: "ProFastComp"
@@ -54,10 +57,10 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
-      technologies: ["hopp"]
+      technologies: ["wind"]
     hydrogen:
       commodity: "hydrogen"
-      technologies: ["hopp", "electrolyzer"]
+      technologies: ["wind", "electrolyzer"]
     co2:
       commodity: "co2"
-      technologies: ["hopp", "doc"]
+      technologies: ["wind", "doc"]

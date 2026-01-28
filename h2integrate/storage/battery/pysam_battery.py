@@ -68,7 +68,7 @@ class BatteryOutputs:
         return asdict(self)
 
 
-@define
+@define(kw_only=True)
 class PySAMBatteryPerformanceModelConfig(BaseConfig):
     """Configuration class for battery performance models.
 
