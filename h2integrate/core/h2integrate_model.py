@@ -892,6 +892,42 @@ class H2IntegrateModel:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
 
+                # Check if this is a multivariable stream connection
+                # Format: [source, dest, stream_name, transport_type]
+                if transport_item in multivariable_streams:
+                    # Handle combiner connections with auto-counting
+                    if "combiner" in dest_tech:
+                        if dest_tech not in combiner_counts:
+                            combiner_counts[dest_tech] = 1
+                        else:
+                            combiner_counts[dest_tech] += 1
+                        stream_index = combiner_counts[dest_tech]
+                        for var_name in multivariable_streams[transport_item]:
+                            self.plant.connect(
+                                f"{source_tech}.{var_name}_out",
+                                f"{dest_tech}.{var_name}_in{stream_index}",
+                            )
+                    # Handle splitter connections with auto-counting
+                    elif "splitter" in source_tech:
+                        if source_tech not in splitter_counts:
+                            splitter_counts[source_tech] = 1
+                        else:
+                            splitter_counts[source_tech] += 1
+                        stream_index = splitter_counts[source_tech]
+                        for var_name in multivariable_streams[transport_item]:
+                            self.plant.connect(
+                                f"{source_tech}.{var_name}_out{stream_index}",
+                                f"{dest_tech}.{var_name}_in",
+                            )
+                    # Direct connection for non-combiner/splitter destinations
+                    else:
+                        for var_name in multivariable_streams[transport_item]:
+                            self.plant.connect(
+                                f"{source_tech}.{var_name}_out",
+                                f"{dest_tech}.{var_name}_in",
+                            )
+                    continue  # Skip the rest of the 4-element handling
+
                 if transport_type in self.tech_names:
                     # if the transport type is already a technology, skip creating a new component
                     connection_name = f"{transport_type}"

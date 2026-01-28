@@ -54,6 +54,7 @@ from h2integrate.storage.hydrogen.h2_storage_cost import (
     SaltCavernStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
+from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopCostModel,
     AmmoniaSynLoopPerformanceModel,
@@ -234,6 +235,7 @@ supported_models = {
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
     "combiner_performance": GenericCombinerPerformanceModel,
+    "gas_stream_combiner": GasStreamCombinerPerformanceModel,
     "splitter_performance": GenericSplitterPerformanceModel,
     "iron_transport_performance": IronTransportPerformanceComponent,
     "iron_transport_cost": IronTransportCostComponent,

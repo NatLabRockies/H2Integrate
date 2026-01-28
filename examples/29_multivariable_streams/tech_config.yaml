@@ -1,11 +1,11 @@
 name: "technology_config"
 description: >
   Technology configuration for multivariable streams example.
-  This example uses two dummy components that produce and consume
-  a wellhead_gas multivariable stream.
+  Demonstrates two gas producers feeding into a combiner, which then
+  feeds a consumer. The combiner uses mass-weighted averaging.
 
 technologies:
-  gas_producer:
+  gas_producer_1:
     performance_model:
       model: "dummy_gas_producer_performance"
     cost_model:
@@ -17,6 +17,27 @@ technologies:
         base_pressure: 12.0  # bar
       cost_parameters:
         cost_year: 2024
+
+  gas_producer_2:
+    performance_model:
+      model: "dummy_gas_producer_performance"
+    cost_model:
+      model: "dummy_gas_producer_cost"
+    model_inputs:
+      performance_parameters:
+        base_flow_rate: 100.0  # kg/hr - different flow rate
+        base_temperature: 350.0  # K - hotter stream
+        base_pressure: 8.0  # bar - lower pressure
+      cost_parameters:
+        cost_year: 2024
+
+  gas_combiner:
+    performance_model:
+      model: "gas_stream_combiner"
+    model_inputs:
+      performance_parameters:
+        stream_type: "wellhead_gas"
+        in_streams: 2
 
   gas_consumer:
     performance_model:
