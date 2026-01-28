@@ -22,7 +22,8 @@ parts:
   - file: user_guide/recording_and_loading_data
   - file: user_guide/how_to_interface_with_user_defined_model
   - file: user_guide/how_to_run_several_cases_in_sequence
-  - file: ../examples/25_sizing_modes/run_size_modes
+  - file: user_guide/run_size_modes
+  - file: user_guide/plotting_geospatial_data_with_geopandas
 
 - caption: Technology Models
   chapters:
@@ -62,6 +63,7 @@ parts:
   - file: control/control_overview
   - file: control/open-loop_controllers
   - file: control/pyomo_controllers
+  - file: control/controller_demonstrations
 
 - caption: Finance Models
   chapters:

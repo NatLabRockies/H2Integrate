@@ -1,5 +1,7 @@
 # Changelog
+
 ## 0.5.x [TBD]
+
 - Updates models for NumPy version 2.4.0
 - Update test values for WOMBAT update to 0.13.0
 - Added standalone iron DRI and steel EAF performance and cost models
@@ -8,7 +10,25 @@
 - Add baseclass for caching functionality
 - Added postprocessing function to save timeseries
 - Minor reorg for profast tools
+- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
 - Removed hydrogen tank cost and performance models that were unused
+- Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
+- Updated the contributing documentation to clarify what developers should expect for including
+  executable content in the documentation.
+- Converted the example notebooks to documentation examples, and maintain a basic working example
+  in the examples folder:
+  - `examples/14_wind_hydrogen_dispatch/hydrogren_dispatch.ipynb` -> `docs/control/controller_demonstrations.md`
+  - `examples/20_solar_electrolyzer_doe/run_csv_doe.ipynb` content added to `docs/user_guide/design_of_experiments_in_h2i.md`
+  - `examples/25_sizing_modes/run_size_modes.ipynb` -> `docs/user_guide/run_size_modes.md`
+- `.gitignore` is updated to be more inclusive of example output data.
+- Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught.
+- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations.
+  - Cleans up unnecessary ignore rules in the ruff settings.
+  - Removes duplicate dependency listings, and alphabetizes for legibility with NLR packages
+    listed at the bottom.
+  - Remove unused dependencies.
+  - Fixes typos for skipped folders.
+  - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
 
 ## 0.5.1 [December 18, 2025]
 

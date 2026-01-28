@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
-from h2integrate import EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -1519,6 +1519,162 @@ def test_24_solar_battery_grid_example(subtests):
     with subtests.test("Value check on LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/(MW*h)")[0]
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
+
+
+def test_28_iron_map_example(subtests):
+    import geopandas as gpd
+    import matplotlib
+
+    from h2integrate.postprocess.mapping import (
+        plot_geospatial_point_heat_map,
+        plot_straight_line_shipping_routes,
+    )
+
+    os.chdir(EXAMPLE_DIR / "28_iron_map")
+
+    # Define filepaths
+    ex_28_dir = Path.cwd()
+    ex_28_out_dir = ex_28_dir / "ex_28_out"
+    ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
+    shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+    shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
+    cases_csv_fpath = ex_28_out_dir / "cases.csv"
+    ex_png_fpath = ex_28_out_dir / "example_28_iron_map.png"
+    ex_png_fpath.unlink(missing_ok=True)
+
+    # Plot LCOI results from cases.sql file, save sql data to csv
+    fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=cases_csv_fpath,
+        metric_to_plot="iron.LCOI (USD/kg)",
+        map_preferences={
+            "figsize": (10, 8),
+            "colorbar_label": "Levelized Cost of\nIron [$/kg]",
+            "colorbar_limits": (0.6, 1.0),
+        },
+    )
+    # Add a layer for example ore cost prices from select mines
+    fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=ore_prices_filepath,
+        metric_to_plot="ore_cost_per_kg",
+        map_preferences={
+            "colormap": "Greens",
+            "marker": "o",
+            "colorbar_bbox_to_anchor": (0.025, 0.97, 1, 1),
+            "colorbar_label": "Levelized Cost of\nIron Ore Pellets\n[$/kg ore]",
+            "colorbar_limits": (0.11, 0.14),
+        },
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=lcoi_layer_gdf,
+    )
+    # Add a layer for example waterway shipping cost from select mines to select ports
+    fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=shipping_prices_filepath,
+        metric_to_plot="shipping_cost_per_kg",
+        map_preferences={
+            "colormap": "Greys",
+            "marker": "d",
+            "markersize": 80,
+            "colorbar_bbox_to_anchor": (0.4, 0.97, 1, 1),
+            "colorbar_label": "Waterway Shipping Cost\n[$/kg ore]",
+            "colorbar_limits": (0.11, 0.14),
+        },
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[lcoi_layer_gdf, ore_cost_layer_gdf],
+    )
+
+    # Define example water way shipping routes for plotting straight line transport
+    cleveland_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Lake Huron",
+        "Port Huron",
+        "Erie",
+        "Cleveland",
+    ]
+    buffalo_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Lake Huron",
+        "Port Huron",
+        "Erie",
+        "Cleveland",
+        "Buffalo",
+    ]
+    chicago_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Mackinaw",
+        "Manistique",
+        "Chicago",
+    ]
+
+    # Add cleveland route as layer
+    fig, ax, transport_layer1_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=cleveland_route,
+        map_preferences={},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[lcoi_layer_gdf, ore_cost_layer_gdf, shipping_cost_layer_gdf],
+    )
+    # Add buffalo route as layer
+    fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=buffalo_route,
+        map_preferences={},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[
+            lcoi_layer_gdf,
+            ore_cost_layer_gdf,
+            shipping_cost_layer_gdf,
+            transport_layer1_gdf,
+        ],
+    )
+    # Add chicago route as layer
+    fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=chicago_route,
+        map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[
+            lcoi_layer_gdf,
+            ore_cost_layer_gdf,
+            shipping_cost_layer_gdf,
+            transport_layer1_gdf,
+            transport_layer2_gdf,
+        ],
+        save_plot_fpath=ex_png_fpath,
+    )
+
+    with subtests.test("Type check on fig, ax, and lcoi_layer_gdf"):
+        assert isinstance(
+            fig, matplotlib.figure.Figure
+        ), f"Expected matplotlib.figure.Figure but got{type(fig)}"
+        assert isinstance(
+            ax, matplotlib.axes._axes.Axes
+        ), f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
+        assert isinstance(
+            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
+        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
+        assert isinstance(
+            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
+        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+
+    with subtests.test("Check example_28_iron_map.png was saved"):
+        assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"
+
+    # Clean up any output files/dirs created
+    ex_png_fpath.unlink(missing_ok=True)
 
 
 def test_natural_geoh2(subtests):
