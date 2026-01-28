@@ -183,7 +183,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["capacity_factor"] = H2_Results["Performance Schedules"][
             "Capacity Factor [-]"
         ].values
-        outputs["annual_hydrogen_produced"] = outputs["hydrogen_out"].sum()
+        outputs["annual_hydrogen_produced"] = H2_Results["Life: Annual H2 production [kg/year]"]
 
         # TODO: replace above line w below
         # outputs["annual_hydrogen_produced"] = H2_Results["Performance Schedules"][

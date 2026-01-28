@@ -356,7 +356,9 @@ def test_wind_h2_opt_example(subtests):
 
     model_init.post_process()
 
-    annual_h20 = model_init.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0]
+    annual_h20 = model_init.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[
+        0
+    ]
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer.yaml")
@@ -422,7 +424,7 @@ def test_wind_h2_opt_example(subtests):
     with subtests.test("Check minimum total hydrogen produced"):
         assert (
             pytest.approx(
-                model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0],
+                model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0],
                 abs=15000,
             )
             == 29028700

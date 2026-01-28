@@ -61,7 +61,7 @@ def summarize_case(case, return_units=False):
         # save average capacity factor and annual production
         lifetime_prod_var = var.lower().split(".")[-1].startswith("annual") and var.lower().split(
             "."
-        )[-1].endsswith("production")
+        )[-1].endswith("production")
         if "capacity_factor" in var.lower() or lifetime_prod_var:
             if isinstance(val, np.ndarray):
                 if not np.all(val == val[0]):

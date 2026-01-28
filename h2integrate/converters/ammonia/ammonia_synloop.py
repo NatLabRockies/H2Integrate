@@ -548,7 +548,7 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         o2_price_base = self.config.oxygen_price_base  # USD / kg O2
 
         # Get total production/consumption
-        nh3_prod = inputs["total_ammonia_produced"]  # kg NH3 /year
+        nh3_prod = inputs["annual_ammonia_produced"].mean()  # kg NH3 /year
 
         # Apply scaling
         rebuild_cost = rebuild_cost_base * capex_ratio * cepci_ratio

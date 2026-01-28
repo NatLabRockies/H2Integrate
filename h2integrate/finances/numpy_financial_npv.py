@@ -77,6 +77,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     def setup(self):
         commodity_type = self.options["commodity_type"]
         description = self.options["description"].strip() if "description" in self.options else ""
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Use description only if non-empty
         suffix = f"_{description}" if description else ""
@@ -100,6 +101,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             self.add_input(
                 f"total_{self.options['commodity_type']}_produced",
                 val=0.0,
+                shape=plant_life,
                 units=commodity_units,
             )
 
