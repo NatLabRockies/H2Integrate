@@ -4,9 +4,9 @@ description: "This plant has wind feeding into an electrolyzer without optimizat
 technologies:
   wind:
     performance_model:
-      model: "wind_plant_ard"
+      model: "ard_wind_plant_combined"
     cost_model:
-      model: "wind_plant_ard"
+      model: "ard_wind_plant_combined"
     model_inputs:
       shared_parameters: {}
       performance_parameters:
@@ -101,7 +101,7 @@ technologies:
     cost_model:
       model: "atb_battery_cost"
     control_strategy:
-      model: "demand_open_loop_controller"
+      model: "demand_open_loop_storage_controller"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"

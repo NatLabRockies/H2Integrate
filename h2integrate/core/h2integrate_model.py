@@ -413,7 +413,7 @@ class H2IntegrateModel:
             "hopp",
             "h2_storage",
             "wombat",
-            "wind_plant_ard",
+            "ard_wind_plant_combined",
             "iron",
         ]
 

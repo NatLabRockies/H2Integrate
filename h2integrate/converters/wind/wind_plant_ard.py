@@ -2,8 +2,8 @@ import openmdao.api as om
 from attrs import field, define
 from ard.api import set_up_ard_model
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 class WindArdCostComponent(CostModelBaseClass):
