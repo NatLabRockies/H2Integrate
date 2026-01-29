@@ -8,8 +8,36 @@ connection feature. They produce and consume wellhead_gas streams with
 
 import numpy as np
 import openmdao.api as om
+from attrs import field, define
 
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import gt_zero, gte_zero
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
+
+
+@define(kw_only=True)
+class DummyGasProducerPerformanceConfig(BaseConfig):
+    """
+    Configuration class for dummy gas producer performance model.
+
+    Attributes:
+        base_flow_rate: Base gas flow rate in kg/h
+        base_temperature: Base gas temperature in K
+        base_pressure: Base gas pressure in bar
+        flow_variation: Fractional variation in flow rate (0-1)
+        temp_variation: Variation in temperature in K
+        pressure_variation: Variation in pressure in bar
+        random_seed: Seed for random number generator (for reproducibility)
+    """
+
+    base_flow_rate: float = field(default=100.0, validator=gt_zero)
+    base_temperature: float = field(default=300.0, validator=gt_zero)
+    base_pressure: float = field(default=10.0, validator=gt_zero)
+    flow_variation: float = field(default=0.2, validator=gte_zero)
+    temp_variation: float = field(default=10.0, validator=gte_zero)
+    pressure_variation: float = field(default=1.0, validator=gte_zero)
+    random_seed: int | None = field(default=None)
 
 
 class DummyGasProducerPerformance(om.ExplicitComponent):
@@ -20,7 +48,7 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
     of the wellhead_gas stream (gas_flow, hydrogen_fraction, oxygen_fraction,
     gas_temperature, gas_pressure).
 
-    The outputs are sinusoidal variations to demonstrate time-varying behavior.
+    The outputs use random variations around base values.
     """
 
     def initialize(self):
@@ -29,6 +57,9 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        self.config = DummyGasProducerPerformanceConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+        )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add all wellhead_gas stream outputs
@@ -41,36 +72,40 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
                 desc=var_props.get("desc", ""),
             )
 
-        # Add some configuration inputs
-        self.add_input("base_flow_rate", val=100.0, units="kg/h", desc="Base gas flow rate")
-        self.add_input("base_temperature", val=300.0, units="K", desc="Base gas temperature")
-        self.add_input("base_pressure", val=10.0, units="bar", desc="Base gas pressure")
-
     def compute(self, inputs, outputs):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # Create time array for sinusoidal variations
-        t = np.linspace(0, 2 * np.pi * 365, n_timesteps)  # One year of hourly data
+        # Set random seed for reproducibility if specified
+        rng = np.random.default_rng(self.config.random_seed)
 
-        # Generate varied outputs for each stream variable
-        base_flow = inputs["base_flow_rate"][0]
-        base_temp = inputs["base_temperature"][0]
-        base_pressure = inputs["base_pressure"][0]
+        # Generate random variations around base values
+        base_flow = self.config.base_flow_rate
+        base_temp = self.config.base_temperature
+        base_pressure = self.config.base_pressure
 
-        # Gas flow varies ±20% sinusoidally (daily pattern)
-        outputs["gas_flow_out"] = base_flow * (1.0 + 0.2 * np.sin(t * 24))
+        # Gas flow varies randomly within ±variation fraction
+        flow_noise = rng.uniform(
+            -self.config.flow_variation, self.config.flow_variation, n_timesteps
+        )
+        outputs["gas_flow_out"] = base_flow * (1.0 + flow_noise)
 
-        # Hydrogen fraction: 0.7 to 0.9 (varies slowly over the year)
-        outputs["hydrogen_fraction_out"] = 0.8 + 0.1 * np.sin(t)
+        # Hydrogen fraction: 0.7 to 0.9 (random)
+        outputs["hydrogen_fraction_out"] = rng.uniform(0.7, 0.9, n_timesteps)
 
-        # Oxygen fraction: 0.0 to 0.05 (inverse of hydrogen somewhat)
-        outputs["oxygen_fraction_out"] = 0.025 + 0.025 * np.cos(t)
+        # Oxygen fraction: 0.0 to 0.05 (random)
+        outputs["oxygen_fraction_out"] = rng.uniform(0.0, 0.05, n_timesteps)
 
-        # Temperature varies ±10K with daily and seasonal patterns
-        outputs["gas_temperature_out"] = base_temp + 5 * np.sin(t * 24) + 5 * np.sin(t)
+        # Temperature varies randomly within ±temp_variation K
+        temp_noise = rng.uniform(
+            -self.config.temp_variation, self.config.temp_variation, n_timesteps
+        )
+        outputs["gas_temperature_out"] = base_temp + temp_noise
 
-        # Pressure varies ±1 bar (weekly pattern)
-        outputs["gas_pressure_out"] = base_pressure + 1.0 * np.sin(t * 7)
+        # Pressure varies randomly within ±pressure_variation bar
+        pres_noise = rng.uniform(
+            -self.config.pressure_variation, self.config.pressure_variation, n_timesteps
+        )
+        outputs["gas_pressure_out"] = base_pressure + pres_noise
 
 
 class DummyGasConsumerPerformance(om.ExplicitComponent):
@@ -134,65 +169,63 @@ class DummyGasConsumerPerformance(om.ExplicitComponent):
         outputs["avg_pressure"] = np.mean(pressure)
 
 
-class DummyGasProducerCost(om.ExplicitComponent):
+@define(kw_only=True)
+class DummyGasProducerCostConfig(CostModelBaseConfig):
+    """
+    Configuration class for dummy gas producer cost model.
+
+    Attributes:
+        capex: Capital expenditure in USD
+        opex: Fixed operational expenditure in USD/year
+    """
+
+    capex: float = field(default=1_000_000.0, validator=gte_zero)
+    opex: float = field(default=50_000.0, validator=gte_zero)
+
+
+class DummyGasProducerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas producer.
-
-    This is a placeholder cost model that returns fixed CapEx/OpEx values.
     """
 
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
     def setup(self):
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-
-        self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
-        self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
-        self.add_output(
-            "VarOpEx",
-            val=0.0,
-            shape=plant_life,
-            units="USD/year",
-            desc="Variable operational expenditure",
+        self.config = DummyGasProducerCostConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
-        self.add_discrete_output("cost_year", val=2024, desc="Dollar year for costs")
+
+        super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
-        # Fixed cost values for demonstration
-        outputs["CapEx"] = 1_000_000.0  # $1M
-        outputs["OpEx"] = 50_000.0  # $50k/year
+        outputs["CapEx"] = self.config.capex
+        outputs["OpEx"] = self.config.opex
 
 
-class DummyGasConsumerCost(om.ExplicitComponent):
+@define(kw_only=True)
+class DummyGasConsumerCostConfig(CostModelBaseConfig):
+    """
+    Configuration class for dummy gas consumer cost model.
+
+    Attributes:
+        capex: Capital expenditure in USD
+        opex: Fixed operational expenditure in USD/year
+    """
+
+    capex: float = field(default=2_000_000.0, validator=gte_zero)
+    opex: float = field(default=100_000.0, validator=gte_zero)
+
+
+class DummyGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.
-
-    This is a placeholder cost model that returns fixed CapEx/OpEx values.
     """
 
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
     def setup(self):
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-
-        self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
-        self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
-        self.add_output(
-            "VarOpEx",
-            val=0.0,
-            shape=plant_life,
-            units="USD/year",
-            desc="Variable operational expenditure",
+        self.config = DummyGasConsumerCostConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
-        self.add_discrete_output("cost_year", val=2024, desc="Dollar year for costs")
+
+        super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
-        # Fixed cost values for demonstration
-        outputs["CapEx"] = 2_000_000.0  # $2M
-        outputs["OpEx"] = 100_000.0  # $100k/year
+        outputs["CapEx"] = self.config.capex
+        outputs["OpEx"] = self.config.opex

@@ -1,22 +1,14 @@
 name: "plant_config"
 description: "Demonstrates multivariable streams with a gas combiner"
 
-# Multivariable stream connections with combiner:
-# - Two producers feed into the gas_combiner
-# - The combiner outputs a single combined stream to the consumer
-# Format: [source, dest, stream_type, transport_type]
-# The combiner automatically counts inputs like standard combiners do
-technology_interconnections: [
-  # Producer 1 -> Combiner (auto-counted as input 1)
-  ["gas_producer_1", "gas_combiner", "wellhead_gas", "pipe"],
-  # Producer 2 -> Combiner (auto-counted as input 2)
-  ["gas_producer_2", "gas_combiner", "wellhead_gas", "pipe"],
-  # Combiner -> Consumer
-  ["gas_combiner", "gas_consumer", "wellhead_gas"],
-]
-
 plant:
   plant_life: 30
   simulation:
     n_timesteps: 8760
     timezone: -6
+
+technology_interconnections: [
+  ["gas_producer_1", "gas_combiner", "wellhead_gas", "pipe"],
+  ["gas_producer_2", "gas_combiner", "wellhead_gas", "pipe"],
+  ["gas_combiner", "gas_consumer", "wellhead_gas"],
+]
