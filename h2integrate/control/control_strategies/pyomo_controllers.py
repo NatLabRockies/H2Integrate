@@ -296,7 +296,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     # Progress report
                     if t % (self.n_timesteps // 4) < self.n_control_window:
                         percentage = round((t / self.n_timesteps) * 100)
-                        print(f"{percentage}% done with dispatch")
+                        print(f"{percentage}% done with optimal dispatch")
                     # Update time series parameters for the optimization method
                     self.update_time_series_parameters(
                         commodity_in=commodity_in,
@@ -344,6 +344,9 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     unused_commodity[j] = np.maximum(
                         0, storage_commodity_out[j] + commodity_in[j - t] - demand_in[j - t]
                     )
+
+            if "optimized" in control_strategy:
+                print("100% done with optimal dispatch")
 
             return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
 

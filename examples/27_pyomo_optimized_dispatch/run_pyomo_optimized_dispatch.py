@@ -75,7 +75,7 @@ ax[1].set_xlabel("Timestep (hr)")
 
 plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
-plt.savefig("plot.png", dpi=300)
+plt.savefig("optimized_dispatch_plot.png", dpi=300)
 
 fig, ax = plt.subplots(1, 1, sharex=True)
 

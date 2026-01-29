@@ -19,7 +19,7 @@ For an example of how to use the heuristic pyomo control framework with the `heu
 
 (optimized-load-following-controller)=
 ## Optimized Load Following Controller
-The optmimized dispatch method is specified by setting the storage control to  `optimized_dispatch_controller`. The same `dispatch_rule_set` for each technology connected to the storage technology is followed as in the heuristic case. This method maximizes the load met while minimizing the cost of the system (operating cost) over each specified time window.
+The optimized dispatch method is specified by setting the storage control to  `optimized_dispatch_controller`. The same `dispatch_rule_set` for each technology connected to the storage technology is followed as in the heuristic case. This method maximizes the load met while minimizing the cost of the system (operating cost) over each specified time window.
 
 For an example of how to use the optimized pyomo control framework with the `optimized_dispatch_controller`, see
 - `examples/27_pyomo_optimized_dispatch`
