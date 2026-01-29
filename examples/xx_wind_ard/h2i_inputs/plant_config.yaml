@@ -1,5 +1,5 @@
 name: "plant_config"
-description: "This plant is located in Denmark"
+description: "This plant is located in Denmark. The plant combines wind and solar generation with a battery to meet a constant load"
 
 sites:
   site:
@@ -11,8 +11,8 @@ sites:
         resource_model: "openmeteo_solar_api"
         resource_parameters:
           resource_year: 2023
-          # resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
-          # resource_filename: "30.6617_-101.7096_psmv3_60_2013.csv"
+          resource_dir: "h2i_inputs/weather/solar/"
+          resource_filename: "56.22732285_8.594398_2023_openmeteo_archive_solar_60min_utc_tz.csv"
 
 
 plant:

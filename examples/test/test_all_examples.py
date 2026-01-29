@@ -1158,12 +1158,12 @@ def test_windard_pv_battery_dispatch_example(subtests):
     with subtests.test("Check wind generation"):
         # Wind should generate some electricity
         wind_electricity = model.prob.get_val("wind.electricity_out", units="MW")
-        assert wind_electricity.sum() > 0
+        assert wind_electricity.sum() == 150884.90967164712
 
     with subtests.test("Check solar generation"):
         # Solar should generate some electricity
         solar_electricity = model.prob.get_val("solar.electricity_out", units="MW")
-        assert solar_electricity.sum() > 0
+        assert solar_electricity.sum() == 44221.39046811775
 
     with subtests.test("Check battery gets wind and solar output"):
         # Wind plus solar electricity should match battery input (direct connection)
@@ -1183,11 +1183,11 @@ def test_windard_pv_battery_dispatch_example(subtests):
     # Subtest for LCOE
     with subtests.test("Check dispatched LCOE value"):
         lcoe = model.prob.get_val("finance_subgroup_dispatched_electricity.LCOE")[0]
-        assert pytest.approx(lcoe, rel=1e-6) == 0.22171693744337054
+        assert pytest.approx(lcoe, rel=1e-6) == 0.09289430342906849
 
     with subtests.test("Check generation LCOE value (excludes battery)"):
         lcoe = model.prob.get_val("finance_subgroup_produced_electricity.LCOE")[0]
-        assert pytest.approx(lcoe, rel=1e-6) == 0.06770722531229562
+        assert pytest.approx(lcoe, rel=1e-6) == 0.07204429286793802
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity dispatched"):
@@ -1204,14 +1204,14 @@ def test_windard_pv_battery_dispatch_example(subtests):
         ).sum()
 
         # import pdb; pdb.set_trace()
-        assert electricity_curtailed == pytest.approx(525088.2729268058, rel=1e-6)
+        assert electricity_curtailed == pytest.approx(20344.97639127703, rel=1e-6)
 
     # Subtest for missed load
     with subtests.test("Check electricity missed load"):
         electricity_missed_load = np.linalg.norm(
             model.prob.get_val("battery.electricity_unmet_demand", units="MW")
         )
-        assert electricity_missed_load == pytest.approx(468.28057304873026)
+        assert electricity_missed_load == pytest.approx(1403.5372787817894)
 
 
 def test_csvgen_design_of_experiments(subtests):
