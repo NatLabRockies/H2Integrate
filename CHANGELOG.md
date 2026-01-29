@@ -29,6 +29,7 @@
   - Remove unused dependencies.
   - Fixes typos for skipped folders.
   - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
+- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models
 
 ## 0.5.1 [December 18, 2025]
 
