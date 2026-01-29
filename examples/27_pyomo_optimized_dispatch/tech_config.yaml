@@ -52,20 +52,20 @@ technologies:
         commodity_name: "electricity"
         max_charge_rate: 100000
         max_capacity: 400000
-        n_control_window: 24
-        n_horizon_window: 48
-        init_charge_percent: 0.5
-        max_charge_percent: 0.9
-        min_charge_percent: 0.1
+        n_control_window: 24 # in timesteps (currently hours), The length of time that the control is applied to in the rolling window optimization
+        n_horizon_window: 48 # in timesteps (currently hours), The horizon window the optimization is run over
+        init_charge_percent: 0.5 # Initial SOC for the storage
+        max_charge_percent: 0.9 # Maximum SOC allowable for the storage technology
+        min_charge_percent: 0.1 # Minimum SOC allowable for the storage technology
         system_commodity_interface_limit: 1e12
-        time_weighting_factor: 0.995
-        charge_efficiency: 0.95
-        discharge_efficiency: 0.95
+        time_weighting_factor: 0.995 # This parameter discounts each subsequent time step incrementally in the future in the horizon window by this amount
+        charge_efficiency: 0.95 # Charge efficiency of the storage technology
+        discharge_efficiency: 0.95 # Discharge efficiency of the storage technology
         commodity_storage_units: "kW"
-        cost_per_charge: 0.03
-        cost_per_discharge: 0.05
-        commodity_met_value: 0.1
-        cost_per_production: 0.0
+        cost_per_charge: 0.03 # in $/kW, cost to charge the storage (note that charging is incentivized)
+        cost_per_discharge: 0.05 # in $/kW, cost to discharge the storage
+        commodity_met_value: 0.1 # in $/kW, penalty for not meeting the desired load demand
+        cost_per_production: 0.0 # in $/kW, cost to use the incoming produced commodity (i.e. electricity from wind)
       performance_parameters:
         system_model_source: "pysam"
         chemistry: "LFPGraphite"
@@ -76,5 +76,4 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
       control_parameters:
-        # commodity_storage_units: "kW"
         tech_name: "battery"

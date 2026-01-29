@@ -11,8 +11,8 @@ class PyomoRuleStorageMinOperatingCosts:
         commodity_info: dict,
         pyomo_model: pyo.ConcreteModel,
         index_set: pyo.Set,
+        round_digits: int,
         block_set_name: str = "storage",
-        round_digits=4,
     ):
         self.round_digits = round_digits
         self.block_set_name = block_set_name
@@ -141,7 +141,7 @@ class PyomoRuleStorageMinOperatingCosts:
             doc=f"{pyomo_model.name} maximum storage rating [{self.commodity_storage_units}]",
             default=1000.0,
             within=pyo.NonNegativeReals,
-            mutable=False,
+            mutable=True,
             units=pyo_commodity_storage_unit_hrs,
         )
         pyomo_model.minimum_soc = pyo.Param(

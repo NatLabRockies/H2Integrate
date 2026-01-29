@@ -160,7 +160,8 @@ class PyomoControllerBaseClass(ControllerBaseClass):
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
 
-        index_set = pyomo.Set(initialize=range(self.config.n_control_window))
+        # index_set = pyomo.Set(initialize=range(self.config.n_control_window))
+        index_set = pyomo.Set(initialize=range(self.config.n_horizon_window))
 
         self.source_techs = []
         self.dispatch_tech = []
@@ -834,13 +835,14 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     charge_efficiency: float = field(default=None)
     discharge_efficiency: float = field(default=None)
     demand_profile: list = field(default=None)
-    time_weighting_factor: float = 0.995
     commodity_name: str = field(default=None)
     commodity_storage_units: str = field(default=None)
     cost_per_production: float = field(default=None)
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
     commodity_met_value: float = field(default=None)
+    time_weighting_factor: float = 0.995
+    round_digits: int = 4
 
     def make_dispatch_inputs(self):
         dispatch_keys = [
@@ -984,6 +986,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     self.commodity_info,
                     model,
                     model.forecast_horizon,
+                    self.config.round_digits,
                     block_set_name=f"{tech}_rule",
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
@@ -992,13 +995,19 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     self.commodity_info,
                     model,
                     model.forecast_horizon,
+                    self.config.round_digits,
                     block_set_name=f"{tech}_rule",
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
 
         # Create hybrid pyomo model, inputting indivdual technology models
         self.hybrid_dispatch_rule = PyomoDispatchPlantRule(
-            model, model.forecast_horizon, self.source_techs, self.pyomo_model, self.config
+            model,
+            model.forecast_horizon,
+            self.source_techs,
+            self.pyomo_model,
+            self.config.time_weighting_factor,
+            self.config.round_digits,
         )
         return model
 

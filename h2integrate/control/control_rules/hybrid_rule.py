@@ -12,18 +12,19 @@ class PyomoDispatchPlantRule:
         index_set: pyo.Set,
         source_techs: list,
         tech_dispatch_models: pyo.ConcreteModel,
-        dispatch_options: dict,
+        time_weighting_factor: float,
+        round_digits: int,
         block_set_name: str = "hybrid",
     ):
         self.source_techs = source_techs  # self.pyomo_model
-        self.options = dispatch_options  # only using dispatch_options.time_weighting_factor
         self.power_source_gen_vars = {key: [] for key in index_set}
         self.tech_dispatch_models = tech_dispatch_models
+        self.time_weighting_factor_input = time_weighting_factor
         self.load_vars = {key: [] for key in index_set}
         self.ports = {key: [] for key in index_set}
         self.arcs = []
 
-        self.round_digits = 4
+        self.round_digits = round_digits
 
         self.model = pyomo_model
         self.blocks = pyo.Block(index_set, rule=self.dispatch_block_rule)
@@ -66,7 +67,7 @@ class PyomoDispatchPlantRule:
             dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
 
         """
-        self.time_weighting_factor = self.options.time_weighting_factor  # Discount factor
+        self.time_weighting_factor = self.time_weighting_factor_input  # Discount factor
         for tech in self.source_techs:
             pyomo_block = self.tech_dispatch_models.__getattribute__(f"{tech}_rule")
             pyomo_block.initialize_parameters(commodity_in, commodity_demand, dispatch_params)

@@ -11,8 +11,8 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
         commodity_info: dict,
         pyomo_model: pyo.ConcreteModel,
         index_set: pyo.Set,
+        round_digits: int,
         block_set_name: str = "converter",
-        round_digits: int = 4,
     ):
         self.round_digits = round_digits
         self.block_set_name = block_set_name
@@ -135,8 +135,8 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
     def _create_constraints(self, pyomo_model: pyo.ConcreteModel):
         """Create generic converter Pyomo constraints to add to the Pyomo model instance.
 
-        Method is currently passed but this can serve as a template to add constraints to the Pyomo
-        model instance.
+        Method is currently empty but this serves as a placeholder to add constraints to the Pyomo
+        model instance if this class is inherited.
 
         Args:
             pyomo_model (pyo.ConcreteModel): pyomo_model that constraints are added to.

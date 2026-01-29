@@ -59,6 +59,7 @@ tech_config = {
                     "cost_per_discharge": 0.005,
                     "cost_per_production": 0.0,
                     "commodity_met_value": 0.1,
+                    "round_digits": 4,
                 },
                 "performance_parameters": {
                     "system_model_source": "pysam",
