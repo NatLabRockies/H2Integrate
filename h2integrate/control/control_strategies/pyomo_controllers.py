@@ -160,8 +160,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
 
-        # index_set = pyomo.Set(initialize=range(self.config.n_control_window))
-        index_set = pyomo.Set(initialize=range(self.config.n_horizon_window))
+        index_set = pyomo.Set(initialize=range(self.config.n_control_window))
 
         self.source_techs = []
         self.dispatch_tech = []
@@ -335,7 +334,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 for j in window_indices:
                     # save the output for the control window to the output for the full
                     # simulation
-                    # TODO: connect soc properly over multiple windows
                     storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
                     soc[j] = soc_control_window[j - t]
                     total_commodity_out[j] = np.minimum(
@@ -345,9 +343,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     unused_commodity[j] = np.maximum(
                         0, storage_commodity_out[j] + commodity_in[j - t] - demand_in[j - t]
                     )
-
-            if "optimized" in control_strategy:
-                print("100% done with optimal dispatch")
 
             return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
 
@@ -1026,6 +1021,11 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         log_name: str = "",
         user_solver_options: dict | None = None,
     ):
+        """
+        This method takes in the dispatch system-level pyomo model that we have built,
+        gives it to the solver, and gives back solver results.
+        """
+
         # log_name = "annual_solve_GLPK.log"  # For debugging MILP solver
         # Ref. on solver options: https://en.wikibooks.org/wiki/GLPK/Using_GLPSOL
         glpk_solver_options = {
