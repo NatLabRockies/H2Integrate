@@ -1788,11 +1788,11 @@ def test_21_iron_dri_eaf_example(subtests):
 
     with subtests.test("Value check on LCOP"):
         lcop = h2i.model.get_val("finance_subgroup_pig_iron.LCOP", units="USD/t")[0]
-        assert pytest.approx(lcop, rel=1e-4) == 365.38855928418843
+        assert pytest.approx(lcop, rel=1e-4) == 359.670379351
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 538.4002908756322
+        assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
 
 
 def test_sweeping_different_resource_sites_doe(subtests):

@@ -32,16 +32,23 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
         self.config = FeedstockPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        feedstock_type = self.config.feedstock_type
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.add_input(
+            f"{self.config.feedstock_type}_capacity",
+            val=self.config.rated_capacity,
+            units=self.config.units,
+        )
 
-        self.add_output(f"{feedstock_type}_out", shape=n_timesteps, units=self.config.units)
+        self.add_output(
+            f"{self.config.feedstock_type}_out", shape=self.n_timesteps, units=self.config.units
+        )
 
     def compute(self, inputs, outputs):
-        feedstock_type = self.config.feedstock_type
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # Generate feedstock array operating at full capacity for the full year
-        outputs[f"{feedstock_type}_out"] = np.full(n_timesteps, self.config.rated_capacity)
+        outputs[f"{self.config.feedstock_type}_out"] = np.full(
+            self.n_timesteps, inputs[f"{self.config.feedstock_type}_capacity"][0]
+        )
 
 
 @define(kw_only=True)
