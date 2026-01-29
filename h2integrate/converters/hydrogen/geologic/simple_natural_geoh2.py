@@ -240,7 +240,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         outputs["hydrogen_out"] = avg_h2_flow[:n_timesteps]
         outputs["max_wellhead_gas"] = ramp_up_flow
         # this is lifetime flow which decreases over time
-        outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
+        outputs["total_wellhead_gas_produced"] = np.average(wh_flow_profile)*n_timesteps
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
 
     def arps_decline_curve_fit(self, t, qi, Di, b):
