@@ -87,7 +87,7 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="hydrogen",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_hydrogen_produced", 4.0e5, units="kg/year")
+        ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -121,7 +121,7 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", 2.0e7, units="kW*h/year")
+        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -166,7 +166,7 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", 2.0e7, units="kW*h/year")
+        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -297,7 +297,7 @@ def test_profast_config_provided():
         commodity_type="hydrogen",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_hydrogen_produced", 4.0e5, units="kg/year")
+    ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 

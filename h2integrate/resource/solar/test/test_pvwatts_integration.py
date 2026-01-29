@@ -386,7 +386,7 @@ def test_pvwatts_with_openmeteo_solar(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 443558.17053592583
