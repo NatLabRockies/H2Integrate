@@ -97,10 +97,8 @@ class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
         self.add_input("grain_size", units="m", val=self.config.grain_size)
 
         # outputs
-        self.add_output("wellhead_gas_out", units="kg/h", shape=(8760,))
-        # self.add_output("hydrogen_out", units="kg/h", shape=(8760,))
+        self.add_output("wellhead_gas_out", units="kg/h", shape=(self.n_timesteps,))
         self.add_output("total_wellhead_gas_produced", val=0.0, units="kg/year")
-        # self.add_output("total_hydrogen_produced", val=0.0, units="kg/year")
 
 
 @define(kw_only=True)

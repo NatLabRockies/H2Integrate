@@ -66,12 +66,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         )
         super().setup()
         self.add_output("efficiency", val=0.0, desc="Average efficiency of the electrolyzer")
-        # self.add_output(
-        #     "rated_h2_production_kg_pr_hr",
-        #     val=0.0,
-        #     units="kg/h",
-        #     desc="Rated hydrogen production of system in kg/hour",
-        # )
+
         self.add_output(
             "time_until_replacement", val=80000.0, units="h", desc="Time until replacement"
         )
@@ -92,7 +87,6 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_input("cluster_size", val=-1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
         # TODO: add feedstock inputs and consumption outputs
-        # self.add_output("hydrogen_capacity_factor", val=0.0, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         plant_life = self.options["plant_config"]["plant"]["plant_life"]

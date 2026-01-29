@@ -12,7 +12,6 @@ class SteelPerformanceBaseClass(PerformanceModelBaseClass):
         # NOTE: the SteelPerformanceModel does not use electricity or hydrogen in its calc
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        # self.add_output("steel", val=0.0, shape=n_timesteps, units="t/year")
 
     def compute(self, inputs, outputs):
         """

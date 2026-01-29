@@ -88,9 +88,6 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
 
         self.add_output("air_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("ASU_capacity_kW", val=0.0, units="kW", desc="ASU rated capacity in kW")
-        # self.add_output(
-        #     "rated_N2_kg_pr_hr", val=0.0, units="kg/h", desc="ASU rated capacity in kg-N2/hour"
-        # )
 
         self.add_output(
             "annual_electricity_consumption",
@@ -98,26 +95,7 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
             units="kW",
             desc="ASU annual electricity consumption in kWh/year",
         )
-        # self.add_output(
-        #     "total_nitrogen_produced",
-        #     val=0.0,
-        #     units="kg/year",
-        #     desc="ASU annual nitrogen production in kg-N2/year",
-        # )
-        # self.add_output(
-        #     "annual_max_nitrogen_production",
-        #     val=0.0,
-        #     units="kg/year",
-        #     desc="ASU maximum annual nitrogen production in kg-N2/year",
-        # )
-        # self.add_output(
-        #     "nitrogen_production_capacity_factor",
-        #     val=0.0,
-        #     units=None,
-        #     desc="ASU annual nitrogen production in kg-N2/year",
-        # )
 
-        # self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("oxygen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("argon_out", val=0.0, shape=n_timesteps, units="kg/h")
 

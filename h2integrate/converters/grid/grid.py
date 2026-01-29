@@ -87,14 +87,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             desc="Electricity demand from downstream technologies",
         )
 
-        # Electricity flowing OUT OF the grid (buying from grid)
-        # self.add_output(
-        #     "electricity_out",
-        #     val=0.0,
-        #     shape=n_timesteps,
-        #     units=self.commodity_rate_units,
-        #     desc="Electricity flowing out of grid interconnection point (buying from grid)",
-        # )
+        # electricity_out is electricity flowing OUT OF the grid (buying from grid)
 
         self.add_output(
             "electricity_sold",

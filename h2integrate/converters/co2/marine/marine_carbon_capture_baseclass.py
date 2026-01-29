@@ -41,13 +41,7 @@ class MarineCarbonCapturePerformanceBaseClass(PerformanceModelBaseClass):
         self.add_input(
             "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
         )
-        # self.add_output(
-        #     "co2_out",
-        #     val=0.0,
-        #     shape=8760,
-        #     units="kg/h",
-        #     desc="Hourly CO₂ capture rate (kg/h)",
-        # )
+
         # TODO: remove this output once finance models are updated
         self.add_output("co2_capture_mtpy", units="t/year", desc="Annual CO₂ captured (t/year)")
 

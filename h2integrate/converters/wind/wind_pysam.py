@@ -240,16 +240,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             desc="turbine hub-height in meters",
         )
 
-        # self.add_output(
-        #     "annual_energy",
-        #     val=0.0,
-        #     units="kW*h/year",
-        #     desc="Annual energy production from WindPlant in kW",
-        # )
-        # self.add_output(
-        #     "total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity in kW"
-        # )
-
         if self.config.create_model_from == "default":
             self.system_model = Windpower.default(self.config.config_name)
         elif self.config.create_model_from == "new":

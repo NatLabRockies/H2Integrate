@@ -33,8 +33,6 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
 
-        # n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.config = HOPPComponentModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
@@ -69,9 +67,6 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
         self.add_output("percent_load_missed", units="percent", val=0.0)
         self.add_output("curtailment_percent", units="percent", val=0.0)
         self.add_output("aep", units="kW*h", val=0.0)
-        # self.add_output(
-        #     "electricity_out", val=np.zeros(n_timesteps), units="kW", desc="Power output"
-        # )
         self.add_output("battery_duration", val=0.0, units="h", desc="Battery duration")
         self.add_output(
             "annual_energy_to_interconnect_potential_ratio",

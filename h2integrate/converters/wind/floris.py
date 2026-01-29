@@ -145,18 +145,6 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
             desc="turbine hub-height",
         )
 
-        # self.add_output(
-        #     "total_electricity_produced",
-        #     val=0.0,
-        #     units="kW*h/year",
-        #     desc="Annual energy production from WindPlant",
-        # )
-        # self.add_output("total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity")
-
-        # self.add_output(
-        #     "capacity_factor", val=0.0, units="unitless", desc="Wind farm capacity factor"
-        # )
-
         super().setup()
 
         power_curve = self.config.floris_turbine_config.get("power_thrust_table").get("power")

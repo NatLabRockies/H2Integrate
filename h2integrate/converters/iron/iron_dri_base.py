@@ -80,14 +80,6 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
             desc="Pig iron demand for iron plant",
         )
 
-        # self.add_output(
-        #     "pig_iron_out",
-        #     val=0.0,
-        #     shape=n_timesteps,
-        #     units="t/h",
-        #     desc="Pig iron produced",
-        # )
-
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
         # rosner dri performance model
         coeff_df = pd.read_csv(coeff_fpath, index_col=0)

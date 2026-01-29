@@ -81,15 +81,6 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             desc="Natural gas consumed by the plant",
         )
 
-        # Add electricity output
-        # self.add_output(
-        #     "electricity_out",
-        #     val=0.0,
-        #     shape=n_timesteps,
-        #     units="MW",
-        #     desc="Electricity output from natural gas plant",
-        # )
-
         # Add heat_rate as an OpenMDAO input with config value as default
         self.add_input(
             "heat_rate_mmbtu_per_mwh",

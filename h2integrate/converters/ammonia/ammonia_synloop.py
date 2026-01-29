@@ -153,13 +153,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="MW")
 
-        # self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("electricity_out", val=0.0, shape=n_timesteps, units="MW")
         self.add_output("heat_out", val=0.0, shape=n_timesteps, units="kW*h/kg")
         self.add_output("catalyst_mass", val=0.0, units="kg")
-        # self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
+
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_electricity_consumed", val=0.0, units="kW*h/year")
@@ -167,7 +166,6 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             "limiting_input", val=0, shape_by_conn=True, copy_shape="hydrogen_in", units=None
         )
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
-        # self.add_output("ammonia_capacity_factor", val=0.0, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values

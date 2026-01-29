@@ -76,14 +76,6 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             desc="Steel demand for steel plant",
         )
 
-        # self.add_output(
-        #     "steel_out",
-        #     val=0.0,
-        #     shape=n_timesteps,
-        #     units="t/h",
-        #     desc="Steel produced",
-        # )
-
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
         # rosner dri performance model
         coeff_df = pd.read_csv(coeff_fpath, index_col=0)

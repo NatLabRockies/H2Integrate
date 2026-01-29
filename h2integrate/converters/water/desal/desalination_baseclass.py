@@ -7,7 +7,7 @@ class DesalinationPerformanceBaseClass(PerformanceModelBaseClass):
         self.commodity_amount_units = "m**3"
         self.commodity_rate_units = "m**3/h"
         super().setup()
-        # self.add_output("water", val=0.0, units="m**3/h", desc="Fresh water")
+
         self.add_output("mass", val=0.0, units="kg", desc="Mass of desalination system")
         self.add_output("footprint", val=0.0, units="m**2", desc="Footprint of desalination system")
 

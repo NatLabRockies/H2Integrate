@@ -79,9 +79,7 @@ class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
         self.add_input("wellhead_h2_concentration_mol", units="mol/mol", val=-1.0)
 
         # outputs
-        # self.add_output("hydrogen_out", units="kg/h", shape=(n_timesteps,))
         self.add_output("hydrogen_concentration_out", units="mol/mol", val=-1.0)
-        # self.add_output("total_hydrogen_produced", val=-1.0, units="kg/year")
         self.add_output("max_flow_size", units="kg/h", val=self.config.max_flow_in)
 
 

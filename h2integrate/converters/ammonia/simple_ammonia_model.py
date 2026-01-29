@@ -45,8 +45,6 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        # self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
-        # self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
 
     def compute(self, inputs, outputs):
         ammonia_production_kgpy = (

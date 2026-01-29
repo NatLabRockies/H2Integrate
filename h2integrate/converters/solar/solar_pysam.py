@@ -155,12 +155,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             desc="PV rated capacity in DC",
         )
         self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
-        # self.add_output(
-        #     "annual_energy",
-        #     val=0.0,
-        #     units="kW*h/year",
-        #     desc="Annual energy production in kWac",
-        # )
 
         if self.design_config.create_model_from == "default":
             self.system_model = Pvwatts.default(self.design_config.config_name)
@@ -306,4 +300,3 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
         outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
-        # outputs["annual_energy"] = self.system_model.value("ac_annual")
