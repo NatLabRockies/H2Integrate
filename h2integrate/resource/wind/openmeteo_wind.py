@@ -47,7 +47,7 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
-    verify_download: bool = field(defalt=False)
+    verify_download: bool = field(default=False)
 
 
 class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
