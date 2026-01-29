@@ -28,6 +28,7 @@
     listed at the bottom.
   - Remove unused dependencies.
   - Fixes typos for skipped folders.
+  - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
 
 ## 0.5.1 [December 18, 2025]
 
