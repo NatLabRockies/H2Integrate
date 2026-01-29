@@ -240,7 +240,6 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         )
 
         super().setup()
-        # BatteryPerformanceBaseClass.setup(self)
 
         self.add_input(
             "electricity_demand",

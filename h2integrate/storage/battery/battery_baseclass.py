@@ -16,14 +16,6 @@ class BatteryPerformanceBaseClass(PerformanceModelBaseClass):
             desc="Power input to Battery",
         )
 
-        # self.add_output(
-        #     "electricity_out",
-        #     val=0.0,
-        #     copy_shape="electricity_in",
-        #     units="kW",
-        #     desc="Total electricity out of Battery",
-        # )
-
         self.add_output(
             "SOC",
             val=0.0,
