@@ -26,7 +26,8 @@ technology_interconnections: [
 ]
 
 resource_to_tech_connections: [
-  # connect the wind resource to the wind technology
+  # The wind resource is handled strictly by Ard in this example,
+  # so only the solar resource connection is included here
   ['site.solar_resource', 'solar', 'solar_resource_data'],
 ]
 
