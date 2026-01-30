@@ -4,15 +4,15 @@ site:
   boundaries:
     polygons:
     - x:
-      - -4000.0
-      - 4000.0
-      - 4000.0
-      - -4000.0
+      - -1000.0
+      - 1000.0
+      - 1000.0
+      - -1000.0
       y:
-      - -4000.0
-      - -4000.0
-      - 4000.0
-      - 4000.0
+      - -1000.0
+      - -1000.0
+      - 1000.0
+      - 1000.0
   energy_resource: !include ./open-meteo-56.20N8.54E86m.yaml
 wind_farm:
   name: Small wind farm

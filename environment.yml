@@ -1,4 +1,4 @@
-name: h2i-ard
+name: h2integrate
 channels:
   - conda-forge
   - defaults

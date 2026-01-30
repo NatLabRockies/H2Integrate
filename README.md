@@ -115,11 +115,8 @@ pip install h2integrate
 
 3. Create a conda environment and install H2Integrate and all its dependencies
 
-    - for apple silicon
     ```bash
-    conda CONDA_SUBDIR=osx-arm64 conda env create -f environment.yml
-    conda activate h2i-ard
-    conda env config vars set CONDA_SUBDIR=osx-arm64 # this command makes the environment permanently native
+    conda env create -f environment.yml
     ```
 
 4. Install Cbc.
