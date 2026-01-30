@@ -2,6 +2,7 @@ import copy
 import unittest
 from pathlib import Path
 
+import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import approx
@@ -85,9 +86,14 @@ class TestProFastComp(unittest.TestCase):
             tech_config=edited_tech_config,
             driver_config=self.driver_config,
             commodity_type="hydrogen",
+            commodity_stream="h2_storage",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
+
+        total_h2_produced_per_year = 4.0e5
+        ivc.add_output(
+            "total_hydrogen_produced", [total_h2_produced_per_year] * 30, units="kg/year"
+        )
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -96,7 +102,11 @@ class TestProFastComp(unittest.TestCase):
         prob.set_val("capex_adjusted_electrolyzer1", 1.0e7, units="USD")
         prob.set_val("opex_adjusted_electrolyzer1", 1.0e4, units="USD/year")
 
-        prob.set_val("electrolyzer1_time_until_replacement", 5.0e3, units="h")
+        refurb_schedule = np.zeros(30)
+        refurb_period = round(5.0e3 / 8760)
+        refurb_schedule[refurb_period:30:refurb_period] = 1
+
+        prob.set_val("electrolyzer1_replacement_schedule", refurb_schedule, units="unitless")
 
         prob.run_model()
 
@@ -135,7 +145,11 @@ class TestProFastComp(unittest.TestCase):
         prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
         prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
         prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
-        prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
+        refurb_schedule = np.zeros(30)
+        refurb_period = round(80000.0 / 8760)
+        refurb_schedule[refurb_period:30:refurb_period] = 1
+
+        prob.set_val("electrolyzer_replacement_schedule", refurb_schedule, units="unitless")
 
         prob.run_model()
 
@@ -180,7 +194,11 @@ class TestProFastComp(unittest.TestCase):
         prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
         prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
         prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
-        prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
+        refurb_schedule = np.zeros(30)
+        refurb_period = round(80000.0 / 8760)
+        refurb_schedule[refurb_period:30:refurb_period] = 1
+
+        prob.set_val("electrolyzer_replacement_schedule", refurb_schedule, units="unitless")
 
         prob.run_model()
 
@@ -295,9 +313,17 @@ def test_profast_config_provided():
         tech_config=tech_config,
         driver_config=driver_config,
         commodity_type="hydrogen",
+        commodity_stream="electrolyzer",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
+
+    annual_h2 = 4.0e5
+    elec_cf = 1
+    hourly_h2 = (annual_h2 / (elec_cf)) / 8760
+    ivc.add_output("total_hydrogen_produced", [annual_h2] * 30, units="kg/year")
+    ivc.add_output("electrolyzer_rated_hydrogen_production", hourly_h2, units="kg/h")
+    ivc.add_output("electrolyzer_capacity_factor", [elec_cf] * 30, units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -306,7 +332,10 @@ def test_profast_config_provided():
     prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
     prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
 
-    prob.set_val("electrolyzer_time_until_replacement", 5.0e3, units="h")
+    refurb_schedule = np.zeros(30)
+    refurb_schedule[1:30] = 1
+
+    prob.set_val("electrolyzer_replacement_schedule", refurb_schedule, units="unitless")
 
     prob.run_model()
 
