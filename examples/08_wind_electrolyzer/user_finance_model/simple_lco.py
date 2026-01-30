@@ -19,6 +19,7 @@ class SimpleLCOFinance(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
         self.options.declare("commodity_type", types=str)
         self.options.declare("description", types=str, default="")
+        self.options.declare("commodity_stream", types=str, default="")  # unused in this model
 
     def setup(self):
         if self.options["commodity_type"] == "electricity":

@@ -857,6 +857,7 @@ class H2IntegrateModel:
                     plant_config=filtered_plant_config,
                     commodity_type=commodity,
                     description=commodity_output_desc,
+                    commodity_stream="" if commodity_stream is None else commodity_stream,
                 )
 
                 # name the finance component based on the commodity and description
@@ -1069,6 +1070,16 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.{primary_commodity_type}_sum.total_{primary_commodity_type}_produced",
                         f"finance_subgroup_{group_id}.total_{primary_commodity_type}_produced",
                     )
+                    # Temporary for electrolyzer lifetime logic
+                    if primary_commodity_type == "hydrogen" and "electrolyzer" in commodity_stream:
+                        self.plant.connect(
+                            f"{commodity_stream}.capacity_factor",
+                            f"finance_subgroup_{group_id}.{commodity_stream}_capacity_factor",
+                        )
+                        self.plant.connect(
+                            f"{commodity_stream}.rated_hydrogen_production",
+                            f"finance_subgroup_{group_id}.{commodity_stream}_rated_hydrogen_production",
+                        )
 
                 # if commodity stream was not specified, follow existing logic
                 else:
@@ -1128,6 +1139,15 @@ class H2IntegrateModel:
                                 self.plant.connect(
                                     f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
+                                )
+                                # Temporary for electrolyzer lifetime logic
+                                self.plant.connect(
+                                    f"{tech_name}.capacity_factor",
+                                    f"finance_subgroup_{group_id}.{tech_name}_capacity_factor",
+                                )
+                                self.plant.connect(
+                                    f"{tech_name}.rated_hydrogen_production",
+                                    f"finance_subgroup_{group_id}.{tech_name}_rated_hydrogen_production",
                                 )
 
                         if "geoh2" in tech_name:

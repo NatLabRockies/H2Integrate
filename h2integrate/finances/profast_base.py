@@ -494,6 +494,7 @@ class ProFastBase(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
         self.options.declare("commodity_type", types=str)
         self.options.declare("description", types=str, default="")
+        self.options.declare("commodity_stream", types=str, default="")
 
     def add_model_specific_outputs(self):
         """Placeholder for subclass-defined outputs."""
@@ -537,6 +538,7 @@ class ProFastBase(om.ExplicitComponent):
 
         # Add inputs for CapEx, OpEx, and variable OpEx for each technology
 
+        use_lifetime_performance = False  # Temporary for electrolyzer-specific logic
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")
@@ -547,6 +549,32 @@ class ProFastBase(om.ExplicitComponent):
             if tech.startswith("electrolyzer"):
                 self.add_input(f"{tech}_replacement_schedule", shape=plant_life, units="unitless")
 
+                if self.options["commodity_type"] == "hydrogen":
+                    # Temporary logic to handle using lifetime performance if
+                    # electrolyzer is included and is the commodity output stream
+                    if (
+                        "electrolyzer" in self.options["commodity_stream"]
+                        or self.options["commodity_stream"] != "h2_storage"
+                    ):
+                        use_lifetime_performance = True
+                        self.lifetime_performance_tech = tech
+                        # Temporary: use lifetime performance for electrolyzer
+                        # if calculating LCOH
+
+                        self.add_input(
+                            f"{tech}_rated_{self.options['commodity_type']}_production",
+                            val=-1.0,
+                            units="kg/d",
+                            require_connection=True,
+                        )
+                        self.add_input(
+                            f"{tech}_capacity_factor",
+                            val=-1.0,
+                            units="unitless",
+                            shape=plant_life,
+                            require_connection=True,
+                        )
+        self.use_lifetime_performance = use_lifetime_performance
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]["params"]
@@ -627,17 +655,28 @@ class ProFastBase(om.ExplicitComponent):
             {"unit": "kg" if self.options["commodity_type"] in mass_commodities else "kWh"}
         )
 
-        # calculate capacity and total production based on commodity type
-        if self.options["commodity_type"] != "co2":
-            capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
+        if self.use_lifetime_performance:
+            capacity = inputs[
+                f"{self.lifetime_performance_tech}_rated_{self.options['commodity_type']}_production"
+            ][0]
+            profast_params["capacity"] = capacity
+            profast_params["long term utilization"] = dict(
+                zip(years_of_operation, inputs[f"{self.lifetime_performance_tech}_capacity_factor"])
+            )
             total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
-        else:
-            capacity = inputs["co2_capture_kgpy"][0] / 365.0
-            total_production = inputs["co2_capture_kgpy"][0]
 
-        # define profast parameters for capacity and utilization
-        profast_params["capacity"] = capacity  # TODO: update to actual daily capacity
-        profast_params["long term utilization"] = 1  # TODO: update to capacity factor
+        else:
+            # calculate capacity and total production based on commodity type
+            if self.options["commodity_type"] != "co2":
+                capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
+                total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
+            else:
+                capacity = inputs["co2_capture_kgpy"][0] / 365.0
+                total_production = inputs["co2_capture_kgpy"][0]
+
+            # define profast parameters for capacity and utilization
+            profast_params["capacity"] = capacity  # TODO: update to actual daily capacity
+            profast_params["long term utilization"] = 1  # TODO: update to capacity factor
 
         # initialize profast dictionary
         pf_dict = {"params": profast_params, "capital_items": {}, "fixed_costs": {}}
