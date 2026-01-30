@@ -550,7 +550,10 @@ class ProFastBase(om.ExplicitComponent):
         fin_params = check_parameter_inputs(finance_params, plant_config)
 
         # initialize financial parameters
-        self.params = BasicProFASTParameterConfig.from_dict(fin_params)
+        self.params = BasicProFASTParameterConfig.from_dict(
+            fin_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # initialize default capital item parameters
         capital_item_params = plant_config["finance_parameters"]["model_inputs"].get(

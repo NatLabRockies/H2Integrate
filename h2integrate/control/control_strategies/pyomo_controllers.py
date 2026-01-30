@@ -697,7 +697,8 @@ class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
     def setup(self):
         """Initialize HeuristicLoadFollowingController."""
         self.config = HeuristicLoadFollowingControllerConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

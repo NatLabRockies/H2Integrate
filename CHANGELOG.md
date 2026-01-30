@@ -29,10 +29,11 @@
   - Remove unused dependencies.
   - Fixes typos for skipped folders.
   - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
+  - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
+- Adds `additional_cls_name` kwarg to `BaseConfif.from_dict()` to allow for configuration errors buried in parent or child classes to provide which model had the offending misconfiguration for simpler user debugging.
 - Updates all models in `supported_models` to map between a string version of the class name and
   the class itself. As such, all examples and documentation have been updated to properly instruct
   users to the change in model configuration naming conventions.
-- Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
 
 ## 0.5.1 [December 18, 2025]
 
