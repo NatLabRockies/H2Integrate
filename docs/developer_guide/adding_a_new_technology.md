@@ -159,6 +159,13 @@ required inputs and outputs defined in the baseclass.
 5. **Next, add the new technology to the `supported_models.py` file.**
 This file contains a dictionary of all the available technologies in H2Integrate.
 Add your new technology to the dictionary with the appropriate keys depending on if it a performance, cost, or financial model.
+
+```{important}
+When adding a new technology use a string version of the class name as the dictionary key mapping
+to the class. This greatly simplifies debugging configuration issues and model findability within the
+documentation and code.
+```
+
 Here's what the updated `supported_models.py` file looks like with our new solar technology added as the first entry:
 
 ```python
