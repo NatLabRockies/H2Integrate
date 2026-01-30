@@ -54,7 +54,9 @@ class GenericStorageCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = GenericStorageCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"), strict=False
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()

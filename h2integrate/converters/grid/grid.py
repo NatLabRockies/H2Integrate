@@ -49,7 +49,8 @@ class GridPerformanceModel(om.ExplicitComponent):
 
     def setup(self):
         self.config = GridPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -169,7 +170,8 @@ class GridCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = GridCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

@@ -28,7 +28,8 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
 class ATBUtilityPVCostModel(CostModelBaseClass):
     def setup(self):
         self.config = ATBUtilityPVCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
