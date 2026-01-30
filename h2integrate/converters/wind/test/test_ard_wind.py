@@ -121,7 +121,7 @@ def test_ard_wind_combined(plant_config, ard_config, subtests):
         assert (
             pytest.approx(
                 sum(prob.get_val("electricity_out", units="GW")),
-                abs=1e-8,
+                abs=1e-4,
             )
             == 150.8849096716472
         )

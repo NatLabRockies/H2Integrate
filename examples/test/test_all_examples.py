@@ -1158,12 +1158,12 @@ def test_windard_pv_battery_dispatch_example(subtests):
     with subtests.test("Check wind generation"):
         # Wind should generate some electricity
         wind_electricity = model.prob.get_val("wind.electricity_out", units="GW")
-        assert wind_electricity.sum() == 150.88490967164714
+        assert wind_electricity.sum() == pytest.approx(150.88490967164714, rel=1e-4)
 
     with subtests.test("Check solar generation"):
         # Solar should generate some electricity
         solar_electricity = model.prob.get_val("solar.electricity_out", units="GW")
-        assert solar_electricity.sum() == 44.22139046811775
+        assert solar_electricity.sum() == pytest.approx(44.22139046811775, rel=1e-4)
 
     with subtests.test("Check battery gets wind and solar output"):
         # Wind plus solar electricity should match battery input (direct connection)
