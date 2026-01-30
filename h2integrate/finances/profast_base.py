@@ -532,7 +532,6 @@ class ProFastBase(om.ExplicitComponent):
                 val=-1.0,
                 units=commodity_units,
                 shape=plant_life,
-                # shape_by_conn=True,
                 require_connection=True,
             )
 

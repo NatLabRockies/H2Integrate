@@ -59,7 +59,7 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg")
+
         prob.run_model()
 
         per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
@@ -71,7 +71,7 @@ class TestBasicH2Costs:
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
         )
-        prob.set_val("total_hydrogen_produced", self.h2_annual_output, units="kg")
+
         prob.run_model()
 
         electrolyzer_total_capital_cost = prob["CapEx"]
@@ -84,7 +84,7 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg")
+
         prob.run_model()
 
         per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
@@ -98,7 +98,7 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg")
+
         prob.run_model()
 
         per_turb_electrolyzer_OM_cost = prob["OpEx"]
@@ -110,7 +110,7 @@ class TestBasicH2Costs:
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
         )
-        prob.set_val("total_hydrogen_produced", self.h2_annual_output, units="kg")
+
         prob.run_model()
 
         electrolyzer_OM_cost = prob["OpEx"]
@@ -123,7 +123,7 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg")
+
         prob.run_model()
 
         per_turb_electrolyzer_OM_cost = prob["OpEx"]

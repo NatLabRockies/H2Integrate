@@ -162,6 +162,10 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             refurb_period = round(float(H2_Results["Time Until Replacement [hrs]"]) / (24 * 365))
         refurb_schedule[refurb_period : self.plant_life : refurb_period] = 1
 
+        # The replacement_schedule is the fraction of the total capacity that is replaced per year
+        # The replacement_schedule may be used in the finance model if the replacement_cost_percent
+        # is specified in the tech_config under
+        # ['model_inputs']['finance_parameters']['capital_items']['replacement_cost_percent']
         outputs["replacement_schedule"] = refurb_schedule
         # NOTE: could replace above with line with below:
         # outputs["replacement_schedule"] = (H2_Results["Performance Schedules"]
