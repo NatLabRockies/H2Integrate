@@ -18,7 +18,7 @@ model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 model.run()
 
 # Plot the results
-fig, ax = plt.subplots(2, 1, sharex=True)
+fig, ax = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
 
 start_hour = 0
 end_hour = 200
@@ -67,7 +67,7 @@ ax[1].plot(
     range(start_hour, end_hour),
     demand_profile[start_hour:end_hour],
     linestyle="--",
-    label="Eletrical Demand (MW)",
+    label="Electrical Demand (MW)",
 )
 ax[1].set_ylim([-1e2, 2.5e2])
 ax[1].set_ylabel("Electricity Hourly (MW)")
@@ -77,7 +77,7 @@ plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
 plt.savefig("optimized_dispatch_plot.png", dpi=300)
 
-fig, ax = plt.subplots(1, 1, sharex=True)
+fig, ax = plt.subplots(1, 1, sharex=True, figsize=(7, 5))
 
 start_hour = 0
 end_hour = 200
@@ -103,7 +103,7 @@ plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
 plt.savefig("plot_battery_behavior.png", dpi=300)
 
-fig, ax = plt.subplots(1, 1, sharex=True)
+fig, ax = plt.subplots(1, 1, sharex=True, figsize=(7, 5))
 
 start_hour = 8600
 end_hour = 8760

@@ -257,7 +257,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
             # TODO: implement optional kwargs for this method: maybe this will remove if statement here
             if "heuristic" in control_strategy:
-                # Initialize parameters for heruistic dispatch strategy
+                # Initialize parameters for heuristic dispatch strategy
                 self.initialize_parameters()
             elif "optimized" in control_strategy:
                 # Initialize parameters for optimized dispatch strategy
@@ -995,7 +995,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
 
-        # Create hybrid pyomo model, inputting indivdual technology models
+        # Create hybrid pyomo model, inputting individual technology models
         self.hybrid_dispatch_rule = PyomoDispatchPlantRule(
             model,
             model.forecast_horizon,
@@ -1038,12 +1038,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         solver_options = SolverOptions(glpk_solver_options, log_name, user_solver_options, "log")
         with pyomo.SolverFactory("glpk") as solver:
             results = solver.solve(pyomo_model, options=solver_options.constructed)
-        # HybridDispatchBuilderSolver.log_and_solution_check(
-        #     log_name,
-        #     solver_options.instance_log,
-        #     results.solver.termination_condition,
-        #     pyomo_model,
-        # )
+
         return results
 
     def glpk_solve(self):
@@ -1051,17 +1046,6 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             # self.pyomo_model
             self.hybrid_dispatch_model
         )
-        # self.pyomo_model, log_name='', user_solver_options=dict({})
-
-    # @staticmethod
-    # def log_and_solution_check(
-    #     log_name: str, solve_log: str, solver_termination_condition, pyomo_model
-    # ):
-    #     if log_name != "":
-    #         HybridDispatchBuilderSolver.append_solve_to_log(log_name, solve_log)
-    #     HybridDispatchBuilderSolver.check_solve_condition(
-    #         solver_termination_condition, pyomo_model
-    #     )
 
     @property
     def storage_dispatch_commands(self) -> list:

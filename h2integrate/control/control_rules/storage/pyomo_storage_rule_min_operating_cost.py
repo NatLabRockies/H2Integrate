@@ -455,7 +455,7 @@ class PyomoRuleStorageMinOperatingCosts:
                 + (self.blocks[t].commodity_load_demand - hybrid_blocks[t].commodity_out)
                 * self.blocks[t].commodity_met_value
             )
-            # Try to incentivize battery charging
+            # Try to incentivize charging
             for t in self.blocks.index_set()
         )
         return self.obj

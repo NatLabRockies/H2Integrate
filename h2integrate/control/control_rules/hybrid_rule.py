@@ -4,7 +4,7 @@ from pyomo.network import Arc
 
 class PyomoDispatchPlantRule:
     """Class defining Pyomo model and rule for the optimized dispatch for load following
-    for the overal optimization problem describing the system."""
+    for the overall optimization problem describing the system."""
 
     def __init__(
         self,
