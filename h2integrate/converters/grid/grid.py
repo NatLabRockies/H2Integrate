@@ -138,8 +138,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             self.dt / 3600
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
-        outputs["annual_electricity_produced"] = (
-            outputs["total_electricity_produced"] * self.fraction_of_year_simulated
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
 

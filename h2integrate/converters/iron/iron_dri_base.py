@@ -256,8 +256,8 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
             inputs["system_capacity"] * self.n_timesteps
         )
         outputs["rated_pig_iron_production"] = inputs["system_capacity"]
-        outputs["annual_pig_iron_produced"] = (
-            outputs["total_pig_iron_produced"] * self.fraction_of_year_simulated
+        outputs["annual_pig_iron_produced"] = outputs["total_pig_iron_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
         # feedstock consumption based on actual pig iron produced

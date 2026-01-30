@@ -100,8 +100,8 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         outputs["capacity_factor"] = outputs["total_water_produced"] / (
             outputs["rated_water_production"] * len(outputs["water_out"])
         )
-        outputs["annual_water_produced"] = (
-            outputs["total_water_produced"] * self.fraction_of_year_simulated
+        outputs["annual_water_produced"] = outputs["total_water_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
         outputs["electricity_in"] = desal_power

@@ -254,8 +254,8 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
         outputs["steel_out"] = steel_production
         outputs["rated_steel_production"] = inputs["system_capacity"]
         outputs["total_steel_produced"] = outputs["steel_out"].sum()
-        outputs["annual_steel_produced"] = (
-            outputs["total_steel_produced"] * self.fraction_of_year_simulated
+        outputs["annual_steel_produced"] = outputs["total_steel_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         outputs["capacity_factor"] = outputs["total_steel_produced"] / (
             outputs["rated_steel_production"] * len(outputs["steel_out"])

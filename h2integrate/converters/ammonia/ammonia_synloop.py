@@ -277,8 +277,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["capacity_factor"] = np.mean(nh3_prod) / nh3_cap
 
         outputs["rated_ammonia_production"] = nh3_cap
-        outputs["annual_ammonia_produced"] = (
-            outputs["total_ammonia_produced"] * self.fraction_of_year_simulated
+        outputs["annual_ammonia_produced"] = outputs["total_ammonia_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
 

@@ -199,8 +199,8 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
         # annual N2 production in kg-N2/year
         outputs["total_nitrogen_produced"] = sum(n2_profile_out_kg)
         # maximum annual N2 production in kg-N2/year
-        outputs["annual_nitrogen_produced"] = (
-            outputs["total_nitrogen_produced"] * self.fraction_of_year_simulated
+        outputs["annual_nitrogen_produced"] = outputs["total_nitrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         # annual electricity consumption in kWh/year
         outputs["annual_electricity_consumption"] = sum(electricity_kWh)

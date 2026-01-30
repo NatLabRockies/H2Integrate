@@ -69,8 +69,8 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
 
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
         # Estimate annual electricity production
-        outputs["annual_electricity_produced"] = (
-            outputs["total_electricity_produced"] * self.fraction_of_year_simulated
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
         # Calculate capacity factor

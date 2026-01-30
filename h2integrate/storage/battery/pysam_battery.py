@@ -430,8 +430,8 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         outputs["rated_electricity_production"] = inputs["max_charge_rate"]
 
         outputs["total_electricity_produced"] = np.sum(total_power_out)
-        outputs["annual_electricity_produced"] = (
-            outputs["total_electricity_produced"] * self.fraction_of_year_simulated
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
             outputs["rated_electricity_production"] * self.n_timesteps

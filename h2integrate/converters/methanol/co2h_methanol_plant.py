@@ -125,8 +125,8 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         outputs["total_methanol_produced"] = outputs["methanol_out"].sum()
         max_production = len(meoh_prod) * inputs["plant_capacity_kgpy"] / 8760
         outputs["capacity_factor"] = outputs["total_methanol_produced"] / max_production
-        outputs["annual_methanol_produced"] = (
-            outputs["total_methanol_produced"] * self.fraction_of_year_simulated
+        outputs["annual_methanol_produced"] = outputs["total_methanol_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
 

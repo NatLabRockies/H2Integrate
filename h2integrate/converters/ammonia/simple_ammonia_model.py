@@ -54,8 +54,8 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
         outputs["capacity_factor"] = self.config.plant_capacity_factor
 
         outputs["total_ammonia_produced"] = ammonia_production_kgpy
-        outputs["annual_ammonia_produced"] = (
-            outputs["total_ammonia_produced"] * self.fraction_of_year_simulated
+        outputs["annual_ammonia_produced"] = outputs["total_ammonia_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         outputs["rated_ammonia_production"] = self.config.plant_capacity_kgpy / 8760
 

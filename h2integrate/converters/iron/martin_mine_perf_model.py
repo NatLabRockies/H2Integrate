@@ -230,8 +230,8 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
         outputs["iron_ore_out"] = processed_ore_production
         outputs["total_iron_ore_produced"] = np.sum(processed_ore_production)
-        outputs["annual_iron_ore_produced"] = (
-            outputs["total_iron_ore_produced"] * self.fraction_of_year_simulated
+        outputs["annual_iron_ore_produced"] = outputs["total_iron_ore_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         outputs["rated_iron_ore_production"] = inputs["system_capacity"]
         outputs["capacity_factor"] = outputs["total_iron_ore_produced"] / (

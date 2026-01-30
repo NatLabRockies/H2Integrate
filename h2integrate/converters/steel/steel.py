@@ -33,8 +33,8 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
         outputs["rated_steel_production"] = self.config.plant_capacity_mtpy / 8760
         outputs["capacity_factor"] = self.config.capacity_factor
         outputs["total_steel_produced"] = outputs["steel_out"].sum()
-        outputs["annual_steel_produced"] = (
-            outputs["total_steel_produced"] * self.fraction_of_year_simulated
+        outputs["annual_steel_produced"] = outputs["total_steel_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
 
 
