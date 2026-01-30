@@ -120,10 +120,10 @@ def test_ard_wind_combined(plant_config, ard_config, subtests):
     with subtests.test("AEP"):
         assert (
             pytest.approx(
-                sum(prob.get_val("electricity_out", units="MW")),
-                rel=1e-6,
+                sum(prob.get_val("electricity_out", units="GW")),
+                abs=1e-8,
             )
-            == 150884.9096716472
+            == 150.8849096716472
         )
 
     with subtests.test("CapEx"):
