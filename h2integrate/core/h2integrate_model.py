@@ -1118,8 +1118,8 @@ class H2IntegrateModel:
 
                     if "electrolyzer" in tech_name:
                         self.plant.connect(
-                            f"{tech_name}.time_until_replacement",
-                            f"finance_subgroup_{group_id}.{tech_name}_time_until_replacement",
+                            f"{tech_name}.replacement_schedule",
+                            f"finance_subgroup_{group_id}.{tech_name}_replacement_schedule",
                         )
 
                     if commodity_stream is None:

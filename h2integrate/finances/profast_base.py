@@ -545,7 +545,7 @@ class ProFastBase(om.ExplicitComponent):
 
             # Include electrolyzer replacement time if applicable
             if tech.startswith("electrolyzer"):
-                self.add_input(f"{tech}_time_until_replacement", units="h")
+                self.add_input(f"{tech}_replacement_schedule", shape=plant_life, units="unitless")
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -673,14 +673,15 @@ class ProFastBase(om.ExplicitComponent):
 
                 if "refurbishment_period_years" in tech_capex_info:
                     refurb_period = tech_capex_info["refurbishment_period_years"]
+                    refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
+                        tech_capex_info["replacement_cost_percent"]
+                    )
                 else:
-                    refurb_period = round(
-                        float(inputs[f"{tech}_time_until_replacement"][0]) / (24 * 365)
+                    refurb_schedule = (
+                        inputs[f"{tech}_replacement_schedule"]
+                        * tech_capex_info["replacement_cost_percent"]
                     )
 
-                refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
-                    tech_capex_info["replacement_cost_percent"]
-                )
                 # add refurbishment schedule to tech-specific capital item entry
                 tech_capex_info["refurb"] = list(refurb_schedule)
 
