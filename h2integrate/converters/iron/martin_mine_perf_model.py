@@ -31,10 +31,13 @@ class MartinIronMinePerformanceConfig(BaseConfig):
 
 
 class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "iron_ore"
         self.commodity_rate_units = "t/h"
         self.commodity_amount_units = "t"
+
+    def setup(self):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MartinIronMinePerformanceConfig.from_dict(

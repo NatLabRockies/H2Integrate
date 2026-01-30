@@ -86,10 +86,13 @@ class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
             The total hydrogen produced over the plant lifetime, in kilograms per year.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "hydrogen"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
+
+    def setup(self):
         super().setup()
 
         # inputs

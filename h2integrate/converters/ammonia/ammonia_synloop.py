@@ -139,24 +139,26 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     conversion efficiency up to the limiting reagent or energy input.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "ammonia"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
+    def setup(self):
         self.config = AmmoniaSynLoopPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         super().setup()
 
-        self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="MW")
+        self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="MW")
 
-        self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("electricity_out", val=0.0, shape=n_timesteps, units="MW")
-        self.add_output("heat_out", val=0.0, shape=n_timesteps, units="kW*h/kg")
+        self.add_output("nitrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("hydrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("electricity_out", val=0.0, shape=self.n_timesteps, units="MW")
+        self.add_output("heat_out", val=0.0, shape=self.n_timesteps, units="kW*h/kg")
         self.add_output("catalyst_mass", val=0.0, units="kg")
 
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")

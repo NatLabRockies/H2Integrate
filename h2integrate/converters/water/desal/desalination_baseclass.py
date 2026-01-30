@@ -2,10 +2,13 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class DesalinationPerformanceBaseClass(PerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "water"
         self.commodity_amount_units = "m**3"
         self.commodity_rate_units = "m**3/h"
+
+    def setup(self):
         super().setup()
 
         self.add_output("mass", val=0.0, units="kg", desc="Mass of desalination system")

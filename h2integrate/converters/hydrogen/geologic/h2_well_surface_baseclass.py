@@ -66,11 +66,13 @@ class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
             The wellhead gas flow in kg/hour used for sizing the system - passed to the cost model.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "hydrogen"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
 
+    def setup(self):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # inputs

@@ -46,14 +46,12 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
-    def setup(self):
+        super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
+
+    def setup(self):
         super().setup()
         self.config = GridPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
