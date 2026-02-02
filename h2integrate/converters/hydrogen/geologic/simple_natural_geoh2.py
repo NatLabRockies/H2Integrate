@@ -235,13 +235,25 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         outputs["wellhead_h2_concentration_mol"] = wh_h2_conc
         outputs["lifetime_wellhead_flow"] = np.average(wh_flow_profile)
         # fill "wellhead_gas_out_natural" with first year profile from wh_flow_profile
-        outputs["wellhead_gas_out_natural"] = wh_flow_profile[:n_timesteps]
-        outputs["wellhead_gas_out"] = wh_flow_profile[:n_timesteps]
-        outputs["hydrogen_out"] = avg_h2_flow[:n_timesteps]
+        # updated to average value over 8760 until simulation length handling is improved
+        # commented code on lines 240 to 246 have the original intended functionality
+        outputs["wellhead_gas_out_natural"] = np.full(
+            n_timesteps, np.average(wh_flow_profile)
+        )  # wh_flow_profile[:n_timesteps]
+        outputs["wellhead_gas_out"] = np.full(
+            n_timesteps, np.average(wh_flow_profile)
+        )  # wh_flow_profile[:n_timesteps]
+        outputs["hydrogen_out"] = np.full(
+            n_timesteps, np.average(avg_h2_flow)
+        )  # avg_h2_flow[:n_timesteps]
         outputs["max_wellhead_gas"] = ramp_up_flow
         # this is lifetime flow which decreases over time
-        outputs["total_wellhead_gas_produced"] = np.average(wh_flow_profile) * n_timesteps
-        outputs["total_hydrogen_produced"] = np.average(avg_h2_flow) * n_timesteps
+        outputs["total_wellhead_gas_produced"] = (
+            np.average(wh_flow_profile) * n_timesteps
+        )  # np.sum(wh_flow_profile)
+        outputs["total_hydrogen_produced"] = (
+            np.average(avg_h2_flow) * n_timesteps
+        )  # np.sum(avg_h2_flow)
 
     def arps_decline_curve_fit(self, t, qi, Di, b):
         """Arps decline curve model based on Arps (1945)

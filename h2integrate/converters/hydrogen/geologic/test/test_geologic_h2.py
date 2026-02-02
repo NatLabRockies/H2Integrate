@@ -134,7 +134,15 @@ def test_natural_geoh2_well_performance(subtests, plant_config):
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("perf.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 22649.432193239327
+            == 6061.508855232839
+        ), 1e-6
+
+    with subtests.test("total h2 out"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("perf.total_hydrogen_produced", units="kg/year"), rel=1e-6
+            )
+            == 53098817.57183966
         ), 1e-6
 
 
@@ -161,16 +169,24 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 2264.9432193239327
+            == 606.1508855232839
+        ), 1e-6
+
+    with subtests.test("total h2 out well"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("well.total_hydrogen_produced", units="kg/year"), rel=1e-6
+            )
+            == 5309881.757183
         ), 1e-6
 
 
 def test_aspen_geoh2_performance_cost(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
-    expected_capex = 4419318.42
+    expected_capex = 1800711.83796
     expected_opex = 4567464
-    expected_varopex = 3613663.44
+    expected_varopex = 989213.8787
 
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(
@@ -246,7 +262,7 @@ def test_aspen_geoh2_refit_coeffs(
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 2264.9432193239327
+            == 606.1508855232839
         ), 1e-6
 
     with subtests.test("Refit Performance Coeff File"):
