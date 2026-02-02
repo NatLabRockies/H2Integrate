@@ -49,7 +49,10 @@ class Himawari7SolarAPI(NRELDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari7-download.csv?"
         # create the resource config
-        self.config = Himawari7SolarAPIConfig.from_dict(resource_specs)
+        self.config = Himawari7SolarAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -95,7 +98,10 @@ class Himawari8SolarAPI(NRELDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari-download.csv?"
         # create the resource config
-        self.config = Himawari8SolarAPIConfig.from_dict(resource_specs)
+        self.config = Himawari8SolarAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -157,5 +163,8 @@ class HimawariTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari-tmy-download.csv?"
         # create the resource config
-        self.config = HimawariTMYAPIConfig.from_dict(resource_specs)
+        self.config = HimawariTMYAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()

@@ -45,7 +45,8 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SMRPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -138,7 +139,8 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
 
     def setup(self):
         self.config = SMRCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -203,7 +205,8 @@ class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
 
     def setup(self):
         self.config = MethanolFinanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
