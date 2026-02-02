@@ -115,10 +115,10 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
         commodity_storage_soc = []
         for j in range(len(commodity_production)):
             if j == 0:
-                commodity_storage_soc.append(commodity_production[j] - commodity_demand)
+                commodity_storage_soc.append(commodity_production[j] - commodity_demand[j])
             else:
                 commodity_storage_soc.append(
-                    commodity_storage_soc[j - 1] + commodity_production[j] - commodity_demand
+                    commodity_storage_soc[j - 1] + commodity_production[j] - commodity_demand[j]
                 )
 
         minimum_soc = np.min(commodity_storage_soc)
@@ -138,7 +138,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
         for t, demand_t in enumerate(commodity_demand):
             input_flow = commodity_production[t]
             available_charge = float(commodity_storage_capacity_kg - soc)
-            available_discharge = float(soc - commodity_storage_soc[t])
+            available_discharge = float(soc)
 
             if demand_t > input_flow:
                 # Discharge storage to meet demand.
