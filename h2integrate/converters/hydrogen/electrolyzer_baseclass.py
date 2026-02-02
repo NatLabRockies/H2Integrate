@@ -5,11 +5,13 @@ from h2integrate.core.model_baseclasses import (
 
 
 class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "hydrogen"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
 
+    def setup(self):
         super().setup()
 
         # Define inputs for electricity

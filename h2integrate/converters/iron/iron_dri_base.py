@@ -31,14 +31,12 @@ class IronReductionPerformanceBaseConfig(BaseConfig):
 
 class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
-    def setup(self):
+        super().initialize()
         self.commodity = "pig_iron"
         self.commodity_rate_units = "t/h"
         self.commodity_amount_units = "t"
+
+    def setup(self):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 

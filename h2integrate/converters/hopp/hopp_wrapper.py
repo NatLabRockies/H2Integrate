@@ -28,11 +28,13 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
     computed results when the same configuration is encountered.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
 
+    def setup(self):
         self.config = HOPPComponentModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,

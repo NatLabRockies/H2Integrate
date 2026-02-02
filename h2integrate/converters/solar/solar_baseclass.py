@@ -2,10 +2,13 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 class SolarPerformanceBaseClass(PerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
+
+    def setup(self):
         super().setup()
 
         self.add_discrete_input(

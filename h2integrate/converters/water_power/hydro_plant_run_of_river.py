@@ -36,11 +36,13 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
     Computes annual electricity production based on water flow rate and turbine efficiency.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
 
+    def setup(self):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = RunOfRiverHydroPerformanceConfig.from_dict(

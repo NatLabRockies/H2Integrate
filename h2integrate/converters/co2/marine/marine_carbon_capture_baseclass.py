@@ -32,14 +32,21 @@ class MarineCarbonCapturePerformanceBaseClass(PerformanceModelBaseClass):
         tech_config (dict): Configuration dictionary for technology-specific parameters.
     """
 
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "co2"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
+
+    def setup(self):
         super().setup()
 
         self.add_input(
-            "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
+            "electricity_in",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="W",
+            desc="Hourly input electricity (W)",
         )
 
         # TODO: remove this output once finance models are updated

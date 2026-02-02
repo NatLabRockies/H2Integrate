@@ -30,10 +30,13 @@ class ElectricArcFurnacePerformanceBaseConfig(BaseConfig):
 
 
 class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "steel"
         self.commodity_rate_units = "t/h"
         self.commodity_amount_units = "t"
+
+    def setup(self):
         super().setup()
 
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

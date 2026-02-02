@@ -35,14 +35,12 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
-    def setup(self):
+        super().initialize()
         self.commodity = "methanol"
         self.commodity_rate_units = "kg/h"
         self.commodity_amount_units = "kg"
+
+    def setup(self):
         super().setup()
 
         self.add_input("plant_capacity_kgpy", units="kg/year", val=self.config.plant_capacity_kgpy)

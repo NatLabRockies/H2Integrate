@@ -2,11 +2,13 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class SteelPerformanceBaseClass(PerformanceModelBaseClass):
-    def setup(self):
+    def initialize(self):
+        super().initialize()
         self.commodity = "steel"
         self.commodity_amount_units = "t"
         self.commodity_rate_units = "t/h"
 
+    def setup(self):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # NOTE: the SteelPerformanceModel does not use electricity or hydrogen in its calc
