@@ -122,10 +122,8 @@ class BaseConfig:
     """
 
     @classmethod
-    def from_dict(cls, data: dict, strict=True):
+    def from_dict(cls, data: dict, strict=True, additional_cls_name: str | None = None):
         """Maps a data dictionary to an `attr`-defined class.
-
-        TODO: Add an error to ensure that either none or all the parameters are passed in
 
         Args:
             data : dict
@@ -133,6 +131,9 @@ class BaseConfig:
             strict: bool
                 A flag enabling strict parameter processing, meaning that no extra parameters
                     may be passed in or an AttributeError will be raised.
+            additional_cls_name (str | None): The name of the model class creating the configuration
+                data class. Provides an easier to diagnose error message for end users when
+                the class name is provided.
         Returns:
             cls
                 The `attr`-defined class.
@@ -142,10 +143,17 @@ class BaseConfig:
             class_attr_names = [a.name for a in cls.__attrs_attrs__]
             extra_args = [d for d in data if d not in class_attr_names]
             if len(extra_args):
-                raise AttributeError(
-                    f"The initialization for {cls.__name__} was given extraneous "
-                    f"inputs: {extra_args}"
-                )
+                if additional_cls_name is not None:
+                    msg = (
+                        f"{additional_cls_name} setup failed as a result of {cls.__name__}"
+                        f" receiving extraneous inputs: {extra_args}"
+                    )
+                else:
+                    msg = (
+                        f"The initialization for {cls.__name__} was given extraneous "
+                        f"inputs: {extra_args}"
+                    )
+                raise AttributeError(msg)
 
         kwargs = {a.name: data[a.name] for a in cls.__attrs_attrs__ if a.name in data and a.init}
 
@@ -156,10 +164,17 @@ class BaseConfig:
         undefined = sorted(set(required_inputs) - set(kwargs))
 
         if undefined:
-            raise AttributeError(
-                f"The class definition for {cls.__name__} is missing the following inputs: "
-                f"{undefined}"
-            )
+            if additional_cls_name is not None:
+                msg = (
+                    f"{additional_cls_name} setup failed as a result of {cls.__name__}"
+                    f" missing the following inputs: {undefined}"
+                )
+            else:
+                msg = (
+                    f"The class definition for {cls.__name__} is missing the following inputs: "
+                    f"{undefined}"
+                )
+            raise AttributeError(msg)
         return cls(**kwargs)
 
     def as_dict(self) -> dict:

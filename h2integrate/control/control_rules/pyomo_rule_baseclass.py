@@ -31,6 +31,7 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
         self.config = PyomoRuleBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.round_digits = 4

@@ -94,8 +94,7 @@ develop = [
     "isort",
     "jupyter-book<2",
     "pre-commit",
-    "pytest",
-    "pytest-subtests",
+    "pytest>=9",
     "ruff",
     "sphinxcontrib-napoleon",
     "h2integrate[gis]"

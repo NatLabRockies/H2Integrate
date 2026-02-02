@@ -38,6 +38,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         self.config = IronTransportPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_output("land_transport_distance", val=0.0, units="km")
         self.add_output("water_transport_distance", val=0.0, units="km")
@@ -182,6 +183,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.config = IronTransportCostConfig.from_dict(
             config_dict,
             strict=True,
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
