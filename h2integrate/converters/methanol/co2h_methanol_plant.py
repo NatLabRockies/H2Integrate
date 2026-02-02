@@ -52,7 +52,8 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = CO2HPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -155,7 +156,8 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = CO2HCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -214,7 +216,8 @@ class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MethanolFinanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

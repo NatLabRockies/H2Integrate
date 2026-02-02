@@ -29,7 +29,8 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
 
     def setup(self):
         self.config = PyomoRuleBaseConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["dispatch_rule_parameters"]
+            self.options["tech_config"]["model_inputs"]["dispatch_rule_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_discrete_output(
