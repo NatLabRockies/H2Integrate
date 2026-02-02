@@ -69,7 +69,8 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleASUPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         if self.config.size_from_N2_demand:
             self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
@@ -297,7 +298,8 @@ class SimpleASUCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = SimpleASUCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

@@ -53,7 +53,10 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalSolarAPIConfig.from_dict(resource_specs)
+        self.config = OpenMeteoHistoricalSolarAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False

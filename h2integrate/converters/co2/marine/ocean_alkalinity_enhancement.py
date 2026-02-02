@@ -81,7 +81,8 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def setup(self):
         self.config = OAEPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -265,10 +266,14 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
             self.config = OAECostModelConfig.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+                additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(data={})
+            self.config = OAECostModelConfig.from_dict(
+                data={},
+                additional_cls_name=self.__class__.__name__,
+            )
         super().setup()
         self.add_input(
             "mass_sellable_product",
@@ -351,10 +356,14 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
             self.config = OAECostModelConfig.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+                additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(data={})
+            self.config = OAECostModelConfig.from_dict(
+                data={},
+                additional_cls_name=self.__class__.__name__,
+            )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input(
