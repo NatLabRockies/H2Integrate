@@ -35,7 +35,7 @@ class PassThroughOpenLoopController(ControllerBaseClass):
         )
 
         self.add_output(
-            f"{self.config.commodity_name}_out",
+            f"{self.config.commodity_name}_set_point",
             copy_shape=f"{self.config.commodity_name}_in",
             units=self.config.commodity_units,
             desc=f"{self.config.commodity_name} output timeseries from plant after storage",
@@ -53,7 +53,9 @@ class PassThroughOpenLoopController(ControllerBaseClass):
         """
 
         # Assign the input to the output
-        outputs[f"{self.config.commodity_name}_out"] = inputs[f"{self.config.commodity_name}_in"]
+        outputs[f"{self.config.commodity_name}_set_point"] = inputs[
+            f"{self.config.commodity_name}_in"
+        ]
 
     def setup_partials(self):
         """
@@ -74,7 +76,7 @@ class PassThroughOpenLoopController(ControllerBaseClass):
         # Declare partials sparsely for all elements as an identity matrix
         # (diagonal elements are 1.0, others are 0.0)
         self.declare_partials(
-            of=f"{self.config.commodity_name}_out",
+            of=f"{self.config.commodity_name}_set_point",
             wrt=f"{self.config.commodity_name}_in",
             rows=np.arange(size),
             cols=np.arange(size),

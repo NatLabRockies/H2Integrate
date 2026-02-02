@@ -1,8 +1,10 @@
+from copy import deepcopy
+
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -22,7 +24,7 @@ class StorageSizingModelConfig(BaseConfig):
     demand_profile: int | float | list = field(default=0.0)
 
 
-class StorageAutoSizingModel(om.ExplicitComponent):
+class StorageAutoSizingModel(PerformanceModelBaseClass):
     """Performance model that calculates the storage charge rate and capacity needed
     to either:
 
@@ -30,9 +32,9 @@ class StorageAutoSizingModel(om.ExplicitComponent):
     2. try to meet the commodity demand with the given commodity production profile.
 
     Inputs:
-        {commodity_name}_in (float): Input commodity flow timeseries (e.g., hydrogen production).
+        self.commodity_in (float): Input commodity flow timeseries (e.g., hydrogen production).
             - Units: Defined in `commodity_units` (e.g., "kg/h").
-        {commodity_name}_demand_profile (float): Demand profile of commodity.
+        self.commodity_demand_profile (float): Demand profile of commodity.
             - Units: Defined in `commodity_units` (e.g., "kg/h").
 
     Outputs:
@@ -42,10 +44,10 @@ class StorageAutoSizingModel(om.ExplicitComponent):
             - Units: Defined in `commodity_units` (e.g., "kg/h").
     """
 
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+    # def initialize(self):
+    #     self.options.declare("driver_config", types=dict)
+    #     self.options.declare("plant_config", types=dict)
+    #     self.options.declare("tech_config", types=dict)
 
     def setup(self):
         self.config = StorageSizingModelConfig.from_dict(
@@ -54,25 +56,32 @@ class StorageAutoSizingModel(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
 
+        self.commodity = self.config.commodity_name
+        self.commodity_rate_units = self.config.commodity_units
+        self.commodity_amount_units = f"({self.commodity_rate_units})*h"
+
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
-        commodity_name = self.config.commodity_name
-
         self.add_input(
-            f"{commodity_name}_demand_profile",
+            f"{self.commodity}_demand_profile",
             units=f"{self.config.commodity_units}",
             val=self.config.demand_profile,
-            shape=n_timesteps,
-            desc=f"{commodity_name} demand profile timeseries",
+            shape=self.n_timesteps,
+            desc=f"{self.commodity} demand profile timeseries",
         )
 
         self.add_input(
-            f"{commodity_name}_in",
+            f"{self.commodity}_in",
             shape_by_conn=True,
             units=f"{self.config.commodity_units}",
-            desc=f"{commodity_name} input timeseries from production to storage",
+            desc=f"{self.commodity} input timeseries from production to storage",
+        )
+
+        self.add_input(
+            f"{self.commodity}_set_point",
+            shape_by_conn=True,
+            units=f"{self.config.commodity_units}",
+            desc=f"{self.commodity} input timeseries from production to storage",
         )
 
         self.add_output(
@@ -90,18 +99,17 @@ class StorageAutoSizingModel(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
-        commodity_name = self.config.commodity_name
-        storage_max_fill_rate = np.max(inputs[f"{commodity_name}_in"])
+        storage_max_fill_rate = np.max(inputs[f"{self.commodity}_in"])
 
         ########### get storage size ###########
-        if np.sum(inputs[f"{commodity_name}_demand_profile"]) > 0:
-            commodity_demand = inputs[f"{commodity_name}_demand_profile"]
+        if np.sum(inputs[f"{self.commodity}_demand_profile"]) > 0:
+            commodity_demand = inputs[f"{self.commodity}_demand_profile"]
         else:
-            commodity_demand = np.mean(
-                inputs[f"{commodity_name}_in"]
+            commodity_demand = np.mean(inputs[f"{self.commodity}_in"]) * np.ones(
+                self.n_timesteps
             )  # TODO: update demand based on end-use needs
 
-        commodity_production = inputs[f"{commodity_name}_in"]
+        commodity_production = inputs[f"{self.commodity}_set_point"]
 
         # TODO: SOC is just an absolute value and is not a percentage. Ideally would calculate as shortfall in future.
         commodity_storage_soc = []
@@ -123,5 +131,44 @@ class StorageAutoSizingModel(om.ExplicitComponent):
             commodity_storage_soc
         )
 
+        discharge_storage = np.zeros(self.n_timesteps)
+        charge_storage = np.zeros(self.n_timesteps)
+        soc = deepcopy(commodity_storage_soc[0])
+        output_array = np.zeros(self.n_timesteps)
+        for t, demand_t in enumerate(commodity_demand):
+            input_flow = commodity_production[t]
+            available_charge = float(commodity_storage_capacity_kg - soc)
+            available_discharge = float(soc - commodity_storage_soc[t])
+
+            if demand_t > input_flow:
+                # Discharge storage to meet demand.
+                discharge_needed = demand_t - input_flow
+                discharge = min(discharge_needed, available_discharge, storage_max_fill_rate)
+                soc -= discharge
+
+                discharge_storage[t] = discharge
+                output_array[t] = input_flow + discharge
+
+            else:
+                # Charge storage with unused input
+                unused_input = input_flow - demand_t
+                charge = min(unused_input, available_charge, storage_max_fill_rate)
+                soc += charge
+
+                charge_storage[t] = charge
+                output_array[t] = demand_t
+
         outputs["max_charge_rate"] = storage_max_fill_rate
         outputs["max_capacity"] = commodity_storage_capacity_kg
+
+        outputs[f"{self.commodity}_out"] = output_array
+
+        outputs[f"rated_{self.commodity}_production"] = storage_max_fill_rate
+        outputs[f"total_{self.commodity}_produced"] = outputs[f"{self.commodity}_out"].sum()
+        outputs[f"annual_{self.commodity}_produced"] = outputs[
+            f"total_{self.commodity}_produced"
+        ] * (1 / self.fraction_of_year_simulated)
+
+        max_production = storage_max_fill_rate * self.n_timesteps * (self.dt / 3600)
+
+        outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / max_production

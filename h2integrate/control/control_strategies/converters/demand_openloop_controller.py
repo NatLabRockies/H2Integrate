@@ -70,6 +70,6 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{commodity}_out"] = (
+        outputs[f"{commodity}_set_point"] = (
             inputs[f"{commodity}_in"] - outputs[f"{commodity}_unused_commodity"]
         )

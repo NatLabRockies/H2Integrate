@@ -279,7 +279,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         # initialize outputs
         soc_array = outputs[f"{commodity}_soc"]
         unused_commodity_array = outputs[f"{commodity}_unused_commodity"]
-        output_array = outputs[f"{commodity}_out"]
+        output_array = outputs[f"{commodity}_set_point"]
         unmet_demand_array = outputs[f"{commodity}_unmet_demand"]
 
         # Loop through each time step
@@ -338,7 +338,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
             # Record the missed load at the current time step
             unmet_demand_array[t] = max(0.0, (demand_t - output_array[t]))
 
-        outputs[f"{commodity}_out"] = output_array
+        outputs[f"{commodity}_set_point"] = output_array
 
         # Return the SOC
         outputs[f"{commodity}_soc"] = soc_array

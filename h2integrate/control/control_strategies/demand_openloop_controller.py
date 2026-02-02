@@ -97,7 +97,7 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
         )
 
         self.add_output(
-            f"{commodity}_out",
+            f"{commodity}_set_point",
             val=0.0,
             shape=(n_timesteps),
             units=self.config.commodity_units,
