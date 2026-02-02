@@ -72,24 +72,32 @@ for casename in casenames:
     )
 
 # Compare the Capex, Fixed Opex, and Variable Opex across the 4 cases
-columns = [
-    "Levelized Cost\n[USD/kg]",
-    "Capex\n[USD]",
-    "Fixed Opex\n[USD/year]",
-    "Variable Opex\n[USD/year]",
-]
+columns = pd.MultiIndex.from_tuples(
+    [
+        ("Levelized Cost", "[USD/kg]"),
+        ("Capex", "[USD]"),
+        ("Fixed Opex", "[USD/year]"),
+        ("Variable Opex", "[USD/year]"),
+    ]
+)
+print()
+
 df_ore = pd.DataFrame(
     np.transpose(np.vstack([lcois_ore, capexes_ore, fopexes_ore, vopexes_ore])),
     index=casenames,
     columns=columns,
 )
 print(df_ore)
+
+print()
 df_iron = pd.DataFrame(
     np.transpose(np.vstack([lcois_iron, capexes_iron, fopexes_iron, vopexes_iron])),
     index=casenames,
     columns=columns,
 )
 print(df_iron)
+
+print()
 df_steel = pd.DataFrame(
     np.transpose(np.vstack([lcois_steel, capexes_steel, fopexes_steel, vopexes_steel])),
     index=casenames,

@@ -43,7 +43,7 @@ parts:
   - file: technology_models/geologic_hydrogen.md
   - file: technology_models/grid
   - file: technology_models/hydrogen_storage.md
-  - file: technology_models/iron_ewin.md
+  - file: technology_models/iron_mine.md
 
 - caption: Resource Models
   chapters:
