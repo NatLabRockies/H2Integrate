@@ -47,7 +47,10 @@ class RiverResource(om.ExplicitComponent):
 
     def setup(self):
         # Define inputs and outputs
-        self.config = RiverResourceConfig.from_dict(self.options["resource_config"])
+        self.config = RiverResourceConfig.from_dict(
+            self.options["resource_config"],
+            additional_cls_name=self.__class__.__name__,
+        )
         site_config = self.options["plant_config"]["site"]
 
         self.add_input("latitude", site_config.get("latitude", 0.0), units="deg")

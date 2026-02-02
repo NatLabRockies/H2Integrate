@@ -46,7 +46,8 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = RunOfRiverHydroPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input("discharge", val=0.0, shape=n_timesteps, units="m**3/s")
@@ -108,7 +109,8 @@ class RunOfRiverHydroCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = RunOfRiverHydroCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()

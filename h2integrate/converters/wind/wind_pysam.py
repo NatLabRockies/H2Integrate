@@ -196,7 +196,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         layout_mode = layout_params.get("layout_mode", "basicgrid")
         layout_options = layout_params.get("layout_options", {})
         if layout_mode == "basicgrid":
-            self.layout_config = BasicGridLayoutConfig.from_dict(layout_options)
+            self.layout_config = BasicGridLayoutConfig.from_dict(
+                layout_options,
+                additional_cls_name=self.__class__.__name__,
+            )
         self.layout_mode = layout_mode
 
         # initialize power-curve recalc config
@@ -209,7 +212,8 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         # initialize wind turbine config
         self.config = PYSAMWindPlantPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(

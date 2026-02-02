@@ -44,6 +44,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
         self.config = ElectricArcFurnacePerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
@@ -329,7 +330,11 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
 
         config_dict.update({"cost_year": target_dollar_year})
 
-        self.config = ElectricArcFurnaceCostBaseConfig.from_dict(config_dict, strict=False)
+        self.config = ElectricArcFurnaceCostBaseConfig.from_dict(
+            config_dict,
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         super().setup()
 

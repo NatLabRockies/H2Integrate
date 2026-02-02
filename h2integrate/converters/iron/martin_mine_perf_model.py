@@ -43,6 +43,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.config = MartinIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(

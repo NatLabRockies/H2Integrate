@@ -66,7 +66,8 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         super().setup()
 
         self.config = NaturalGasPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
@@ -237,7 +238,8 @@ class NaturalGasCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = NaturalGasCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 

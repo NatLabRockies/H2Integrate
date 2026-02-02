@@ -36,7 +36,8 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
 
     def setup(self):
         self.config = GenericSummerPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
