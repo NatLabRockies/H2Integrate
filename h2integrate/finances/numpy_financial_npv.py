@@ -113,7 +113,10 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             )
         finance_params.update({"plant_life": plant_config["plant"]["plant_life"]})
 
-        self.config = NumpyFinancialNPVFinanceConfig.from_dict(finance_params)
+        self.config = NumpyFinancialNPVFinanceConfig.from_dict(
+            finance_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:

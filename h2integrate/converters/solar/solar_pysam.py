@@ -147,6 +147,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_input(
             "system_capacity_DC",
