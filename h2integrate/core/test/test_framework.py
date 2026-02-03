@@ -32,7 +32,7 @@ def test_custom_model_name_clash(subtests):
     tech_config_data = load_tech_yaml(temp_tech_config)
 
     tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
-        "model": "basic_electrolyzer_cost",
+        "model": "BasicElectrolyzerCostModel",
         "model_location": "dummy_path",  # path doesn't matter; just that `model_location` exists
     }
 
@@ -54,8 +54,9 @@ def test_custom_model_name_clash(subtests):
     with subtests.test("custom model name should not match built-in model names"):
         # Assert that a ValueError is raised with the expected message when running the model
         error_msg = (
-            r"Custom model_class_name or model_location specified for 'basic_electrolyzer_cost', "
-            r"but 'basic_electrolyzer_cost' is a built-in H2Integrate model\. "
+            r"Custom model_class_name or model_location specified for '"
+            r"BasicElectrolyzerCostModel', but 'BasicElectrolyzerCostModel' is a built-in "
+            r"H2Integrate model\. "
             r"Using built-in model instead is not allowed\. "
             r"If you want to use a custom model, please rename it in your configuration\."
         )

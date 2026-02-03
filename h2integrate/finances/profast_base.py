@@ -87,7 +87,7 @@ def check_parameter_inputs(finance_params, plant_config):
             f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
         )
 
-        msg = f"Duplicate entries found in ProFastComp params. Duplicated entries are: {err_info}"
+        msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
         raise ValueError(msg)
 
     # Check for conflicts between nickname/realname pairs

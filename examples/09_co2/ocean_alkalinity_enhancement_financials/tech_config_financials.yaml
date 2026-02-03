@@ -4,9 +4,9 @@ description: "This plant has wind connected to a ocean alkalinity enhancement de
 technologies:
   wind:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: "FlorisWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 3 #number of turbines in the farm
@@ -33,9 +33,9 @@ technologies:
         cost_year: 2022
   oae:
     performance_model:
-      model: "ocean_alkalinity_enhancement_performance"
+      model: "OAEPerformanceModel"
     finance_model:
-      model: "ocean_alkalinity_enhancement_cost_financial"
+      model: "OAECostAndFinancialModel"
     model_inputs:
       performance_parameters:
         number_ed_min: 1
