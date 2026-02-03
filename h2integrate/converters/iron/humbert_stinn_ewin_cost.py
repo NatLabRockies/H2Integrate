@@ -192,7 +192,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
         # Set inputs for Stinn Capex model
-        self.add_input("electrolysis_temp", val=T, units="C")
+        self.add_input("electrolysis_temp", val=T, units="degC")
         self.add_input("electron_moles", val=z, units=None)
         self.add_input("current_density", val=j, units="A/m**2")
         self.add_input("electrode_area", val=A, units="m**2")
@@ -223,10 +223,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_output("elec_opex", val=0.0, units="USD/year")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # Physical constants
-        F = faraday  # Faraday constant: Electric charge per mole of electrons (C/mol)
-        M = FE_MW / 1000  # Fe molar mass (kg/mol)
-
         # Parse inputs for Stinn Capex model (doi.org/10.1149/2.F06202IF)
         T = inputs["electrolysis_temp"]
         z = inputs["electron_moles"]
@@ -269,7 +265,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         processing_capex = a1 * P**e1
 
         # Electrolysis and product handling contribution to total cost
-        electrolysis_capex = a2 * ((p * z * F) / (j * A * e * M)) ** e2
+        FE_MW_kg_per_mol = FE_MW / 1000  # Fe molar mass (kg/mol)
+        electrolysis_capex = a2 * ((p * z * faraday) / (j * A * e * FE_MW_kg_per_mol)) ** e2
 
         # Power rectifying contribution
         rectifier_capex = a3 * V**e3 * N**e4
