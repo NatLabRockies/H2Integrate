@@ -258,7 +258,15 @@ def test_ammonia_synloop_example(subtests):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25737370.661763854
+        assert pytest.approx(model.prob.get_val("ammonia.OpEx")[0], rel=1e-4) == 25737370.661763854
+
+    with subtests.test("Check ammonia production"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
+            )
+            == 406333.161
+        )
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
