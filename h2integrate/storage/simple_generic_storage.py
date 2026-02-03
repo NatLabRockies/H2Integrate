@@ -13,6 +13,10 @@ class SimpleGenericStorageConfig(BaseConfig):
 class SimpleGenericStorage(PerformanceModelBaseClass):
     """
     Simple generic storage model that acts as a pass-through component.
+
+    Note: this storage performance model is intended to be used with the
+    `DemandOpenLoopStorageController` controller.
+
     """
 
     def setup(self):
@@ -33,14 +37,19 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
         )
 
     def compute(self, inputs, outputs):
+        # Pass the commodity_out as the commodity_set_point
         outputs[f"{self.commodity}_out"] = inputs[f"{self.commodity}_set_point"]
 
+        # Estimate the rated commodity production as the maximum value from the commodity_set_point
         outputs[f"rated_{self.commodity}_production"] = inputs[f"{self.commodity}_set_point"].max()
+
+        # Calculate the total and annual commodity produced
         outputs[f"total_{self.commodity}_produced"] = outputs[f"{self.commodity}_out"].sum()
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
 
+        # Calculate the maximum commodity production over the simulation
         max_production = (
             inputs[f"{self.commodity}_set_point"].max() * self.n_timesteps * (self.dt / 3600)
         )

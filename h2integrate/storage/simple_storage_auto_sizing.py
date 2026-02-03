@@ -34,11 +34,19 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
     Then simulates performance of a basic storage component using the charge rate and
     capacity calculated.
 
+    Note: this storage performance model is intended to be used with the
+    `PassThroughOpenLoopController` controller and is not compatible with the
+    `DemandOpenLoopStorageController` controller.
+
     Inputs:
-        commodity_in (float): Input commodity flow timeseries (e.g., hydrogen production).
+        {commodity}_in (float): Input commodity flow timeseries (e.g., hydrogen production)
+            used to estimate the demand if `commodity_demand_profile` is zero.
             - Units: Defined in `commodity_units` (e.g., "kg/h").
-        commodity_demand_profile (float): Demand profile of commodity.
+        {commodity}_set_point (float): Input commodity flow timeseries (e.g., hydrogen production)
+            used as the available input commodity to meet the demand.
+        {commodity}_demand_profile (float): Demand profile of commodity.
             - Units: Defined in `commodity_units` (e.g., "kg/h").
+
 
     Outputs:
         max_capacity (float): Maximum storage capacity of the commodity.
@@ -46,11 +54,17 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
         max_charge_rate (float): Maximum rate at which the commodity can be charged
             - Units: Defined in `commodity_units` (e.g., "kg/h").
             Assumed to also be the discharge rate.
-        commodity_out (np.ndarray):
-        total_commodity_produced (float):
-        rated_commodity_production (float):
-        annual_commodity_produced (np.ndarray):
-        capacity_factor (np.ndarray):
+        {commodity}_out (np.ndarray): the commodity used to meet demand from the available
+            input commodity and storage component. Defined in `commodity_units`.
+        total_{commodity}_produced (float): sum of commodity discharged from storage over
+            the simulation. Defined in `commodity_units*h`
+        rated_{commodity}_production (float): maximum commodity that could be discharged
+            in a timestep. Defined in `commodity_units`
+        annual_{commodity}_produced (np.ndarray): total commodity discharged per year.
+            Defined in `commodity_units*h/year`
+        capacity_factor (np.ndarray): ratio of commodity discharged to the maximum
+            commodity that could be discharged over the simulation.
+            Defined as a ratio (units of `unitless`)
 
     """
 
