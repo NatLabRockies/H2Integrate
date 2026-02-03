@@ -4,9 +4,9 @@ description: "Set up technology for an iron mine/iron electrowinning system"
 technologies:
   grid_feedstock: #electricity feedstock for iron ore - comes from grid
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
@@ -21,9 +21,9 @@ technologies:
 
   mine_feedstock: #crude iron ore feedstock - comes from the ground
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "crude_ore"
@@ -38,9 +38,9 @@ technologies:
 
   iron_mine: # iron mine - turns crude_iron into iron_ore
     performance_model:
-      model: "iron_mine_performance_martin"
+      model: "MartinIronMinePerformanceComponent"
     cost_model:
-      model: "iron_mine_cost_martin"
+      model: "MartinIronMineCostComponent"
     model_inputs:
       shared_parameters:
         mine: "Northshore"
@@ -49,9 +49,9 @@ technologies:
 
   iron_transport: # ship iron_ore from iron_mine to iron_plant
     performance_model:
-      model: "iron_transport_performance"
+      model: "IronTransportPerformanceComponent"
     cost_model:
-      model: "iron_transport_cost"
+      model: "IronTransportCostComponent"
     model_inputs:
       performance_parameters:
         find_closest_ship_site: False
@@ -62,9 +62,9 @@ technologies:
 
   ewin_grid_feedstock: #electricity feedstock for iron electrowinning
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
@@ -79,9 +79,9 @@ technologies:
 
   iron_plant: # iron plant - turns iron_ore into sponge_iron
     performance_model:
-      model: "humbert_electrowinning_performance"
+      model: "HumbertEwinPerformanceComponent"
     cost_model:
-      model: "humbert_stinn_electrowinning_cost"
+      model: "HumbertStinnEwinCostComponent"
     model_inputs:
       shared_parameters:
         electrolysis_type: "ahe"
