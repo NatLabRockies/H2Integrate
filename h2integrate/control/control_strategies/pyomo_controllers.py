@@ -373,18 +373,19 @@ class PyomoControllerBaseClass(ControllerBaseClass):
 
 
 class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
-    """Fixes battery dispatch operations based on user input.
+    """Fixes storage dispatch operations based on user input.
 
-    Currently, enforces available generation and grid limit assuming no battery charging from grid.
+    Currently, enforces available generation and system interface limit assuming no
+    storage charging from external sources.
 
     Enforces:
         - Available generation cannot be exceeded for charging.
-        - Interface (grid / export) limit bounds discharge.
-        - No grid charging (unless logic extended elsewhere).
+        - Interface (e.g., grid / export) limit bounds discharge.
+        - No external charging (unless logic extended elsewhere).
     """
 
     def setup(self):
-        """Initialize SimpleBatteryControllerHeuristic."""
+        """Initialize the heuristic storage controller."""
         super().setup()
 
         self.round_digits = 4
@@ -504,13 +505,15 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         minimum_soc: float,
         maximum_soc: float,
     ) -> float:
-        """Enforces simple bounds (0, .9) for battery power fractions.
+        """Enforces simple bounds for storage power fractions.
 
         Args:
             storage_fraction (float): Storage fraction from heuristic method.
+            minimum_soc (float): Minimum state of charge fraction.
+            maximum_soc (float): Maximum state of charge fraction.
 
         Returns:
-            storage_fraction (float): Bounded storage fraction.
+            float: Bounded storage fraction within [minimum_soc, maximum_soc].
 
         """
         if storage_fraction > maximum_soc:
@@ -641,7 +644,7 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
     def storage_dispatch_commands(self) -> list:
         """
         Commanded dispatch including available commodity at current time step that has not
-        been used to charge the battery.
+        been used to charge storage.
         """
         return [
             (self.blocks[t].discharge_commodity.value - self.blocks[t].charge_commodity.value)
@@ -729,15 +732,16 @@ class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
 
 
 class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
-    """Operates the battery based on heuristic rules to meet the demand profile based power
-        available from power generation profiles and power demand profile.
+    """Operates storage based on heuristic rules to meet the demand profile based on
+        available commodity from generation profiles and demand profile.
 
-    Currently, enforces available generation and grid limit assuming no battery charging from grid.
+    Currently, enforces available generation and system interface limit assuming no
+    storage charging from external sources.
 
     """
 
     def setup(self):
-        """Initialize HeuristicLoadFollowingController."""
+        """Initialize the heuristic load-following controller."""
         self.config = HeuristicLoadFollowingControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             additional_cls_name=self.__class__.__name__,
@@ -758,7 +762,7 @@ class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
         system_commodity_interface_limit: list,
         commodity_demand: list,
     ):
-        """Sets charge and discharge power of battery dispatch using fixed_dispatch attribute
+        """Sets charge and discharge amount of storage dispatch using fixed_dispatch attribute
             and enforces available generation and charge/discharge limits.
 
         Args:
@@ -829,15 +833,15 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
 
 
 class OptimizedDispatchController(PyomoControllerBaseClass):
-    """Operates the battery based on heuristic rules to meet the demand profile based power
-        available from power generation profiles and power demand profile.
+    """Operates storage based on optimization to meet the demand profile based on
+        available commodity from generation profiles and demand profile while minimizing costs.
 
-    Currently, enforces available generation and grid limit assuming no battery charging from grid.
+    Uses a rolling-window optimization approach with configurable horizon and control windows.
 
     """
 
     def setup(self):
-        """Initialize OptimizedDispatchController."""
+        """Initialize the optimized dispatch controller."""
         self.config = OptimizedDispatchControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
         )
@@ -846,14 +850,14 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             "max_charge_rate",
             val=self.config.max_charge_rate,
             units=self.config.commodity_storage_units,
-            desc="Battery charge rate",
+            desc="Storage charge rate",
         )
 
         self.add_input(
             "storage_capacity",
             val=self.config.max_capacity,
             units=f"{self.config.commodity_storage_units}*h",
-            desc="Battery storage capacity",
+            desc="Storage capacity",
         )
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -917,13 +921,11 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         start_time: int = 0,
         n_days: int = 0,
     ):
-        """Sets charge and discharge power of battery dispatch from the optimized dispatch results
+        """Solves the dispatch optimization model and stores problem metrics.
 
         Args:
-            commodity_in (list): List of generated commodity in.
-            system_commodity_interface_limit (list): List of max flow rates through system
-                interface (e.g. grid interface).
-            commodity_demand (list): The demanded commodity.
+            start_time (int): Starting timestep index for the current solve window.
+            n_days (int): Total number of days in the simulation.
 
         """
 
@@ -1015,7 +1017,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
     def storage_dispatch_commands(self) -> list:
         """
         Commanded dispatch including available commodity at current time step that has not
-        been used to charge the battery.
+        been used to charge storage.
         """
         return self.hybrid_dispatch_rule.storage_commodity_out
 
