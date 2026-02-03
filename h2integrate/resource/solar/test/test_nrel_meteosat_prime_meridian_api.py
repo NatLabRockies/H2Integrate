@@ -32,7 +32,7 @@ def meteosat_prime_meridian_site():
         "longitude": 12.4368,
         "resources": {
             "solar_resource": {
-                "resource_model": "meteosat_solar_v4_api",
+                "resource_model": "MeteosatPrimeMeridianSolarAPI",
                 "resource_parameters": {
                     "resource_year": 2008,
                 },
@@ -51,7 +51,7 @@ def tmy_site():
         "longitude": 152.67935,
         "resources": {
             "solar_resource": {
-                "resource_model": "meteosat_tmy_solar_v4_api",
+                "resource_model": "MeteosatPrimeMeridianTMYSolarAPI",
                 "resource_parameters": {
                     "resource_year": "tmy-2022",
                     "resource_filename": tmy_file,

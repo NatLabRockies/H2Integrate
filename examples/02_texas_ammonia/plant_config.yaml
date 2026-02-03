@@ -7,12 +7,12 @@ sites:
     longitude: -100.18
     resources:
       wind_resource:
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2013
 
       solar_resource:
-        resource_model: "goes_aggregated_solar_v4_api"
+        resource_model: "GOESAggregatedSolarAPI"
         resource_parameters:
           resource_year: 2013
 # array of arrays containing left-to-right technology
@@ -43,7 +43,7 @@ plant:
 
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       save_profast_config: True
       save_profast_results: False

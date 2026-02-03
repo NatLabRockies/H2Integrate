@@ -131,7 +131,7 @@ def himawari7_site_config_tmy():
         "longitude": 152.67935,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari_tmy_solar_v3_api",
+                "resource_model": "HimawariTMYSolarAPI",
                 "resource_parameters": {
                     "resource_year": "tmy-2020",
                 },
@@ -149,7 +149,7 @@ def himawari7_site_config():
         "longitude": 152.67935,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari7_solar_v3_api",
+                "resource_model": "Himawari7SolarAPI",
                 "resource_parameters": {
                     "resource_year": 2013,
                 },
@@ -167,7 +167,7 @@ def himawari8_site_config():
         "longitude": 101.656312,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari8_solar_v3_api",
+                "resource_model": "Himawari8SolarAPI",
                 "resource_parameters": {
                     "resource_year": 2020,
                 },
@@ -214,7 +214,7 @@ def test_pvwatts_with_himawari7(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 473577.280269
@@ -248,7 +248,7 @@ def test_pvwatts_with_himawari8(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 411251.781327
@@ -282,7 +282,7 @@ def test_pvwatts_with_meteosat_pm(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 410211.9419
@@ -318,7 +318,7 @@ def test_pvwatts_with_himawari_tmy(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 510709.633402
@@ -352,7 +352,7 @@ def test_pvwatts_with_meteosat_pm_tmy(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 510709.633402
@@ -386,7 +386,7 @@ def test_pvwatts_with_openmeteo_solar(
     prob.setup()
     prob.run_model()
 
-    aep = prob.get_val("pv_perf.annual_energy", units="MW*h/year")[0]
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="MW*h/year")[0]
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == 443558.17053592583

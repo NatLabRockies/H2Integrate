@@ -4,9 +4,9 @@ description: "This plant has wind feeding into an electrolyzer with optimization
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 2
@@ -31,11 +31,11 @@ technologies:
         cost_year: 2019
   battery:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"

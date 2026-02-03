@@ -244,16 +244,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             desc="turbine hub-height in meters",
         )
 
-        self.add_output(
-            "annual_energy",
-            val=0.0,
-            units="kW*h/year",
-            desc="Annual energy production from WindPlant in kW",
-        )
-        self.add_output(
-            "total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity in kW"
-        )
-
         if self.config.create_model_from == "default":
             self.system_model = Windpower.default(self.config.config_name)
         elif self.config.create_model_from == "new":
@@ -472,8 +462,16 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         self.system_model.execute(0)
 
         outputs["electricity_out"] = self.system_model.Outputs.gen
-        outputs["total_capacity"] = self.system_model.Farm.system_capacity
-        outputs["annual_energy"] = self.system_model.Outputs.annual_energy
+        outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
+
+        # outputs["total_capacity"] = self.system_model.Farm.system_capacity
+        # outputs["annual_energy"] = self.system_model.Outputs.annual_energy
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
+        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+        max_production = (
+            self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(

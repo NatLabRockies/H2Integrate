@@ -87,7 +87,7 @@ def check_parameter_inputs(finance_params, plant_config):
             f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
         )
 
-        msg = f"Duplicate entries found in ProFastComp params. Duplicated entries are: {err_info}"
+        msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
         raise ValueError(msg)
 
     # Check for conflicts between nickname/realname pairs
@@ -521,6 +521,8 @@ class ProFastBase(om.ExplicitComponent):
         # Add model-specific outputs defined by subclass
         self.add_model_specific_outputs()
 
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         # Add production input (CO2 capture or total commodity produced)
         if self.options["commodity_type"] == "co2":
             self.add_input("co2_capture_kgpy", val=0.0, units="kg/year", require_connection=True)
@@ -529,11 +531,12 @@ class ProFastBase(om.ExplicitComponent):
                 f"total_{self.options['commodity_type']}_produced",
                 val=-1.0,
                 units=commodity_units,
+                shape=plant_life,
                 require_connection=True,
             )
 
         # Add inputs for CapEx, OpEx, and variable OpEx for each technology
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")

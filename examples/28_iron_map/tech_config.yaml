@@ -4,7 +4,7 @@ description: "This hybrid plant produces iron"
 technologies:
   iron:
     performance_model:
-      model: "iron"
+      model: IronComponent
     model_inputs:
       cost_parameters:
         # h2_kgpy: 68583942.6460997 #1000000 #68583942.6460997
@@ -14,7 +14,6 @@ technologies:
         iron_ore_product_selection: "drg_taconite_pellets" #"drg_taconite_pellets" or "std_taconite_pellets"
         reduced_iron_product_selection: "h2_dri" #"h2_dri" or "ng_dri"
         structural_iron_product_selection: "eaf_steel" #"eaf_steel" or "none"
-        structural_iron_product_selection: "none" #"eaf_steel" or "none"
         cost_year: 2020
         reduced_iron_site_latitude: 41.717
         reduced_iron_site_longitude: -88.398

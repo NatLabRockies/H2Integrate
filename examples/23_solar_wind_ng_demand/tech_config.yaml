@@ -4,9 +4,9 @@ description: This plant produces electricity with wind, solar, and a natural gas
 technologies:
   wind:
     performance_model:
-      model: pysam_wind_plant_performance
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: atb_wind_cost
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 20
@@ -35,9 +35,9 @@ technologies:
 
   solar:
     performance_model:
-      model: pysam_solar_plant_performance
+      model: PYSAMSolarPlantPerformanceModel
     cost_model:
-      model: atb_utility_pv_cost
+      model: ATBUtilityPVCostModel
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 100000 #100 MWdc
@@ -64,9 +64,9 @@ technologies:
 
   ng_feedstock:
     performance_model:
-      model: feedstock_performance
+      model: FeedstockPerformanceModel
     cost_model:
-      model: feedstock_cost
+      model: FeedstockCostModel
     model_inputs:
       shared_parameters:
         feedstock_type: natural_gas
@@ -81,9 +81,9 @@ technologies:
 
   natural_gas_plant:
     performance_model:
-      model: natural_gas_performance
+      model: NaturalGasPerformanceModel
     cost_model:
-      model: natural_gas_cost
+      model: NaturalGasCostModel
     model_inputs:
       shared_parameters:
         heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
@@ -96,7 +96,7 @@ technologies:
 
   electrical_load_demand:
       control_strategy:
-        model: demand_open_loop_converter_controller
+        model: DemandOpenLoopConverterController
       model_inputs:
         control_parameters:
           commodity_name: electricity
@@ -105,7 +105,7 @@ technologies:
 
   combiner:
     performance_model:
-      model: combiner_performance
+      model: GenericCombinerPerformanceModel
     model_inputs:
       performance_parameters:
         commodity: electricity
