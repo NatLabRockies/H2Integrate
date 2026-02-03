@@ -139,11 +139,11 @@ def test_natural_geoh2_well_performance(subtests, plant_config):
 
     with subtests.test("total h2 out"):
         assert (
-            pytest.approx(
-                prob.model.get_val("perf.total_hydrogen_produced", units="kg/year"), rel=1e-6
-            )
+            pytest.approx(prob.model.get_val("perf.total_hydrogen_produced", units="kg"), rel=1e-6)
             == 53098817.57183966
         ), 1e-6
+
+
 def test_aspen_geoh2_performance_outputs(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
@@ -271,9 +271,7 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
 
     with subtests.test("total h2 out well"):
         assert (
-            pytest.approx(
-                prob.model.get_val("well.total_hydrogen_produced", units="kg/year"), rel=1e-6
-            )
+            pytest.approx(prob.model.get_val("well.total_hydrogen_produced", units="kg"), rel=1e-6)
             == 5309881.757183
         ), 1e-6
 
