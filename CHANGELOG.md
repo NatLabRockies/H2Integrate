@@ -35,6 +35,8 @@
   the class itself. As such, all examples and documentation have been updated to properly instruct
   users to the change in model configuration naming conventions. The naming convention is also
   enforced by a newly added test to ensure adherence.
+- Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
+- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models
 
 ## 0.5.1 [December 18, 2025]
 

@@ -5,6 +5,7 @@ import yaml
 import numpy as np
 import pytest
 import openmdao.api as om
+from pytest import fixture
 
 from h2integrate.storage.battery.pysam_battery import (
     PySAMBatteryPerformanceModel,
@@ -12,7 +13,19 @@ from h2integrate.storage.battery.pysam_battery import (
 )
 
 
-def test_pysam_battery_performance_model_without_controller(subtests):
+@fixture
+def plant_config():
+    plant = {
+        "plant_life": 30,
+        "simulation": {
+            "dt": 3600,
+            "n_timesteps": 24,
+        },
+    }
+    return {"plant": plant}
+
+
+def test_pysam_battery_performance_model_without_controller(plant_config, subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
 
@@ -57,7 +70,7 @@ def test_pysam_battery_performance_model_without_controller(subtests):
     prob.model.add_subsystem(
         "pysam_battery",
         PySAMBatteryPerformanceModel(
-            plant_config={"plant": {"simulation": {"dt": 3600, "n_timesteps": 24}}},
+            plant_config=plant_config,
             tech_config=tech_config["technologies"]["battery"],
         ),
         promotes=["*"],
@@ -240,7 +253,7 @@ def test_battery_config(subtests):
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
 
-def test_battery_initialization(subtests):
+def test_battery_initialization(plant_config, subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
 
@@ -252,7 +265,7 @@ def test_battery_initialization(subtests):
         tech_config = yaml.safe_load(file)
 
     battery = PySAMBatteryPerformanceModel(
-        plant_config={"plant": {"simulation": {"dt": 3600, "n_timesteps": 24}}},
+        plant_config=plant_config,
         tech_config=tech_config["technologies"]["battery"],
     )
 

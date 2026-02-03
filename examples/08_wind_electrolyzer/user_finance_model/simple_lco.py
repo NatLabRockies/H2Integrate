@@ -41,10 +41,13 @@ class SimpleLCOFinance(om.ExplicitComponent):
             else f"{LCO_base_str}_{self.options['description']}"
         )
 
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         # add inputs for commodity production and costs
         self.add_input(
             f"total_{self.options['commodity_type']}_produced",
             val=0.0,
+            shape=plant_life,
             units=commodity_units,
         )
         tech_config = self.tech_config = self.options["tech_config"]

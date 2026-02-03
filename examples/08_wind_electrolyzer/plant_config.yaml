@@ -61,14 +61,17 @@ finance_parameters:
   finance_subgroups:
     electricity_profast:
       commodity: "electricity"
+      # commodity_stream: "wind"
       finance_groups: ["profast_model"]
       technologies: ["wind"]
     electricity_custom:
       commodity: "electricity"
+      # commodity_stream: "wind"
       finance_groups: ["custom_model"]
       technologies: ["wind"]
     hydrogen:
       commodity: "hydrogen"
+      # commodity_stream: "electrolyzer"
       commodity_desc: "produced"
       finance_groups: ["custom_model","profast_model"]
       technologies: ["wind", "electrolyzer"]
