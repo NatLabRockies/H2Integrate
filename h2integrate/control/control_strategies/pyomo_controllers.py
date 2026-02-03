@@ -371,10 +371,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
     def blocks(self) -> pyomo.Block:
         return getattr(self.pyomo_model, self.config.tech_name)
 
-    # @property
-    # def model(self) -> pyomo.ConcreteModel:
-    #     return self._model
-
 
 class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
     """Fixes battery dispatch operations based on user input.
@@ -404,19 +400,6 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
 
     def initialize_parameters(self):
         """Initializes parameters."""
-        # TODO: implement and test lifecycle counting
-        # if self.config.include_lifecycle_count:
-        #     self.lifecycle_cost = (
-        #         self.options.lifecycle_cost_per_kWh_cycle
-        #         * self._system_model.value("nominal_energy")
-        #     )
-
-        # self.cost_per_charge = self._financial_model.value("om_batt_variable_cost")[
-        #     0
-        # ]  # [$/MWh]
-        # self.cost_per_discharge = self._financial_model.value("om_batt_variable_cost")[
-        #     0
-        # ]  # [$/MWh]
         self.minimum_storage = 0.0
         self.maximum_storage = self.config.max_capacity
         self.minimum_soc = self.config.min_charge_percent
@@ -737,26 +720,12 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         for t in self.blocks.index_set():
             self.blocks[t].discharge_efficiency = round(efficiency, self.round_digits)
 
-    # @property
-    # def round_trip_efficiency(self) -> float:
-    #     """Round trip efficiency."""
-    #     return self.charge_efficiency * self.discharge_efficiency
-
-    # @round_trip_efficiency.setter
-    # def round_trip_efficiency(self, round_trip_efficiency: float):
-    #     round_trip_efficiency = self._check_efficiency_value(round_trip_efficiency)
-    #     # Assumes equal charge and discharge efficiencies
-    #     efficiency = round_trip_efficiency ** (1 / 2)
-    #     self.charge_efficiency = efficiency
-    #     self.discharge_efficiency = efficiency
-
 
 @define(kw_only=True)
 class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(default=None)
     discharge_efficiency: float = field(default=None)
-    include_lifecycle_count: bool = field(default=False)
 
 
 class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
@@ -958,7 +927,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
         """
 
-        solver_results = self.glpk_solve()
+        solver_results = self.glpk_solve_call(self.hybrid_dispatch_model)
         self.problem_state.store_problem_metrics(
             solver_results, start_time, n_days, pyomo.value(self.hybrid_dispatch_model.objective)
         )
@@ -1041,12 +1010,6 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             results = solver.solve(pyomo_model, options=solver_options.constructed)
 
         return results
-
-    def glpk_solve(self):
-        return self.glpk_solve_call(
-            # self.pyomo_model
-            self.hybrid_dispatch_model
-        )
 
     @property
     def storage_dispatch_commands(self) -> list:
