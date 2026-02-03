@@ -12,7 +12,7 @@ class SimpleGenericStorageConfig(BaseConfig):
 
 class SimpleGenericStorage(PerformanceModelBaseClass):
     """
-    Simple generic storage model.
+    Simple generic storage model that acts as a pass-through component.
     """
 
     def setup(self):
