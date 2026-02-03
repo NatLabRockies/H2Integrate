@@ -27,6 +27,9 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
             load resource files from. Defaults to "".
         resource_filename (str, optional): Filename to save resource data to or load
             resource data from. Defaults to None.
+        verify_download (bool, optional): Whether to verify the API download from the url.
+            If an `openmeteo_requests.Client.OpenMeteoRequestsError` error is thrown,
+            try setting to True. Defaults to False.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -45,6 +48,7 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
+    verify_download: bool = field(default=False)
 
 
 class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
@@ -167,7 +171,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
-        responses = openmeteo.weather_api(base_url, params=url, verify=False)
+        responses = openmeteo.weather_api(base_url, params=url, verify=self.config.verify_download)
         response = responses[0]
         hourly_data = response.Hourly()
         ts_data = {}
