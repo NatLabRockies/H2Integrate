@@ -4,11 +4,11 @@ description: "This plant has offshore wind and wave energy connected to a direct
 technologies:
   hopp:
     performance_model:
-      model: "hopp"
+      model: "HOPPComponent"
     cost_model:
-      model: "hopp"
+      model: "HOPPComponent"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       shared_parameters:
         cost_year: 2022
@@ -21,9 +21,9 @@ technologies:
         commodity_storage_units: "kW"
   wind:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: "FlorisWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 22 #number of turbines in the farm
@@ -51,9 +51,9 @@ technologies:
 
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -63,13 +63,13 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
-      model: "heuristic_load_following_controller"
+      model: "HeuristicLoadFollowingController"
     performance_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
@@ -98,9 +98,9 @@ technologies:
         commodity_storage_units: "kW"
   doc:
     performance_model:
-      model: "direct_ocean_capture_performance"
+      model: "DOCPerformanceModel"
     cost_model:
-      model: "direct_ocean_capture_cost"
+      model: "DOCCostModel"
     model_inputs:
       shared_parameters:
         power_single_ed_w: 24000000. # W

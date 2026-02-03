@@ -159,20 +159,27 @@ required inputs and outputs defined in the baseclass.
 5. **Next, add the new technology to the `supported_models.py` file.**
 This file contains a dictionary of all the available technologies in H2Integrate.
 Add your new technology to the dictionary with the appropriate keys depending on if it a performance, cost, or financial model.
+
+```{important}
+When adding a new technology use a string version of the class name as the dictionary key mapping
+to the class. This greatly simplifies debugging configuration issues and model findability within the
+documentation and code.
+```
+
 Here's what the updated `supported_models.py` file looks like with our new solar technology added as the first entry:
 
 ```python
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceComponent
 
 supported_models = {
-    "pysam_solar_plant_performance" : PYSAMSolarPlantPerformanceComponent,
+    "PYSAMSolarPlantPerformanceModel" : PYSAMSolarPlantPerformanceComponent,
 
-    "run_of_river_hydro_performance": RunOfRiverHydroPerformanceModel,
-    "run_of_river_hydro_cost": RunOfRiverHydroCostModel,
-    "eco_pem_electrolyzer_performance": ECOElectrolyzerPerformanceModel,
-    "singlitico_electrolyzer_cost": SingliticoCostModel,
-    "basic_electrolyzer_cost": BasicElectrolyzerCostModel,
-    "custom_electrolyzer_cost": CustomElectrolyzerCostModel,
+    "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
+    "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
+    "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
+    "SingliticoCostModel": SingliticoCostModel,
+    "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
+    "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
 
     ...
 }
@@ -228,7 +235,7 @@ If you're adding a technology where this makes sense, you can follow the same st
 For now, modify a single  the `create_technology_models.py` file to include your new technology as such:
 
 ```python
-combined_performance_and_cost_model_technologies = ['hopp', 'h2_storage', '<your_tech_here>']
+combined_performance_and_cost_model_technologies = ['HOPPComponent', 'h2_storage', '<your_tech_here>']
 
 # Create a technology group for each technology
 for tech_name, individual_tech_config in self.technology_config['technologies'].items():

@@ -4,9 +4,9 @@ description: This hybrid plant produces geologic hydrogen
 technologies:
   geoh2_well_subsurface:
     performance_model:
-      model: simple_natural_geoh2_performance
+      model: NaturalGeoH2PerformanceModel
     cost_model:
-      model: mathur_modified_geoh2_cost
+      model: GeoH2SubsurfaceCostModel
     model_inputs:
       shared_parameters:
         borehole_depth: 300
@@ -35,9 +35,9 @@ technologies:
         as_spent_ratio: 1.1
   geoh2_well_surface:
     performance_model:
-      model: aspen_geoh2_performance
+      model: AspenGeoH2SurfacePerformanceModel
     cost_model:
-      model: aspen_geoh2_cost
+      model: AspenGeoH2SurfaceCostModel
     model_inputs:
       shared_parameters:
         refit_coeffs: false

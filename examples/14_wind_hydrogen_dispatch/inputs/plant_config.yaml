@@ -5,9 +5,11 @@ sites:
   site:
     latitude: 35.2018863
     longitude: -101.945027
+
+
     resources:
       wind_resource:
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 
@@ -30,7 +32,7 @@ plant:
 
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2030

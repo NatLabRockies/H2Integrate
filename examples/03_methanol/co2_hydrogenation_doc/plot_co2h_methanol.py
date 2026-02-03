@@ -16,12 +16,10 @@ def plot_methanol(model):
     T = plt.title("Electrolyzer")
     T.set_position([-0.2, 1.1])
     elyzer_elec_in = (
-        model.plant.electrolyzer.eco_pem_electrolyzer_performance.get_val("electricity_in") / 1000
+        model.plant.electrolyzer.ECOElectrolyzerPerformanceModel.get_val("electricity_in") / 1000
     )
     elyzer_h2_out = (
-        model.plant.electrolyzer.eco_pem_electrolyzer_performance.get_val("hydrogen_out")
-        / 1000
-        * 24
+        model.plant.electrolyzer.ECOElectrolyzerPerformanceModel.get_val("hydrogen_out") / 1000 * 24
     )
     plt.plot(times, elyzer_elec_in, label="Electricity Available [MW]", color=[0.5, 0.5, 1])
     plt.plot(
@@ -46,8 +44,8 @@ def plot_methanol(model):
     plt.subplot(3, 2, 2)
     T = plt.title("Direct\nOcean\nCapture")
     T.set_position([-0.2, 1.1])
-    doc_elec_in = model.plant.doc.direct_ocean_capture_performance.get_val("electricity_in") / 1e6
-    doc_co2_out = model.plant.doc.direct_ocean_capture_performance.get_val("co2_out") / 1000
+    doc_elec_in = model.plant.doc.DOCPerformanceModel.get_val("electricity_in") / 1e6
+    doc_co2_out = model.plant.doc.DOCPerformanceModel.get_val("co2_out") / 1000
     plt.plot(times, doc_elec_in, label="Electricity Available [MW]", color=[0.5, 0.5, 1])
     plt.plot(
         [times[0], times[-1]],
@@ -103,9 +101,9 @@ def plot_methanol(model):
     plt.subplot(3, 2, 5)
     T = plt.title("Methanol")
     T.set_position([-0.2, 1.1])
-    meoh_h2_in = model.plant.methanol.co2h_methanol_plant_performance.get_val("hydrogen_in")
-    meoh_co2_in = model.plant.methanol.co2h_methanol_plant_performance.get_val("co2_in")
-    meoh_meoh_out = model.plant.methanol.co2h_methanol_plant_performance.get_val("methanol_out")
+    meoh_h2_in = model.plant.methanol.CO2HMethanolPlantPerformanceModel.get_val("hydrogen_in")
+    meoh_co2_in = model.plant.methanol.CO2HMethanolPlantPerformanceModel.get_val("co2_in")
+    meoh_meoh_out = model.plant.methanol.CO2HMethanolPlantPerformanceModel.get_val("methanol_out")
     plt.plot(times, meoh_h2_in, label="Hydrogen In [kg/hr]", color=[0, 0.5, 0])
     plt.plot(times, meoh_co2_in, label="CO$_2$ In [kg/hr]", color=[0, 0.25, 0.5])
     plt.plot(times, meoh_meoh_out, label="Methanol Out [kg/hr]", color=[1, 0, 0.5])
