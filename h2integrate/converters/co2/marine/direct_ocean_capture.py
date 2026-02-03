@@ -129,10 +129,21 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
             plot_range=[3910, 4030],
         )
 
-        outputs["co2_out"] = ed_outputs.ED_outputs["mCC"] * 1000
-        outputs["co2_capture_mtpy"] = max(ed_outputs.mCC_yr, 1e-6)  # Must be >0
+        outputs["co2_out"] = ed_outputs.ED_outputs["mCC"] * 1000  # kg/h
+        outputs["co2_capture_mtpy"] = max(ed_outputs.mCC_yr, 1e-6)  # Must be >0 #TODO: remove
         outputs["total_tank_volume_m3"] = range_outputs.V_aT_max + range_outputs.V_bT_max
-        outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mCC"])
+        outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mCC"])  # TODO: remove
+
+        outputs["rated_co2_production"] = (
+            max(range_outputs.S1["mCC"]) * 1e3
+        )  # convert from t/h to kg/h
+        outputs["total_co2_produced"] = outputs["co2_out"].sum()
+
+        max_production = outputs["rated_co2_production"] * len(outputs["co2_out"])
+        outputs["annual_co2_produced"] = max(
+            ed_outputs.mCC_yr * 1e3, 1e-6
+        )  # convert from metric tons/year to kg/year
+        outputs["capacity_factor"] = outputs["total_co2_produced"] / max_production
 
 
 @define(kw_only=True)
@@ -181,7 +192,7 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
         )
 
         self.add_input(
-            "plant_mCC_capacity_mtph",
+            "plant_mCC_capacity_mtph",  # TODO: replace with rated_co2_production
             val=0.0,
             units="t/h",
             desc="Theoretical plant maximum CO₂ capture (t/h)",
@@ -194,10 +205,12 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
         res = echem_mcc.electrodialysis_cost_model(
             echem_mcc.ElectrodialysisCostInputs(
                 electrodialysis_inputs=ED_inputs,
-                mCC_yr=inputs["co2_capture_mtpy"],
+                mCC_yr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
                 total_tank_volume=inputs["total_tank_volume_m3"],
                 infrastructure_type=self.config.infrastructure_type,
-                max_theoretical_mCC=inputs["plant_mCC_capacity_mtph"],
+                max_theoretical_mCC=inputs[
+                    "plant_mCC_capacity_mtph"
+                ],  # TODO: replaced with rated_co2_production
             )
         )
 

@@ -3,7 +3,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -15,7 +15,7 @@ class MethanolPerformanceConfig(BaseConfig):
     h2o_consume_ratio: float = field()
 
 
-class MethanolPerformanceBaseClass(om.ExplicitComponent):
+class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a methanol plant.
     Computes annual methanol and co-product production, feedstock consumption, and emissions
@@ -35,21 +35,21 @@ class MethanolPerformanceBaseClass(om.ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "methanol"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        super().setup()
+
         self.add_input("plant_capacity_kgpy", units="kg/year", val=self.config.plant_capacity_kgpy)
-        self.add_input("capacity_factor", units="unitless", val=self.config.capacity_factor)
+        self.add_input("input_capacity_factor", units="unitless", val=self.config.capacity_factor)
         self.add_input("co2e_emit_ratio", units="kg/kg", val=self.config.co2e_emit_ratio)
         self.add_input("h2o_consume_ratio", units="kg/kg", val=self.config.h2o_consume_ratio)
 
-        self.add_output("methanol_out", units="kg/h", shape=n_timesteps)
-        self.add_output("total_methanol_produced", units="kg/year")
-        self.add_output("co2e_emissions", units="kg/h", shape=n_timesteps)
-        self.add_output("h2o_consumption", units="kg/h", shape=n_timesteps)
+        self.add_output("co2e_emissions", units="kg/h", shape=self.n_timesteps)
+        self.add_output("h2o_consumption", units="kg/h", shape=self.n_timesteps)
 
 
 @define(kw_only=True)

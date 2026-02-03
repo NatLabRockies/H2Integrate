@@ -11,8 +11,11 @@ class ElectricitySumComp(om.ExplicitComponent):
 
     def initialize(self):
         self.options.declare("tech_configs", types=dict, desc="Configuration for each technology")
+        self.options.declare("plant_config", types=dict)
 
     def setup(self):
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         # Add inputs for each electricity producing technology
         for tech in self.options["tech_configs"]:
             if is_electricity_producer(tech):
@@ -28,6 +31,7 @@ class ElectricitySumComp(om.ExplicitComponent):
         self.add_output(
             "total_electricity_produced",
             val=0.0,
+            shape=plant_life,
             units="kW*h/year",
             desc="Total electricity produced",
         )

@@ -11,7 +11,12 @@ rng = np.random.default_rng(seed=0)
 
 @fixture
 def plant_config():
-    plant_dict = {"plant": {"simulation": {"n_timesteps": 8760, "dt": 3600}}}
+    plant_dict = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"n_timesteps": 8760, "dt": 3600},
+        }
+    }
     return plant_dict
 
 

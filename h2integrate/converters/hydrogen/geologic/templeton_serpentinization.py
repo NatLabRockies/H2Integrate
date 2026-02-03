@@ -136,3 +136,11 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         outputs["wellhead_gas_out"] = h2_prod_avg
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
         outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
+
+        outputs["annual_hydrogen_produced"] = outputs["total_hydrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["rated_hydrogen_production"] = np.max(h2_prod_avg)  # TODO: double check
+        outputs["capacity_factor"] = outputs["total_hydrogen_produced"] / (
+            outputs["rated_hydrogen_production"] * self.n_timesteps
+        )

@@ -31,6 +31,7 @@
   - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
 - Adds `additional_cls_name` kwarg to `BaseConfif.from_dict()` to allow for configuration errors buried in parent or child classes to provide which model had the offending misconfiguration for simpler user debugging.
 - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
+- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models
 
 ## 0.5.1 [December 18, 2025]
 
