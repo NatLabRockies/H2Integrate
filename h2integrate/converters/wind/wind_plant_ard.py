@@ -54,6 +54,9 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
         super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -115,7 +118,7 @@ class ArdWindPlantModel(om.Group):
                 plant_config=self.options["plant_config"],
                 tech_config=self.options["tech_config"],
             ),
-            promotes=["cost_year", "VarOpEx"],
+            promotes=["*"],
         )
 
         # create ard model
