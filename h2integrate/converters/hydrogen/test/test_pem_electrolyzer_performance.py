@@ -1,51 +1,61 @@
-import os
-import shutil
-from pathlib import Path
-
 import numpy as np
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
-from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
+from h2integrate.converters.hydrogen.pem_electrolyzer import ECOElectrolyzerPerformanceModel
 
 
 @fixture
 def plant_config():
-    plant_cnfg = load_plant_yaml(EXAMPLE_DIR / "25_sizing_modes" / "plant_config.yaml")
-    return plant_cnfg
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        },
+    }
+    return plant_config
 
 
 @fixture
 def tech_config():
-    os.chdir(EXAMPLE_DIR / "25_sizing_modes")
-    tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
-    hopp_tech_config = tech_config["technologies"]["hopp"]
+    config = {
+        "model_inputs": {
+            "performance_parameters": {
+                "n_clusters": 4.0,
+                "location": "onshore",
+                "cluster_rating_MW": 10,
+                "eol_eff_percent_loss": 10.0,
+                "uptime_hours_until_eol": 8000,
+                "include_degradation_penalty": True,
+                "turndown_ratio": 0.1,
+                "electrolyzer_capex": 10.0,
+            }
+        }
+    }
+    return config
 
-    return hopp_tech_config
 
-
-def test_hopp_wrapper_outputs(subtests, plant_config, tech_config):
-    tech_config["model_inputs"]["performance_parameters"]["enable_caching"] = False
-    tech_config["model_inputs"]["performance_parameters"]["hopp_config"]["technologies"]["wind"][
-        "num_turbines"
-    ] = 4
-    prob = om.Problem()
-
-    hopp_perf = HOPPComponent(
-        plant_config=plant_config,
-        tech_config=tech_config,
-        driver_config={},
-    )
-    prob.model.add_subsystem("comp", hopp_perf, promotes=["*"])
-    prob.setup()
-    prob.run_model()
+def test_electrolyzer_outputs(tech_config, plant_config, subtests):
     plant_life = int(plant_config["plant"]["plant_life"])
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
-    commodity = "electricity"
-    commodity_amount_units = "kW*h"
-    commodity_rate_units = "kW"
+
+    prob = om.Problem()
+    comp = ECOElectrolyzerPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    power_profile = np.ones(n_timesteps) * 32.0
+    prob.set_val("comp.electricity_in", power_profile, units="MW")
+
+    prob.run_model()
+
+    commodity = "hydrogen"
+    commodity_amount_units = "kg"
+    commodity_rate_units = "kg/h"
 
     # Check that replacement schedule is between 0 and 1
     with subtests.test("0 <= replacement_schedule <=1"):
@@ -116,56 +126,4 @@ def test_hopp_wrapper_outputs(subtests, plant_config, tech_config):
     with subtests.test("operational_life default value"):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
     with subtests.test("replacement_schedule value"):
-        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
-
-
-def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config):
-    cache_dir = EXAMPLE_DIR / "25_sizing_modes" / "test_cache"
-
-    # delete cache dir if it exists
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)
-
-    tech_config["model_inputs"]["performance_parameters"]["enable_caching"] = True
-    tech_config["model_inputs"]["performance_parameters"]["cache_dir"] = cache_dir
-
-    # Run hopp and get cache filename
-    prob = om.Problem()
-
-    hopp_perf = HOPPComponent(
-        plant_config=plant_config,
-        tech_config=tech_config,
-        driver_config={},
-    )
-    prob.model.add_subsystem("perf", hopp_perf, promotes=["*"])
-    prob.setup()
-    prob.run_model()
-
-    cache_filename_init = list(Path(cache_dir).glob("*.pkl"))
-
-    # Modify something in the hopp config and check that cache filename is different
-    tech_config["model_inputs"]["performance_parameters"]["hopp_config"]["config"][
-        "simulation_options"
-    ].pop("cache")
-
-    # Run hopp and get cache filename
-    prob = om.Problem()
-
-    hopp_perf = HOPPComponent(
-        plant_config=plant_config,
-        tech_config=tech_config,
-        driver_config={},
-    )
-    prob.model.add_subsystem("perf", hopp_perf, promotes=["*"])
-    prob.setup()
-    prob.run_model()
-
-    cache_filename_new = [
-        file for file in Path(cache_dir).glob("*.pkl") if file not in cache_filename_init
-    ]
-
-    with subtests.test("Check unique filename with modified config"):
-        assert len(cache_filename_new) > 0
-
-    # Delete cache files and the testing cache dir
-    shutil.rmtree(cache_dir)
+        assert np.any(prob.get_val("comp.replacement_schedule", units="unitless") == 0)

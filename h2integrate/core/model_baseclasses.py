@@ -9,6 +9,103 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 
 
+class PerformanceModelBaseClass(om.ExplicitComponent):
+    def initialize(self):
+        self.options.declare("driver_config", types=dict)
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("tech_config", types=dict)
+
+    def setup(self):
+        # Below should be done in subclass that produces hydrogen
+        # self.commodity = "hydrogen"
+        # self.commodity_rate_units = "kg/h"
+        # self.commodity_amount_units = "kg"
+        # super().setup()
+
+        # Below should be done in subclass that produces electricity
+        # self.commodity = "electricity"
+        # self.commodity_rate_units = "kW"
+        # self.commodity_amount_units = "kW*h"
+        # super().setup()
+
+        # n_timesteps is number of timesteps in a simulation
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        # dt is seconds per timestep
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        # plant_life is number of years the plant is expected to operate for
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        hours_per_year = 8760
+        # hours simulated is the number of hours in a simulation
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+        # fraction_of_year_simulated is the ratio of simulation length to length of year
+        # and may be used to estimate annual performance from simulation performance
+        self.fraction_of_year_simulated = hours_simulated / hours_per_year
+        self.set_outputs()
+
+    def set_outputs(self):
+        # Check that the required attributes have been instantiated
+        required = ("commodity", "commodity_rate_units", "commodity_amount_units")
+        missing = [el for el in required if not hasattr(self, el)]
+
+        if missing:
+            # Throw error if any attributes are missing.
+            cls_name = self.msginfo.split("<class ")[-1].strip("<>")
+            missing = ", ".join(missing)
+            msg = (
+                f"{cls_name} is missing the following required attributes: {missing}."
+                f"Please ensure that the attributes: {missing}"
+                f"are set in the `setup()` method of {cls_name}."
+                "Further documentation can be found in the `PerformanceModelBaseClass` "
+                "documentation."
+            )
+            raise NotImplementedError(msg)
+
+        # timeseries profiles
+        self.add_output(
+            f"{self.commodity}_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        # sum over simulation
+        self.add_output(
+            f"total_{self.commodity}_produced", val=0.0, units=self.commodity_amount_units
+        )
+        # annual performance estimate for commodity produced
+        self.add_output(
+            f"annual_{self.commodity}_produced",
+            val=0.0,
+            shape=self.plant_life,
+            units=f"({self.commodity_amount_units})/year",
+        )
+        # lifetime estimate of item replacements, represented as a fraction of the capacity.
+        self.add_output("replacement_schedule", val=0.0, shape=self.plant_life, units="unitless")
+        # capacity factor is the ratio of actual production / maximum production possible
+        self.add_output(
+            "capacity_factor",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Capacity factor",
+        )
+        # rated/maximum commodity production, this would be used to calculate the maximum
+        # production possible over the simulation
+        self.add_output(
+            f"rated_{self.commodity}_production", val=0.0, units=self.commodity_rate_units
+        )
+        # operational life of the technology if the technology cannot be replaced
+        self.add_output("operational_life", val=self.plant_life, units="yr")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        """
+        Computation for the OM component.
+
+        For a template class this is not implement and raises an error.
+        """
+
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
@@ -86,7 +183,7 @@ class ResizeablePerformanceModelBaseConfig(BaseConfig):
                 )
 
 
-class ResizeablePerformanceModelBaseClass(om.ExplicitComponent):
+class ResizeablePerformanceModelBaseClass(PerformanceModelBaseClass):
     """Baseclass to be used for all resizeable performance models. The built-in inputs
     are used by the performance models to resize themselves.
 
@@ -110,12 +207,8 @@ class ResizeablePerformanceModelBaseClass(om.ExplicitComponent):
             this component to the max commodity consumed by the downstream tech.
     """
 
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
     def setup(self):
+        super().setup()
         # Parse in sizing parameters
         size_mode = self.config.size_mode
         self.add_discrete_input("size_mode", val=size_mode)
