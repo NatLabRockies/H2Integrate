@@ -31,7 +31,7 @@ class DispatchProblemState:
             for k, v in solver_results.solver._list[0].items()
             if k != "Statistics"
         }
-        # Reformat variables names to take out spaces for progromatic simplicity
+        # Reformat variables names to take out spaces for programmatic simplicity
         solver_problem_dict = {
             k.lower().replace(" ", "_"): v.value for k, v in solver_results.problem._list[0].items()
         }
