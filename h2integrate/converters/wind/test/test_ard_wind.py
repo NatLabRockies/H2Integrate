@@ -126,8 +126,18 @@ def test_ard_wind_combined(plant_config, ard_config, subtests):
             == 150.8849096716472
         )
 
+    with subtests.test("model cost year"):
+        assert prob.get_val("cost_year") == 2024
+
     with subtests.test("CapEx"):
         assert pytest.approx(np.sum(prob.get_val("CapEx", units="MUSD")), rel=1e-6) == 58.5
 
     with subtests.test("OpEx"):
         assert pytest.approx(np.sum(prob.get_val("OpEx", units="MUSD/year")), rel=1e-6) == 1.98
+
+    with subtests.test("dummy cost model capex"):
+        assert prob.get_val("wind_ard_cost.CapEx", units="USD") == [0.0]
+    with subtests.test("dummy cost model opex"):
+        assert prob.get_val("wind_ard_cost.OpEx", units="USD/year") == [0.0]
+    with subtests.test("dummy cost model varopex"):
+        assert prob.get_val("VarOpEx", "USD/year").all() == 0.0

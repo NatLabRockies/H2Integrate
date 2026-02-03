@@ -20,10 +20,10 @@ if show_visualizations:
     ard_prob = h2i_model.prob.model.plant.wind.wind.ard_sub_prob._subprob
 
     # create an N2 diagram of the H2I problem
-    om.n2(h2i_model.prob)
+    om.n2(h2i_model.prob, outfile="n2-h2i.html")
 
     # create an N2 diagram of the Ard sub-problem
-    om.n2(ard_prob)
+    om.n2(ard_prob, outfile="n2-ard.html")
 
     # visualize the wind farm layout
     ard_input = h2i_model.technology_config["technologies"]["wind"]["model_inputs"][

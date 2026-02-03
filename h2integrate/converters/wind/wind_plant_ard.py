@@ -73,6 +73,7 @@ class ArdWindPlantModel(om.Group):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
+        # add pass-through cost model to include cost_year as expected by H2Integrate
         self.add_subsystem(
             "wind_ard_cost",
             WindArdCostComponent(
@@ -83,12 +84,9 @@ class ArdWindPlantModel(om.Group):
             promotes=["cost_year", "VarOpEx"],
         )
 
-        # check if wind resource data is coming from H2Integrate
-
-        # add ard sub-problem
+        # create ard model
         ard_input_dict = self.config.ard_system
         ard_data_path = self.config.ard_data_path
-
         ard_prob = set_up_ard_model(input_dict=ard_input_dict, root_data_path=ard_data_path)
 
         # add ard to the h2i model as a sub-problem
@@ -111,6 +109,7 @@ class ArdWindPlantModel(om.Group):
             ],
         )
 
+        # add the ard sub-problem to the parent group
         self.add_subsystem(
             "ard_sub_prob",
             subprob_ard,
