@@ -10,7 +10,7 @@ general:
 driver:
   design_of_experiments:
     flag: true
-    debug_print: true
+    debug_print: false
     generator: "csvgen"
     filename: "ned_reduced_sitelist.csv"
     run_parallel: False

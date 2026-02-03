@@ -79,6 +79,8 @@ class IronComponent(CostModelBaseClass):
     """
 
     def setup(self):
+        plant_life = self.options["plant_config"]["plant"]["plant_life"]
+
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = IronConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
@@ -97,7 +99,7 @@ class IronComponent(CostModelBaseClass):
         self.add_input("LCOE", val=self.config.LCOE, units="USD/MW/h")
         self.add_input("LCOH", val=self.config.LCOH, units="USD/kg")
 
-        self.add_output("total_iron_produced", val=0.0, units="kg/year")
+        self.add_output("annual_iron_produced", val=0.0, shape=plant_life, units="kg/year")
         self.add_output("LCOI", val=0.0, units="USD/kg")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -237,7 +239,7 @@ class IronComponent(CostModelBaseClass):
         # ABOVE: Copy-pasted from ye olde h2integrate_simulation.py (the 1000+ line monster)
 
         outputs["iron_out"] = iron_mtpy * 1000 / 8760
-        outputs["total_iron_produced"] = iron_mtpy * 1000
+        outputs["annual_iron_produced"] = iron_mtpy * 1000
 
         cost_df = iron_costs.costs_df
         capex = 0

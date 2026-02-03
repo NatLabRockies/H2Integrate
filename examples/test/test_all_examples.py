@@ -356,7 +356,9 @@ def test_wind_h2_opt_example(subtests):
 
     model_init.post_process()
 
-    annual_h20 = model_init.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0]
+    annual_h20 = model_init.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[
+        0
+    ]
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer.yaml")
@@ -422,7 +424,7 @@ def test_wind_h2_opt_example(subtests):
     with subtests.test("Check minimum total hydrogen produced"):
         assert (
             pytest.approx(
-                model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0],
+                model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0],
                 abs=15000,
             )
             == 29028700
@@ -1382,9 +1384,9 @@ def test_sweeping_solar_sites_doe(subtests):
     for ci, case in enumerate(cases):
         solar_resource_data = case.get_val("site.solar_resource.solar_resource_data")
         lat_lon = f"{case.get_val('site.latitude')[0]} {case.get_val('site.longitude')[0]}"
-        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"]
-        aep = case.get_val("solar.annual_energy", units="MW*h/yr")
-        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")
+        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
+        aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
+        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
 
         site_res = pd.DataFrame(
             [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
@@ -1467,7 +1469,8 @@ def test_floris_example(subtests):
     with subtests.test("Distributed wind plant capacity"):
         assert (
             pytest.approx(
-                h2i.prob.get_val("distributed_wind_plant.total_capacity", units="MW"), rel=1e-6
+                h2i.prob.get_val("distributed_wind_plant.rated_electricity_production", units="MW"),
+                rel=1e-6,
             )
             == 66.0
         )
@@ -1477,7 +1480,7 @@ def test_floris_example(subtests):
             pytest.approx(
                 np.sum(
                     h2i.prob.get_val(
-                        "distributed_wind_plant.total_electricity_produced", units="MW*h/yr"
+                        "distributed_wind_plant.total_electricity_produced", units="MW*h"
                     )
                 ),
                 rel=1e-6,
@@ -1505,7 +1508,8 @@ def test_floris_example(subtests):
     with subtests.test("Utility wind plant capacity"):
         assert (
             pytest.approx(
-                h2i.prob.get_val("utility_wind_plant.total_capacity", units="MW"), rel=1e-6
+                h2i.prob.get_val("utility_wind_plant.rated_electricity_production", units="MW"),
+                rel=1e-6,
             )
             == 120.0
         )

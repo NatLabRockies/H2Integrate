@@ -769,7 +769,8 @@ class H2IntegrateModel:
 
             if commodity_stream is None and commodity == "electricity":
                 finance_subgroup.add_subsystem(
-                    "electricity_sum", ElectricitySumComp(tech_configs=tech_configs)
+                    "electricity_sum",
+                    ElectricitySumComp(plant_config=self.plant_config, tech_configs=tech_configs),
                 )
 
             # Add adjusted capex/opex
@@ -1061,7 +1062,6 @@ class H2IntegrateModel:
                 tech_configs = group_configs.get("tech_configs")
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
-
                 if commodity_stream is not None:
                     # connect commodity stream output to summer input
                     self.plant.connect(
@@ -1132,20 +1132,20 @@ class H2IntegrateModel:
                         if "electrolyzer" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "geoh2" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "ammonia" in tech_name and primary_commodity_type == "ammonia":
                             self.plant.connect(
-                                f"{tech_name}.total_ammonia_produced",
+                                f"{tech_name}.annual_ammonia_produced",
                                 f"finance_subgroup_{group_id}.total_ammonia_produced",
                             )
 
@@ -1159,13 +1159,13 @@ class H2IntegrateModel:
 
                     if "methanol" in tech_name and primary_commodity_type == "methanol":
                         self.plant.connect(
-                            f"{tech_name}.total_methanol_produced",
+                            f"{tech_name}.annual_methanol_produced",
                             f"finance_subgroup_{group_id}.total_methanol_produced",
                         )
 
                     if "air_separator" in tech_name and primary_commodity_type == "nitrogen":
                         self.plant.connect(
-                            f"{tech_name}.total_nitrogen_produced",
+                            f"{tech_name}.annual_nitrogen_produced",
                             f"finance_subgroup_{group_id}.total_nitrogen_produced",
                         )
 

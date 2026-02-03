@@ -1,13 +1,16 @@
 import numpy as np
 import pandas as pd
-import openmdao.api as om
 from attrs import field, define
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
 
@@ -26,13 +29,16 @@ class ElectricArcFurnacePerformanceBaseConfig(BaseConfig):
     water_density: float = field(default=1000)  # kg/m3
 
 
-class ElectricArcFurnacePlantBasePerformanceComponent(om.ExplicitComponent):
+class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass):
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "steel"
+        self.commodity_rate_units = "t/h"
+        self.commodity_amount_units = "t"
 
     def setup(self):
+        super().setup()
+
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = ElectricArcFurnacePerformanceBaseConfig.from_dict(
@@ -44,7 +50,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(om.ExplicitComponent):
         self.add_input(
             "system_capacity",
             val=self.config.steel_production_rate_tonnes_per_hr,
-            units="t/h",
+            units=self.commodity_rate_units,
             desc="Rated steel production capacity",
         )
 
@@ -70,16 +76,8 @@ class ElectricArcFurnacePlantBasePerformanceComponent(om.ExplicitComponent):
             "steel_demand",
             val=self.config.steel_production_rate_tonnes_per_hr,
             shape=n_timesteps,
-            units="t/h",
+            units=self.commodity_rate_units,
             desc="Steel demand for steel plant",
-        )
-
-        self.add_output(
-            "steel_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="t/h",
-            desc="Steel produced",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -258,6 +256,14 @@ class ElectricArcFurnacePlantBasePerformanceComponent(om.ExplicitComponent):
         # output is minimum between available feedstocks and output demand
         steel_production = np.minimum.reduce(steel_from_feedstocks)
         outputs["steel_out"] = steel_production
+        outputs["rated_steel_production"] = inputs["system_capacity"]
+        outputs["total_steel_produced"] = outputs["steel_out"].sum()
+        outputs["annual_steel_produced"] = outputs["total_steel_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["capacity_factor"] = outputs["total_steel_produced"] / (
+            outputs["rated_steel_production"] * len(outputs["steel_out"])
+        )
 
         # feedstock consumption based on actual steel produced
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
