@@ -1,14 +1,14 @@
 
 (profastcomp:profastcompmodel)=
 # ProFastComp
-The `ProFastComp` finance model calculates levelized cost of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
+The `ProFastLCO` finance model calculates levelized cost of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
 
-The inputs, outputs, and naming convention for the `ProFastComp` model are outlined in this doc page.
+The inputs, outputs, and naming convention for the `ProFastLCO` model are outlined in this doc page.
 
 
 (profastcomp:overview)=
 ## Finance parameters overview
-The main inputs for `ProFastComp` model include:
+The main inputs for `ProFastLCO` model include:
 - required: financial parameters (`params` section). These can be input in the `ProFastBase` format or the `ProFAST` format. These two formats are described in the following sections:
   - [ProFastBase format](profast:direct_opt)
   - [ProFAST format](profast:pf_params_opt)
@@ -17,7 +17,7 @@ The main inputs for `ProFastComp` model include:
 
 ```yaml
 finance_parameters:
-  finance_model: "ProFastComp"
+  finance_model: "ProFastLCO"
   model_inputs: #inputs for the finance_model
     save_profast_results: True #optional, will save ProFAST results to .yaml file in the folder specified in the driver_config (`driver_config["general"]["folder_output"]`)
     save_profast_config: True #optional, will save ProFAST the profast config to .yaml file in the folder specified in the driver_config (`driver_config["general"]["folder_output"]`)
@@ -40,7 +40,7 @@ If you are setting `save_profast_results` to `True` and are using multiple finan
 
 (profastcomp:outputs)=
 ## Output values and naming convention
-``ProFastComp`` outputs the following data following the naming convention detailed below:
+``ProFastLCO`` outputs the following data following the naming convention detailed below:
 - `LCO<x_and_descriptor>`: levelized cost of commodity in USD/commodity unit, e.g. `LCOH_produced` for hydrogen produced.
 - `wacc_<commodity_and_descriptor>`: weighted average cost of capital as a fraction.
 - `crf_<commodity_and_descriptor>`: capital recovery factor as a fraction.

@@ -8,7 +8,7 @@ sites:
 
     resources:
       river_resource:
-        resource_model: "river_resource"
+        resource_model: "RiverResource"
         resource_parameters:
           filename: "river_data.csv"
 
@@ -34,7 +34,7 @@ plant:
 finance_parameters:
   finance_groups:
     commodity: "electricity"
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

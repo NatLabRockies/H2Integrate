@@ -7,7 +7,7 @@ sites:
     longitude: -101.945027
     resources:
       wind_resource: #name of the resource model for the wind_site
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
           use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
@@ -16,7 +16,7 @@ sites:
     longitude: -102.75
     resources:
       solar_resource: #name of the resource model for the solar_site
-        resource_model: "goes_aggregated_solar_v4_api"
+        resource_model: "GOESAggregatedSolarAPI"
         resource_parameters:
           resource_year: 2012
           use_fixed_resource_location: False #set to False so the resource data is updated when the site location changes in the design sweep
@@ -43,7 +43,7 @@ plant:
 finance_parameters:
   finance_groups:
     optimistic:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032

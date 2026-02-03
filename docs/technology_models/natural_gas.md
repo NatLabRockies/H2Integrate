@@ -2,7 +2,7 @@
 
 The natural gas power plant model simulates electricity generation from natural gas combustion, suitable for both natural gas combustion turbines (NGCT) and natural gas combined cycle (NGCC) plants. The model calculates electricity output based on natural gas input and plant heat rate, along with comprehensive cost modeling that includes capital expenses, operating expenses, and fuel costs.
 
-To use this model, specify `"natural_gas_performance"` as the performance model and `"natural_gas_cost"` as the cost model.
+To use this model, specify `"NaturalGasPerformanceModel"` as the performance model and `"NaturalGasCostModel"` as the cost model.
 
 ## Performance Parameters
 

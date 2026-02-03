@@ -4,9 +4,9 @@ description: "This plant runs a wind farm using FLORIS"
 technologies:
   distributed_wind_plant:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: "FlorisWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 100 #number of turbines in the farm
@@ -33,9 +33,9 @@ technologies:
         cost_year: 2022
   utility_wind_plant:
     performance_model:
-      model: pysam_wind_plant_performance
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: atb_wind_cost
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 20
@@ -63,7 +63,7 @@ technologies:
         cost_year: 2022
   combiner:
     performance_model:
-      model: combiner_performance
+      model: GenericCombinerPerformanceModel
     model_inputs:
       performance_parameters:
         commodity: electricity
