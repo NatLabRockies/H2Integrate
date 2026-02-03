@@ -35,7 +35,7 @@ class DispatchProblemState:
         solver_problem_dict = {
             k.lower().replace(" ", "_"): v.value for k, v in solver_results.problem._list[0].items()
         }
-        # Simpify names of quantities of interest
+        # Simplify names of quantities of interest
         prob_to_attr_map = {
             "number_of_nonzeros": "non_zeros",
             "number_of_variables": "variables",
