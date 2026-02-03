@@ -1,0 +1,64 @@
+name: "technology_config"
+description: >
+  Technology configuration for multivariable streams example.
+  Demonstrates two gas producers feeding into a combiner, which then
+  feeds a consumer. The combiner uses mass-weighted averaging.
+
+technologies:
+  gas_producer_1:
+    performance_model:
+      model: "dummy_gas_producer_performance"
+    cost_model:
+      model: "dummy_gas_producer_cost"
+    model_inputs:
+      performance_parameters:
+        base_flow_rate: 150.0  # kg/hr
+        base_temperature: 310.0  # K
+        base_pressure: 12.0  # bar
+        flow_variation: 0.3  # ±30% variation
+        temp_variation: 15.0  # ±15 K variation
+        pressure_variation: 2.0  # ±2 bar variation
+        random_seed: 42  # for reproducibility
+      cost_parameters:
+        capex: 1000000.0  # $1M
+        opex: 50000.0  # $50k/year
+        cost_year: 2024
+
+  gas_producer_2:
+    performance_model:
+      model: "dummy_gas_producer_performance"
+    cost_model:
+      model: "dummy_gas_producer_cost"
+    model_inputs:
+      performance_parameters:
+        base_flow_rate: 100.0  # kg/hr - different flow rate
+        base_temperature: 350.0  # K - hotter stream
+        base_pressure: 8.0  # bar - lower pressure
+        flow_variation: 0.25  # ±25% variation
+        temp_variation: 20.0  # ±20 K variation
+        pressure_variation: 1.5  # ±1.5 bar variation
+        random_seed: 123  # different seed for different random pattern
+      cost_parameters:
+        capex: 800000.0  # $800k
+        opex: 40000.0  # $40k/year
+        cost_year: 2024
+
+  gas_combiner:
+    performance_model:
+      model: "gas_stream_combiner"
+    model_inputs:
+      performance_parameters:
+        stream_type: "wellhead_gas"
+        in_streams: 2
+
+  gas_consumer:
+    performance_model:
+      model: "dummy_gas_consumer_performance"
+    cost_model:
+      model: "dummy_gas_consumer_cost"
+    model_inputs:
+      performance_parameters: {}
+      cost_parameters:
+        capex: 2000000.0  # $2M
+        opex: 100000.0  # $100k/year
+        cost_year: 2024

@@ -54,6 +54,7 @@ from h2integrate.storage.hydrogen.h2_storage_cost import (
     SaltCavernStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
+from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopCostModel,
     AmmoniaSynLoopPerformanceModel,
@@ -90,6 +91,12 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
 )
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
+from h2integrate.converters.natural_gas.dummy_gas_components import (
+    DummyGasConsumerCost,
+    DummyGasProducerCost,
+    DummyGasConsumerPerformance,
+    DummyGasProducerPerformance,
+)
 from h2integrate.control.control_strategies.pyomo_controllers import (
     HeuristicLoadFollowingController,
 )
@@ -228,6 +235,7 @@ supported_models = {
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
     "combiner_performance": GenericCombinerPerformanceModel,
+    "gas_stream_combiner": GasStreamCombinerPerformanceModel,
     "splitter_performance": GenericSplitterPerformanceModel,
     "iron_transport_performance": IronTransportPerformanceComponent,
     "iron_transport_cost": IronTransportCostComponent,
@@ -258,37 +266,13 @@ supported_models = {
     # Grid
     "grid_performance": GridPerformanceModel,
     "grid_cost": GridCostModel,
+    # Dummy components for multivariable stream demonstrations
+    "dummy_gas_producer_performance": DummyGasProducerPerformance,
+    "dummy_gas_producer_cost": DummyGasProducerCost,
+    "dummy_gas_consumer_performance": DummyGasConsumerPerformance,
+    "dummy_gas_consumer_cost": DummyGasConsumerCost,
     # Finance
     "ProFastComp": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
 }
-
-
-def is_electricity_producer(tech_name: str) -> bool:
-    """Check if a technology is an electricity producer.
-
-    Args:
-        tech_name: The name of the technology to check.
-    Returns:
-        True if tech_name starts with any of the known electricity producing
-        tech prefixes (e.g., 'wind', 'solar', 'pv', 'grid_buy', etc.).
-    Note:
-        This uses prefix matching, so 'grid_buy_1' and 'grid_buy_2' would both
-        be considered electricity producers. Be careful when naming technologies
-        to avoid unintended matches (e.g., 'pv_battery' would be incorrectly
-        identified as an electricity producer).
-    """
-
-    # add any new electricity producing technologies to this list
-    electricity_producing_techs = [
-        "wind",
-        "solar",
-        "pv",
-        "river",
-        "hopp",
-        "natural_gas_plant",
-        "grid_buy",
-    ]
-
-    return any(tech_name.startswith(elem) for elem in electricity_producing_techs)

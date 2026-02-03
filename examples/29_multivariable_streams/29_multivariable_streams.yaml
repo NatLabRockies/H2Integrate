@@ -1,0 +1,12 @@
+name: "H2Integrate_config"
+
+system_summary: >
+  This example demonstrates the multivariable streams feature in H2Integrate.
+  Multivariable streams allow users to connect multiple related variables with
+  a single connection specification. In this example, we connect a wellhead_gas
+  stream (containing gas_flow, hydrogen_fraction, oxygen_fraction, gas_temperature,
+  and gas_pressure) between a dummy gas producer and consumer.
+
+driver_config: "driver_config.yaml"
+technology_config: "tech_config.yaml"
+plant_config: "plant_config.yaml"
