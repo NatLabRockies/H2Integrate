@@ -11,7 +11,6 @@ sites:
         resource_model: "openmeteo_solar_api"
         resource_parameters:
           resource_year: 2023
-          resource_dir: "h2i_inputs/weather/solar/"
           resource_filename: "56.22732285_8.594398_2023_openmeteo_archive_solar_60min_utc_tz.csv"
 
 

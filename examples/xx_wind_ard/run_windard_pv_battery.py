@@ -19,10 +19,10 @@ if show_visualizations:
     # get the Ard sub-problem
     ard_prob = h2i_model.prob.model.plant.wind.wind.ard_sub_prob._subprob
 
-    # create N2 diagram of the H2I
+    # create an N2 diagram of the H2I problem
     om.n2(h2i_model.prob)
 
-    # create N2 diagram of the Ard sub-problem
+    # create an N2 diagram of the Ard sub-problem
     om.n2(ard_prob)
 
     # visualize the wind farm layout
