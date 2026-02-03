@@ -53,6 +53,10 @@ finance_parameters:
       commodity: "iron_ore"
       commodity_stream: "iron_mine"
       technologies: ["iron_mine", "grid_feedstock", "mine_feedstock"]
+    iron_ore_delivered:
+      commodity: "iron_ore"
+      commodity_stream: "iron_mine"
+      technologies: ["iron_mine", "grid_feedstock", "mine_feedstock", "iron_transport"]
     sponge_iron:
       commodity: "sponge_iron"
       commodity_stream: "iron_plant"

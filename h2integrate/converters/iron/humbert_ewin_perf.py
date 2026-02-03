@@ -80,22 +80,21 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = HumbertEwinConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            strict=False,
+            strict=True,
         )
 
-        ewin_type = self.config.electrolysis_type
         # Look up performance parameters for each electrolysis type from Humbert Table 10
-        if ewin_type == "ahe":
+        if self.config.electrolysis_type == "ahe":
             E_all_lo = 2.781
             E_all_hi = 3.779
             E_electrolysis_lo = 1.869
             E_electrolysis_hi = 2.72
-        elif ewin_type == "mse":
+        elif self.config.electrolysis_type == "mse":
             E_all_lo = 2.720
             E_all_hi = 3.138
             E_electrolysis_lo = 1.81
             E_electrolysis_hi = 2.08
-        elif ewin_type == "moe":
+        elif self.config.electrolysis_type == "moe":
             E_all_lo = 2.89
             E_all_hi = 4.45
             E_electrolysis_lo = 2.89
@@ -124,18 +123,16 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
     def compute(self, inputs, outputs):
-        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         # Parse inputs
         elec_in = inputs["electricity_in"]
         ore_in = inputs["iron_ore_in"]
-        pct_fe = inputs["ore_fe_concentration"]
+        pct_fe = inputs["ore_fe_concentration"] / 100  # convert to decimal
         kwh_kg_fe = inputs["spec_energy_all"]
         kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]
         cap_kw = inputs["capacity"] * 1000
 
         # Calculate max iron production for each input
-        fe_from_ore = ore_in * pct_fe / 100
+        fe_from_ore = ore_in * pct_fe
         fe_from_elec = elec_in / kwh_kg_fe
 
         # Limit iron production per hour by each input
