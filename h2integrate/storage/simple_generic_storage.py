@@ -15,13 +15,7 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
     Simple generic storage model.
     """
 
-    # def initialize(self):
-    #     self.options.declare("tech_config", types=dict)
-    #     self.options.declare("plant_config", types=dict)
-    #     self.options.declare("driver_config", types=dict)
-
     def setup(self):
-        # n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleGenericStorageConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,

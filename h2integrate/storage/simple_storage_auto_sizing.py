@@ -44,11 +44,6 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             - Units: Defined in `commodity_units` (e.g., "kg/h").
     """
 
-    # def initialize(self):
-    #     self.options.declare("driver_config", types=dict)
-    #     self.options.declare("plant_config", types=dict)
-    #     self.options.declare("tech_config", types=dict)
-
     def setup(self):
         self.config = StorageSizingModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
