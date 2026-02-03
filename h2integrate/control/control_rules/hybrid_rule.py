@@ -204,7 +204,7 @@ class PyomoDispatchPlantRule:
 
     @property
     def storage_commodity_out(self) -> list:
-        # THIS IS USED
+        # This is used in the storage_dispatch_commands method of the control strategy
         """Storage commodity out."""
         return [
             self.blocks[t].discharge_commodity.value - self.blocks[t].charge_commodity.value
