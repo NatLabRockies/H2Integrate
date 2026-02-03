@@ -4,9 +4,9 @@ description: "This plant produces hydrogen using water electrolysis powered by a
 technologies:
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_utility_pv_cost"
+      model: "ATBUtilityPVCostModel"
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 400000
@@ -31,9 +31,9 @@ technologies:
         cost_year: 2022
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "custom_electrolyzer_cost"
+      model: "CustomElectrolyzerCostModel"
     model_inputs:
       performance_parameters:
         size_mode: "normal"

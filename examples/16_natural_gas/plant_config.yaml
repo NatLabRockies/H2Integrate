@@ -8,7 +8,7 @@ sites:
 
     resources:
       solar_resource:
-        resource_model: "goes_aggregated_solar_v4_api"
+        resource_model: "GOESAggregatedSolarAPI"
         resource_parameters:
           resource_year: 2013
           resource_dir: "../11_hybrid_energy_plant/tech_inputs/weather/solar"
@@ -41,7 +41,7 @@ finance_parameters:
   finance_groups:
     profast_model:
       commodity: "electricity"
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032

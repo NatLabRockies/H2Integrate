@@ -7,12 +7,12 @@ sites:
     longitude: -92.5366
     resources:
       wind_resource:
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2013
 
       solar_resource:
-        resource_model: "goes_aggregated_solar_v4_api"
+        resource_model: "GOESAggregatedSolarAPI"
         resource_parameters:
           resource_year: 2013
           resource_filename: "47.5_-93.0_psmv3_60_2013.csv"
@@ -48,7 +48,7 @@ plant:
 finance_parameters:
   finance_groups:
     profast_model:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs:
         params:
           analysis_start_year: 2032

@@ -35,7 +35,7 @@ class GenericStorageCostConfig(CostModelBaseConfig):
     max_charge_rate: float = field()
     commodity_units: str = field(
         validator=contains(["W", "kW", "MW", "GW", "TW", "g/h", "kg/h", "t/h", "MMBtu/h"])
-    )
+    )  # TODO: udpate to commodity_rate_units
 
 
 class GenericStorageCostModel(CostModelBaseClass):

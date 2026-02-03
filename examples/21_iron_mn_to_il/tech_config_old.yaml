@@ -4,9 +4,9 @@ description: "This hybrid plant produces iron"
 technologies:
   iron_mine:
     performance_model:
-      model: "iron_mine_performance"
+      model: "IronMinePerformanceComponent"
     cost_model:
-      model: "iron_mine_cost"
+      model: "IronMineCostComponent"
     model_inputs:
       shared_parameters:
         mine: "Northshore"
@@ -31,9 +31,9 @@ technologies:
           debt interest rate: 0.050049
   iron_transport:
     performance_model:
-      model: "iron_transport_performance"
+      model: "IronTransportPerformanceComponent"
     cost_model:
-      model: "iron_transport_cost"
+      model: "IronTransportCostComponent"
     model_inputs:
       performance_parameters:
         find_closest_ship_site: False
@@ -43,9 +43,9 @@ technologies:
         cost_year: 2022
   iron_plant:
     performance_model:
-      model: "iron_plant_performance"
+      model: "IronPlantPerformanceComponent"
     cost_model:
-      model: "iron_plant_cost"
+      model: "IronPlantCostComponent"
     model_inputs:
       shared_parameters:
         winning_type: "ng"

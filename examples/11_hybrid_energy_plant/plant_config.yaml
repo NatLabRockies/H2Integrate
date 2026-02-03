@@ -12,7 +12,7 @@ plant:
 finance_parameters:
   finance_groups:
     commodity: "electricity"
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

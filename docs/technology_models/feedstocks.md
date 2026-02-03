@@ -10,12 +10,12 @@ Please see the example `16_natural_gas` in the `examples` directory for a comple
 
 Each feedstock type requires two model components:
 
-1. **Performance Model** (`feedstock_performance`):
+1. **Performance Model** (`FeedstockPerformanceModel`):
    - Generates the feedstock supply profile
    - Outputs `{feedstock_type}_out` variable
    - Located at the beginning of the technology chain
 
-2. **Cost Model** (`feedstock_cost`):
+2. **Cost Model** (`FeedstockCostModel`):
    - Calculates consumption costs based on actual usage
    - Takes `{feedstock_type}_consumed` as input
    - Located after all consuming technologies in the chain
@@ -43,9 +43,9 @@ To use the feedstock performance and cost models, add an entry to your `tech_con
 ```yaml
 ng_feedstock:
     performance_model:
-        model: "feedstock_performance"
+        model: "FeedstockPerformanceModel"
     cost_model:
-        model: "feedstock_cost"
+        model: "FeedstockCostModel"
     model_inputs:
         shared_parameters:
         feedstock_type: "natural_gas"
