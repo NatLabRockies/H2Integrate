@@ -1144,7 +1144,7 @@ def test_simple_dispatch_example(subtests):
 
 def test_windard_pv_battery_dispatch_example(subtests):
     # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "xx_wind_ard")
+    os.chdir(EXAMPLE_DIR / "29_wind_ard")
 
     # Create the model
     model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")

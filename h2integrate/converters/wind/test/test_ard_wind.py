@@ -12,7 +12,7 @@ from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 
 @fixture
 def ard_config():
-    wind_io_path = EXAMPLE_DIR / "xx_wind_ard" / "ard_inputs" / "windio.yaml"
+    wind_io_path = EXAMPLE_DIR / "29_wind_ard" / "ard_inputs" / "windio.yaml"
     wind_io_dict = load_yaml(wind_io_path)
     ard_tech_dict = {
         "performance_parameters": {
@@ -99,7 +99,7 @@ def plant_config():
 
 
 def test_ard_wind_combined(plant_config, ard_config, subtests):
-    os.chdir(EXAMPLE_DIR / "xx_wind_ard" / "ard_inputs")
+    os.chdir(EXAMPLE_DIR / "29_wind_ard" / "ard_inputs")
 
     tech_config_dict = {
         "model_inputs": ard_config,
