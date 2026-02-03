@@ -3,10 +3,14 @@ from attrs import field, define
 from ard.api import set_up_ard_model
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
-class WindArdCostComponent(CostModelBaseClass):
+class WindArdCostCompatibilityComponent(CostModelBaseClass):
     """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
 
     We could almost use the CostModelBaseClass directly, but its setup method
@@ -36,6 +40,24 @@ class WindPlantArdModelConfig(BaseConfig):
 
     ard_system: dict = field()
     ard_data_path: str = field()
+
+
+class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
+    """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
+
+    We could almost use the CostModelBaseClass directly, but its setup method
+    requires a self.config attribute to be defined, so we create this minimal subclass.
+    """
+
+    def setup(self):
+        self.config = WindPlantArdModelConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+        )
+
+        super().setup()
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        pass
 
 
 class ArdWindPlantModel(om.Group):
@@ -75,8 +97,20 @@ class ArdWindPlantModel(om.Group):
 
         # add pass-through cost model to include cost_year as expected by H2Integrate
         self.add_subsystem(
-            "wind_ard_cost",
-            WindArdCostComponent(
+            "wind_ard_cost_compatibility",
+            WindArdCostCompatibilityComponent(
+                driver_config=self.options["driver_config"],
+                plant_config=self.options["plant_config"],
+                tech_config=self.options["tech_config"],
+            ),
+            promotes=["cost_year", "VarOpEx"],
+        )
+
+        # add pass-through performance model to include inputs and
+        # outputs as expected by H2Integrate
+        self.add_subsystem(
+            "wind_ard_performance_compatibility",
+            WindArdPerformanceCompatibilityComponent(
                 driver_config=self.options["driver_config"],
                 plant_config=self.options["plant_config"],
                 tech_config=self.options["tech_config"],

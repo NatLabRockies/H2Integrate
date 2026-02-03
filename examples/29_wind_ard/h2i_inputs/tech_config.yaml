@@ -4,9 +4,9 @@ description: "This plant is located in Denmark. The plant combines wind and sola
 technologies:
   wind:
     performance_model:
-      model: "ard_wind_plant_combined"
+      model: "ArdWindPlantModel"
     cost_model:
-      model: "ard_wind_plant_combined"
+      model: "ArdWindPlantModel"
     model_inputs:
       performance_parameters:
         ard_data_path: "./"
@@ -61,9 +61,9 @@ technologies:
         cost_year: 2024
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_utility_pv_cost"
+      model: "ATBUtilityPVCostModel"
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 50000 # 50 MW
@@ -89,16 +89,16 @@ technologies:
         cost_year: 2024
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: electricity
         commodity_units: kW
   battery:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     control_strategy:
       model: "demand_open_loop_storage_controller"
     model_inputs:
