@@ -37,6 +37,7 @@
   enforced by a newly added test to ensure adherence.
 - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
 - Added `PerformanceModelBaseClass` and standardized outputs of converter performance models
+- Updated storage control strategies to output `commodity_set_point` and generic storage performance models to output `commodity_out` and input `commodity_set_point`.
 
 ## 0.5.1 [December 18, 2025]
 
