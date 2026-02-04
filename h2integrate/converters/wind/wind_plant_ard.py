@@ -32,14 +32,17 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     H2Integrate.
     """
 
+    def initialize(self):
+        super().initialize()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
+
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
-        self.commodity = "electricity"
-        self.commodity_rate_units = "kW"
-        self.commodity_amount_units = "kW*h"
         super().setup()
 
         self.hours_per_year = 8760
