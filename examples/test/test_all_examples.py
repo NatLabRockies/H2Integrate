@@ -1,4 +1,6 @@
+import io
 import os
+import builtins
 import importlib
 from pathlib import Path
 
@@ -8,6 +10,51 @@ import openmdao.api as om
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
+
+
+ROOT = Path(__file__).parents[1]
+print(f"{ROOT=}")
+
+
+def patch_open(open_func, files):
+    def open_patched(
+        path,
+        mode="r",
+        buffering=-1,
+        encoding=None,
+        errors=None,
+        newline=None,
+        closefd=True,
+        opener=None,
+    ):
+        if "w" in mode and not Path(path).is_file():
+            files.append(path)
+        return open_func(
+            path,
+            mode=mode,
+            buffering=buffering,
+            encoding=encoding,
+            errors=errors,
+            newline=newline,
+            closefd=closefd,
+            opener=opener,
+        )
+
+    return open_patched
+
+
+@pytest.fixture(autouse=True)
+def cleanup_files(monkeypatch):
+    files = []
+    monkeypatch.setattr(builtins, "open", patch_open(builtins.open, files))
+    monkeypatch.setattr(io, "open", patch_open(io.open, files))
+    yield
+    for f in files:
+        if (f := Path(f)).is_relative_to(ROOT):
+            try:
+                f.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def test_steel_example(subtests):
