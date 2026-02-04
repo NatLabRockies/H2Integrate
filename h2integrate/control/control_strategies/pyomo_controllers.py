@@ -810,8 +810,8 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
     commodity_met_value: float = field(default=None)
-    time_weighting_factor: float = 0.995
-    round_digits: int = 4
+    time_weighting_factor: float = field(default=0.995)
+    round_digits: int = field(default=4)
 
     def make_dispatch_inputs(self):
         dispatch_keys = [
