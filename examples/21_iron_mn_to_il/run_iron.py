@@ -1,3 +1,16 @@
+"""Example of an iron mine sending processed ore pellets to a separate DRI iron plant and EAF
+
+In this example, iron ore pellets are produced at different iron mine locations in NE Minnesota.
+These mines send processed ore pellets to a separate iron DRI plant located outside Chicago.
+Four different cases are generated for four different iron mine setups in the `test_inputs.csv`.
+The first two cases generate standard blast furnace gradepellets at two different mine locations.
+The second two cases generate DR grade pellets at the same location, with the output capacity
+varied to show how the capacity of the mine does not affect the levelized cost of iron_ore pellets
+(LCOI), nor does it affect the final cost of the pig_iron produced by DRI (LCOP) or the cost of the
+steel produced by the EAF (LCOS).
+
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -22,24 +35,28 @@ casenames = [
     "DR Grade Iron - Northshore (adjusted)",
 ]
 
+# Create empty lists to store the costs
 lcois_ore = []
 capexes_ore = []
 fopexes_ore = []
 vopexes_ore = []
+production_ore = []
 lcois_iron = []
 capexes_iron = []
 fopexes_iron = []
 vopexes_iron = []
+production_ore = []
 lcois_steel = []
 capexes_steel = []
 fopexes_steel = []
 vopexes_steel = []
 
+model.run()
+model.post_process()
 
 for casename in casenames:
     model = modify_tech_config(model, cases[casename])
     model.run()
-    model.post_process()
     lcois_ore.append(float(model.model.get_val("finance_subgroup_iron_ore.price_iron_ore")[0]))
     capexes_ore.append(
         float(model.model.get_val("finance_subgroup_iron_ore.total_capex_adjusted")[0])

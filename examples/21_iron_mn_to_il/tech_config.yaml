@@ -12,7 +12,7 @@ technologies:
         feedstock_type: "electricity"
         units: "MW"
       performance_parameters:
-        rated_capacity: 70. # MW, need 27.913 MW per timestep for iron ore
+        rated_capacity: 30. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
         cost_year: 2022
         price: 0. # Electricity costs are already priced in to current mine model
@@ -29,7 +29,7 @@ technologies:
         feedstock_type: "crude_ore"
         units: "t/h"
       performance_parameters:
-        rated_capacity: 2500. # need 828.50385048 t/h
+        rated_capacity: 2000. # need 828.50385048 t/h
       cost_parameters:
         cost_year: 2022
         price: 0. #USD/t
@@ -45,13 +45,13 @@ technologies:
       shared_parameters:
         mine: "Northshore"
         taconite_pellet_type: "drg"
-        max_ore_production_rate_tonnes_per_hr: 500
+        max_ore_production_rate_tonnes_per_hr: 221.2592636
 
   processed_ore_feedstock: #iron ore feedstock
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "iron_ore"
@@ -200,8 +200,6 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "natural_gas"
-        units: "MMBtu"
         feedstock_type: "natural_gas"
         units: "MMBtu"
       performance_parameters:
