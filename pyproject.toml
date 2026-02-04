@@ -131,6 +131,18 @@ omit = [
   "*test/*"
 ]
 
+[tool.pytest]
+addopts = [
+  "-r fEsxX",
+  "--cov=h2integrate",
+  "--cov-report=html",
+  "--cov-report=term-missing:skip-covered",
+  "--no-cov-on-fail"
+]
+tmp_path_retention_count = "1"
+tmp_path_retention_policy = "failed"
+cache_dir = ".cache"
+
 [tool.isort]
 src_paths = ["h2integrate", "test"]
 skip = ["__init__.py"]
