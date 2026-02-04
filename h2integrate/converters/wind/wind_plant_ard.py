@@ -70,7 +70,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         # convert for time step length and simulation length
         # to get an estimate of the annual energy production regardless
         # of the length of the simulation
-        aep = ard_electricity_series.sum() * (self.fraction_of_year_simulated)
+        aep = ard_electricity_series.sum() / (self.fraction_of_year_simulated)
 
         outputs["electricity_out"] = ard_electricity_series
         outputs["total_electricity_produced"] = ard_electricity_series.sum()
