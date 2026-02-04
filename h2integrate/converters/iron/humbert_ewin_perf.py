@@ -17,11 +17,11 @@ Classes:
 """
 
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define
@@ -45,7 +45,7 @@ class HumbertEwinConfig(BaseConfig):
     capacity_mw: float = field(kw_only=True)
 
 
-class HumbertEwinPerformanceComponent(om.ExplicitComponent):
+class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
     """OpenMDAO component for the Humbert iron electrowinning performance model.
 
     Attributes:
@@ -72,16 +72,18 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        self.commodity = "sponge_iron"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
+        super().initialize()
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = HumbertEwinConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
         )
+
+        super().setup()
 
         # Look up performance parameters for each electrolysis type from Humbert Table 10
         if self.config.electrolysis_type == "ahe":
@@ -102,8 +104,8 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         E_all = (E_all_lo + E_all_hi) / 2  # kWh/kg_Fe
         E_electrolysis = (E_electrolysis_lo + E_electrolysis_hi) / 2  # kWh/kg_Fe
 
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
-        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
+        self.add_input("iron_ore_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("ore_fe_concentration", val=self.config.ore_fe_wt_pct, units="percent")
         self.add_input("spec_energy_all", val=E_all, units="kW*h/kg")
         self.add_input("spec_energy_electrolysis", val=E_electrolysis, units="kW*h/kg")
@@ -112,14 +114,11 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         self.add_output(
             "electricity_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity consumed",
         )
-        self.add_output("limiting_input", val=0.0, shape=n_timesteps, units=None)
-        self.add_output("sponge_iron_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("total_sponge_iron_produced", val=0.0, units="kg/year")
-        self.add_output("output_capacity", val=0.0, units="kg/year")
+        self.add_output("limiting_input", val=0.0, shape=self.n_timesteps, units=None)
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
     def compute(self, inputs, outputs):
@@ -161,5 +160,11 @@ class HumbertEwinPerformanceComponent(om.ExplicitComponent):
         outputs["sponge_iron_out"] = fe_prod
         outputs["electricity_consumed"] = elec_consume
         outputs["total_sponge_iron_produced"] = np.sum(fe_prod)
-        outputs["output_capacity"] = cap_kw / kwh_kg_fe * 8760
+        outputs["rated_sponge_iron_production"] = cap_kw / kwh_kg_fe
+        outputs["annual_sponge_iron_produced"] = outputs["total_sponge_iron_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["capacity_factor"] = outputs["total_sponge_iron_produced"] / (
+            outputs["rated_sponge_iron_production"] * self.n_timesteps
+        )
         outputs["specific_energy_electrolysis"] = kwh_kg_electrolysis

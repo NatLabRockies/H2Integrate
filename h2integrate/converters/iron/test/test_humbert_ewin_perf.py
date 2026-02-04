@@ -84,8 +84,9 @@ def setup_and_run(plant_config, tech_config, feedstocks_dict):
     prob.run_model()
 
     elec_consumed = prob.get_val("perf.electricity_consumed", units="kW")
-    iron_out = prob.get_val("perf.total_sponge_iron_produced", units="kg/year")
-    iron_cap = prob.get_val("perf.output_capacity", units="kg/year")
+    iron_out = prob.get_val("perf.total_sponge_iron_produced", units="kg")
+    iron_cap = prob.get_val("perf.rated_sponge_iron_production", units="kg/h") * 8760
+    # prob.get_val("perf.output_capacity", units="kg/year")
 
     return elec_consumed, iron_out, iron_cap
 

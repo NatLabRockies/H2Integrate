@@ -114,7 +114,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = HumbertStinnEwinCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=True,
@@ -183,12 +183,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             anode_replace_int = 3  # Replacement interval of anodes (years)
 
         # Set up connected inputs
-        self.add_input("output_capacity", val=0.0, units="Mg/year")  # Mg = tonnes
-        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("iron_transport_cost", val=0.0, units="USD/t")
-        self.add_input("price_iron_ore", val=0.0, units="USD/Mg")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
-        self.add_input("price_electricity", val=0.0, units="USD/kW/h")
+        self.add_input("rated_sponge_iron_production", val=0.0, units="t/h")
         self.add_input("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
         # Set inputs for Stinn Capex model
@@ -232,7 +227,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         V = inputs["cell_voltage"]
         N = inputs["rectifier_lines"]
         E_spec = inputs["specific_energy_electrolysis"]
-        P = inputs["output_capacity"]
+        P = inputs["rated_sponge_iron_production"] * 8760
         p = P * 1000 / 8760 / 3600  # kg/s
 
         # Calculate total power
@@ -284,14 +279,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         limestone_ratio = inputs["limestone_ratio"]
         anode_ratio = inputs["anode_ratio"]
         anode_interval = inputs["anode_replacement_interval"]
-        ore_in = inputs["iron_ore_in"]
-        ore_price = inputs["price_iron_ore"]
-        ore_transport_cost = inputs["iron_transport_cost"]
-        elec_in = inputs["electricity_in"]
-        elec_price = inputs["price_electricity"]
-
-        # Add ore transport cost TODO: turn iron_transport into proper transporter
-        ore_price += ore_transport_cost
 
         # Humbert Opex model - from SI spreadsheet (doi.org/10.1007/s40831-024-00878-3)
         # Default costs - adjusted to 2018 to match Stinn via CPI
@@ -308,20 +295,12 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         CaCl2_opex = CaCl2_ratio * P * CaCl2_cost  # CaCl2 VarOpEx USD/year
         limestone_opex = limestone_ratio * P * limestone_cost  # Limestone VarOpEx USD/year
         anode_opex = anode_ratio * P * anode_cost / anode_interval  # Anode VarOpEx USD/year
-        ore_opex = np.sum(ore_in * ore_price, keepdims=True)  # Ore VarOpEx USD/year
-        elec_opex = np.sum(elec_in * elec_price, keepdims=True)  # Electricity VarOpEx USD/year
 
         # Opex outputs
-        outputs["OpEx"] = (
-            labor_opex + NaOH_opex + CaCl2_opex + limestone_opex + anode_opex + ore_opex + elec_opex
-        )
-        outputs["VarOpEx"] = (
-            NaOH_opex + CaCl2_opex + limestone_opex + anode_opex + ore_opex + elec_opex
-        )
+        outputs["OpEx"] = labor_opex
+        outputs["VarOpEx"] = NaOH_opex + CaCl2_opex + limestone_opex + anode_opex
         outputs["labor_opex"] = labor_opex
         outputs["NaOH_opex"] = NaOH_opex
         outputs["CaCl2_opex"] = CaCl2_opex
         outputs["limestone_opex"] = limestone_opex
         outputs["anode_opex"] = anode_opex
-        outputs["ore_opex"] = ore_opex
-        outputs["elec_opex"] = elec_opex
