@@ -409,7 +409,12 @@ class H2IntegrateModel:
         self.cost_models = []
         self.finance_models = []
 
-        combined_performance_and_cost_models = ["hopp", "h2_storage", "wombat", "iron"]
+        combined_performance_and_cost_models = [
+            "HOPPComponent",
+            "h2_storage",
+            "WOMBATElectrolyzerModel",
+            "IronComponent",
+        ]
 
         if any(tech == "site" for tech in self.technology_config["technologies"]):
             msg = (
@@ -433,7 +438,7 @@ class H2IntegrateModel:
                             f"the top-level name of the tech group ({tech_name})"
                         )
 
-            if perf_model is not None and "feedstock" in perf_model:
+            if perf_model == "FeedstockPerformanceModel":
                 comp = self.supported_models[perf_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -522,7 +527,7 @@ class H2IntegrateModel:
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             cost_model = individual_tech_config.get("cost_model", {}).get("model")
-            if cost_model is not None and "feedstock" in cost_model:
+            if cost_model == "FeedstockCostModel":
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -605,7 +610,7 @@ class H2IntegrateModel:
 
             >>> self.plant_config["finance_parameters"]["finance_group"] = {
             ...     "commodity": "hydrogen",
-            ...     "finance_model": "ProFastComp",
+            ...     "finance_model": "ProFastLCO",
             ...     "model_inputs": {"discount_rate": 0.08},
             ... }
             >>> self.create_finance_model()
@@ -734,7 +739,7 @@ class H2IntegrateModel:
             # to sum the commodity production profile from the commodity stream
             if commodity_stream is not None:
                 # get the generic summer model
-                commodity_summer_model = self.supported_models.get("summer")
+                commodity_summer_model = self.supported_models.get("GenericSummerPerformanceModel")
                 if "combiner" in commodity_stream or "splitter" in commodity_stream:
                     # combiners and splitters have the same tech config as the production summer,
                     # so just use their config if the commodity stream is a combiner or splitter
@@ -763,7 +768,8 @@ class H2IntegrateModel:
 
             if commodity_stream is None and commodity == "electricity":
                 finance_subgroup.add_subsystem(
-                    "electricity_sum", ElectricitySumComp(tech_configs=tech_configs)
+                    "electricity_sum",
+                    ElectricitySumComp(plant_config=self.plant_config, tech_configs=tech_configs),
                 )
 
             # Add adjusted capex/opex
@@ -899,13 +905,13 @@ class H2IntegrateModel:
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
-                if cost_model_name is not None and "feedstock" in cost_model_name:
+                if cost_model_name == "FeedstockCostModel":
                     self.plant.connect(
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
                     )
 
-                if perf_model_name is not None and "feedstock" in perf_model_name:
+                if perf_model_name == "FeedstockPerformanceModel":
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object
@@ -1055,7 +1061,6 @@ class H2IntegrateModel:
                 tech_configs = group_configs.get("tech_configs")
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
-
                 if commodity_stream is not None:
                     # connect commodity stream output to summer input
                     self.plant.connect(
@@ -1126,20 +1131,20 @@ class H2IntegrateModel:
                         if "electrolyzer" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "geoh2" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "ammonia" in tech_name and primary_commodity_type == "ammonia":
                             self.plant.connect(
-                                f"{tech_name}.total_ammonia_produced",
+                                f"{tech_name}.annual_ammonia_produced",
                                 f"finance_subgroup_{group_id}.total_ammonia_produced",
                             )
 
@@ -1153,13 +1158,13 @@ class H2IntegrateModel:
 
                     if "methanol" in tech_name and primary_commodity_type == "methanol":
                         self.plant.connect(
-                            f"{tech_name}.total_methanol_produced",
+                            f"{tech_name}.annual_methanol_produced",
                             f"finance_subgroup_{group_id}.total_methanol_produced",
                         )
 
                     if "air_separator" in tech_name and primary_commodity_type == "nitrogen":
                         self.plant.connect(
-                            f"{tech_name}.total_nitrogen_produced",
+                            f"{tech_name}.annual_nitrogen_produced",
                             f"finance_subgroup_{group_id}.total_nitrogen_produced",
                         )
 

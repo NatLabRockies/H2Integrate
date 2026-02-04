@@ -8,7 +8,7 @@ sites:
 
     resources:
       wind_resource:
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 

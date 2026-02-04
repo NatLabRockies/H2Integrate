@@ -41,6 +41,7 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         if self.config.commodity == "electricity":
             # NOTE: this should be updated in overhaul required for flexible dt
@@ -57,9 +58,19 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
         )
 
         if self.config.operation_mode == "consumption":
-            self.add_output(f"total_{self.config.commodity}_consumed", val=0.0, units=summed_units)
+            self.add_output(
+                f"total_{self.config.commodity}_consumed",
+                val=0.0,
+                shape=plant_life,
+                units=summed_units,
+            )
         else:  # production mode (default)
-            self.add_output(f"total_{self.config.commodity}_produced", val=0.0, units=summed_units)
+            self.add_output(
+                f"total_{self.config.commodity}_produced",
+                val=0.0,
+                shape=plant_life,
+                units=summed_units,
+            )
 
     def compute(self, inputs, outputs):
         if self.config.operation_mode == "consumption":

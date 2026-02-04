@@ -7,15 +7,16 @@ sites:
     longitude: -95.19757
     resources:
       wind_resource: #name of the resource model for this site
-        resource_model: "openmeteo_wind_api"
+        resource_model: "OpenMeteoHistoricalWindResource"
         resource_parameters:
           resource_year: 2023
+          timezone: -6
   utility_wind_site: #name of the site for the utility_wind_plant technology
     latitude: 35.2018863
     longitude: -101.945027
     resources:
       wind_resource: #name of the resource model for this site
-        resource_model: "wind_toolkit_v2_api"
+        resource_model: "WTKNRELDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 
@@ -38,7 +39,7 @@ plant:
     dt: 3600
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

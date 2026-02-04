@@ -2,19 +2,18 @@
 # Solar Resource: Model Overview
 
 - [GOES PSM v4 API](solar_resource:goes_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "goes_aggregated_solar_v4_api"
-    - "goes_conus_solar_v4_api"
-    - "goes_fulldisc_solar_v4_api"
-    - "goes_tmy_solar_v4_api"
+    - "GOESAggregatedSolarAPI"
+    - "GOESConusSolarAPI"
+    - "GOESFullDiscSolarAPI"
+    - "GOESTMYSolarAPI"
 - [Himawari PSM v4 API](solar_resource:himawari_v3_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "himawari7_solar_v3_api"
-    - "himawari8_solar_v3_api"
-    - "himawari_tmy_solar_v3_api"
+    - "Himawari7SolarAPI"
+    - "Himawari8SolarAPI"
+    - "HimawariTMYSolarAPI"
 - [Meteosat Prime Meridian PSM v4 API](solar_resource:msg_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "meteosat_solar_v4_api"
-    - "meteosat_tmy_solar_v4_api"
-- [OpenMeteo Historical Weather API](solar_resource:openmeteo_historical): this model does not require an NREL API key, the available model is:
-    - "openmeteo_solar_api"
+    - "MeteosatPrimeMeridianSolarAPI"
+    - "MeteosatPrimeMeridianTMYSolarAPI"
+
 
 ```{note}
 Please refer to the [`Setting Environment Variables`](environment_variables:setting-environment-variables) doc page for information on setting up an NREL API key if you haven't yet.
@@ -25,10 +24,12 @@ Please refer to the [`Setting Environment Variables`](environment_variables:sett
 
 Solar resource models may output solar resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a solar resource model.
 
-- [Solar Resource Data](#primary-data-solar-resource-timeseries)
-- [Site Information](#additional-data-site-information)
-- [Data Source Information](#additional-data-data-source)
-- [Time Profile Information](#additional-data-time-profile)
+- [Solar Resource: Model Overview](#solar-resource-model-overview)
+- [Solar Resource: Output Data](#solar-resource-output-data)
+  - [Primary Data: Solar Resource Timeseries](#primary-data-solar-resource-timeseries)
+  - [Additional Data: Site Information](#additional-data-site-information)
+  - [Additional Data: Data source](#additional-data-data-source)
+  - [Additional Data: Time profile](#additional-data-time-profile)
 
 
 ```{note}

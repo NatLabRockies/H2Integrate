@@ -1,8 +1,8 @@
 (wind_resource:models)=
 # Wind Resource: Model Overview
 
-- [**"wind_toolkit_v2_api"**](wind_resource:wtk_v2_api): this requires an API key for the NREL developer network
-- [**"openmeteo_wind_api"**](wind_resource:openmeteo_archive)
+- [**"WTKNRELDeveloperAPIWindResource"**](wind_resource:wtk_v2_api): this requires an API key for the NREL developer network
+- [**"OpenMeteoHistoricalWindResource"**](wind_resource:openmeteo_archive)
 
 
 ```{note}

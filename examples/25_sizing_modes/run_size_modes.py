@@ -82,10 +82,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -112,10 +112,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -153,10 +153,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -198,10 +198,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:

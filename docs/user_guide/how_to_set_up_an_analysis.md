@@ -142,9 +142,9 @@ h2i_model.run()
 
 # h2i_model.post_process()
 
-# Print the total hydrogen produced by the electrolyzer in kg/year
-total_hydrogen = h2i_model.model.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0]
-print(f"Total hydrogen produced by the electrolyzer: {total_hydrogen:.2f} kg/year")
+# Print the average annual hydrogen produced by the electrolyzer in kg/year
+annual_hydrogen = h2i_model.model.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year").mean()
+print(f"Total hydrogen produced by the electrolyzer: {annual_hydrogen:.2f} kg/year")
 ```
 
 This will run the analysis defined in the config files and generate the output files in the through the `post_process` method.
@@ -169,9 +169,9 @@ h2i_model.run()
 # Post-process the results
 # h2i_model.post_process()
 
-# Print the total hydrogen produced by the electrolyzer in kg/year
-total_hydrogen = h2i_model.model.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0]
-print(f"Total hydrogen produced by the electrolyzer: {total_hydrogen:.2f} kg/year")
+# Print the average annual hydrogen produced by the electrolyzer in kg/year
+annual_hydrogen = h2i_model.model.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year").mean()
+print(f"Total hydrogen produced by the electrolyzer: {annual_hydrogen:.2f} kg/year")
 ```
 
 This is especially useful when you want to run an H2I model as a script and modify parameters dynamically without changing the original YAML configuration file.

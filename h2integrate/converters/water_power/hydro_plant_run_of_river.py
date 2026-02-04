@@ -2,8 +2,11 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
-from h2integrate.converters.water_power.hydro_plant_baseclass import HydroPerformanceBaseClass
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define(kw_only=True)
@@ -27,7 +30,7 @@ class RunOfRiverHydroPerformanceConfig(BaseConfig):
     head: float = field()
 
 
-class RunOfRiverHydroPerformanceModel(HydroPerformanceBaseClass):
+class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a run-of-river hydropower plant.
     Computes annual electricity production based on water flow rate and turbine efficiency.
@@ -35,6 +38,9 @@ class RunOfRiverHydroPerformanceModel(HydroPerformanceBaseClass):
 
     def initialize(self):
         super().initialize()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
         super().setup()
@@ -62,6 +68,17 @@ class RunOfRiverHydroPerformanceModel(HydroPerformanceBaseClass):
 
         # Distribute the power output over the number of time steps
         outputs["electricity_out"] = power_output
+        outputs["rated_electricity_production"] = plant_capacity_kw
+
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
+        # Estimate annual electricity production
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+
+        # Calculate capacity factor
+        max_production = plant_capacity_kw * self.n_timesteps * (self.dt / 3600)
+        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
 
 
 @define(kw_only=True)

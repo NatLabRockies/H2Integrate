@@ -42,7 +42,7 @@ def site_config_download_from_web():
         "longitude": -95.19757,
         "resources": {
             "wind_resource": {
-                "resource_model": "openmeteo_wind_api",
+                "resource_model": "OpenMeteoHistoricalWindResource",
                 "resource_parameters": {
                     "resource_year": 2023,
                     "resource_filename": "open-meteo-44.04N95.20W438m.csv",
@@ -60,7 +60,7 @@ def site_config_download_from_h2i():
         "longitude": -95.19757,
         "resources": {
             "wind_resource": {
-                "resource_model": "openmeteo_wind_api",
+                "resource_model": "OpenMeteoHistoricalWindResource",
                 "resource_parameters": {
                     "resource_year": 2023,
                 },

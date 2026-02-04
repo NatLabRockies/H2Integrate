@@ -4,9 +4,9 @@ description: "This plant produces electricity from natural gas using a combined 
 technologies:
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_utility_pv_cost"
+      model: "ATBUtilityPVCostModel"
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 200000 #200 MWdc
@@ -32,11 +32,11 @@ technologies:
         cost_year: 2024
   battery:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
@@ -58,9 +58,9 @@ technologies:
         opex_fraction: 0.05 # percent of capex
   grid_buy:
     performance_model:
-      model: "grid_performance"
+      model: "GridPerformanceModel"
     cost_model:
-      model: "grid_cost"
+      model: "GridCostModel"
     model_inputs:
       shared_parameters:
         interconnection_size: 1.e6  # kW
@@ -72,9 +72,9 @@ technologies:
         fixed_interconnection_cost: 0.0  # $ one-time fixed cost
   grid_sell:
     performance_model:
-      model: "grid_performance"
+      model: "GridPerformanceModel"
     cost_model:
-      model: "grid_cost"
+      model: "GridCostModel"
     model_inputs:
       shared_parameters:
         interconnection_size: 1.e6  # kW

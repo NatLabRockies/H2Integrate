@@ -150,3 +150,10 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         outputs["max_wellhead_gas"] = init_wh_flow
         outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
+        outputs["annual_hydrogen_produced"] = outputs["total_hydrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["rated_hydrogen_production"] = init_wh_flow  # TODO: double check
+        outputs["capacity_factor"] = outputs["total_hydrogen_produced"] / (
+            outputs["rated_hydrogen_production"] * self.n_timesteps
+        )

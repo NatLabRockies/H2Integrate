@@ -15,6 +15,7 @@ def plant_config():
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,
+                "dt": 3600,
             },
         },
     }
@@ -29,9 +30,9 @@ def electricity_profile_kW():
 @fixture
 def battery_tech_config_kW():
     battery_inputs = {
-        "performance_model": {"model": "simple_generic_storage"},
-        "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "performance_model": {"model": "SimpleGenericStorage"},
+        "cost_model": {"model": "ATBBatteryCostModel"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",
@@ -62,9 +63,9 @@ def battery_tech_config_kW():
 @fixture
 def battery_tech_config_MW():
     battery_inputs = {
-        "performance_model": {"model": "simple_generic_storage"},
-        "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "performance_model": {"model": "SimpleGenericStorage"},
+        "cost_model": {"model": "ATBBatteryCostModel"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
                 "commodity_name": "electricity",

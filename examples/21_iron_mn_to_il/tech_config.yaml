@@ -4,9 +4,9 @@ description: "This hybrid plant produces iron"
 technologies:
   mine_electricity_feedstock: #electricity feedstock for iron ore
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
@@ -21,9 +21,9 @@ technologies:
 
   mine_crude_ore_feedstock: #iron ore feedstock
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "crude_ore"
@@ -38,9 +38,9 @@ technologies:
 
   iron_mine:
     performance_model:
-      model: "iron_mine_performance_martin"
+      model: "MartinIronMinePerformanceComponent"
     cost_model:
-      model: "iron_mine_cost_martin"
+      model: "MartinIronMineCostComponent"
     model_inputs:
       shared_parameters:
         mine: "Northshore"
@@ -66,9 +66,9 @@ technologies:
 
   iron_transport:
     performance_model:
-      model: "iron_transport_performance"
+      model: "IronTransportPerformanceComponent"
     cost_model:
-      model: "iron_transport_cost"
+      model: "IronTransportCostComponent"
     model_inputs:
       performance_parameters:
         find_closest_ship_site: False
@@ -79,9 +79,9 @@ technologies:
 
   natural_gas_feedstock:
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "natural_gas"
@@ -96,9 +96,9 @@ technologies:
 
   water_feedstock: #for iron reduction
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "water"
@@ -113,9 +113,9 @@ technologies:
 
   catalyst_feedstock: #for NG iron reduction
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "reformer_catalyst"
@@ -130,9 +130,9 @@ technologies:
 
   dri_grid_feedstock: #electricity feedstock for iron dri
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
@@ -147,9 +147,9 @@ technologies:
 
   iron_plant:
     performance_model:
-      model: "ng_dri_performance_rosner"
+      model: "NaturalGasIronReductionPlantPerformanceComponent"
     cost_model:
-      model: "ng_dri_cost_rosner"
+      model: "NaturalGasIronReductionPlantCostComponent"
     model_inputs:
       shared_parameters:
         pig_iron_production_rate_tonnes_per_hr: 161.8829908675799 #equivalent to 1418095 t/yr
@@ -161,9 +161,9 @@ technologies:
 
   eaf_grid_feedstock: #electricity feedstock for EAF
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "electricity"
@@ -178,9 +178,9 @@ technologies:
 
   eaf_water_feedstock: #for EAF
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "water"
@@ -195,9 +195,9 @@ technologies:
 
   eaf_natural_gas_feedstock:
     performance_model:
-      model: "feedstock_performance"
+      model: "FeedstockPerformanceModel"
     cost_model:
-      model: "feedstock_cost"
+      model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
         feedstock_type: "natural_gas"
@@ -214,9 +214,9 @@ technologies:
 
   steel_plant:
     performance_model:
-      model: "ng_eaf_performance_rosner"
+      model: "NaturalGasEAFPlantPerformanceComponent"
     cost_model:
-      model: "ng_eaf_cost_rosner"
+      model: "NaturalGasEAFPlantCostComponent"
     model_inputs:
       shared_parameters:
         steel_production_rate_tonnes_per_hr: 135.8187214611872 #equivalent to 1189772 t/yr
