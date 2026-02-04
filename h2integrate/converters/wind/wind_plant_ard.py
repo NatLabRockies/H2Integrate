@@ -10,28 +10,6 @@ from h2integrate.core.model_baseclasses import (
 )
 
 
-class WindArdCostCompatibilityComponent(CostModelBaseClass):
-    """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
-
-    We could almost use the CostModelBaseClass directly, but its setup method
-    requires a self.config attribute to be defined, so we create this minimal subclass.
-    """
-
-    def setup(self):
-        self.config = CostModelBaseConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
-        )
-
-        super().setup()
-
-        self.add_input("ard_CapEx", val=0, units="USD")
-        self.add_input("ard_OpEx", val=0.0, units="USD/year")
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        outputs["CapEx"] = inputs["ard_CapEx"]
-        outputs["OpEx"] = inputs["ard_OpEx"]
-
-
 @define
 class WindPlantArdModelConfig(BaseConfig):
     """Configuration container for Ard wind plant model inputs.
@@ -98,12 +76,37 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         outputs["capacity_factor"] = aep / self.plant_capacity
 
 
+class WindArdCostCompatibilityComponent(CostModelBaseClass):
+    """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
+
+    We could almost use the CostModelBaseClass directly, but its setup method
+    requires a self.config attribute to be defined, so we create this minimal subclass.
+    """
+
+    def setup(self):
+        self.config = CostModelBaseConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+        )
+
+        super().setup()
+
+        self.add_input("ard_CapEx", val=0, units="USD")
+        self.add_input("ard_OpEx", val=0.0, units="USD/year")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        outputs["CapEx"] = inputs["ard_CapEx"]
+        outputs["OpEx"] = inputs["ard_OpEx"]
+
+
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
     Subsystems:
-        wind_ard_cost (WindArdCostComponent): Necessary for providing cost_year to H2Integrate.
         ard_sub_prob (SubmodelComp): Encapsulated Ard Problem exposing specified inputs/outputs.
+        wind_ard_performance_compatibility (WindArdPerformanceCompatibilityComponent):
+            Necessary for providing required performance metrics to H2Integrate.
+        wind_ard_cost_compatibility (WindArdCostCompatibilityComponent):
+            Necessary for providing cost_year to H2Integrate.
 
     Promoted Inputs:
         spacing_primary: Primary spacing parameter.

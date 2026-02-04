@@ -18,9 +18,9 @@ technologies:
     wind:
         model_inputs:
             performance_model:
-                model: "ard_wind_plant_combined"
+                model: "ArdWindPlantModel"
             cost_model:
-                model: "ard_wind_plant_combined"
+                model: "ArdWindPlantModel"
             cost_parameters:
                 cost_year: 2024
             performance_parameters:
@@ -74,7 +74,7 @@ technologies:
                     analysis_options:
 ```
 
-## Some Key Capabilities of Ard
+## Some Key Capabilities of Ard (and the external models used)
 - Highly modular to include alternate/new models and capabilities
     - Built using OpenMDAO
 - Wind farm layout optimization
