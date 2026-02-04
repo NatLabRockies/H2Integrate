@@ -1,6 +1,5 @@
 import os
 import shutil
-import unittest
 from pathlib import Path
 
 import yaml
@@ -509,7 +508,3 @@ def test_BaseConfig(subtests):
         msg = "The class definition for DemoConfig is missing the following inputs"
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({})
-
-
-if __name__ == "__main__":
-    unittest.main()
