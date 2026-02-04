@@ -116,7 +116,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = HumbertStinnEwinCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=True,
         )
         super().setup()
