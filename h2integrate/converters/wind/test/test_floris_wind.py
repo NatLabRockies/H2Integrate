@@ -48,6 +48,7 @@ def plant_config_openmeteo():
                 "resource_model": "OpenMeteoHistoricalWindResource",
                 "resource_parameters": {
                     "resource_year": 2023,
+                    "timezone": -6,
                 },
             }
         },
