@@ -38,11 +38,8 @@ def create_basic_feedstock_config(
             },
         }
     }
-
     plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 8760}}}
-
     driver_config = {}
-
     return tech_config, plant_config, driver_config
 
 
