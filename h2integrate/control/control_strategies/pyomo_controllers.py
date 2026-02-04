@@ -910,7 +910,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         Args:
             commodity_in (list): List of generated commodity in for this time slice.
             commodity_demand (list): The demanded commodity for this time slice.
-
+            updated_initial_soc (float): The updated initial state of charge for storage
+                technologies for the current time slice.
         """
         self.hybrid_dispatch_rule.update_time_series_parameters(
             commodity_in, commodity_demand, updated_initial_soc

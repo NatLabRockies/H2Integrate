@@ -166,7 +166,8 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
         Args:
             commodity_in (list): List of generated commodity in for this time slice.
             commodity_demand (list): The demanded commodity for this time slice.
-
+            updated_initial_soc (float): The updated initial state of charge for storage
+                technologies for the current time slice.
         """
         self.time_duration = [1.0] * len(self.blocks.index_set())
         self.available_production = [commodity_in[t] for t in self.blocks.index_set()]

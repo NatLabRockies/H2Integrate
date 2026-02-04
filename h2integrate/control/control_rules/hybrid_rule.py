@@ -157,7 +157,8 @@ class PyomoDispatchPlantRule:
         Args:
             commodity_in (list): List of generated commodity in for this time slice.
             commodity_demand (list): The demanded commodity for this time slice.
-
+            updated_initial_soc (float): The updated initial state of charge for storage
+                technologies for the current time slice.
         """
         # Note: currently, storage techs use commodity_demand and converter techs use commodity_in
         #   Better way to do this?
