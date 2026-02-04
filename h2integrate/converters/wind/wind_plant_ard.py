@@ -24,8 +24,12 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
 
         super().setup()
 
+        self.add_input("ard_CapEx", val=0, units="USD")
+        self.add_input("ard_OpEx", val=0.0, units="USD/year")
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass
+        outputs["CapEx"] = inputs["ard_CapEx"]
+        outputs["OpEx"] = inputs["ard_OpEx"]
 
 
 @define
@@ -45,8 +49,9 @@ class WindPlantArdModelConfig(BaseConfig):
 class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
 
-    We could almost use the CostModelBaseClass directly, but its setup method
-    requires a self.config attribute to be defined, so we create this minimal subclass.
+    This component takes some of the output of Ard and returns it in the format expected
+    by H2Integrate. Some minor calculations are performed to get metrics required by
+    H2Integrate.
     """
 
     def setup(self):
@@ -59,8 +64,38 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "kW*h"
         super().setup()
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass
+        self.hours_per_year = 8760
+        self.n_turbines = self.config.ard_system["modeling_options"]["layout"]["N_turbines"]
+        turbine_specs = self.config.ard_system["modeling_options"]["windIO_plant"]["wind_farm"][
+            "turbine"
+        ]
+        # windio rated power in W, convert to kW
+        self.turbine_rating_kw = turbine_specs["performance"]["rated_power"] * 1e-3
+        self.plant_rating_kw = self.n_turbines * self.turbine_rating_kw
+        self.plant_capacity = self.plant_rating_kw * self.hours_per_year
+
+        self.add_input(
+            "ard_electricity_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+
+    def compute(self, inputs, outputs):
+        ard_electricity_series = inputs["ard_electricity_out"]
+
+        # ard has no concept of time and will simulate for all
+        # wind conditions provided, including duplicates. Here we
+        # convert for time step length and simulation length
+        # to get an estimate of the annual energy production regardless
+        # of the length of the simulation
+        aep = ard_electricity_series.sum() * (self.fraction_of_year_simulated)
+
+        outputs["electricity_out"] = ard_electricity_series
+        outputs["total_electricity_produced"] = ard_electricity_series.sum()
+        outputs["annual_electricity_produced"] = aep
+        outputs["rated_electricity_production"] = self.plant_rating_kw
+        outputs["capacity_factor"] = aep / self.plant_capacity
 
 
 class ArdWindPlantModel(om.Group):
@@ -98,29 +133,6 @@ class ArdWindPlantModel(om.Group):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
-        # add pass-through cost model to include cost_year as expected by H2Integrate
-        self.add_subsystem(
-            "wind_ard_cost_compatibility",
-            WindArdCostCompatibilityComponent(
-                driver_config=self.options["driver_config"],
-                plant_config=self.options["plant_config"],
-                tech_config=self.options["tech_config"],
-            ),
-            promotes=["cost_year", "VarOpEx"],
-        )
-
-        # add pass-through performance model to include inputs and
-        # outputs as expected by H2Integrate
-        self.add_subsystem(
-            "wind_ard_performance_compatibility",
-            WindArdPerformanceCompatibilityComponent(
-                driver_config=self.options["driver_config"],
-                plant_config=self.options["plant_config"],
-                tech_config=self.options["tech_config"],
-            ),
-            promotes=["*"],
-        )
-
         # create ard model
         ard_input_dict = self.config.ard_system
         ard_data_path = self.config.ard_data_path
@@ -138,9 +150,9 @@ class ArdWindPlantModel(om.Group):
                 "y_substations",
             ],
             outputs=[
-                ("aepFLORIS.power_farm", "electricity_out"),
-                ("tcc.tcc", "CapEx"),
-                ("opex.opex", "OpEx"),
+                ("aepFLORIS.power_farm", "ard_electricity_out"),
+                ("tcc.tcc", "ard_CapEx"),
+                ("opex.opex", "ard_OpEx"),
                 "boundary_distances",
                 "turbine_spacing",
             ],
@@ -150,5 +162,28 @@ class ArdWindPlantModel(om.Group):
         self.add_subsystem(
             "ard_sub_prob",
             subprob_ard,
+            promotes=["*"],
+        )
+
+        # add performance model to include inputs and
+        # outputs as expected by H2Integrate
+        self.add_subsystem(
+            "wind_ard_performance_compatibility",
+            WindArdPerformanceCompatibilityComponent(
+                driver_config=self.options["driver_config"],
+                plant_config=self.options["plant_config"],
+                tech_config=self.options["tech_config"],
+            ),
+            promotes=["*"],
+        )
+
+        # add pass-through cost model to include cost_year as expected by H2Integrate
+        self.add_subsystem(
+            "wind_ard_cost_compatibility",
+            WindArdCostCompatibilityComponent(
+                driver_config=self.options["driver_config"],
+                plant_config=self.options["plant_config"],
+                tech_config=self.options["tech_config"],
+            ),
             promotes=["*"],
         )

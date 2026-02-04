@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
@@ -120,24 +119,37 @@ def test_ard_wind_combined(plant_config, ard_config, subtests):
     with subtests.test("AEP"):
         assert (
             pytest.approx(
-                sum(prob.get_val("electricity_out", units="GW")),
+                prob.get_val("annual_electricity_produced", units="GW*h/year"),
                 abs=1e-4,
             )
             == 150.8849096716472
         )
 
-    with subtests.test("model cost year"):
+    with subtests.test("total electricity produced"):
+        assert prob.get_val("total_electricity_produced", units="GW*h")[0] == pytest.approx(
+            prob.get_val("annual_electricity_produced", units="GW*h/year")
+        )
+
+    with subtests.test("electricity out"):
+        # this test works because we are simulating a single full year
+        assert prob.get_val("electricity_out", units="GW").sum() == pytest.approx(
+            prob.get_val("annual_electricity_produced", units="GW*h/year")
+        )
+
+    with subtests.test("rated capacity"):
+        assert prob.get_val("rated_electricity_production", units="MW")[0] == 45.0
+
+    with subtests.test("rated capacity"):
+        assert prob.get_val("capacity_factor", units="unitless")[0] == pytest.approx(0.382762327)
+
+    with subtests.test("cost year"):
         assert prob.get_val("cost_year") == 2024
 
     with subtests.test("CapEx"):
-        assert pytest.approx(np.sum(prob.get_val("CapEx", units="MUSD")), rel=1e-6) == 58.5
+        assert prob.get_val("CapEx", units="MUSD") == pytest.approx(58.5)
 
     with subtests.test("OpEx"):
-        assert pytest.approx(np.sum(prob.get_val("OpEx", units="MUSD/year")), rel=1e-6) == 1.98
+        assert prob.get_val("OpEx", units="MUSD/year") == pytest.approx(1.98)
 
-    with subtests.test("dummy cost model capex"):
-        assert prob.get_val("wind_ard_cost.CapEx", units="USD") == [0.0]
-    with subtests.test("dummy cost model opex"):
-        assert prob.get_val("wind_ard_cost.OpEx", units="USD/year") == [0.0]
-    with subtests.test("dummy cost model varopex"):
+    with subtests.test("varopex"):
         assert prob.get_val("VarOpEx", "USD/year").all() == 0.0
