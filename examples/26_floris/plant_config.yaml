@@ -10,6 +10,7 @@ sites:
         resource_model: "OpenMeteoHistoricalWindResource"
         resource_parameters:
           resource_year: 2023
+          timezone: -6
   utility_wind_site: #name of the site for the utility_wind_plant technology
     latitude: 35.2018863
     longitude: -101.945027
