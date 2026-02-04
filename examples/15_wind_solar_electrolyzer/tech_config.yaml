@@ -4,9 +4,9 @@ description: "This hybrid plant produces hydrogen"
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 100
@@ -31,9 +31,9 @@ technologies:
         cost_year: 2019
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_utility_pv_cost"
+      model: "ATBUtilityPVCostModel"
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 100000 #100 MW
@@ -59,16 +59,16 @@ technologies:
         cost_year: 2024
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
         commodity_units: "kW"
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"

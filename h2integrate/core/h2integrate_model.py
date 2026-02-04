@@ -409,7 +409,13 @@ class H2IntegrateModel:
         self.cost_models = []
         self.finance_models = []
 
-        combined_performance_and_cost_models = ["hopp", "h2_storage", "wombat", "iron"]
+        combined_performance_and_cost_models = [
+            "HOPPComponent",
+            "h2_storage",
+            "WOMBATElectrolyzerModel",
+            "IronComponent",
+            "ArdWindPlantModel",
+        ]
 
         if any(tech == "site" for tech in self.technology_config["technologies"]):
             msg = (
@@ -433,7 +439,7 @@ class H2IntegrateModel:
                             f"the top-level name of the tech group ({tech_name})"
                         )
 
-            if perf_model is not None and "feedstock" in perf_model:
+            if perf_model == "FeedstockPerformanceModel":
                 comp = self.supported_models[perf_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -522,7 +528,7 @@ class H2IntegrateModel:
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             cost_model = individual_tech_config.get("cost_model", {}).get("model")
-            if cost_model is not None and "feedstock" in cost_model:
+            if cost_model == "FeedstockCostModel":
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -605,7 +611,7 @@ class H2IntegrateModel:
 
             >>> self.plant_config["finance_parameters"]["finance_group"] = {
             ...     "commodity": "hydrogen",
-            ...     "finance_model": "ProFastComp",
+            ...     "finance_model": "ProFastLCO",
             ...     "model_inputs": {"discount_rate": 0.08},
             ... }
             >>> self.create_finance_model()
@@ -734,7 +740,7 @@ class H2IntegrateModel:
             # to sum the commodity production profile from the commodity stream
             if commodity_stream is not None:
                 # get the generic summer model
-                commodity_summer_model = self.supported_models.get("summer")
+                commodity_summer_model = self.supported_models.get("GenericSummerPerformanceModel")
                 if "combiner" in commodity_stream or "splitter" in commodity_stream:
                     # combiners and splitters have the same tech config as the production summer,
                     # so just use their config if the commodity stream is a combiner or splitter
@@ -900,13 +906,13 @@ class H2IntegrateModel:
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
-                if cost_model_name is not None and "feedstock" in cost_model_name:
+                if cost_model_name == "FeedstockCostModel":
                     self.plant.connect(
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
                     )
 
-                if perf_model_name is not None and "feedstock" in perf_model_name:
+                if perf_model_name == "FeedstockPerformanceModel":
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object

@@ -45,9 +45,10 @@ def plant_config_openmeteo():
         "longitude": -95.19757,
         "resource": {
             "wind_resource": {
-                "resource_model": "openmeteo_wind_api",
+                "resource_model": "OpenMeteoHistoricalWindResource",
                 "resource_parameters": {
                     "resource_year": 2023,
+                    "timezone": -6,
                 },
             }
         },
@@ -68,7 +69,7 @@ def plant_config_wtk():
         "longitude": -101.945027,
         "resource": {
             "wind_resource": {
-                "resource_model": "wind_toolkit_v2_api",
+                "resource_model": "WTKNRELDeveloperAPIWindResource",
                 "resource_parameters": {
                     "resource_year": 2012,
                 },

@@ -12,9 +12,10 @@ The pyomo control framework currently supports both a simple heuristic method an
 
 (heuristic-load-following-controller)=
 ## Heuristic Load Following Controller
-The simple heuristic method is specified by setting the storage control to  `heuristic_load_following_controller`. When using the pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `pyomo_dispatch_generic_converter` for generating technologies, and `pyomo_dispatch_generic_storage` for storage technologies. More complex rule sets may be developed as needed.
 
-For an example of how to use the heuristic pyomo control framework with the `heuristic_load_following_controller`, see
+The simple heuristic method is specified by setting the storage control to  `HeuristicLoadFollowingController`. When using the pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `PyomoDispatchGenericConverter` for generating technologies, and `PyomoRuleStorageBaseclass` for storage technologies. More complex rule sets may be developed as needed.
+
+For an example of how to use the heuristic pyomo control framework with the `HeuristicLoadFollowingController`, see
 - `examples/18_pyomo_heuristic_wind_battery_dispatch`
 
 (optimized-load-following-controller)=

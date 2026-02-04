@@ -3,12 +3,12 @@
 
 This model uses the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html) available in PySAM to simulate the performance of a solar-PV system.
 
-To use this model, specify `"pysam_solar_plant_performance"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
+To use this model, specify `"PYSAMSolarPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
 
 ```yaml
 technologies:
     pv:
-        performance_model: "pysam_solar_plant_performance"
+        performance_model: "PYSAMSolarPlantPerformanceModel"
         model_inputs:
             performance_parameters:
                 pv_capacity_kWdc: 1000.0

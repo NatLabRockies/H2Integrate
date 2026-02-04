@@ -281,7 +281,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 ]
                 demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
 
-                if "heuristic" in control_strategy:
+                if "Heuristic" in control_strategy:
                     # Update time series parameters for the heuristic method
                     self.update_time_series_parameters()
                     # determine dispatch commands for the current control window

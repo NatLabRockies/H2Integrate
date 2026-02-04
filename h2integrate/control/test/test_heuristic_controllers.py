@@ -34,9 +34,9 @@ tech_config = {
     "description": "...",
     "technologies": {
         "battery": {
-            "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
-            "control_strategy": {"model": "heuristic_load_following_controller"},
-            "performance_model": {"model": "pysam_battery"},
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "HeuristicLoadFollowingController"},
+            "performance_model": {"model": "PySAMBatteryPerformanceModel"},
             "model_inputs": {
                 "shared_parameters": {
                     "max_charge_rate": 50000,
@@ -84,7 +84,7 @@ def test_heuristic_load_following_battery_dispatch(subtests):
     prob = om.Problem()
 
     prob.model.add_subsystem(
-        "pyomo_generic_storage",
+        "PyomoRuleStorageBaseclass",
         PyomoRuleStorageBaseclass(
             plant_config=plant_config, tech_config=tech_config["technologies"]["battery"]
         ),

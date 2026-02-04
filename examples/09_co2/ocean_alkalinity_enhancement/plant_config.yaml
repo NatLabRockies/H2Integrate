@@ -8,7 +8,7 @@ sites:
 
     resources:
         wind_resource:
-          resource_model: "wind_toolkit_v2_api"
+          resource_model: "WTKNRELDeveloperAPIWindResource"
           resource_parameters:
             resource_year: 2010
 
@@ -36,7 +36,7 @@ plant:
 
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

@@ -33,7 +33,7 @@ def site_config():
         "longitude": -102.75,
         "resources": {
             "solar_resource": {
-                "resource_model": "goes_aggregated_solar_v4_api",
+                "resource_model": "GOESAggregatedSolarAPI",
                 "resource_parameters": {
                     "latitude": 34.22,
                     "longitude": -102.75,

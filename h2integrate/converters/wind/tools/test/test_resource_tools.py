@@ -20,7 +20,7 @@ def wind_resource_data():
             "longitude": -102.75,
             "resources": {
                 "wind_resource": {
-                    "resource_model": "wind_toolkit_v2_api",
+                    "resource_model": "WTKNRELDeveloperAPIWindResource",
                     "resource_parameters": {
                         "latitude": 35.2018863,
                         "longitude": -101.945027,
