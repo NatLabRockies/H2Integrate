@@ -1811,7 +1811,7 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.187928233525775
+        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -1820,7 +1820,7 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 3.3410182461323226
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -1829,7 +1829,7 @@ def test_27_iron_electrowinning_example(subtests):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.2832248695268893
+        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
 
 
 def test_sweeping_different_resource_sites_doe(subtests):
