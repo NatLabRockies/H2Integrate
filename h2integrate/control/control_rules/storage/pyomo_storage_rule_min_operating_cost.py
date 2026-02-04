@@ -446,6 +446,10 @@ class PyomoRuleStorageMinOperatingCosts:
                 models by adding modeling components as attributes.
 
         """
+        # Note that this objective function incentivizes charging the storage and penalizes
+        # discharging the storage. This is to help the storage model maintain a state of charge.
+        # This is also why cost_per_discharge should not equal cost_per_charge, which can lead
+        # to battery oscillation behavior.
         self.obj = sum(
             hybrid_blocks[t].time_weighting_factor
             * self.blocks[t].time_duration
@@ -455,7 +459,6 @@ class PyomoRuleStorageMinOperatingCosts:
                 + (self.blocks[t].commodity_load_demand - hybrid_blocks[t].commodity_out)
                 * self.blocks[t].commodity_met_value
             )
-            # Try to incentivize charging
             for t in self.blocks.index_set()
         )
         return self.obj
