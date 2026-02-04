@@ -529,7 +529,9 @@ class PyomoRuleStorageMinOperatingCosts:
             units=pyo_commodity_units,
         )
         # Returns to power_source_gen_vars and load_vars in hybrid_rule
-        return hybrid_model.discharge_commodity, hybrid_model.charge_commodity
+        power_source_gen_var = hybrid_model.discharge_commodity
+        load_var = hybrid_model.charge_commodity
+        return power_source_gen_var, load_var
 
     @staticmethod
     def _check_efficiency_value(efficiency):

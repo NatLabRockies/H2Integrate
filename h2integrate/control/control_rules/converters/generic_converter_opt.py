@@ -226,7 +226,9 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
 
         # Returns to power_source_gen_vars and load_vars in hybrid_rule
         # load var is zero for converters
-        return hybrid_model.__getattribute__(f"{tech_name}_{self.commodity_name}"), 0
+        power_source_gen_var = hybrid_model.__getattribute__(f"{tech_name}_{self.commodity_name}")
+        load_var = 0
+        return power_source_gen_var, load_var
 
     # Property getters and setters for time series parameters
     @property
