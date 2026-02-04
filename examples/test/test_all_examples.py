@@ -1193,11 +1193,11 @@ def test_windard_pv_battery_dispatch_example(subtests):
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity dispatched"):
-        total_electricity = model.prob.get_val(
+        total_electricity_year_one = model.prob.get_val(
             "finance_subgroup_dispatched_electricity.electricity_sum.total_electricity_produced",
             units="MW*h/year",
-        ).sum()
-        assert total_electricity == pytest.approx(dispatched_electricity.sum())
+        )[0]
+        assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
 
     # Subtest for electricity curtailed
     with subtests.test("Check electricity curtailed"):

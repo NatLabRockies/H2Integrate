@@ -40,6 +40,7 @@ from h2integrate.converters.iron.iron_transport import (
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
+from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
@@ -156,6 +157,7 @@ supported_models = {
     "RiverResource": RiverResource,
     "WTKNRELDeveloperAPIWindResource": WTKNRELDeveloperAPIWindResource,
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
+    "OpenMeteoHistoricalSolarResource": OpenMeteoHistoricalSolarResource,
     "GOESAggregatedSolarAPI": GOESAggregatedSolarAPI,
     "GOESConusSolarAPI": GOESConusSolarAPI,
     "GOESFullDiscSolarAPI": GOESFullDiscSolarAPI,
