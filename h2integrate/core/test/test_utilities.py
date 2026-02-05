@@ -25,6 +25,7 @@ def temp_dir(tmp_path_factory):
     shutil.rmtree(str(temp_dir))
 
 
+@pytest.mark.unit
 def test_get_path(subtests):
     current_cwd = Path.cwd()
 
@@ -73,6 +74,7 @@ def test_get_path(subtests):
     os.chdir(current_cwd)
 
 
+@pytest.mark.unit
 def test_find_file(subtests):
     current_cwd = Path.cwd()
 
@@ -113,6 +115,7 @@ def test_find_file(subtests):
     os.chdir(current_cwd)
 
 
+@pytest.mark.unit
 def test_make_unique_filename(subtests):
     unique_yaml_name = make_unique_case_name(EXAMPLE_DIR, "tech_config.yaml", ".yaml")
     unique_py_name = make_unique_case_name(ROOT_DIR.parent, "conftest.py", ".py")
@@ -132,6 +135,7 @@ def test_make_unique_filename(subtests):
         assert len(csv_files) == 0
 
 
+@pytest.mark.unit
 def test_simple_numeric_conversion():
     """Test conversion of simple numeric values to float."""
     input_dict = {
@@ -159,6 +163,7 @@ def test_simple_numeric_conversion():
     assert isinstance(result["numpy_float"], float)
 
 
+@pytest.mark.unit
 def test_string_and_boolean_preservation():
     """Test that strings and booleans are preserved unchanged."""
     input_dict = {
@@ -183,6 +188,7 @@ def test_string_and_boolean_preservation():
     assert isinstance(result["empty_string"], str)
 
 
+@pytest.mark.unit
 def test_list_and_array_conversion():
     """Test conversion of lists and numpy arrays."""
     input_dict = {
@@ -219,6 +225,7 @@ def test_list_and_array_conversion():
     assert result["mixed_types_list"] == expected_mixed_types
 
 
+@pytest.mark.unit
 def test_nested_dictionaries():
     """Test recursive processing of nested dictionaries."""
     input_dict = {
@@ -243,6 +250,7 @@ def test_nested_dictionaries():
     assert result["top_level_array"] == [10.0, 20.0, 30.0]
 
 
+@pytest.mark.unit
 def test_list_with_nested_dictionaries():
     """Test lists containing dictionaries."""
     input_dict = {
@@ -266,6 +274,7 @@ def test_list_with_nested_dictionaries():
     assert result["complex_list"] == expected
 
 
+@pytest.mark.unit
 def test_empty_containers():
     """Test handling of empty lists, arrays, and dictionaries."""
     input_dict = {
@@ -283,6 +292,7 @@ def test_empty_containers():
     assert result["dict_with_empty"]["empty_nested"] == []
 
 
+@pytest.mark.unit
 def test_yaml_serialization_compatibility(temp_dir):
     """Test that the formatted dictionary can be properly serialized to YAML."""
     input_dict = {
@@ -323,6 +333,7 @@ def test_yaml_serialization_compatibility(temp_dir):
     assert loaded_dict["plant_config"]["metadata"]["parameters"] == [1.0, 2.0, 3.0, 4.0]
 
 
+@pytest.mark.unit
 def test_numpy_dtypes_conversion():
     """Test conversion of various numpy data types."""
     input_dict = {
@@ -365,6 +376,7 @@ def test_numpy_dtypes_conversion():
     assert isinstance(result["bool_np"], float)
 
 
+@pytest.mark.unit
 def test_comprehensive_realistic_example(temp_dir):
     """Test with a realistic plant configuration example."""
     input_dict = {
@@ -469,6 +481,7 @@ class BaseDemoModelAdditional:
         super().__init__(config)
 
 
+@pytest.mark.unit
 def test_BaseConfig(subtests):
     """Tests the BaseConfig class."""
 

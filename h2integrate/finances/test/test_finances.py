@@ -72,6 +72,7 @@ def model_configs():
     return plant_config, tech_config, driver_config
 
 
+@pytest.mark.regression
 def test_electrolyzer_refurb_results(model_configs):
     plant_config, tech_config, driver_config = model_configs
     prob = om.Problem()
@@ -103,6 +104,7 @@ def test_electrolyzer_refurb_results(model_configs):
     assert prob["LCOH"][0] == pytest.approx(4.27529137, abs=1e-7)
 
 
+@pytest.mark.regression
 def test_modified_lcoe_calc():
     # Set up paths
     example_case_dir = EXAMPLE_DIR / "01_onshore_steel_mn"
@@ -143,6 +145,7 @@ def test_modified_lcoe_calc():
     assert prob["LCOE"][0] == pytest.approx(0.2116038814767319, abs=1e-7)
 
 
+@pytest.mark.regression
 def test_lcoe_with_selected_technologies():
     # Set up paths
     example_case_dir = EXAMPLE_DIR / "01_onshore_steel_mn"
@@ -189,6 +192,7 @@ def test_lcoe_with_selected_technologies():
     assert prob["LCOE"][0] == pytest.approx(0.2116038814767319, abs=1e-6)
 
 
+@pytest.mark.integration
 def test_profast_config_provided():
     """Test that inputting ProFAST parameters gives same LCOH as specifying finance
     parameters directly (as is done in `test_electrolyzer_refurb_results`). Output
@@ -315,6 +319,7 @@ def test_profast_config_provided():
     assert prob["LCOH"] == approx(4.27529137)
 
 
+@pytest.mark.unit
 def test_parameter_validation_clashing_values():
     """Test that parameter validation raises an error when plant config and params
     have different values for the same parameter."""
@@ -405,6 +410,7 @@ def test_parameter_validation_clashing_values():
         prob.setup()
 
 
+@pytest.mark.unit
 def test_parameter_validation_duplicate_parameters():
     """Test that parameter validation raises an error when plant config and pf_params
     have different values for the same parameter."""

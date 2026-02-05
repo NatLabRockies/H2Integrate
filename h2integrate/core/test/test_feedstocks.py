@@ -43,6 +43,7 @@ def create_basic_feedstock_config(
     return tech_config, plant_config, driver_config
 
 
+@pytest.mark.unit
 def test_single_feedstock_natural_gas():
     """Test a single natural gas feedstock with basic parameters."""
     tech_config, plant_config, driver_config = create_basic_feedstock_config()
@@ -87,6 +88,7 @@ def test_single_feedstock_natural_gas():
     assert opex == pytest.approx(expected_opex, abs=1e-5)
 
 
+@pytest.mark.unit
 def test_multiple_same_type_feedstocks():
     """Test multiple feedstocks of the same type with different parameters."""
     # Test two natural gas feedstocks with different capacities and prices
@@ -129,6 +131,7 @@ def test_multiple_same_type_feedstocks():
     assert np.all(ng_output2 == 150.0)
 
 
+@pytest.mark.unit
 def test_multiple_different_type_feedstocks():
     """Test feedstocks of different types (natural gas, electricity, water)."""
     # Natural gas feedstock
@@ -187,6 +190,7 @@ def test_multiple_different_type_feedstocks():
     assert np.all(water_out == 1000.0)
 
 
+@pytest.mark.unit
 def test_variable_pricing():
     """Test feedstock with variable pricing (array of prices)."""
     # Create hourly price array that varies throughout the year
@@ -227,6 +231,7 @@ def test_variable_pricing():
     assert opex != pytest.approx(constant_price_opex, abs=2)
 
 
+@pytest.mark.unit
 def test_zero_cost_feedstock():
     """Test feedstock with zero costs (free resource)."""
     tech_config, plant_config, driver_config = create_basic_feedstock_config(
