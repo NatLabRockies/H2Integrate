@@ -70,10 +70,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         output_capacity (float): Maximum annual iron production capacity in kg/year.
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
-        iron_transport_cost (float): Cost to transport iron ore in USD/kg.
-        price_iron_ore (float): Price of iron ore in USD/kg.
         electricity_in (array): Electric power input available in kW for each timestep.
-        price_electricity (float): Price of electricity in USD/kWh.
         specific_energy_electrolysis (float): The specific electrical energy consumption required
             to win pure iron (Fe) from iron ore - JUST the electrolysis step.
         electrolysis_temp (float): Electrolysis temperature (°C).
@@ -188,12 +185,12 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         # Set inputs for Stinn Capex model
         self.add_input("electrolysis_temp", val=T, units="degC")
-        self.add_input("electron_moles", val=z, units=None)
+        self.add_input("electron_moles", val=z, units="unitless")
         self.add_input("current_density", val=j, units="A/m**2")
         self.add_input("electrode_area", val=A, units="m**2")
-        self.add_input("current_efficiency", val=e, units=None)
+        self.add_input("current_efficiency", val=e, units="unitless")
         self.add_input("cell_voltage", val=V, units="V")
-        self.add_input("rectifier_lines", val=N, units=None)
+        self.add_input("rectifier_lines", val=N, units="unitless")
 
         # Set outputs for Stinn Capex model
         self.add_output("processing_capex", val=0.0, units="USD")
@@ -201,11 +198,11 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_output("rectifier_capex", val=0.0, units="USD")
 
         # Set inputs for Humbert Opex model
-        self.add_input("positions", val=positions, units="year/Mg")
-        self.add_input("NaOH_ratio", val=NaOH_ratio, units=None)
-        self.add_input("CaCl2_ratio", val=CaCl2_ratio, units=None)
-        self.add_input("limestone_ratio", val=limestone_ratio, units=None)
-        self.add_input("anode_ratio", val=anode_ratio, units=None)
+        self.add_input("positions", val=positions, units="year/t")
+        self.add_input("NaOH_ratio", val=NaOH_ratio, units="unitless")
+        self.add_input("CaCl2_ratio", val=CaCl2_ratio, units="unitless")
+        self.add_input("limestone_ratio", val=limestone_ratio, units="unitless")
+        self.add_input("anode_ratio", val=anode_ratio, units="unitless")
         self.add_input("anode_replacement_interval", val=anode_replace_int, units="year")
 
         # Set outputs for Humbert Opex model
@@ -267,6 +264,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         rectifier_capex = a3 * V**e3 * N**e4
 
         # Capex outputs
+        # Note: Capex is broken out into components of `processing_capex`, `electrolysis_capex`,
+        # etc., which are not used by the financial model but can be used for cost breakdowns.
         outputs["CapEx"] = processing_capex + electrolysis_capex + rectifier_capex
         outputs["processing_capex"] = processing_capex
         outputs["electrolysis_capex"] = electrolysis_capex
@@ -297,6 +296,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         anode_opex = anode_ratio * P * anode_cost / anode_interval  # Anode VarOpEx USD/year
 
         # Opex outputs
+        # Note: Opex is broken out into components of `labor_opex`, `NaOH_opex`, etc., which are
+        # not used by the financial model but can be used for cost breakdowns.
         outputs["OpEx"] = labor_opex
         outputs["VarOpEx"] = NaOH_opex + CaCl2_opex + limestone_opex + anode_opex
         outputs["labor_opex"] = labor_opex

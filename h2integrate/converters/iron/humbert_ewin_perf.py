@@ -85,7 +85,11 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
 
         super().setup()
 
-        # Look up performance parameters for each electrolysis type from Humbert Table 10
+        # Look up performance parameters for each electrolysis type from Humbert Table 10:
+        # E_all_lo [kWh/kg-Fe] Lowest reported specific energy consumption, total
+        # E_all_hi [kWh/kg-Fe] Highest reported specific energy consumption, total
+        # E_electrolysis_lo [kWh/kg-Fe] Highest reported specific energy consumption, electrolysis
+        # E_electrolysis_hi [kWh/kg-Fe] Lowest reported specific energy consumption, electrolysis
         if self.config.electrolysis_type == "ahe":
             E_all_lo = 2.781
             E_all_hi = 3.779
@@ -118,6 +122,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             units="kW",
             desc="Electricity consumed",
         )
+        self.add_output("iron_ore_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("limiting_input", val=0.0, shape=self.n_timesteps, units=None)
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
 
@@ -153,12 +158,14 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         limiters = np.maximum.reduce([cap_lim * 2, limiters])
         outputs["limiting_input"] = limiters
 
-        # Determine actual electricity consumption from iron consumption
+        # Determine actual feedstock consumption from iron production
         elec_consume = fe_prod * kwh_kg_fe
+        ore_consume = fe_prod / pct_fe
 
         # Return iron production
         outputs["sponge_iron_out"] = fe_prod
         outputs["electricity_consumed"] = elec_consume
+        outputs["iron_ore_consumed"] = ore_consume
         outputs["total_sponge_iron_produced"] = np.sum(fe_prod)
         outputs["rated_sponge_iron_production"] = cap_kw / kwh_kg_fe
         outputs["annual_sponge_iron_produced"] = outputs["total_sponge_iron_produced"] * (
