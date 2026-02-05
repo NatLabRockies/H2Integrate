@@ -1,0 +1,70 @@
+name: "driver_config"
+description: "This analysis runs a wind plant from Ard, a solar plant from pysam, and a simple battery"
+
+general:
+  folder_output: windard_pv_battery
+
+driver:
+  optimization:
+    flag: False
+    solver: COBYLA
+    tol: 0.1
+    catol: 15000
+    max_iter: 100
+    rhobeg: 2
+    debug_print: True
+
+design_variables:
+  wind:
+    spacing_primary:
+      flag: True
+      lower:  3.0
+      upper: 20.0
+      units: unitless
+    spacing_secondary:
+      flag: True
+      lower:  3.0
+      upper: 20.0
+      units: unitless
+    angle_orientation:
+      flag: True
+      lower: -180.0
+      upper:  180.0
+      units: deg
+    angle_skew:
+      flag: True
+      lower: -75.0
+      upper: 180.0
+      units: deg
+    x_substations:
+      flag: True
+      lower: -3000
+      upper: 3000
+      units: m
+      scaler: 1E-2
+    y_substations:
+      flag: True
+      lower: -3000
+      upper: 3000
+      units: m
+      scaler: 1E-2
+
+constraints:
+  wind:
+    boundary_distances:
+      flag: True
+      units: "km"
+      upper: 0.0
+    turbine_spacing:
+      flag: True
+      units: "km"
+      lower: 0.552
+
+objective:
+  name: finance_subgroup_dispatched_electricity.LCOE
+
+recorder:
+  flag: True
+  file: "wind_h2_opt.sql"
+  includes: ["*"]
+  excludes: ["*_resource_data"]
