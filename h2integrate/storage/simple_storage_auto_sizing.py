@@ -28,7 +28,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
     """Performance model that calculates the storage charge rate and capacity needed
     to either:
 
-    1. supply the comodity at a constant rate based on the commodity production profile or
+    1. supply the commodity at a constant rate based on the commodity production profile or
     2. try to meet the commodity demand with the given commodity production profile.
 
     Then simulates performance of a basic storage component using the charge rate and
