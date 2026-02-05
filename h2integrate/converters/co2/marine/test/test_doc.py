@@ -198,6 +198,7 @@ def test_performance_model(tech_config, plant_config, driver_config):
 
 
 @pytest.mark.skipif(has_mcm, reason="mcm is installed")
+@pytest.mark.unit
 def test_no_mcm_import(tech_config, plant_config, driver_config):
     err = "The `mcm` package is required to use the Direct Ocean Capture model. Install it via:"
     with pytest.raises(match=err):

@@ -134,6 +134,7 @@ omit = [
 
 [tool.pytest]
 addopts = [
+  "--strict-markers",
   "-r fEsxX",
   "--cov=h2integrate",
   "--cov-report=html",
@@ -143,6 +144,11 @@ addopts = [
 tmp_path_retention_count = "1"
 tmp_path_retention_policy = "failed"
 cache_dir = ".cache"
+markers = [
+    "unit: marks unit tests (deselect with '-m \"not unit\"')",
+    "regression: marks regression tests (deselect with '-m \"not regression\"')",
+    "integration: marks unit tests (deselect with '-m \"not integration\"')",
+]
 
 [tool.isort]
 src_paths = ["h2integrate", "test"]
