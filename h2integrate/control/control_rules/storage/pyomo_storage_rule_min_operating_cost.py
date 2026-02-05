@@ -568,41 +568,6 @@ class PyomoRuleStorageMinOperatingCosts:
             val_rounded = round(param_val, self.round_digits)
             self.blocks[t].__setattr__(param_name, val_rounded)
 
-    @property
-    def max_charge(self) -> float:
-        """Maximum charge amount."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].max_charge.value
-
-    @property
-    def max_discharge(self) -> float:
-        """Maximum discharge amount."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].max_discharge.value
-
-    @property
-    def minimum_soc(self) -> float:
-        """Minimum state-of-charge."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].minimum_soc.value
-
-    @property
-    def maximum_soc(self) -> float:
-        """Maximum state-of-charge."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].maximum_soc.value
-
-    @property
-    def minimum_storage(self) -> float:
-        """Minimum storage."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].minimum_storage.value
-
-    @property
-    def maximum_storage(self) -> float:
-        """Maximum storage."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].maximum_storage.value
 
     @property
     def charge_efficiency(self) -> float:
@@ -642,18 +607,6 @@ class PyomoRuleStorageMinOperatingCosts:
         self.discharge_efficiency = efficiency
 
     @property
-    def cost_per_charge(self) -> float:
-        """Cost per charge."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].cost_per_charge.value
-
-    @property
-    def cost_per_discharge(self) -> float:
-        """Cost per discharge."""
-        for t in self.blocks.index_set():
-            return self.blocks[t].cost_per_discharge.value
-
-    @property
     def commodity_load_demand(self) -> list:
         return [self.blocks[t].commodity_load_demand.value for t in self.blocks.index_set()]
 
@@ -664,69 +617,3 @@ class PyomoRuleStorageMinOperatingCosts:
                 self.blocks[t].commodity_load_demand.set_value(round(limit, self.round_digits))
         else:
             raise ValueError("'commodity_demand' list must be the same length as time horizon")
-
-    @property
-    def commodity_met_value(self) -> float:
-        return [self.blocks[t].commodity_met_value.value for t in self.blocks.index_set()]
-
-    # OUTPUTS
-    @property
-    def is_charging(self) -> list:
-        """Storage is charging."""
-        return [self.blocks[t].is_charging.value for t in self.blocks.index_set()]
-
-    @property
-    def is_discharging(self) -> list:
-        """Storage is discharging."""
-        return [self.blocks[t].is_discharging.value for t in self.blocks.index_set()]
-
-    @property
-    def soc(self) -> list:
-        """State-of-charge."""
-        return [self.blocks[t].soc.value for t in self.blocks.index_set()]
-
-    @property
-    def charge_commodity(self) -> list:
-        """Charge commodity."""
-        return [self.blocks[t].charge_commodity.value for t in self.blocks.index_set()]
-
-    @property
-    def discharge_commodity(self) -> list:
-        """Discharge commodity."""
-        return [self.blocks[t].discharge_commodity.value for t in self.blocks.index_set()]
-
-    @property
-    def storage_output(self) -> list:
-        """Storage Output."""
-        return [
-            self.blocks[t].discharge_commodity.value - self.blocks[t].charge_commodity.value
-            for t in self.blocks.index_set()
-        ]
-
-    @property
-    def system_production(self) -> list:
-        return [self.blocks[t].system_production.value for t in self.blocks.index_set()]
-
-    @property
-    def system_load(self) -> list:
-        return [self.blocks[t].system_load.value for t in self.blocks.index_set()]
-
-    @property
-    def commodity_out(self) -> list:
-        return [self.blocks[t].commodity_out.value for t in self.blocks.index_set()]
-
-    @property
-    def storage_commodity_out(self) -> list:
-        """Storage commodity out."""
-        return [
-            self.blocks[t].discharge_commodity.value - self.blocks[t].charge_commodity.value
-            for t in self.blocks.index_set()
-        ]
-
-    @property
-    def is_generating(self) -> list:
-        return [self.blocks[t].is_generating.value for t in self.blocks.index_set()]
-
-    @property
-    def not_generating(self) -> list:
-        return [self.blocks[t].not_generating.value for t in self.blocks.index_set()]
