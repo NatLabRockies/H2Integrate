@@ -52,7 +52,7 @@ def pytest_collection_modifyitems(config, items):
     missing_type_mark = [
         f"{item.path}::{item.name}"
         for item in items
-        if not test_types.intersection(item.iter_markers())
+        if not test_types.intersection([el.name for el in item.iter_markers()])
     ]
     if missing_type_mark:
         errors = "\n".join(missing_type_mark)
