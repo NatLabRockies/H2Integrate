@@ -162,6 +162,7 @@ sections = [
   "LOCALFOLDER",
 ]
 known_first_party = "h2integrate"
+known_third_party = "pytest"
 known_local_folder = "test"
 combine_as_imports = true
 force_grid_wrap = 0
@@ -248,6 +249,8 @@ ignore-overlong-task-comments = true
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.isort]
+known-third-party = ["pytest"]
 
 [tool.ruff.format]
 quote-style = "double"
