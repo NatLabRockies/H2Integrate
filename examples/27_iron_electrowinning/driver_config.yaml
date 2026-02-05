@@ -1,0 +1,5 @@
+name: "driver_config"
+description: "Simply setting up an outputs folder, nothing fancy"
+
+general:
+  folder_output: outputs

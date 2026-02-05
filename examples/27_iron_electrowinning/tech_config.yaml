@@ -1,0 +1,90 @@
+name: "technology_config"
+description: "Set up technology for an iron mine/iron electrowinning system"
+
+technologies:
+  grid_feedstock: #electricity feedstock for iron ore - comes from grid
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "electricity"
+        units: "MW"
+      performance_parameters:
+        rated_capacity: 30.
+      cost_parameters:
+        cost_year: 2022
+        price: 58.02 #USD/MW
+        annual_cost: 0.
+        start_up_cost: 0.
+
+  mine_feedstock: #crude iron ore feedstock - comes from the ground
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "crude_ore"
+        units: "t/h"
+      performance_parameters:
+        rated_capacity: 2000.
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.
+
+  iron_mine: # iron mine - turns crude_iron into iron_ore
+    performance_model:
+      model: "MartinIronMinePerformanceComponent"
+    cost_model:
+      model: "MartinIronMineCostComponent"
+    model_inputs:
+      shared_parameters:
+        mine: "Northshore"
+        taconite_pellet_type: "drg"
+        max_ore_production_rate_tonnes_per_hr: 250
+
+  iron_transport: # ship iron_ore from iron_mine to iron_plant
+    performance_model:
+      model: "IronTransportPerformanceComponent"
+    cost_model:
+      model: "IronTransportCostComponent"
+    model_inputs:
+      performance_parameters:
+        find_closest_ship_site: False
+        shipment_site: "Chicago"
+      cost_parameters:
+        transport_year: 2022
+        cost_year: 2022
+
+  ewin_grid_feedstock: #electricity feedstock for iron electrowinning
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "electricity"
+        units: "kW"
+      performance_parameters:
+        rated_capacity: 600000.
+      cost_parameters:
+        cost_year: 2022
+        price: 0.05802 #USD/kW
+        annual_cost: 0.
+        start_up_cost: 0.
+
+  iron_plant: # iron plant - turns iron_ore into sponge_iron
+    performance_model:
+      model: "HumbertEwinPerformanceComponent"
+    cost_model:
+      model: "HumbertStinnEwinCostComponent"
+    model_inputs:
+      shared_parameters:
+        electrolysis_type: "ahe"
+      performance_parameters:
+        ore_fe_wt_pct: 65
+        capacity_mw: 600

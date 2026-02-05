@@ -614,6 +614,7 @@ class ProFastBase(om.ExplicitComponent):
             "methanol",
             "iron_ore",
             "pig_iron",
+            "sponge_iron",
         ]
 
         # create years of operation list

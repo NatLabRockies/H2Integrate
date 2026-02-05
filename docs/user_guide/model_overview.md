@@ -44,7 +44,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `HOPPComponent`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
-| `steel`          |  steel        | hydrogen |
+| `steel`          |  steel        | iron ore |
 | `ammonia`        |  ammonia      | nitrogen, hydrogen |
 | `doc`   |  co2     | electricity |
 | `oae`   |  co2     | electricity |
@@ -238,9 +238,16 @@ Below summarizes the available performance, cost, and financial models for each 
     - performance models:
         + `'NaturalGasIronReductionPlantPerformanceComponent'`
         + `'HydrogenIronReductionPlantPerformanceComponent'`
+        + `'HumbertEwinPerformanceComponent'`
     - cost models:
         + `'NaturalGasIronReductionPlantCostComponent'`
         + `'HydrogenIronReductionPlantCostComponent'`
+- `iron_ewin`: iron electrowinning
+    - performance models:
+        + `'HumbertEwinPerformanceComponent'`
+    - cost models:
+        + `'HumbertStinnEwinCostComponent'`
+
 
 (transport-models)=
 ## Transport Models
