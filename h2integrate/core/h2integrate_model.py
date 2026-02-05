@@ -969,6 +969,15 @@ class H2IntegrateModel:
                         f"{connection_name}.{transport_item}_out",
                         f"{dest_tech}.{transport_item}_in{combiner_counts[dest_tech]}",
                     )
+                    # Connect the source tech design and performance info to the combiner
+                    self.plant.connect(
+                        f"{source_tech}.rated_{transport_item}_production",
+                        f"{dest_tech}.rated_{transport_item}_production{combiner_counts[dest_tech]}",
+                    )
+                    self.plant.connect(
+                        f"{source_tech}.capacity_factor",
+                        f"{dest_tech}.{transport_item}_capacity_factor{combiner_counts[dest_tech]}",
+                    )
 
                 elif "storage" in dest_tech:
                     # Connect the connection component to the destination technology
