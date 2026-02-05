@@ -568,7 +568,6 @@ class PyomoRuleStorageMinOperatingCosts:
             val_rounded = round(param_val, self.round_digits)
             self.blocks[t].__setattr__(param_name, val_rounded)
 
-
     @property
     def charge_efficiency(self) -> float:
         """Charge efficiency."""
