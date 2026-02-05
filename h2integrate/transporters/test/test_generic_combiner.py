@@ -110,7 +110,9 @@ def summer_tech_config_hydrogen_production():
     return h2_summer_dict
 
 
-def test_generic_combiner_performance_power(plant_config, combiner_tech_config_electricity):
+def test_generic_combiner_performance_power(
+    plant_config, combiner_tech_config_electricity, subtests
+):
     prob = om.Problem()
     comp = GenericCombinerPerformanceModel(
         plant_config=plant_config, tech_config=combiner_tech_config_electricity, driver_config={}
@@ -119,6 +121,10 @@ def test_generic_combiner_performance_power(plant_config, combiner_tech_config_e
     ivc = om.IndepVarComp()
     ivc.add_output("electricity_in1", val=np.zeros(8760), units="kW")
     ivc.add_output("electricity_in2", val=np.zeros(8760), units="kW")
+    ivc.add_output("rated_electricity_production1", val=0, units="kW")
+    ivc.add_output("rated_electricity_production2", val=0, units="kW")
+    ivc.add_output("electricity_capacity_factor1", val=np.zeros(30), units="unitless")
+    ivc.add_output("electricity_capacity_factor2", val=np.zeros(30), units="unitless")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
 
     prob.setup()
@@ -126,12 +132,30 @@ def test_generic_combiner_performance_power(plant_config, combiner_tech_config_e
     electricity_input1 = rng.random(8760)
     electricity_input2 = rng.random(8760)
     electricity_output = electricity_input1 + electricity_input2
-
+    rated_electricity_output = np.max(electricity_input1) + np.max(electricity_input2)
+    cf_input1 = np.sum(electricity_input1) / (np.max(electricity_input1) * len(electricity_input1))
+    cf_input2 = np.sum(electricity_input2) / (np.max(electricity_input2) * len(electricity_input2))
     prob.set_val("electricity_in1", electricity_input1, units="kW")
     prob.set_val("electricity_in2", electricity_input2, units="kW")
+    prob.set_val("rated_electricity_production1", np.max(electricity_input1), units="kW")
+    prob.set_val("rated_electricity_production2", np.max(electricity_input2), units="kW")
+    prob.set_val("electricity_capacity_factor1", cf_input1 * np.ones(30), units="unitless")
+    prob.set_val("electricity_capacity_factor2", cf_input2 * np.ones(30), units="unitless")
     prob.run_model()
 
-    assert prob.get_val("electricity_out", units="kW") == approx(electricity_output, rel=1e-5)
+    with subtests.test("combined electricity_out"):
+        assert prob.get_val("electricity_out", units="kW") == approx(electricity_output, rel=1e-5)
+    with subtests.test("combined rated_electricity_production"):
+        assert prob.get_val("rated_electricity_production", units="kW") == approx(
+            rated_electricity_output, rel=1e-5
+        )
+    with subtests.test("combined electricity_capacity_factor"):
+        combined_cf = np.sum(electricity_output) / (
+            rated_electricity_output * len(electricity_output)
+        )
+        assert prob.get_val("electricity_capacity_factor", units="unitless") == approx(
+            combined_cf, rel=1e-5
+        )
 
 
 def test_generic_combiner_performance_power_4_in(

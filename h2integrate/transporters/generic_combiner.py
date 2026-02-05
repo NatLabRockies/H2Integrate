@@ -15,7 +15,7 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()
+    commodity_units: str = field()  # TODO: update to commodity_rate_units
     in_streams: int = field(default=2)
 
 
@@ -39,6 +39,7 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         for i in range(1, self.config.in_streams + 1):
             self.add_input(
@@ -47,6 +48,18 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
                 shape=n_timesteps,
                 units=self.config.commodity_units,
             )
+            self.add_input(
+                f"rated_{self.config.commodity}_production{i}",
+                val=0.0,
+                shape=1,
+                units=self.config.commodity_units,
+            )
+            self.add_input(
+                f"{self.config.commodity}_capacity_factor{i}",
+                val=0.0,
+                shape=plant_life,
+                units="unitless",
+            )
 
         self.add_output(
             f"{self.config.commodity}_out",
@@ -54,10 +67,36 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
             shape=n_timesteps,
             units=self.config.commodity_units,
         )
+        self.add_output(
+            f"{self.config.commodity}_capacity_factor",
+            val=0.0,
+            shape=plant_life,
+            units="unitless",
+        )
+        self.add_output(
+            f"rated_{self.config.commodity}_production",
+            val=0.0,
+            shape=1,
+            units=self.config.commodity_units,
+        )
 
     def compute(self, inputs, outputs):
-        total = 0.0
+        total_out = 0.0
+        weighted_cf = 0.0
+        total_rated = 0.0
         for key, value in inputs.items():
             if "_in" in key:
-                total = total + value
-        outputs[f"{self.config.commodity}_out"] = total
+                total_out = total_out + value
+            if key.startswith("rated_"):
+                total_rated = total_rated + value
+            if "_capacity_factor" in key:
+                stream_number = key.split("capacity_factor")[-1]
+                rated_capacity = inputs[f"rated_{self.config.commodity}_production{stream_number}"]
+                weighted_cf = weighted_cf + (value * rated_capacity)
+
+        outputs[f"{self.config.commodity}_out"] = total_out
+        outputs[f"rated_{self.config.commodity}_production"] = total_rated
+        if total_rated > 0:
+            outputs[f"{self.config.commodity}_capacity_factor"] = weighted_cf / total_rated
+        else:
+            outputs[f"{self.config.commodity}_capacity_factor"] = 0.0
