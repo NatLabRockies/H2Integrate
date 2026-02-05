@@ -256,10 +256,10 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             control_strategy = self.options["tech_config"]["control_strategy"]["model"]
 
             # TODO: implement optional kwargs for this method: maybe this will remove if statement here
-            if "heuristic" in control_strategy:
+            if "Heuristic" in control_strategy:
                 # Initialize parameters for heuristic dispatch strategy
                 self.initialize_parameters()
-            elif "optimized" in control_strategy:
+            elif "Optimized" in control_strategy:
                 # Initialize parameters for optimized dispatch strategy
                 self.initialize_parameters(
                     inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
@@ -292,7 +292,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                         demand_in,
                     )
 
-                elif "optimized" in control_strategy:
+                elif "Optimized" in control_strategy:
                     # Progress report
                     if t % (self.n_timesteps // 4) < self.n_control_window:
                         percentage = round((t / self.n_timesteps) * 100)
