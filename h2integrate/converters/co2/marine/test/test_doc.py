@@ -1,11 +1,19 @@
-import unittest
-import importlib
+import shutil
 
 import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
 from openmdao.utils.assert_utils import assert_near_equal
+
+from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
+
+
+has_mcm = True
+try:
+    import mcm  # noqa: F401
+except ModuleNotFoundError:
+    has_mcm = False
 
 
 @fixture
@@ -49,20 +57,20 @@ def tech_config():
     }
 
 
-@fixture
-def driver_config():
+@fixture(scope="module")
+def driver_config(tmp_path_factory):
+    temp_dir = tmp_path_factory.mktemp("output")
     driver_config = {
         "general": {
-            "folder_output": "output",
+            "folder_output": str(temp_dir),
         },
     }
-    return driver_config
+    yield driver_config
+    shutil.rmtree(str(temp_dir))
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
-    from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
-
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
     )
@@ -157,102 +165,42 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-@unittest.skipUnless(importlib.util.find_spec("mcm") is not None, "mcm is not installed")
-class TestDOCPerformanceModel(unittest.TestCase):
-    def setUp(self):
-        from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
+@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
+def test_performance_model(tech_config, plant_config, driver_config):
+    doc_model = DOCPerformanceModel(
+        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
+    )
+    prob = om.Problem(model=om.Group())
+    prob.model.add_subsystem("DOC", doc_model, promotes=["*"])
+    prob.setup()
 
-        self.config = {
-            "model_inputs": {
-                "performance_parameters": {
-                    "power_single_ed_w": 24000000.0,  # W
-                    "flow_rate_single_ed_m3s": 0.6,  # m^3/s
-                    "number_ed_min": 1,
-                    "number_ed_max": 10,
-                    "E_HCl": 0.05,  # kWh/mol
-                    "E_NaOH": 0.05,  # kWh/mol
-                    "y_ext": 0.9,
-                    "y_pur": 0.2,
-                    "y_vac": 0.6,
-                    "frac_ed_flow": 0.01,
-                    "use_storage_tanks": True,
-                    "initial_tank_volume_m3": 0.0,  # m^3
-                    "store_hours": 12.0,  # hours
-                    "sal": 33.0,  # ppt
-                    "temp_C": 12.0,  # degrees Celsius
-                    "dic_i": 0.0022,  # mol/L
-                    "pH_i": 8.1,  # initial pH
-                },
-            },
-        }
-        plant_config = {
-            "plant": {
-                "plant_life": 30,
-                "simulation": {
-                    "n_timesteps": 8760,  # Default number of timesteps for the simulation
-                    "dt": 3600,
-                },
-            },
-        }
+    # Set inputs
+    rng = np.random.default_rng(seed=42)
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    power_profile = base_power + noise
+    prob.set_val("DOC.electricity_in", power_profile, units="W")
 
-        driver_config = {
-            "general": {
-                "folder_output": "output",
-            },
-        }
+    # Run the model
+    prob.run_model()
 
-        doc_model = DOCPerformanceModel(
-            driver_config=driver_config, plant_config=plant_config, tech_config=self.config
+    # Additional asserts for output values
+    co2_out = prob.get_val("co2_out")
+    co2_capture_mtpy = prob.get_val("co2_capture_mtpy")
+    plant_mCC_capacity_mtph = prob.get_val("plant_mCC_capacity_mtph")
+    total_tank_volume_m3 = prob.get_val("total_tank_volume_m3")
+
+    # Assert values (allowing for small numerical tolerance)
+    assert_near_equal(np.linalg.norm(co2_out), 11394970.06218, tolerance=1e-1)
+    assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
+    assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
+    assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
+
+
+@pytest.mark.skipif(has_mcm, reason="mcm is installed")
+def test_no_mcm_import(tech_config, plant_config, driver_config):
+    err = "The `mcm` package is required to use the Direct Ocean Capture model. Install it via:"
+    with pytest.raises(match=err):
+        DOCPerformanceModel(
+            driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
         )
-        self.prob = om.Problem(model=om.Group())
-        self.prob.model.add_subsystem("DOC", doc_model, promotes=["*"])
-        self.prob.setup()
-
-    def test_performance_model(self):
-        # Set inputs
-        rng = np.random.default_rng(seed=42)
-        base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
-        noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
-        power_profile = base_power + noise
-        self.prob.set_val("DOC.electricity_in", power_profile, units="W")
-
-        # Run the model
-        self.prob.run_model()
-
-        # Additional asserts for output values
-        co2_out = self.prob.get_val("co2_out")
-        co2_capture_mtpy = self.prob.get_val("co2_capture_mtpy")
-        plant_mCC_capacity_mtph = self.prob.get_val("plant_mCC_capacity_mtph")
-        total_tank_volume_m3 = self.prob.get_val("total_tank_volume_m3")
-
-        # Assert values (allowing for small numerical tolerance)
-        assert_near_equal(np.linalg.norm(co2_out), 11394970.06218, tolerance=1e-1)
-        assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
-        assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
-        assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
-
-
-@unittest.skipUnless(importlib.util.find_spec("mcm") is None, "mcm is installed")
-class TestDOCPerformanceModelNoMCM(unittest.TestCase):
-    def test_no_mcm_import(self):
-        from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
-
-        try:
-            plant_config = {
-                "plant": {
-                    "plant_life": 30,
-                    "simulation": {
-                        "n_timesteps": 8760,  # Default number of timesteps for the simulation
-                        "dt": 3600,
-                    },
-                },
-            }
-            self.model = DOCPerformanceModel(plant_config=plant_config, tech_config={})
-        except ImportError as e:
-            self.assertIn(
-                "The `mcm` package is required to use the Direct Ocean Capture model."
-                " Install it via:",
-                str(e),
-            )
-        else:
-            self.fail("ImportError was not raised")

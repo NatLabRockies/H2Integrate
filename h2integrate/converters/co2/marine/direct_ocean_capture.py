@@ -11,7 +11,7 @@ from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
 
 try:
     from mcm.capture import echem_mcc
-except ImportError:
+except ModuleNotFoundError:
     echem_mcc = None
 
 
