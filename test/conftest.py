@@ -48,6 +48,9 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def pytest_collection_modifyitems(config, items):
+    """Enforce the usage marking tests as either unit, regression, or integration tests.
+    This method will need to be imported into all subsequent ``contest.py`` files.
+    """
     test_types = {"unit", "regression", "integration"}
     missing_type_mark = [
         f"{item.path}::{item.name}"
