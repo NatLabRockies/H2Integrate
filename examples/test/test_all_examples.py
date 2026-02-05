@@ -1191,6 +1191,78 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
+def test_windard_pv_battery_dispatch_example(subtests):
+    # Change the current working directory to the example's directory
+    os.chdir(EXAMPLE_DIR / "29_wind_ard")
+
+    # Create the model
+    model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")
+
+    # Run the model
+    model.run()
+
+    # Post-process the results
+    model.post_process()
+
+    with subtests.test("Check wind generation"):
+        # Wind should generate some electricity
+        wind_electricity = model.prob.get_val("wind.electricity_out", units="GW")
+        assert wind_electricity.sum() == pytest.approx(150.88490967164714, rel=1e-4)
+
+    with subtests.test("Check solar generation"):
+        # Solar should generate some electricity
+        solar_electricity = model.prob.get_val("solar.electricity_out", units="GW")
+        assert solar_electricity.sum() == pytest.approx(44.22139046811775, rel=1e-4)
+
+    with subtests.test("Check battery gets wind and solar output"):
+        # Wind plus solar electricity should match battery input (direct connection)
+        battery_electricity_in = model.prob.get_val("battery.electricity_in", units="GW")
+        assert wind_electricity.sum() + solar_electricity.sum() == pytest.approx(
+            battery_electricity_in.sum(), rel=1e-6
+        )
+
+    with subtests.test("Check demand satisfaction"):
+        dispatched_electricity = model.prob.get_val("battery.electricity_out", units="MW")
+        # Demand should be met for the last part of the year
+        assert np.allclose(
+            dispatched_electricity[8700:],
+            model.prob.get_val("battery.electricity_demand", units="MW")[8700:],
+        )
+
+    # Subtest for LCOE
+    with subtests.test("Check dispatched LCOE value"):
+        lcoe = model.prob.get_val("finance_subgroup_dispatched_electricity.LCOE")[0]
+        assert pytest.approx(lcoe, rel=1e-6) == 0.09289430342906849
+
+    with subtests.test("Check generation LCOE value (excludes battery)"):
+        lcoe = model.prob.get_val("finance_subgroup_produced_electricity.LCOE")[0]
+        assert pytest.approx(lcoe, rel=1e-6) == 0.07204429286793802
+
+    # Subtest for total electricity produced
+    with subtests.test("Check total electricity dispatched"):
+        total_electricity_year_one = model.prob.get_val(
+            "finance_subgroup_dispatched_electricity.electricity_sum.total_electricity_produced",
+            units="MW*h/year",
+        )[0]
+        assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
+
+    # Subtest for electricity curtailed
+    with subtests.test("Check electricity curtailed"):
+        electricity_curtailed = model.prob.get_val(
+            "battery.electricity_unused_commodity", units="MW"
+        ).sum()
+
+        # import pdb; pdb.set_trace()
+        assert electricity_curtailed == pytest.approx(20344.97639127703, rel=1e-6)
+
+    # Subtest for missed load
+    with subtests.test("Check electricity missed load"):
+        electricity_missed_load = np.linalg.norm(
+            model.prob.get_val("battery.electricity_unmet_demand", units="MW")
+        )
+        assert electricity_missed_load == pytest.approx(1403.5372787817894)
+
+
 def test_csvgen_design_of_experiments(subtests):
     os.chdir(EXAMPLE_DIR / "20_solar_electrolyzer_doe")
 

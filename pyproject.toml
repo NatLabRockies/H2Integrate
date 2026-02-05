@@ -36,6 +36,7 @@ description = "Holistic Hybrids Optimization and Design Tool"
 requires-python = ">=3.11, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
+  "ard-nrel",
   "attrs",
   "CoolProp<7.0.0",
   "geopy",
