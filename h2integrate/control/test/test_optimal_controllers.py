@@ -38,9 +38,9 @@ tech_config = {
     "description": "...",
     "technologies": {
         "battery": {
-            "dispatch_rule_set": {"model": "pyomo_dispatch_generic_storage"},
-            "control_strategy": {"model": "optimized_dispatch_controller"},
-            "performance_model": {"model": "pysam_battery"},
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "OptimizedDispatchController"},
+            "performance_model": {"model": "PySAMBatteryPerformanceModel"},
             "model_inputs": {
                 "shared_parameters": {
                     "max_charge_rate": 50000,
@@ -73,8 +73,8 @@ tech_config = {
             },
         },
         "combiner": {
-            "performance_model": {"model": "combiner_performance"},
-            "dispatch_rule_set": {"model": "pyomo_dispatch_generic_converter"},
+            "performance_model": {"model": "CombinerPerformanceModel"},
+            "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
             "model_inputs": {
                 "performance_parameters": {
                     "commodity": "electricity",
