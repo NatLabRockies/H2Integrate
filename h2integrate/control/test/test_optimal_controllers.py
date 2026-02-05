@@ -73,7 +73,7 @@ tech_config = {
             },
         },
         "combiner": {
-            "performance_model": {"model": "CombinerPerformanceModel"},
+            "performance_model": {"model": "GenericCombinerPerformanceModel"},
             "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
             "model_inputs": {
                 "performance_parameters": {
