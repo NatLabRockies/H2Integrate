@@ -15,7 +15,8 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
     Simple generic storage model that acts as a pass-through component.
 
     Note: this storage performance model is intended to be used with the
-    `DemandOpenLoopStorageController` controller.
+    `DemandOpenLoopStorageController` controller and has not been tested
+    with other controllers.
 
     """
 
