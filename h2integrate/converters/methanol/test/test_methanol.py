@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -61,6 +62,7 @@ def smr_tech_config():
     return config
 
 
+@pytest.mark.unit
 def test_co2h_model_outputs(plant_config, co2h_tech_config, subtests):
     prob = om.Problem()
 
@@ -150,6 +152,7 @@ def test_co2h_model_outputs(plant_config, co2h_tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.unit
 def test_smr_model_outputs(plant_config, smr_tech_config, subtests):
     prob = om.Problem()
 
