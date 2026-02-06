@@ -1,14 +1,22 @@
 import os
 import shutil
-from pathlib import Path
 
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+    shutil.rmtree(str(temp_dir))
 
 
 @fixture
@@ -26,6 +34,7 @@ def tech_config():
     return hopp_tech_config
 
 
+@pytest.mark.unit
 def test_hopp_wrapper_outputs(subtests, plant_config, tech_config):
     tech_config["model_inputs"]["performance_parameters"]["enable_caching"] = False
     tech_config["model_inputs"]["performance_parameters"]["hopp_config"]["technologies"]["wind"][
@@ -119,13 +128,9 @@ def test_hopp_wrapper_outputs(subtests, plant_config, tech_config):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config):
-    cache_dir = EXAMPLE_DIR / "25_sizing_modes" / "test_cache"
-
-    # delete cache dir if it exists
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)
-
+@pytest.mark.unit
+def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config, temp_dir):
+    cache_dir = EXAMPLE_DIR / "25_sizing_modes" / str(temp_dir)
     tech_config["model_inputs"]["performance_parameters"]["enable_caching"] = True
     tech_config["model_inputs"]["performance_parameters"]["cache_dir"] = cache_dir
 
@@ -141,7 +146,7 @@ def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config):
     prob.setup()
     prob.run_model()
 
-    cache_filename_init = list(Path(cache_dir).glob("*.pkl"))
+    cache_filename_init = list(cache_dir.glob("*.pkl"))
 
     # Modify something in the hopp config and check that cache filename is different
     tech_config["model_inputs"]["performance_parameters"]["hopp_config"]["config"][
@@ -161,11 +166,8 @@ def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config):
     prob.run_model()
 
     cache_filename_new = [
-        file for file in Path(cache_dir).glob("*.pkl") if file not in cache_filename_init
+        file for file in cache_dir.glob("*.pkl") if file not in cache_filename_init
     ]
 
     with subtests.test("Check unique filename with modified config"):
         assert len(cache_filename_new) > 0
-
-    # Delete cache files and the testing cache dir
-    shutil.rmtree(cache_dir)
