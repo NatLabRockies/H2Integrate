@@ -927,7 +927,9 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         self.hybrid_dispatch_rule.create_arcs()
         assert_units_consistent(self.hybrid_dispatch_model)
 
-        # this is where dispatch problem state is made, this is used in the solver call
+        # This calls a class that stores problem state information such as solver metrics and
+        #   the objective function. This is directly used in the H2I simulation, but is
+        #   useful for tracking solver performance and debugging.
         self.problem_state = DispatchProblemState()
 
         # hybrid_dispatch_rule is the thing where you can access variables and hybrid_rule \
@@ -965,8 +967,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         """
 
         solver_results = self.glpk_solve_call(self.hybrid_dispatch_model)
-        # Call out how this would be used
-        # Note in file that we pulled this from HOPP (link to file in HOPP directory)
+        # The outputs of the store_problem_metrics method are not actively used in the H2I
+        #   simulation, but they are useful for debugging and tracking solver performance over time.
         self.problem_state.store_problem_metrics(
             solver_results, start_time, n_days, pyomo.value(self.hybrid_dispatch_model.objective)
         )

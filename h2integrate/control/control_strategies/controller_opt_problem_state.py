@@ -21,6 +21,18 @@ class DispatchProblemState:
     def store_problem_metrics(self, solver_results, start_time, n_days, objective_value):
         """
         This method takes the solver results and formats them for debugging.
+        The outputs of this method are not actively used in the H2I simulation, but they are useful
+        for debugging and tracking solver performance over time.
+
+        NOTE: that this method was brought over from HOPP. The link to the original method is here:
+        https://github.com/NatLabRockies/HOPP/blob/dde63faf6ea804828b2a7054cd6ec2c0a2f19614/hopp/simulation/technologies/dispatch/dispatch_problem_state.py
+
+
+        Args:
+            solver_results: The results object returned by the optimization solver.
+            start_time: The starting time of the optimization problem.
+            n_days: The number of days in the optimization horizon.
+            objective_value: The value of the objective function from the optimization problem.
         """
         self.value("start_time", start_time)
         self.value("n_days", n_days)
