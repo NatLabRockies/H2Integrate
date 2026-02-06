@@ -2,7 +2,7 @@ import pyomo.environ as pyo
 from pyomo.network import Arc
 
 
-class PyomoDispatchPlantRule:
+class PyomoDispatchPlantModel:
     """Class defining Pyomo model and rule for the optimized dispatch for load following
     for the overall optimization problem describing the system.
 
@@ -19,7 +19,7 @@ class PyomoDispatchPlantRule:
             the current time step in the optimization problem.
         round_digits (int): Number of digits to round to.
         block_set_name (str, optional): Name of the block set (model variables).
-            Defaults to "hybrid".
+            Defaults to "plant".
     """
 
     def __init__(
@@ -30,7 +30,7 @@ class PyomoDispatchPlantRule:
         tech_dispatch_models: pyo.ConcreteModel,
         time_weighting_factor: float,
         round_digits: int,
-        block_set_name: str = "hybrid",
+        block_set_name: str = "plant",
     ):
         self.source_techs = source_techs  # self.pyomo_model
         self.power_source_gen_vars = {key: [] for key in index_set}

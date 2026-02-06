@@ -129,9 +129,6 @@ from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
     AspenGeoH2SurfaceCostModel,
     AspenGeoH2SurfacePerformanceModel,
 )
-from h2integrate.control.control_rules.converters.generic_converter_opt import (
-    PyomoDispatchGenericConverterMinOperatingCosts,
-)
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
 )
@@ -153,6 +150,9 @@ from h2integrate.control.control_strategies.converters.demand_openloop_controlle
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
+)
+from h2integrate.control.control_rules.converters.generic_converter_min_operating_cost import (
+    PyomoDispatchGenericConverterMinOperatingCosts,
 )
 from h2integrate.control.control_strategies.converters.flexible_demand_openloop_controller import (
     FlexibleDemandOpenLoopConverterController,

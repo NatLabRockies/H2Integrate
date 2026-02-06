@@ -7,14 +7,14 @@ from pyomo.util.check_units import assert_units_consistent
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import range_val
-from h2integrate.control.control_rules.hybrid_rule import PyomoDispatchPlantRule
+from h2integrate.control.control_rules.plant_dispatch_model import PyomoDispatchPlantModel
 from h2integrate.control.control_strategies.controller_baseclass import ControllerBaseClass
-from h2integrate.control.control_rules.converters.generic_converter_opt import (
-    PyomoDispatchGenericConverterMinOperatingCosts,
-)
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
+)
+from h2integrate.control.control_rules.converters.generic_converter_min_operating_cost import (
+    PyomoDispatchGenericConverterMinOperatingCosts,
 )
 
 
@@ -969,7 +969,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
 
         # Create hybrid pyomo model, inputting individual technology models
-        self.hybrid_dispatch_rule = PyomoDispatchPlantRule(
+        self.hybrid_dispatch_rule = PyomoDispatchPlantModel(
             model,
             model.forecast_horizon,
             self.source_techs,
