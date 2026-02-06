@@ -4,7 +4,19 @@ from pyomo.network import Port
 
 class PyomoRuleStorageMinOperatingCosts:
     """Class defining Pyomo rules for the optimized dispatch for load following
-    for generic commodity storage components."""
+    for generic commodity storage components.
+
+    Args:
+        commodity_info (dict): Dictionary of commodity information. This must contain the keys
+            "commodity_name" and "commodity_storage_units".
+        pyomo_model (pyo.ConcreteModel): Externally defined Pyomo model that works as the base
+            model that this class builds off of.
+        index_set (pyo.Set):  Externally defined Pyomo index set for time steps. This should be
+            consistent with the forecast horizon of the optimization problem.
+        round_digits (int): Number of digits to round to.
+        block_set_name (str, optional): Name of the block set (model variables).
+            Defaults to "storage".
+    """
 
     def __init__(
         self,

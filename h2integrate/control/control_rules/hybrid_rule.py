@@ -4,7 +4,23 @@ from pyomo.network import Arc
 
 class PyomoDispatchPlantRule:
     """Class defining Pyomo model and rule for the optimized dispatch for load following
-    for the overall optimization problem describing the system."""
+    for the overall optimization problem describing the system.
+
+        Args:
+        pyomo_model (pyo.ConcreteModel): Externally defined Pyomo model that works as the base
+            model that this class builds off of.
+        index_set (pyo.Set):  Externally defined Pyomo index set for time steps. This should be
+            consistent with the forecast horizon of the optimization problem.
+        source_techs (list): List of technology names that are being dispatched in the system.
+        tech_dispatch_models (pyo.ConcreteModel): Externally defined Pyomo model that contains
+            the technology-specific dispatch rules and components for each technology in the system.
+        time_weighting_factor (float): Exponential time weighting factor for the
+            optimization problem that defines if/how future time steps are discounted relative to
+            the current time step in the optimization problem.
+        round_digits (int): Number of digits to round to.
+        block_set_name (str, optional): Name of the block set (model variables).
+            Defaults to "hybrid".
+    """
 
     def __init__(
         self,
