@@ -77,6 +77,23 @@ class GenericStorageCostModel(CostModelBaseClass):
             units=capacity_units,
             desc="Storage storage capacity",
         )
+        self.add_input(
+            "capacity_capex",
+            val=self.config.capacity_capex,
+            units="USD/" + capacity_units,
+            desc="Storage energy capital cost",
+        )
+        self.add_input(
+            "charge_capex",
+            val=self.config.charge_capex,
+            units="USD/" + charge_units,
+            desc="Storage power capital cost",
+        )
+        self.add_input(
+            "opex_fraction",
+            val=self.config.opex_fraction,
+            desc="Annual operating cost as a fraction of total system cost",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         storage_duration_hrs = 0.0
@@ -90,11 +107,11 @@ class GenericStorageCostModel(CostModelBaseClass):
             )
             raise UserWarning(msg)
         # Calculate total system cost based on capacity and charge components
-        total_system_cost = (
-            storage_duration_hrs * self.config.capacity_capex
-        ) + self.config.charge_capex
+        total_system_cost = (storage_duration_hrs * inputs["capacity_capex"]) + inputs[
+            "charge_capex"
+        ]
         capex = total_system_cost * inputs["max_charge_rate"]
         # Calculate operating expenses as a fraction of capital expenses
-        opex = self.config.opex_fraction * capex
+        opex = inputs["opex_fraction"] * capex
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex
