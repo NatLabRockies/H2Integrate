@@ -38,6 +38,7 @@ def variable_h2_production_profile():
     return variable_h2_profile
 
 
+@pytest.mark.unit
 def test_pass_through_controller(subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -93,6 +94,7 @@ def test_pass_through_controller(subtests):
         )
 
 
+@pytest.mark.regression
 def test_storage_demand_controller(subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -168,6 +170,7 @@ def test_storage_demand_controller(subtests):
         )
 
 
+@pytest.mark.unit
 def test_storage_demand_controller_round_trip_efficiency(subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -257,6 +260,7 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         )
 
 
+@pytest.mark.regression
 def test_generic_storage_demand_controller(subtests):
     # Test is the same as the demand controller test test_demand_controller for the "h2_storage"
     # performance model but with the "SimpleGenericStorage" performance model
@@ -343,6 +347,7 @@ def test_generic_storage_demand_controller(subtests):
         )
 
 
+@pytest.mark.regression
 def test_demand_converter_controller(subtests):
     # Test is the same as the demand controller test test_demand_controller for the "h2_storage"
     # performance model but with the "SimpleGenericStorage" performance model
@@ -413,6 +418,7 @@ def test_demand_converter_controller(subtests):
 ### Add test for flexible load demand controller here
 
 
+@pytest.mark.unit
 def test_flexible_demand_converter_controller(subtests, variable_h2_production_profile):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -519,6 +525,7 @@ def test_flexible_demand_converter_controller(subtests, variable_h2_production_p
         assert np.all(unmet_demand == prob.get_val("hydrogen_unmet_demand"))
 
 
+@pytest.mark.regression
 def test_flexible_demand_converter_controller_min_utilization(
     subtests, variable_h2_production_profile
 ):
