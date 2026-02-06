@@ -800,6 +800,16 @@ class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
 
 @define
 class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
+    """
+    Docstring for OptimizedDispatchControllerConfig
+
+    :var Args: Description
+    :var Args: Description
+    :var Args: Description
+    round_digits (int): Number of digits to round to in the Pyomo model.
+
+    """
+
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(default=None)
     discharge_efficiency: float = field(default=None)
@@ -812,6 +822,7 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     commodity_met_value: float = field(default=None)
     time_weighting_factor: float = field(default=0.995)
     round_digits: int = field(default=4)
+    time_duration: float = field(default=1.0)  # hours
 
     def make_dispatch_inputs(self):
         dispatch_keys = [
@@ -955,6 +966,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     model,
                     model.forecast_horizon,
                     self.config.round_digits,
+                    self.config.time_duration,
                     block_set_name=f"{tech}_rule",
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
@@ -964,6 +976,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     model,
                     model.forecast_horizon,
                     self.config.round_digits,
+                    self.config.time_duration,
                     block_set_name=f"{tech}_rule",
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)

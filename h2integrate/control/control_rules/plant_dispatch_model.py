@@ -17,7 +17,7 @@ class PyomoDispatchPlantModel:
         time_weighting_factor (float): Exponential time weighting factor for the
             optimization problem that defines if/how future time steps are discounted relative to
             the current time step in the optimization problem.
-        round_digits (int): Number of digits to round to.
+        round_digits (int): Number of digits to round to in the Pyomo model.
         block_set_name (str, optional): Name of the block set (model variables).
             Defaults to "plant".
     """
@@ -32,19 +32,45 @@ class PyomoDispatchPlantModel:
         round_digits: int,
         block_set_name: str = "plant",
     ):
-        self.source_techs = source_techs  # self.pyomo_model
-        self.power_source_gen_vars = {key: [] for key in index_set}
+        # Set the source technologies that are being dispatched in the system, this will be used to
+        #   pull the generation and load variables from the technology-specific dispatch models.
+        #   This includes all technologies in the dispatch model, e.g., converters and storage.
+        # These are pulled from self.pyomo_model in pyomo_controller.py
+        self.source_techs = source_techs
+        # Set the technology-specific dispatch models. These contain the technology-specific
+        #    Pyomo models for each technology in the system. These are created in
+        #   pyomo_controller.py and contain the technology-specific variables, parameters,
+        #   constraints, and ports for each technology.
         self.tech_dispatch_models = tech_dispatch_models
+        # Set the time weighting factor for the optimization problem, this defines if/how future
+        #   time steps are discounted relative to the current time step in the optimization problem.
         self.time_weighting_factor_input = time_weighting_factor
+        # Initialize lists to hold the generation and load variables from each technology
         self.load_vars = {key: [] for key in index_set}
+        self.power_source_gen_vars = {key: [] for key in index_set}
+        # Initialize lists to hold the ports from each technology that will be connected to the
+        #   system-level ports in the dispatch model. These are used to define the arcs between
+        #   the technology-specific ports and the system-level ports.
         self.ports = {key: [] for key in index_set}
+        # Initialize list to hold the arcs that connect the technology-specific ports to the
+        #   system-level ports in the dispatch model.
         self.arcs = []
 
+        # Set the number of digits to round to in the Pyomo model
         self.round_digits = round_digits
 
+        # The Pyomo model that this class builds off of, where all of the variables, parameters,
+        #   constraints, and ports of the plant model will be added to. The plant model collects
+        #   the generation and load variables from the technology-specific dispatch models and
+        #   defines the system-level constraints that connect the technologies together in the
+        #   overall system.
         self.model = pyomo_model
+        # Set of time steps for the optimization problem, this will be used to define the Pyomo
+        #   blocks for the dispatch model. This is where the internal variables, parameters,
+        #   constraints, and ports are defined for the storage dispatch model in the
+        #   dispatch_block_rule_function.
         self.blocks = pyo.Block(index_set, rule=self.dispatch_block_rule)
-
+        # Add the blocks to the Pyomo model with the specified block set name.
         self.model.__setattr__(block_set_name, self.blocks)
 
     def dispatch_block_rule(self, hybrid, t):

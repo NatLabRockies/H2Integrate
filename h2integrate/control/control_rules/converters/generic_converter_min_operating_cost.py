@@ -13,7 +13,7 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
             model that this class builds off of.
         index_set (pyo.Set):  Externally defined Pyomo index set for time steps. This should be
             consistent with the forecast horizon of the optimization problem.
-        round_digits (int): Number of digits to round to.
+        round_digits (int): Number of digits to round to in the Pyomo model.
         block_set_name (str, optional): Name of the block set (model variables).
             Defaults to "converter".
     """
@@ -24,18 +24,32 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
         pyomo_model: pyo.ConcreteModel,
         index_set: pyo.Set,
         round_digits: int,
+        time_duration: float,
         block_set_name: str = "converter",
     ):
+        # Set the number of digits to round to in the Pyomo model
         self.round_digits = round_digits
+        # Set the block set name and commodity information
         self.block_set_name = block_set_name
+        # Commodity information, this will be used to define variable and parameter
+        #   names and units in the Pyomo model
         self.commodity_name = commodity_info["commodity_name"]
         self.commodity_storage_units = commodity_info["commodity_storage_units"]
 
+        # The Pyomo model that this class builds off of, where all of the variables, parameters,
+        #   constraints, and ports will be added to.
         self.model = pyomo_model
+        # Set of time steps for the optimization problem, this will be used to define the Pyomo
+        #   blocks for the dispatch model. This is where the internal variables, parameters,
+        #   constraints, and ports are defined for the storage dispatch model in the
+        #   dispatch_block_rule_function.
         self.blocks = pyo.Block(index_set, rule=self.dispatch_block_rule_function)
 
+        # Add the blocks to the Pyomo model with the specified block set name.
         self.model.__setattr__(self.block_set_name, self.blocks)
-        self.time_duration = [1.0] * len(self.blocks.index_set())
+        # Set time steps for pyomo model. 1.0 here means that the time step is 1 hour.
+        #   The units of this are in hours, so half an hour would be 0.5, etc.
+        self.time_duration = [time_duration] * len(self.blocks.index_set())
 
     def initialize_parameters(
         self, commodity_in: list, commodity_demand: list, dispatch_inputs: dict
