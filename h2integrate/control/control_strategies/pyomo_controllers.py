@@ -180,6 +180,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     dispatch_block_rule_function = discrete_inputs[
                         f"{'dispatch_block_rule_function'}_{source_tech}"
                     ]
+                # TODO: Make issue about using Jared's rules here to enable running optimization
                 # create pyomo block and set attr
                 blocks = pyomo.Block(index_set, rule=dispatch_block_rule_function)
                 setattr(self.pyomo_model, source_tech, blocks)
@@ -796,19 +797,46 @@ class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
 @define
 class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     """
-    Docstring for OptimizedDispatchControllerConfig
+    Configuration data container for Pyomo-based optimal dispatch.
 
-    :var Args: Description
-    :var Args: Description
-    :var Args: Description
-    round_digits (int): Number of digits to round to in the Pyomo model.
+    This class groups the parameters needed by the optimized dispatch controller.
+    Values are typically populated from the technology
+    `tech_config.yaml` (merged under the "control" section).
 
+    Attributes:
+        max_charge_rate (float):
+            The maximum charge that the storage can accept
+            (in units of the commodity per time step).
+        charge_efficiency (float):
+            The efficiency of charging the storage (between 0 and 1).
+        discharge_efficiency (float):
+            The efficiency of discharging the storage (between 0 and 1).
+        commodity_name (str):
+            The name of the commodity being stored (e.g., "electricity", "hydrogen").
+        commodity_storage_units (str):
+            The units of the commodity being stored (e.g., "kW", "kg").
+        cost_per_production (float):
+            The cost to use the incoming produced commodity (in $/commodity_storage_units).
+        cost_per_charge (float):
+            The cost per unit of charging the storage (in $/commodity_storage_units).
+        cost_per_discharge (float):
+            The cost per unit of discharging the storage (in $/commodity_storage_units).
+        commodity_met_value (float):
+            The penalty for not meeting the desired load demand (in $/commodity_storage_units).
+        time_weighting_factor (float):
+            The weighting factor applied to future time steps in the optimization objective
+            (between 0 and 1).
+        round_digits (int):
+            The number of digits to round to in the Pyomo model for numerical stability.
+            The default of this parameter is 4.
+        time_duration (float):
+            The duration of each time step in the Pyomo model in hours.
+            The default of this parameter is 1.0 (i.e., 1 hour time steps).
     """
 
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(default=None)
     discharge_efficiency: float = field(default=None)
-    demand_profile: list = field(default=None)
     commodity_name: str = field(default=None)
     commodity_storage_units: str = field(default=None)
     cost_per_production: float = field(default=None)
@@ -937,6 +965,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         """
 
         solver_results = self.glpk_solve_call(self.hybrid_dispatch_model)
+        # Call out how this would be used
+        # Note in file that we pulled this from HOPP (link to file in HOPP directory)
         self.problem_state.store_problem_metrics(
             solver_results, start_time, n_days, pyomo.value(self.hybrid_dispatch_model.objective)
         )
