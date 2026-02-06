@@ -292,6 +292,11 @@ For further information on how to write or run a test, please see the
 [`pytest` documentation](https://docs.pytest.org/en/stable/index.html), which outlines many
 useful features for both writing and running tests.
 
+When running tests (or building the docs) OpenMDAO produces a significant number of outputs files
+and folders, which can be cleaned up using `openmdao clean`. This will prompt you to confirm every
+folder, so if you don't need to review the OpenMDAO output files, they can be universally wiped
+without prompts using the `-f` flag. Use `--help` for further usage instructions.
+
 #### Chunking Lengthy or Complex Tests
 
 At times these tests can be lengthy because many checks could be required in a single test function,
