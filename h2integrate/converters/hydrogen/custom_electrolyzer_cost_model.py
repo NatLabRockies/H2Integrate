@@ -42,7 +42,21 @@ class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):
             desc="Size of the electrolyzer in kW",
         )
 
+        self.add_input(
+            "unit_capex",
+            val=self.config.capex_USD_per_kW,
+            units="USD/kW",
+            desc="CapEx of electrolyzer in USD/kW",
+        )
+
+        self.add_input(
+            "fixed_opex",
+            val=self.config.fixed_om_USD_per_kW_per_year,
+            units="USD/kW/yr",
+            desc="Fixed OpEx of electrolyzer in USD/kW/year",
+        )
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         electrolyzer_size_kW = inputs["electrolyzer_size_mw"]
-        outputs["CapEx"] = self.config.capex_USD_per_kW * electrolyzer_size_kW
-        outputs["OpEx"] = self.config.fixed_om_USD_per_kW_per_year * electrolyzer_size_kW
+        outputs["CapEx"] = inputs["unit_capex"] * electrolyzer_size_kW
+        outputs["OpEx"] = inputs["fixed_opex"] * electrolyzer_size_kW
