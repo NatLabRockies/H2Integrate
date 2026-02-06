@@ -6,6 +6,7 @@ from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
 )
 
 
+@pytest.mark.unit
 def test_custom_electrolyzer_cost_model(subtests):
     capex_usd_per_kw = 10.0
     opex_usd_per_kw = 5.0
