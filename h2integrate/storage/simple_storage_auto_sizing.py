@@ -134,17 +134,19 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             )  # TODO: update demand based on end-use needs
 
         # The commodity_set_point is the production set by the controller
-        commodity_production = inputs[f"{self.commodity}_set_point"]
+        desired_commodity_production = inputs[f"{self.commodity}_set_point"]
 
         # TODO: SOC is just an absolute value and is not a percentage. Ideally would calculate as shortfall in future.
         # Size the storage capacity to meet the demand as much as possible
         commodity_storage_soc = []
-        for j in range(len(commodity_production)):
+        for j in range(len(desired_commodity_production)):
             if j == 0:
-                commodity_storage_soc.append(commodity_production[j] - commodity_demand[j])
+                commodity_storage_soc.append(desired_commodity_production[j] - commodity_demand[j])
             else:
                 commodity_storage_soc.append(
-                    commodity_storage_soc[j - 1] + commodity_production[j] - commodity_demand[j]
+                    commodity_storage_soc[j - 1]
+                    + desired_commodity_production[j]
+                    - commodity_demand[j]
                 )
 
         minimum_soc = np.min(commodity_storage_soc)
@@ -170,7 +172,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
 
         # Simulate a basic storage component
         for t, demand_t in enumerate(commodity_demand):
-            input_flow = commodity_production[t]
+            input_flow = desired_commodity_production[t]
             available_charge = float(commodity_storage_capacity_kg - soc)
             available_discharge = float(soc)
 
