@@ -91,6 +91,17 @@ def aspen_geoh2_config():
     return {"model_inputs": model_inputs}
 
 
+@fixture
+def geologic_data():
+    input_dir = ROOT_DIR / "converters" / "hydrogen" / "geologic" / "inputs"
+    perf_out_fname = "aspen_perf_coeffs_test.csv"
+    cost_out_fname = "aspen_cost_coeffs_test.csv"
+    yield input_dir, perf_out_fname, cost_out_fname
+    (input_dir / perf_out_fname).unlink(missing_ok=True)
+    (input_dir / cost_out_fname).unlink(missing_ok=True)
+
+
+@pytest.mark.unit
 def test_aspen_geoh2_performance_outputs(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
@@ -190,6 +201,7 @@ def test_aspen_geoh2_performance_outputs(
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config):
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(
@@ -217,6 +229,7 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
         ), 1e-6
 
 
+@pytest.mark.regression
 def test_aspen_geoh2_performance_cost(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
@@ -257,13 +270,11 @@ def test_aspen_geoh2_performance_cost(
         assert pytest.approx(prob.model.get_val("geoh2.VarOpEx")[0], rel=1e-6) == expected_varopex
 
 
+@pytest.mark.regression
 def test_aspen_geoh2_refit_coeffs(
-    subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
+    subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config, geologic_data
 ):
-    input_dir = ROOT_DIR / "converters" / "hydrogen" / "geologic" / "inputs"
-    perf_out_fname = "aspen_perf_coeffs_test.csv"
-    cost_out_fname = "aspen_cost_coeffs_test.csv"
-
+    input_dir, perf_out_fname, cost_out_fname = geologic_data
     aspen_geoh2_config["model_inputs"]["shared_parameters"].update({"refit_coeffs": True})
     aspen_geoh2_config["model_inputs"]["performance_parameters"].update(
         {"perf_coeff_fn": perf_out_fname}
@@ -308,7 +319,3 @@ def test_aspen_geoh2_refit_coeffs(
     with subtests.test("Refit Cost Coeff File"):
         cost_out_fpath = input_dir / cost_out_fname
         assert cost_out_fpath.exists()
-
-    # Remove refit coefficient files
-    cost_out_fpath.unlink()
-    perf_out_fpath.unlink()
