@@ -525,7 +525,6 @@ class PyomoRuleStorageMinOperatingCosts:
         ##################################
         # System Variables               #
         ##################################
-        # TODO: fix the units on these
         pyo_commodity_units = eval("pyo.units." + self.commodity_storage_units)
 
         hybrid_model.system_production = pyo.Var(

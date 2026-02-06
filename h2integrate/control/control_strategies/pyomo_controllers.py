@@ -180,7 +180,6 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     dispatch_block_rule_function = discrete_inputs[
                         f"{'dispatch_block_rule_function'}_{source_tech}"
                     ]
-                # TODO: Make issue about using Jared's rules here to enable running optimization
                 # create pyomo block and set attr
                 blocks = pyomo.Block(index_set, rule=dispatch_block_rule_function)
                 setattr(self.pyomo_model, source_tech, blocks)
