@@ -2,6 +2,7 @@ import copy
 import shutil
 from pathlib import Path
 
+import pytest
 from pytest import approx, fixture
 
 from h2integrate.converters.iron import iron
@@ -64,6 +65,7 @@ def iron_ore():
     return iron_ore
 
 
+@pytest.mark.regression
 def test_run_martin_iron_ore(iron_ore, subtests):
     performance, cost, finance = iron.run_iron_full_model(iron_ore)
     perf_df = performance.performances_df
@@ -119,11 +121,10 @@ def test_run_martin_iron_ore(iron_ore, subtests):
         assert finance.sol["lco"] == approx(141.91, 1e-3)
 
 
+@pytest.mark.regression
 def test_refit_coefficients(iron_ore, subtests):
     # Determine the model directory based on the model name
-    iron_tech_dir = (
-        Path(__file__).parent.parent.parent.parent / "h2integrate" / "converters" / "iron"
-    )
+    iron_tech_dir = Path(__file__).parents[3] / "h2integrate" / "converters" / "iron"
     model_name = iron_ore["iron"]["cost_model"]["name"]
     model_dir = iron_tech_dir / model_name
 
@@ -198,6 +199,7 @@ def test_refit_coefficients(iron_ore, subtests):
         shutil.move(perf_backup_file, perf_coeffs_file)
 
 
+@pytest.mark.regression
 def test_run_rosner_iron_ore(iron_ore, subtests):
     iron_ore_copy = copy.deepcopy(iron_ore)
     iron_ore_copy["iron"]["finance_model"]["name"] = "rosner_ore"

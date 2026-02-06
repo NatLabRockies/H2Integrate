@@ -35,6 +35,7 @@ def plant_config():
     return plant_config
 
 
+@pytest.mark.regression
 def test_iron_transport_performance_chicago(plant_config, subtests):
     # Chicago land distance: 68.19490223326876 km
     # Chicago has water distance of 1414.8120870922066 km
@@ -81,6 +82,7 @@ def test_iron_transport_performance_chicago(plant_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_iron_transport_performance_buffalo(plant_config, subtests):
     # Buffalo land distance: 794.1713773276688 km
     # Buffalo has water distance of 1621.9112211308186 km
@@ -127,6 +129,7 @@ def test_iron_transport_performance_buffalo(plant_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_iron_transport_performance_cleveland(plant_config, subtests):
     # Cleveland land distance: 555.2088919541055 km
     # Cleveland has water distance of 1341.7141480490504 km
@@ -173,6 +176,7 @@ def test_iron_transport_performance_cleveland(plant_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_iron_transport_performance_closest_loc(plant_config, subtests):
     tech_config_find_closest = {
         "model_inputs": {
@@ -218,6 +222,7 @@ def test_iron_transport_performance_closest_loc(plant_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_iron_transport_cost_cleveland(plant_config, subtests):
     # total cost: 62.94298688675447 USD/tonne
     # land cost: 38.4320718826894 USD/tonne
