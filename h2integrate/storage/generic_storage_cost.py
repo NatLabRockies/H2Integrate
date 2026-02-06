@@ -80,18 +80,19 @@ class GenericStorageCostModel(CostModelBaseClass):
         self.add_input(
             "capacity_capex",
             val=self.config.capacity_capex,
-            units="USD/" + capacity_units,
+            units=f"USD/({capacity_units})",
             desc="Storage energy capital cost",
         )
         self.add_input(
             "charge_capex",
             val=self.config.charge_capex,
-            units="USD/" + charge_units,
+            units=f"USD/({charge_units})",
             desc="Storage power capital cost",
         )
         self.add_input(
             "opex_fraction",
             val=self.config.opex_fraction,
+            units="unitless",
             desc="Annual operating cost as a fraction of total system cost",
         )
 
