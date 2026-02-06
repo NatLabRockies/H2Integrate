@@ -1,5 +1,6 @@
 import os
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -31,7 +32,10 @@ def tech_config():
     tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
     hopp_tech_config = tech_config["technologies"]["hopp"]
 
-    return hopp_tech_config
+    yield hopp_tech_config
+
+    (Path.cwd() / "battery_output.png").unlink()
+    (Path.cwd() / "generation_profile.png").unlink()
 
 
 @pytest.mark.unit
@@ -130,9 +134,9 @@ def test_hopp_wrapper_outputs(subtests, plant_config, tech_config):
 
 @pytest.mark.unit
 def test_hopp_wrapper_cache_filenames(subtests, plant_config, tech_config, temp_dir):
-    cache_dir = EXAMPLE_DIR / "25_sizing_modes" / str(temp_dir)
+    cache_dir = temp_dir
     tech_config["model_inputs"]["performance_parameters"]["enable_caching"] = True
-    tech_config["model_inputs"]["performance_parameters"]["cache_dir"] = cache_dir
+    tech_config["model_inputs"]["performance_parameters"]["cache_dir"] = str(cache_dir)
 
     # Run hopp and get cache filename
     prob = om.Problem()
