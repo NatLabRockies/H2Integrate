@@ -86,17 +86,24 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         total_rated = 0.0
         for key, value in inputs.items():
             if "_in" in key:
+                # add the commodity_in profile
                 total_out = total_out + value
             if key.startswith("rated_"):
+                # add the rated_commodity_production
                 total_rated = total_rated + value
             if "_capacity_factor" in key:
+                # get the stream number so we can get the proper rated capacity
                 stream_number = key.split("capacity_factor")[-1]
                 rated_capacity = inputs[f"rated_{self.config.commodity}_production{stream_number}"]
+                # weight the capacity factor with the rated capacity
                 weighted_cf = weighted_cf + (value * rated_capacity)
 
         outputs[f"{self.config.commodity}_out"] = total_out
         outputs[f"rated_{self.config.commodity}_production"] = total_rated
         if total_rated > 0:
+            # weighted CF = (CF1*S1 + CF2*S2)/(S1 + S2)
+            # Where S is the rated commodity production of input stream i
+            # and CF is the capacity factor of input stream i
             outputs[f"{self.config.commodity}_capacity_factor"] = weighted_cf / total_rated
         else:
             outputs[f"{self.config.commodity}_capacity_factor"] = 0.0
