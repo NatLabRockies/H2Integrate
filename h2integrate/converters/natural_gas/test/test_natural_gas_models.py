@@ -71,6 +71,7 @@ def plant_config():
     }
 
 
+@pytest.mark.unit
 def test_ngcc_performance_outputs(plant_config, ngcc_performance_params, subtests):
     """Test NGCC performance model with typical operating conditions."""
     tech_config_dict = {
@@ -173,6 +174,7 @@ def test_ngcc_performance_outputs(plant_config, ngcc_performance_params, subtest
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.unit
 def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
     """Test NGCC performance model with typical operating conditions."""
     tech_config_dict = {
@@ -209,6 +211,7 @@ def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 100.0
 
 
+@pytest.mark.regression
 def test_ngct_performance(plant_config, ngct_performance_params, subtests):
     """Test NGCT performance model with typical operating conditions."""
     tech_config_dict = {
@@ -245,6 +248,7 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 50.0
 
 
+@pytest.mark.unit
 def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
     """Test NGCC cost model calculations."""
     tech_config_dict = {
@@ -294,6 +298,7 @@ def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
         assert cost_year == ngcc_cost_params["cost_year"]
 
 
+@pytest.mark.unit
 def test_ngct_cost(plant_config, ngct_cost_params, subtests):
     """Test NGCT cost model calculations."""
     tech_config_dict = {
@@ -343,6 +348,7 @@ def test_ngct_cost(plant_config, ngct_cost_params, subtests):
         assert cost_year == ngct_cost_params["cost_year"]
 
 
+@pytest.mark.unit
 def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests):
     """Test NGCC performance model with typical operating conditions."""
     tech_config_dict = {
