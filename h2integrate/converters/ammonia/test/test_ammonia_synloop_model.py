@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 import pytest
@@ -9,6 +10,14 @@ from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+    shutil.rmtree(str(temp_dir))
 
 
 @fixture
@@ -42,6 +51,7 @@ def synloop_config():
     }
 
 
+@pytest.mark.unit
 def test_ammonia_synloop_outputs(synloop_config, subtests):
     plant_config = {
         "plant": {
@@ -151,6 +161,7 @@ def test_ammonia_synloop_outputs(synloop_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
     plant_info = {
         "plant_life": 30,
@@ -212,12 +223,14 @@ def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
         assert np.allclose(total, np.sum(expected_nh3), rtol=1e-6)
 
 
-def test_size_mode_outputs(subtests):
+@pytest.mark.regression
+def test_size_mode_outputs(subtests, temp_dir):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "25_sizing_modes")
 
     # Load the 'base' configs needed to create the H2I model
     driver_config = load_driver_yaml(EXAMPLE_DIR / "25_sizing_modes" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = str(temp_dir)
     plant_config = load_plant_yaml(EXAMPLE_DIR / "25_sizing_modes" / "plant_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
     input_config = {
