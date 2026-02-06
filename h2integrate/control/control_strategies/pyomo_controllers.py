@@ -394,11 +394,6 @@ class SimpleBatteryControllerHeuristic(PyomoControllerBaseClass):
         self.max_discharge_fraction = [0.0] * self.config.n_control_window
         self._fixed_dispatch = [0.0] * self.config.n_control_window
 
-        # TODO: should I enforce either a day schedule or a year schedule year and save it as
-        # user input? Additionally, Should I drop it as input in the init function?
-        # if fixed_dispatch is not None:
-        #     self.user_fixed_dispatch = fixed_dispatch
-
     def initialize_parameters(self):
         """Initializes parameters."""
         self.minimum_storage = 0.0
