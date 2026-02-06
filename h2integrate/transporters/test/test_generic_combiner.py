@@ -24,7 +24,7 @@ def plant_config():
 def combiner_tech_config_electricity():
     elec_combiner_dict = {
         "model_inputs": {
-            "performance_parameters": {"commodity": "electricity", "commodity_units": "kW"}
+            "performance_parameters": {"commodity": "electricity", "commodity_rate_units": "kW"}
         }
     }
     return elec_combiner_dict
@@ -36,7 +36,7 @@ def combiner_tech_config_electricity_4_in():
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "electricity",
-                "commodity_units": "kW",
+                "commodity_rate_units": "kW",
                 "in_streams": 4,
             }
         }
@@ -48,7 +48,7 @@ def combiner_tech_config_electricity_4_in():
 def combiner_tech_config_hydrogen():
     h2_combiner_dict = {
         "model_inputs": {
-            "performance_parameters": {"commodity": "hydrogen", "commodity_units": "kg"}
+            "performance_parameters": {"commodity": "hydrogen", "commodity_rate_units": "kg"}
         }
     }
     return h2_combiner_dict
@@ -60,7 +60,7 @@ def summer_tech_config_electricity_consumption():
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "electricity",
-                "commodity_units": "kW",
+                "commodity_rate_units": "kW",
                 "operation_mode": "consumption",
             }
         }
@@ -74,7 +74,7 @@ def summer_tech_config_hydrogen_consumption():
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "hydrogen",
-                "commodity_units": "kg",
+                "commodity_rate_units": "kg",
                 "operation_mode": "consumption",
             }
         }
@@ -88,7 +88,7 @@ def summer_tech_config_electricity_production():
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "electricity",
-                "commodity_units": "kW",
+                "commodity_rate_units": "kW",
                 "operation_mode": "production",
             }
         }
@@ -102,7 +102,7 @@ def summer_tech_config_hydrogen_production():
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "hydrogen",
-                "commodity_units": "kg",
+                "commodity_rate_units": "kg",
                 "operation_mode": "production",
             }
         }
@@ -328,7 +328,7 @@ def test_generic_summer_default_mode_is_production(plant_config):
         "model_inputs": {
             "performance_parameters": {
                 "commodity": "electricity",
-                "commodity_units": "kW",
+                "commodity_rate_units": "kW",
                 # Note: operation_mode not specified, should default to production
             }
         }

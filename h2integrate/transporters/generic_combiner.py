@@ -15,7 +15,7 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()  # TODO: update to commodity_rate_units
+    commodity_rate_units: str = field()
     in_streams: int = field(default=2)
 
 
@@ -46,13 +46,13 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
                 f"{self.config.commodity}_in{i}",
                 val=0.0,
                 shape=n_timesteps,
-                units=self.config.commodity_units,
+                units=self.config.commodity_rate_units,
             )
             self.add_input(
                 f"rated_{self.config.commodity}_production{i}",
                 val=0.0,
                 shape=1,
-                units=self.config.commodity_units,
+                units=self.config.commodity_rate_units,
             )
             self.add_input(
                 f"{self.config.commodity}_capacity_factor{i}",
@@ -65,7 +65,7 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
             f"{self.config.commodity}_out",
             val=0.0,
             shape=n_timesteps,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
         )
         self.add_output(
             f"{self.config.commodity}_capacity_factor",
@@ -77,7 +77,7 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
             f"rated_{self.config.commodity}_production",
             val=0.0,
             shape=1,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
         )
 
     def compute(self, inputs, outputs):

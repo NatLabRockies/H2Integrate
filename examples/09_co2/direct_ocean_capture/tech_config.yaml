@@ -57,7 +57,7 @@ technologies:
     model_inputs:
       performance_parameters:
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_rate_units: "kW"
       dispatch_rule_parameters:
         commodity_name: "electricity"
         commodity_storage_units: "kW"
