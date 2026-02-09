@@ -1,23 +1,9 @@
-from pytest import fixture
+import pytest
 
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 
-@fixture
-def plant_config():
-    plant = {
-        "plant_life": 30,
-        "simulation": {
-            "dt": 3600,
-            "n_timesteps": 8760,
-            "start_time": "01/01/1900 00:30:00",
-            "timezone": 0,
-        },
-    }
-
-    return {"plant": plant, "site": {"latitude": 30.6617, "longitude": -101.7096, "resources": {}}}
-
-
+@pytest.mark.unit
 def test_solar_baseclass_initialization(plant_config, subtests):
     solar_base = SolarPerformanceBaseClass(
         plant_config=plant_config,
