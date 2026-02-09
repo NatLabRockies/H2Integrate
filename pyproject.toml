@@ -36,7 +36,6 @@ description = "Holistic Hybrids Optimization and Design Tool"
 requires-python = ">=3.11, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
-  "ard-nrel",
   "attrs",
   "CoolProp<7.0.0",
   "geopy",
@@ -98,16 +97,17 @@ develop = [
     "pytest>=9",
     "ruff",
     "sphinxcontrib-napoleon",
-    "h2integrate[gis]"
+    "h2integrate[gis,ard]"
 ]
 examples = [
   "jupyterlab",
-  "h2integrate[gis]"
+  "h2integrate[gis,ard]"
 ]
 gis = [
   "geopandas",
   "contextily"
 ]
+ard = ["ard-nrel"]
 all = ["h2integrate[develop,examples]"]
 
 [tool.setuptools]
