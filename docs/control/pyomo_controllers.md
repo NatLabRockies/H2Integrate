@@ -34,7 +34,7 @@ We have exposed the optimization cost (weighting) values to the user in this imp
 - The `commodity_met_value` should be the largest (possibly by an order of magnitude) because this is what drives meeting the load for load following.
 - The `cost_per_charge` value should not equal the `cost_per_discharge` value. If they are the same value, they can cause the optimizer to oscillate the battery. In general, `cost_per_charge` shoul be slightly lower than `cost_per_discharge`.
 - The `cost_per_production` is the cost of the energy that is already produced (i.e. from wind for example). This can be set to 0 to encourage using incoming energy.
-- These weights are defined as "$/kW".
+- The cost values are defined in units of "$/kW".
 ```
 
 For an example of how to use the optimized pyomo control framework with the `optimized_dispatch_controller`, see
