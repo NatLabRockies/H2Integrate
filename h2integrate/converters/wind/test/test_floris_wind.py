@@ -62,29 +62,7 @@ def plant_config_openmeteo():
     return d
 
 
-@fixture
-def plant_config_wtk():
-    site_config = {
-        "latitude": 35.2018863,
-        "longitude": -101.945027,
-        "resource": {
-            "wind_resource": {
-                "resource_model": "WTKNRELDeveloperAPIWindResource",
-                "resource_parameters": {
-                    "resource_year": 2012,
-                },
-            }
-        },
-    }
-    plant_dict = {
-        "plant_life": 30,
-        "simulation": {"n_timesteps": 8760, "dt": 3600, "start_time": "01/01 00:30:00"},
-    }
-
-    d = {"site": site_config, "plant": plant_dict}
-    return d
-
-
+@pytest.mark.unit
 def test_floris_outputs(plant_config_openmeteo, floris_config, subtests):
     tech_config_dict = {
         "model_inputs": {
@@ -192,6 +170,7 @@ def test_floris_outputs(plant_config_openmeteo, floris_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests):
     tech_config_dict = {
         "model_inputs": {
@@ -244,6 +223,7 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
         ) == prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")
 
 
+@pytest.mark.unit
 def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, subtests):
     cache_dir = ROOT_DIR.parent / "test_cache_floris"
 
@@ -321,6 +301,7 @@ def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, su
     shutil.rmtree(cache_dir)
 
 
+@pytest.mark.regression
 def test_floris_caching_changed_inputs(plant_config_openmeteo, floris_config, subtests):
     cache_dir = ROOT_DIR.parent / "test_cache_floris"
 
@@ -397,6 +378,7 @@ def test_floris_caching_changed_inputs(plant_config_openmeteo, floris_config, su
     shutil.rmtree(cache_dir)
 
 
+@pytest.mark.regression
 def test_floris_wind_performance_air_dens(plant_config_wtk, floris_config, subtests):
     tech_config_dict = {
         "model_inputs": {

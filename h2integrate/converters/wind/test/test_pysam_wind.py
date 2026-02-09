@@ -1,83 +1,25 @@
 import numpy as np
 import pytest
 import openmdao.api as om
-from pytest import fixture
 
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
-@fixture
-def wind_resource_config():
-    wind_resource_dict = {
-        "latitude": 35.2018863,
-        "longitude": -101.945027,
-        "resource_year": 2012,
-    }
-    return wind_resource_dict
-
-
-@fixture
-def plant_config():
-    site_config = {
-        "latitude": 35.2018863,
-        "longitude": -101.945027,
-    }
-    plant_dict = {
-        "plant_life": 30,
-        "simulation": {"n_timesteps": 8760, "dt": 3600, "start_time": "01/01 00:30:00"},
-    }
-
-    d = {"site": site_config, "plant": plant_dict}
-    return d
-
-
-@fixture
-def wind_plant_config():
-    layout_config = {
-        "layout_mode": "basicgrid",
-        "layout_options": {
-            "row_D_spacing": 5.0,
-            "turbine_D_spacing": 5.0,
-            "rotation_angle_deg": 0.0,
-            "row_phase_offset": 0.0,
-            "layout_shape": "square",
-        },
-    }
-    pysam_config = {
-        "Farm": {
-            "wind_farm_wake_model": 0,
-        },
-        "Losses": {
-            "ops_strategies_loss": 10.0,
-        },
-    }
-    design_config = {
-        "num_turbines": 50,
-        "hub_height": 115,
-        "rotor_diameter": 170,
-        "turbine_rating_kw": 6000,
-        "create_model_from": "default",
-        "config_name": "WindPowerSingleOwner",
-        "pysam_options": pysam_config,
-        "layout": layout_config,
-    }
-    return design_config
-
-
-def test_pysam_wind_outputs(wind_resource_config, plant_config, wind_plant_config, subtests):
+@pytest.mark.unit
+def test_pysam_wind_outputs(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
@@ -90,8 +32,8 @@ def test_pysam_wind_outputs(wind_resource_config, plant_config, wind_plant_confi
     commodity = "electricity"
     commodity_amount_units = "kW*h"
     commodity_rate_units = "kW"
-    plant_life = int(plant_config["plant"]["plant_life"])
-    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+    plant_life = int(plant_config_wtk["plant"]["plant_life"])
+    n_timesteps = int(plant_config_wtk["plant"]["simulation"]["n_timesteps"])
 
     # Check that replacement schedule is between 0 and 1
     with subtests.test("0 <= replacement_schedule <=1"):
@@ -165,21 +107,20 @@ def test_pysam_wind_outputs(wind_resource_config, plant_config, wind_plant_confi
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-def test_wind_plant_pysam_no_changes_from_setup(
-    wind_resource_config, plant_config, wind_plant_config, subtests
-):
+@pytest.mark.regression
+def test_wind_plant_pysam_no_changes_from_setup(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
@@ -216,21 +157,20 @@ def test_wind_plant_pysam_no_changes_from_setup(
         )
 
 
-def test_wind_plant_pysam_change_hub_height(
-    wind_resource_config, plant_config, wind_plant_config, subtests
-):
+@pytest.mark.regression
+def test_wind_plant_pysam_change_hub_height(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
@@ -268,21 +208,20 @@ def test_wind_plant_pysam_change_hub_height(
         )
 
 
-def test_wind_plant_pysam_change_rotor_diameter(
-    wind_resource_config, plant_config, wind_plant_config, subtests
-):
+@pytest.mark.regression
+def test_wind_plant_pysam_change_rotor_diameter(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
@@ -320,21 +259,20 @@ def test_wind_plant_pysam_change_rotor_diameter(
         )
 
 
-def test_wind_plant_pysam_change_turbine_rating(
-    wind_resource_config, plant_config, wind_plant_config, subtests
-):
+@pytest.mark.regression
+def test_wind_plant_pysam_change_turbine_rating(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
@@ -371,21 +309,20 @@ def test_wind_plant_pysam_change_turbine_rating(
         )
 
 
-def test_wind_plant_pysam_change_n_turbines(
-    wind_resource_config, plant_config, wind_plant_config, subtests
-):
+@pytest.mark.regression
+def test_wind_plant_pysam_change_n_turbines(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()
 
-    plant_config["site"].update({"resources": {"wind_resource": wind_resource_config}})
-
     wind_resource = WTKNRELDeveloperAPIWindResource(
-        plant_config=plant_config,
-        resource_config=wind_resource_config,
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
         driver_config={},
     )
 
     wind_plant = PYSAMWindPlantPerformanceModel(
-        plant_config=plant_config,
+        plant_config=plant_config_wtk,
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
