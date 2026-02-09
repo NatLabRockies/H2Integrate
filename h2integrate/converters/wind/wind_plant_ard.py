@@ -1,6 +1,11 @@
 import openmdao.api as om
 from attrs import field, define
-from ard.api import set_up_ard_model
+
+
+try:
+    from ard.api import set_up_ard_model
+except ModuleNotFoundError:
+    set_up_ard_model = None
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclasses import (
@@ -37,6 +42,12 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
+        if set_up_ard_model is None:
+            raise ModuleNotFoundError(
+                "The `ard-nrel` package is required to use the "
+                "`WindArdPerformanceCompatibilityComponent`. Install it via:\n"
+                "pip install ard-nrel"
+            )
 
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(
