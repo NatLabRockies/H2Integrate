@@ -11,7 +11,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 
 
-examples_dir = Path(__file__).resolve().parent.parent.parent.parent / "examples/."
+examples_dir = Path(__file__).resolve().parents[3] / "examples/."
 
 
 def test_custom_model_name_clash(subtests):

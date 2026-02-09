@@ -172,9 +172,7 @@ def test_rosner_override(iron_win, subtests):
 @pytest.mark.regression
 def test_refit_coefficients(iron_win, subtests):
     # Determine the model directory based on the model name
-    iron_tech_dir = (
-        Path(__file__).parent.parent.parent.parent / "h2integrate" / "converters" / "iron"
-    )
+    iron_tech_dir = Path(__file__).parents[3] / "h2integrate" / "converters" / "iron"
     model_name = iron_win["iron"]["cost_model"]["name"]
     model_dir = iron_tech_dir / model_name
 
