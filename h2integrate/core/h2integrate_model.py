@@ -414,6 +414,7 @@ class H2IntegrateModel:
             "h2_storage",
             "WOMBATElectrolyzerModel",
             "IronComponent",
+            "ArdWindPlantModel",
         ]
 
         if any(tech == "site" for tech in self.technology_config["technologies"]):

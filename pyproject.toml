@@ -98,16 +98,17 @@ develop = [
     "pytest-cov",
     "ruff",
     "sphinxcontrib-napoleon",
-    "h2integrate[gis]"
+    "h2integrate[gis,ard]"
 ]
 examples = [
   "jupyterlab",
-  "h2integrate[gis]"
+  "h2integrate[gis,ard]"
 ]
 gis = [
   "geopandas",
   "contextily"
 ]
+ard = ["ard-nrel"]
 all = ["h2integrate[develop,examples]"]
 
 [tool.setuptools]

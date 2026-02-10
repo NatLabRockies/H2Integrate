@@ -143,6 +143,8 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'FlorisWindPlantPerformanceModel'`
     - cost models:
         + `'ATBWindPlantCostModel'`
+    - combined models:
+        + `'ArdWindPlantModel'`
 - `solar`: solar-PV panels
     - performance models:
         + `'PYSAMSolarPlantPerformanceModel'`
