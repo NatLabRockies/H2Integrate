@@ -36,13 +36,18 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         feedstock_type = self.config.feedstock_type
 
+        self.add_input(
+            f"{feedstock_type}_capacity", val=self.config.rated_capacity, units=self.config.units
+        )
         self.add_output(f"{feedstock_type}_out", shape=n_timesteps, units=self.config.units)
 
     def compute(self, inputs, outputs):
         feedstock_type = self.config.feedstock_type
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # Generate feedstock array operating at full capacity for the full year
-        outputs[f"{feedstock_type}_out"] = np.full(n_timesteps, self.config.rated_capacity)
+        outputs[f"{feedstock_type}_out"] = np.full(
+            n_timesteps, inputs[f"{feedstock_type}_capacity"][0]
+        )
 
 
 @define(kw_only=True)
@@ -86,10 +91,17 @@ class FeedstockCostModel(CostModelBaseClass):
             units=self.config.units,
             desc=f"Consumption profile of {feedstock_type}",
         )
+        self.add_input(
+            "price",
+            val=self.config.price,
+            shape=int(n_timesteps),
+            units=f"USD/(({self.config.units})*h)",
+            desc=f"Price profile of {feedstock_type}",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         feedstock_type = self.config.feedstock_type
-        price = self.config.price
+        price = inputs["price"]
         hourly_consumption = inputs[f"{feedstock_type}_consumed"]
         cost_per_year = sum(price * hourly_consumption)
 
