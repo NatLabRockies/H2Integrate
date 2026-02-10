@@ -209,12 +209,14 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             n2_in = h2_in / H_MW * 3 * N_MW  # TODO: Replace with connected input
         elec_in = inputs["electricity_in"]  # Temporary until HOPP is connected
         if np.max(elec_in) == 0:
+            # elec_in is in MW
             elec_in = (
                 np.ones(
                     len(h2_in),
                 )
                 * nh3_cap
                 * energy_demand
+                / 1e3
             )  # TODO: replace with connected input
 
         # Calculate max NH3 production for each input
@@ -245,7 +247,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Calculate unused inputs
         used_h2 = nh3_prod * h2_rate
         used_n2 = nh3_prod * n2_rate
-        used_elec = nh3_prod * energy_demand
+        used_elec = nh3_prod * energy_demand  # kW
 
         # Calculate output in purge gas
         purge_mw = x_h2_purge * H_MW * 2 + x_n2_purge * N_MW * 2  # g / mol
@@ -263,13 +265,13 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["ammonia_out"] = nh3_prod
         outputs["hydrogen_out"] = h2_in - used_h2 + h2_purge
         outputs["nitrogen_out"] = n2_in - used_n2 + n2_purge
-        outputs["electricity_out"] = elec_in - used_elec
+        outputs["electricity_out"] = elec_in - (used_elec / 1e3)  # MW
         outputs["heat_out"] = nh3_prod * heat_output
         outputs["catalyst_mass"] = cat_mass
         outputs["total_ammonia_produced"] = max(nh3_prod.sum(), 1e-6)
         outputs["total_hydrogen_consumed"] = h2_in.sum()
         outputs["total_nitrogen_consumed"] = n2_in.sum()
-        outputs["total_electricity_consumed"] = elec_in.sum()
+        outputs["total_electricity_consumed"] = elec_in.sum() / 1e3  # kW*h/year
 
         h2_cap = nh3_cap * h2_rate  # kg H2 per hour
         outputs["max_hydrogen_capacity"] = h2_cap
