@@ -1,4 +1,5 @@
 import os
+import importlib
 
 import pytest
 import openmdao.api as om
@@ -97,6 +98,7 @@ def plant_config():
     return d
 
 
+@pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
 def test_ard_wind_combined(plant_config, ard_config, subtests):
     os.chdir(EXAMPLE_DIR / "29_wind_ard" / "ard_inputs")
 

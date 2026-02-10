@@ -1,9 +1,19 @@
+import importlib
+
 import openmdao.api as om
 import matplotlib.pyplot as plt
 from ard.viz.layout import plot_layout  # a plotting tool!
 
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
+
+if not importlib.util.find_spec("ard"):
+    msg = (
+        "Please install `ard-nrel` or `h2integrate[ard]` to use the Ard model."
+        " It is highly recommended to run `conda install wisdem` first. See H2I's"
+        "installation instructions for further details."
+    )
+    raise ModuleNotFoundError(msg)
 
 # Create the model
 h2i_model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")
