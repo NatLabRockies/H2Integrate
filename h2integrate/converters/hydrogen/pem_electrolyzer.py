@@ -3,8 +3,9 @@ import math
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import ResizeablePerformanceModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerPerformanceBaseClass
@@ -62,14 +63,13 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.config = ECOElectrolyzerPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         self.add_output("efficiency", val=0.0, desc="Average efficiency of the electrolyzer")
+
         self.add_output(
-            "rated_h2_production_kg_pr_hr",
-            val=0.0,
-            units="kg/h",
-            desc="Rated hydrogen production of system in kg/hour",
+            "time_until_replacement", val=80000.0, units="h", desc="Time until replacement"
         )
 
         self.add_input(
@@ -87,7 +87,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         )
         self.add_input("cluster_size", val=-1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
-        self.add_output("hydrogen_capacity_factor", val=0.0, units="unitless")
+        # TODO: add feedstock inputs and consumption outputs
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         plant_life = self.options["plant_config"]["plant"]["plant_life"]
@@ -105,12 +105,12 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             size_flow = discrete_inputs["flow_used_for_sizing"]
         if size_mode == "resize_by_max_feedstock":
             # In this sizing mode, electrolyzer size comes from feedstock
-            feed_ratio = inputs["max_feedstock_ratio"]
+            feed_ratio = inputs["max_feedstock_ratio"][0]
             # Make sure COBLYA doesn't cause any shenanigans trying to set feed_ratio <= 0
             if feed_ratio <= 1e-6:
-                feed_ratio = 1e-6
+                feed_ratio = 1.0e-6
             if size_flow == "electricity":
-                electrolyzer_size_mw = np.max(inputs["electricity_in"]) / 1000 * feed_ratio
+                electrolyzer_size_mw = np.max(inputs["electricity_in"]) / 1000.0 * feed_ratio
             else:
                 raise ValueError(f"Cannot resize for '{size_flow}' feedstock")
         elif size_mode == "resize_by_max_commodity":
@@ -154,9 +154,37 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
 
         # Assuming `h2_results` includes hydrogen and oxygen rates per timestep
         outputs["hydrogen_out"] = H2_Results["Hydrogen Hourly Production [kg/hr]"]
-        outputs["total_hydrogen_produced"] = H2_Results["Life: Annual H2 production [kg/year]"]
+        outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()
         outputs["efficiency"] = H2_Results["Sim: Average Efficiency [%-HHV]"]
+        refurb_schedule = np.zeros(self.plant_life)
+        if np.isnan(H2_Results["Time Until Replacement [hrs]"]):
+            refurb_period = 80000 / (24 * 365)
+        else:
+            refurb_period = round(float(H2_Results["Time Until Replacement [hrs]"]) / (24 * 365))
+        refurb_schedule[refurb_period : self.plant_life : refurb_period] = 1
+
+        # The replacement_schedule is the fraction of the total capacity that is replaced per year
+        # The replacement_schedule may be used in the finance model if the replacement_cost_percent
+        # is specified in the tech_config under
+        # ['model_inputs']['finance_parameters']['capital_items']['replacement_cost_percent']
+        outputs["replacement_schedule"] = refurb_schedule
+        # NOTE: could replace above with line with below:
+        # outputs["replacement_schedule"] = (H2_Results["Performance Schedules"]
+        # ['Refurbishment Schedule [MW replaced/year]'].values
+        # /electrolyzer_actual_capacity_MW
+        # )
+
+        # TODO: remove time_until_replacement as output after finance model(s) have been updated to not use it
         outputs["time_until_replacement"] = H2_Results["Time Until Replacement [hrs]"]
-        outputs["rated_h2_production_kg_pr_hr"] = H2_Results["Rated BOL: H2 Production [kg/hr]"]
+
+        outputs["rated_hydrogen_production"] = H2_Results["Rated BOL: H2 Production [kg/hr]"]
         outputs["electrolyzer_size_mw"] = electrolyzer_actual_capacity_MW
-        outputs["hydrogen_capacity_factor"] = H2_Results["Life: Capacity Factor"]
+        outputs["capacity_factor"] = H2_Results["Performance Schedules"][
+            "Capacity Factor [-]"
+        ].values
+        outputs["annual_hydrogen_produced"] = H2_Results["Life: Annual H2 production [kg/year]"]
+
+        # TODO: replace above line w below
+        # outputs["annual_hydrogen_produced"] = H2_Results["Performance Schedules"][
+        #     "Annual H2 Production [kg/year]"
+        # ].values

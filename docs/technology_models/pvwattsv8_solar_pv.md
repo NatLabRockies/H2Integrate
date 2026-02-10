@@ -3,12 +3,12 @@
 
 This model uses the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html) available in PySAM to simulate the performance of a solar-PV system.
 
-To use this model, specify `"pysam_solar_plant_performance"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
+To use this model, specify `"PYSAMSolarPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
 
 ```yaml
 technologies:
     pv:
-        performance_model: "pysam_solar_plant_performance"
+        performance_model: "PYSAMSolarPlantPerformanceModel"
         model_inputs:
             performance_parameters:
                 pv_capacity_kWdc: 1000.0
@@ -31,7 +31,7 @@ technologies:
 (performance-parameters)=
 ## Performance Parameters
 - `pv_capacity_kWdc` (required): capacity of the PV system in kW-DC
-- `dc_ac_ratio`: the ratio of DC capacity to AC capacity, equal to `pv_capacity_kWdc/pv_capacity_kWac` is used to calculate the PV capacity in kW-AC and is equivalent as the inverter rated power. An inverter is used in PV systems to convert DC power (output from panels) to AC power (input to AC microgrid). The PV capacity in kW-AC is `pv_capacity_kWdc/dc_ac_ratio`. A general default `dc_ac_ratio` is between 1.2 and 1.3. **This is required if** `dc_ac_ratio` is not either loaded from a default Pvwattsv8 config OR not included in the `pysam_options` dictionary under the `SystemDesign` group.
+- `dc_ac_ratio`: the ratio of DC capacity to AC capacity, equal to `pv_capacity_kWdc/pv_system_capacity_AC` is used to calculate the PV capacity in kW-AC and is equivalent as the inverter rated power. An inverter is used in PV systems to convert DC power (output from panels) to AC power (input to AC microgrid). The PV capacity in kW-AC is `pv_capacity_kWdc/dc_ac_ratio`. A general default `dc_ac_ratio` is between 1.2 and 1.3. **This is required if** `dc_ac_ratio` is not either loaded from a default Pvwattsv8 config OR not included in the `pysam_options` dictionary under the `SystemDesign` group.
 
 $$
 \text{PV Capacity (kW-AC)} = \frac{\text{PV Capacity (kW-DC)}}{\text{dc_ac_ratio}}

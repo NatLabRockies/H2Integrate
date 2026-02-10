@@ -38,10 +38,10 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
     def setup(self):
         super().setup()
         self.config = WOMBATModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-        self.add_output("capacity_factor", val=0.0, units=None)
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Operational expenditure")
         self.add_output(
@@ -121,11 +121,13 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
         outputs["hydrogen_out"] = hydrogen_out_with_availability
 
         # Compute total hydrogen produced (sum over the year)
-        outputs["total_hydrogen_produced"] = np.sum(hydrogen_out_with_availability)
+        # TODO: make below total rather than annual
+        outputs["annual_hydrogen_produced"] = np.sum(hydrogen_out_with_availability)
 
         # Compute percent hydrogen lost due to O&M maintenance
+        # TODO: make below total rather than annual
         percent_hydrogen_lost = 100 * (
-            1 - outputs["total_hydrogen_produced"] / np.sum(original_hydrogen_out)
+            1 - outputs["annual_hydrogen_produced"][0] / np.sum(original_hydrogen_out)
         )
 
         outputs["percent_hydrogen_lost"] = percent_hydrogen_lost

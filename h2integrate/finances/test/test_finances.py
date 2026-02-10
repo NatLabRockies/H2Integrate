@@ -1,3 +1,4 @@
+import copy
 import unittest
 from pathlib import Path
 
@@ -16,7 +17,7 @@ class TestProFastComp(unittest.TestCase):
     def setUp(self):
         self.plant_config = {
             "finance_parameters": {
-                "finance_model": "ProFastComp",
+                "finance_model": "ProFastLCO",
                 "model_inputs": {
                     "params": {
                         "analysis_start_year": 2022,
@@ -74,23 +75,28 @@ class TestProFastComp(unittest.TestCase):
 
     def test_electrolyzer_refurb_results(self):
         prob = om.Problem()
+
+        # change name of tech to make sure that the refurb works with names
+        # that contain, not just match "electrolyzer"
+        edited_tech_config = {"electrolyzer1": copy.deepcopy(self.tech_config["electrolyzer"])}
+
         comp = ProFastLCO(
             plant_config=self.plant_config,
-            tech_config=self.tech_config,
+            tech_config=edited_tech_config,
             driver_config=self.driver_config,
             commodity_type="hydrogen",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_hydrogen_produced", 4.0e5, units="kg/year")
+        ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
         prob.setup()
 
-        prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
-        prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
+        prob.set_val("capex_adjusted_electrolyzer1", 1.0e7, units="USD")
+        prob.set_val("opex_adjusted_electrolyzer1", 1.0e4, units="USD/year")
 
-        prob.set_val("electrolyzer_time_until_replacement", 5.0e3, units="h")
+        prob.set_val("electrolyzer1_time_until_replacement", 5.0e3, units="h")
 
         prob.run_model()
 
@@ -106,7 +112,7 @@ class TestProFastComp(unittest.TestCase):
         finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
         plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
         plant_config_filtered.update({"finance_parameters": finance_inputs})
-        # Run ProFastComp with loaded configs
+        # Run ProFastLCO with loaded configs
         prob = om.Problem()
         comp = ProFastLCO(
             plant_config=plant_config_filtered,
@@ -115,14 +121,14 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", 2.0e7, units="kW*h/year")
+        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
         prob.setup()
 
-        prob.set_val("capex_adjusted_hopp", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_hopp", 2.0e4, units="USD/year")
+        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
         prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
         prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
         prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
@@ -145,7 +151,7 @@ class TestProFastComp(unittest.TestCase):
 
         # Only include HOPP and electrolyzer in metrics
         plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
-            "hopp",
+            "wind",
             "steel",
         ]
         finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
@@ -160,14 +166,14 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", 2.0e7, units="kW*h/year")
+        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
         prob.setup()
 
-        prob.set_val("capex_adjusted_hopp", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_hopp", 2.0e4, units="USD/year")
+        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
         prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
         prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
         prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
@@ -241,7 +247,7 @@ def test_profast_config_provided():
     }
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -291,7 +297,7 @@ def test_profast_config_provided():
         commodity_type="hydrogen",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_hydrogen_produced", 4.0e5, units="kg/year")
+    ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -335,7 +341,7 @@ def test_parameter_validation_clashing_values():
 
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -426,7 +432,7 @@ def test_parameter_validation_duplicate_parameters():
 
     plant_config = {
         "finance_parameters": {
-            "finance_model": "ProFastComp",
+            "finance_model": "ProFastLCO",
             "model_inputs": {
                 "params": pf_params,
                 "capital_items": {
@@ -469,5 +475,5 @@ def test_parameter_validation_duplicate_parameters():
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 
     # Should raise ValueError during setup due to clashing values
-    with pytest.raises(ValueError, match="Duplicate entries found in ProFastComp params"):
+    with pytest.raises(ValueError, match="Duplicate entries found in ProFastLCO params"):
         prob.setup()

@@ -5,12 +5,12 @@ import numpy as np
 from h2integrate.core.utilities import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
+    convert_pf_to_dict,
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
 from h2integrate.finances.profast_base import ProFastBase
 from h2integrate.core.inputs.validation import write_yaml
-from h2integrate.tools.profast_reverse_tools import convert_pf_to_dict
 
 
 class ProFastLCO(ProFastBase):
@@ -117,7 +117,7 @@ class ProFastLCO(ProFastBase):
         outputs[self.LCO_str] = sol["lco"]
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
-            if isinstance(val, (np.ndarray, list, tuple)):  # only for IRR
+            if isinstance(val, np.ndarray | list | tuple):  # only for IRR
                 # if len(val)>0:
                 val = val[-1]
             outputs[f"{output_var}_{self.output_txt}"] = val
@@ -140,7 +140,7 @@ class ProFastLCO(ProFastBase):
         if save_results or save_config:
             output_dir = self.options["driver_config"]["general"]["folder_output"]
             fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastComp"
+                "profast_output_description", "ProFastLCO"
             )
 
             fbasename = f"{fdesc}_{self.output_txt}"

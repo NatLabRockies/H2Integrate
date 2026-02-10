@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
-from h2integrate import EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -16,29 +16,74 @@ def test_steel_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "01_onshore_steel_mn.yaml")
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 720.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 
     # Run the model
     model.run()
 
     model.post_process()
     # Subtests for checking specific values
+    with subtests.test("Check total electricity produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity.total_electricity_produced", units="MW*h/yr"
+                )[0],
+                rel=1e-3,
+            )
+            == 5901098.278035271
+        )
+
+    with subtests.test("Check total adjusted CapEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_capex_adjusted")[0], rel=1e-3
+            )
+            == 4314364438.840067
+        )
+    with subtests.test("Check total adjusted OpEx (electricity)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.total_opex_adjusted")[0], rel=1e-3
+            )
+            == 75831805.27785796
+        )
+
+    with subtests.test("Check LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 90.8231905486079
+        )
+
+    with subtests.test("Check H2 Storage capacity"):
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.max_capacity", units="kg"), rel=1e-3)
+            == 2559669.7759292
+        )
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered")[0], rel=1e-3
             )
-            == 7.47944016
+            == 8.270362492342693
         )
 
     with subtests.test("Check LCOS"):
-        assert pytest.approx(model.prob.get_val("steel.LCOS")[0], rel=1e-3) == 1213.87728644
+        assert pytest.approx(model.prob.get_val("steel.LCOS")[0], rel=1e-3) == 1266.6193378846617
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
             )
-            == 5.10869916e09
+            == 5129491338.670795
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -46,7 +91,7 @@ def test_steel_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 96349901.77625626
+            == 98169205.81687717
         )
 
     with subtests.test("Check steel CapEx"):
@@ -63,17 +108,30 @@ def test_simple_ammonia_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "02_texas_ammonia.yaml")
 
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-3) == 1.75469962e09
+    with subtests.test("Check Wind+PV CapEx"):
+        wind_pv_capex = (
+            model.prob.get_val("wind.CapEx", units="USD")[0]
+            + model.prob.get_val("solar.CapEx", units="USD")[0]
+        )
+        assert pytest.approx(wind_pv_capex, rel=1e-3) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-3) == 32953490.4
+    with subtests.test("Check Wind+PV OpEx"):
+        wind_pv_opex = (
+            model.prob.get_val("wind.OpEx", units="USD/yr")[0]
+            + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
+        )
+        assert pytest.approx(wind_pv_opex, rel=1e-3) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-3) == 6.00412524e08
@@ -82,10 +140,14 @@ def test_simple_ammonia_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-3) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-3) == 65336874.189441
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 64599012.73829915
+        )
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-3) == 2358776.66234517
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3126204.813298109
+        )
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-3) == 1.0124126e08
@@ -106,14 +168,14 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 53161706.5
+            == 54034051.95
         )
 
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 3.970
+            == 4.025446
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -121,14 +183,14 @@ def test_simple_ammonia_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen")[0], rel=1e-3
             )
-            == 3.970
+            == 4.025446
         )
 
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_ammonia.LCOA")[0], rel=1e-3)
-            == 1.02470046
+            == 1.027395
         )
 
     # Check that the expected output files exist
@@ -151,6 +213,11 @@ def test_ammonia_synloop_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "12_ammonia_synloop.yaml")
 
+    # Set battery demand profile to electrolyzer capacity
+    demand_profile = np.ones(8760) * 640.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -158,10 +225,22 @@ def test_ammonia_synloop_example(subtests):
 
     # Subtests for checking specific values
     with subtests.test("Check HOPP CapEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.CapEx"), rel=1e-6) == 1.75469962e09
+        wind_pv_capex = (
+            model.prob.get_val("wind.CapEx", units="USD")[0]
+            + model.prob.get_val("solar.CapEx", units="USD")[0]
+        )
+        battery_capex = model.prob.get_val("battery.CapEx")
+        re_capex = wind_pv_capex + battery_capex
+        assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
     with subtests.test("Check HOPP OpEx"):
-        assert pytest.approx(model.prob.get_val("plant.hopp.hopp.OpEx"), rel=1e-6) == 32953490.4
+        wind_pv_opex = (
+            model.prob.get_val("wind.OpEx", units="USD/yr")[0]
+            + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
+        )
+        battery_opex = model.prob.get_val("battery.OpEx")
+        re_opex = wind_pv_opex + battery_opex
+        assert pytest.approx(re_opex, rel=1e-6) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
         assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-6) == 6.00412524e08
@@ -170,23 +249,23 @@ def test_ammonia_synloop_example(subtests):
         assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-6) == 14703155.39207595
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 65337437.18075897
+        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 64553014.22218219
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 2358794.11507603
+        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 3124778.867314414
 
     with subtests.test("Check ammonia CapEx"):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25712447.0
+        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25737370.661763854
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted")[0], rel=1e-6
             )
-            == 3.7289e09
+            == 3728034379.0699997
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -194,19 +273,19 @@ def test_ammonia_synloop_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted")[0], rel=1e-6
             )
-            == 78873785.09009656
+            == 79744581.00552343
         )
 
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_h2.LCOH")[0], rel=1e-6)
-            == 3.9705799098258776
+            == 4.025385101169759
         )
 
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_nh3.LCOA")[0], rel=1e-6)
-            == 1.21777477635066
+            == 1.2310335361130984
         )
 
 
@@ -241,7 +320,7 @@ def test_co2h_methanol_example(subtests):
 
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
-        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.381162
+        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
@@ -260,8 +339,8 @@ def test_doc_methanol_example(subtests):
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM"), rel=1e-6)
-            == 2.58989518
+            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM")[0], rel=1e-4)
+            == 2.5252588
         )
 
 
@@ -277,7 +356,9 @@ def test_wind_h2_opt_example(subtests):
 
     model_init.post_process()
 
-    annual_h20 = model_init.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0]
+    annual_h20 = model_init.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[
+        0
+    ]
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer.yaml")
@@ -297,7 +378,7 @@ def test_wind_h2_opt_example(subtests):
     with subtests.test("Check electrolyzer size"):
         assert (
             pytest.approx(model.prob.get_val("electrolyzer.electrolyzer_size_mw")[0], rel=1e-3)
-            == 1380.0
+            == 320.0
         )
     # Read the resulting SQL file and compare initial and final LCOH values
 
@@ -330,23 +411,23 @@ def test_wind_h2_opt_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
             )
-            == 2667734319.98
+            == 978075832.46
         )
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
             )
-            == 72718135.62
+            == 27646299.56
         )
 
     with subtests.test("Check minimum total hydrogen produced"):
         assert (
             pytest.approx(
-                model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg/year")[0],
+                model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0],
                 abs=15000,
             )
-            == 60500000
+            == 29028700
         )
 
 
@@ -374,7 +455,10 @@ def test_wind_wave_doc_example(subtests):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_doc.yaml")
-
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 340.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     # Run the model
     model.run()
 
@@ -384,13 +468,16 @@ def test_wind_wave_doc_example(subtests):
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 2.26955589
+            == 1.803343170781246
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.330057
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 243.723825
         )
 
 
@@ -408,22 +495,32 @@ def test_splitter_wind_doc_h2_example(subtests):
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Check Electrical AEP"):
+        electrical_aep = model.prob.get_val(
+            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
+            units="MW*h/year",
+        )
+
+        assert pytest.approx(electrical_aep[0], rel=1e-3) == 511267.03627
+
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 10.25515911
+            == 9.82319908
         )
 
     with subtests.test("Check LCOC"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
-            == 14.19802243
+            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 13.655268
         )
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
-            == 0.1385128
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 132.395036462
         )
 
 
@@ -466,29 +563,6 @@ def test_hybrid_energy_plant_example(subtests):
         assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
 
 
-def test_asu_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "13_air_separator")
-
-    # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "13_air_separator.yaml")
-
-    # Run the model
-    model.run()
-
-    model.post_process()
-
-    # Subtests for checking specific values
-    with subtests.test("Check LCON"):
-        assert (
-            pytest.approx(
-                model.prob.get_val("finance_subgroup_default.LCON", units="USD/kg")[0],
-                abs=1e-4,
-            )
-            == 0.309041977334972
-        )
-
-
 def test_hydrogen_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "14_wind_hydrogen_dispatch")
@@ -515,7 +589,7 @@ def test_hydrogen_dispatch_example(subtests):
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.360810057454742
+            == 5.380013537850591
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -524,7 +598,7 @@ def test_hydrogen_dispatch_example(subtests):
                 model.prob.get_val("finance_subgroup_dispatched_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 7.54632229849164
+            == 7.573354943596408
         )
 
 
@@ -536,6 +610,11 @@ def test_wind_wave_oae_example(subtests):
     # Create a H2Integrate model
     model = H2IntegrateModel(Path.cwd() / "offshore_plant_oae.yaml")
 
+    # Set battery demand profile
+    demand_profile = np.ones(8760) * 330.0
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
     # Run the model
     model.run()
 
@@ -545,12 +624,15 @@ def test_wind_wave_oae_example(subtests):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC"), rel=1e-3) == 37.82
+        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.156
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.367
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 263.130
         )
 
 
@@ -572,12 +654,17 @@ def test_wind_wave_oae_example_with_finance(subtests):
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE"), rel=1e-3)
-            == 0.09180
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 92.269663
         )
 
     with subtests.test("Check Carbon Credit"):
-        assert pytest.approx(model.prob.get_val("oae.carbon_credit_value"), rel=1e-3) == 569.5
+        assert (
+            pytest.approx(model.prob.get_val("oae.carbon_credit_value")[0], rel=1e-3) == 574.37466
+        )
 
 
 def test_natural_gas_example(subtests):
@@ -732,8 +819,8 @@ def test_wind_solar_electrolyzer_example(subtests):
     model = H2IntegrateModel(Path.cwd() / "15_wind_solar_electrolyzer.yaml")
     model.run()
 
-    solar_fpath = model.model.get_val("site.solar_resource.solar_resource_data")["filepath"]
-    wind_fpath = model.model.get_val("site.wind_resource.wind_resource_data")["filepath"]
+    solar_fpath = model.model.get_val("solar_site.solar_resource.solar_resource_data")["filepath"]
+    wind_fpath = model.model.get_val("wind_site.wind_resource.wind_resource_data")["filepath"]
 
     with subtests.test("Wind resource file"):
         assert Path(wind_fpath).name == "35.2018863_-101.945027_2012_wtk_v2_60min_utc_tz.csv"
@@ -801,9 +888,9 @@ def test_electrolyzer_om_example(subtests):
     with subtests.test("Check LCOE"):
         assert pytest.approx(lcoe, rel=1e-4) == 39.98869
     with subtests.test("Check LCOH with lcoh_financials"):
-        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 13.0954678
+        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 13.0858012
     with subtests.test("Check LCOH with lcoe_financials"):
-        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 8.00321771
+        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 7.9935907
 
 
 def test_wombat_electrolyzer_example(subtests):
@@ -1057,6 +1144,79 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
+@pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
+def test_windard_pv_battery_dispatch_example(subtests):
+    # Change the current working directory to the example's directory
+    os.chdir(EXAMPLE_DIR / "29_wind_ard")
+
+    # Create the model
+    model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")
+
+    # Run the model
+    model.run()
+
+    # Post-process the results
+    model.post_process()
+
+    with subtests.test("Check wind generation"):
+        # Wind should generate some electricity
+        wind_electricity = model.prob.get_val("wind.electricity_out", units="GW")
+        assert wind_electricity.sum() == pytest.approx(150.88490967164714, rel=1e-4)
+
+    with subtests.test("Check solar generation"):
+        # Solar should generate some electricity
+        solar_electricity = model.prob.get_val("solar.electricity_out", units="GW")
+        assert solar_electricity.sum() == pytest.approx(44.22139046811775, rel=1e-4)
+
+    with subtests.test("Check battery gets wind and solar output"):
+        # Wind plus solar electricity should match battery input (direct connection)
+        battery_electricity_in = model.prob.get_val("battery.electricity_in", units="GW")
+        assert wind_electricity.sum() + solar_electricity.sum() == pytest.approx(
+            battery_electricity_in.sum(), rel=1e-6
+        )
+
+    with subtests.test("Check demand satisfaction"):
+        dispatched_electricity = model.prob.get_val("battery.electricity_out", units="MW")
+        # Demand should be met for the last part of the year
+        assert np.allclose(
+            dispatched_electricity[8700:],
+            model.prob.get_val("battery.electricity_demand", units="MW")[8700:],
+        )
+
+    # Subtest for LCOE
+    with subtests.test("Check dispatched LCOE value"):
+        lcoe = model.prob.get_val("finance_subgroup_dispatched_electricity.LCOE")[0]
+        assert pytest.approx(lcoe, rel=1e-6) == 0.09289430342906849
+
+    with subtests.test("Check generation LCOE value (excludes battery)"):
+        lcoe = model.prob.get_val("finance_subgroup_produced_electricity.LCOE")[0]
+        assert pytest.approx(lcoe, rel=1e-6) == 0.07204429286793802
+
+    # Subtest for total electricity produced
+    with subtests.test("Check total electricity dispatched"):
+        total_electricity_year_one = model.prob.get_val(
+            "finance_subgroup_dispatched_electricity.electricity_sum.total_electricity_produced",
+            units="MW*h/year",
+        )[0]
+        assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
+
+    # Subtest for electricity curtailed
+    with subtests.test("Check electricity curtailed"):
+        electricity_curtailed = model.prob.get_val(
+            "battery.electricity_unused_commodity", units="MW"
+        ).sum()
+
+        # import pdb; pdb.set_trace()
+        assert electricity_curtailed == pytest.approx(20344.97639127703, rel=1e-6)
+
+    # Subtest for missed load
+    with subtests.test("Check electricity missed load"):
+        electricity_missed_load = np.linalg.norm(
+            model.prob.get_val("battery.electricity_unmet_demand", units="MW")
+        )
+        assert electricity_missed_load == pytest.approx(1403.5372787817894)
+
+
 def test_csvgen_design_of_experiments(subtests):
     os.chdir(EXAMPLE_DIR / "20_solar_electrolyzer_doe")
 
@@ -1111,7 +1271,7 @@ def test_csvgen_design_of_experiments(subtests):
     with subtests.test("Check that sql summary file was written as expected"):
         summary = pd.read_csv(summarized_filepath, index_col="Unnamed: 0")
         assert len(summary) == 10
-        d_var_cols = ["solar.capacity_kWdc (kW)", "electrolyzer.n_clusters (unitless)"]
+        d_var_cols = ["solar.system_capacity_DC (kW)", "electrolyzer.n_clusters (unitless)"]
         assert summary.columns.to_list()[0] in d_var_cols
         assert summary.columns.to_list()[1] in d_var_cols
         assert "finance_subgroup_hydrogen.LCOH_optimistic (USD/kg)" in summary.columns.to_list()
@@ -1123,10 +1283,14 @@ def test_csvgen_design_of_experiments(subtests):
     cases = list(cr.get_cases())
 
     with subtests.test("Check solar capacity in case 0"):
-        assert pytest.approx(cases[0].get_val("solar.capacity_kWdc", units="MW"), rel=1e-6) == 25.0
+        assert (
+            pytest.approx(cases[0].get_val("solar.system_capacity_DC", units="MW"), rel=1e-6)
+            == 25.0
+        )
     with subtests.test("Check solar capacity in case 9"):
         assert (
-            pytest.approx(cases[-1].get_val("solar.capacity_kWdc", units="MW"), rel=1e-6) == 500.0
+            pytest.approx(cases[-1].get_val("solar.system_capacity_DC", units="MW"), rel=1e-6)
+            == 500.0
         )
 
     with subtests.test("Check electrolyzer capacity in case 0"):
@@ -1179,7 +1343,7 @@ def test_csvgen_design_of_experiments(subtests):
     with subtests.test("Min LCOH solar capacity"):
         assert (
             pytest.approx(
-                cases[min_lcoh_case_num].get_val("solar.capacity_kWdc", units="MW"), rel=1e-6
+                cases[min_lcoh_case_num].get_val("solar.system_capacity_DC", units="MW"), rel=1e-6
             )
             == 200.0
         )
@@ -1221,9 +1385,9 @@ def test_sweeping_solar_sites_doe(subtests):
     for ci, case in enumerate(cases):
         solar_resource_data = case.get_val("site.solar_resource.solar_resource_data")
         lat_lon = f"{case.get_val('site.latitude')[0]} {case.get_val('site.longitude')[0]}"
-        solar_capacity = case.get_design_vars()["solar.capacity_kWdc"]
-        aep = case.get_val("solar.annual_energy", units="MW*h/yr")
-        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")
+        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
+        aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
+        lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
 
         site_res = pd.DataFrame(
             [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
@@ -1254,6 +1418,145 @@ def test_sweeping_solar_sites_doe(subtests):
 
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
+
+
+def test_floris_example(subtests):
+    from h2integrate.core.utilities import load_yaml
+
+    os.chdir(EXAMPLE_DIR / "26_floris")
+
+    driver_config = load_yaml(EXAMPLE_DIR / "26_floris" / "driver_config.yaml")
+    tech_config = load_yaml(EXAMPLE_DIR / "26_floris" / "tech_config.yaml")
+    plant_config = load_yaml(EXAMPLE_DIR / "26_floris" / "plant_config.yaml")
+
+    h2i_config = {
+        "name": "H2Integrate_config",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    # Create a H2I model
+    h2i = H2IntegrateModel(h2i_config)
+
+    # Run the model
+    h2i.run()
+
+    with subtests.test("Distributed LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 99.872209
+        )
+    with subtests.test("Utility LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_utility.LCOE", units="USD/MW/h")[0], rel=1e-6
+            )
+            == 54.2709437311
+        )
+
+    with subtests.test("Total LCOE"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("finance_subgroup_total_electricity.LCOE", units="USD/MW/h")[0],
+                rel=1e-6,
+            )
+            == 65.2444127137
+        )
+
+    with subtests.test("Distributed wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.rated_electricity_production", units="MW"),
+                rel=1e-6,
+            )
+            == 66.0
+        )
+
+    with subtests.test("Total distributed electricity production"):
+        assert (
+            pytest.approx(
+                np.sum(
+                    h2i.prob.get_val(
+                        "distributed_wind_plant.total_electricity_produced", units="MW*h"
+                    )
+                ),
+                rel=1e-6,
+            )
+            == 128948.21977
+        )
+
+    with subtests.test("Total utility electricity production"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.electricity_out", units="MW").sum(), rel=1e-6
+            )
+            == 406908.03381618496
+        )
+
+    with subtests.test("Distributed wind capacity factor"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.capacity_factor", units="percent")[0],
+                rel=1e-6,
+            )
+            == 22.30320668
+        )
+
+    with subtests.test("Utility wind plant capacity"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.rated_electricity_production", units="MW"),
+                rel=1e-6,
+            )
+            == 120.0
+        )
+
+    with subtests.test("Distributed wind site location"):
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.latitude"), rel=1e-6) == 44.04218
+        )
+        assert (
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.longitude"), rel=1e-6)
+            == -95.19757
+        )
+
+    with subtests.test("Distributed wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 44.04218
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -95.19757
+        )
+
+    with subtests.test("Utility wind site location"):
+        assert pytest.approx(h2i.prob.get_val("utility_wind_site.latitude"), rel=1e-6) == 35.2018863
+        assert (
+            pytest.approx(h2i.prob.get_val("utility_wind_site.longitude"), rel=1e-6) == -101.945027
+        )
+
+    with subtests.test("Utility wind plant resource location"):
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lat"], abs=1e-2
+            )
+            == 35.2018863
+        )
+        assert (
+            pytest.approx(
+                h2i.prob.get_val("utility_wind_plant.wind_resource_data")["site_lon"], abs=1e-2
+            )
+            == -101.945027
+        )
 
 
 def test_24_solar_battery_grid_example(subtests):
@@ -1293,3 +1596,386 @@ def test_24_solar_battery_grid_example(subtests):
     with subtests.test("Value check on LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/(MW*h)")[0]
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
+
+
+def test_28_iron_map_example(subtests):
+    import geopandas as gpd
+    import matplotlib
+
+    from h2integrate.postprocess.mapping import (
+        plot_geospatial_point_heat_map,
+        plot_straight_line_shipping_routes,
+    )
+
+    os.chdir(EXAMPLE_DIR / "28_iron_map")
+
+    # Define filepaths
+    ex_28_dir = Path.cwd()
+    ex_28_out_dir = ex_28_dir / "ex_28_out"
+    ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
+    shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+    shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
+    cases_csv_fpath = ex_28_out_dir / "cases.csv"
+    ex_png_fpath = ex_28_out_dir / "example_28_iron_map.png"
+    ex_png_fpath.unlink(missing_ok=True)
+
+    # Plot LCOI results from cases.sql file, save sql data to csv
+    fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=cases_csv_fpath,
+        metric_to_plot="iron.LCOI (USD/kg)",
+        map_preferences={
+            "figsize": (10, 8),
+            "colorbar_label": "Levelized Cost of\nIron [$/kg]",
+            "colorbar_limits": (0.6, 1.0),
+        },
+    )
+    # Add a layer for example ore cost prices from select mines
+    fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=ore_prices_filepath,
+        metric_to_plot="ore_cost_per_kg",
+        map_preferences={
+            "colormap": "Greens",
+            "marker": "o",
+            "colorbar_bbox_to_anchor": (0.025, 0.97, 1, 1),
+            "colorbar_label": "Levelized Cost of\nIron Ore Pellets\n[$/kg ore]",
+            "colorbar_limits": (0.11, 0.14),
+        },
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=lcoi_layer_gdf,
+    )
+    # Add a layer for example waterway shipping cost from select mines to select ports
+    fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
+        case_results_fpath=shipping_prices_filepath,
+        metric_to_plot="shipping_cost_per_kg",
+        map_preferences={
+            "colormap": "Greys",
+            "marker": "d",
+            "markersize": 80,
+            "colorbar_bbox_to_anchor": (0.4, 0.97, 1, 1),
+            "colorbar_label": "Waterway Shipping Cost\n[$/kg ore]",
+            "colorbar_limits": (0.11, 0.14),
+        },
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[lcoi_layer_gdf, ore_cost_layer_gdf],
+    )
+
+    # Define example water way shipping routes for plotting straight line transport
+    cleveland_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Lake Huron",
+        "Port Huron",
+        "Erie",
+        "Cleveland",
+    ]
+    buffalo_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Lake Huron",
+        "Port Huron",
+        "Erie",
+        "Cleveland",
+        "Buffalo",
+    ]
+    chicago_route = [
+        "Duluth",
+        "Keweenaw",
+        "Sault St Marie",
+        "De Tour",
+        "Mackinaw",
+        "Manistique",
+        "Chicago",
+    ]
+
+    # Add cleveland route as layer
+    fig, ax, transport_layer1_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=cleveland_route,
+        map_preferences={},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[lcoi_layer_gdf, ore_cost_layer_gdf, shipping_cost_layer_gdf],
+    )
+    # Add buffalo route as layer
+    fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=buffalo_route,
+        map_preferences={},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[
+            lcoi_layer_gdf,
+            ore_cost_layer_gdf,
+            shipping_cost_layer_gdf,
+            transport_layer1_gdf,
+        ],
+    )
+    # Add chicago route as layer
+    fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
+        shipping_coords_fpath=shipping_coords_filepath,
+        shipping_route=chicago_route,
+        map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
+        fig=fig,
+        ax=ax,
+        base_layer_gdf=[
+            lcoi_layer_gdf,
+            ore_cost_layer_gdf,
+            shipping_cost_layer_gdf,
+            transport_layer1_gdf,
+            transport_layer2_gdf,
+        ],
+        save_plot_fpath=ex_png_fpath,
+    )
+
+    with subtests.test("Type check on fig, ax, and lcoi_layer_gdf"):
+        assert isinstance(
+            fig, matplotlib.figure.Figure
+        ), f"Expected matplotlib.figure.Figure but got{type(fig)}"
+        assert isinstance(
+            ax, matplotlib.axes._axes.Axes
+        ), f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
+        assert isinstance(
+            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
+        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
+        assert isinstance(
+            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
+        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+
+    with subtests.test("Check example_28_iron_map.png was saved"):
+        assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"
+
+    # Clean up any output files/dirs created
+    ex_png_fpath.unlink(missing_ok=True)
+
+
+def test_natural_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_nat = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_natural.yaml")
+    h2i_nat.run()
+
+    with subtests.test("H2 Production"):
+        assert (
+            pytest.approx(
+                np.mean(h2i_nat.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")),
+                rel=1e-6,
+            )
+            == 603.4286677531819
+        )
+
+    with subtests.test("integrated LCOH"):
+        assert (
+            pytest.approx(
+                h2i_nat.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg"), rel=1e-6
+            )
+            == 1.59307314
+        )
+    with subtests.test("subsurface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 7667341.11417252
+        )
+    with subtests.test("subsurface fixed Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("subsurface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.VarOpEx"), rel=1e-6) == 0.0
+        )
+    with subtests.test("subsurface adjusted opex"):
+        adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
+
+    with subtests.test("surface Capex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6) == 1795733.55
+        )
+    with subtests.test("surface fixed Opex"):
+        assert pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.OpEx"), rel=1e-6) == 4567464
+    with subtests.test("surface variable Opex"):
+        assert (
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.VarOpEx"), rel=1e-6)
+            == 984842.53
+        )
+    with subtests.test("surface adjusted opex"):
+        surface_adjusted_opex = h2i_nat.prob.get_val(
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_surface"
+        )
+        assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
+
+
+def test_stimulated_geoh2(subtests):
+    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+
+    h2i_stim = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_stimulated.yaml")
+    h2i_stim.run()
+
+    h2_prod = h2i_stim.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")
+
+    with subtests.test("H2 Production"):
+        assert pytest.approx(np.mean(h2_prod), rel=1e-6) == 155.03934945719536
+
+    with subtests.test("integrate LCOH"):
+        lcoh = h2i_stim.prob.get_val("finance_subgroup_default.LCOH")
+        assert lcoh == pytest.approx(
+            2.29337734, 1e-6
+        )  # previous val from custom finance model was 1.74903827
+
+    # failure is expected because we are inflating using general inflation rather than CPI and CEPCI
+    with subtests.test("Capex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            == 19520122.88478073
+        )
+    with subtests.test("fixed Opex"):
+        assert (
+            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            == 215100.7857875
+        )
+    with subtests.test("variable Opex"):
+        var_om_pr_h2 = h2i_stim.model.get_val("geoh2_well_subsurface.VarOpEx") / np.sum(h2_prod)
+        assert pytest.approx(var_om_pr_h2, rel=1e-6) == 0.32105362
+    with subtests.test("adjusted Opex"):
+        adjusted_opex = h2i_stim.prob.get_val(
+            "finance_subgroup_default.opex_adjusted_geoh2_well_subsurface"
+        )
+        assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
+
+
+def test_21_iron_dri_eaf_example(subtests):
+    os.chdir(EXAMPLE_DIR / "21_iron_mn_to_il")
+
+    h2i = H2IntegrateModel("21_iron.yaml")
+
+    h2i.run()
+
+    with subtests.test("Value check on LCOI"):
+        lcoi = h2i.model.get_val("finance_subgroup_iron_ore.LCOI", units="USD/t")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 143.3495266638054
+
+    with subtests.test("Value check on LCOP"):
+        lcop = h2i.model.get_val("finance_subgroup_pig_iron.LCOP", units="USD/t")[0]
+        assert pytest.approx(lcop, rel=1e-4) == 353.99805215243265
+
+    with subtests.test("Value check on LCOS"):
+        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcos, rel=1e-4) == 524.8228189073025
+
+
+def test_sweeping_different_resource_sites_doe(subtests):
+    os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
+    import pandas as pd
+
+    # Create the model
+    model = H2IntegrateModel("27_wind_solar_site_doe.yaml")
+
+    # # Run the model
+    model.run()
+
+    # Specify the filepath to the sql file, the folder and filename are in the driver_config
+    sql_fpath = EXAMPLE_DIR / "27_site_doe_diff" / "ex_27_out" / "cases.sql"
+
+    # load the cases
+    cr = om.CaseReader(sql_fpath)
+
+    cases = list(cr.get_cases())
+
+    res_df = pd.DataFrame()
+    for ci, case in enumerate(cases):
+        solar_resource_data = case.get_val("solar_site.solar_resource.solar_resource_data")
+        wind_resource_data = case.get_val("wind_site.wind_resource.wind_resource_data")
+        with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
+            assert (
+                pytest.approx(case.get_val("solar_site.solar_resource.latitude"), abs=0.1)
+                == solar_resource_data["site_lat"]
+            )
+        with subtests.test(f"Case {ci}: Wind resource latitude matches site latitude"):
+            assert (
+                pytest.approx(case.get_val("wind_site.wind_resource.latitude"), abs=0.1)
+                == wind_resource_data["site_lat"]
+            )
+
+        s_lat = case.get_val("solar_site.solar_resource.latitude")[0]
+        s_lon = case.get_val("solar_site.solar_resource.longitude")[0]
+        solar_lat_lon = f"{s_lat} {s_lon}"
+        w_lat = case.get_val("wind_site.wind_resource.latitude")[0]
+        w_lon = case.get_val("wind_site.wind_resource.longitude")[0]
+        wind_lat_lon = f"{w_lat} {w_lon}"
+
+        solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
+
+        solar_aep = np.sum(case.get_val("solar.electricity_out", units="MW"))
+        solar_lcoe = case.get_val("finance_subgroup_solar.LCOE", units="USD/(MW*h)")[0]
+
+        wind_aep = np.sum(case.get_val("wind.electricity_out", units="MW"))
+        wind_lcoe = case.get_val("finance_subgroup_wind.LCOE", units="USD/(MW*h)")[0]
+
+        combiner_aep = np.sum(case.get_val("combiner.electricity_out", units="MW"))
+        combiner_lcoe = case.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+
+        index_cols = [
+            "solar site",
+            "wind site",
+            "solar AEP",
+            "solar LCOE",
+            "solar size",
+            "wind AEP",
+            "wind LCOE",
+            "combiner AEP",
+            "combiner LCOE",
+        ]
+        vals = [
+            solar_lat_lon,
+            wind_lat_lon,
+            solar_aep,
+            solar_lcoe,
+            solar_capacity,
+            wind_aep,
+            wind_lcoe,
+            combiner_aep,
+            combiner_lcoe,
+        ]
+
+        site_res = pd.DataFrame(vals, index=index_cols, columns=[ci]).T
+
+        res_df = pd.concat([site_res, res_df], axis=0)
+
+    with subtests.test("Two unique solar capacities"):
+        solar_sizes = list(set(res_df["solar site"].to_list()))
+        assert len(solar_sizes) == 2
+
+    with subtests.test("Two unique solar sites"):
+        solar_locations = list(set(res_df["solar site"]))
+        assert len(solar_locations) == 2
+
+    with subtests.test("Two unique wind sites"):
+        wind_locations = list(set(res_df["wind site"]))
+        assert len(wind_locations) == 2
+
+    with subtests.test("Unique solar AEPS"):
+        assert len(list(set(res_df["solar AEP"].to_list()))) == 4
+
+    with subtests.test("Unique solar LCOEs"):
+        assert len(list(set(res_df["solar LCOE"].to_list()))) == 4
+
+    with subtests.test("Unique wind AEPS"):
+        assert len(list(set(res_df["wind AEP"].to_list()))) == 2
+
+    with subtests.test("Unique wind LCOEs"):
+        assert len(list(set(res_df["wind LCOE"].to_list()))) == 2
+
+    with subtests.test("Unique combiner AEPS"):
+        assert len(list(set(res_df["combiner AEP"].to_list()))) == len(res_df)
+
+    with subtests.test("Unique LCOEs per case"):
+        assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)

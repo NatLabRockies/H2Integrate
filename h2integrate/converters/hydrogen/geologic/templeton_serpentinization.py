@@ -76,7 +76,8 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = StimulatedGeoH2PerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -131,4 +132,15 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         h2_prod_avg = h2_produced[-1] / lifetime / n_timesteps
         outputs["hydrogen_out_stim"] = h2_prod_avg
         outputs["hydrogen_out"] = h2_prod_avg
+        # Until surface processing model is developed, wellhead gas = hydrogen
+        outputs["wellhead_gas_out"] = h2_prod_avg
         outputs["total_hydrogen_produced"] = np.sum(outputs["hydrogen_out"])
+        outputs["total_wellhead_gas_produced"] = np.sum(outputs["wellhead_gas_out"])
+
+        outputs["annual_hydrogen_produced"] = outputs["total_hydrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["rated_hydrogen_production"] = np.max(h2_prod_avg)  # TODO: double check
+        outputs["capacity_factor"] = outputs["total_hydrogen_produced"] / (
+            outputs["rated_hydrogen_production"] * self.n_timesteps
+        )

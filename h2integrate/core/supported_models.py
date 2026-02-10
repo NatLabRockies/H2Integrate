@@ -6,6 +6,7 @@ from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
+from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -27,17 +28,27 @@ from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
 from h2integrate.transporters.generic_splitter import GenericSplitterPerformanceModel
+from h2integrate.converters.iron.iron_dri_plant import (
+    HydrogenIronReductionPlantCostComponent,
+    NaturalGasIronReductionPlantCostComponent,
+    HydrogenIronReductionPlantPerformanceComponent,
+    NaturalGasIronReductionPlantPerformanceComponent,
+)
 from h2integrate.converters.iron.iron_transport import (
     IronTransportCostComponent,
     IronTransportPerformanceComponent,
 )
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
+from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
+from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
-from h2integrate.storage.hydrogen.tank_baseclass import (
-    HydrogenTankCostModel,
-    HydrogenTankPerformanceModel,
-)
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
+from h2integrate.converters.steel.steel_eaf_plant import (
+    HydrogenEAFPlantCostComponent,
+    NaturalGasEAFPlantCostComponent,
+    HydrogenEAFPlantPerformanceComponent,
+    NaturalGasEAFPlantPerformanceComponent,
+)
 from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
 from h2integrate.storage.hydrogen.h2_storage_cost import (
     PipeStorageCostModel,
@@ -113,6 +124,10 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
+from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
+    AspenGeoH2SurfaceCostModel,
+    AspenGeoH2SurfacePerformanceModel,
+)
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
 )
@@ -139,103 +154,114 @@ from h2integrate.control.control_strategies.converters.flexible_demand_openloop_
 
 supported_models = {
     # Resources
-    "river_resource": RiverResource,
-    "wind_toolkit_v2_api": WTKNRELDeveloperAPIWindResource,
-    "openmeteo_wind_api": OpenMeteoHistoricalWindResource,
-    "goes_aggregated_solar_v4_api": GOESAggregatedSolarAPI,
-    "goes_conus_solar_v4_api": GOESConusSolarAPI,
-    "goes_fulldisc_solar_v4_api": GOESFullDiscSolarAPI,
-    "goes_tmy_solar_v4_api": GOESTMYSolarAPI,
-    "meteosat_solar_v4_api": MeteosatPrimeMeridianSolarAPI,
-    "meteosat_tmy_solar_v4_api": MeteosatPrimeMeridianTMYSolarAPI,
-    "himawari7_solar_v3_api": Himawari7SolarAPI,
-    "himawari8_solar_v3_api": Himawari8SolarAPI,
-    "himawari_tmy_solar_v3_api": HimawariTMYSolarAPI,
+    "RiverResource": RiverResource,
+    "WTKNRELDeveloperAPIWindResource": WTKNRELDeveloperAPIWindResource,
+    "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
+    "OpenMeteoHistoricalSolarResource": OpenMeteoHistoricalSolarResource,
+    "GOESAggregatedSolarAPI": GOESAggregatedSolarAPI,
+    "GOESConusSolarAPI": GOESConusSolarAPI,
+    "GOESFullDiscSolarAPI": GOESFullDiscSolarAPI,
+    "GOESTMYSolarAPI": GOESTMYSolarAPI,
+    "MeteosatPrimeMeridianSolarAPI": MeteosatPrimeMeridianSolarAPI,
+    "MeteosatPrimeMeridianTMYSolarAPI": MeteosatPrimeMeridianTMYSolarAPI,
+    "Himawari7SolarAPI": Himawari7SolarAPI,
+    "Himawari8SolarAPI": Himawari8SolarAPI,
+    "HimawariTMYSolarAPI": HimawariTMYSolarAPI,
     # Converters
-    "atb_wind_cost": ATBWindPlantCostModel,
-    "pysam_wind_plant_performance": PYSAMWindPlantPerformanceModel,
-    "pysam_solar_plant_performance": PYSAMSolarPlantPerformanceModel,
-    "atb_utility_pv_cost": ATBUtilityPVCostModel,
-    "atb_comm_res_pv_cost": ATBResComPVCostModel,
-    "run_of_river_hydro_performance": RunOfRiverHydroPerformanceModel,
-    "run_of_river_hydro_cost": RunOfRiverHydroCostModel,
-    "eco_pem_electrolyzer_performance": ECOElectrolyzerPerformanceModel,
-    "singlitico_electrolyzer_cost": SingliticoCostModel,
-    "basic_electrolyzer_cost": BasicElectrolyzerCostModel,
-    "custom_electrolyzer_cost": CustomElectrolyzerCostModel,
-    "wombat": WOMBATElectrolyzerModel,
-    "simple_ASU_cost": SimpleASUCostModel,
-    "simple_ASU_performance": SimpleASUPerformanceModel,
-    "hopp": HOPPComponent,
-    "iron": IronComponent,
-    "iron_mine_performance": IronMinePerformanceComponent,
-    "iron_mine_cost": IronMineCostComponent,
-    "iron_plant_performance": IronPlantPerformanceComponent,
-    "iron_plant_cost": IronPlantCostComponent,
-    "iron_mine_performance_martin": MartinIronMinePerformanceComponent,  # standalone model
-    "iron_mine_cost_martin": MartinIronMineCostComponent,  # standalone model
-    "reverse_osmosis_desalination_performance": ReverseOsmosisPerformanceModel,
-    "reverse_osmosis_desalination_cost": ReverseOsmosisCostModel,
-    "simple_ammonia_performance": SimpleAmmoniaPerformanceModel,
-    "simple_ammonia_cost": SimpleAmmoniaCostModel,
-    "synloop_ammonia_performance": AmmoniaSynLoopPerformanceModel,
-    "synloop_ammonia_cost": AmmoniaSynLoopCostModel,
-    "steel_performance": SteelPerformanceModel,
-    "steel_cost": SteelCostAndFinancialModel,
-    "smr_methanol_plant_performance": SMRMethanolPlantPerformanceModel,
-    "smr_methanol_plant_cost": SMRMethanolPlantCostModel,
-    "smr_methanol_plant_financial": SMRMethanolPlantFinanceModel,
-    "co2h_methanol_plant_performance": CO2HMethanolPlantPerformanceModel,
-    "co2h_methanol_plant_cost": CO2HMethanolPlantCostModel,
-    "co2h_methanol_plant_financial": CO2HMethanolPlantFinanceModel,
-    "direct_ocean_capture_performance": DOCPerformanceModel,
-    "direct_ocean_capture_cost": DOCCostModel,
-    "ocean_alkalinity_enhancement_performance": OAEPerformanceModel,
-    "ocean_alkalinity_enhancement_cost": OAECostModel,
-    "ocean_alkalinity_enhancement_cost_financial": OAECostAndFinancialModel,
-    "simple_natural_geoh2_performance": NaturalGeoH2PerformanceModel,
-    "templeton_serpentinization_geoh2_performance": StimulatedGeoH2PerformanceModel,
-    "mathur_modified_geoh2_cost": GeoH2SubsurfaceCostModel,
-    "natural_gas_performance": NaturalGasPerformanceModel,
-    "natural_gas_cost": NaturalGasCostModel,
+    "ATBWindPlantCostModel": ATBWindPlantCostModel,
+    "PYSAMWindPlantPerformanceModel": PYSAMWindPlantPerformanceModel,
+    "FlorisWindPlantPerformanceModel": FlorisWindPlantPerformanceModel,
+    "ArdWindPlantModel": ArdWindPlantModel,
+    "PYSAMSolarPlantPerformanceModel": PYSAMSolarPlantPerformanceModel,
+    "ATBUtilityPVCostModel": ATBUtilityPVCostModel,
+    "ATBResComPVCostModel": ATBResComPVCostModel,
+    "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
+    "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
+    "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
+    "SingliticoCostModel": SingliticoCostModel,
+    "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
+    "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
+    "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
+    "SimpleASUCostModel": SimpleASUCostModel,
+    "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
+    "HOPPComponent": HOPPComponent,
+    "IronComponent": IronComponent,
+    "IronMinePerformanceComponent": IronMinePerformanceComponent,
+    "IronMineCostComponent": IronMineCostComponent,
+    "IronPlantPerformanceComponent": IronPlantPerformanceComponent,
+    "IronPlantCostComponent": IronPlantCostComponent,
+    "MartinIronMinePerformanceComponent": MartinIronMinePerformanceComponent,  # standalone model
+    "MartinIronMineCostComponent": MartinIronMineCostComponent,  # standalone model
+    "NaturalGasIronReductionPlantPerformanceComponent": NaturalGasIronReductionPlantPerformanceComponent,  # noqa: E501
+    "NaturalGasIronReductionPlantCostComponent": NaturalGasIronReductionPlantCostComponent,  # standalone model  # noqa: E501
+    "HydrogenIronReductionPlantPerformanceComponent": HydrogenIronReductionPlantPerformanceComponent,  # noqa: E501
+    "HydrogenIronReductionPlantCostComponent": HydrogenIronReductionPlantCostComponent,  # standalone model  # noqa: E501
+    "NaturalGasEAFPlantPerformanceComponent": NaturalGasEAFPlantPerformanceComponent,
+    "NaturalGasEAFPlantCostComponent": NaturalGasEAFPlantCostComponent,  # standalone model
+    "HydrogenEAFPlantPerformanceComponent": HydrogenEAFPlantPerformanceComponent,
+    "HydrogenEAFPlantCostComponent": HydrogenEAFPlantCostComponent,  # standalone model
+    "ReverseOsmosisPerformanceModel": ReverseOsmosisPerformanceModel,
+    "ReverseOsmosisCostModel": ReverseOsmosisCostModel,
+    "SimpleAmmoniaPerformanceModel": SimpleAmmoniaPerformanceModel,
+    "SimpleAmmoniaCostModel": SimpleAmmoniaCostModel,
+    "AmmoniaSynLoopPerformanceModel": AmmoniaSynLoopPerformanceModel,
+    "AmmoniaSynLoopCostModel": AmmoniaSynLoopCostModel,
+    "SteelPerformanceModel": SteelPerformanceModel,
+    "SteelCostAndFinancialModel": SteelCostAndFinancialModel,
+    "SMRMethanolPlantPerformanceModel": SMRMethanolPlantPerformanceModel,
+    "SMRMethanolPlantCostModel": SMRMethanolPlantCostModel,
+    "SMRMethanolPlantFinanceModel": SMRMethanolPlantFinanceModel,
+    "CO2HMethanolPlantPerformanceModel": CO2HMethanolPlantPerformanceModel,
+    "CO2HMethanolPlantCostModel": CO2HMethanolPlantCostModel,
+    "CO2HMethanolPlantFinanceModel": CO2HMethanolPlantFinanceModel,
+    "DOCPerformanceModel": DOCPerformanceModel,
+    "DOCCostModel": DOCCostModel,
+    "OAEPerformanceModel": OAEPerformanceModel,
+    "OAECostModel": OAECostModel,
+    "OAECostAndFinancialModel": OAECostAndFinancialModel,
+    "NaturalGeoH2PerformanceModel": NaturalGeoH2PerformanceModel,
+    "StimulatedGeoH2PerformanceModel": StimulatedGeoH2PerformanceModel,
+    "GeoH2SubsurfaceCostModel": GeoH2SubsurfaceCostModel,
+    "AspenGeoH2SurfacePerformanceModel": AspenGeoH2SurfacePerformanceModel,
+    "AspenGeoH2SurfaceCostModel": AspenGeoH2SurfaceCostModel,
+    "NaturalGasPerformanceModel": NaturalGasPerformanceModel,
+    "NaturalGasCostModel": NaturalGasCostModel,
     # Transport
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
-    "combiner_performance": GenericCombinerPerformanceModel,
-    "splitter_performance": GenericSplitterPerformanceModel,
-    "iron_transport_performance": IronTransportPerformanceComponent,
-    "iron_transport_cost": IronTransportCostComponent,
+    "GenericCombinerPerformanceModel": GenericCombinerPerformanceModel,
+    "GenericSplitterPerformanceModel": GenericSplitterPerformanceModel,
+    "IronTransportPerformanceComponent": IronTransportPerformanceComponent,
+    "IronTransportCostComponent": IronTransportCostComponent,
     # Simple Summers
-    "summer": GenericSummerPerformanceModel,
+    "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
     # Storage
-    "pysam_battery": PySAMBatteryPerformanceModel,
-    "hydrogen_tank_performance": HydrogenTankPerformanceModel,
-    "hydrogen_tank_cost": HydrogenTankCostModel,
-    "storage_auto_sizing": StorageAutoSizingModel,
-    "lined_rock_cavern_h2_storage_cost": LinedRockCavernStorageCostModel,
-    "salt_cavern_h2_storage_cost": SaltCavernStorageCostModel,
-    "mch_tol_h2_storage_cost": MCHTOLStorageCostModel,
-    "buried_pipe_h2_storage_cost": PipeStorageCostModel,
-    "atb_battery_cost": ATBBatteryCostModel,
-    "generic_storage_cost": GenericStorageCostModel,
-    "simple_generic_storage": SimpleGenericStorage,
+    "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
+    "StorageAutoSizingModel": StorageAutoSizingModel,
+    "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
+    "SaltCavernStorageCostModel": SaltCavernStorageCostModel,
+    "MCHTOLStorageCostModel": MCHTOLStorageCostModel,
+    "PipeStorageCostModel": PipeStorageCostModel,
+    "ATBBatteryCostModel": ATBBatteryCostModel,
+    "GenericStorageCostModel": GenericStorageCostModel,
+    "SimpleGenericStorage": SimpleGenericStorage,
     # Control
-    "pass_through_controller": PassThroughOpenLoopController,
-    "demand_open_loop_storage_controller": DemandOpenLoopStorageController,
-    "heuristic_load_following_controller": HeuristicLoadFollowingController,
-    "demand_open_loop_converter_controller": DemandOpenLoopConverterController,
-    "flexible_demand_open_loop_converter_controller": FlexibleDemandOpenLoopConverterController,
+    "PassThroughOpenLoopController": PassThroughOpenLoopController,
+    "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
+    "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
+    "DemandOpenLoopConverterController": DemandOpenLoopConverterController,
+    "FlexibleDemandOpenLoopConverterController": FlexibleDemandOpenLoopConverterController,
     # Dispatch
-    "pyomo_dispatch_generic_converter": PyomoDispatchGenericConverter,
-    "pyomo_dispatch_generic_storage": PyomoRuleStorageBaseclass,
+    "PyomoDispatchGenericConverter": PyomoDispatchGenericConverter,
+    "PyomoRuleStorageBaseclass": PyomoRuleStorageBaseclass,
     # Feedstock
-    "feedstock_performance": FeedstockPerformanceModel,
-    "feedstock_cost": FeedstockCostModel,
+    "FeedstockPerformanceModel": FeedstockPerformanceModel,
+    "FeedstockCostModel": FeedstockCostModel,
     # Grid
-    "grid_performance": GridPerformanceModel,
-    "grid_cost": GridCostModel,
+    "GridPerformanceModel": GridPerformanceModel,
+    "GridCostModel": GridCostModel,
     # Finance
-    "ProFastComp": ProFastLCO,
+    "ProFastLCO": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
 }

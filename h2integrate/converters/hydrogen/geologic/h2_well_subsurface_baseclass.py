@@ -1,9 +1,12 @@
-import openmdao.api as om
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig
+from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.tools.inflation.inflate import inflate_cepci
 
 
@@ -42,7 +45,7 @@ class GeoH2SubsurfacePerformanceConfig(BaseConfig):
     grain_size: float = field()
 
 
-class GeoH2SubsurfacePerformanceBaseClass(om.ExplicitComponent):
+class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
     """OpenMDAO component for modeling the performance of the well subsurface for
         geologic hydrogen.
 
@@ -68,27 +71,37 @@ class GeoH2SubsurfacePerformanceBaseClass(om.ExplicitComponent):
             The characteristic grain size of the rock formation, in meters.
 
     Outputs:
+        wellhead_gas_out (ndarray):
+            The wellhead gas production rate profile over a one-year period (8760 hours),
+            in kilograms per hour.
+
         hydrogen_out (ndarray):
             The hydrogen production rate profile over a one-year period (8760 hours),
             in kilograms per hour.
+
+        total_wellhead_gas_produced (float):
+            The total wellhead gas produced over the plant lifetime, in kilograms per year.
 
         total_hydrogen_produced (float):
             The total hydrogen produced over the plant lifetime, in kilograms per year.
     """
 
     def initialize(self):
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-        self.options.declare("driver_config", types=dict)
+        super().initialize()
+        self.commodity = "hydrogen"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
+        super().setup()
+
         # inputs
         self.add_input("borehole_depth", units="m", val=self.config.borehole_depth)
         self.add_input("grain_size", units="m", val=self.config.grain_size)
 
         # outputs
-        self.add_output("hydrogen_out", units="kg/h", shape=(8760,))
-        self.add_output("total_hydrogen_produced", val=0.0, units="kg/year")
+        self.add_output("wellhead_gas_out", units="kg/h", shape=(self.n_timesteps,))
+        self.add_output("total_wellhead_gas_produced", val=0.0, units="kg/year")
 
 
 @define(kw_only=True)
@@ -133,11 +146,11 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
         borehole_depth (float):
             Total borehole depth, in meters (may include directional drilling sections).
 
-        hydrogen_out (ndarray):
-            Hydrogen production rate profile over the simulation period, in kg/h.
+        wellhead_gas_out (ndarray):
+            Wellhead gas production rate profile over the simulation period, in kg/h.
 
-        total_hydrogen_produced (float):
-            Total hydrogen produced over the plant lifetime, in kg/year.
+        total_wellhead_gas_produced (float):
+            Total wellhead gas produced over the plant lifetime, in kg/year.
 
     Outputs:
         bare_capital_cost (float):
@@ -153,7 +166,7 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
             Annual fixed OPEX component that does not scale with hydrogen output, in USD/year.
 
         Variable_OpEx (float):
-            Variable OPEX per kilogram of hydrogen produced, in USD/kg.
+            Variable OPEX per kilogram of wellhead gas produced, in USD/kg.
     """
 
     def setup(self):
@@ -163,12 +176,12 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
         # inputs
         self.add_input("borehole_depth", units="m", val=self.config.borehole_depth)
         self.add_input(
-            "hydrogen_out",
+            "wellhead_gas_out",
             shape=n_timesteps,
             units="kg/h",
             desc=f"Hydrogen production rate in kg/h over {n_timesteps} hours.",
         )
-        self.add_input("total_hydrogen_produced", val=0.0, units="kg/year")
+        self.add_input("total_wellhead_gas_produced", val=0.0, units="kg/year")
 
         # outputs
         self.add_output("bare_capital_cost", units="USD")

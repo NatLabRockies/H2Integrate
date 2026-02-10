@@ -4,14 +4,11 @@ description: "This hybrid plant produces hydrogen"
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
-    resource:
-      type: "pysam_wind"
-      wind_speed: 9.
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       performance_parameters:
         num_turbines: 100
@@ -39,13 +36,13 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
-      model: "heuristic_load_following_controller"
+      model: "HeuristicLoadFollowingController"
     performance_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"

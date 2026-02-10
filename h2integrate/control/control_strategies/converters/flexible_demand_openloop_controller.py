@@ -59,7 +59,8 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
         flexible demand output profile, which will be populated in ``compute``.
         """
         self.config = FlexibleDemandOpenLoopConverterControllerConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["control_parameters"]
+            self.options["tech_config"]["model_inputs"]["control_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

@@ -4,8 +4,11 @@ description: "This plant is a simple passthrough wind+solar+battery hybrid energ
 technologies:
   hopp:
     performance_model:
-      model: hopp
-      config: !include tech_inputs/hopp_config.yaml
+      model: HOPPComponent
     model_inputs:
-      cost_parameters:
+      shared_parameters:
         cost_year: 2024
+      performance_parameters:
+        cache_dir: "cache"
+        enable_caching: True
+        hopp_config: !include tech_inputs/hopp_config.yaml

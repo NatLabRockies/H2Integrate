@@ -2,21 +2,61 @@ name: "technology_config"
 description: "This hybrid plant produces methanol"
 
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: "hopp"
-      config: !include tech_inputs/hopp_config.yaml
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "hopp"
-    electrolyzer_rating: 156. # MW
+      model: "ATBWindPlantCostModel"
     model_inputs:
+      performance_parameters:
+        num_turbines: 29
+        turbine_rating_kw: 6000
+        rotor_diameter: 100.
+        hub_height: 115.
+        create_model_from: "default"
+        config_name: "WindPowerSingleOwner"
+        run_recalculate_power_curve: True
+        layout:
+          layout_mode: "basicgrid"
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: "square"
       cost_parameters:
+        capex_per_kW: 1380.0
+        opex_per_kW_per_year: 29.0
         cost_year: 2019
+  solar:
+    performance_model:
+      model: "PYSAMSolarPlantPerformanceModel"
+    cost_model:
+      model: "ATBResComPVCostModel"
+    model_inputs:
+      shared_parameters:
+        pv_capacity_kWdc: 350000 #350 MWdc
+      performance_parameters:
+        dc_ac_ratio: 1.3
+        create_model_from: "default"
+        config_name: "PVWattsSingleOwner"
+        tilt_angle_func: "lat-func"
+      cost_parameters:
+        capex_per_kWdc: 1323
+        opex_per_kWdc_per_year: 18
+        cost_year: 2019
+  combiner:
+    performance_model:
+      model: "GenericCombinerPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_units: "kW"
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -35,11 +75,11 @@ technologies:
           replacement_cost_percent: 0.15 # percent of capex - H2A default case
   methanol:
     performance_model:
-      model: "co2h_methanol_plant_performance"
+      model: "CO2HMethanolPlantPerformanceModel"
     cost_model:
-      model: "co2h_methanol_plant_cost"
+      model: "CO2HMethanolPlantCostModel"
     finance_model:
-      model: "co2h_methanol_plant_financial"
+      model: "CO2HMethanolPlantFinanceModel"
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 127893196.8

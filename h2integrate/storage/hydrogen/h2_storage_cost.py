@@ -97,6 +97,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         self.config = HydrogenStorageBaseCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()
@@ -133,9 +134,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         storage_input["h2_storage_kg"] = max_capacity_kg[0]
 
         # system_flow_rate must be in kg/day
-        # NOTE: I believe this conversion is a bug and should not be divided by 24.
-        # To make the code consistent with previous behavior, I will not change it now.
-        storage_input["system_flow_rate"] = storage_max_fill_rate[0] / 24  # kg/day to kg/hr
+        storage_input["system_flow_rate"] = storage_max_fill_rate[0]  # kg/day
 
         return storage_input
 

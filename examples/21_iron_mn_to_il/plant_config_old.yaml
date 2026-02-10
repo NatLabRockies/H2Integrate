@@ -1,28 +1,17 @@
 name: "plant_config"
 description: "This plant is located in MN, USA..."
 
-site:
-  latitude: 41.717
-  longitude: -88.398
-
-  # array of polygons defining boundaries with x/y coords
-  boundaries: [
-    {
-      x: [0.0, 1000.0, 1000.0, 0.0],
-      y: [0.0, 0.0, 100.0, 1000.0],
-    },
-    {
-      x: [2000.0, 2500.0, 2000.0],
-      y: [2000.0, 2000.0, 2500.0],
-    }
-  ]
+sites:
+  site:
+    latitude: 41.717
+    longitude: -88.398
 
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections: [
-  ["iron_mine","iron_transport","total_iron_ore_produced"],
+  ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["iron_transport","iron_plant","iron_transport_cost"],
   ["finance_subgroup_iron_ore","iron_plant","price_iron_ore"],
 ]
@@ -31,7 +20,7 @@ plant:
   plant_life: 30
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

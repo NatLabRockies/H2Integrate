@@ -4,12 +4,12 @@ description: "This plant has wind feeding into an electrolyzer with optimization
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
-        num_turbines: 100
+        num_turbines: 50
         turbine_rating_kw: 8300
         rotor_diameter: 196.
         hub_height: 130.
@@ -31,9 +31,9 @@ technologies:
         cost_year: 2019
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -41,7 +41,7 @@ technologies:
       performance_parameters:
         size_mode: "normal"
         cluster_rating_MW: 20
-        n_clusters: 25
+        n_clusters: 5
         eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000. #number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: True #include degradation

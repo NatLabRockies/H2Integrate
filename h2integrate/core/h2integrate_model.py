@@ -1,10 +1,10 @@
 import importlib.util
 
-import numpy as np
 import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
+from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import (
     get_path,
     find_file,
@@ -320,21 +320,48 @@ class H2IntegrateModel:
                 )
 
     def create_site_model(self):
+        """
+        Create and configure site component(s) for the system.
+
+        This method initializes a site group for each site provided in
+        ``self.plant_config["sites"]``.
+
+        This method creates an OpenMDAO Group for each site that contains the location definition
+        and resources models (if provided in the configuration) for that site.
+        """
+        # Loop through each site defined in the plant config
+        for site_name, site_info in self.plant_config["sites"].items():
+            # Reorganize the plant config to be formatted as expected by the
+            # resource models
+            plant_config_reorg = {
+                "site": site_info,
+                "plant": self.plant_config["plant"],
+            }
+
+            # Create the site group and resource models
+            site_group = self.create_site_group(plant_config_reorg, site_info)
+
+            # Add the site group to the system model
+            self.model.add_subsystem(site_name, site_group)
+
+    def create_site_group(self, plant_config_dict: dict, site_config: dict):
+        """
+        Create and configure a site Group for the input site configuration.
+
+        Args:
+            plant_config_dict (dict): The plant config dictionary formatted for the resource models
+            site_config (dict): Information that defines each site, such as latitude,
+                longitude, and resource models.
+
+        Returns:
+            om.Group: OpenMDAO group for a site
+        """
+        # Initialize the site group
         site_group = om.Group()
 
-        # Create a site-level component
-        site_config = self.plant_config.get("site", {})
-        site_component = om.IndepVarComp()
-        site_component.add_output("latitude", val=site_config.get("latitude", 0.0), units="deg")
-        site_component.add_output("longitude", val=site_config.get("longitude", 0.0), units="deg")
-        site_component.add_output("elevation_m", val=site_config.get("elevation_m", 0.0), units="m")
-
-        # Add boundaries if they exist
-        site_config = self.plant_config.get("site", {})
-        boundaries = site_config.get("boundaries", [])
-        for i, boundary in enumerate(boundaries):
-            site_component.add_output(f"boundary_{i}_x", val=np.array(boundary.get("x", [])))
-            site_component.add_output(f"boundary_{i}_y", val=np.array(boundary.get("y", [])))
+        # Create a site location component (defines latitude, longitude, etc)
+        site_inputs = {k: v for k, v in site_config.items() if k != "resources"}
+        site_component = SiteLocationComponent(site_inputs)
 
         site_group.add_subsystem("site_component", site_component, promotes=["*"])
 
@@ -346,15 +373,14 @@ class H2IntegrateModel:
                 resource_class = self.supported_models.get(resource_model)
                 if resource_class:
                     resource_component = resource_class(
-                        plant_config=self.plant_config,
+                        plant_config=plant_config_dict,
                         resource_config=resource_inputs,
                         driver_config=self.driver_config,
                     )
                     site_group.add_subsystem(
                         resource_name, resource_component, promotes_inputs=["latitude", "longitude"]
                     )
-
-        self.model.add_subsystem("site", site_group)
+        return site_group
 
     def create_plant_model(self):
         """
@@ -383,7 +409,13 @@ class H2IntegrateModel:
         self.cost_models = []
         self.finance_models = []
 
-        combined_performance_and_cost_models = ["hopp", "h2_storage", "wombat", "iron"]
+        combined_performance_and_cost_models = [
+            "HOPPComponent",
+            "h2_storage",
+            "WOMBATElectrolyzerModel",
+            "IronComponent",
+            "ArdWindPlantModel",
+        ]
 
         if any(tech == "site" for tech in self.technology_config["technologies"]):
             msg = (
@@ -407,7 +439,7 @@ class H2IntegrateModel:
                             f"the top-level name of the tech group ({tech_name})"
                         )
 
-            if perf_model is not None and "feedstock" in perf_model:
+            if perf_model == "FeedstockPerformanceModel":
                 comp = self.supported_models[perf_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -496,7 +528,7 @@ class H2IntegrateModel:
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             cost_model = individual_tech_config.get("cost_model", {}).get("model")
-            if cost_model is not None and "feedstock" in cost_model:
+            if cost_model == "FeedstockCostModel":
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -579,7 +611,7 @@ class H2IntegrateModel:
 
             >>> self.plant_config["finance_parameters"]["finance_group"] = {
             ...     "commodity": "hydrogen",
-            ...     "finance_model": "ProFastComp",
+            ...     "finance_model": "ProFastLCO",
             ...     "model_inputs": {"discount_rate": 0.08},
             ... }
             >>> self.create_finance_model()
@@ -708,7 +740,7 @@ class H2IntegrateModel:
             # to sum the commodity production profile from the commodity stream
             if commodity_stream is not None:
                 # get the generic summer model
-                commodity_summer_model = self.supported_models.get("summer")
+                commodity_summer_model = self.supported_models.get("GenericSummerPerformanceModel")
                 if "combiner" in commodity_stream or "splitter" in commodity_stream:
                     # combiners and splitters have the same tech config as the production summer,
                     # so just use their config if the commodity stream is a combiner or splitter
@@ -737,7 +769,8 @@ class H2IntegrateModel:
 
             if commodity_stream is None and commodity == "electricity":
                 finance_subgroup.add_subsystem(
-                    "electricity_sum", ElectricitySumComp(tech_configs=tech_configs)
+                    "electricity_sum",
+                    ElectricitySumComp(plant_config=self.plant_config, tech_configs=tech_configs),
                 )
 
             # Add adjusted capex/opex
@@ -859,8 +892,12 @@ class H2IntegrateModel:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
 
-                # make the connection_name based on source, dest, item, type
-                connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
+                if transport_type in self.tech_names:
+                    # if the transport type is already a technology, skip creating a new component
+                    connection_name = f"{transport_type}"
+                else:
+                    # make the connection_name based on source, dest, item, type
+                    connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
 
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
@@ -869,22 +906,27 @@ class H2IntegrateModel:
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
-                if cost_model_name is not None and "feedstock" in cost_model_name:
+                if cost_model_name == "FeedstockCostModel":
                     self.plant.connect(
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
                     )
 
-                if perf_model_name is not None and "feedstock" in perf_model_name:
+                if perf_model_name == "FeedstockPerformanceModel":
                     source_tech = f"{source_tech}_source"
 
                 # Create the transport object
-                connection_component = self.supported_models[transport_type](
-                    transport_item=transport_item
-                )
+                # allow transport_type to be from self.tech_name
+                if transport_type in self.tech_names:
+                    # Connect the connection component to the destination technology
+                    pass
+                else:
+                    connection_component = self.supported_models[transport_type](
+                        transport_item=transport_item
+                    )
 
-                # Add the connection component to the model
-                self.plant.add_subsystem(connection_name, connection_component)
+                    # Add the connection component to the model
+                    self.plant.add_subsystem(connection_name, connection_component)
 
                 # Check if the source technology is a splitter
                 if "splitter" in source_tech:
@@ -946,7 +988,7 @@ class H2IntegrateModel:
             elif len(connection) == 3:
                 # connect directly from source to dest
                 source_tech, dest_tech, connected_parameter = connection
-                if isinstance(connected_parameter, (tuple, list)):
+                if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
                     self.plant.connect(
                         f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
@@ -962,7 +1004,12 @@ class H2IntegrateModel:
 
         resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
 
-        resource_models = self.plant_config.get("site", {}).get("resources", {})
+        if "sites" in self.plant_config:
+            resource_models = {}
+            for site_grp, site_grp_inputs in self.plant_config["sites"].items():
+                for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
+                    resource_models[f"{site_grp}-{resource_key}"] = resource_params
+
         resource_source_connections = [c[0] for c in resource_to_tech_connections]
         # Check if there is a missing resource to tech connection or missing resource model
         if len(resource_models) != len(resource_source_connections):
@@ -1005,7 +1052,7 @@ class H2IntegrateModel:
             resource_name, tech_name, variable = connection
 
             # Connect the resource output to the technology input
-            self.model.connect(f"site.{resource_name}.{variable}", f"{tech_name}.{variable}")
+            self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
@@ -1015,7 +1062,6 @@ class H2IntegrateModel:
                 tech_configs = group_configs.get("tech_configs")
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
-
                 if commodity_stream is not None:
                     # connect commodity stream output to summer input
                     self.plant.connect(
@@ -1086,20 +1132,20 @@ class H2IntegrateModel:
                         if "electrolyzer" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "geoh2" in tech_name:
                             if primary_commodity_type == "hydrogen":
                                 self.plant.connect(
-                                    f"{tech_name}.total_hydrogen_produced",
+                                    f"{tech_name}.annual_hydrogen_produced",
                                     f"finance_subgroup_{group_id}.total_hydrogen_produced",
                                 )
 
                         if "ammonia" in tech_name and primary_commodity_type == "ammonia":
                             self.plant.connect(
-                                f"{tech_name}.total_ammonia_produced",
+                                f"{tech_name}.annual_ammonia_produced",
                                 f"finance_subgroup_{group_id}.total_ammonia_produced",
                             )
 
@@ -1113,13 +1159,13 @@ class H2IntegrateModel:
 
                     if "methanol" in tech_name and primary_commodity_type == "methanol":
                         self.plant.connect(
-                            f"{tech_name}.total_methanol_produced",
+                            f"{tech_name}.annual_methanol_produced",
                             f"finance_subgroup_{group_id}.total_methanol_produced",
                         )
 
                     if "air_separator" in tech_name and primary_commodity_type == "nitrogen":
                         self.plant.connect(
-                            f"{tech_name}.total_nitrogen_produced",
+                            f"{tech_name}.annual_nitrogen_produced",
                             f"finance_subgroup_{group_id}.total_nitrogen_produced",
                         )
 

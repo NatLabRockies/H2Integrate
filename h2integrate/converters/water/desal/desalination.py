@@ -1,7 +1,8 @@
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.water.desal.desalination_baseclass import (
     DesalinationCostBaseClass,
     DesalinationPerformanceBaseClass,
@@ -34,7 +35,8 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
     def setup(self):
         super().setup()
         self.config = ReverseOsmosisPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_output(
             "electricity_in",
@@ -93,7 +95,16 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         desal_mass_kg = freshwater_m3_per_hr * 346.7  # [kg]
         desal_size_m2 = freshwater_m3_per_hr * 0.467  # [m^2]
 
-        outputs["water"] = freshwater_m3_per_hr
+        outputs["water_out"] = freshwater_m3_per_hr
+        outputs["total_water_produced"] = outputs["water_out"].sum()
+        outputs["rated_water_production"] = outputs["water_out"].max()
+        outputs["capacity_factor"] = outputs["total_water_produced"] / (
+            outputs["rated_water_production"] * len(outputs["water_out"])
+        )
+        outputs["annual_water_produced"] = outputs["total_water_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+
         outputs["electricity_in"] = desal_power
         outputs["feedwater"] = feedwater_m3_per_hr
         outputs["mass"] = desal_mass_kg
@@ -123,7 +134,8 @@ class ReverseOsmosisCostModel(DesalinationCostBaseClass):
 
     def setup(self):
         self.config = ReverseOsmosisCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

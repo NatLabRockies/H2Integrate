@@ -196,7 +196,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         layout_mode = layout_params.get("layout_mode", "basicgrid")
         layout_options = layout_params.get("layout_options", {})
         if layout_mode == "basicgrid":
-            self.layout_config = BasicGridLayoutConfig.from_dict(layout_options)
+            self.layout_config = BasicGridLayoutConfig.from_dict(
+                layout_options,
+                additional_cls_name=self.__class__.__name__,
+            )
         self.layout_mode = layout_mode
 
         # initialize power-curve recalc config
@@ -209,7 +212,8 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         # initialize wind turbine config
         self.config = PYSAMWindPlantPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
@@ -238,16 +242,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             val=self.config.hub_height,
             units="m",
             desc="turbine hub-height in meters",
-        )
-
-        self.add_output(
-            "annual_energy",
-            val=0.0,
-            units="kW*h/year",
-            desc="Annual energy production from WindPlant in kW",
-        )
-        self.add_output(
-            "total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity in kW"
         )
 
         if self.config.create_model_from == "default":
@@ -468,8 +462,16 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         self.system_model.execute(0)
 
         outputs["electricity_out"] = self.system_model.Outputs.gen
-        outputs["total_capacity"] = self.system_model.Farm.system_capacity
-        outputs["annual_energy"] = self.system_model.Outputs.annual_energy
+        outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
+
+        # outputs["total_capacity"] = self.system_model.Farm.system_capacity
+        # outputs["annual_energy"] = self.system_model.Outputs.annual_energy
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
+        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+        max_production = (
+            self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(

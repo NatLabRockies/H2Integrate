@@ -5,9 +5,12 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pytest
+from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
 from h2integrate.core.utilities import (
+    BaseConfig,
     get_path,
     find_file,
     make_unique_case_name,
@@ -19,13 +22,15 @@ def test_get_path(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_inputs" / "hopp_config.yaml"
+    file_abs_path = (
+        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
+    )
     file_abs_out_path = get_path(file_abs_path)
     with subtests.test("get_path: absolute filepath for file"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "01_onshore_steel_mn")
+    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
     file_cwd_rel_out_path = get_path(file_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for file"):
@@ -33,19 +38,19 @@ def test_get_path(subtests):
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    file_h2i_rel_path = "examples/01_onshore_steel_mn/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
     file_h2i_rel_out_path = get_path(file_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for file"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 1. As an absolute path.
-    dir_abs_path = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_inputs"
+    dir_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs"
     dir_abs_out_path = get_path(dir_abs_path)
     with subtests.test("get_path: absolute filepath for folder"):
         assert dir_abs_out_path == dir_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "01_onshore_steel_mn")
+    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     dir_cwd_rel_path = "tech_inputs"
     dir_cwd_rel_out_path = get_path(dir_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for folder"):
@@ -53,7 +58,7 @@ def test_get_path(subtests):
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    dir_h2i_rel_path = "examples/01_onshore_steel_mn/tech_inputs"
+    dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs"
     dir_h2i_rel_out_path = get_path(dir_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for folder"):
         assert dir_h2i_rel_out_path == dir_abs_path
@@ -65,13 +70,15 @@ def test_find_file(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_inputs" / "hopp_config.yaml"
+    file_abs_path = (
+        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
+    )
     file_abs_out_path = find_file(file_abs_path)
     with subtests.test("find_file: absolute filepath"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "01_onshore_steel_mn")
+    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
     file_cwd_rel_out_path = find_file(file_cwd_rel_path)
     with subtests.test("find_file: filepath relative to cwd"):
@@ -79,20 +86,20 @@ def test_find_file(subtests):
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR / "core" / "inputs")
-    file_h2i_rel_path = "examples/01_onshore_steel_mn/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
     file_h2i_rel_out_path = find_file(file_h2i_rel_path)
     with subtests.test("find_file: filepath relative to H2I package"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 3. Relative to the root_folder (outside of it)
-    file_root_rel_path = "../examples/01_onshore_steel_mn/tech_inputs/hopp_config.yaml"
+    file_root_rel_path = "../examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
     file_root_rel_out_path = find_file(file_root_rel_path, root_folder=ROOT_DIR)
     with subtests.test("find_file: filepath relative (outside) of root_folder"):
         assert file_root_rel_out_path.resolve() == file_abs_path
 
     # 4. Relative to the root_folder (inside of it)
     file_root_in_rel_path = "tech_inputs/hopp_config.yaml"
-    ex_root = EXAMPLE_DIR / "01_onshore_steel_mn"
+    ex_root = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture"
     file_root_in_rel_out_path = find_file(file_root_in_rel_path, root_folder=ex_root)
     with subtests.test("find_file: filepath relative (inside) to root_folder"):
         assert file_root_in_rel_out_path.resolve() == file_abs_path
@@ -421,6 +428,87 @@ class TestDictToYamlFormatting(unittest.TestCase):
         self.assertEqual(plant_config["technologies"]["wind"]["active"], True)
         self.assertEqual(plant_config["financial"]["project_life"], 25)
         self.assertEqual(plant_config["financial"]["discount_rate"], 0.08)
+
+
+@define
+class DemoConfig(BaseConfig):
+    """Test class for the basic functionality of `BaseConfig`."""
+
+    x: int = field()
+    y: str = field(default="y")
+
+
+class BaseDemoModel:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(
+            config, strict=False, additional_cls_name=self.__class__.__name__
+        )
+
+
+class BaseDemoModelStrict:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(config, strict=True)
+
+
+class BaseDemoModelStrictAdditional:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(
+            config, strict=True, additional_cls_name=self.__class__.__name__
+        )
+
+
+class BaseDemoModelAdditional:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+
+
+def test_BaseConfig(subtests):
+    """Tests the BaseConfig class."""
+
+    with subtests.test("Check basic passing inputs"):
+        demo = BaseDemoModel({"x": 1})
+        assert demo.config.x == 1
+        assert demo.config.y == "y"
+
+    with subtests.test("Check allowed inputs overload"):
+        demo = BaseDemoModel({"x": 1, "z": 2})
+        assert demo.config.x == 1
+        assert demo.config.y == "y"
+
+    with subtests.test("Check prohibited inputs overload with additional"):
+        msg = (
+            "BaseDemoModelStrictAdditional setup failed as a result of DemoConfig"
+            " receiving extraneous inputs"
+        )
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrictAdditional({"x": 1, "z": 2})
+
+    with subtests.test("Check prohibited inputs overload w/o additional"):
+        msg = "The initialization for DemoConfig" " was given extraneous inputs"
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrict({"x": 1, "z": 2})
+        assert demo.config.y == "y"
+
+    with subtests.test("Check undefined inputs overload with additional"):
+        msg = (
+            "BaseDemoModelStrictAdditional setup failed as a result of DemoConfig"
+            " missing the following inputs"
+        )
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrictAdditional({})
+
+    with subtests.test("Check prohibited inputs overload w/o additional"):
+        msg = "The class definition for DemoConfig is missing the following inputs"
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrict({})
 
 
 if __name__ == "__main__":

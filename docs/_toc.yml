@@ -15,13 +15,15 @@ parts:
   - file: user_guide/model_overview
   - file: user_guide/how_to_set_up_an_analysis
   - file: user_guide/connecting_technologies
+  - file: user_guide/defining_sites_and_resources
   - file: user_guide/design_optimization_in_h2i
   - file: user_guide/design_of_experiments_in_h2i
   - file: user_guide/postprocessing_results
   - file: user_guide/recording_and_loading_data
   - file: user_guide/how_to_interface_with_user_defined_model
   - file: user_guide/how_to_run_several_cases_in_sequence
-  - file: ../examples/25_sizing_modes/run_size_modes
+  - file: user_guide/run_size_modes
+  - file: user_guide/plotting_geospatial_data_with_geopandas
 
 - caption: Technology Models
   chapters:
@@ -38,6 +40,7 @@ parts:
   - file: technology_models/methanol.md
   - file: technology_models/ammonia.md
   - file: technology_models/pysam_battery.md
+  - file: technology_models/wind_plant_ard.md
   - file: technology_models/geologic_hydrogen.md
   - file: technology_models/grid
   - file: technology_models/hydrogen_storage.md
@@ -53,12 +56,14 @@ parts:
       - file: resource/goes_solar_v4_api
       - file: resource/himawari_v3_api
       - file: resource/meteosat_prime_meridian_v4_api
+      - file: resource/openmeteo_solar_archive
 
 - caption: Control
   chapters:
   - file: control/control_overview
   - file: control/open-loop_controllers
   - file: control/pyomo_controllers
+  - file: control/controller_demonstrations
 
 - caption: Finance Models
   chapters:
@@ -91,6 +96,7 @@ parts:
     - file: misc_resources/FAQ
     - file: misc_resources/glossary
     - file: misc_resources/defining_filepaths
+    - file: misc_resources/turbine_models_library_preprocessing
 
 - caption: API Reference
   maxdepth: 3

@@ -1,4 +1,4 @@
-﻿solar.capacity_kWdc,electrolyzer.n_clusters
+﻿solar.system_capacity_DC,electrolyzer.n_clusters
 25000.0,5.0
 50000.0,5.0
 100000.0,5.0

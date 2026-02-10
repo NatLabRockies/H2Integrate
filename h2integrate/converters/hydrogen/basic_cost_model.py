@@ -3,8 +3,9 @@ import warnings
 import numpy as np
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
@@ -36,7 +37,8 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
 
     def setup(self):
         self.config = BasicElectrolyzerCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

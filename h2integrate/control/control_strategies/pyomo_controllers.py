@@ -68,7 +68,7 @@ class PyomoControllerBaseConfig(BaseConfig):
     def __attrs_post_init__(self):
         if isinstance(self.system_commodity_interface_limit, str):
             self.system_commodity_interface_limit = float(self.system_commodity_interface_limit)
-        if isinstance(self.system_commodity_interface_limit, (float, int)):
+        if isinstance(self.system_commodity_interface_limit, float | int):
             self.system_commodity_interface_limit = [
                 self.system_commodity_interface_limit
             ] * self.n_control_window
@@ -247,7 +247,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                 ]
                 demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
 
-                if "heuristic" in control_strategy:
+                if control_strategy == "HeuristicLoadFollowingController":
                     # determine dispatch commands for the current control window
                     # using the heuristic method
                     self.set_fixed_dispatch(
@@ -697,7 +697,8 @@ class HeuristicLoadFollowingController(SimpleBatteryControllerHeuristic):
     def setup(self):
         """Initialize HeuristicLoadFollowingController."""
         self.config = HeuristicLoadFollowingControllerConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

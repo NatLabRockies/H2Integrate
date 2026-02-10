@@ -7,7 +7,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 @define(kw_only=True)
 class SimpleGenericStorageConfig(BaseConfig):
     commodity_name: str = field()
-    commodity_units: str = field()
+    commodity_units: str = field()  # TODO: update to commodity_rate_units
 
 
 class SimpleGenericStorage(om.ExplicitComponent):
@@ -25,6 +25,7 @@ class SimpleGenericStorage(om.ExplicitComponent):
         self.config = SimpleGenericStorageConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         commodity_name = self.config.commodity_name
         commodity_units = self.config.commodity_units

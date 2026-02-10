@@ -4,9 +4,9 @@ description: "This plant produces electricity from river hydro"
 technologies:
   river:
     performance_model:
-      model: "run_of_river_hydro_performance"
+      model: "RunOfRiverHydroPerformanceModel"
     cost_model:
-      model: "run_of_river_hydro_cost"
+      model: "RunOfRiverHydroCostModel"
     model_inputs:
       shared_parameters:
         plant_capacity_mw: 10.0

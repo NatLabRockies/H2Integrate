@@ -1,9 +1,9 @@
 from attrs import field, define
 from openmdao.utils import units
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, gte_zero, range_val
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)
@@ -56,7 +56,9 @@ class ATBBatteryCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = ATBBatteryCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"), strict=False
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()

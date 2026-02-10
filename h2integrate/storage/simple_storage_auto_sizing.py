@@ -18,7 +18,7 @@ class StorageSizingModelConfig(BaseConfig):
     """
 
     commodity_name: str = field(default="hydrogen")
-    commodity_units: str = field(default="kg/h")
+    commodity_units: str = field(default="kg/h")  # TODO: update to commodity_rate_units
     demand_profile: int | float | list = field(default=0.0)
 
 
@@ -51,6 +51,7 @@ class StorageAutoSizingModel(om.ExplicitComponent):
         self.config = StorageSizingModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()

@@ -2,17 +2,17 @@
 # Solar Resource: Model Overview
 
 - [GOES PSM v4 API](solar_resource:goes_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "goes_aggregated_solar_v4_api"
-    - "goes_conus_solar_v4_api"
-    - "goes_fulldisc_solar_v4_api"
-    - "goes_tmy_solar_v4_api"
+    - "GOESAggregatedSolarAPI"
+    - "GOESConusSolarAPI"
+    - "GOESFullDiscSolarAPI"
+    - "GOESTMYSolarAPI"
 - [Himawari PSM v4 API](solar_resource:himawari_v3_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "himawari7_solar_v3_api"
-    - "himawari8_solar_v3_api"
-    - "himawari_tmy_solar_v3_api"
+    - "Himawari7SolarAPI"
+    - "Himawari8SolarAPI"
+    - "HimawariTMYSolarAPI"
 - [Meteosat Prime Meridian PSM v4 API](solar_resource:msg_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
-    - "meteosat_solar_v4_api"
-    - "meteosat_tmy_solar_v4_api"
+    - "MeteosatPrimeMeridianSolarAPI"
+    - "MeteosatPrimeMeridianTMYSolarAPI"
 
 
 ```{note}
@@ -24,10 +24,12 @@ Please refer to the [`Setting Environment Variables`](environment_variables:sett
 
 Solar resource models may output solar resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a solar resource model.
 
-- [Solar Resource Data](#primary-data-solar-resource-timeseries)
-- [Site Information](#additional-data-site-information)
-- [Data Source Information](#additional-data-data-source)
-- [Time Profile Information](#additional-data-time-profile)
+- [Solar Resource: Model Overview](#solar-resource-model-overview)
+- [Solar Resource: Output Data](#solar-resource-output-data)
+  - [Primary Data: Solar Resource Timeseries](#primary-data-solar-resource-timeseries)
+  - [Additional Data: Site Information](#additional-data-site-information)
+  - [Additional Data: Data source](#additional-data-data-source)
+  - [Additional Data: Time profile](#additional-data-time-profile)
 
 
 ```{note}
@@ -37,8 +39,8 @@ Not all solar resource models will output all the data keys listed below. Please
 (primary-data-solar-resource-timeseries)=
 ## Primary Data: Solar Resource Timeseries
 The below variables are outputted as arrays, with a length equal to the simulation duration. The naming convention and standardized units of solar resource variables are listed below:
-- `solar_direction`: solar direction in degrees (units are 'deg')
-- `solar_speed`: solar speed in meters per second (units are 'm/s')
+- `wind_direction`: wind direction in degrees (units are 'deg')
+- `wind_speed`: wind speed in meters per second (units are 'm/s')
 - `temperature`: air temperature in Celsius (units are 'C')
 - `pressure`: air pressure in millibar (units are 'mbar')
 - `relative_humidity`: relative humidity represented as a percentage (units are 'percent')
@@ -66,6 +68,9 @@ The below variables are outputted as arrays, with a length equal to the simulati
 ## Additional Data: Data source
 - `data_tz` (int | float): timezone the data is in represented as an hour offset from UTC
 - `filepath` (str): filepath where the resource data was loaded from
+- `start_time` (str): the start time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `end_time` (str): the end time of resource data formatted as "yyyy/mm/dd hh:mm:ss (tz)", where tz is the timezone represented as the UTC offset
+- `dt` (int | float): the timestep of resource data in seconds
 
 (additional-data-time-profile)=
 ## Additional Data: Time profile

@@ -77,6 +77,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     def setup(self):
         commodity_type = self.options["commodity_type"]
         description = self.options["description"].strip() if "description" in self.options else ""
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Use description only if non-empty
         suffix = f"_{description}" if description else ""
@@ -100,6 +101,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             self.add_input(
                 f"total_{self.options['commodity_type']}_produced",
                 val=0.0,
+                shape=plant_life,
                 units=commodity_units,
             )
 
@@ -111,7 +113,10 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             )
         finance_params.update({"plant_life": plant_config["plant"]["plant_life"]})
 
-        self.config = NumpyFinancialNPVFinanceConfig.from_dict(finance_params)
+        self.config = NumpyFinancialNPVFinanceConfig.from_dict(
+            finance_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
@@ -181,7 +186,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
         # Calculate revenue from selling the commodity at the specified price
         # Revenue is only generated during operational years (not during construction year 0)
-        income = float(inputs[f"sell_price_{self.output_txt}"]) * annual_production
+        income = inputs[f"sell_price_{self.output_txt}"][0] * annual_production
         # Create cash inflow array: [0 for year 0 (construction), income for years 1-N]
         cash_inflow = np.concatenate(([0], income * np.ones(self.config.plant_life)))
 
@@ -195,8 +200,8 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         # Loop through each technology (e.g., wind, electrolyzer, etc.) to sum costs
         for tech in self.tech_config:
             # Extract financial inputs for this technology and apply negative sign convention
-            capex = sign_of_costs * float(inputs[f"capex_adjusted_{tech}"])
-            fixed_om = sign_of_costs * float(inputs[f"opex_adjusted_{tech}"])
+            capex = sign_of_costs * inputs[f"capex_adjusted_{tech}"][0]
+            fixed_om = sign_of_costs * inputs[f"opex_adjusted_{tech}"][0]
             var_om = sign_of_costs * inputs[f"varopex_adjusted_{tech}"]
 
             # CAPEX occurs only in year 0 (construction phase)

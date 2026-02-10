@@ -87,7 +87,7 @@ def check_parameter_inputs(finance_params, plant_config):
             f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
         )
 
-        msg = f"Duplicate entries found in ProFastComp params. Duplicated entries are: {err_info}"
+        msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
         raise ValueError(msg)
 
     # Check for conflicts between nickname/realname pairs
@@ -521,6 +521,8 @@ class ProFastBase(om.ExplicitComponent):
         # Add model-specific outputs defined by subclass
         self.add_model_specific_outputs()
 
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         # Add production input (CO2 capture or total commodity produced)
         if self.options["commodity_type"] == "co2":
             self.add_input("co2_capture_kgpy", val=0.0, units="kg/year", require_connection=True)
@@ -529,20 +531,21 @@ class ProFastBase(om.ExplicitComponent):
                 f"total_{self.options['commodity_type']}_produced",
                 val=-1.0,
                 units=commodity_units,
+                shape=plant_life,
                 require_connection=True,
             )
 
         # Add inputs for CapEx, OpEx, and variable OpEx for each technology
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
             self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
 
-        # Include electrolyzer replacement time if applicable
-        if "electrolyzer" in tech_config:
-            self.add_input("electrolyzer_time_until_replacement", units="h")
+            # Include electrolyzer replacement time if applicable
+            if tech.startswith("electrolyzer"):
+                self.add_input(f"{tech}_time_until_replacement", units="h")
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -550,7 +553,10 @@ class ProFastBase(om.ExplicitComponent):
         fin_params = check_parameter_inputs(finance_params, plant_config)
 
         # initialize financial parameters
-        self.params = BasicProFASTParameterConfig.from_dict(fin_params)
+        self.params = BasicProFASTParameterConfig.from_dict(
+            fin_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # initialize default capital item parameters
         capital_item_params = plant_config["finance_parameters"]["model_inputs"].get(
@@ -626,11 +632,11 @@ class ProFastBase(om.ExplicitComponent):
 
         # calculate capacity and total production based on commodity type
         if self.options["commodity_type"] != "co2":
-            capacity = float(inputs[f"total_{self.options['commodity_type']}_produced"][0]) / 365.0
-            total_production = float(inputs[f"total_{self.options['commodity_type']}_produced"][0])
+            capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
+            total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
         else:
-            capacity = float(inputs["co2_capture_kgpy"]) / 365.0
-            total_production = float(inputs["co2_capture_kgpy"])
+            capacity = inputs["co2_capture_kgpy"][0] / 365.0
+            total_production = inputs["co2_capture_kgpy"][0]
 
         # define profast parameters for capacity and utilization
         profast_params["capacity"] = capacity  # TODO: update to actual daily capacity

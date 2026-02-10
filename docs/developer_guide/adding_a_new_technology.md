@@ -140,11 +140,11 @@ class ATBUtilityPVCostModel(CostModelBaseClass):
         super().setup()
 
         # add extra inputs or outputs for the cost model
-        self.add_input("capacity_kWac", val=0.0, units="kW", desc="PV rated capacity in AC")
+        self.add_input("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # calculate CapEx and OpEx in USD
-        capacity = inputs["capacity_kWac"][0]
+        capacity = inputs["system_capacity_AC"][0]
         capex = self.config.capex_per_kWac * capacity
         opex = self.config.opex_per_kWac_per_year * capacity
         outputs["CapEx"] = capex
@@ -159,20 +159,27 @@ required inputs and outputs defined in the baseclass.
 5. **Next, add the new technology to the `supported_models.py` file.**
 This file contains a dictionary of all the available technologies in H2Integrate.
 Add your new technology to the dictionary with the appropriate keys depending on if it a performance, cost, or financial model.
+
+```{important}
+When adding a new technology use a string version of the class name as the dictionary key mapping
+to the class. This greatly simplifies debugging configuration issues and model findability within the
+documentation and code.
+```
+
 Here's what the updated `supported_models.py` file looks like with our new solar technology added as the first entry:
 
 ```python
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceComponent
 
 supported_models = {
-    "pysam_solar_plant_performance" : PYSAMSolarPlantPerformanceComponent,
+    "PYSAMSolarPlantPerformanceModel" : PYSAMSolarPlantPerformanceComponent,
 
-    "run_of_river_hydro_performance": RunOfRiverHydroPerformanceModel,
-    "run_of_river_hydro_cost": RunOfRiverHydroCostModel,
-    "eco_pem_electrolyzer_performance": ECOElectrolyzerPerformanceModel,
-    "singlitico_electrolyzer_cost": SingliticoCostModel,
-    "basic_electrolyzer_cost": BasicElectrolyzerCostModel,
-    "custom_electrolyzer_cost": CustomElectrolyzerCostModel,
+    "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
+    "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
+    "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
+    "SingliticoCostModel": SingliticoCostModel,
+    "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
+    "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
 
     ...
 }
@@ -212,6 +219,14 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_output('efficiency', val=0.0, desc='Average efficiency of the electrolyzer')
 ```
 
+### Caching results for expensive computations
+
+If your technology involves computationally expensive calculations, you can leverage the caching functionality built into the H2Integrate model baseclasses.
+This allows you to save the results of expensive computations to disk and load them in future runs, avoiding the need to recompute them.
+To use this functionality, you need to ensure that your model inherits from the appropriate baseclass (`CacheBaseClass`) and that caching is enabled in your model's configuration.
+You can then enable caching by setting the `enable_caching` flag to `True` in your model's `tech_config` file.
+Please see the `hopp_wrapper.py` file for an example of how to implement caching in your model.
+
 ### Models where the performance and cost are tightly coupled
 
 In some cases, the performance and cost models are tightly coupled, and it might make sense to combine them into a single model.
@@ -220,7 +235,7 @@ If you're adding a technology where this makes sense, you can follow the same st
 For now, modify a single  the `create_technology_models.py` file to include your new technology as such:
 
 ```python
-combined_performance_and_cost_model_technologies = ['hopp', 'h2_storage', '<your_tech_here>']
+combined_performance_and_cost_model_technologies = ['HOPPComponent', 'h2_storage', '<your_tech_here>']
 
 # Create a technology group for each technology
 for tech_name, individual_tech_config in self.technology_config['technologies'].items():

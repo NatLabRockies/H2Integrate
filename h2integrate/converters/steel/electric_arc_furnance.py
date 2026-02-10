@@ -58,6 +58,7 @@ class EAFPlantPerformanceComponent(om.ExplicitComponent):
         self.config = EAFPlantPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_discrete_output(
@@ -130,7 +131,10 @@ class EAFPlantCostComponent(CostModelBaseClass):
         config_dict.update({"cost_year": self.target_dollar_year})
         config_dict.update({"plant_life": self.plant_life})
 
-        self.config = EAFPlantCostConfig.from_dict(config_dict)
+        self.config = EAFPlantCostConfig.from_dict(
+            config_dict,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         super().setup()
         self.add_input("LCOE", val=self.config.LCOE, units="USD/MW/h")
@@ -244,7 +248,7 @@ class EAFPlantCostComponent(CostModelBaseClass):
 
         # TODO: make natural gas costs an input
         natural_gas_prices_MMBTU = coeff_dict["Natural Gas"]["values"][indices].astype(float)
-        natural_gas_prices_GJ = natural_gas_prices_MMBTU * 1.05506  # Convert to GJ
+        natural_gas_prices_GJ = natural_gas_prices_MMBTU / 1.05506  # Convert to GJ
 
         iron_ore_pellet_unitcost_tonne = inputs["LCOI_ore"][0]
         if inputs["iron_transport_cost"] > 0:

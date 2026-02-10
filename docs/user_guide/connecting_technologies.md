@@ -100,7 +100,7 @@ Add the combiner to your `tech_config.yaml`:
 technologies:
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -143,7 +143,7 @@ Add the splitter to your `tech_config.yaml`:
 technologies:
   electricity_splitter:
     performance_model:
-      model: "splitter_performance"
+      model: "GenericSplitterPerformanceModel"
       config:
         commodity: "electricity"
         commodity_units: "kW"

@@ -1,7 +1,8 @@
 from attrs import field, define
 
-from h2integrate.core.utilities import CostModelBaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gte_zero
+from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
@@ -28,7 +29,8 @@ class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):
 
     def setup(self):
         self.config = CustomElectrolyzerCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()
@@ -40,7 +42,21 @@ class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):
             desc="Size of the electrolyzer in kW",
         )
 
+        self.add_input(
+            "unit_capex",
+            val=self.config.capex_USD_per_kW,
+            units="USD/kW",
+            desc="CapEx of electrolyzer in USD/kW",
+        )
+
+        self.add_input(
+            "fixed_opex",
+            val=self.config.fixed_om_USD_per_kW_per_year,
+            units="USD/kW/yr",
+            desc="Fixed OpEx of electrolyzer in USD/kW/year",
+        )
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         electrolyzer_size_kW = inputs["electrolyzer_size_mw"]
-        outputs["CapEx"] = self.config.capex_USD_per_kW * electrolyzer_size_kW
-        outputs["OpEx"] = self.config.fixed_om_USD_per_kW_per_year * electrolyzer_size_kW
+        outputs["CapEx"] = inputs["unit_capex"] * electrolyzer_size_kW
+        outputs["OpEx"] = inputs["fixed_opex"] * electrolyzer_size_kW
