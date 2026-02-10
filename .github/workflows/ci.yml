@@ -31,7 +31,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libglpk-dev glpk-utils coinor-cbc
           python -m pip install --upgrade pip
-          pip install git+https://github.com/NREL/HOPP@develop
           if [ "${{ matrix.optional }}" = "true" ]; then
             pip install ".[develop]"
             pip install git+https://github.com/NREL/MarineCarbonManagement.git
