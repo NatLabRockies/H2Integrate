@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -10,14 +9,6 @@ from pytest import fixture
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
-
-
-@pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory):
-    """Temp directory for YAML outputs."""
-    temp_dir = tmp_path_factory.mktemp("temp_dir")
-    yield temp_dir
-    shutil.rmtree(str(temp_dir))
 
 
 @fixture

@@ -3,7 +3,7 @@ from pytest import fixture
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.inputs.validation import load_driver_yaml
 
-from test.conftest import pytest_collection_modifyitems  # noqa: F401
+from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 
 @fixture

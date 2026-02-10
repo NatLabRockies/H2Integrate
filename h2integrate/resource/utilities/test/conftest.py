@@ -2,7 +2,7 @@ import os
 
 from hopp import TEST_ENV_VAR
 
-from test.conftest import pytest_collection_modifyitems  # noqa: F401
+from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 
 def pytest_sessionstart(session):
