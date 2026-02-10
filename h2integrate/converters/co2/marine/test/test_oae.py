@@ -3,14 +3,31 @@ import pytest
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_near_equal
 
+from conftest import has_mcm
 from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import OAEPerformanceModel
 
 
-has_mcm = True
-try:
-    import mcm  # noqa: F401
-except ModuleNotFoundError:
-    has_mcm = False
+@pytest.fixture
+def tech_config():
+    return {
+        "model_inputs": {
+            "performance_parameters": {
+                "number_ed_min": 1,
+                "number_ed_max": 10,
+                "max_ed_system_flow_rate_m3s": 0.0324,  # m^3/s
+                "frac_base_flow": 0.5,
+                "assumed_CDR_rate": 0.8,  # mol CO2/mol NaOH
+                "use_storage_tanks": True,
+                "initial_tank_volume_m3": 0.0,  # m^3
+                "store_hours": 12.0,  # hours
+                "acid_disposal_method": "sell rca",
+                "initial_salinity_ppt": 73.76,  # ppt
+                "initial_temp_C": 10.0,  # degrees Celsius
+                "initial_dic_mol_per_L": 0.0044,  # mol/L
+                "initial_pH": 8.1,  # initial pH
+            },
+        },
+    }
 
 
 @pytest.mark.unit
