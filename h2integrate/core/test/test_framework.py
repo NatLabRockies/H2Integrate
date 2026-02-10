@@ -10,14 +10,6 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
-@pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory):
-    """Temp directory for YAML outputs."""
-    temp_dir = tmp_path_factory.mktemp("temp_dir")
-    yield temp_dir
-    shutil.rmtree(str(temp_dir))
-
-
 @pytest.mark.unit
 def test_custom_model_name_clash(temp_dir, subtests):
     # Path to the original tech_config.yaml and high-level yaml in the example directory

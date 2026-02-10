@@ -3,10 +3,21 @@ Pytest configuration file.
 """
 
 import os
+import shutil
+
+import pytest
 
 from h2integrate import EXAMPLE_DIR
 
 from test.conftest import pytest_collection_modifyitems  # noqa: F401
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+    shutil.rmtree(str(temp_dir))
 
 
 def pytest_sessionstart(session):
