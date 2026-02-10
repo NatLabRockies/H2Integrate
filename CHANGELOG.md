@@ -2,16 +2,32 @@
 
 ## 0.6.0 [February 11, 2026]
 
+### New Features and Technology Models
+
+- Added standalone iron DRI and steel EAF performance and cost models [PR 409](https://github.com/NatLabRockies/H2Integrate/pull/409)
+- Add geologic hydrogen surface processing converter [PR 405](https://github.com/NatLabRockies/H2Integrate/pull/405)
+- Added [Ard](https://github.com/NLRWindSystems/Ard) as an optional combined performance and cost model [PR 481](https://github.com/NatLabRockies/H2Integrate/pull/481)
+- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NatLabRockies/H2Integrate/pull/413)
+
+### Improvements and Refactoring
+
+- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models [PR 463](https://github.com/NatLabRockies/H2Integrate/pull/463)
+- Updates all models in `supported_models` to map between a string version of the class name and
+  the class itself. As such, all examples and documentation have been updated to properly instruct
+  users to the change in model configuration naming conventions. The naming convention is also
+  enforced by a newly added test to ensure adherence. [PR 468](https://github.com/NatLabRockies/H2Integrate/pull/468)
+- Adds `additional_cls_name` kwarg to `BaseConfig.from_dict()` to allow for configuration errors buried in parent or child classes to provide which model had the offending misconfiguration for simpler user debugging. [PR 479](https://github.com/NatLabRockies/H2Integrate/pull/479)
+- Added capability to have transport models that require user input parameters [PR 408](https://github.com/NatLabRockies/H2Integrate/pull/408)
+- Add baseclass for caching functionality [PR 422](https://github.com/NatLabRockies/H2Integrate/pull/422)
+- Minor reorg for profast tools [PR 450](https://github.com/NatLabRockies/H2Integrate/pull/450)
+- Added postprocessing function to save timeseries [PR 440](https://github.com/NatLabRockies/H2Integrate/pull/440)
+- Removed hydrogen tank cost and performance models that were unused [PR 457](https://github.com/NatLabRockies/H2Integrate/pull/457)
+- Allow design variables to be specified with None type units [PR 514](https://github.com/NatLabRockies/H2Integrate/pull/514)
+
+### Documentation, Examples, and Miscellaneous
+
 - Updates models for NumPy version 2.4.0 [PR 422](https://github.com/NatLabRockies/H2Integrate/pull/422)
 - Update test values for WOMBAT update to 0.13.0 [PR 425](https://github.com/NatLabRockies/H2Integrate/pull/425)
-- Added standalone iron DRI and steel EAF performance and cost models [PR 409](https://github.com/NatLabRockies/H2Integrate/pull/409)
-- Added capability to have transport models that require user input parameters [PR 408](https://github.com/NatLabRockies/H2Integrate/pull/408)
-- Add geologic hydrogen surface processing converter [PR 405](https://github.com/NatLabRockies/H2Integrate/pull/405)
-- Add baseclass for caching functionality [PR 422](https://github.com/NatLabRockies/H2Integrate/pull/422)
-- Added postprocessing function to save timeseries [PR 440](https://github.com/NatLabRockies/H2Integrate/pull/440)
-- Minor reorg for profast tools [PR 450](https://github.com/NatLabRockies/H2Integrate/pull/450)
-- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NatLabRockies/H2Integrate/pull/413)
-- Removed hydrogen tank cost and performance models that were unused [PR 457](https://github.com/NatLabRockies/H2Integrate/pull/457)
 - Converted the documentation Jupyter notebooks to markdown files to simplify output diffs [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464)
 - Updated the contributing documentation to clarify what developers should expect for including
   executable content in the documentation. [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464)
@@ -30,15 +46,6 @@
   - Fixes typos for skipped folders.
   - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
   - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
-- Adds `additional_cls_name` kwarg to `BaseConfif.from_dict()` to allow for configuration errors buried in parent or child classes to provide which model had the offending misconfiguration for simpler user debugging. [PR 479](https://github.com/NatLabRockies/H2Integrate/pull/479)
-- Updates all models in `supported_models` to map between a string version of the class name and
-  the class itself. As such, all examples and documentation have been updated to properly instruct
-  users to the change in model configuration naming conventions. The naming convention is also
-  enforced by a newly added test to ensure adherence. [PR 468](https://github.com/NatLabRockies/H2Integrate/pull/468)
-- Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project. [PR 479](https://github.com/NatLabRockies/H2Integrate/pull/479)
-- Added [Ard](https://github.com/NLRWindSystems/Ard) as an optional combined performance and cost model [PR 481](https://github.com/NatLabRockies/H2Integrate/pull/481)
-- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models [PR 463](https://github.com/NatLabRockies/H2Integrate/pull/463)
-- Allow design variables to be specified with None type units [PR 514](https://github.com/NatLabRockies/H2Integrate/pull/514)
 
 ## 0.5.1 [December 18, 2025]
 
