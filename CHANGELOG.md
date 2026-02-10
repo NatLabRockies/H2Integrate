@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 [February 11, 2026]
+## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models
 
