@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.5.x [TBD]
+
 - Updates models for NumPy version 2.4.0
 - Update test values for WOMBAT update to 0.13.0
 - Added standalone iron DRI and steel EAF performance and cost models
@@ -35,8 +36,9 @@
   users to the change in model configuration naming conventions. The naming convention is also
   enforced by a newly added test to ensure adherence.
 - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
-- Added [Ard](https://github.com/NLRWindSystems/Ard) as a combined performance and cost model
+- Added [Ard](https://github.com/NLRWindSystems/Ard) as an optional combined performance and cost model
 - Added `PerformanceModelBaseClass` and standardized outputs of converter performance models
+- Allow design variables to be specified with None type units
 
 ## 0.5.1 [December 18, 2025]
 
