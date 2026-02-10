@@ -68,7 +68,8 @@ def summarize_case(case, return_units=False):
                     # take the average value if not all years are equal
                     val = [np.mean(val)]
                 else:
-                    continue
+                    # take the first year value if all years are equal
+                    val = val[0]
 
         if isinstance(val, np.ndarray):
             # dont save information for non-scalar values
