@@ -152,6 +152,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         )
         super().setup()
 
+        # Feedstocks input
         self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="MW")
@@ -161,6 +162,10 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_output("electricity_out", val=0.0, shape=self.n_timesteps, units="MW")
         self.add_output("heat_out", val=0.0, shape=self.n_timesteps, units="kW*h/kg")
         self.add_output("catalyst_mass", val=0.0, units="kg")
+
+        # Feedstock consumption profiles
+        self.add_output("hydrogen_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("electricity_consumed", val=0.0, shape=self.n_timesteps, units="kW")
 
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
@@ -272,7 +277,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["total_hydrogen_consumed"] = h2_in.sum()
         outputs["total_nitrogen_consumed"] = n2_in.sum()
         outputs["total_electricity_consumed"] = elec_in.sum() / 1e3  # kW*h/year
-
+        outputs["electricity_consumed"] = used_elec  # kW
+        outputs["hydrogen_consumed"] = used_h2  # kg
         h2_cap = nh3_cap * h2_rate  # kg H2 per hour
         outputs["max_hydrogen_capacity"] = h2_cap
 
@@ -432,9 +438,9 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input("annual_ammonia_produced", val=0.0, shape=plant_life, units="kg/year")
-        self.add_input("total_hydrogen_consumed", val=0.0, units="kg/year")
-        self.add_input("total_nitrogen_consumed", val=0.0, units="kg/year")
-        self.add_input("total_electricity_consumed", val=0.0, units="kW*h/year")
+        self.add_input(
+            "rated_ammonia_production", val=self.config.production_capacity, units="kg/h"
+        )
 
         self.add_output(
             "capex_asu", val=0.0, units="USD", desc="Capital cost for air separation unit"
@@ -476,7 +482,7 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         ##---Scaling Ratios---
 
         # Get config values
-        capacity = self.config.production_capacity  # kg NH3 / hr
+        capacity = inputs["rated_ammonia_production"]  # kg NH3 / hr
         base_cap = self.config.baseline_capacity  # kg NH3 / hr
         year = self.options["plant_config"]["finance_parameters"]["cost_adjustment_parameters"][
             "target_dollar_year"
