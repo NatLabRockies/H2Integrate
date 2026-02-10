@@ -1,6 +1,9 @@
+import pytest
+
 from h2integrate.core.supported_models import supported_models, is_electricity_producer
 
 
+@pytest.mark.unit
 def test_is_electricity_producer(subtests):
     with subtests.test("exact match"):
         assert is_electricity_producer("grid_buy")
@@ -18,6 +21,7 @@ def test_is_electricity_producer(subtests):
         assert not is_electricity_producer("battery")
 
 
+@pytest.mark.unit
 def test_dictionary_mapping():
     """Tests that the supported_models dictionary keys exactly match the model class name,
     except for allowed transport models that simplify configuration readability.

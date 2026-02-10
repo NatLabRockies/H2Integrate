@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 
 import yaml
@@ -15,14 +14,6 @@ from h2integrate.core.utilities import (
     make_unique_case_name,
     dict_to_yaml_formatting,
 )
-
-
-@pytest.fixture(scope="module")
-def temp_dir(tmp_path_factory):
-    """Temp directory for YAML outputs."""
-    temp_dir = tmp_path_factory.mktemp("temp_dir")
-    yield temp_dir
-    shutil.rmtree(str(temp_dir))
 
 
 @pytest.mark.unit
