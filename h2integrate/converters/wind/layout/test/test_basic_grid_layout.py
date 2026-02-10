@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -8,6 +9,7 @@ from h2integrate.converters.wind.layout.simple_grid_layout import (
 )
 
 
+@pytest.mark.unit
 def test_rectangular_layout_dimensions(subtests):
     n_turbs_per_row = 10
     n_rows = 5
@@ -24,6 +26,7 @@ def test_rectangular_layout_dimensions(subtests):
         assert int(n_rows_out * n_turbs_per_row_out) == int(n_turbs)
 
 
+@pytest.mark.unit
 def test_square_layout_dimensions(subtests):
     n_turbs = 25
     n_turbs_per_row_out, n_rows_out = find_square_layout_dimensions_by_nturbs(n_turbs)
@@ -35,6 +38,7 @@ def test_square_layout_dimensions(subtests):
         assert int(n_rows_out * n_turbs_per_row_out) == n_turbs
 
 
+@pytest.mark.unit
 def test_square_layout_dimensions_uneven_nturbs(subtests):
     n_turbs = 50
     n_turbs_per_row_out, n_rows_out = find_square_layout_dimensions_by_nturbs(n_turbs)
@@ -46,6 +50,7 @@ def test_square_layout_dimensions_uneven_nturbs(subtests):
         assert int(n_rows_out * n_turbs_per_row_out) >= n_turbs
 
 
+@pytest.mark.unit
 def test_simple_square_layout_uneven_nturbs(subtests):
     layout_config_dict = {
         "row_D_spacing": 7.0,
@@ -95,6 +100,7 @@ def test_simple_square_layout_uneven_nturbs(subtests):
         assert len(unique_coords) == n_turbs
 
 
+@pytest.mark.unit
 def test_simple_rectangular_layout_uneven_nturbs(subtests):
     layout_config_dict = {
         "row_D_spacing": 7.0,
