@@ -20,12 +20,12 @@ design_variables:
       flag: True
       lower:  3.0
       upper: 20.0
-      units: unitless
+      units:
     spacing_secondary:
       flag: True
       lower:  3.0
       upper: 20.0
-      units: unitless
+      units:
     angle_orientation:
       flag: True
       lower: -180.0
