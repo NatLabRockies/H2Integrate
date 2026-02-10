@@ -3,6 +3,7 @@ Pytest configuration file.
 """
 
 import os
+import shutil
 
 import pytest
 
@@ -64,3 +65,11 @@ def pytest_collection_modifyitems(config, items):
             f" tests using `@pytest.mark.<test-type>`:\n{errors}"
         )
         raise pytest.UsageError(msg)
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+    shutil.rmtree(str(temp_dir))
