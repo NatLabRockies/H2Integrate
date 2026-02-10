@@ -9,7 +9,6 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 class SimpleGenericStorageConfig(BaseConfig):
     commodity_name: str = field()
     commodity_units: str = field()  # TODO: update to commodity_rate_units
-    max_capacity: float = field()
     max_charge_rate: float = field(validator=gte_zero)
 
 
@@ -44,13 +43,6 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
             val=self.config.max_charge_rate,
             units=self.config.commodity_units,
             desc="Storage charge/discharge rate",
-        )
-
-        self.add_input(
-            "max_capacity",
-            val=self.config.max_capacity,
-            units=self.config.commodity_units + "*h",
-            desc="Maximum storage capacity",
         )
 
     def compute(self, inputs, outputs):
