@@ -165,9 +165,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_electricity_consumed", val=0.0, units="kW*h/year")
-        self.add_output(
-            "limiting_input", val=0, shape_by_conn=True, copy_shape="hydrogen_in", units=None
-        )
+        self.add_output("limiting_input", val=0, shape=self.n_timesteps, units=None)
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
