@@ -59,6 +59,7 @@ technologies:
         charge_efficiency: 0.95 # Charge efficiency of the storage technology
         discharge_efficiency: 0.95 # Discharge efficiency of the storage technology
         commodity_storage_units: "kW"
+        # rated_demand: 100000 # in kW
 
       performance_parameters:
         system_model_source: "pysam"

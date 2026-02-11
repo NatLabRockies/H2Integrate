@@ -123,7 +123,8 @@ class PyomoRuleStorageMinOperatingCosts:
         Args:
             pyomo_model (pyo.ConcreteModel): Pyomo model instance representing
                 the storage system.
-            t: Time index or iterable representing time steps (unused in this method).
+            t: Time index or iterable representing time steps (unused in this method)
+                but is needed for compatibility with Pyomo.
         """
         ##################################
         # Storage Parameters             #
@@ -381,6 +382,16 @@ class PyomoRuleStorageMinOperatingCosts:
         ##################################
 
         def soc_inventory_rule(m):
+            """
+            Inner nested function that tracks the SOC of the storage model.
+
+            Args:
+                m: The Pyomo model instance representing the storage system.
+
+            Returns:
+                True if the SOC inventory constraint is satisfied, False otherwise.
+
+            """
             return m.soc == (
                 m.soc0
                 + m.time_duration
@@ -451,7 +462,7 @@ class PyomoRuleStorageMinOperatingCosts:
 
     # Update time series parameters for next optimization window
     def update_time_series_parameters(
-        self, commodity_in: list, commodity_demand: list, updated_initial_soc: None
+        self, commodity_in: list, commodity_demand: list, updated_initial_soc: float
     ):
         """Updates the pyomo optimization problem with parameters that change with time
 
