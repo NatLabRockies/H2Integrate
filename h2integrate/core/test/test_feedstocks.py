@@ -57,7 +57,9 @@ class TestFeedstocks(unittest.TestCase):
             }
         }
 
-        plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 8760}}}
+        plant_config = {
+            "plant": {"plant_life": 30, "simulation": {"n_timesteps": 8760, "dt": 3600}}
+        }
 
         driver_config = {}
 
