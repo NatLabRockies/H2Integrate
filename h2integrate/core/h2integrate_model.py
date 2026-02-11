@@ -576,7 +576,7 @@ class H2IntegrateModel:
             technologies, associated commodity, and finance model(s).
             Each subgroup is nested under a unique name of your choice under
             ["finance_parameters"]["subgroups"] in the plant configuration.
-            * Subsystems such as ``ElectricitySumComp``, ``AdjustedCapexOpexComp``,
+            * Subsystems such as ``AdjustedCapexOpexComp`` and
             ``GenericProductionSummerPerformanceModel``, and the selected finance
             models are added to each subgroup's finance group.
             * If `commodity_stream` is provided for a subgroup, the output of the
