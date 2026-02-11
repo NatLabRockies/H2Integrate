@@ -11,7 +11,7 @@ class FeedstockPerformanceConfig(BaseConfig):
     """Config class for feedstock.
 
     Attributes:
-        feedstock_type (str): feedstock name
+        commodity(str): feedstock name
         commodity_rate_units (str): feedstock usage units (such as "galUS/h", "kW", or "kg/h")
         rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
             This is used to size the feedstock supply to meet the plant's needs.
@@ -59,7 +59,7 @@ class FeedstockCostConfig(CostModelBaseConfig):
     """Config class for feedstock.
 
     Attributes:
-        feedstock_type (str): feedstock name
+        commodity (str): feedstock name
         commodity_rate_units (str): feedstock usage units (such as "galUS/h", "kW", or "kg/h")
         price (scalar or list):  The cost of the feedstock in USD/`commodity_amount_units`).
             If scalar, cost is assumed to be constant for each timestep and each year.
@@ -154,6 +154,9 @@ class FeedstockCostModel(CostModelBaseClass):
         outputs[f"annual_{self.commodity}_consumed"] = outputs[
             f"total_{self.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)
+
+        # NOTE: once we standardize feedstock consumption outputs in models, this should
+        # be updated to handle consumption that varies over years of operation
 
         # Calculate costs
         price = inputs["price"]
