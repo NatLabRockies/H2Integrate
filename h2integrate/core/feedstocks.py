@@ -11,7 +11,7 @@ class FeedstockPerformanceConfig(BaseConfig):
     """Config class for feedstock.
 
     Attributes:
-        commodity(str): feedstock name
+        commodity (str): feedstock name
         commodity_rate_units (str): feedstock usage units (such as "galUS/h", "kW", or "kg/h")
         rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
             This is used to size the feedstock supply to meet the plant's needs.
@@ -37,6 +37,7 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
         self.commodity = self.config.commodity
         self.commodity_rate_units = self.config.commodity_rate_units
 
+        # NOTE: should below be renamed to f"{self.commodity}_capacity"?
         self.add_input(
             f"rated_{self.commodity}_production",
             val=self.config.rated_capacity,
@@ -99,6 +100,8 @@ class FeedstockCostModel(CostModelBaseClass):
         self.commodity_amount_units = self.config.commodity_amount_units
 
         # Feedstock available from performance model, used to calculate CF
+        # NOTE: should f"{self.commodity}_out" be renamed to f"{self.commodity}_available"?
+        # f"{self.commodity}_out" is connected from the FeedstockPerformanceModel output
         self.add_input(
             f"{self.commodity}_out", val=0, shape=self.n_timesteps, units=self.commodity_rate_units
         )
@@ -142,21 +145,36 @@ class FeedstockCostModel(CostModelBaseClass):
             desc="Capacity factor",
         )
 
+        # NOTE: should below be added as an output?
+        # self.add_output(
+        #     f"rated_{self.commodity}_production",
+        #     val=0,
+        #     units=self.commodity_rate_units,
+        # )
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Calculate performance based on consumption
 
+        # Capacity factor is the total amount consumed / the total amount available
         outputs["capacity_factor"] = (
             inputs[f"{self.commodity}_consumed"].sum() / inputs[f"{self.commodity}_out"].sum()
         )
+
+        # Sum the amount consumed
         outputs[f"total_{self.commodity}_consumed"] = inputs[f"{self.commodity}_consumed"].sum() * (
             self.dt / 3600
         )
+
+        # Estimate annual consumption based on consumption over the simulation
+        # NOTE: once we standardize feedstock consumption outputs in models, this should
+        # be updated to handle consumption that varies over years of operation
         outputs[f"annual_{self.commodity}_consumed"] = outputs[
             f"total_{self.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)
 
-        # NOTE: once we standardize feedstock consumption outputs in models, this should
-        # be updated to handle consumption that varies over years of operation
+        # NOTE: if we want to add f"rated_{self.commodity}_production" as an output,
+        # should it be calculated as below:
+        # outputs[f"rated_{self.commodity}_production"] = inputs[f"{self.commodity}_out"].max()
 
         # Calculate costs
         price = inputs["price"]
