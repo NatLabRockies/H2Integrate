@@ -73,7 +73,7 @@ properties:
             description: Upper bound for the variable
             default: null
           units:
-            type: string
+            type: ["string", "null"]
             description: Units of the variable
   objective:
     type: object

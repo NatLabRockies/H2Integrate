@@ -1144,6 +1144,7 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
+@pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
 def test_windard_pv_battery_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "29_wind_ard")
