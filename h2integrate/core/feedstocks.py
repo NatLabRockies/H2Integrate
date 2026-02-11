@@ -17,9 +17,8 @@ class FeedstockPerformanceConfig(BaseConfig):
             This is used to size the feedstock supply to meet the plant's needs.
     """
 
-    feedstock_type: str = field()  # TODO: replace with feedstock_commodity
-    units: str = field()  # TODO: replace with commodity_rate_units
-    # TODO: add commodity_amount_units
+    feedstock_type: str = field()  # TODO: rename to commodity_type
+    units: str = field()  # TODO: rename to commodity_rate_units
     rated_capacity: float = field()
 
 
@@ -62,20 +61,26 @@ class FeedstockCostConfig(CostModelBaseConfig):
     Attributes:
         feedstock_type (str): feedstock name
         units (str): feedstock usage units (such as "galUS" or "kg")
-        price (scalar or list):  The cost of the feedstock in USD/`units`).
+        price (scalar or list):  The cost of the feedstock in USD/`commodity_amount_units`).
             If scalar, cost is assumed to be constant for each timestep and each year.
             If list, then it can be the cost per timestep of the simulation
-
         annual_cost (float, optional): fixed cost associated with the feedstock in USD/year
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
         cost_year (int): dollar-year for costs.
+        commodity_amount_units (str | None, optional): the amount units of the commodity (i.e.,
+            "kg", "kW" or "galUS"). If None, will be set as `units`*h
     """
 
-    feedstock_type: str = field()
-    units: str = field()
+    feedstock_type: str = field()  # TODO: rename to commodity_type
+    units: str = field()  # TODO: rename to commodity_rate_units
     price: int | float | list = field()
     annual_cost: float = field(default=0.0)
     start_up_cost: float = field(default=0.0)
+    commodity_amount_units: str | None = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.commodity_amount_units is None:
+            self.commodity_amount_units = f"({self.units})*h"
 
 
 class FeedstockCostModel(CostModelBaseClass):
@@ -91,7 +96,7 @@ class FeedstockCostModel(CostModelBaseClass):
 
         self.commodity = self.config.feedstock_type
         self.commodity_rate_units = self.config.units
-        self.commodity_amount_units = f"({self.config.units})*h"
+        self.commodity_amount_units = self.config.commodity_amount_units
 
         # Feedstock available from performance model, used to calculate CF
         self.add_input(
