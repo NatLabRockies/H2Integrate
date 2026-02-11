@@ -34,8 +34,8 @@ def ng_tech_input_config():
     tech_config = {
         "model_inputs": {
             "shared_parameters": {
-                "feedstock_type": "natural_gas",
-                "units": "MMBtu/h",
+                "commodity": "natural_gas",
+                "commodity_rate_units": "MMBtu/h",
             },
             "performance_parameters": {
                 "rated_capacity": 100.0,
@@ -108,8 +108,8 @@ class TestFeedstocks(unittest.TestCase):
         tech_config = {
             "model_inputs": {
                 "shared_parameters": {
-                    "feedstock_type": feedstock_type,
-                    "units": units,
+                    "commodity": feedstock_type,
+                    "commodity_rate_units": units,
                 },
                 "performance_parameters": {
                     "rated_capacity": rated_capacity,

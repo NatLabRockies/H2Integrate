@@ -17,8 +17,8 @@ class FeedstockPerformanceConfig(BaseConfig):
             This is used to size the feedstock supply to meet the plant's needs.
     """
 
-    feedstock_type: str = field()  # TODO: rename to commodity_type
-    units: str = field()  # TODO: rename to commodity_rate_units
+    commodity: str = field()  # TODO: rename to commodity
+    commodity_rate_units: str = field()  # TODO: rename to commodity_rate_units
     rated_capacity: float = field()
 
 
@@ -34,8 +34,8 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        self.commodity = self.config.feedstock_type
-        self.commodity_rate_units = self.config.units
+        self.commodity = self.config.commodity
+        self.commodity_rate_units = self.config.commodity_rate_units
 
         self.add_input(
             f"rated_{self.commodity}_production",
@@ -71,8 +71,8 @@ class FeedstockCostConfig(CostModelBaseConfig):
             "kg", "kW" or "galUS"). If None, will be set as `units`*h
     """
 
-    feedstock_type: str = field()  # TODO: rename to commodity_type
-    units: str = field()  # TODO: rename to commodity_rate_units
+    commodity: str = field()  # TODO: rename to commodity_type
+    commodity_rate_units: str = field()  # TODO: rename to commodity_rate_units
     price: int | float | list = field()
     annual_cost: float = field(default=0.0)
     start_up_cost: float = field(default=0.0)
@@ -80,7 +80,7 @@ class FeedstockCostConfig(CostModelBaseConfig):
 
     def __attrs_post_init__(self):
         if self.commodity_amount_units is None:
-            self.commodity_amount_units = f"({self.units})*h"
+            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
 class FeedstockCostModel(CostModelBaseClass):
@@ -94,8 +94,8 @@ class FeedstockCostModel(CostModelBaseClass):
         # Set cost outputs
         super().setup()
 
-        self.commodity = self.config.feedstock_type
-        self.commodity_rate_units = self.config.units
+        self.commodity = self.config.commodity
+        self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = self.config.commodity_amount_units
 
         # Feedstock available from performance model, used to calculate CF
