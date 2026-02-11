@@ -9,9 +9,75 @@ import unittest
 from pathlib import Path
 
 import numpy as np
+import pytest
 import openmdao.api as om
+from pytest import fixture
 
 from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
+
+
+@fixture
+def plant_config():
+    return {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        },
+    }
+
+
+@fixture
+def ng_tech_input_config():
+    tech_config = {
+        "model_inputs": {
+            "shared_parameters": {
+                "feedstock_type": "natural_gas",
+                "units": "MMBtu/h",
+            },
+            "performance_parameters": {
+                "rated_capacity": 100.0,
+            },
+            "cost_parameters": {
+                "price": 4.2,  # USD/MMBtu
+                "annual_cost": 0,
+                "start_up_cost": 0,
+                "cost_year": 2023,
+                "commodity_amount_units": "MMBtu",  # optional
+            },
+        }
+    }
+    return tech_config
+
+
+def test_feedstock_standard_outputs(plant_config, ng_tech_input_config, subtests):
+    perf_model = FeedstockPerformanceModel(
+        plant_config=plant_config, tech_config=ng_tech_input_config, driver_config={}
+    )
+    cost_model = FeedstockCostModel(
+        plant_config=plant_config, tech_config=ng_tech_input_config, driver_config={}
+    )
+    prob = om.Problem()
+    prob.model.add_subsystem("ng_feedstock_source", perf_model)
+    prob.model.add_subsystem("ng_feedstock", cost_model)
+    # Connect the feedstock performance model output to the cost model input
+    prob.model.connect(
+        "ng_feedstock_source.natural_gas_out",
+        "ng_feedstock.natural_gas_out",
+    )
+
+    prob.setup()
+    # Set some consumption values
+    consumption = np.full(8760, 50.0)  # 50 MMBtu/hour
+    prob.set_val("ng_feedstock.natural_gas_consumed", consumption)
+    prob.run_model()
+    with subtests.test("Check feedstock capacity factor"):
+        ng_cf = prob.get_val("ng_feedstock.capacity_factor", units="unitless").mean()
+        assert pytest.approx(ng_cf, rel=1e-6) == 0.5
+    # TODO: add subtests for rated_natural_gas_production, total_natural_gas_consumed,
+    # and annual_natural_gas_consumed
 
 
 class TestFeedstocks(unittest.TestCase):
