@@ -58,18 +58,3 @@ tech_to_dispatch_connections: [
   ["battery", "battery"],
 ]
 ```
-
-The demand is also still set externally after the setup step. Ideally, the dispatch will be integrated with the load demand framework that already exists in H2I, and the demand can be defined that way.
-
-```python
-# Define demand signal
-demand_profile = np.ones(8760) * 100.0
-
-# Model setup
-model.setup()
-# Set demand signal directly on the battery technology
-model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
-
-# Run the model
-model.run()
-```

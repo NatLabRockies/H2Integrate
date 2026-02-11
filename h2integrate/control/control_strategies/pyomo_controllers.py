@@ -834,15 +834,15 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     """
 
     max_charge_rate: int | float = field()
-    charge_efficiency: float = field(default=None)
-    discharge_efficiency: float = field(default=None)
+    charge_efficiency: float = field(validator=range_val(0, 1), default=None)
+    discharge_efficiency: float = field(validator=range_val(0, 1), default=None)
     commodity_name: str = field(default=None)
     commodity_storage_units: str = field(default=None)
     cost_per_production: float = field(default=None)
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
     commodity_met_value: float = field(default=None)
-    time_weighting_factor: float = field(default=0.995)
+    time_weighting_factor: float = field(validator=range_val(0, 1), default=0.995)
     round_digits: int = field(default=4)
     time_duration: float = field(default=1.0)  # hours
 

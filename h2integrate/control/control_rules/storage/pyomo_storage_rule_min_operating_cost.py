@@ -77,8 +77,8 @@ class PyomoRuleStorageMinOperatingCosts:
         self.set_timeseries_parameter("maximum_soc", dispatch_inputs["max_charge_percent"])
 
         self.initial_soc = dispatch_inputs["initial_soc_percent"]
-        self.charge_efficiency = dispatch_inputs.get("charge_efficiency", 0.94)
-        self.discharge_efficiency = dispatch_inputs.get("discharge_efficiency", 0.94)
+        self.charge_efficiency = dispatch_inputs.get("charge_efficiency")
+        self.discharge_efficiency = dispatch_inputs.get("discharge_efficiency")
 
         # Set charge and discharge rate equal to each other for now
         self.set_timeseries_parameter("max_charge", dispatch_inputs["max_charge_rate"])
@@ -484,7 +484,8 @@ class PyomoRuleStorageMinOperatingCosts:
         Args:
             hybrid_blocks (Pyomo.block): A generalized container for defining hierarchical
                 models by adding modeling components as attributes.
-
+            tech_name (str): The name or key identifying the technology for which the
+                objective function.
         """
         # Note that this objective function incentivizes charging the storage and penalizes
         # discharging the storage. This is to help the storage model maintain a state of charge.
