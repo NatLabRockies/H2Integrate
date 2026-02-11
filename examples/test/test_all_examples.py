@@ -1766,7 +1766,7 @@ def test_natural_geoh2(subtests):
                 np.mean(h2i_nat.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")),
                 rel=1e-6,
             )
-            == 603.4286677531819
+            == 606.1508855232839
         )
 
     with subtests.test("integrated LCOH"):
@@ -1774,7 +1774,7 @@ def test_natural_geoh2(subtests):
             pytest.approx(
                 h2i_nat.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg"), rel=1e-6
             )
-            == 1.59307314
+            == 1.5870496689
         )
     with subtests.test("subsurface Capex"):
         assert (
@@ -1798,14 +1798,15 @@ def test_natural_geoh2(subtests):
 
     with subtests.test("surface Capex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6) == 1795733.55
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6)
+            == 1800711.83796
         )
     with subtests.test("surface fixed Opex"):
         assert pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.OpEx"), rel=1e-6) == 4567464
     with subtests.test("surface variable Opex"):
         assert (
             pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.VarOpEx"), rel=1e-6)
-            == 984842.53
+            == 989213.8787
         )
     with subtests.test("surface adjusted opex"):
         surface_adjusted_opex = h2i_nat.prob.get_val(

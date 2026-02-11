@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add Arps decline rate to natural geologic hydrogen model
+
 ## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models
