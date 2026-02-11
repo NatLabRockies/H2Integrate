@@ -38,9 +38,9 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
     def initialize(self):
         super().initialize()
-        self.commodity = "hydrogen"
-        self.commodity_rate_units = "kg/h"
-        self.commodity_amount_units = "kg"
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
         super().setup()
@@ -53,10 +53,10 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.add_input(
-            f"{self.commodity}_in",
+            "hydrogen_in",
             val=0.0,
             shape=n_timesteps,
-            units=self.commodity_rate_units,
+            units="kg/h",
         )
 
         self.add_input(
@@ -71,14 +71,6 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=self.config.system_capacity_kw,
             units="kW",
             desc="Capacity of the h2 fuel cell system",
-        )
-
-        self.add_output(
-            "electricity_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="kW",
-            desc="Electricity output from the fuel cell",
         )
 
     def compute(self, inputs, outputs):
@@ -107,6 +99,16 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         # clip the electricity output to the system capacity
         outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity_kw)
+        outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"])
+        outputs["rated_electricity_production"] = system_capacity_kw
+        outputs["annual_electricity_produced"] = (
+            np.sum(outputs["electricity_out"])
+            * self.options["plant_config"]["plant"]["simulation"]["dt"]
+            / 3600.0
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
+            system_capacity_kw * self.n_timesteps
+        )
 
 
 @define(kw_only=True)

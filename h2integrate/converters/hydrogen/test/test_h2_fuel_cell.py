@@ -85,6 +85,36 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
     with subtests.test("electricity out"):
         assert pytest.approx(np.sum(electricity_output), rel=1e-6) == 3504600.0
 
+    with subtests.test("capacity_factor"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.capacity_factor", units="unitless"), rel=1e-6)
+            == 0.40006849
+        )
+
+    with subtests.test("annual_electricity_production"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.annual_electricity_produced", units="kW*h/year"), rel=1e-6
+            )
+            == 3504600.0
+        )
+
+    with subtests.test("rated_electricity_production"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.rated_electricity_production", units="kW"), rel=1e-6
+            )
+            == 1000.0
+        )
+
+    with subtests.test("total_electricity_produced"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.total_electricity_produced", units="kW*h"), rel=1e-6
+            )
+            == 3504600.0
+        )
+
 
 def test_fuel_cell_cost(cost_config, plant_config, subtests):
     int(plant_config["plant"]["simulation"]["n_timesteps"])
