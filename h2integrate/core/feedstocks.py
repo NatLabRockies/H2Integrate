@@ -12,13 +12,13 @@ class FeedstockPerformanceConfig(BaseConfig):
 
     Attributes:
         feedstock_type (str): feedstock name
-        units (str): feedstock usage units (such as "galUS" or "kg")
-        rated_capacity (float):  The rated capacity of the feedstock in `units`/hour.
+        commodity_rate_units (str): feedstock usage units (such as "galUS/h", "kW", or "kg/h")
+        rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
             This is used to size the feedstock supply to meet the plant's needs.
     """
 
-    commodity: str = field()  # TODO: rename to commodity
-    commodity_rate_units: str = field()  # TODO: rename to commodity_rate_units
+    commodity: str = field()
+    commodity_rate_units: str = field()
     rated_capacity: float = field()
 
 
@@ -60,7 +60,7 @@ class FeedstockCostConfig(CostModelBaseConfig):
 
     Attributes:
         feedstock_type (str): feedstock name
-        units (str): feedstock usage units (such as "galUS" or "kg")
+        commodity_rate_units (str): feedstock usage units (such as "galUS/h", "kW", or "kg/h")
         price (scalar or list):  The cost of the feedstock in USD/`commodity_amount_units`).
             If scalar, cost is assumed to be constant for each timestep and each year.
             If list, then it can be the cost per timestep of the simulation
@@ -71,8 +71,8 @@ class FeedstockCostConfig(CostModelBaseConfig):
             "kg", "kW" or "galUS"). If None, will be set as `units`*h
     """
 
-    commodity: str = field()  # TODO: rename to commodity_type
-    commodity_rate_units: str = field()  # TODO: rename to commodity_rate_units
+    commodity: str = field()
+    commodity_rate_units: str = field()
     price: int | float | list = field()
     annual_cost: float = field(default=0.0)
     start_up_cost: float = field(default=0.0)
@@ -119,7 +119,6 @@ class FeedstockCostModel(CostModelBaseClass):
             desc=f"Price profile of {self.commodity}",
         )
 
-        # TODO: add outputs like those in PerformanceModelBaseClass
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         hours_per_year = 8760
