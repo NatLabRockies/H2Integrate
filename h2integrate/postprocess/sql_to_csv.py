@@ -64,7 +64,6 @@ def summarize_case(case, return_units=False):
         )[-1].endswith("production")
         if "capacity_factor" in var.lower() or lifetime_prod_var:
             if isinstance(val, np.ndarray):
-                # take the average value if not all years are equal
                 val = [np.mean(val)]
 
         if isinstance(val, np.ndarray):
