@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added linearized hydrogen fuel cell model
+
 ## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models
