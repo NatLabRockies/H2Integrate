@@ -5,9 +5,9 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create an H2Integrate model
-model = H2IntegrateModel("pyomo_heuristic_dispatch.yaml")
+model = H2IntegrateModel("pyomo_optimized_dispatch.yaml")
 
-demand_profile = np.ones(8760) * 50.0
+demand_profile = np.ones(8760) * 100.0
 
 
 # TODO: Update with demand module once it is developed
@@ -18,7 +18,7 @@ model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 model.run()
 
 # Plot the results
-fig, ax = plt.subplots(2, 1, sharex=True)
+fig, ax = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
 
 start_hour = 0
 end_hour = 200
@@ -69,10 +69,10 @@ ax[1].plot(
     linestyle="--",
     label="Electrical Demand (MW)",
 )
-ax[1].set_ylim([-7e2, 7e2])
+ax[1].set_ylim([-1e2, 2.5e2])
 ax[1].set_ylabel("Electricity Hourly (MW)")
 ax[1].set_xlabel("Timestep (hr)")
 
 plt.legend(ncol=2, frameon=False)
 plt.tight_layout()
-plt.savefig("plot.png", dpi=300)
+plt.savefig("optimized_dispatch_plot.png", dpi=300)
