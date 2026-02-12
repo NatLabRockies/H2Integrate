@@ -82,6 +82,7 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
+        commodity_storage_units: "kW"
         max_charge_rate: 375740.4 #kW
         max_capacity: 375745.2 #kWh
         n_control_window: 24
@@ -100,11 +101,7 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.024999840573439444
       control_parameters:
-        commodity_storage_units: "kW"
         tech_name: "battery"
-      dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
 
   electrolyzer:
     performance_model:

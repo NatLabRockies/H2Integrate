@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added load following optimization dispatch
+
 ## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models
