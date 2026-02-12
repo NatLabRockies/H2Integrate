@@ -45,7 +45,8 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SMRPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -105,6 +106,14 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         outputs["total_methanol_produced"] = np.sum(meoh_prod)
         outputs["electricity_out"] = meoh_prod * elec_ratio
 
+        outputs["rated_methanol_production"] = inputs["plant_capacity_kgpy"] / 8760
+        outputs["total_methanol_produced"] = outputs["methanol_out"].sum()
+        max_production = len(meoh_prod) * inputs["plant_capacity_kgpy"] / 8760
+        outputs["capacity_factor"] = outputs["total_methanol_produced"] / max_production
+        outputs["annual_methanol_produced"] = outputs["total_methanol_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+
 
 @define(kw_only=True)
 class SMRCostConfig(MethanolCostConfig):
@@ -138,7 +147,8 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
 
     def setup(self):
         self.config = SMRCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -203,7 +213,8 @@ class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
 
     def setup(self):
         self.config = MethanolFinanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

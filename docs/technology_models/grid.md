@@ -1,13 +1,13 @@
 # Grid Performance and Cost Models
 
-This page documents the unified `grid_performance` and `grid_cost` models, which together represent a flexible, configurable grid interconnection point within an H2I simulation.
+This page documents the unified `GridPerformanceModel` and `GridCostModel` models, which together represent a flexible, configurable grid interconnection point within an H2I simulation.
 These components support both power flows and cost accounting for buying and selling electricity through a constrained interconnection.
 This is a single model that can be configured to either sell electricity to the grid, buy electricity from the grid, or both.
 
 See `example/24_solar_battery_grid` to see how to set up both buying and selling grid components.
 
 ## Grid Performance
-`grid_performance` represents a grid interconnection point that can buy or sell electricity subject to a maximum throughput rating (interconnection_size).
+`GridPerformanceModel` represents a grid interconnection point that can buy or sell electricity subject to a maximum throughput rating (interconnection_size).
 
 It supports:
 - Buying electricity from the grid to meet downstream demand.
@@ -35,7 +35,7 @@ Multiple grid instances may be used within the same plant to represent different
 | `electricity_excess`     | array[n_timesteps] | kW    | Electricity that could not be sold due to limits.                   |
 
 ## Grid Cost
-`grid_cost` computes all costs and revenues associated with the grid interconnection, including:
+`GridCostModel` computes all costs and revenues associated with the grid interconnection, including:
 - Capital cost based on interconnection rating.
 - Fixed annual O&M.
 - Variable cost of electricity purchased.

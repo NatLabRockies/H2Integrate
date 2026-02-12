@@ -36,34 +36,29 @@ description = "Holistic Hybrids Optimization and Design Tool"
 requires-python = ">=3.11, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
-    "attrs",
-    "CoolProp<7.0.0",
-    "floris==4.3",
-    "geopy",
-    "hopp>=3.3.0",
-    "jsonschema",
-    "matplotlib",
-    "multiprocessing-on-dill",
-    "numpy",
-    "numpy-financial",
-    "openmdao>=3.40.0",
-    "openpyxl",
-    "orbit-nrel",
-    "pandas>=2.0.3",
-    "ProFAST",
-    "Pyomo>=6.1.2",
-    "rainflow",
-    "ruamel.yaml",
-    "scipy",
-    "wombat>=0.11",
-    "geopy",
-    "openmeteo-requests",
-    "geopy",
-    "pyDOE3",
-    "rich>=13.7.0",
-    "requests-cache",
-    "retry_requests",
-    "turbine-models>=0.2.1"
+  "attrs",
+  "CoolProp<7.0.0",
+  "geopy",
+  "jsonschema",
+  "matplotlib",
+  "numpy",
+  "numpy-financial",
+  "openmdao>=3.40.0",
+  "openmeteo-requests",
+  "pandas>=2.0.3",
+  "ProFAST",
+  "Pyomo>=6.1.2",
+  "rainflow",
+  "requests-cache",
+  "retry_requests",
+  "rich>=13.7.0",
+  "ruamel.yaml",
+  "scipy",
+  "orbit-nrel",
+  "floris",
+  "hopp>=3.3.0",
+  "turbine-models>=0.2.1",
+  "wombat>=0.13.1",
 ]
 keywords = [
     "python3",
@@ -84,6 +79,7 @@ classifiers = [  # https://pypi.org/classifiers/
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -96,17 +92,23 @@ changelog = "https://github.com/NREL/H2Integrate/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 develop = [
-    "pre-commit",
     "isort",
-    "ruff",
-    "pytest",
-    "pytest-subtests",
-    "responses",
-    "Plotly",
     "jupyter-book<2",
-    "sphinxcontrib-napoleon"
+    "pre-commit",
+    "pytest>=9",
+    "ruff",
+    "sphinxcontrib-napoleon",
+    "h2integrate[gis,ard]"
 ]
-examples = ["jupyterlab"]
+examples = [
+  "jupyterlab",
+  "h2integrate[gis,ard]"
+]
+gis = [
+  "geopandas",
+  "contextily"
+]
+ard = ["ard-nrel"]
 all = ["h2integrate[develop,examples]"]
 
 [tool.setuptools]
@@ -127,11 +129,11 @@ exclude_lines = ["# pragma: no cover"]
 branch = true
 source = ["h2integrate/*"]
 omit = [
-  "tests/*"
+  "*test/*"
 ]
 
 [tool.isort]
-src_paths = ["h2integrate", "tests"]
+src_paths = ["h2integrate", "test"]
 skip = ["__init__.py"]
 multi_line_output = 3
 sections = [
@@ -142,7 +144,7 @@ sections = [
   "LOCALFOLDER",
 ]
 known_first_party = "h2integrate"
-known_local_folder = "tests"
+known_local_folder = "test"
 combine_as_imports = true
 force_grid_wrap = 0
 include_trailing_comma = true
@@ -154,16 +156,14 @@ line_length = 100
 [tool.ruff]
 src = ["h2integrate", "tests"]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 fix = true
 exclude = [
   ".git",
   "__pycache__",
-  "docs/source/conf.py",
   "old",
   "build",
   "dist",
-  "^tests/",
   ".ruff_cache",
 ]
 
@@ -200,15 +200,13 @@ ignore = [
   "E731",
   "E402",
   "D202",
-  "D212",
-  "C901",
   "D205",
+  "D212",
   "D401",
-  "PD901",
   "PERF203",
   "PD011",
+  "PD901",
   "RUF015",
-  "UP038",  # NOTE: integrate with Python >= 3.10
   "N806",  # NOTE: many variable names use an uppercase for legitimate reasons
   "N802",  # NOTE: many function names use an uppercase for legitimate reasons
   "B905",
@@ -223,10 +221,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"*/__init__.py" = ["E501", "D104", "F401", "F403"]  # NOTE: F403 discouraged
-"tests/*" = ["D100", "D101", "D102", "D103"]
-"h2integrate/to_organize/gradient_free.py" = ["NPY002"]  # TODO: new NumPy needs to be addressed
-"h2integrate/to_organize/inputs_py.py" = ["F821"]  # TODO: there are zero inputs, but many vars
+"*/__init__.py" = ["E501", "D104", "F401"]
+"test/*" = ["D100", "D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

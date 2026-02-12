@@ -117,19 +117,29 @@ ENV/
 *.db-wal
 *n2.html
 
-# H2Integrate structure specific
+# H2Integrate test, documentation, and examples outputs
 tests/h2integrate/data/*
 tests/h2integrate/output.txt
 tests/h2integrate/test_hydrogen/data/*
 tests/h2integrate/test_hydrogen/output.txt
 *speed_dir_data.csv
 examples/h2integrate/*/data
+examples/**/*data/
 examples/h2integrate/*/figures
+examples/*/*_output_dir/
+examples/*/*.sqlite
+examples/*/*_new.*
+examples/*/*[0-9].*
+*wind_electrolyzer/
 tests/h2integrate/reports/
 tests/h2integrate/test_hydrogen/output/
 **/run_*_out/
+**/*_run/
 *_out/
 **/test_*_out/
+**/wind_electrolyzer/*
+docs/misc_resources/wind_electrolyzer/
+docs/_autosummary
 
 output*
 snopt_history.txt
@@ -147,3 +157,6 @@ reports/*
 # Ignore wind and solar resource data files
 resource_files/wind/*
 resource_files/solar/*
+
+# Ignore library files
+library/*

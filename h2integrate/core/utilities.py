@@ -57,7 +57,7 @@ def create_xdsm_from_config(config, output_file="connections_xdsm"):
         else:
             source, destination, data, label = conn
 
-        if isinstance(data, (list, tuple)) and len(data) >= 2:
+        if isinstance(data, list | tuple) and len(data) >= 2:
             data = f"{data[0]} as {data[1]}"
 
         if len(conn) == 3:
@@ -122,10 +122,8 @@ class BaseConfig:
     """
 
     @classmethod
-    def from_dict(cls, data: dict, strict=True):
+    def from_dict(cls, data: dict, strict=True, additional_cls_name: str | None = None):
         """Maps a data dictionary to an `attr`-defined class.
-
-        TODO: Add an error to ensure that either none or all the parameters are passed in
 
         Args:
             data : dict
@@ -133,6 +131,9 @@ class BaseConfig:
             strict: bool
                 A flag enabling strict parameter processing, meaning that no extra parameters
                     may be passed in or an AttributeError will be raised.
+            additional_cls_name (str | None): The name of the model class creating the configuration
+                data class. Provides an easier to diagnose error message for end users when
+                the class name is provided.
         Returns:
             cls
                 The `attr`-defined class.
@@ -142,10 +143,17 @@ class BaseConfig:
             class_attr_names = [a.name for a in cls.__attrs_attrs__]
             extra_args = [d for d in data if d not in class_attr_names]
             if len(extra_args):
-                raise AttributeError(
-                    f"The initialization for {cls.__name__} was given extraneous "
-                    f"inputs: {extra_args}"
-                )
+                if additional_cls_name is not None:
+                    msg = (
+                        f"{additional_cls_name} setup failed as a result of {cls.__name__}"
+                        f" receiving extraneous inputs: {extra_args}"
+                    )
+                else:
+                    msg = (
+                        f"The initialization for {cls.__name__} was given extraneous "
+                        f"inputs: {extra_args}"
+                    )
+                raise AttributeError(msg)
 
         kwargs = {a.name: data[a.name] for a in cls.__attrs_attrs__ if a.name in data and a.init}
 
@@ -156,10 +164,17 @@ class BaseConfig:
         undefined = sorted(set(required_inputs) - set(kwargs))
 
         if undefined:
-            raise AttributeError(
-                f"The class definition for {cls.__name__} is missing the following inputs: "
-                f"{undefined}"
-            )
+            if additional_cls_name is not None:
+                msg = (
+                    f"{additional_cls_name} setup failed as a result of {cls.__name__}"
+                    f" missing the following inputs: {undefined}"
+                )
+            else:
+                msg = (
+                    f"The class definition for {cls.__name__} is missing the following inputs: "
+                    f"{undefined}"
+                )
+            raise AttributeError(msg)
         return cls(**kwargs)
 
     def as_dict(self) -> dict:
@@ -272,27 +287,27 @@ def dict_to_yaml_formatting(orig_dict):
         else:
             if isinstance(key, list):
                 for i, k in enumerate(key):
-                    if isinstance(orig_dict[k], (str, bool, int)):
+                    if isinstance(orig_dict[k], str | bool | int):
                         orig_dict[k] = orig_dict.get(k, []) + val[i]
-                    elif isinstance(orig_dict[k], (list, np.ndarray)):
+                    elif isinstance(orig_dict[k], list | np.ndarray):
                         orig_dict[k] = np.array(val, dtype=float).tolist()
                     else:
                         orig_dict[k] = float(val[i])
             elif isinstance(key, str):
-                if isinstance(orig_dict[key], (str, bool, int)):
+                if isinstance(orig_dict[key], str | bool | int):
                     continue
                 if orig_dict[key] is None:
                     continue
-                if isinstance(orig_dict[key], (list, np.ndarray)):
+                if isinstance(orig_dict[key], list | np.ndarray):
                     if any(isinstance(v, dict) for v in val):
                         for vii, v in enumerate(val):
                             if isinstance(v, dict):
                                 new_val = dict_to_yaml_formatting(v)
                             else:
-                                new_val = v if isinstance(v, (str, bool, int)) else float(v)
+                                new_val = v if isinstance(v, str | bool | int) else float(v)
                             orig_dict[key][vii] = new_val
                     else:
-                        new_val = [v if isinstance(v, (str, bool, int)) else float(v) for v in val]
+                        new_val = [v if isinstance(v, str | bool | int) else float(v) for v in val]
                         orig_dict[key] = new_val
                 else:
                     orig_dict[key] = float(val)
@@ -493,7 +508,7 @@ def remove_numpy(fst_vt: dict) -> dict:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = conversions[data_type](
                         current_value
                     )
-                elif isinstance(current_value, (list, tuple)):
+                elif isinstance(current_value, list | tuple):
                     for i, item in enumerate(current_value):
                         current_value[i] = remove_numpy(item)
 
@@ -784,7 +799,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
     def _mean(val):
         if isinstance(val, np.ndarray):
             return "nan" if val.size == 0 else f"{np.mean(val)}"
-        if isinstance(val, (int, float, np.number)):
+        if isinstance(val, int | float | np.number):
             return f"{val}"
         return "n/a"
 
@@ -856,7 +871,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
             shape_meta = meta.get("shape", "")
             if var == "cost_year":
                 shape_str = "n/a"
-            elif isinstance(shape_meta, (tuple, list)) and len(shape_meta) > 0:
+            elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
                 shape_str = str(shape_meta[0])
             else:
                 shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
@@ -892,7 +907,7 @@ def print_results(model, includes=None, excludes=None, show_units=True):
                     "n/a"
                     if name.split(".")[-1] == "cost_year"
                     else meta.get("shape")[0]
-                    if isinstance(meta.get("shape"), (tuple, list)) and len(meta.get("shape")) > 0
+                    if isinstance(meta.get("shape"), tuple | list) and len(meta.get("shape")) > 0
                     else ""
                     if meta.get("shape") in (None, "", ())
                     else meta.get("shape")

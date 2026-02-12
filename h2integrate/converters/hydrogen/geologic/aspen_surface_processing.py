@@ -78,7 +78,8 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
 
     def setup(self):
         self.config = AspenGeoH2SurfacePerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -148,6 +149,13 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
         outputs["water_consumed"] = water_in_kt_h
         outputs["steam_out"] = steam_out_kt_h
         outputs["total_hydrogen_produced"] = np.sum(h2_out_kg_hr)
+        outputs["annual_hydrogen_produced"] = outputs["total_hydrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["rated_hydrogen_production"] = wellhead_cap_kg_hr  # TODO: double check
+        outputs["capacity_factor"] = outputs["total_hydrogen_produced"] / (
+            outputs["rated_hydrogen_production"] * self.n_timesteps
+        )
 
 
 @define
@@ -238,7 +246,8 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
 
     def setup(self):
         self.config = AspenGeoH2SurfaceCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

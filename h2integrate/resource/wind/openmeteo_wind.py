@@ -26,6 +26,9 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
             load resource files from. Defaults to "".
         resource_filename (str, optional): Filename to save resource data to or load
             resource data from. Defaults to None.
+        verify_download (bool, optional): Whether to verify the API download from the url.
+            If an `openmeteo_requests.Client.OpenMeteoRequestsError` error is thrown,
+            try setting to True. Defaults to False.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -44,6 +47,7 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
+    verify_download: bool = field(default=False)
 
 
 class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
@@ -52,7 +56,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(resource_specs)
+        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -156,7 +163,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
-        responses = openmeteo.weather_api(base_url, params=url, verify=False)
+        responses = openmeteo.weather_api(base_url, params=url, verify=self.config.verify_download)
         response = responses[0]
         hourly_data = response.Hourly()
         ts_data = {}
@@ -338,6 +345,3 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data_time_dict = {c.lower(): data[c].astype(float).values for c in time_cols if c != "time"}
         data_dict.update(data_time_dict)
         return data_dict, data_units
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pass

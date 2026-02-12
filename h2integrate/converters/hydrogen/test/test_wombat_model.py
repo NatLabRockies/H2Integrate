@@ -16,6 +16,7 @@ def test_wombat_model_outputs(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },
@@ -50,7 +51,7 @@ def test_wombat_model_outputs(subtests):
     with subtests.test("efficiency"):
         assert prob["efficiency"] == approx(0.76733639, rel=1e-2)
     with subtests.test("rated_h2_production_kg_pr_hr"):
-        assert prob["rated_h2_production_kg_pr_hr"] == approx(784.3544736, rel=1e-2)
+        assert prob["rated_hydrogen_production"] == approx(784.3544736, rel=1e-2)
     with subtests.test("capacity_factor"):
         assert prob["capacity_factor"] == approx(0.75637315, rel=1e-2)
     with subtests.test("CapEx"):
@@ -73,6 +74,7 @@ def test_wombat_error(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },

@@ -4,9 +4,9 @@ description: "This hybrid plant produces methanol"
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 29
@@ -30,9 +30,9 @@ technologies:
         cost_year: 2019
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_comm_res_pv_cost"
+      model: "ATBResComPVCostModel"
     model_inputs:
       shared_parameters:
         pv_capacity_kWdc: 350000 #350 MWdc
@@ -47,16 +47,16 @@ technologies:
         cost_year: 2019
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
         commodity_units: "kW"
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -75,11 +75,11 @@ technologies:
           replacement_cost_percent: 0.15 # percent of capex - H2A default case
   methanol:
     performance_model:
-      model: "co2h_methanol_plant_performance"
+      model: "CO2HMethanolPlantPerformanceModel"
     cost_model:
-      model: "co2h_methanol_plant_cost"
+      model: "CO2HMethanolPlantCostModel"
     finance_model:
-      model: "co2h_methanol_plant_financial"
+      model: "CO2HMethanolPlantFinanceModel"
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 127893196.8

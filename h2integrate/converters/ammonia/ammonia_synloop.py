@@ -139,32 +139,39 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     conversion efficiency up to the limiting reagent or energy input.
     """
 
+    def initialize(self):
+        super().initialize()
+        self.commodity = "ammonia"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
+
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaSynLoopPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
-        self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="MW")
+        # Feedstocks input
+        self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
-        self.add_output("ammonia_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("hydrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("electricity_out", val=0.0, shape=n_timesteps, units="MW")
-        self.add_output("heat_out", val=0.0, shape=n_timesteps, units="kW*h/kg")
+        self.add_output("nitrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("hydrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("electricity_out", val=0.0, shape=self.n_timesteps, units="kW")
+        self.add_output("heat_out", val=0.0, shape=self.n_timesteps, units="kW*h/kg")
         self.add_output("catalyst_mass", val=0.0, units="kg")
-        self.add_output("total_ammonia_produced", val=0.0, units="kg/year")
+
+        # Feedstock consumption profiles
+        self.add_output("hydrogen_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("electricity_consumed", val=0.0, shape=self.n_timesteps, units="kW")
+
         self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
         self.add_output("total_electricity_consumed", val=0.0, units="kW*h/year")
-        self.add_output(
-            "limiting_input", val=0, shape_by_conn=True, copy_shape="hydrogen_in", units=None
-        )
+        self.add_output("limiting_input", val=0, shape=self.n_timesteps, units=None)
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
-        self.add_output("ammonia_capacity_factor", val=0.0, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values
@@ -207,6 +214,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             n2_in = h2_in / H_MW * 3 * N_MW  # TODO: Replace with connected input
         elec_in = inputs["electricity_in"]  # Temporary until HOPP is connected
         if np.max(elec_in) == 0:
+            # elec_in is in kW
             elec_in = (
                 np.ones(
                     len(h2_in),
@@ -226,7 +234,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         n2_rate = w_n2_feed * ratio_feed  # kg N2 / kg NH3
         nh3_from_n2 = n2_in / n2_rate  # kg nh3 / hr
 
-        nh3_from_elec = elec_in / energy_demand * 1000  # kg nh3 / hr, converting MW elec_in to kW
+        nh3_from_elec = elec_in / energy_demand  # kg nh3 / hr
 
         # Limiting NH3 production per hour by each input
         nh3_prod = np.minimum.reduce([nh3_from_n2, nh3_from_h2, nh3_from_elec])
@@ -243,7 +251,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Calculate unused inputs
         used_h2 = nh3_prod * h2_rate
         used_n2 = nh3_prod * n2_rate
-        used_elec = nh3_prod * energy_demand
+        used_elec = nh3_prod * energy_demand  # kW
 
         # Calculate output in purge gas
         purge_mw = x_h2_purge * H_MW * 2 + x_n2_purge * N_MW * 2  # g / mol
@@ -251,7 +259,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         w_h2_purge = x_h2_purge * H_MW * 2 / purge_mw  # kg H2 / kg purge gas
         h2_purge = w_h2_purge * ratio_purge * nh3_prod  # kg H2 / hr
 
-        w_n2_purge = x_n2_purge * H_MW * 2 / purge_mw  # kg N2 / kg purge gas
+        w_n2_purge = x_n2_purge * N_MW * 2 / purge_mw  # kg N2 / kg purge gas
         n2_purge = w_n2_purge * ratio_purge * nh3_prod  # kg N2 / hr
 
         # Calculate catalyst mass
@@ -261,19 +269,25 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["ammonia_out"] = nh3_prod
         outputs["hydrogen_out"] = h2_in - used_h2 + h2_purge
         outputs["nitrogen_out"] = n2_in - used_n2 + n2_purge
-        outputs["electricity_out"] = elec_in - used_elec
+        outputs["electricity_out"] = elec_in - used_elec  # kW
         outputs["heat_out"] = nh3_prod * heat_output
         outputs["catalyst_mass"] = cat_mass
         outputs["total_ammonia_produced"] = max(nh3_prod.sum(), 1e-6)
         outputs["total_hydrogen_consumed"] = h2_in.sum()
         outputs["total_nitrogen_consumed"] = n2_in.sum()
-        outputs["total_electricity_consumed"] = elec_in.sum()
-
+        outputs["total_electricity_consumed"] = elec_in.sum()  # kW*h/year
+        outputs["electricity_consumed"] = used_elec  # kW
+        outputs["hydrogen_consumed"] = used_h2  # kg
         h2_cap = nh3_cap * h2_rate  # kg H2 per hour
         outputs["max_hydrogen_capacity"] = h2_cap
 
         # Calculate capacity factor
-        outputs["ammonia_capacity_factor"] = np.mean(nh3_prod) / nh3_cap
+        outputs["capacity_factor"] = np.mean(nh3_prod) / nh3_cap
+
+        outputs["rated_ammonia_production"] = nh3_cap
+        outputs["annual_ammonia_produced"] = outputs["total_ammonia_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
@@ -416,14 +430,16 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         )
 
         self.config = AmmoniaSynLoopCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
-        self.add_input("total_ammonia_produced", val=0.0, units="kg/year")
-        self.add_input("total_hydrogen_consumed", val=0.0, units="kg/year")
-        self.add_input("total_nitrogen_consumed", val=0.0, units="kg/year")
-        self.add_input("total_electricity_consumed", val=0.0, units="kW*h/year")
+        self.add_input("annual_ammonia_produced", val=0.0, shape=plant_life, units="kg/year")
+        self.add_input(
+            "rated_ammonia_production", val=self.config.production_capacity, units="kg/h"
+        )
 
         self.add_output(
             "capex_asu", val=0.0, units="USD", desc="Capital cost for air separation unit"
@@ -465,7 +481,7 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         ##---Scaling Ratios---
 
         # Get config values
-        capacity = self.config.production_capacity  # kg NH3 / hr
+        capacity = inputs["rated_ammonia_production"]  # kg NH3 / hr
         base_cap = self.config.baseline_capacity  # kg NH3 / hr
         year = self.options["plant_config"]["finance_parameters"]["cost_adjustment_parameters"][
             "target_dollar_year"
@@ -539,7 +555,7 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         o2_price_base = self.config.oxygen_price_base  # USD / kg O2
 
         # Get total production/consumption
-        nh3_prod = inputs["total_ammonia_produced"]  # kg NH3 /year
+        nh3_prod = inputs["annual_ammonia_produced"].mean()  # kg NH3 /year
 
         # Apply scaling
         rebuild_cost = rebuild_cost_base * capex_ratio * cepci_ratio

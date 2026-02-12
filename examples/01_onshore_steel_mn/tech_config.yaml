@@ -4,9 +4,9 @@ description: "This hybrid plant produces steel"
 technologies:
   wind:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: "FlorisWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 216 #number of turbines in the farm
@@ -34,9 +34,9 @@ technologies:
 
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_comm_res_pv_cost"
+      model: "ATBResComPVCostModel"
     model_inputs:
       shared_parameters:
         pv_capacity_kWdc: 1500000 #1500 MWdc
@@ -59,9 +59,9 @@ technologies:
 
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -72,16 +72,17 @@ technologies:
 
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
-      model: "heuristic_load_following_controller"
+      model: "HeuristicLoadFollowingController"
     performance_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
+        commodity_storage_units: "kW"
         max_charge_rate: 375740.4 #kW
         max_capacity: 375745.2 #kWh
         n_control_window: 24
@@ -100,17 +101,13 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.024999840573439444
       control_parameters:
-        commodity_storage_units: "kW"
         tech_name: "battery"
-      dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
 
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -130,11 +127,11 @@ technologies:
 
   h2_storage:
     performance_model:
-      model: "storage_auto_sizing"
+      model: "StorageAutoSizingModel"
     control_strategy:
-      model: "pass_through_controller"
+      model: "PassThroughOpenLoopController"
     cost_model:
-      model: "lined_rock_cavern_h2_storage_cost"
+      model: "LinedRockCavernStorageCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"
@@ -148,11 +145,11 @@ technologies:
 
   steel:
     performance_model:
-      model: "steel_performance"
+      model: "SteelPerformanceModel"
     cost_model:
-      model: "steel_cost"
+      model: "SteelCostAndFinancialModel"
     finance_model:
-      model: "steel_cost"
+      model: "SteelCostAndFinancialModel"
     model_inputs:
       shared_parameters:
         capacity_factor: 0.9

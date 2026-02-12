@@ -1,13 +1,16 @@
 import numpy as np
 import pandas as pd
-import openmdao.api as om
 from attrs import field, define
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
 
@@ -26,18 +29,21 @@ class IronReductionPerformanceBaseConfig(BaseConfig):
     water_density: float = field(default=1000)  # kg/m3
 
 
-class IronReductionPlantBasePerformanceComponent(om.ExplicitComponent):
+class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "pig_iron"
+        self.commodity_rate_units = "t/h"
+        self.commodity_amount_units = "t"
 
     def setup(self):
+        super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = IronReductionPerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
@@ -71,14 +77,6 @@ class IronReductionPlantBasePerformanceComponent(om.ExplicitComponent):
             shape=n_timesteps,
             units="t/h",
             desc="Pig iron demand for iron plant",
-        )
-
-        self.add_output(
-            "pig_iron_out",
-            val=0.0,
-            shape=n_timesteps,
-            units="t/h",
-            desc="Pig iron produced",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -252,6 +250,14 @@ class IronReductionPlantBasePerformanceComponent(om.ExplicitComponent):
         # output is minimum between available feedstocks and output demand
         pig_iron_production = np.minimum.reduce(pig_iron_from_feedstocks)
         outputs["pig_iron_out"] = pig_iron_production
+        outputs["total_pig_iron_produced"] = np.sum(pig_iron_production)
+        outputs["capacity_factor"] = outputs["total_pig_iron_produced"] / (
+            inputs["system_capacity"] * self.n_timesteps
+        )
+        outputs["rated_pig_iron_production"] = inputs["system_capacity"]
+        outputs["annual_pig_iron_produced"] = outputs["total_pig_iron_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
         # feedstock consumption based on actual pig iron produced
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
@@ -319,7 +325,11 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
 
         config_dict.update({"cost_year": target_dollar_year})
 
-        self.config = IronReductionCostBaseConfig.from_dict(config_dict, strict=False)
+        self.config = IronReductionCostBaseConfig.from_dict(
+            config_dict,
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         super().setup()
 

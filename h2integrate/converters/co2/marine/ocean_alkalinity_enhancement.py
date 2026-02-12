@@ -81,7 +81,8 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def setup(self):
         self.config = OAEPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -215,8 +216,19 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         )
 
         outputs["co2_out"] = oae_outputs.OAE_outputs["mass_CO2_absorbed"]
-        outputs["co2_capture_mtpy"] = oae_outputs.M_co2est
-        outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mass_CO2_absorbed"] / 1000)
+        outputs["rated_co2_production"] = max(range_outputs.S1["mass_CO2_absorbed"])  # kg/h
+        outputs["total_co2_produced"] = outputs["co2_out"].sum()
+
+        max_production = outputs["rated_co2_production"] * len(outputs["co2_out"])
+        outputs["annual_co2_produced"] = (
+            oae_outputs.M_co2est * 1e3
+        )  # convert from metric tons/year to kg/year
+        outputs["capacity_factor"] = outputs["total_co2_produced"] / max_production
+
+        outputs["co2_capture_mtpy"] = oae_outputs.M_co2est  # TODO: remove
+        outputs["plant_mCC_capacity_mtph"] = max(
+            range_outputs.S1["mass_CO2_absorbed"] / 1000
+        )  # TODO: remove
         outputs["alkaline_seawater_flow_rate"] = oae_outputs.OAE_outputs["Qout"]
         outputs["alkaline_seawater_pH"] = oae_outputs.OAE_outputs["pH_f"]
         outputs["alkaline_seawater_dic"] = oae_outputs.OAE_outputs["dic_f"]
@@ -265,10 +277,14 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
             self.config = OAECostModelConfig.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+                additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(data={})
+            self.config = OAECostModelConfig.from_dict(
+                data={},
+                additional_cls_name=self.__class__.__name__,
+            )
         super().setup()
         self.add_input(
             "mass_sellable_product",
@@ -313,7 +329,7 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
             value_product=inputs["value_products"],
             waste_mass=inputs["mass_acid_disposed"],
             waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],
+            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
             base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
             mass_rca=inputs["mass_rca"],
             annual_energy_cost=0,  # Energy costs are calculated within H2I and added to LCOC calc
@@ -351,10 +367,14 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
             self.config = OAECostModelConfig.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+                additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(data={})
+            self.config = OAECostModelConfig.from_dict(
+                data={},
+                additional_cls_name=self.__class__.__name__,
+            )
         super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input(
@@ -435,7 +455,7 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
             value_product=inputs["value_products"],
             waste_mass=inputs["mass_acid_disposed"],
             waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],
+            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
             base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
             mass_rca=inputs["mass_rca"],
             annual_energy_cost=annual_energy_cost_usd_yr,

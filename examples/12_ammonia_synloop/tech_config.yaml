@@ -4,9 +4,9 @@ description: "This hybrid plant produces ammonia"
 technologies:
   wind:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: "FlorisWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 148 #number of turbines in the farm
@@ -34,9 +34,9 @@ technologies:
 
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_comm_res_pv_cost"
+      model: "ATBResComPVCostModel"
     model_inputs:
       shared_parameters:
         pv_capacity_kWdc: 400000 #400 MWdc
@@ -58,9 +58,9 @@ technologies:
         cost_year: 2019
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_converter"
+      model: "PyomoDispatchGenericConverter"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -70,16 +70,17 @@ technologies:
         commodity_storage_units: "kW"
   battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     control_strategy:
-      model: "heuristic_load_following_controller"
+      model: "HeuristicLoadFollowingController"
     performance_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     cost_model:
-      model: "atb_battery_cost"
+      model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
+        commodity_storage_units: "kW"
         max_charge_rate: 96.0 #kW
         max_capacity: 96.0 #kWh
         n_control_window: 24
@@ -98,16 +99,13 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
       control_parameters:
-        commodity_storage_units: "kW"
         tech_name: "battery"
-      dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -128,11 +126,11 @@ technologies:
 
   h2_storage:
     performance_model:
-      model: "storage_auto_sizing"
+      model: "StorageAutoSizingModel"
     control_strategy:
-      model: "pass_through_controller"
+      model: "PassThroughOpenLoopController"
     cost_model:
-      model: "salt_cavern_h2_storage_cost"
+      model: "SaltCavernStorageCostModel"
     model_inputs:
       shared_parameters:
         commodity_name: "hydrogen"
@@ -145,9 +143,9 @@ technologies:
 
   ammonia:
     performance_model:
-      model: "synloop_ammonia_performance"
+      model: "AmmoniaSynLoopPerformanceModel"
     cost_model:
-      model: "synloop_ammonia_cost"
+      model: "AmmoniaSynLoopCostModel"
     model_inputs: # See converters/ammonia/Ammonia cost breakdown-ANL source.xlsx
       shared_parameters:
         production_capacity: 52777.6

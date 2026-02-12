@@ -14,18 +14,18 @@ Currently, H2I recognizes four types of models:
 
 | Resource name     | Resource Type  |
 | :---------------- | :---------------: |
-| `river_resource`  | river resource |
-| `wind_toolkit_v2_api` | wind resource |
-| `openmeteo_wind_api` | wind resource |
-| `goes_aggregated_solar_v4_api` | solar resource |
-| `goes_conus_solar_v4_api` | solar resource |
-| `goes_fulldisc_solar_v4_api` | solar resource |
-| `goes_tmy_solar_v4_api` | solar resource |
-| `meteosat_solar_v4_api` | solar resource |
-| `meteosat_tmy_solar_v4_api` | solar resource |
-| `himawari7_solar_v3_api` | solar resource |
-| `himawari8_solar_v3_api` | solar resource |
-| `himawari_tmy_solar_v3_api` | solar resource |
+| `RiverResource`  | river resource |
+| `WTKNRELDeveloperAPIWindResource` | wind resource |
+| `OpenMeteoHistoricalWindResource` | wind resource |
+| `GOESAggregatedSolarAPI` | solar resource |
+| `GOESConusSolarAPI` | solar resource |
+| `GOESFullDiscSolarAPI` | solar resource |
+| `GOESTMYSolarAPI` | solar resource |
+| `MeteosatPrimeMeridianSolarAPI` | solar resource |
+| `MeteosatPrimeMeridianTMYSolarAPI` | solar resource |
+| `Himawari7SolarAPI` | solar resource |
+| `Himawari8SolarAPI` | solar resource |
+| `HimawariTMYSolarAPI` | solar resource |
 
 
 (converters)=
@@ -41,7 +41,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `wind`           |  electricity  | wind resource |
 | `solar`          |  electricity  | solar resource |
 | `river`          |  electricity  | river resource |
-| `hopp`           |  electricity  | N/A |
+| `HOPPComponent`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
 | `steel`          |  steel        | hydrogen |
@@ -91,147 +91,156 @@ Connection: `[source_tech, dest_tech, transport_commodity, transport_technology]
 
 | Controller        | Control Method |
 | :----------------------------- | :---------------: |
-| `pass_through_controller`      |  open-loop control. directly passes the input resource flow to the output without any modifications         |
-| `demand_open_loop_storage_controller`  |  open-loop control. manages resource flow based on demand and storage constraints     |
-| `demand_open_loop_converter_controller`  |  open-loop control. manages resource flow based on demand constraints     |
-| `flexible_demand_open_loop_converter_controller`  |  open-loop control. manages resource flow based on demand and flexibility constraints     |
-| `heuristic_load_following_controller` | open-loop control that works on a time window basis to set dispatch commands. Uses pyomo |
+| `PassThroughOpenLoopController`      |  open-loop control. directly passes the input resource flow to the output without any modifications         |
+| `DemandOpenLoopStorageController`  |  open-loop control. manages resource flow based on demand and storage constraints     |
+| `DemandOpenLoopConverterController`  |  open-loop control. manages resource flow based on demand constraints     |
+| `FlexibleDemandOpenLoopConverterController`  |  open-loop control. manages resource flow based on demand and flexibility constraints     |
+| `HeuristicLoadFollowingController` | open-loop control that works on a time window basis to set dispatch commands. Uses pyomo |
 
 # Technology Models Overview
 
 Below summarizes the available performance, cost, and financial models for each model type. The list of supported models is also available in [supported_models.py](../../h2integrate/core/supported_models.py)
-- [Resource](#resource-models)
-- [Converters](#converter-models)
-- [Transport](#transport-models)
-- [Storage](#storage-models)
-- [Basic Operations](#basic-operations)
-- [Control](#control-models)
+- [Model Overview](#model-overview)
+  - [Resource](#resource)
+  - [Converters](#converters)
+  - [Transport](#transport)
+  - [Storage](#storage)
+  - [Control](#control)
+- [Technology Models Overview](#technology-models-overview)
+  - [Resource models](#resource-models)
+  - [Converter models](#converter-models)
+  - [Transport Models](#transport-models)
+  - [Storage Models](#storage-models)
+  - [Basic Operations](#basic-operations)
+  - [Control Models](#control-models)
 
 (resource-models)=
 ## Resource models
 - `river`:
     - resource models:
-        + `river_resource`
+        + `RiverResource`
 - `wind_resource`:
     - resource models:
-        + `wind_toolkit_v2_api`
-        + `openmeteo_wind_api`
+        + `WTKNRELDeveloperAPIWindResource`
+        + `OpenMeteoHistoricalWindResource`
 - `solar_resource`:
     - resource models:
-        + `goes_aggregated_solar_v4_api`
-        + `goes_conus_solar_v4_api`
-        + `goes_fulldisc_solar_v4_api`
-        + `goes_tmy_solar_v4_api`
-        + `meteosat_solar_v4_api`
-        + `meteosat_tmy_solar_v4_api`
-        + `himawari7_solar_v3_api`
-        + `himawari8_solar_v3_api`
-        + `himawari_tmy_solar_v3_api`
+        + `GOESAggregatedSolarAPI`
+        + `GOESConusSolarAPI`
+        + `GOESFullDiscSolarAPI`
+        + `GOESTMYSolarAPI`
+        + `MeteosatPrimeMeridianSolarAPI`
+        + `MeteosatPrimeMeridianTMYSolarAPI`
+        + `Himawari7SolarAPI`
+        + `Himawari8SolarAPI`
+        + `HimawariTMYSolarAPI`
 
 (converter-models)=
 ## Converter models
 - `wind`: wind turbine
     - performance models:
-        + `'pysam_wind_plant_performance'`
-        + `'floris_wind_plant_performance'`
+        + `'PYSAMWindPlantPerformanceModel'`
+        + `'FlorisWindPlantPerformanceModel'`
     - cost models:
-        + `'atb_wind_cost'`
+        + `'ATBWindPlantCostModel'`
+    - combined models:
+        + `'ArdWindPlantModel'`
 - `solar`: solar-PV panels
     - performance models:
-        + `'pysam_solar_plant_performance'`
+        + `'PYSAMSolarPlantPerformanceModel'`
     - cost models:
-        + `'atb_utility_pv_cost'`
-        + `'atb_comm_res_pv_cost'`
+        + `'ATBUtilityPVCostModel'`
+        + `'ATBResComPVCostModel'`
 - `river`: hydropower
     - performance models:
-        + `'run_of_river_hydro_performance'`
+        + `'RunOfRiverHydroPerformanceModel'`
     - cost models:
-        + `'run_of_river_hydro_cost'`
+        + `'RunOfRiverHydroCostModel'`
 - `hopp`: hybrid plant
     - combined performance and cost model:
-        + `'hopp'`
+        + `'HOPPComponent'`
 - `electrolyzer`: hydrogen electrolysis
     - combined performance and cost:
-        + `'wombat'`
+        + `'WOMBATElectrolyzerModel'`
     - performance models:
-        + `'eco_pem_electrolyzer_performance'`
+        + `'ECOElectrolyzerPerformanceModel'`
     - cost models:
-        + `'singlitico_electrolyzer_cost'`
-        + `'basic_electrolyzer_cost'`
+        + `'SingliticoCostModel'`
+        + `'BasicElectrolyzerCostModel'`
 - `geoh2_well_subsurface`: geologic hydrogen well subsurface
     - performance models:
-        + `'simple_natural_geoh2_performance'`
-        + `'templeton_serpentinization_geoh2_performance'`
+        + `'NaturalGeoH2PerformanceModel'`
+        + `'StimulatedGeoH2PerformanceModel'`
     - cost models:
-        + `'mathur_modified_geoh2_cost'`
+        + `'GeoH2SubsurfaceCostModel'`
 - `steel`: steel production
     - performance models:
-        + `'steel_performance'`
-        + `'ng_eaf_performance_rosner'`
-        + `'h2_eaf_performance_rosner'`
+        + `'SteelPerformanceModel'`
+        + `'NaturalGasEAFPlantPerformanceComponent'`
+        + `'HydrogenEAFPlantPerformanceComponent'`
     - combined cost and financial models:
-        + `'steel_cost'`
+        + `'SteelCostAndFinancialModel'`
     - cost models:
-        + `'ng_eaf_cost_rosner'`
-        + `'h2_eaf_cost_rosner'`
+        + `'NaturalGasEAFPlantCostComponent'`
+        + `'HydrogenEAFPlantCostComponent'`
 - `ammonia`: ammonia synthesis
     - performance models:
         + `'simple_ammonia_performance'`
-        + `'synloop_ammonia_performance'`
+        + `'AmmoniaSynLoopPerformanceModel'`
     - cost models:
         + `'simple_ammonia_cost'`
-        + `'synloop_ammonia_cost'`
+        + `'AmmoniaSynLoopCostModel'`
 - `doc`: direct ocean capture
     - performance models:
-        + `'direct_ocean_capture_performance'`
+        + `'DOCPerformanceModel'`
     - cost models:
-        + `'direct_ocean_capture_cost'`
+        + `'DOCCostModel'`
 - `oae`: ocean alkalinity enhancement
     - performance models:
-        + `'ocean_alkalinity_enhancement_performance'`
+        + `'OAEPerformanceModel'`
     - cost models:
-        + `'ocean_alkalinity_enhancement_cost'`
+        + `'OAECostModel'`
     - financial models:
-        + `'ocean_alkalinity_enhancement_cost_financial'`
+        + `'OAECostAndFinancialModel'`
 - `methanol`: methanol synthesis
     - performance models:
-        + `'smr_methanol_plant_performance'`
+        + `'SMRMethanolPlantPerformanceModel'`
     - cost models:
-        + `'smr_methanol_plant_cost'`
+        + `'SMRMethanolPlantCostModel'`
     - financial models:
         + `'methanol_plant_financial'`
 - `air_separator`: nitrogen separation from air
     - performance models:
-        + `'simple_ASU_performance'`
+        + `'SimpleASUPerformanceModel'`
     - cost models:
-        + `'simple_ASU_cost'`
+        + `'SimpleASUCostModel'`
 - `desal`: water desalination
     - performance models:
-        + `'reverse_osmosis_desalination_performance'`
+        + `'ReverseOsmosisPerformanceModel'`
     - cost models:
-        + `'reverse_osmosis_desalination_cost'`
+        + `'ReverseOsmosisCostModel'`
 - `natural_gas`: natural gas combined cycle and combustion turbine
     - performance models:
-        + `'natural_gas_performance'`
+        + `'NaturalGasPerformanceModel'`
     - cost_models:
-        + `'natural_gas_cost'`
+        + `'NaturalGasCostModel'`
 - `grid`: electricity grid connection
     - performance models:
-        + `'grid_performance'`
+        + `'GridPerformanceModel'`
     - cost models:
-        + `'grid_cost'`
+        + `'GridCostModel'`
 - `iron_ore`: iron ore mining and refining
     - performance models:
-        + `'iron_mine_performance_martin'`
+        + `'MartinIronMinePerformanceComponent'`
     - cost models:
-        + `'iron_mine_cost_martin'`
+        + `'MartinIronMineCostComponent'`
 - `iron_dri`: iron ore direct reduction
     - performance models:
-        + `'ng_dri_performance_rosner'`
-        + `'h2_dri_performance_rosner'`
+        + `'NaturalGasIronReductionPlantPerformanceComponent'`
+        + `'HydrogenIronReductionPlantPerformanceComponent'`
     - cost models:
-        + `'ng_dri_cost_rosner'`
-        + `'h2_dri_cost_rosner'`
+        + `'NaturalGasIronReductionPlantCostComponent'`
+        + `'HydrogenIronReductionPlantCostComponent'`
 
 (transport-models)=
 ## Transport Models
@@ -243,10 +252,10 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", "pig_iron", "reformer_catalyst", "water", "carbon", "iron_ore", and "lime"
 - `combiner`:
     - performance models:
-        + `'combiner_performance'`: can be used for any commodity
+        + `'GenericCombinerPerformanceModel'`: can be used for any commodity
 - `splitter`:
     - performance models:
-        + `'splitter_performance'`: can be used for any commodity
+        + `'GenericSplitterPerformanceModel'`: can be used for any commodity
 
 (storage-models)=
 ## Storage Models
@@ -254,21 +263,21 @@ Below summarizes the available performance, cost, and financial models for each 
     - performance models:
         + `'hydrogen_tank_performance'`
     - cost models:
-        + `'lined_rock_cavern_h2_storage_cost'`
-        + `'salt_cavern_h2_storage_cost'`
-        + `'mch_tol_h2_storage_cost'`
-        + `'buried_pipe_h2_storage_cost'`
+        + `'LinedRockCavernStorageCostModel'`
+        + `'SaltCavernStorageCostModel'`
+        + `'MCHTOLStorageCostModel'`
+        + `'PipeStorageCostModel'`
 - `generic_storage`: any resource storage
     - performance models:
-        + `'simple_generic_storage'`
-        + `'storage_auto_sizing'`
+        + `'SimpleGenericStorage'`
+        + `'StorageAutoSizingModel'`
     - cost models:
-        + `'generic_storage_cost'`
+        + `'GenericStorageCostModel'`
 - `battery`: battery storage
     - performance models:
-        + `'pysam_battery'`
+        + `'PySAMBatteryPerformanceModel'`
     - cost models:
-        + `'atb_battery_cost'`
+        + `'ATBBatteryCostModel'`
 
 (basic-operations)=
 ## Basic Operations
@@ -278,10 +287,10 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (control-models)=
 ## Control Models
-- `'pass_through_controller'`
+- `'PassThroughOpenLoopController'`
 - Storage Controllers:
-    - `'demand_open_loop_storage_controller'`
-    - `'heuristic_load_following_controller'`
+    - `'DemandOpenLoopStorageController'`
+    - `'HeuristicLoadFollowingController'`
 - Converter Controllers:
-    - `'demand_open_loop_converter_controller`
-    - `'flexible_demand_open_loop_converter_controller'`
+    - `'DemandOpenLoopConverterController`
+    - `'FlexibleDemandOpenLoopConverterController'`

@@ -24,12 +24,19 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
     def setup(self):
         super().setup()
         self.config = SteelPerformanceModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
     def compute(self, inputs, outputs):
         steel_production_mtpy = self.config.plant_capacity_mtpy * self.config.capacity_factor
-        outputs["steel"] = steel_production_mtpy / len(inputs["electricity_in"])
+        outputs["steel_out"] = steel_production_mtpy / len(inputs["electricity_in"])
+        outputs["rated_steel_production"] = self.config.plant_capacity_mtpy / 8760
+        outputs["capacity_factor"] = self.config.capacity_factor
+        outputs["total_steel_produced"] = outputs["steel_out"].sum()
+        outputs["annual_steel_produced"] = outputs["total_steel_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
@@ -79,11 +86,14 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
 
     def setup(self):
         self.config = SteelCostAndFinancialModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
-        self.add_input("steel_production_mtpy", val=0.0, units="t/year")
+        self.add_input(
+            "steel_production_mtpy", val=0.0, units="t/year"
+        )  # TODO: update with rated_steel_production
         self.add_output("LCOS", val=0.0, units="USD/t")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

@@ -35,7 +35,7 @@ The `electrolyzer.yml` configuration file may include sections such as `turbines
 
 ## Example: Using the WOMBAT Electrolyzer Model
 
-To use the WOMBAT electrolyzer model in H2Integrate, configure your `tech_config.yaml` to use `wombat` for both the performance and cost models.
+To use the WOMBAT electrolyzer model in H2Integrate, configure your `tech_config.yaml` to use `WOMBATElectrolyzerModel` for both the performance and cost models.
 An example is shown below:
 
 ### tech_config.yaml (excerpt)
@@ -44,9 +44,9 @@ An example is shown below:
 technologies:
   electrolyzer:
     performance_model:
-      model: "wombat"
+      model: "WOMBATElectrolyzerModel"
     cost_model:
-      model: "wombat"
+      model: "WOMBATElectrolyzerModel"
     model_inputs:
       shared_parameters:
         location: "onshore"

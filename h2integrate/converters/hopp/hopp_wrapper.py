@@ -3,7 +3,11 @@ from attrs import field, define
 from hopp.tools.dispatch.plot_tools import plot_battery_output, plot_generation_profile
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig, CostModelBaseClass
+from h2integrate.core.model_baseclasses import (
+    CacheBaseClass,
+    CacheBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.converters.hopp.hopp_mgmt import run_hopp, setup_hopp
 
 
@@ -14,7 +18,7 @@ class HOPPComponentModelConfig(CacheBaseConfig):
     electrolyzer_rating: int | float | None = field(default=None)
 
 
-class HOPPComponent(CostModelBaseClass, CacheBaseClass):
+class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
     """
     A simple OpenMDAO component that represents a HOPP model.
 
@@ -24,12 +28,17 @@ class HOPPComponent(CostModelBaseClass, CacheBaseClass):
     computed results when the same configuration is encountered.
     """
 
-    def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+    def initialize(self):
+        super().initialize()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
+    def setup(self):
         self.config = HOPPComponentModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         super().setup()
@@ -61,9 +70,6 @@ class HOPPComponent(CostModelBaseClass, CacheBaseClass):
         self.add_output("percent_load_missed", units="percent", val=0.0)
         self.add_output("curtailment_percent", units="percent", val=0.0)
         self.add_output("aep", units="kW*h", val=0.0)
-        self.add_output(
-            "electricity_out", val=np.zeros(n_timesteps), units="kW", desc="Power output"
-        )
         self.add_output("battery_duration", val=0.0, units="h", desc="Battery duration")
         self.add_output(
             "annual_energy_to_interconnect_potential_ratio",
@@ -76,6 +82,19 @@ class HOPPComponent(CostModelBaseClass, CacheBaseClass):
             val=0.0,
             units="unitless",
             desc="Power capacity to interconnect ratio",
+        )
+        self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
+        self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
+        self.add_output(
+            "VarOpEx",
+            val=0.0,
+            shape=self.plant_life,
+            units="USD/year",
+            desc="Variable operational expenditure",
+        )
+        # Define discrete outputs: cost_year
+        self.add_discrete_output(
+            "cost_year", val=self.config.cost_year, desc="Dollar year for costs"
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -143,10 +162,16 @@ class HOPPComponent(CostModelBaseClass, CacheBaseClass):
         # Set the outputs
         outputs["percent_load_missed"] = subset_of_hopp_results["percent_load_missed"]
         outputs["curtailment_percent"] = subset_of_hopp_results["curtailment_percent"]
-        outputs["aep"] = subset_of_hopp_results["annual_energies"]["hybrid"]
+        # outputs["aep"] = subset_of_hopp_results["annual_energies"]["hybrid"]
         outputs["electricity_out"] = subset_of_hopp_results["combined_hybrid_power_production_hopp"]
         outputs["CapEx"] = subset_of_hopp_results["capex"]
         outputs["OpEx"] = subset_of_hopp_results["opex"]
+        outputs["rated_electricity_production"] = hopp_results["hybrid_plant"].system_capacity_kw[
+            "hybrid"
+        ]  # this includes battery
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum()
+        outputs["annual_electricity_produced"] = subset_of_hopp_results["annual_energies"]["hybrid"]
+        outputs["capacity_factor"] = hopp_results["hybrid_plant"].capacity_factors["hybrid"] / 100
 
         if "battery" in self.config.hopp_config["technologies"]:
             outputs["battery_duration"] = (

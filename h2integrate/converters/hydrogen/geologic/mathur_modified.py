@@ -171,7 +171,11 @@ class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
             self.target_dollar_year = 2024
 
         config_dict.update({"cost_year": self.target_dollar_year})
-        self.config = GeoH2SubsurfaceCostConfig.from_dict(config_dict, strict=True)
+        self.config = GeoH2SubsurfaceCostConfig.from_dict(
+            config_dict,
+            strict=True,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         super().setup()
 
