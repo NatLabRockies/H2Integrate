@@ -76,7 +76,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             "natural_gas_consumed",
             val=0.0,
             shape=n_timesteps,
-            units="MMBtu",
+            units="MMBtu/h",
             desc="Natural gas consumed by the plant",
         )
 
@@ -84,7 +84,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "heat_rate_mmbtu_per_mwh",
             val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/MW/h",
+            units="MMBtu/(MW*h)",
             desc="Plant heat rate in MMBtu/MWh",
         )
 
@@ -110,7 +110,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             "natural_gas_in",
             val=0.0,
             shape=n_timesteps,
-            units="MMBtu",
+            units="MMBtu/h",
             desc="Natural gas input energy",
         )
 

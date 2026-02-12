@@ -68,9 +68,9 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity: "natural_gas"
-        commodity_rate_units: "MMBtu"
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
-        rated_capacity: 1270. # need 1268.934 MMBtu at each timestep
+        rated_capacity: 1270. # need 1268.934 MMBtu/h
       cost_parameters:
         cost_year: 2022
         price: 4.0 #USD 4.0/MMBtu
@@ -184,9 +184,9 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity: "natural_gas"
-        commodity_rate_units: "MMBtu"
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
-        rated_capacity: 280. # need 276.5242929731515 MMBtu at each timestep
+        rated_capacity: 280. # need 276.5242929731515 MMBtu/h
       cost_parameters:
         cost_year: 2022
         price: 4.0 #USD 4.0/MMBtu

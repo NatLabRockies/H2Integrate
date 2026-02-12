@@ -70,9 +70,9 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity: natural_gas
-        commodity_rate_units: MMBtu
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
-        rated_capacity: 750. #MMBtu
+        rated_capacity: 750. #MMBtu/h
       cost_parameters:
         cost_year: 2023
         price: 4.2 #USD/MMBtu

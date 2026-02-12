@@ -33,7 +33,7 @@ class PipePerformanceModel(om.ExplicitComponent):
         self.output_name = transport_item + "_out"
 
         if transport_item == "natural_gas":
-            units = "MMBtu"
+            units = "MMBtu/h"
         elif transport_item == "reformer_catalyst":
             units = "(m**3)"
         elif transport_item == "water":

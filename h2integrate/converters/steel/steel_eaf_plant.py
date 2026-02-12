@@ -47,7 +47,7 @@ class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanc
     def setup(self):
         self.product = "h2_eaf"
         self.feedstocks_to_units = {
-            "natural_gas": "MMBtu",
+            "natural_gas": "MMBtu/h",
             "water": "galUS",  # "galUS/h"
             "carbon": "t/h",
             "lime": "t/h",
@@ -69,7 +69,7 @@ class NaturalGasEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerforma
 
     def setup(self):
         self.feedstocks_to_units = {
-            "natural_gas": "MMBtu",
+            "natural_gas": "MMBtu/h",
             "water": "galUS",  # "galUS/h"
             "pig_iron": "t/h",
             "electricity": "kW",
