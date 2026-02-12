@@ -80,6 +80,7 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
+        commodity_storage_units: "kW"
         max_charge_rate: 96.0 #kW
         max_capacity: 96.0 #kWh
         n_control_window: 24
@@ -98,11 +99,8 @@ technologies:
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
       control_parameters:
-        commodity_storage_units: "kW"
         tech_name: "battery"
-      dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+
   electrolyzer:
     performance_model:
       model: "ECOElectrolyzerPerformanceModel"

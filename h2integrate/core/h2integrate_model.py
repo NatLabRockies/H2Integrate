@@ -13,7 +13,6 @@ from h2integrate.core.utilities import (
     create_xdsm_from_config,
 )
 from h2integrate.finances.finances import AdjustedCapexOpexComp
-from h2integrate.core.resource_summer import ElectricitySumComp
 from h2integrate.core.supported_models import supported_models, is_electricity_producer
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
@@ -577,7 +576,7 @@ class H2IntegrateModel:
             technologies, associated commodity, and finance model(s).
             Each subgroup is nested under a unique name of your choice under
             ["finance_parameters"]["subgroups"] in the plant configuration.
-            * Subsystems such as ``ElectricitySumComp``, ``AdjustedCapexOpexComp``,
+            * Subsystems such as ``AdjustedCapexOpexComp`` and
             ``GenericProductionSummerPerformanceModel``, and the selected finance
             models are added to each subgroup's finance group.
             * If `commodity_stream` is provided for a subgroup, the output of the
@@ -770,9 +769,48 @@ class H2IntegrateModel:
                 finance_subgroup.add_subsystem(f"{commodity}_sum", commodity_summer)
 
             if commodity_stream is None and commodity == "electricity":
+                # Add combiner to the finance group to combine the electricity produced
+                elec_tech_names = [tech for tech in tech_configs if is_electricity_producer(tech)]
+                commodity_combiner_config = {
+                    "model_inputs": {
+                        "performance_parameters": {
+                            "commodity": commodity,
+                            "commodity_units": "kW",
+                            "in_streams": len(elec_tech_names),
+                        }
+                    }
+                }
+                commodity_combiner_model = self.supported_models.get(
+                    "GenericCombinerPerformanceModel"
+                )
+
+                finance_subgroup.add_subsystem(
+                    "electricity_combiner_comp",
+                    commodity_combiner_model(
+                        plant_config=self.plant_config,
+                        tech_config=commodity_combiner_config,
+                        driver_config=self.driver_config,
+                    ),
+                )
+
+                # Add summer to the finance group to sum the electricity profile from the combiner
+                commodity_summer_model = self.supported_models.get("GenericSummerPerformanceModel")
+                commodity_summer_config = {
+                    "model_inputs": {
+                        "performance_parameters": {
+                            "commodity": commodity,
+                            "commodity_units": "kW",
+                        }
+                    }
+                }
+
                 finance_subgroup.add_subsystem(
                     "electricity_sum",
-                    ElectricitySumComp(plant_config=self.plant_config, tech_configs=tech_configs),
+                    commodity_summer_model(
+                        plant_config=self.plant_config,
+                        tech_config=commodity_summer_config,
+                        driver_config=self.driver_config,
+                    ),
                 )
 
             # Add adjusted capex/opex
@@ -1094,18 +1132,27 @@ class H2IntegrateModel:
                     # Loop through technologies and connect electricity outputs to the ExecComp
                     # Only connect if the technology is included in at least one commodity's stackup
                     # and in this finance group
+                    elec_combiner_cnt = 1
                     for tech_name in tech_configs.keys():
                         if (
                             is_electricity_producer(tech_name)
                             and primary_commodity_type == "electricity"
                         ):
+                            # connect technologies to electricity combiner
                             self.plant.connect(
                                 f"{tech_name}.electricity_out",
-                                f"finance_subgroup_{group_id}.electricity_sum.electricity_{tech_name}",
+                                f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_in{elec_combiner_cnt}",
                             )
                             plant_producing_electricity = True
+                            elec_combiner_cnt += 1
 
                     if plant_producing_electricity and primary_commodity_type == "electricity":
+                        # Connect the electricity out of the electricity combiner to the input
+                        # of the electricity summer
+                        self.plant.connect(
+                            f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_out",
+                            f"finance_subgroup_{group_id}.electricity_sum.electricity_in",
+                        )
                         # Connect total electricity produced to the finance group
                         self.plant.connect(
                             f"finance_subgroup_{group_id}.electricity_sum.total_electricity_produced",
