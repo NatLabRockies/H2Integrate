@@ -775,7 +775,7 @@ class H2IntegrateModel:
                     "model_inputs": {
                         "performance_parameters": {
                             "commodity": commodity,
-                            "commodity_units": "kW",
+                            "commodity_rate_units": "kW",
                             "in_streams": len(elec_tech_names),
                         }
                     }
@@ -799,7 +799,7 @@ class H2IntegrateModel:
                     "model_inputs": {
                         "performance_parameters": {
                             "commodity": commodity,
-                            "commodity_units": "kW",
+                            "commodity_rate_units": "kW",
                         }
                     }
                 }
