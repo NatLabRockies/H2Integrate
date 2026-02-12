@@ -813,7 +813,7 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
         commodity (str):
             The name of the commodity being stored (e.g., "electricity", "hydrogen").
         commodity_rate_units (str):
-            The units of the commodity being stored (e.g., "kW", "kg").
+            The rate units of the commodity being stored (e.g., "kW", "kg/h").
         cost_per_production (float):
             The cost to use the incoming produced commodity (in $/commodity_rate_units).
         cost_per_charge (float):

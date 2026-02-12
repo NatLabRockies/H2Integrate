@@ -58,9 +58,9 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
 
-        # Calculate the maximum commodity production over the simulation
-        max_production = (
+        # Calculate the maximum theoretical commodity production over the simulation
+        rated_production = (
             outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * (self.dt / 3600)
         )
 
-        outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / max_production
+        outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / rated_production
