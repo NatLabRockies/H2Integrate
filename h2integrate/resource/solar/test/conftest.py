@@ -4,7 +4,7 @@ from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 
 @pytest.fixture
-def plant_simulation_utc_start():
+def plant_simulation():
     plant = {
         "plant_life": 30,
         "simulation": {
