@@ -18,12 +18,12 @@ def plant_simulation():
 
 
 @pytest.fixture
-def site_config(lat, lon, model, resource_year, model_name):
+def site_config(which, lat, lon, model, resource_year, model_name):
     site_config = {
         "latitude": lat,
         "longitude": lon,
         "resources": {
-            "solar_resource": {
+            f"{which}_resource": {
                 "resource_model": model,
                 "resource_parameters": {
                     "resource_year": resource_year,
@@ -37,7 +37,7 @@ def site_config(lat, lon, model, resource_year, model_name):
             site_config["resources"]["solar_resource"]["resource_parameters"].setdefault(
                 "resource_filename", fn
             )
-        case str(x) if "GOES" in x:
+        case str(x) if "GOES" in x or "WTKNRELDeveloperAPIWindResource":
             additional = {"latitude": lat, "longitude": lon}
             site_config["resources"]["solar_resource"]["resource_parameters"].update(additional)
         case _:

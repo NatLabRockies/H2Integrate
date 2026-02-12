@@ -7,25 +7,28 @@ from h2integrate import RESOURCE_DEFAULT_DIR
 from h2integrate.core.supported_models import supported_models
 
 
+# fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "lat,lon,model,resource_year,model_name",
+    "model,which,lat,lon,resource_year,model_name",
     [
-        (34.22, -102.75, "GOESAggregatedSolarAPI", 2012, "goes_aggregated_v4"),
-        (-27.3649, 152.67935, "HimawariTMYSolarAPI", "tmy-2020", "himawari_tmy_v3"),
-        (-27.3649, 152.67935, "Himawari7SolarAPI", 2013, "himawari7_v3"),
-        (3.25735, 101.656312, "Himawari8SolarAPI", 2020, "himawari8_v3"),
-        (-27.3649, 152.67935, "MeteosatPrimeMeridianTMYSolarAPI", "tmy-2022", "himawari_tmy_v3"),
-        (41.9077, 12.4368, "MeteosatPrimeMeridianSolarAPI", 2008, "nsrdb_msg_v4"),
+        ("GOESAggregatedSolarAPI", "solar", 34.22, -102.75, 2012, "goes_aggregated_v4"),
+        ("Himawari7SolarAPI", "solar", -27.3649, 152.67935, 2013, "himawari7_v3"),
+        ("Himawari8SolarAPI", "solar", 3.25735, 101.656312, 2020, "himawari8_v3"),
+        ("HimawariTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2020", "himawari_tmy_v3"),
+        ("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4"),
+        ("MeteosatPrimeMeridianTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2022", "himawari_tmy_v3"),  # noqa: E501
     ],
 )
+# fmt: on
 def test_nrel_solar_resource_file_downloads(
     subtests,
     plant_simulation,
     site_config,
+    model,
+    which,
     lat,
     lon,
-    model,
     resource_year,
     model_name,
 ):
@@ -52,21 +55,22 @@ def test_nrel_solar_resource_file_downloads(
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "lat,lon,model,resource_year,model_name",
+    "model,which,lat,lon,resource_year,model_name",
     [
-        (34.22, -102.75, "GOESAggregatedSolarAPI", 2012, "goes_aggregated_v4"),
-        (34.22, -102.75, "GOESConusSolarAPI", 2012, "goes_aggregated_v4"),
-        (34.22, -102.75, "GOESTMYSolarAPI", 2012, "goes_aggregated_v4"),
-        (34.22, -102.75, "GOESFullDiscSolarAPI", 2012, "goes_aggregated_v4"),
+        ("GOESAggregatedSolarAPI", "solar", 34.22, -102.75, 2012, "goes_aggregated_v4"),
+        ("GOESConusSolarAPI", "solar", 34.22, -102.75, 2012, "goes_aggregated_v4"),
+        ("GOESFullDiscSolarAPI", "solar", 34.22, -102.75, 2012, "goes_aggregated_v4"),
+        ("GOESTMYSolarAPI", "solar", 34.22, -102.75, 2012, "goes_aggregated_v4"),
     ],
 )
 def test_goes_resource_models(
     subtests,
     plant_simulation,
     site_config,
+    model,
+    which,
     lat,
     lon,
-    model,
     resource_year,
     model_name,
 ):
@@ -118,20 +122,21 @@ def test_goes_resource_models(
             assert len(data[k]) == 8760
 
 
+# fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "lat,lon,model,resource_year,model_name",
-    [
-        (44.04218, -95.19757, "OpenMeteoHistoricalSolarResource", 2023, "openmeteo_archive_solar"),
-    ],
+    "model,which,lat,lon,resource_year,model_name",
+    [("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar")],  # noqa: E501
 )
+# fmt: on
 def test_solar_resource_h2i_download(
     plant_simulation,
     site_config,
     subtests,
+    model,
+    which,
     lat,
     lon,
-    model,
     resource_year,
     model_name,
 ):

@@ -61,52 +61,29 @@ def pysam_performance_model():
     return comp
 
 
+# fmt: off
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "lat,lon,model,resource_year,model_name,lon_tol,expected_aep",
+    "model,which,lat,lon,resource_year,model_name,lon_tol,expected_aep",
     [
-        (-27.3649, 152.67935, "Himawari7SolarAPI", 2013, "himawari7_v3", 2e-2, 473577.280269),
-        (3.25735, 101.656312, "Himawari8SolarAPI", 2020, "himawari8_v3", 1e-2, 411251.781327),
-        (
-            -27.3649,
-            152.67935,
-            "HimawariTMYSolarAPI",
-            "tmy-2020",
-            "himawari_tmy_v3",
-            2e-2,
-            510709.633402,
-        ),
-        (
-            41.9077,
-            12.4368,
-            "MeteosatPrimeMeridianSolarAPI",
-            2008,
-            "nsrdb_msg_v4",
-            2e-2,
-            410211.9419,
-        ),
-        (
-            -27.3649,
-            152.67935,
-            "MeteosatPrimeMeridianTMYSolarAPI",
-            "tmy-2022",
-            "himawari_tmy_v3",
-            1e-3,
-            510709.633402,
-        ),
-        (
-            44.04218,
-            -95.19757,
-            "OpenMeteoHistoricalSolarResource",
-            2023,
-            "openmeteo_archive_solar",
-            1e-3,
-            443558.17053592583,
-        ),
+        ("Himawari7SolarAPI", "solar", -27.3649, 152.67935, 2013, "himawari7_v3", 2e-2, 473577.280269),  # noqa: E501
+        ("Himawari8SolarAPI", "solar", 3.25735, 101.656312, 2020, "himawari8_v3", 1e-2, 411251.781327),  # noqa: E501
+        ("HimawariTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2020", "himawari_tmy_v3", 2e-2, 510709.633402),  # noqa: E501
+        ("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 2e-2, 410211.9419),  # noqa: E501
+        ("MeteosatPrimeMeridianTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2022", "himawari_tmy_v3", 1e-3, 510709.633402),  # noqa: E501
+        ("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 1e-3, 443558.17053592583),  # noqa: E501
     ],
 )
+# fmt: on
 def test_pvwatts_with_meteosat_pm(
-    subtests, pysam_performance_model, plant_simulation, site_config, model, lon_tol, expected_aep
+    subtests,
+    pysam_performance_model,
+    model,
+    which,
+    plant_simulation,
+    site_config,
+    lon_tol,
+    expected_aep,
 ):
     plant_config = {
         "site": site_config,
