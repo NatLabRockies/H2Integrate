@@ -65,7 +65,7 @@ def ng_feedstock_availability_costs():
         },
         "natural_gas": {
             "rated_capacity": 277,  # need 276.5024456918746 MMBtu at each timestep
-            "units": "MMBtu",
+            "units": "MMBtu/h",
             "price": 0.0,
         },
         "water": {
@@ -93,7 +93,7 @@ def h2_feedstock_availability_costs():
         },
         "natural_gas": {
             "rated_capacity": 13.0,  # need 12.136117946872957 MMBtu at each timestep
-            "units": "MMBtu",
+            "units": "MMBtu/h",
             "price": 0.0,
         },
         "carbon": {
