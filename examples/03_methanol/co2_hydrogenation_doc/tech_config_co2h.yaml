@@ -49,7 +49,7 @@ technologies:
     model_inputs:
       performance_parameters:
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_rate_units: "kW"
         split_mode: "fraction"
         fraction_to_priority_tech: 0.243998425816608
   electrolyzer:
