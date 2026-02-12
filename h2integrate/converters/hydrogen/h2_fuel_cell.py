@@ -3,6 +3,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero, range_val
+from h2integrate.tools.constants import HHV_H2_MJ_PER_KG
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -16,11 +17,12 @@ class H2FuelCellPerformanceConfig(BaseConfig):
 
     Attributes:
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
-        fuel_cell_efficiency (float): The efficiency of the fuel cell (0 <= efficiency <= 1).
+        fuel_cell_efficiency_hhv (float): The higher heating value efficiency of the
+            fuel cell (0 <= efficiency <= 1).
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
-    fuel_cell_efficiency: float = field(validator=range_val(0, 1))
+    fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
 
 
 class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -28,12 +30,12 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
     Performance model for a hydrogen fuel cell.
 
     The model implements the relationship:
-    electricity_out = hydrogen_in * fuel_cell_efficiency * LHV_hydrogen
+    electricity_out = hydrogen_in * fuel_cell_efficiency_hhv * HHV_hydrogen
 
     where:
     - hydrogen_in is the mass flow rate of hydrogen in kg/hr
     - fuel_cell_efficiency is the efficiency of the fuel cell (0 <= efficiency <= 1)
-    - LHV_hydrogen is the lower heating value of hydrogen (approximately 120 MJ/kg)
+    - HHV_hydrogen is the higher heating value of hydrogen (approximately 142 MJ/kg)
     """
 
     def initialize(self):
@@ -50,20 +52,18 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.add_input(
             "hydrogen_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/h",
         )
 
         self.add_input(
             "fuel_cell_efficiency",
-            val=self.config.fuel_cell_efficiency,
+            val=self.config.fuel_cell_efficiency_hhv,
             units=None,
-            desc="Efficiency of the fuel cell (0 <= efficiency <= 1)",
+            desc="HHV efficiency of the fuel cell (0 <= efficiency <= 1)",
         )
 
         self.add_input(
@@ -73,41 +73,53 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
             desc="Capacity of the h2 fuel cell system",
         )
 
+        self.add_output(
+            "hydrogen_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="kg/h",
+            desc="Mass flow rate of hydrogen consumed by the fuel cell",
+        )
+
     def compute(self, inputs, outputs):
         """
         Compute electricity output from the fuel cell based on hydrogen input
-            and fuel cell efficiency.
+            and fuel cell HHV efficiency.
 
         Args:
-            inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell efficiency,
-                and system_capacity.
-            outputs: OpenMDAO outputs object for electricity_out.
+            inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
+                HHV efficiency,and system_capacity.
+            outputs: OpenMDAO outputs object for electricity_out,
+                hydrogen_consumed.
         """
 
         hydrogen_in = inputs["hydrogen_in"]  # kg/h
         fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
-        system_capacity_kw = inputs["system_capacity"]
-
-        LHV_hydrogen = 120.0  # MJ/kg
+        system_capacity_kW = inputs["system_capacity"]
 
         # make any negative hydrogen input zero
         hydrogen_in = np.maximum(hydrogen_in, 0.0)
 
         # calculate electricity output in kW
-        electricity_out_kw = hydrogen_in * fuel_cell_efficiency * LHV_hydrogen / (3600.0 * 0.001)
+        electricity_out_kw = (
+            hydrogen_in * fuel_cell_efficiency * HHV_H2_MJ_PER_KG / (3600.0 * 0.001)
+        )
         # kW = kg/h * - * MJ/kg * (1 h / 3600 s) * (1 kW / 0.001 MJ/s)
 
         # clip the electricity output to the system capacity
-        outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity_kw)
-        outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"])
-        outputs["rated_electricity_production"] = system_capacity_kw
-        outputs["annual_electricity_produced"] = (
-            np.sum(outputs["electricity_out"])
-            * self.options["plant_config"]["plant"]["simulation"]["dt"]
-            / 3600.0
+        outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity_kW)
+        outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
+            self.dt / 3600
+        )
+        outputs["rated_electricity_production"] = system_capacity_kW
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
-            system_capacity_kw * self.n_timesteps
+            system_capacity_kW * self.n_timesteps * (self.dt / 3600)
+        )
+        outputs["hydrogen_consumed"] = outputs["electricity_out"] / (
+            fuel_cell_efficiency * HHV_H2_MJ_PER_KG / (3600.0 * 0.001)
         )
 
 
@@ -155,16 +167,16 @@ class H2FuelCellCostModel(CostModelBaseClass):
         )
 
         self.add_input(
-            "capex_per_kw",
+            "unit_capex",
             val=self.config.capex_per_kw,
             units="USD/kW",
             desc="Capital cost per unit capacity",
         )
 
         self.add_input(
-            "fixed_opex_per_kw_per_year",
+            "fixed_opex_per_year",
             val=self.config.fixed_opex_per_kw_per_year,
-            units="USD/(kW*year)",
+            units="USD/kW/year",
             desc="Fixed operating expenses per unit capacity per year",
         )
 
@@ -180,7 +192,7 @@ class H2FuelCellCostModel(CostModelBaseClass):
         system_capacity_kw = inputs["system_capacity"]
 
         # Calculate capital cost
-        outputs["CapEx"] = system_capacity_kw * inputs["capex_per_kw"]
+        outputs["CapEx"] = system_capacity_kw * inputs["unit_capex"]
 
         # Calculate fixed operating cost per year
-        outputs["OpEx"] = system_capacity_kw * inputs["fixed_opex_per_kw_per_year"]
+        outputs["OpEx"] = system_capacity_kw * inputs["fixed_opex_per_year"]

@@ -29,7 +29,7 @@ def tech_config():
         "model_inputs": {
             "performance_parameters": {
                 "system_capacity_kw": 1000.0,
-                "fuel_cell_efficiency": 0.60,
+                "fuel_cell_efficiency_hhv": 0.50,
             }
         }
     }
@@ -83,12 +83,12 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
         assert np.all(electricity_output >= 0)
 
     with subtests.test("electricity out"):
-        assert pytest.approx(np.sum(electricity_output), rel=1e-6) == 3504600.0
+        assert pytest.approx(np.sum(electricity_output), rel=1e-6) == 3452532.6111
 
     with subtests.test("capacity_factor"):
         assert (
             pytest.approx(prob.get_val("fuel_cell.capacity_factor", units="unitless"), rel=1e-6)
-            == 0.40006849
+            == 0.39412473
         )
 
     with subtests.test("annual_electricity_production"):
@@ -96,7 +96,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             pytest.approx(
                 prob.get_val("fuel_cell.annual_electricity_produced", units="kW*h/year"), rel=1e-6
             )
-            == 3504600.0
+            == 3452532.6111
         )
 
     with subtests.test("rated_electricity_production"):
@@ -112,7 +112,15 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             pytest.approx(
                 prob.get_val("fuel_cell.total_electricity_produced", units="kW*h"), rel=1e-6
             )
-            == 3504600.0
+            == 3452532.6111
+        )
+
+    with subtests.test("hydrogen consumed"):
+        assert (
+            pytest.approx(
+                np.sum(prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")), rel=1e-6
+            )
+            == 175230.7542647681
         )
 
 
