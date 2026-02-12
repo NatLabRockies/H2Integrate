@@ -1,5 +1,6 @@
 name: "technology_config"
-description: "This hybrid plant produces hydrogen"
+description: "This hybrid plant produces electricity from wind and battery storage."
+
 
 technologies:
   wind:
@@ -14,13 +15,13 @@ technologies:
       wind_speed: 9.
     model_inputs:
       performance_parameters:
-        num_turbines: 100
+        num_turbines: 25
         turbine_rating_kw: 8300
         rotor_diameter: 196.
         hub_height: 130.
         create_model_from: "default"
         config_name: "WindPowerSingleOwner"
-        pysam_options: !include "pysam_options_8.3MW.yaml"
+        pysam_options: !include pysam_options_8.3MW.yaml
         run_recalculate_power_curve: False
         layout:
           layout_mode: "basicgrid"
@@ -41,7 +42,7 @@ technologies:
     dispatch_rule_set:
       model: "PyomoRuleStorageBaseclass"
     control_strategy:
-      model: "HeuristicLoadFollowingController"
+      model: "OptimizedDispatchController"
     performance_model:
       model: "PySAMBatteryPerformanceModel"
     cost_model:
@@ -49,22 +50,32 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity_name: "electricity"
-        commodity_storage_units: "kW"
         max_charge_rate: 100000
-        max_capacity: 500000
-        n_control_window: 24
-        n_horizon_window: 48
-        init_charge_percent: 0.5
-        max_charge_percent: 0.9
-        min_charge_percent: 0.1
+        max_capacity: 400000
+        init_charge_percent: 0.5 # Initial SOC for the storage
+        max_charge_percent: 0.9 # Maximum SOC allowable for the storage technology
+        min_charge_percent: 0.1 # Minimum SOC allowable for the storage technology
         system_commodity_interface_limit: 1e12
+        charge_efficiency: 0.95 # Charge efficiency of the storage technology
+        discharge_efficiency: 0.95 # Discharge efficiency of the storage technology
+        commodity_storage_units: "kW"
+        # rated_demand: 100000 # in kW
+
       performance_parameters:
         system_model_source: "pysam"
         chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2022
+        commodity_units: "kW"
         energy_capex: 310 # $/kWh from 2024 ATB year 2025
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB
       control_parameters:
-        tech_name: "wrong_tech_name"
+        tech_name: "battery"
+        cost_per_charge: 0.03 # in $/kW, cost to charge the storage (note that charging is incentivized)
+        cost_per_discharge: 0.05 # in $/kW, cost to discharge the storage
+        commodity_met_value: 0.1 # in $/kW, penalty for not meeting the desired load demand
+        cost_per_production: 0.0 # in $/kW, cost to use the incoming produced commodity (i.e. electricity from wind)
+        time_weighting_factor: 0.995 # This parameter discounts each subsequent time step incrementally in the future in the horizon window by this amount
+        n_control_window: 24 # in timesteps (currently hours), The length of time that the control is applied to in the rolling window optimization
+        n_horizon_window: 48 # in timesteps (currently hours), The horizon window the optimization is run over

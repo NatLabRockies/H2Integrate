@@ -1,0 +1,7 @@
+name: "H2Integrate_config"
+
+system_summary: "This hybrid plant contains wind and battery storage technologies. The system is designed to dispatch storage optimally meet a specific electrical load."
+
+driver_config: "driver_config.yaml"
+technology_config: "tech_config.yaml"
+plant_config: "plant_config.yaml"
