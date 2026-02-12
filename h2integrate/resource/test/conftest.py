@@ -37,9 +37,12 @@ def site_config(which, lat, lon, model, resource_year, model_name):
             site_config["resources"]["solar_resource"]["resource_parameters"].setdefault(
                 "resource_filename", fn
             )
-        case str(x) if "GOES" in x or "WTKNRELDeveloperAPIWindResource":
+        case str(x) if "GOES" in x:
             additional = {"latitude": lat, "longitude": lon}
             site_config["resources"]["solar_resource"]["resource_parameters"].update(additional)
+        case "WTKNRELDeveloperAPIWindResource":
+            additional = {"latitude": lat, "longitude": lon}
+            site_config["resources"]["wind_resource"]["resource_parameters"].update(additional)
         case _:
             pass
     return site_config
