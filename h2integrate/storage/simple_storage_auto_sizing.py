@@ -12,15 +12,16 @@ class StorageSizingModelConfig(BaseConfig):
     """Configuration class for the StorageAutoSizingModel.
 
     Attributes:
-        commodity_name (str, optional): Name of the commodity being controlled (e.g., "hydrogen").
+        commodity (str, optional): Name of the commodity being controlled (e.g., "hydrogen").
             Defaults to "hydrogen"
-        commodity_units (str, optional): Units of the commodity (e.g., "kg/h"). Defaults to "kg/h"
+        commodity_rate_units (str, optional): Units of the commodity (e.g., "kg/h").
+            Defaults to "kg/h".
         demand_profile (scalar or list): The demand values for each time step (in the same units
-            as `commodity_units`) or a scalar for a constant demand.
+            as `commodity_rate_units`) or a scalar for a constant demand.
     """
 
-    commodity_name: str = field(default="hydrogen")
-    commodity_units: str = field(default="kg/h")  # TODO: update to commodity_rate_units
+    commodity: str = field(default="hydrogen")
+    commodity_rate_units: str = field(default="kg/h")  # TODO: update to commodity_rate_units
     demand_profile: int | float | list = field(default=0.0)
 
 
@@ -41,27 +42,27 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
     Inputs:
         {commodity}_in (float): Input commodity flow timeseries (e.g., hydrogen production)
             used to estimate the demand if `commodity_demand_profile` is zero.
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
         {commodity}_set_point (float): Input commodity flow timeseries (e.g., hydrogen production)
             used as the available input commodity to meet the demand.
         {commodity}_demand_profile (float): Demand profile of commodity.
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
 
 
     Outputs:
         max_capacity (float): Maximum storage capacity of the commodity.
-            - Units: in non-rate units, e.g., "kg" if `commodity_units` is "kg/h"
+            - Units: in non-rate units, e.g., "kg" if `commodity_rate_units` is "kg/h"
         max_charge_rate (float): Maximum rate at which the commodity can be charged
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
             Assumed to also be the discharge rate.
         {commodity}_out (np.ndarray): the commodity used to meet demand from the available
-            input commodity and storage component. Defined in `commodity_units`.
+            input commodity and storage component. Defined in `commodity_rate_units`.
         total_{commodity}_produced (float): sum of commodity discharged from storage over
-            the simulation. Defined in `commodity_units*h`
+            the simulation. Defined in `commodity_rate_units*h`
         rated_{commodity}_production (float): maximum commodity that could be discharged
-            in a timestep. Defined in `commodity_units`
+            in a timestep. Defined in `commodity_rate_units`
         annual_{commodity}_produced (np.ndarray): total commodity discharged per year.
-            Defined in `commodity_units*h/year`
+            Defined in `commodity_rate_units*h/year`
         capacity_factor (np.ndarray): ratio of commodity discharged to the maximum
             commodity that could be discharged over the simulation.
             Defined as a ratio (units of `unitless`)
@@ -75,15 +76,15 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        self.commodity = self.config.commodity_name
-        self.commodity_rate_units = self.config.commodity_units
+        self.commodity = self.config.commodity
+        self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
         super().setup()
 
         self.add_input(
             f"{self.commodity}_demand_profile",
-            units=f"{self.config.commodity_units}",
+            units=f"{self.config.commodity_rate_units}",
             val=self.config.demand_profile,
             shape=self.n_timesteps,
             desc=f"{self.commodity} demand profile timeseries",
@@ -92,14 +93,14 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
         self.add_input(
             f"{self.commodity}_in",
             shape_by_conn=True,
-            units=f"{self.config.commodity_units}",
+            units=f"{self.config.commodity_rate_units}",
             desc=f"{self.commodity} input timeseries from production to storage",
         )
 
         self.add_input(
             f"{self.commodity}_set_point",
             shape_by_conn=True,
-            units=f"{self.config.commodity_units}",
+            units=f"{self.config.commodity_rate_units}",
             desc=f"{self.commodity} input set point from controller",
         )
 
@@ -107,14 +108,14 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             "max_capacity",
             val=0.0,
             shape=1,
-            units=f"({self.config.commodity_units})*h",
+            units=f"({self.config.commodity_rate_units})*h",
         )
 
         self.add_output(
             "max_charge_rate",
             val=0.0,
             shape=1,
-            units=f"{self.config.commodity_units}",
+            units=f"{self.config.commodity_rate_units}",
         )
 
     def compute(self, inputs, outputs):

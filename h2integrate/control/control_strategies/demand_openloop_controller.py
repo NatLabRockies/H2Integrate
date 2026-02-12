@@ -12,16 +12,16 @@ class DemandOpenLoopControlBaseConfig(BaseConfig):
     demand profile that should be met by downstream components.
 
     Attributes:
-        commodity_units (str): Units of the commodity (e.g., "kg/h").
-        commodity_name (str): Name of the commodity being controlled
+        commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
+        commodity (str): Name of the commodity being controlled
             (e.g., "hydrogen"). Converted to lowercase and stripped of whitespace.
         demand_profile (int | float | list): Demand values for each timestep, in
-            the same units as `commodity_units`. May be a scalar for constant
+            the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
     """
 
-    commodity_units: str = field(converter=str.strip)
-    commodity_name: str = field(converter=(str.strip, str.lower))
+    commodity_rate_units: str = field(converter=str.strip)
+    commodity: str = field(converter=(str.strip, str.lower))
     demand_profile: int | float | list = field()
 
 
@@ -62,13 +62,13 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
         """
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
 
         self.add_input(
             f"{commodity}_demand",
             val=self.config.demand_profile,
             shape=(n_timesteps),
-            units=self.config.commodity_units,  # NOTE: hardcoded to align with controllers
+            units=self.config.commodity_rate_units,  # NOTE: hardcoded to align with controllers
             desc=f"Demand profile of {commodity}",
         )
 
@@ -76,7 +76,7 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
             f"{commodity}_in",
             val=0.0,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Amount of {commodity} demand that has already been supplied",
         )
 
@@ -84,7 +84,7 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
             f"{commodity}_unmet_demand",
             val=self.config.demand_profile,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Remaining demand profile of {commodity}",
         )
 
@@ -92,7 +92,7 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
             f"{commodity}_unused_commodity",
             val=0.0,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Excess production of {commodity}",
         )
 
@@ -100,13 +100,13 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
             f"{commodity}_set_point",
             val=0.0,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Production profile of {commodity}",
         )
 
         self.add_output(
             f"total_{commodity}_unmet_demand",
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc="Total unmet demand",
         )
 

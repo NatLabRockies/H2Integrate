@@ -282,8 +282,8 @@ def test_generic_storage_demand_controller(subtests):
         },
         "model_inputs": {
             "shared_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "max_capacity": 10.0,  # kg
                 "max_charge_rate": 1.0,  # percent as decimal
             },
@@ -365,8 +365,8 @@ def test_demand_converter_controller(subtests):
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "demand_profile": [5.0] * 10,  # Example: 10 time steps with 5 kg/time step demand
             },
         },
@@ -436,8 +436,8 @@ def test_flexible_demand_converter_controller(subtests, variable_h2_production_p
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "rated_demand": end_use_rated_demand,
                 "demand_profile": end_use_rated_demand,  # flat demand profile
                 "turndown_ratio": min_demand_kg / end_use_rated_demand,
@@ -546,8 +546,8 @@ def test_flexible_demand_converter_controller_min_utilization(
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "rated_demand": end_use_rated_demand,
                 "demand_profile": end_use_rated_demand,  # flat demand profile
                 "turndown_ratio": min_demand_kg / end_use_rated_demand,

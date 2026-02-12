@@ -7,8 +7,8 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 @define(kw_only=True)
 class SimpleGenericStorageConfig(BaseConfig):
-    commodity_name: str = field()
-    commodity_units: str = field()  # TODO: update to commodity_rate_units
+    commodity: str = field()
+    commodity_rate_units: str = field()  # TODO: update to commodity_rate_units
     max_charge_rate: float = field(validator=gte_zero)
 
 
@@ -28,8 +28,8 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
             strict=False,
             additional_cls_name=self.__class__.__name__,
         )
-        self.commodity = self.config.commodity_name
-        self.commodity_rate_units = self.config.commodity_units
+        self.commodity = self.config.commodity
+        self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = f"({self.commodity_rate_units})*h"
         super().setup()
         self.add_input(
@@ -41,7 +41,7 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc="Storage charge/discharge rate",
         )
 
