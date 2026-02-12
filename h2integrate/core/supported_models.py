@@ -307,6 +307,7 @@ def is_electricity_producer(tech_name: str) -> bool:
         "hopp",
         "natural_gas_plant",
         "grid_buy",
+        "h2_fuel_cell",
     ]
 
     return any(tech_name.startswith(elem) for elem in electricity_producing_techs)
