@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added load following optimization dispatch
+- Added simple dispatch calculations to `StorageAutoSizingModel`
 
 ## 0.6 [February 10, 2026]
 
