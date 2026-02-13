@@ -82,8 +82,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 103701.401563086  # kg
       control_parameters:
@@ -135,8 +135,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "co2"
-        commodity_units: "kg/h"
+        commodity: "co2"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 961456.376748904  # kg
       control_parameters:

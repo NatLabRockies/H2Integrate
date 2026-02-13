@@ -17,8 +17,8 @@ technologies:
         enable_caching: True
         hopp_config: !include tech_inputs/hopp_config.yaml
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
   wind:
     performance_model:
       model: "FlorisWindPlantPerformanceModel"
@@ -59,8 +59,8 @@ technologies:
         commodity: "electricity"
         commodity_rate_units: "kW"
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
   battery:
     dispatch_rule_set:
       model: "PyomoRuleStorageBaseclass"
@@ -72,8 +72,8 @@ technologies:
       model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
         max_charge_rate: 50000 #kW
         max_capacity: 200000 #kWh
         n_control_window: 24
@@ -87,7 +87,6 @@ technologies:
         chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2022
-        commodity_units: "kW"
         energy_capex: 246 # $/kWh from 2024 ATB year 2025
         power_capex: 317 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.02536510376633359

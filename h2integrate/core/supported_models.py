@@ -42,6 +42,10 @@ from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, Simpl
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
+from h2integrate.converters.hydrogen.h2_fuel_cell import (
+    H2FuelCellCostModel,
+    LinearH2FuelCellPerformanceModel,
+)
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
     HydrogenEAFPlantCostComponent,
@@ -189,6 +193,8 @@ supported_models = {
     "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
     "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
     "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
+    "LinearH2FuelCellPerformanceModel": LinearH2FuelCellPerformanceModel,
+    "H2FuelCellCostModel": H2FuelCellCostModel,
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
@@ -301,6 +307,7 @@ def is_electricity_producer(tech_name: str) -> bool:
         "hopp",
         "natural_gas_plant",
         "grid_buy",
+        "h2_fuel_cell",
     ]
 
     return any(tech_name.startswith(elem) for elem in electricity_producing_techs)

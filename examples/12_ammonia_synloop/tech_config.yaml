@@ -66,8 +66,8 @@ technologies:
         commodity: "electricity"
         commodity_rate_units: "kW"
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
   battery:
     dispatch_rule_set:
       model: "PyomoRuleStorageBaseclass"
@@ -79,8 +79,8 @@ technologies:
       model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
         max_charge_rate: 96.0 #kW
         max_capacity: 96.0 #kWh
         n_control_window: 24
@@ -94,7 +94,6 @@ technologies:
         chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2019
-        commodity_units: "kW"
         energy_capex: 310 # $/kWh from 2024 ATB year 2025
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
@@ -133,8 +132,8 @@ technologies:
       model: "SaltCavernStorageCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities
