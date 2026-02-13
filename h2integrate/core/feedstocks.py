@@ -37,9 +37,8 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
         self.commodity = self.config.commodity
         self.commodity_rate_units = self.config.commodity_rate_units
 
-        # NOTE: should below be renamed to f"{self.commodity}_capacity"?
         self.add_input(
-            f"rated_{self.commodity}_production",
+            f"{self.commodity}_capacity",
             val=self.config.rated_capacity,
             units=self.commodity_rate_units,
         )
@@ -51,7 +50,7 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
     def compute(self, inputs, outputs):
         # Generate feedstock array operating at full capacity for the full year
         outputs[f"{self.commodity}_out"] = np.full(
-            self.n_timesteps, inputs[f"rated_{self.commodity}_production"][0]
+            self.n_timesteps, inputs[f"{self.commodity}_capacity"][0]
         )
 
 
@@ -145,12 +144,11 @@ class FeedstockCostModel(CostModelBaseClass):
             desc="Capacity factor",
         )
 
-        # NOTE: should below be added as an output?
-        # self.add_output(
-        #     f"rated_{self.commodity}_production",
-        #     val=0,
-        #     units=self.commodity_rate_units,
-        # )
+        self.add_output(
+            f"rated_{self.commodity}_production",
+            val=0,
+            units=self.commodity_rate_units,
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Calculate performance based on consumption
@@ -172,9 +170,7 @@ class FeedstockCostModel(CostModelBaseClass):
             f"total_{self.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)
 
-        # NOTE: if we want to add f"rated_{self.commodity}_production" as an output,
-        # should it be calculated as below:
-        # outputs[f"rated_{self.commodity}_production"] = inputs[f"{self.commodity}_out"].max()
+        outputs[f"rated_{self.commodity}_production"] = inputs[f"{self.commodity}_out"].max()
 
         # Calculate costs
         price = inputs["price"]
