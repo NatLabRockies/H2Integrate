@@ -4,7 +4,7 @@
 
 - Added linearized hydrogen fuel cell model
 - Added load following optimization dispatch
-- Updated example number and added pyomo dispatch regression test
+- Added simple dispatch calculations to `StorageAutoSizingModel`
 
 ## 0.6 [February 10, 2026]
 

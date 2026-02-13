@@ -16,12 +16,12 @@ class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
         """
         setattr(
             pyomo_model,
-            f"{tech_name}_{self.config.commodity_name}",
+            f"{tech_name}_{self.config.commodity}",
             pyo.Var(
-                doc=f"{self.config.commodity_name} generation \
-                    from {tech_name} [{self.config.commodity_storage_units}]",
+                doc=f"{self.config.commodity} generation \
+                    from {tech_name} [{self.config.commodity_rate_units}]",
                 domain=pyo.NonNegativeReals,
-                units=eval("pyo.units." + self.config.commodity_storage_units),
+                units=eval("pyo.units." + self.config.commodity_rate_units),
                 initialize=0.0,
             ),
         )
@@ -40,8 +40,8 @@ class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
             f"{tech_name}_port",
             Port(
                 initialize={
-                    f"{tech_name}_{self.config.commodity_name}": getattr(
-                        pyomo_model, f"{tech_name}_{self.config.commodity_name}"
+                    f"{tech_name}_{self.config.commodity}": getattr(
+                        pyomo_model, f"{tech_name}_{self.config.commodity}"
                     )
                 }
             ),

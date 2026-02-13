@@ -39,8 +39,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "electricity"
-        commodity_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
         max_charge_rate: 25000.0  # kW/time step, 25 MW
         max_capacity: 200000.0  # kWh, 200 MWh
       control_parameters:
