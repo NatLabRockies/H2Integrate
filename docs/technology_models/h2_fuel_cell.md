@@ -7,7 +7,7 @@ There are no non-linear considerations in this model such as warm-up delays, deg
 The hydrogen fuel cell cost model is implemented to use cost values that are in dollars per kilowatt (or per kilowatt per year) because that's the typical reporting metric for hydrogen fuel cells.
 
 ```{note}
-To ensure the hydrogen fuel cell is appropriately connected with other electricity producing technologies it needs to include `h2_fuel_cell` in the technology name in the `tech_config["technologies]`
+To ensure the hydrogen fuel cell is appropriately connected with other electricity producing technologies, the model name in the `tech_config["technologies]` needs to begin with `h2_fuel_cell`.
 ```
 
 ## Performance Model
