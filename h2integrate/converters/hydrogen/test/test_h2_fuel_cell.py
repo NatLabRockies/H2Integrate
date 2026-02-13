@@ -5,7 +5,7 @@ from pytest import fixture
 
 from h2integrate.converters.hydrogen.h2_fuel_cell import (
     H2FuelCellCostModel,
-    H2FuelCellPerformanceModel,
+    LinearH2FuelCellPerformanceModel,
 )
 
 
@@ -56,7 +56,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
 
     prob = om.Problem()
 
-    fuel_cell = H2FuelCellPerformanceModel(
+    fuel_cell = LinearH2FuelCellPerformanceModel(
         plant_config=plant_config, tech_config=tech_config, driver_config={}
     )
 

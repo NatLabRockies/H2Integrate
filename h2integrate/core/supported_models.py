@@ -44,7 +44,7 @@ from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarR
 from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 from h2integrate.converters.hydrogen.h2_fuel_cell import (
     H2FuelCellCostModel,
-    H2FuelCellPerformanceModel,
+    LinearH2FuelCellPerformanceModel,
 )
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 from h2integrate.converters.steel.steel_eaf_plant import (
@@ -193,7 +193,7 @@ supported_models = {
     "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
     "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
     "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
-    "H2FuelCellPerformanceModel": H2FuelCellPerformanceModel,
+    "LinearH2FuelCellPerformanceModel": LinearH2FuelCellPerformanceModel,
     "H2FuelCellCostModel": H2FuelCellCostModel,
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,

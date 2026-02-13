@@ -12,7 +12,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class H2FuelCellPerformanceConfig(BaseConfig):
+class LinearH2FuelCellPerformanceConfig(BaseConfig):
     """Configuration class for the hydrogen fuel cell performance model.
 
     Attributes:
@@ -25,7 +25,7 @@ class H2FuelCellPerformanceConfig(BaseConfig):
     fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
 
 
-class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
+class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a hydrogen fuel cell.
 
@@ -47,7 +47,7 @@ class H2FuelCellPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = H2FuelCellPerformanceConfig.from_dict(
+        self.config = LinearH2FuelCellPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
