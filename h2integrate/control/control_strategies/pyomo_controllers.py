@@ -49,10 +49,10 @@ class PyomoControllerBaseConfig(BaseConfig):
         n_horizon_window (int):
             Number of timesteps considered for look ahead / optimization horizon.
             May be >= n_control_window (used by predictive strategies).
-        commodity_name (str):
+        commodity (str):
             Base name of the controlled commodity (e.g., "hydrogen", "electricity").
-            Used to construct input/output variable names (e.g., f"{commodity_name}_in").
-        commodity_storage_units (str):
+            Used to construct input/output variable names (e.g., f"{commodity}_in").
+        commodity_rate_units (str):
             Units string for stored commodity rates (e.g., "kg/h", "MW").
             Used for unit annotations when creating model variables.
         tech_name (str):
@@ -69,8 +69,8 @@ class PyomoControllerBaseConfig(BaseConfig):
     init_charge_percent: float = field(validator=range_val(0, 1))
     n_control_window: int = field()
     n_horizon_window: int = field()
-    commodity_name: str = field()
-    commodity_storage_units: str = field()
+    commodity: str = field()
+    commodity_rate_units: str = field()
     tech_name: str = field()
     system_commodity_interface_limit: float | int | str | list[float] = field()
 
@@ -153,7 +153,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
         """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
 
         Returns:
-            callable: Function(performance_model, performance_model_kwargs, inputs, commodity_name)
+            callable: Function(performance_model, performance_model_kwargs, inputs, commodity)
                 executing rolling-window heuristic dispatch or optimization and returning:
                 (total_out, storage_out, unmet_demand, unused_commodity, soc)
         """
@@ -193,7 +193,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             performance_model_kwargs,
             inputs,
             pyomo_model=self.pyomo_model,
-            commodity_name: str = self.config.commodity_name,
+            commodity_name: str = self.config.commodity,
         ):
             """
             Execute rolling-window dispatch for the controlled technology.
@@ -216,11 +216,11 @@ class PyomoControllerBaseClass(ControllerBaseClass):
                     at window (e.g., efficiencies, timestep size).
                 inputs (dict):
                     Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
-                        f"{commodity_name}_in"          : available generated commodity profile.
-                        f"{commodity_name}_demand"   : demanded commodity output profile.
-                commodity_name (str, optional):
+                        f"{commodity}_in"          : available generated commodity profile.
+                        f"{commodity}_demand"   : demanded commodity output profile.
+                commodity (str, optional):
                     Base commodity name (e.g. "electricity", "hydrogen"). Default:
-                    self.config.commodity_name.
+                    self.config.commodity.
 
             Returns:
                 tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -276,7 +276,7 @@ class PyomoControllerBaseClass(ControllerBaseClass):
             # loop over all control windows, where t is the starting index of each window
             for t in window_start_indices:
                 # get the inputs over the current control window
-                commodity_in = inputs[self.config.commodity_name + "_in"][
+                commodity_in = inputs[self.config.commodity + "_in"][
                     t : t + self.config.n_control_window
                 ]
                 demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
@@ -810,18 +810,18 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
             The efficiency of charging the storage (between 0 and 1).
         discharge_efficiency (float):
             The efficiency of discharging the storage (between 0 and 1).
-        commodity_name (str):
+        commodity (str):
             The name of the commodity being stored (e.g., "electricity", "hydrogen").
-        commodity_storage_units (str):
-            The units of the commodity being stored (e.g., "kW", "kg").
+        commodity_rate_units (str):
+            The rate units of the commodity being stored (e.g., "kW", "kg/h").
         cost_per_production (float):
-            The cost to use the incoming produced commodity (in $/commodity_storage_units).
+            The cost to use the incoming produced commodity (in $/commodity_rate_units).
         cost_per_charge (float):
-            The cost per unit of charging the storage (in $/commodity_storage_units).
+            The cost per unit of charging the storage (in $/commodity_rate_units).
         cost_per_discharge (float):
-            The cost per unit of discharging the storage (in $/commodity_storage_units).
+            The cost per unit of discharging the storage (in $/commodity_rate_units).
         commodity_met_value (float):
-            The penalty for not meeting the desired load demand (in $/commodity_storage_units).
+            The penalty for not meeting the desired load demand (in $/commodity_rate_units).
         time_weighting_factor (float):
             The weighting factor applied to future time steps in the optimization objective
             (between 0 and 1).
@@ -836,8 +836,8 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
     max_charge_rate: int | float = field()
     charge_efficiency: float = field(validator=range_val(0, 1), default=None)
     discharge_efficiency: float = field(validator=range_val(0, 1), default=None)
-    commodity_name: str = field(default=None)
-    commodity_storage_units: str = field(default=None)
+    commodity: str = field(default=None)
+    commodity_rate_units: str = field(default=None)
     cost_per_production: float = field(default=None)
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
@@ -882,14 +882,14 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=self.config.commodity_storage_units,
+            units=self.config.commodity_rate_units,
             desc="Storage charge rate",
         )
 
         self.add_input(
             "storage_capacity",
             val=self.config.max_capacity,
-            units=f"{self.config.commodity_storage_units}*h",
+            units=f"{self.config.commodity_rate_units}*h",
             desc="Storage capacity",
         )
 
@@ -902,8 +902,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
         # Is this the best place to put this???
         self.commodity_info = {
-            "commodity_name": self.config.commodity_name,
-            "commodity_storage_units": self.config.commodity_storage_units,
+            "commodity_name": self.config.commodity,
+            "commodity_storage_units": self.config.commodity_rate_units,
         }
         # TODO: note that this definition of cost_per_production is not generalizable to multiple
         #       production technologies. Would need a name adjustment to connect it to

@@ -30,19 +30,21 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
         # dt is seconds per timestep
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
         # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-        hours_per_year = 8760
+
         # hours simulated is the number of hours in a simulation
         hours_simulated = (self.dt / 3600) * self.n_timesteps
+
         # fraction_of_year_simulated is the ratio of simulation length to length of year
         # and may be used to estimate annual performance from simulation performance
+        hours_per_year = 8760
         self.fraction_of_year_simulated = hours_simulated / hours_per_year
-        self.set_outputs()
 
-    def set_outputs(self):
         # Check that the required attributes have been instantiated
         required = ("commodity", "commodity_rate_units", "commodity_amount_units")
         missing = [el for el in required if not hasattr(self, el)]

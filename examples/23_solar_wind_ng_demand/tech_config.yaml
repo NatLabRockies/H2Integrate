@@ -99,8 +99,8 @@ technologies:
         model: DemandOpenLoopConverterController
       model_inputs:
         control_parameters:
-          commodity_name: electricity
-          commodity_units: kW
+          commodity: electricity
+          commodity_rate_units: kW
           demand_profile: 100000 #100 MW
 
   combiner:

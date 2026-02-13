@@ -34,8 +34,8 @@ technologies:
         opex_per_kW_per_year: 72
         cost_year: 2022
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
 
 
   battery:
@@ -49,8 +49,8 @@ technologies:
       model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
         max_charge_rate: 50000 #kW
         max_capacity: 200000 #kWh
         n_control_window: 24
