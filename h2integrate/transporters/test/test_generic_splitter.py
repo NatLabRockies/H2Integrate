@@ -11,14 +11,14 @@ from h2integrate.transporters.generic_splitter import (
 
 @fixture
 def splitter_tech_config_electricity():
-    return {"commodity": "electricity", "commodity_units": "kW"}
+    return {"commodity": "electricity", "commodity_rate_units": "kW"}
 
 
 @fixture
 def splitter_tech_config_hydrogen():
     h2_combiner_dict = {
         "model_inputs": {
-            "performance_parameters": {"commodity": "hydrogen", "commodity_units": "kg"}
+            "performance_parameters": {"commodity": "hydrogen", "commodity_rate_units": "kg"}
         }
     }
     return h2_combiner_dict
@@ -293,7 +293,7 @@ def test_splitter_missing_config():
     incomplete_config_dict = {
         "split_mode": "fraction",
         "commodity": "electricity",
-        "commodity_units": "kW",
+        "commodity_rate_units": "kW",
     }
 
     with pytest.raises(
