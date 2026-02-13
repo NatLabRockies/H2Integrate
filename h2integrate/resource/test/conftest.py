@@ -4,21 +4,21 @@ from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 
 @pytest.fixture
-def plant_simulation():
+def plant_simulation(timezone):
     plant = {
         "plant_life": 30,
         "simulation": {
             "dt": 3600,
             "n_timesteps": 8760,
             "start_time": "01/01/1900 00:30:00",
-            "timezone": 0,
+            "timezone": timezone,
         },
     }
     return plant
 
 
 @pytest.fixture
-def site_config(which, lat, lon, model, resource_year, model_name):
+def site_config(which, lat, lon, model, resource_year, model_name, elevation=0):
     site_config = {
         "latitude": lat,
         "longitude": lon,
