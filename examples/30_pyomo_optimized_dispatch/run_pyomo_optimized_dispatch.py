@@ -17,6 +17,8 @@ model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
 # Run the model
 model.run()
 
+model.post_process()
+
 # Plot the results
 fig, ax = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
 
