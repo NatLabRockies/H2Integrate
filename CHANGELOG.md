@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added linearized hydrogen fuel cell model
 - Added load following optimization dispatch
 
 ## 0.6 [February 10, 2026]
