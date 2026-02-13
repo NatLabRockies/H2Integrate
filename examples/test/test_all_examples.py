@@ -845,6 +845,10 @@ def test_natural_gas_example(subtests):
         expected_opex = 4.2 * ng_consumed.sum()  # price = 4.2 $/MMBtu
         assert pytest.approx(ng_opex, rel=1e-6) == expected_opex
 
+    with subtests.test("Check feedstock capacity factor"):
+        ng_cf = model.prob.get_val("ng_feedstock.capacity_factor", units="unitless").mean()
+        assert pytest.approx(ng_cf, rel=1e-6) == 0.5676562763739097
+
 
 def test_wind_solar_electrolyzer_example(subtests):
     # Change the current working directory to the example's directory

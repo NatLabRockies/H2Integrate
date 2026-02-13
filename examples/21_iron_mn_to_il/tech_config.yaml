@@ -9,8 +9,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "electricity"
-        units: "MW"
+        commodity: "electricity"
+        commodity_rate_units: "MW"
       performance_parameters:
         rated_capacity: 30. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
@@ -26,8 +26,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "crude_ore"
-        units: "t/h"
+        commodity: "crude_ore"
+        commodity_rate_units: "t/h"
       performance_parameters:
         rated_capacity: 2000. # need 828.50385048 t/h
       cost_parameters:
@@ -67,10 +67,10 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "natural_gas"
-        units: "MMBtu"
+        commodity: "natural_gas"
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
-        rated_capacity: 1270. # need 1268.934 MMBtu at each timestep
+        rated_capacity: 1270. # need 1268.934 MMBtu/h
       cost_parameters:
         cost_year: 2022
         price: 4.0 #USD 4.0/MMBtu
@@ -84,8 +84,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "water"
-        units: "galUS" #galUS/h
+        commodity: "water"
+        commodity_rate_units: "galUS" #galUS/h
       performance_parameters:
         rated_capacity: 40000. # need 38710.49649 galUS/h
       cost_parameters:
@@ -101,8 +101,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "reformer_catalyst"
-        units: "(m**3)" #m**3/h
+        commodity: "reformer_catalyst"
+        commodity_rate_units: "(m**3)" #m**3/h
       performance_parameters:
         rated_capacity: 0.001 # need 0.00056546 m**3/h
       cost_parameters:
@@ -118,8 +118,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "electricity"
-        units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
       performance_parameters:
         rated_capacity: 27000. # need 26949.46472431 kW
       cost_parameters:
@@ -149,8 +149,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "electricity"
-        units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
       performance_parameters:
         rated_capacity: 56650. # need 56642.327357 kW
       cost_parameters:
@@ -166,8 +166,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "water"
-        units: "galUS" #galUS/h
+        commodity: "water"
+        commodity_rate_units: "galUS" #galUS/h
       performance_parameters:
         rated_capacity: 10000. # need 9083.687924154146 galUS/h
       cost_parameters:
@@ -183,10 +183,10 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "natural_gas"
-        units: "MMBtu"
+        commodity: "natural_gas"
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
-        rated_capacity: 280. # need 276.5242929731515 MMBtu at each timestep
+        rated_capacity: 280. # need 276.5242929731515 MMBtu/h
       cost_parameters:
         cost_year: 2022
         price: 4.0 #USD 4.0/MMBtu
