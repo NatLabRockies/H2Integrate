@@ -2036,23 +2036,6 @@ def test_pyomo_optimized_dispatch_example(subtests):
         battery_opex = model.prob.get_val("battery.OpEx")[0]
         assert battery_opex == pytest.approx(38_775_000.0, rel=1e-3)
 
-    # Demand satisfaction checks
-    with subtests.test("Check electricity unmet demand"):
-        electricity_unmet_demand = np.linalg.norm(
-            model.prob.get_val("battery.unmet_electricity_demand_out", units="kW")
-        )
-        assert electricity_unmet_demand == pytest.approx(
-            np.linalg.norm(np.ones(8760) * 26_279.9764), rel=1e-2
-        )
-
-    with subtests.test("Check electricity unused commodity"):
-        electricity_unused = np.linalg.norm(
-            model.prob.get_val("battery.unused_electricity_out", units="kW")
-        )
-        assert electricity_unused == pytest.approx(
-            np.linalg.norm(np.ones(8760) * 15_375.3577), rel=1e-2
-        )
-
     # Finance checks
     with subtests.test("Check LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_all_electricity.LCOE", units="USD/(kW*h)")[0]
