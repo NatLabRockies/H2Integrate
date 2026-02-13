@@ -25,6 +25,20 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
+
+    The combined output capacity factor is computed as a weighted average of the
+    input stream capacity factors, weighted by each stream's rated production:
+
+    .. math::
+
+        CF_{out} = \\frac{\\sum_i CF_i \\cdot S_i}{\\sum_i S_i}
+
+    where :math:`CF_i` is the capacity factor and :math:`S_i` is the rated
+    commodity production of input stream *i*. If the total rated production is
+    zero, the output capacity factor is set to zero.
+
+    The total rated production is the sum of all input rated productions, and
+    the output commodity profile is the element-wise sum of all input profiles.
     """
 
     def initialize(self):
@@ -51,7 +65,6 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
             self.add_input(
                 f"rated_{self.config.commodity}_production{i}",
                 val=0.0,
-                shape=1,
                 units=self.config.commodity_rate_units,
             )
             self.add_input(
@@ -76,7 +89,6 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         self.add_output(
             f"rated_{self.config.commodity}_production",
             val=0.0,
-            shape=1,
             units=self.config.commodity_rate_units,
         )
 
