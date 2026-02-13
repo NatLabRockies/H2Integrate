@@ -64,15 +64,23 @@ def pysam_performance_model():
 # fmt: off
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "model,which,lat,lon,resource_year,model_name,lon_tol,expected_aep",
+    "model,which,lat,lon,resource_year,model_name,timezone,lon_tol,expected_aep",
     [
-        ("Himawari7SolarAPI", "solar", -27.3649, 152.67935, 2013, "himawari7_v3", 2e-2, 473577.280269),  # noqa: E501
-        ("Himawari8SolarAPI", "solar", 3.25735, 101.656312, 2020, "himawari8_v3", 1e-2, 411251.781327),  # noqa: E501
-        ("HimawariTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2020", "himawari_tmy_v3", 2e-2, 510709.633402),  # noqa: E501
-        ("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 2e-2, 410211.9419),  # noqa: E501
-        ("MeteosatPrimeMeridianTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2022", "himawari_tmy_v3", 1e-3, 510709.633402),  # noqa: E501
-        ("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 1e-3, 443558.17053592583),  # noqa: E501
+        ("Himawari7SolarAPI", "solar", -27.3649, 152.67935, 2013, "himawari7_v3", 0, 2e-2, 473577.280269),  # noqa: E501
+        ("Himawari8SolarAPI", "solar", 3.25735, 101.656312, 2020, "himawari8_v3", 0, 1e-2, 411251.781327),  # noqa: E501
+        ("HimawariTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2020", "himawari_tmy_v3", 0, 2e-2, 510709.633402),  # noqa: E501
+        ("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 0, 2e-2, 410211.9419),  # noqa: E501
+        ("MeteosatPrimeMeridianTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2022", "himawari_tmy_v3", 0, 1e-3, 510709.633402),  # noqa: E501
+        ("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 0, 1e-3, 443558.17053592583),  # noqa: E501
     ],
+    ids=[
+        "Himawari7SolarAPI",
+        "Himawari8SolarAPI",
+        "HimawariTMYSolarAPI",
+        "MeteosatPrimeMeridianSolarAPI",
+        "MeteosatPrimeMeridianTMYSolarAPI",
+        "OpenMeteoHistoricalSolarResource",
+    ]
 )
 # fmt: on
 def test_pvwatts_with_meteosat_pm(

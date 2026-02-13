@@ -19,8 +19,9 @@ def wtk_site_config(site_config, lat2, lon2):
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "model,which,lat,lon,lat2,lon2,resource_year,model_name",
-    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_api_v2")],  # noqa: E501
+    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone",
+    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_api_v2", 0)],  # noqa: E501
+    ids=["WTKNRELDeveloperAPIWindResource"],
 )
 # fmt: on
 def test_wind_resource_loaded_from_default_dir(
@@ -85,8 +86,9 @@ def test_wind_resource_loaded_from_default_dir(
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "model,which,lat,lon,lat2,lon2,resource_year,model_name",
-    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_v2")],  # noqa: E501
+    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone",
+    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_v2", 0)],  # noqa: E501
+    ids=["WTKNRELDeveloperAPIWindResource"],
 )
 # fmt: on
 def test_wind_resource_loaded_from_weather_dir(
