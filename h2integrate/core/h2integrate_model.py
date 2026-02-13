@@ -753,7 +753,9 @@ class H2IntegrateModel:
                         "model_inputs": {
                             "performance_parameters": {
                                 "commodity": commodity,
-                                "commodity_units": "kW" if commodity == "electricity" else "kg/h",
+                                "commodity_rate_units": "kW"
+                                if commodity == "electricity"
+                                else "kg/h",
                             }
                         }
                     }
@@ -773,7 +775,7 @@ class H2IntegrateModel:
                     "model_inputs": {
                         "performance_parameters": {
                             "commodity": commodity,
-                            "commodity_units": "kW",
+                            "commodity_rate_units": "kW",
                             "in_streams": len(elec_tech_names),
                         }
                     }
@@ -797,7 +799,7 @@ class H2IntegrateModel:
                     "model_inputs": {
                         "performance_parameters": {
                             "commodity": commodity,
-                            "commodity_units": "kW",
+                            "commodity_rate_units": "kW",
                         }
                     }
                 }
@@ -1007,6 +1009,15 @@ class H2IntegrateModel:
                     self.plant.connect(
                         f"{connection_name}.{transport_item}_out",
                         f"{dest_tech}.{transport_item}_in{combiner_counts[dest_tech]}",
+                    )
+                    # Connect the source tech design and performance info to the combiner
+                    self.plant.connect(
+                        f"{source_tech}.rated_{transport_item}_production",
+                        f"{dest_tech}.rated_{transport_item}_production{combiner_counts[dest_tech]}",
+                    )
+                    self.plant.connect(
+                        f"{source_tech}.capacity_factor",
+                        f"{dest_tech}.{transport_item}_capacity_factor{combiner_counts[dest_tech]}",
                     )
 
                 elif "storage" in dest_tech:

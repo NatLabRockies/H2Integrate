@@ -78,7 +78,7 @@ tech_config = {
             "model_inputs": {
                 "performance_parameters": {
                     "commodity": "electricity",
-                    "commodity_units": "kW",
+                    "commodity_rate_units": "kW",
                     "in_streams": 1,
                 },
                 "dispatch_rule_parameters": {

@@ -16,7 +16,7 @@ class GenericSummerPerformanceConfig(BaseConfig):
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()
+    commodity_rate_units: str = field()
     operation_mode: str = field(
         default="production",
         converter=(str.lower, str.strip),
@@ -46,15 +46,15 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
         if self.config.commodity == "electricity":
             # NOTE: this should be updated in overhaul required for flexible dt
             # and flexible simulation length
-            summed_units = f"{self.config.commodity_units}*h/year"
+            summed_units = f"{self.config.commodity_rate_units}*h/year"
         else:
-            summed_units = f"{self.config.commodity_units}*h/year"
+            summed_units = f"{self.config.commodity_rate_units}*h/year"
 
         self.add_input(
             f"{self.config.commodity}_in",
             val=0.0,
             shape=n_timesteps,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
         )
 
         if self.config.operation_mode == "consumption":

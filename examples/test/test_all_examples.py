@@ -326,6 +326,33 @@ def test_co2h_methanol_example(subtests):
 
     model.post_process()
 
+    # Below is used as an integration test for the combiner
+    with subtests.test("combiner rated production"):
+        combined_rated_input = model.prob.get_val(
+            "wind.rated_electricity_production", units="MW"
+        ) + model.prob.get_val("solar.rated_electricity_production", units="MW")
+        assert (
+            pytest.approx(
+                model.prob.get_val("combiner.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == combined_rated_input
+        )
+    with subtests.test("combiner weighted CF"):
+        wind_weighted_cf = model.prob.get_val(
+            "wind.rated_electricity_production", units="MW"
+        ) * model.prob.get_val("wind.capacity_factor", units="unitless")
+        solar_weighted_cf = model.prob.get_val(
+            "solar.rated_electricity_production", units="MW"
+        ) * model.prob.get_val("solar.capacity_factor", units="unitless")
+        combined_cf = (wind_weighted_cf + solar_weighted_cf) / combined_rated_input
+        assert (
+            pytest.approx(
+                model.prob.get_val("combiner.electricity_capacity_factor", units="unitless"),
+                rel=1e-6,
+            )
+            == combined_cf
+        )
+
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
