@@ -1979,3 +1979,92 @@ def test_sweeping_different_resource_sites_doe(subtests):
 
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
+
+
+def test_pyomo_optimized_dispatch_example(subtests):
+    # Change the current working directory to the example's directory
+    os.chdir(EXAMPLE_DIR / "30_pyomo_optimized_dispatch")
+
+    # Create a H2Integrate model
+    model = H2IntegrateModel(Path.cwd() / "pyomo_optimized_dispatch.yaml")
+
+    demand_profile = np.ones(8760) * 100.0
+
+    # TODO: Update with demand module once it is developed
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
+    # Run the model
+    model.run()
+
+    model.post_process()
+
+    with subtests.test("Check wind total electricity produced"):
+        wind_total = model.prob.get_val("wind.total_electricity_produced", units="kW*h")[0]
+        assert wind_total == pytest.approx(781_472_811.8, rel=1e-3)
+
+    with subtests.test("Check wind capacity factor"):
+        wind_cf = model.prob.get_val("wind.capacity_factor")[0]
+        assert wind_cf == pytest.approx(0.4299, rel=1e-3)
+
+    with subtests.test("Check wind CapEx"):
+        wind_capex = model.prob.get_val("wind.CapEx")[0]
+        assert wind_capex == pytest.approx(311_250_000.0, rel=1e-3)
+
+    # Battery checks
+    with subtests.test("Check battery total electricity produced"):
+        battery_total = model.prob.get_val("battery.total_electricity_produced", units="kW*h")[0]
+        assert battery_total == pytest.approx(645_787_407.02, rel=1e-3)
+
+    with subtests.test("Check battery capacity factor"):
+        battery_cf = model.prob.get_val("battery.capacity_factor")[0]
+        assert battery_cf == pytest.approx(0.7372, rel=1e-3)
+
+    with subtests.test("Check battery CapEx"):
+        battery_capex = model.prob.get_val("battery.CapEx")[0]
+        assert battery_capex == pytest.approx(155_100_000.0, rel=1e-3)
+
+    with subtests.test("Check battery OpEx"):
+        battery_opex = model.prob.get_val("battery.OpEx")[0]
+        assert battery_opex == pytest.approx(38_775_000.0, rel=1e-3)
+
+    # Demand satisfaction checks
+    with subtests.test("Check electricity unmet demand"):
+        electricity_unmet_demand = np.linalg.norm(
+            model.prob.get_val("battery.unmet_electricity_demand_out", units="kW")
+        )
+        assert electricity_unmet_demand == pytest.approx(
+            np.linalg.norm(np.ones(8760) * 26_279.9764), rel=1e-2
+        )
+
+    with subtests.test("Check electricity unused commodity"):
+        electricity_unused = np.linalg.norm(
+            model.prob.get_val("battery.unused_electricity_out", units="kW")
+        )
+        assert electricity_unused == pytest.approx(
+            np.linalg.norm(np.ones(8760) * 15_375.3577), rel=1e-2
+        )
+
+    # Finance checks
+    with subtests.test("Check LCOE"):
+        lcoe = model.prob.get_val("finance_subgroup_all_electricity.LCOE", units="USD/(kW*h)")[0]
+        assert lcoe == pytest.approx(0.134, rel=1e-3)
+
+    with subtests.test("Check total adjusted CapEx"):
+        total_capex = model.prob.get_val("finance_subgroup_all_electricity.total_capex_adjusted")[0]
+        assert total_capex == pytest.approx(490_282_207.03, rel=1e-3)
+
+    with subtests.test("Check total adjusted OpEx"):
+        total_opex = model.prob.get_val("finance_subgroup_all_electricity.total_opex_adjusted")[0]
+        assert total_opex == pytest.approx(48_830_466.21, rel=1e-3)
+
+    with subtests.test("Check total electricity produced"):
+        total_electricity = model.prob.get_val(
+            "finance_subgroup_all_electricity.electricity_sum.total_electricity_produced",
+            units="kW*h/year",
+        )[0]
+        assert total_electricity == pytest.approx(781_472_811.8, rel=1e-3)
+
+    with subtests.test("Check electricity price"):
+        price = model.prob.get_val("finance_subgroup_all_electricity.price_electricity")[0]
+        assert price == pytest.approx(0.134, rel=1e-3)
