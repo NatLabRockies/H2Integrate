@@ -49,7 +49,7 @@ class SimpleGenericStorage(PerformanceModelBaseClass):
         # Pass the commodity_out as the commodity_set_point
         outputs[f"{self.commodity}_out"] = inputs[f"{self.commodity}_set_point"]
 
-        # Estimate the rated commodity production as the maximum value from the commodity_set_point
+        # Set the rated commodity production from the max_charge_rate input
         outputs[f"rated_{self.commodity}_production"] = inputs["max_charge_rate"]
 
         # Calculate the total and annual commodity produced
