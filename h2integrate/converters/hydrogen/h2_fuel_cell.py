@@ -176,7 +176,7 @@ class H2FuelCellCostModel(CostModelBaseClass):
         self.add_input(
             "fixed_opex_per_year",
             val=self.config.fixed_opex_per_kw_per_year,
-            units="USD/kW/year",
+            units="(USD/kW)/year",
             desc="Fixed operating expenses per unit capacity per year",
         )
 
