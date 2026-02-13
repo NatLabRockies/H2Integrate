@@ -32,8 +32,8 @@ technologies:
         opex_per_kW_per_year: 45
         cost_year: 2019
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
   battery:
     dispatch_rule_set:
       model: "PyomoRuleStorageBaseclass"
@@ -45,8 +45,8 @@ technologies:
       model: "ATBBatteryCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
         max_charge_rate: 100000
         max_capacity: 500000
         n_control_window: 24
@@ -60,7 +60,6 @@ technologies:
         chemistry: "LFPGraphite"
       cost_parameters:
         cost_year: 2022
-        commodity_units: "kW"
         energy_capex: 310 # $/kWh from 2024 ATB year 2025
         power_capex: 311 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25 # 0.25% of capex per year from 2024 ATB

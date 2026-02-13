@@ -53,14 +53,14 @@ tech_config = {
                     "control_variable": "input_power",
                 },
                 "control_parameters": {
-                    "commodity_name": "electricity",
-                    "commodity_storage_units": "kW",
+                    "commodity": "electricity",
+                    "commodity_rate_units": "kW",
                     "tech_name": "battery",
                     "system_commodity_interface_limit": 1e12,
                 },
                 "dispatch_rule_parameters": {
-                    "commodity_name": "electricity",
-                    "commodity_storage_units": "kW",
+                    "commodity": "electricity",
+                    "commodity_rate_units": "kW",
                 },
             },
         }

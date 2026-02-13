@@ -11,8 +11,8 @@ technologies:
       model: "LinedRockCavernStorageCostModel"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities
