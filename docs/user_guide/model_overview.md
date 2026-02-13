@@ -176,7 +176,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'GeoH2SubsurfaceCostModel'`
 - `h2_fuel_cell`: hydrogen fuel cell
     - performance models:
-        + `'H2FuelCellPerformanceModel'`
+        + `'LinearH2FuelCellPerformanceModel'`
     - cost models:
         + `'H2FuelCellCostModel'`
 - `steel`: steel production
