@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import pytest
 
@@ -25,9 +24,6 @@ def input_config(temp_dir):
         "technology_config": tech_config,
     }
     yield input_config
-
-    (Path.cwd() / "battery_output.png").unlink()
-    (Path.cwd() / "generation_profile.png").unlink()
 
 
 @pytest.mark.unit
