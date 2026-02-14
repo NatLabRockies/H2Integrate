@@ -58,7 +58,7 @@ dependencies = [
   "floris",
   "hopp>=3.3.0",
   "turbine-models>=0.2.1",
-  "wombat>=0.13.1",
+  "wombat>=0.13.2",
 ]
 keywords = [
     "python3",
@@ -138,10 +138,6 @@ omit = [
 addopts = [
   "--strict-markers",
   "-r fEsxX",
-  "--cov=h2integrate",
-  "--cov-report=html",
-  "--cov-report=term-missing:skip-covered",
-  "--no-cov-on-fail"
 ]
 tmp_path_retention_count = "1"
 tmp_path_retention_policy = "failed"
