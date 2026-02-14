@@ -57,6 +57,7 @@ def cleanup_files(monkeypatch):
                 pass
 
 
+@pytest.mark.integration
 def test_steel_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "01_onshore_steel_mn")
@@ -148,6 +149,7 @@ def test_steel_example(subtests):
         assert pytest.approx(model.prob.get_val("steel.OpEx"), rel=1e-3) == 1.0129052e08
 
 
+@pytest.mark.integration
 def test_simple_ammonia_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "02_texas_ammonia")
@@ -253,6 +255,7 @@ def test_simple_ammonia_example(subtests):
     ).is_file(), "profast_output_hydrogen.yaml not found"
 
 
+@pytest.mark.integration
 def test_ammonia_synloop_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "12_ammonia_synloop")
@@ -336,6 +339,7 @@ def test_ammonia_synloop_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_smr_methanol_example(subtests):
     # Change the current working directory to the SMR example's directory
     os.chdir(EXAMPLE_DIR / "03_methanol" / "smr")
@@ -353,6 +357,7 @@ def test_smr_methanol_example(subtests):
         assert pytest.approx(model.prob.get_val("methanol.LCOM"), rel=1e-6) == 0.22116813
 
 
+@pytest.mark.integration
 def test_co2h_methanol_example(subtests):
     # Change the current working directory to the CO2 Hydrogenation example's directory
     os.chdir(EXAMPLE_DIR / "03_methanol" / "co2_hydrogenation")
@@ -371,6 +376,7 @@ def test_co2h_methanol_example(subtests):
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.integration
 def test_doc_methanol_example(subtests):
     # Change the current working directory to the CO2 Hydrogenation example's directory
     os.chdir(EXAMPLE_DIR / "03_methanol" / "co2_hydrogenation_doc")
@@ -391,6 +397,7 @@ def test_doc_methanol_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_wind_h2_opt_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "05_wind_h2_opt")
@@ -478,6 +485,7 @@ def test_wind_h2_opt_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_paper_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "06_custom_tech")
@@ -496,6 +504,7 @@ def test_paper_example(subtests):
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.integration
 def test_wind_wave_doc_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/direct_ocean_capture")
@@ -529,6 +538,7 @@ def test_wind_wave_doc_example(subtests):
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.integration
 def test_splitter_wind_doc_h2_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "17_splitter_wind_doc_h2")
@@ -571,6 +581,7 @@ def test_splitter_wind_doc_h2_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_hydro_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "07_run_of_river_plant")
@@ -593,6 +604,7 @@ def test_hydro_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_hybrid_energy_plant_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "11_hybrid_energy_plant")
@@ -610,6 +622,7 @@ def test_hybrid_energy_plant_example(subtests):
         assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
 
 
+@pytest.mark.integration
 def test_hydrogen_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "14_wind_hydrogen_dispatch")
@@ -650,6 +663,7 @@ def test_hydrogen_dispatch_example(subtests):
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.integration
 def test_wind_wave_oae_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement")
@@ -684,6 +698,7 @@ def test_wind_wave_oae_example(subtests):
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
+@pytest.mark.integration
 def test_wind_wave_oae_example_with_finance(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement_financials")
@@ -714,6 +729,7 @@ def test_wind_wave_oae_example_with_finance(subtests):
         )
 
 
+@pytest.mark.integration
 def test_natural_gas_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "16_natural_gas")
@@ -858,6 +874,7 @@ def test_natural_gas_example(subtests):
         assert pytest.approx(ng_opex, rel=1e-6) == expected_opex
 
 
+@pytest.mark.integration
 def test_wind_solar_electrolyzer_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "15_wind_solar_electrolyzer")
@@ -916,6 +933,7 @@ def test_wind_solar_electrolyzer_example(subtests):
         assert pytest.approx(total_generation.sum(), rel=1e-5) == total_energy_to_electrolyzer.sum()
 
 
+@pytest.mark.integration
 def test_electrolyzer_om_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "10_electrolyzer_om")
@@ -940,6 +958,7 @@ def test_electrolyzer_om_example(subtests):
         assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 7.9935907
 
 
+@pytest.mark.integration
 def test_wombat_electrolyzer_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "08_wind_electrolyzer")
@@ -973,6 +992,7 @@ def test_wombat_electrolyzer_example(subtests):
         assert pytest.approx(lcoe_with_profast_model, rel=1e-5) == 59.0962084
 
 
+@pytest.mark.integration
 def test_pyomo_heuristic_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "18_pyomo_heuristic_dispatch")
@@ -1058,6 +1078,7 @@ def test_pyomo_heuristic_dispatch_example(subtests):
             H2IntegrateModel(Path.cwd() / "pyomo_heuristic_dispatch_error_for_testing.yaml")
 
 
+@pytest.mark.integration
 def test_simple_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "19_simple_dispatch")
@@ -1191,6 +1212,7 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
 def test_windard_pv_battery_dispatch_example(subtests):
     # Change the current working directory to the example's directory
@@ -1264,6 +1286,7 @@ def test_windard_pv_battery_dispatch_example(subtests):
         assert electricity_missed_load == pytest.approx(1403.5372787817894)
 
 
+@pytest.mark.integration
 def test_csvgen_design_of_experiments(subtests):
     os.chdir(EXAMPLE_DIR / "20_solar_electrolyzer_doe")
 
@@ -1410,6 +1433,7 @@ def test_csvgen_design_of_experiments(subtests):
     new_csv_filename.unlink()
 
 
+@pytest.mark.integration
 def test_sweeping_solar_sites_doe(subtests):
     os.chdir(EXAMPLE_DIR / "22_site_doe")
     import pandas as pd
@@ -1467,6 +1491,7 @@ def test_sweeping_solar_sites_doe(subtests):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
 
 
+@pytest.mark.integration
 def test_floris_example(subtests):
     from h2integrate.core.utilities import load_yaml
 
@@ -1606,6 +1631,7 @@ def test_floris_example(subtests):
         )
 
 
+@pytest.mark.integration
 def test_24_solar_battery_grid_example(subtests):
     # NOTE: would be good to compare LCOE against the same example without grid selling
     # and see that LCOE reduces with grid selling
@@ -1645,6 +1671,7 @@ def test_24_solar_battery_grid_example(subtests):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
+@pytest.mark.integration
 def test_28_iron_map_example(subtests):
     import geopandas as gpd
     import matplotlib
@@ -1801,6 +1828,7 @@ def test_28_iron_map_example(subtests):
     ex_png_fpath.unlink(missing_ok=True)
 
 
+@pytest.mark.integration
 def test_natural_geoh2(subtests):
     os.chdir(EXAMPLE_DIR / "04_geo_h2")
 
@@ -1861,6 +1889,7 @@ def test_natural_geoh2(subtests):
         assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
 
 
+@pytest.mark.integration
 def test_stimulated_geoh2(subtests):
     os.chdir(EXAMPLE_DIR / "04_geo_h2")
 
@@ -1899,6 +1928,7 @@ def test_stimulated_geoh2(subtests):
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
 
+@pytest.mark.integration
 def test_21_iron_dri_eaf_example(subtests):
     os.chdir(EXAMPLE_DIR / "21_iron_mn_to_il")
 
@@ -1919,6 +1949,7 @@ def test_21_iron_dri_eaf_example(subtests):
         assert pytest.approx(lcos, rel=1e-4) == 524.8228189073025
 
 
+@pytest.mark.integration
 def test_sweeping_different_resource_sites_doe(subtests):
     os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
     import pandas as pd
