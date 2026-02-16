@@ -173,13 +173,14 @@ class TestOAEPerformanceModel(unittest.TestCase):
                     "initial_temp_C": 10.0,  # degrees Celsius
                     "initial_dic_mol_per_L": 0.0044,  # mol/L
                     "initial_pH": 8.1,  # initial pH
+                    "save_outputs": False,
                 },
             },
         }
 
         driver_config = {
             "general": {
-                "folder_output": "output",
+                "folder_output": "output/",
             },
         }
 

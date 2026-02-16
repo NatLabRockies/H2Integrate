@@ -120,3 +120,6 @@ technologies:
 
       cost_parameters:
         infrastructure_type: "new"
+      performance_parameters:
+        save_outputs: True
+        save_plots: True

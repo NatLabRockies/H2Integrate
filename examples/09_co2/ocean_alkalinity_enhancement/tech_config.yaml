@@ -94,3 +94,5 @@ technologies:
 
       cost_parameters:
         mass_product_tonne_yr: 100000.0
+      performance_parameters:
+        save_outputs: True

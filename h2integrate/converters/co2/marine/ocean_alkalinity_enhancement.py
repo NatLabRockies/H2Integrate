@@ -38,6 +38,8 @@ class OAEPerformanceConfig(MarineCarbonCapturePerformanceConfig):
         initial_pH (float): Initial pH of seawater.
         initial_tank_volume_m3 (float): Initial volume of the tank (m³).
         acid_disposal_method (str): Method for acid disposal.
+        save_outputs (bool, optional): If true, save results to .csv files. Defaults to False.
+        save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
     assumed_CDR_rate: float = field()
@@ -49,6 +51,8 @@ class OAEPerformanceConfig(MarineCarbonCapturePerformanceConfig):
     initial_pH: float = field()
     initial_tank_volume_m3: float = field()
     acid_disposal_method: str = field()
+    save_outputs: bool = field(default=False)
+    save_plots: bool = field(default=False)
 
 
 class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
@@ -198,8 +202,8 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
                     pH_i=self.config.initial_pH,
                 ),
             ),
-            save_outputs=True,
-            save_plots=True,
+            save_outputs=self.config.save_outputs,
+            save_plots=self.config.save_plots,
             output_dir=self.options["driver_config"]["general"]["folder_output"],
             plot_range=[3910, 4030],
         )
@@ -340,12 +344,6 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:

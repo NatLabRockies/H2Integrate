@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 import numpy as np
 import openmdao.api as om
@@ -178,6 +179,8 @@ class TestDOCPerformanceModel(unittest.TestCase):
                     "temp_C": 12.0,  # degrees Celsius
                     "dic_i": 0.0022,  # mol/L
                     "pH_i": 8.1,  # initial pH
+                    "save_outputs": True,
+                    "save_plots": True,
                 },
             },
         }
@@ -193,7 +196,7 @@ class TestDOCPerformanceModel(unittest.TestCase):
 
         driver_config = {
             "general": {
-                "folder_output": "output",
+                "folder_output": "output/",
             },
         }
 
@@ -226,3 +229,15 @@ class TestDOCPerformanceModel(unittest.TestCase):
         assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
         assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
         assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
+
+        # Check that output files were saved
+        assert Path("output/data/DOC_operationScenarios.csv").is_file()
+        assert Path("output/data/DOC_resultTotals.csv").is_file()
+        assert Path("output/data/DOC_timeDependentResults.csv").is_file()
+        assert Path("output/figures/DOC_Time-Dependent_Results.png").is_file()
+
+        # Remove files
+        Path("output/data/DOC_operationScenarios.csv").unlink(missing_ok=True)
+        Path("output/data/DOC_resultTotals.csv").unlink(missing_ok=True)
+        Path("output/data/DOC_timeDependentResults.csv").unlink(missing_ok=True)
+        Path("output/figures/DOC_Time-Dependent_Results.png").unlink(missing_ok=True)
