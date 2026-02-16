@@ -1,4 +1,5 @@
 from attrs import field, define
+from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import must_equal
@@ -7,12 +8,6 @@ from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
     MarineCarbonCapturePerformanceConfig,
     MarineCarbonCapturePerformanceBaseClass,
 )
-
-
-try:
-    from mcm.capture import echem_mcc
-except ImportError:
-    echem_mcc = None
 
 
 def setup_electrodialysis_inputs(config):
@@ -51,6 +46,8 @@ class DOCPerformanceConfig(MarineCarbonCapturePerformanceConfig):
         dic_i (float): Initial dissolved inorganic carbon (mol/L).
         pH_i (float): Initial pH of seawater.
         initial_tank_volume_m3 (float): Initial volume of the tank (m³).
+        save_outputs (bool, optional): If true, save results to .csv files. Defaults to False.
+        save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
     power_single_ed_w: float = field()
@@ -66,6 +63,8 @@ class DOCPerformanceConfig(MarineCarbonCapturePerformanceConfig):
     dic_i: float = field()
     pH_i: float = field()
     initial_tank_volume_m3: float = field()
+    save_outputs: bool = field(default=False)
+    save_plots: bool = field(default=False)
 
 
 class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
@@ -84,12 +83,6 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_mcc is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Direct Ocean Capture model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = DOCPerformanceConfig.from_dict(
@@ -123,8 +116,8 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
                 dic_i=self.config.dic_i,
                 pH_i=self.config.pH_i,
             ),
-            save_outputs=True,
-            save_plots=True,
+            save_outputs=self.config.save_outputs,
+            save_plots=self.config.save_plots,
             output_dir=self.options["driver_config"]["general"]["folder_output"],
             plot_range=[3910, 4030],
         )
@@ -170,12 +163,6 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_mcc is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Direct Ocean Capture model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = DOCCostModelConfig.from_dict(

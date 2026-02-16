@@ -149,6 +149,11 @@ def test_ammonia_synloop_outputs(synloop_config, subtests):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
     with subtests.test("replacement_schedule value"):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
+    with subtests.test("Test electricity_consumed < electricity_in"):
+        assert (
+            prob.get_val("comp.electricity_consumed", units="kW").max()
+            < prob.get_val("comp.electricity_in", units="kW").max()
+        )
 
 
 def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
@@ -247,4 +252,51 @@ def test_size_mode_outputs(subtests):
         assert (
             pytest.approx(model.prob.get_val("ammonia.max_hydrogen_capacity")[0], rel=1e-3)
             == 12543.68246215831
+        )
+
+
+def test_ammonia_synloop_performance(synloop_config, subtests):
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        }
+    }
+
+    cap_mult = 10.0e3
+    n2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 5.0 * cap_mult  # kg
+    h2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 2.0 * cap_mult
+    # electricity is limiting input
+    elec = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 0.001 * cap_mult
+    prob = om.Problem()
+
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec, units="MW")
+
+    prob.run_model()
+
+    prob.get_val("comp.electricity_consumed", units="kW")
+
+    with subtests.test("Test electricity_consumed <= electricity_in"):
+        assert (
+            prob.get_val("comp.electricity_consumed", units="kW").max()
+            <= prob.get_val("comp.electricity_in", units="kW").max()
+        )
+    with subtests.test("Test limiting_output is electricity"):
+        assert np.all(prob.get_val("comp.limiting_input") == 2)
+    with subtests.test("Test hydrogen_consumed < hydrogen_in"):
+        assert (
+            prob.get_val("comp.hydrogen_consumed", units="kg/h").max()
+            <= prob.get_val("comp.hydrogen_in", units="kg/h").max()
         )

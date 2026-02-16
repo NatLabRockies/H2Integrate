@@ -1,35 +1,66 @@
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import gte_zero
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
 class SimpleGenericStorageConfig(BaseConfig):
-    commodity_name: str = field()
-    commodity_units: str = field()  # TODO: update to commodity_rate_units
+    commodity: str = field()
+    commodity_rate_units: str = field()  # TODO: update to commodity_rate_units
+    max_charge_rate: float = field(validator=gte_zero)
 
 
-class SimpleGenericStorage(om.ExplicitComponent):
+class SimpleGenericStorage(PerformanceModelBaseClass):
     """
-    Simple generic storage model.
-    """
+    Simple generic storage model that acts as a pass-through component.
 
-    def initialize(self):
-        self.options.declare("tech_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("driver_config", types=dict)
+    Note: this storage performance model is intended to be used with the
+    `DemandOpenLoopStorageController` controller and has not been tested
+    with other controllers.
+
+    """
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleGenericStorageConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
         )
-        commodity_name = self.config.commodity_name
-        commodity_units = self.config.commodity_units
-        self.add_input(f"{commodity_name}_in", val=0.0, shape=n_timesteps, units=commodity_units)
+        self.commodity = self.config.commodity
+        self.commodity_rate_units = self.config.commodity_rate_units
+        self.commodity_amount_units = f"({self.commodity_rate_units})*h"
+        super().setup()
+        self.add_input(
+            f"{self.commodity}_set_point",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        self.add_input(
+            "max_charge_rate",
+            val=self.config.max_charge_rate,
+            units=self.config.commodity_rate_units,
+            desc="Storage charge/discharge rate",
+        )
 
     def compute(self, inputs, outputs):
-        pass
+        # Pass the commodity_out as the commodity_set_point
+        outputs[f"{self.commodity}_out"] = inputs[f"{self.commodity}_set_point"]
+
+        # Set the rated commodity production from the max_charge_rate input
+        outputs[f"rated_{self.commodity}_production"] = inputs["max_charge_rate"]
+
+        # Calculate the total and annual commodity produced
+        outputs[f"total_{self.commodity}_produced"] = outputs[f"{self.commodity}_out"].sum()
+        outputs[f"annual_{self.commodity}_produced"] = outputs[
+            f"total_{self.commodity}_produced"
+        ] * (1 / self.fraction_of_year_simulated)
+
+        # Calculate the maximum theoretical commodity production over the simulation
+        rated_production = (
+            outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * (self.dt / 3600)
+        )
+
+        outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / rated_production

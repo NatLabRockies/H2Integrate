@@ -33,7 +33,6 @@ jobs:
           python -m pip install --upgrade pip
           if [ "${{ matrix.optional }}" = "true" ]; then
             pip install ".[develop]"
-            pip install git+https://github.com/NREL/MarineCarbonManagement.git
           else
             pip install ".[develop]"
           fi

@@ -60,8 +60,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 12446.00729773  # kg/time step
         max_capacity: 2987042.0  # kg
       control_parameters:
@@ -71,4 +71,4 @@ technologies:
         max_discharge_rate: 12446.00729773  # kg/time step
         charge_efficiency: 1.0 # percent as decimal
         discharge_efficiency: 1.0 # percent as decimal
-        demand_profile: 5000 # constant demand of 5000 kg per hour (see commodity_units)
+        demand_profile: 5000 # constant demand of 5000 kg per hour (see commodity_rate_units)

@@ -20,7 +20,7 @@ class DemandOpenLoopStorageControllerConfig(DemandOpenLoopControlBaseConfig):
 
     Attributes:
         max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
-            e.g., "kg" if `commodity_units` is "kg/h").
+            e.g., "kg" if `commodity_rate_units` is "kg/h").
         max_charge_percent (float): Maximum allowable state of charge (SOC) as a percentage
             of `max_capacity`, represented as a decimal between 0 and 1.
         min_charge_percent (float): Minimum allowable SOC as a percentage of `max_capacity`,
@@ -119,27 +119,27 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
 
     Inputs:
         {commodity}_in (float): Input commodity flow timeseries (e.g., hydrogen production).
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
 
     Outputs:
         {commodity}_out (float): Output commodity flow timeseries after storage to meet demand.
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
             - Note: the may include commodity from commodity_in that was never used to charge the
                     storage system but was directly dispatched to meet demand.
         {commodity}_soc (float): State of charge (SOC) timeseries for the storage system.
             - Units: "unitless" (percentage of maximum capacity given as a ratio between 0 and 1).
         {commodity}_unused_commodity (float): Curtailment timeseries for unused
         input commodity.
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
             - Note: curtailment in this case does not reduce what the converter produces, but
                 rather the system just does not use it (throws it away) because this controller is
                 specific to the storage technology and has no influence on other technologies in
                 the system.
         {commodity}_unmet_demand (float): Unmet demand timeseries when demand exceeds supply.
             Same meaning as missed load.
-            - Units: Defined in `commodity_units` (e.g., "kg/h").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
         total_{commodity}_unmet_demand (float): Total unmet demand over the simulation period.
-            - Units: Defined in `commodity_units` (e.g., "kg").
+            - Units: Defined in `commodity_rate_units` (e.g., "kg").
     """
 
     def setup(self):
@@ -173,19 +173,19 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
 
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc="Storage charge/discharge rate",
         )
 
         self.add_input(
             "max_capacity",
             val=self.config.max_capacity,
-            units=self.config.commodity_units + "*h",
+            units=self.config.commodity_rate_units + "*h",
             desc="Maximum storage capacity",
         )
 
@@ -241,7 +241,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         Returns:
             None
         """
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
         if np.all(inputs[f"{commodity}_demand"] == 0.0):
             msg = "Demand profile is zero, check that demand profile is input"
             raise UserWarning(msg)
@@ -279,7 +279,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         # initialize outputs
         soc_array = outputs[f"{commodity}_soc"]
         unused_commodity_array = outputs[f"{commodity}_unused_commodity"]
-        output_array = outputs[f"{commodity}_out"]
+        output_array = outputs[f"{commodity}_set_point"]
         unmet_demand_array = outputs[f"{commodity}_unmet_demand"]
 
         # Loop through each time step
@@ -338,7 +338,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
             # Record the missed load at the current time step
             unmet_demand_array[t] = max(0.0, (demand_t - output_array[t]))
 
-        outputs[f"{commodity}_out"] = output_array
+        outputs[f"{commodity}_set_point"] = output_array
 
         # Return the SOC
         outputs[f"{commodity}_soc"] = soc_array

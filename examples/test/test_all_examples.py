@@ -258,7 +258,15 @@ def test_ammonia_synloop_example(subtests):
         assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-4) == 25737370.661763854
+        assert pytest.approx(model.prob.get_val("ammonia.OpEx")[0], rel=1e-4) == 25414748.989416014
+
+    with subtests.test("Check ammonia production"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
+            )
+            == 406333.161
+        )
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
@@ -273,7 +281,7 @@ def test_ammonia_synloop_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted")[0], rel=1e-6
             )
-            == 79744581.00552343
+            == 79421959.33317558
         )
 
     with subtests.test("Check LCOH"):
@@ -285,7 +293,7 @@ def test_ammonia_synloop_example(subtests):
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(model.prob.get_val("finance_subgroup_nh3.LCOA")[0], rel=1e-6)
-            == 1.2310335361130984
+            == 1.1022714567388747
         )
 
 
@@ -318,12 +326,38 @@ def test_co2h_methanol_example(subtests):
 
     model.post_process()
 
+    # Below is used as an integration test for the combiner
+    with subtests.test("combiner rated production"):
+        combined_rated_input = model.prob.get_val(
+            "wind.rated_electricity_production", units="MW"
+        ) + model.prob.get_val("solar.rated_electricity_production", units="MW")
+        assert (
+            pytest.approx(
+                model.prob.get_val("combiner.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == combined_rated_input
+        )
+    with subtests.test("combiner weighted CF"):
+        wind_weighted_cf = model.prob.get_val(
+            "wind.rated_electricity_production", units="MW"
+        ) * model.prob.get_val("wind.capacity_factor", units="unitless")
+        solar_weighted_cf = model.prob.get_val(
+            "solar.rated_electricity_production", units="MW"
+        ) * model.prob.get_val("solar.capacity_factor", units="unitless")
+        combined_cf = (wind_weighted_cf + solar_weighted_cf) / combined_rated_input
+        assert (
+            pytest.approx(
+                model.prob.get_val("combiner.electricity_capacity_factor", units="unitless"),
+                rel=1e-6,
+            )
+            == combined_cf
+        )
+
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_doc_methanol_example(subtests):
     # Change the current working directory to the CO2 Hydrogenation example's directory
     os.chdir(EXAMPLE_DIR / "03_methanol" / "co2_hydrogenation_doc")
@@ -448,7 +482,6 @@ def test_paper_example(subtests):
         assert pytest.approx(model.prob.get_val("paper_mill.LCOP"), rel=1e-3) == 51.733275
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_wind_wave_doc_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/direct_ocean_capture")
@@ -481,7 +514,6 @@ def test_wind_wave_doc_example(subtests):
         )
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_splitter_wind_doc_h2_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "17_splitter_wind_doc_h2")
@@ -602,7 +634,6 @@ def test_hydrogen_dispatch_example(subtests):
         )
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_wind_wave_oae_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement")
@@ -636,7 +667,6 @@ def test_wind_wave_oae_example(subtests):
         )
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_wind_wave_oae_example_with_finance(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement_financials")
@@ -1980,3 +2010,75 @@ def test_sweeping_different_resource_sites_doe(subtests):
 
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
+
+
+def test_pyomo_optimized_dispatch_example(subtests):
+    # Change the current working directory to the example's directory
+    os.chdir(EXAMPLE_DIR / "30_pyomo_optimized_dispatch")
+
+    # Create a H2Integrate model
+    model = H2IntegrateModel(Path.cwd() / "pyomo_optimized_dispatch.yaml")
+
+    demand_profile = np.ones(8760) * 100.0
+
+    # TODO: Update with demand module once it is developed
+    model.setup()
+    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+
+    # Run the model
+    model.run()
+
+    model.post_process()
+
+    with subtests.test("Check wind total electricity produced"):
+        wind_total = model.prob.get_val("wind.total_electricity_produced", units="kW*h")[0]
+        assert wind_total == pytest.approx(781_472_811.8, rel=1e-3)
+
+    with subtests.test("Check wind capacity factor"):
+        wind_cf = model.prob.get_val("wind.capacity_factor")[0]
+        assert wind_cf == pytest.approx(0.4299, rel=1e-3)
+
+    with subtests.test("Check wind CapEx"):
+        wind_capex = model.prob.get_val("wind.CapEx")[0]
+        assert wind_capex == pytest.approx(311_250_000.0, rel=1e-3)
+
+    # Battery checks
+    with subtests.test("Check battery total electricity produced"):
+        battery_total = model.prob.get_val("battery.total_electricity_produced", units="kW*h")[0]
+        assert battery_total == pytest.approx(645_787_407.02, rel=1e-3)
+
+    with subtests.test("Check battery capacity factor"):
+        battery_cf = model.prob.get_val("battery.capacity_factor")[0]
+        assert battery_cf == pytest.approx(0.7372, rel=1e-3)
+
+    with subtests.test("Check battery CapEx"):
+        battery_capex = model.prob.get_val("battery.CapEx")[0]
+        assert battery_capex == pytest.approx(155_100_000.0, rel=1e-3)
+
+    with subtests.test("Check battery OpEx"):
+        battery_opex = model.prob.get_val("battery.OpEx")[0]
+        assert battery_opex == pytest.approx(38_775_000.0, rel=1e-3)
+
+    # Finance checks
+    with subtests.test("Check LCOE"):
+        lcoe = model.prob.get_val("finance_subgroup_all_electricity.LCOE", units="USD/(kW*h)")[0]
+        assert lcoe == pytest.approx(0.134, rel=1e-3)
+
+    with subtests.test("Check total adjusted CapEx"):
+        total_capex = model.prob.get_val("finance_subgroup_all_electricity.total_capex_adjusted")[0]
+        assert total_capex == pytest.approx(490_282_207.03, rel=1e-3)
+
+    with subtests.test("Check total adjusted OpEx"):
+        total_opex = model.prob.get_val("finance_subgroup_all_electricity.total_opex_adjusted")[0]
+        assert total_opex == pytest.approx(48_830_466.21, rel=1e-3)
+
+    with subtests.test("Check total electricity produced"):
+        total_electricity = model.prob.get_val(
+            "finance_subgroup_all_electricity.electricity_sum.total_electricity_produced",
+            units="kW*h/year",
+        )[0]
+        assert total_electricity == pytest.approx(781_472_811.8, rel=1e-3)
+
+    with subtests.test("Check electricity price"):
+        price = model.prob.get_val("finance_subgroup_all_electricity.price_electricity")[0]
+        assert price == pytest.approx(0.134, rel=1e-3)
