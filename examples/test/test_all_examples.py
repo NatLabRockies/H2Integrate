@@ -2094,6 +2094,7 @@ def test_sweeping_different_resource_sites_doe(subtests):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
 
 
+@pytest.mark.integration
 def test_pyomo_optimized_dispatch_example(subtests):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "30_pyomo_optimized_dispatch")
