@@ -259,6 +259,7 @@ def test_size_mode_outputs(subtests, temp_dir):
         )
 
 
+@pytest.mark.unit
 def test_ammonia_synloop_performance(synloop_config, subtests):
     plant_config = {
         "plant": {

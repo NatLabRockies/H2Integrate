@@ -91,6 +91,7 @@ tech_config = {
 }
 
 
+@pytest.mark.integration
 def test_min_operating_cost_load_following_battery_dispatch(subtests):
     # Fabricate some oscillating power generation data: 1000 kW for the first 12 hours, 10000 kW for
     # the second twelve hours, and repeat that daily cycle over a year.
