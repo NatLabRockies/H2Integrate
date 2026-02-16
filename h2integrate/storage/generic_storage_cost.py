@@ -20,10 +20,10 @@ class GenericStorageCostConfig(CostModelBaseConfig):
         opex_fraction (float): annual operating cost as a fraction of the total system cost.
         cost_year (int): dollar year corresponding to input costs
         max_capacity (float): Maximum storage capacity (in non-rate units,
-            e.g., "kW*h" if `commodity_units` is "kW").
+            e.g., "kW*h" if `commodity_rate_units` is "kW").
         max_charge_rate (float): Maximum rate at which storage can be charged (in units
             per time step, e.g., "kW/time step").
-        commodity_units (str): Units of the storage resource used to define the charge rate.
+        commodity_rate_units (str): Units of the storage resource used to define the charge rate.
             max_capacity and max_charge_rate. Must have a base of Watts ('W') or grams ('g/h')
             or heat ('MMBtu/h')
     """
@@ -33,7 +33,7 @@ class GenericStorageCostConfig(CostModelBaseConfig):
     opex_fraction: float = field(validator=range_val(0, 1))
     max_capacity: float = field()
     max_charge_rate: float = field()
-    commodity_units: str = field(
+    commodity_rate_units: str = field(
         validator=contains(["W", "kW", "MW", "GW", "TW", "g/h", "kg/h", "t/h", "MMBtu/h"])
     )  # TODO: udpate to commodity_rate_units
 
@@ -61,9 +61,9 @@ class GenericStorageCostModel(CostModelBaseClass):
 
         super().setup()
 
-        charge_units = self.config.commodity_units
+        charge_units = self.config.commodity_rate_units
 
-        capacity_units = f"({self.config.commodity_units})*h"
+        capacity_units = f"({self.config.commodity_rate_units})*h"
 
         self.add_input(
             "max_charge_rate",

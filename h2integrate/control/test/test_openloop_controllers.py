@@ -73,7 +73,7 @@ def test_pass_through_controller(subtests):
 
     # Run the test
     with subtests.test("Check output"):
-        assert pytest.approx(prob.get_val("hydrogen_out"), rel=1e-3) == np.arange(10)
+        assert pytest.approx(prob.get_val("hydrogen_set_point"), rel=1e-3) == np.arange(10)
 
     # Run the test
     with subtests.test("Check derivatives"):
@@ -81,7 +81,7 @@ def test_pass_through_controller(subtests):
         assert_check_totals(
             prob.check_totals(
                 of=[
-                    "hydrogen_out",
+                    "hydrogen_set_point",
                 ],
                 wrt=[
                     "hydrogen_in",
@@ -151,7 +151,7 @@ def test_storage_demand_controller(subtests):
     # Run the test
     with subtests.test("Check output"):
         assert pytest.approx([0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) == prob.get_val(
-            "hydrogen_out"
+            "hydrogen_set_point"
         )
 
     with subtests.test("Check curtailment"):
@@ -244,7 +244,9 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
 
     # Run the test
     with subtests.test("Check output"):
-        assert pytest.approx(prob_ioe.get_val("hydrogen_out")) == prob_rte.get_val("hydrogen_out")
+        assert pytest.approx(prob_ioe.get_val("hydrogen_set_point")) == prob_rte.get_val(
+            "hydrogen_set_point"
+        )
 
     with subtests.test("Check curtailment"):
         assert pytest.approx(prob_ioe.get_val("hydrogen_unused_commodity")) == prob_rte.get_val(
@@ -284,8 +286,8 @@ def test_generic_storage_demand_controller(subtests):
         },
         "model_inputs": {
             "shared_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "max_capacity": 10.0,  # kg
                 "max_charge_rate": 1.0,  # percent as decimal
             },
@@ -328,7 +330,7 @@ def test_generic_storage_demand_controller(subtests):
     # # Run the test
     with subtests.test("Check output"):
         assert pytest.approx([0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) == prob.get_val(
-            "hydrogen_out"
+            "hydrogen_set_point"
         )
 
     with subtests.test("Check curtailment"):
@@ -368,8 +370,8 @@ def test_demand_converter_controller(subtests):
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "demand_profile": [5.0] * 10,  # Example: 10 time steps with 5 kg/time step demand
             },
         },
@@ -401,7 +403,7 @@ def test_demand_converter_controller(subtests):
     # # Run the test
     with subtests.test("Check output"):
         assert pytest.approx([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0]) == prob.get_val(
-            "hydrogen_out"
+            "hydrogen_set_point"
         )
 
     with subtests.test("Check curtailment"):
@@ -440,8 +442,8 @@ def test_flexible_demand_converter_controller(subtests, variable_h2_production_p
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "rated_demand": end_use_rated_demand,
                 "demand_profile": end_use_rated_demand,  # flat demand profile
                 "turndown_ratio": min_demand_kg / end_use_rated_demand,
@@ -551,8 +553,8 @@ def test_flexible_demand_converter_controller_min_utilization(
         },
         "model_inputs": {
             "control_parameters": {
-                "commodity_name": "hydrogen",
-                "commodity_units": "kg",
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
                 "rated_demand": end_use_rated_demand,
                 "demand_profile": end_use_rated_demand,  # flat demand profile
                 "turndown_ratio": min_demand_kg / end_use_rated_demand,
