@@ -1,4 +1,5 @@
 from attrs import field, define
+from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import must_equal
@@ -7,12 +8,6 @@ from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
     MarineCarbonCapturePerformanceConfig,
     MarineCarbonCapturePerformanceBaseClass,
 )
-
-
-try:
-    from mcm.capture import echem_mcc
-except ImportError:
-    echem_mcc = None
 
 
 def setup_electrodialysis_inputs(config):
@@ -84,12 +79,6 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_mcc is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Direct Ocean Capture model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = DOCPerformanceConfig.from_dict(
@@ -170,12 +159,6 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_mcc is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Direct Ocean Capture model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = DOCCostModelConfig.from_dict(

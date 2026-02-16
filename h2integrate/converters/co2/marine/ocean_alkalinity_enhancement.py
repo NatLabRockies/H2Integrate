@@ -1,4 +1,5 @@
 from attrs import field, define
+from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import must_equal
@@ -7,12 +8,6 @@ from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
     MarineCarbonCapturePerformanceConfig,
     MarineCarbonCapturePerformanceBaseClass,
 )
-
-
-try:
-    from mcm.capture import echem_oae
-except ImportError:
-    echem_oae = None
 
 
 def setup_ocean_alkalinity_enhancement_inputs(config):
@@ -72,12 +67,6 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = OAEPerformanceConfig.from_dict(
@@ -267,12 +256,6 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:

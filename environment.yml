@@ -1,4 +1,4 @@
-name: h2integrate
+name: h2integrate-feb
 channels:
   - conda-forge
   - defaults

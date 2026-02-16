@@ -1,8 +1,6 @@
 import unittest
-import importlib
 
 import numpy as np
-import pytest
 import openmdao.api as om
 from pytest import fixture
 from openmdao.utils.assert_utils import assert_near_equal
@@ -59,7 +57,6 @@ def driver_config():
     return driver_config
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
 
@@ -157,7 +154,6 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-@unittest.skipUnless(importlib.util.find_spec("mcm") is not None, "mcm is not installed")
 class TestDOCPerformanceModel(unittest.TestCase):
     def setUp(self):
         from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
@@ -230,29 +226,3 @@ class TestDOCPerformanceModel(unittest.TestCase):
         assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
         assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
         assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
-
-
-@unittest.skipUnless(importlib.util.find_spec("mcm") is None, "mcm is installed")
-class TestDOCPerformanceModelNoMCM(unittest.TestCase):
-    def test_no_mcm_import(self):
-        from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
-
-        try:
-            plant_config = {
-                "plant": {
-                    "plant_life": 30,
-                    "simulation": {
-                        "n_timesteps": 8760,  # Default number of timesteps for the simulation
-                        "dt": 3600,
-                    },
-                },
-            }
-            self.model = DOCPerformanceModel(plant_config=plant_config, tech_config={})
-        except ImportError as e:
-            self.assertIn(
-                "The `mcm` package is required to use the Direct Ocean Capture model."
-                " Install it via:",
-                str(e),
-            )
-        else:
-            self.fail("ImportError was not raised")
