@@ -2,7 +2,7 @@ name: "technology_config"
 description: "This hybrid plant produces iron"
 
 technologies:
-  grid_feedstock: #electricity feedstock for iron ore
+  mine_electricity_feedstock: #electricity feedstock for iron ore
     performance_model:
       model: "FeedstockPerformanceModel"
     cost_model:
@@ -15,11 +15,11 @@ technologies:
         rated_capacity: 30. # MW, need 27.913 MW per timestep for iron ore
       cost_parameters:
         cost_year: 2022
-        price: 58.02 #USD/MW
+        price: 0. # Electricity costs are already priced in to current mine model
         annual_cost: 0.
         start_up_cost: 0.
 
-  mine_feedstock: #iron ore feedstock
+  mine_crude_ore_feedstock: #iron ore feedstock
     performance_model:
       model: "FeedstockPerformanceModel"
     cost_model:
@@ -32,7 +32,7 @@ technologies:
         rated_capacity: 2000. # need 828.50385048 t/h
       cost_parameters:
         cost_year: 2022
-        price: 0.0
+        price: 0. #USD/t
         annual_cost: 0.
         start_up_cost: 0.
 
@@ -45,7 +45,24 @@ technologies:
       shared_parameters:
         mine: "Northshore"
         taconite_pellet_type: "drg"
-        max_ore_production_rate_tonnes_per_hr: 221.2592636 #516.0497610311598
+        max_ore_production_rate_tonnes_per_hr: 221.2592636
+
+  processed_ore_feedstock: #iron ore feedstock
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "iron_ore"
+        units: "t/h"
+      performance_parameters:
+        rated_capacity: 250. # need 828.50385048 t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.
 
   iron_transport:
     performance_model:
@@ -90,7 +107,7 @@ technologies:
         rated_capacity: 40000. # need 38710.49649 galUS/h
       cost_parameters:
         cost_year: 2022
-        price: 0.0016700004398318847 # cost is USD0.441167535/t, converted to USD/gal
+        price: 0.0016700004398318847 # cost is USD 0.441167535/t, converted to USD/gal
         annual_cost: 0.
         start_up_cost: 0.
 
