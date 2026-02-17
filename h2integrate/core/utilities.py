@@ -542,8 +542,7 @@ class Loader(yaml.SafeLoader):
     def include(self, node):
         filename = find_file(node.value, self._root)
 
-        with Path.open(filename) as f:
-            return yaml.load(f, Loader=self.__class__)
+        return load_yaml(filename)
 
     def compose_node(self, parent, index):
         """Custom implementation to include line numbers that account for all lines, including
@@ -596,7 +595,7 @@ def load_yaml(filename, loader=Loader) -> dict:
         try:
             return yaml.load(fid, loader)
         except DuplicateKeyError as e:
-            raise ValueError(f"Duplicate key found in {filename}.") from e
+            raise ValueError(f"Duplicate key found in {filename}: {e.message}") from e
 
 
 def write_yaml(
