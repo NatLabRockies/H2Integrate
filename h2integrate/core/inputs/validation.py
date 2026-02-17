@@ -128,9 +128,6 @@ def _validate(finput, fschema, defaults=True):
     schema_dict = fschema if isinstance(fschema, dict) else load_yaml(fschema)
     input_dict = finput if isinstance(finput, dict) else load_yaml(finput)
     validator = DefaultValidatingDraft7Validator if defaults else json.Draft7Validator
-    from pprint import pprint
-
-    pprint(input_dict)
     validator(schema_dict).validate(input_dict)
     return input_dict
 
