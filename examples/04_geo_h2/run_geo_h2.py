@@ -11,10 +11,8 @@ h2i_nat.post_process()
 import matplotlib.pyplot as plt
 
 
-hydrogen_out = (
-    h2i_nat.prob.model.plant.geoh2_well_subsurface.simple_natural_geoh2_performance.get_val(
-        "hydrogen_out"
-    )
+hydrogen_out = h2i_nat.prob.model.plant.geoh2_well_subsurface.NaturalGeoH2PerformanceModel.get_val(
+    "hydrogen_out"
 )
 plt.plot(hydrogen_out)
 plt.xlabel("Time (hours)")
