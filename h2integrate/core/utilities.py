@@ -556,6 +556,10 @@ class Loader(yaml.SafeLoader):
     def construct_mapping(self, node, deep=False):
         """Custom implementation that reroutes the node creation to add in line numbers for all keys
         and values to enable duplicate key error handling.
+
+        Two copies of node are created to avoid errors when run through the validation schema as
+        the ``__line__{key}`` and ``__line__`` keys in the key and value nodes are not represented
+        by the schema, and therefore raise an error during validation.
         """
         numbered_node = copy.deepcopy(node)
         numbered_nodes = []
