@@ -17,16 +17,19 @@ ROOT = Path(__file__).parents[1]
 
 
 @pytest.fixture(scope="function")
-def temp_copy_of_example(temp_dir, example_folder):
+def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
     original = EXAMPLE_DIR / example_folder
-    shutil.copytree(original, temp_dir, dirs_exist_ok=True)
-    os.chdir(temp_dir)
-    yield temp_dir
+    shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
+    if resource_example_folder is not None:
+        secondary = EXAMPLE_DIR / resource_example_folder
+        shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
+    os.chdir(temp_dir / example_folder)
+    yield temp_dir / example_folder
     os.chdir(Path(__file__).parent)
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["01_onshore_steel_mn"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
 def test_steel_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -118,7 +121,7 @@ def test_steel_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["02_texas_ammonia"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_simple_ammonia_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -224,7 +227,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["12_ammonia_synloop"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("12_ammonia_synloop", None)])
 def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -316,7 +319,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["03_methanol"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("03_methanol/smr", None)])
 def test_smr_methanol_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -334,7 +337,9 @@ def test_smr_methanol_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["03_methanol/co2_hydrogenation"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation", None)]
+)
 def test_co2h_methanol_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -379,7 +384,9 @@ def test_co2h_methanol_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["03_methanol/co2_hydrogenation"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation_doc", None)]
+)
 def test_doc_methanol_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -400,7 +407,7 @@ def test_doc_methanol_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["05_wind_h2_opt"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("05_wind_h2_opt", None)])
 def test_wind_h2_opt_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -488,7 +495,7 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["06_custom_tech"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("06_custom_tech", None)])
 def test_paper_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -506,7 +513,9 @@ def test_paper_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["09_co2/direct_ocean_capture"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("09_co2/direct_ocean_capture", None)]
+)
 def test_wind_wave_doc_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -539,7 +548,9 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["17_splitter_wind_doc_h2"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
+)
 def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -582,7 +593,9 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["07_run_of_river_plant"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
+)
 def test_hydro_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -605,7 +618,9 @@ def test_hydro_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["11_hybrid_energy_plant"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("11_hybrid_energy_plant", None)]
+)
 def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -623,7 +638,9 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["14_wind_hydrogen_dispatch"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("14_wind_hydrogen_dispatch", None)]
+)
 def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -663,7 +680,9 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["09_co2/ocean_alkalinity_enhancement"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("09_co2/ocean_alkalinity_enhancement", None)]
+)
 def test_wind_wave_oae_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -697,7 +716,10 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["09_co2/ocean_alkalinity_enhancement_financials"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("09_co2/ocean_alkalinity_enhancement_financials", None)],
+)
 def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -728,7 +750,9 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["16_natural_gas"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
 def test_natural_gas_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -873,7 +897,10 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["15_wind_solar_electrolyzer"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("15_wind_solar_electrolyzer", "11_hybrid_energy_plant/")],
+)
 def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -932,7 +959,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["10_electrolyzer_om"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("10_electrolyzer_om", None)])
 def test_electrolyzer_om_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -957,7 +984,7 @@ def test_electrolyzer_om_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["08_wind_electrolyzer"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("08_wind_electrolyzer", None)])
 def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -991,7 +1018,9 @@ def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["18_pyomo_heuristic_dispatch"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("18_pyomo_heuristic_dispatch", None)]
+)
 def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1077,7 +1106,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["19_simple_dispatch"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
 def test_simple_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1212,7 +1241,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
-@pytest.mark.parametrize("example_folder", ["29_wind_ard"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("29_wind_ard", None)])
 def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1285,7 +1314,9 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["20_solar_electrolyzer_doe"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
+)
 def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1430,7 +1461,7 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["22_site_doe"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("22_site_doe", None)])
 def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1441,7 +1472,7 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     model.run()
 
     # Specify the filepath to the sql file, the folder and filename are in the driver_config
-    sql_fpath = EXAMPLE_DIR / "22_site_doe" / "ex_22_out" / "cases.sql"
+    sql_fpath = example_folder / "ex_22_out" / "cases.sql"
 
     # load the cases
     cr = om.CaseReader(sql_fpath)
@@ -1488,7 +1519,7 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["26_floris"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("26_floris", None)])
 def test_floris_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1627,7 +1658,9 @@ def test_floris_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["24_solar_battery_grid"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+)
 def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     # NOTE: would be good to compare LCOE against the same example without grid selling
     # and see that LCOE reduces with grid selling
@@ -1668,7 +1701,7 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["28_iron_map"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("28_iron_map", None)])
 def test_28_iron_map_example(subtests, temp_copy_of_example):
     import geopandas as gpd
     import matplotlib
@@ -1826,7 +1859,7 @@ def test_28_iron_map_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["04_geo_h2"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_natural_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1888,7 +1921,7 @@ def test_natural_geoh2(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["04_geo_h2"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_stimulated_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1928,7 +1961,7 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["21_iron_mn_to_il"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("21_iron_mn_to_il", None)])
 def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1950,7 +1983,7 @@ def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["27_site_doe_diff"])
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("27_site_doe_diff", None)])
 def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1961,7 +1994,7 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     model.run()
 
     # Specify the filepath to the sql file, the folder and filename are in the driver_config
-    sql_fpath = EXAMPLE_DIR / "27_site_doe_diff" / "ex_27_out" / "cases.sql"
+    sql_fpath = example_folder / "ex_27_out" / "cases.sql"
 
     # load the cases
     cr = om.CaseReader(sql_fpath)
@@ -2060,7 +2093,9 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder", ["30_pyomo_optimized_dispatch"])
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
+)
 def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
