@@ -334,6 +334,14 @@ silently fail by producing erroneous results or failing unexpectedly.
 
 Run `pytest -m unit` to run only the unit test suite or `pytest -m not-unit` to skip the unit tests.
 
+An example of a unit test is in the example below where there is only a validation of the location
+of the output directory and subdirectory, and not the contents of those files.
+
+:::{literalinclude} ../../h2integrate/resource/utilities/test/test_resource_file_tools.py
+:start-at: @pytest.mark.unit
+:end-at: assert output_dir == expected_output_dir
+:::
+
 #### Regression Tests
 
 In an analysis-focused code base, regression tests should test the results of running the code to

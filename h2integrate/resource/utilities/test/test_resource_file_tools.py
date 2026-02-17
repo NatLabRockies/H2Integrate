@@ -14,7 +14,7 @@ def test_check_resource_dir_no_dir(subtests):
         assert output_dir == RESOURCE_DEFAULT_DIR
 
     output_dir = check_resource_dir(resource_subdir="wind")
-    with subtests.test("No resource_dir, no resource_subdir"):
+    with subtests.test("No resource_dir, with resource_subdir"):
         expected_output_dir = RESOURCE_DEFAULT_DIR / "wind"
         assert output_dir == expected_output_dir
 
