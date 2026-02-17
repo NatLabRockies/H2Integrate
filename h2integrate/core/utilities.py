@@ -12,6 +12,9 @@ import attrs
 import numpy as np
 import ruamel.yaml as ry
 from attrs import Attribute, define
+from yaml.nodes import ScalarNode
+from yaml.composer import Composer
+from yaml.resolver import BaseResolver
 
 from h2integrate import ROOT_DIR
 
@@ -20,6 +23,18 @@ try:
     from pyxdsm.XDSM import FUNC, XDSM
 except ImportError:
     pass
+
+
+class DuplicateKeyError(Exception):
+    """Exception raised when a duplicate YAML key is found.
+
+    Args:
+        message (:obj:str): The duplicate key error message to be displayed.
+    """
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
 
 def create_xdsm_from_config(config, output_file="connections_xdsm"):
@@ -528,7 +543,47 @@ class Loader(yaml.SafeLoader):
         filename = find_file(node.value, self._root)
 
         with Path.open(filename) as f:
-            return yaml.load(f, self.__class__)
+            return yaml.load(f, Loader=self.__class__)
+
+    def compose_node(self, parent, index):
+        """Custom implementation to include line numbers that account for all lines, including
+        blank spaces that align with user anticipated 1-indexing.
+        """
+        line = self.line
+        node = Composer.compose_node(self, parent, index)
+        node.__line__ = line + 1
+        return node
+
+    def construct_mapping(self, node, deep=False):
+        """Custom implementation that reroutes the node creation to add in line numbers for all keys
+        and values to enable duplicate key error handling.
+        """
+        numbered_node = copy.deepcopy(node)
+        numbered_nodes = []
+        for key_node, _ in numbered_node.value:
+            shadow_key_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value="__line__" + key_node.value
+            )
+            shadow_value_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value=key_node.__line__
+            )
+            numbered_nodes.append((shadow_key_node, shadow_value_node))
+
+        numbered_node.value += numbered_nodes
+        return self.check_duplicate_keys(numbered_node, node, deep)
+
+    def check_duplicate_keys(self, numbered_node, node, deep=False):
+        """Raises an error for duplicate keys and completes the `construct_mapping()` routine."""
+        mapping = set()
+        for key_node, _ in numbered_node.value:
+            if ":merge" in key_node.tag:
+                continue
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise DuplicateKeyError(f"Duplicate '{key}' key found at line {key_node.__line__}.")
+            mapping.add(key)
+
+        return super().construct_mapping(node, deep)
 
 
 Loader.add_constructor("!include", Loader.include)
@@ -538,7 +593,10 @@ def load_yaml(filename, loader=Loader) -> dict:
     if isinstance(filename, dict):
         return filename  # filename already yaml dict
     with Path.open(filename) as fid:
-        return yaml.load(fid, loader)
+        try:
+            return yaml.load(fid, loader)
+        except DuplicateKeyError as e:
+            raise ValueError(f"Duplicate key found in {filename}.") from e
 
 
 def write_yaml(
