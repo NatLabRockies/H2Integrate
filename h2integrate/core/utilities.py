@@ -554,8 +554,8 @@ class Loader(yaml.SafeLoader):
         return node
 
     def construct_mapping(self, node, deep=False):
-        """Custom implementation that reroutes the node creation to add in line numbers for all keys
-        and values to enable duplicate key error handling.
+        """Hooks into the ``yaml.SafeLoader.construct_mapping`` routine to create line number
+        mappings for all keys and values, which enables duplicate key error handling.
 
         Two copies of node are created to avoid errors when run through the validation schema as
         the ``__line__{key}`` and ``__line__`` keys in the key and value nodes are not represented
@@ -573,20 +573,24 @@ class Loader(yaml.SafeLoader):
             numbered_nodes.append((shadow_key_node, shadow_value_node))
 
         numbered_node.value += numbered_nodes
-        return self.check_duplicate_keys(numbered_node, node, deep)
+        mapping = self.check_duplicate_keys(numbered_node, node, deep)
+        return mapping
 
     def check_duplicate_keys(self, numbered_node, node, deep=False):
-        """Raises an error for duplicate keys and completes the `construct_mapping()` routine."""
-        mapping = set()
+        """Raises an error for duplicate keys and calls the ``SafeLoader.construct_mapping()``
+        routine to create the final dictionary mappings.
+        """
+        unique_keys = set()
         for key_node, _ in numbered_node.value:
             if ":merge" in key_node.tag:
                 continue
             key = self.construct_object(key_node, deep=deep)
-            if key in mapping:
+            if key in unique_keys:
                 raise DuplicateKeyError(f"Duplicate '{key}' key found at line {key_node.__line__}.")
-            mapping.add(key)
+            unique_keys.add(key)
 
-        return super().construct_mapping(node, deep)
+        mapping = super().construct_mapping(node, deep)
+        return mapping
 
 
 Loader.add_constructor("!include", Loader.include)
