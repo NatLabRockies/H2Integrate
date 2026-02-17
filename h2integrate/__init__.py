@@ -1,6 +1,6 @@
 from pathlib import Path
 
-__version__ = "0.5.1"
+__version__ = "0.6"
 
 ROOT_DIR = Path(__file__).resolve().parent
 EXAMPLE_DIR = ROOT_DIR.parent / "examples"
