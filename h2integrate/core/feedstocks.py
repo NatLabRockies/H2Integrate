@@ -33,16 +33,23 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        feedstock_type = self.config.feedstock_type
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.add_input(
+            f"{self.config.feedstock_type}_capacity",
+            val=self.config.rated_capacity,
+            units=self.config.units,
+        )
 
-        self.add_output(f"{feedstock_type}_out", shape=n_timesteps, units=self.config.units)
+        self.add_output(
+            f"{self.config.feedstock_type}_out", shape=self.n_timesteps, units=self.config.units
+        )
 
     def compute(self, inputs, outputs):
-        feedstock_type = self.config.feedstock_type
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # Generate feedstock array operating at full capacity for the full year
-        outputs[f"{feedstock_type}_out"] = np.full(n_timesteps, self.config.rated_capacity)
+        outputs[f"{self.config.feedstock_type}_out"] = np.full(
+            self.n_timesteps, inputs[f"{self.config.feedstock_type}_capacity"][0]
+        )
 
 
 @define(kw_only=True)
@@ -86,10 +93,16 @@ class FeedstockCostModel(CostModelBaseClass):
             units=self.config.units,
             desc=f"Consumption profile of {feedstock_type}",
         )
+        self.add_input(
+            "price",
+            val=self.config.price,
+            units="USD/(" + self.config.units + ")/h",
+            desc=f"Consumption profile of {feedstock_type}",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         feedstock_type = self.config.feedstock_type
-        price = self.config.price
+        price = inputs["price"]
         hourly_consumption = inputs[f"{feedstock_type}_consumed"]
         cost_per_year = sum(price * hourly_consumption)
 
