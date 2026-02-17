@@ -19,8 +19,8 @@ class FlexibleDemandOpenLoopConverterControllerConfig(DemandOpenLoopControlBaseC
 
     Attributes:
         rated_demand (float): maximum demand in the same units as
-            `commodity_units`, used to convert the constraint parameters from
-            fractions to units of `commodity_units`.
+            `commodity_rate_units`, used to convert the constraint parameters from
+            fractions to units of `commodity_rate_units`.
         turndown_ratio (float): Minimum allowable operating demand expressed as a
             fraction of the maximum demand. Must be in the range ``(0, 1)``.
         ramp_down_rate_fraction (float): Maximum allowable ramp-down rate per
@@ -65,13 +65,13 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
         super().setup()
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
 
         self.add_input(
             f"rated_{commodity}_demand",
             val=self.config.demand_profile,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Rated demand of {commodity}",
         )
 
@@ -107,7 +107,7 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
             f"{commodity}_flexible_demand_profile",
             val=0.0,
             shape=(n_timesteps),
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"Flexible demand profile of {commodity}",
         )
 
@@ -205,7 +205,7 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
         """
 
         # Calculate demand constraint values in units of commodity units
-        rated_demand = inputs[f"rated_{self.config.commodity_name}_demand"][0]
+        rated_demand = inputs[f"rated_{self.config.commodity}_demand"][0]
         min_demand = rated_demand * inputs["turndown_ratio"][0]  # minimum demand in commodity units
         ramp_down_rate = (
             rated_demand * inputs["ramp_down_rate"][0]
@@ -263,7 +263,7 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
             outputs (dict-like): Mapping where computed outputs are written.
 
         """
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
         remaining_demand = inputs[f"{commodity}_demand"] - inputs[f"{commodity}_in"]
 
         if self.config.min_utilization == 1.0:
@@ -297,6 +297,6 @@ class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
             )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{commodity}_out"] = (
+        outputs[f"{commodity}_set_point"] = (
             inputs[f"{commodity}_in"] - outputs[f"{commodity}_unused_commodity"]
         )

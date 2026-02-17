@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added linearized hydrogen fuel cell model
+- Added load following optimization dispatch
+- Added simple dispatch calculations to `StorageAutoSizingModel`
+- Adjust import of mcm package to use the PyPi version
+
 ## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models

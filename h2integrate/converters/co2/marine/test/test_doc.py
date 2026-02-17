@@ -1,8 +1,7 @@
 import unittest
-import importlib
+from pathlib import Path
 
 import numpy as np
-import pytest
 import openmdao.api as om
 from pytest import fixture
 from openmdao.utils.assert_utils import assert_near_equal
@@ -59,7 +58,6 @@ def driver_config():
     return driver_config
 
 
-@pytest.mark.skipif(importlib.util.find_spec("mcm") is None, reason="mcm is not installed")
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
 
@@ -157,7 +155,6 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-@unittest.skipUnless(importlib.util.find_spec("mcm") is not None, "mcm is not installed")
 class TestDOCPerformanceModel(unittest.TestCase):
     def setUp(self):
         from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
@@ -182,6 +179,8 @@ class TestDOCPerformanceModel(unittest.TestCase):
                     "temp_C": 12.0,  # degrees Celsius
                     "dic_i": 0.0022,  # mol/L
                     "pH_i": 8.1,  # initial pH
+                    "save_outputs": True,
+                    "save_plots": True,
                 },
             },
         }
@@ -197,7 +196,7 @@ class TestDOCPerformanceModel(unittest.TestCase):
 
         driver_config = {
             "general": {
-                "folder_output": "output",
+                "folder_output": "output/",
             },
         }
 
@@ -231,28 +230,14 @@ class TestDOCPerformanceModel(unittest.TestCase):
         assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
         assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
 
+        # Check that output files were saved
+        assert Path("output/data/DOC_operationScenarios.csv").is_file()
+        assert Path("output/data/DOC_resultTotals.csv").is_file()
+        assert Path("output/data/DOC_timeDependentResults.csv").is_file()
+        assert Path("output/figures/DOC_Time-Dependent_Results.png").is_file()
 
-@unittest.skipUnless(importlib.util.find_spec("mcm") is None, "mcm is installed")
-class TestDOCPerformanceModelNoMCM(unittest.TestCase):
-    def test_no_mcm_import(self):
-        from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
-
-        try:
-            plant_config = {
-                "plant": {
-                    "plant_life": 30,
-                    "simulation": {
-                        "n_timesteps": 8760,  # Default number of timesteps for the simulation
-                        "dt": 3600,
-                    },
-                },
-            }
-            self.model = DOCPerformanceModel(plant_config=plant_config, tech_config={})
-        except ImportError as e:
-            self.assertIn(
-                "The `mcm` package is required to use the Direct Ocean Capture model."
-                " Install it via:",
-                str(e),
-            )
-        else:
-            self.fail("ImportError was not raised")
+        # Remove files
+        Path("output/data/DOC_operationScenarios.csv").unlink(missing_ok=True)
+        Path("output/data/DOC_resultTotals.csv").unlink(missing_ok=True)
+        Path("output/data/DOC_timeDependentResults.csv").unlink(missing_ok=True)
+        Path("output/figures/DOC_Time-Dependent_Results.png").unlink(missing_ok=True)

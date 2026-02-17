@@ -51,7 +51,7 @@ technologies:
     model_inputs:
       performance_parameters:
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_rate_units: "kW"
   electrolyzer:
     performance_model:
       model: "ECOElectrolyzerPerformanceModel"
