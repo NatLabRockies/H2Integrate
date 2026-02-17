@@ -1,3 +1,4 @@
-Index 0,Index 1,Index 2,Index 3,Index 4,Type,Case 1,Case 2,Case 3,Case 4,
-technologies,iron_mine,model_inputs,shared_parameters,mine,str,Northshore,Hibbing,Northshore,Hibbing,
-technologies,iron_mine,model_inputs,shared_parameters,taconite_pellet_type,str,std,std,drg,drg,
+Index 0,Index 1,Index 2,Index 3,Index 4,Type,Standard Iron - Hibbing,Standard Iron - Northshore,DR Grade Iron - Northshore,DR Grade Iron - Northshore (adjusted)
+technologies,iron_mine,model_inputs,shared_parameters,mine,str,Hibbing,Northshore,Northshore,Northshore
+technologies,iron_mine,model_inputs,shared_parameters,taconite_pellet_type,str,std,std,drg,drg
+technologies,processed_ore_feedstock,model_inputs,performance_parameters,rated_capacity,float,250,250,250,221.2592636
