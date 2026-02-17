@@ -351,6 +351,14 @@ system if it can be helped.
 Run `pytest -m regression` to run only the regression test suite or `pytest -m not-regression` to
 skip the regression tests.
 
+An example of a regression tesst is in the example berlow where the model's outputs are checked
+for stability with some tolerance.
+
+:::{literalinclude} ../../h2integrate/converters/co2/marine/test/test_doc.py
+:start-at: @pytest.mark.regression
+:end-at: assert_near_equal(total_tank_volume_m3
+:::
+
 #### Integration Tests
 
 Integration tests should test the integration of the new code into other systems in the code base.
@@ -364,6 +372,10 @@ systems.
 
 Run `pytest -m integration` to run only the integration test suite or `pytest -m not-integration`
 to skip the integration tests.
+
+For an example of an integration tests, please see the `examples/test/test_all_examples.py` module
+where multiple components are combined to test the models outputs for stability when using tools
+in conjunction with each other.
 
 #### Test coverage
 
