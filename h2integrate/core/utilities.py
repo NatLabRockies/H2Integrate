@@ -25,18 +25,6 @@ except ImportError:
     pass
 
 
-class DuplicateKeyError(Exception):
-    """Exception raised when a duplicate YAML key is found.
-
-    Args:
-        message (:obj:str): The duplicate key error message to be displayed.
-    """
-
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
-
-
 def create_xdsm_from_config(config, output_file="connections_xdsm"):
     """
     Create an XDSM diagram from a given plant configuration and save it to a pdf file.
@@ -530,6 +518,18 @@ def remove_numpy(fst_vt: dict) -> dict:
     # set fast variables to update values
     loop_dict(fst_vt, [])
     return fst_vt
+
+
+class DuplicateKeyError(Exception):
+    """Exception raised when a duplicate YAML key is found.
+
+    Args:
+        message (:obj:str): The duplicate key error message to be displayed.
+    """
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
 
 class Loader(yaml.SafeLoader):
