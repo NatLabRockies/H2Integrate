@@ -3,7 +3,6 @@ import pytest
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_near_equal
 
-from conftest import has_mcm
 from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import OAEPerformanceModel
 
 
@@ -31,7 +30,6 @@ def tech_config():
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     doc_model = OAEPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -129,7 +127,6 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
 
 
 @pytest.mark.regression
-@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
 def test_performance_model(tech_config, plant_config, driver_config):
     oae_model = OAEPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -163,13 +160,3 @@ def test_performance_model(tech_config, plant_config, driver_config):
     assert_near_equal(np.mean(alkaline_seawater_flow_rate), 3.2395561643835618, tolerance=1e-6)
     assert_near_equal(np.mean(alkaline_seawater_pH), 9.145157555568293, tolerance=1e-6)
     assert_near_equal(np.mean(excess_acid), 58.32, tolerance=1e-6)
-
-
-@pytest.mark.unit
-@pytest.mark.skipif(has_mcm, reason="mcm is installed")
-def test_no_mcm_import(tech_config, plant_config, driver_config):
-    err = "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. Install it"
-    with pytest.raises(match=err):
-        OAEPerformanceModel(
-            driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
-        )

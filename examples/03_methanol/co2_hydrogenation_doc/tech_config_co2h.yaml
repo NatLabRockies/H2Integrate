@@ -124,6 +124,9 @@ technologies:
         temp_C: 12.0  # degrees Celsius
         dic_i: 0.0022  # mol/L
         pH_i: 8.1  # initial pH
+      performance_parameters:
+        save_plots: True
+        save_outputs: True
       cost_parameters:
         infrastructure_type: "desal"
   co2_storage:

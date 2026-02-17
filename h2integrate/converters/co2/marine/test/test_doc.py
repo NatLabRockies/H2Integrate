@@ -3,7 +3,6 @@ import pytest
 import openmdao.api as om
 from openmdao.utils.assert_utils import assert_near_equal
 
-from conftest import has_mcm
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
 
 
@@ -35,7 +34,6 @@ def tech_config():
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -132,7 +130,6 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
 
 
 @pytest.mark.regression
-@pytest.mark.skipif(not has_mcm, reason="mcm is not installed")
 def test_performance_model(tech_config, plant_config, driver_config):
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -162,13 +159,3 @@ def test_performance_model(tech_config, plant_config, driver_config):
     assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
     assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
     assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
-
-
-@pytest.mark.skipif(has_mcm, reason="mcm is installed")
-@pytest.mark.unit
-def test_no_mcm_import(tech_config, plant_config, driver_config):
-    err = "The `mcm` package is required to use the Direct Ocean Capture model. Install it via:"
-    with pytest.raises(match=err):
-        DOCPerformanceModel(
-            driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
-        )
