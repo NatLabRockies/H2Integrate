@@ -516,6 +516,7 @@ def test_BaseConfig(subtests):
             demo = BaseDemoModelStrict({})
 
 
+@pytest.mark.unit
 def test_yaml_no_duplicate_keys(subtests):
     inputs = Path(__file__).parent / "inputs"
     with subtests.test("Check for duplicate in original file"):
