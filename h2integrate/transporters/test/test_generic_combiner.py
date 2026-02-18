@@ -27,7 +27,7 @@ def tech_config_4_in(commodity, operation_mode):
         "model_inputs": {
             "performance_parameters": {
                 "commodity": commodity,
-                "commodity_units": "kg" if commodity == "hydrogen" else "kW",
+                "commodity_rate_units": "kg" if commodity == "hydrogen" else "kW",
                 "in_streams": 4,
             }
         }
@@ -41,7 +41,7 @@ def tech_config(commodity, operation_mode):
         "model_inputs": {
             "performance_parameters": {
                 "commodity": commodity,
-                "commodity_units": "kg" if commodity == "hydrogen" else "kW",
+                "commodity_rate_units": "kg" if commodity == "hydrogen" else "kW",
             }
         }
     }
