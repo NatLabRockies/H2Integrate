@@ -6,6 +6,9 @@
 - Added load following optimization dispatch
 - Added simple dispatch calculations to `StorageAutoSizingModel`
 - Adjust import of mcm package to use the PyPi version
+- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
+  found, and points to the file and line number that caused the error. The YAML `Loader` modification
+  maintains compliance with the existing JSON validation protocols.
 
 ## 0.6 [February 10, 2026]
 
