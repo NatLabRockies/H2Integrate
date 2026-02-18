@@ -53,6 +53,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `air_separator`   |  nitrogen     | electricity |
 | `desal`   |  water     | electricity |
 | `natural_gas`   |  electricity     | natural gas |
+| `nuclear`   |  electricity     | none |
 
 ```{note}
 When the Primary Commodity is electricity, those converters are considered electricity producing technologies and their electricity production is summed for financial calculations.
@@ -230,6 +231,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'NaturalGasPerformanceModel'`
     - cost_models:
         + `'NaturalGasCostModel'`
+- `nuclear`: nuclear power plant
+    - performance models:
+        + `'NuclearPerformanceModel'`
+    - cost models:
+        + `'NuclearCostModel'`
 - `grid`: electricity grid connection
     - performance models:
         + `'GridPerformanceModel'`

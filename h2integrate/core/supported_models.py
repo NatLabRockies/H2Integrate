@@ -47,6 +47,7 @@ from h2integrate.converters.hydrogen.h2_fuel_cell import (
     LinearH2FuelCellPerformanceModel,
 )
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
+from h2integrate.converters.nuclear.nuclear_plant import NuclearCostModel, NuclearPerformanceModel
 from h2integrate.converters.steel.steel_eaf_plant import (
     HydrogenEAFPlantCostComponent,
     NaturalGasEAFPlantCostComponent,
@@ -238,6 +239,8 @@ supported_models = {
     "AspenGeoH2SurfacePerformanceModel": AspenGeoH2SurfacePerformanceModel,
     "AspenGeoH2SurfaceCostModel": AspenGeoH2SurfaceCostModel,
     "NaturalGasPerformanceModel": NaturalGasPerformanceModel,
+    "NuclearPerformanceModel": NuclearPerformanceModel,
+    "NuclearCostModel": NuclearCostModel,
     "NaturalGasCostModel": NaturalGasCostModel,
     # Transport
     "cable": CablePerformanceModel,
