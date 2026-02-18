@@ -12,6 +12,9 @@ import attrs
 import numpy as np
 import ruamel.yaml as ry
 from attrs import Attribute, define
+from yaml.nodes import ScalarNode
+from yaml.composer import Composer
+from yaml.resolver import BaseResolver
 
 from h2integrate import ROOT_DIR
 
@@ -517,6 +520,18 @@ def remove_numpy(fst_vt: dict) -> dict:
     return fst_vt
 
 
+class DuplicateKeyError(Exception):
+    """Exception raised when a duplicate YAML key is found.
+
+    Args:
+        message (:obj:str): The duplicate key error message to be displayed.
+    """
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
 class Loader(yaml.SafeLoader):
     def __init__(self, stream):
         # root is the parent directory of the parent yaml file
@@ -527,8 +542,55 @@ class Loader(yaml.SafeLoader):
     def include(self, node):
         filename = find_file(node.value, self._root)
 
-        with Path.open(filename) as f:
-            return yaml.load(f, self.__class__)
+        return load_yaml(filename)
+
+    def compose_node(self, parent, index):
+        """Custom implementation to include line numbers that account for all lines, including
+        blank spaces that align with user anticipated 1-indexing.
+        """
+        line = self.line
+        node = Composer.compose_node(self, parent, index)
+        node.__line__ = line + 1
+        return node
+
+    def construct_mapping(self, node, deep=False):
+        """Hooks into the ``yaml.SafeLoader.construct_mapping`` routine to create line number
+        mappings for all keys and values, which enables duplicate key error handling.
+
+        Two copies of node are created to avoid errors when run through the validation schema as
+        the ``__line__{key}`` and ``__line__`` keys in the key and value nodes are not represented
+        by the schema, and therefore raise an error during validation.
+        """
+        numbered_node = copy.deepcopy(node)
+        numbered_nodes = []
+        for key_node, _ in numbered_node.value:
+            shadow_key_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value="__line__" + key_node.value
+            )
+            shadow_value_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value=key_node.__line__
+            )
+            numbered_nodes.append((shadow_key_node, shadow_value_node))
+
+        numbered_node.value += numbered_nodes
+        mapping = self.check_duplicate_keys(numbered_node, node, deep)
+        return mapping
+
+    def check_duplicate_keys(self, numbered_node, node, deep=False):
+        """Raises an error for duplicate keys and calls the ``SafeLoader.construct_mapping()``
+        routine to create the final dictionary mappings.
+        """
+        unique_keys = set()
+        for key_node, _ in numbered_node.value:
+            if ":merge" in key_node.tag:
+                continue
+            key = self.construct_object(key_node, deep=deep)
+            if key in unique_keys:
+                raise DuplicateKeyError(f"Duplicate '{key}' key found at line {key_node.__line__}.")
+            unique_keys.add(key)
+
+        mapping = super().construct_mapping(node, deep)
+        return mapping
 
 
 Loader.add_constructor("!include", Loader.include)
@@ -538,7 +600,10 @@ def load_yaml(filename, loader=Loader) -> dict:
     if isinstance(filename, dict):
         return filename  # filename already yaml dict
     with Path.open(filename) as fid:
-        return yaml.load(fid, loader)
+        try:
+            return yaml.load(fid, loader)
+        except DuplicateKeyError as e:
+            raise ValueError(f"Duplicate key found in {filename}: {e.message}") from e
 
 
 def write_yaml(
