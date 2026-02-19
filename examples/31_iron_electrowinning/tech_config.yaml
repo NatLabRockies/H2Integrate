@@ -89,7 +89,7 @@ technologies:
         ore_fe_wt_pct: 65
         capacity_mw: 600
 
-  ewin_chem_feedstock:
+  ewin_NaOH_feedstock:
     performance_model:
       model: "FeedstockPerformanceModel"
     cost_model:
@@ -101,6 +101,24 @@ technologies:
       performance_parameters:
         rated_capacity: 195.
       cost_parameters:
+        cost_year: 2022
         price: 415.179  # USD/tonne
+        annual_cost: 0.
+        start_up_cost: 0.
+
+  ewin_CaCl2_feedstock:
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        feedstock_type: "CaCl2"
+        units: "kg/h"
+      performance_parameters:
+        rated_capacity: 0.
+      cost_parameters:
+        cost_year: 2022
+        price: 207.59  # USD/tonne
         annual_cost: 0.
         start_up_cost: 0.

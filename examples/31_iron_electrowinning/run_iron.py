@@ -17,7 +17,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model
-model = H2IntegrateModel("27_iron_electrowinning.yaml")
+model = H2IntegrateModel("31_iron_electrowinning.yaml")
 
 # Define the electrowinning types as a list
 electrolysis_types = ["ahe", "mse", "moe"]
@@ -28,6 +28,18 @@ for electrolysis_type in electrolysis_types:
     model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
         "electrolysis_type"
     ] = electrolysis_type
+    # this enables us to use the same tech config for all electrowinning technologies
+    if electrolysis_type == "mse":
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
+        model.technology_config["technologies"]["ewin_CaCl2_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 179.0
+    if electrolysis_type == "moe":
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
     model.setup()  # re-setup the model after changing config
     model.run()
     model.post_process()
