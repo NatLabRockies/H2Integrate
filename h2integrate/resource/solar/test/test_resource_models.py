@@ -40,6 +40,12 @@ def test_nrel_solar_resource_file_downloads(
     resource_year,
     model_name,
 ):
+    file_resource_year = None
+    if model == "MeteosatPrimeMeridianTMYSolarAPI" and resource_year == "tmy-2022":
+        file_resource_year = "tmy-2020"
+        site_config["resources"]["solar_resource"]["resource_parameters"]["resource_filename"].replace(
+            resource_year, file_resource_year
+        )
     plant_config = {
         "site": site_config,
         "plant": plant_simulation,
@@ -56,7 +62,8 @@ def test_nrel_solar_resource_file_downloads(
     prob.run_model()
     data = prob.get_val("resource.solar_resource_data")
 
-    name_expected = f"{lat}_{lon}_{resource_year}_{model_name}_60min_utc_tz.csv"
+    year = resource_year if file_resource_year is None else file_resource_year
+    name_expected = f"{lat}_{lon}_{year}_{model_name}_60min_utc_tz.csv"
     with subtests.test("Filename expected"):
         assert name_expected == (Path(data["filepath"])).name
 

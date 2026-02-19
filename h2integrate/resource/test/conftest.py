@@ -37,6 +37,7 @@ def site_config(which, lat, lon, model, resource_year, model_name, elevation=0):
     }
     match model:
         case "MeteosatPrimeMeridianTMYSolarAPI":
+            resource_year = "tmy-2020" if resource_year == "tmy-2022" else resource_year
             fn = f"{lat}_{lon}_{resource_year}_{model_name}_60min_utc_tz.csv"
             site_config["resources"]["solar_resource"]["resource_parameters"].setdefault(
                 "resource_filename", fn
