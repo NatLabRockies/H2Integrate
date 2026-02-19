@@ -312,13 +312,13 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         costs = echem_oae.OAECosts(
-            mass_product=inputs["mass_sellable_product"],
-            value_product=inputs["value_products"],
-            waste_mass=inputs["mass_acid_disposed"],
-            waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
-            base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
-            mass_rca=inputs["mass_rca"],
+            mass_product=inputs["mass_sellable_product"][0],
+            value_product=inputs["value_products"][0],
+            waste_mass=inputs["mass_acid_disposed"][0],
+            waste_disposal_cost=inputs["cost_acid_disposal"][0],
+            estimated_cdr=inputs["co2_capture_mtpy"][0],  # TODO: replace with annual_co2_produced
+            base_added_seawater_max_power=inputs["based_added_seawater_max_power"][0],
+            mass_rca=inputs["mass_rca"][0],
             annual_energy_cost=0,  # Energy costs are calculated within H2I and added to LCOC calc
         )
 
@@ -432,14 +432,14 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
             inputs["annual_energy"] - (sum(inputs["unused_energy"]) / 1000)  # Convert W to kW
         )  # remove unused power from the annual energy cost only used power considered
         costs = echem_oae.OAECosts(
-            mass_product=inputs["mass_sellable_product"],
-            value_product=inputs["value_products"],
-            waste_mass=inputs["mass_acid_disposed"],
-            waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
-            base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
-            mass_rca=inputs["mass_rca"],
-            annual_energy_cost=annual_energy_cost_usd_yr,
+            mass_product=inputs["mass_sellable_product"][0],
+            value_product=inputs["value_products"][0],
+            waste_mass=inputs["mass_acid_disposed"][0],
+            waste_disposal_cost=inputs["cost_acid_disposal"][0],
+            estimated_cdr=inputs["co2_capture_mtpy"][0],  # TODO: replace with annual_co2_produced
+            base_added_seawater_max_power=inputs["based_added_seawater_max_power"][0],
+            mass_rca=inputs["mass_rca"][0],
+            annual_energy_cost=annual_energy_cost_usd_yr[0],
         )
 
         results = costs.run()
