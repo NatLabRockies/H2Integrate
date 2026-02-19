@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, range_val
+from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -16,11 +16,9 @@ class NuclearPerformanceConfig(BaseConfig):
 
     Args:
         system_capacity_mw (float): Rated electric capacity in MW.
-        capacity_factor (float): Average availability (0-1).
     """
 
     system_capacity_mw: float = field(validator=gt_zero)
-    capacity_factor: float = field(validator=range_val(0.0, 1.0))
 
 
 class NuclearPerformanceModel(PerformanceModelBaseClass):

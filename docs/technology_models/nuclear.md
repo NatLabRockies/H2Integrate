@@ -9,7 +9,6 @@ To use this model, set the performance model to `NuclearPerformanceModel` and th
 ## Performance model
 
 The performance model limits electricity production by the rated capacity and an optional demand signal.
-A capacity factor parameter is accepted in the config but is not currently applied in the calculation.
 
 **Inputs**
 | Name | Shape | Units | Description |
