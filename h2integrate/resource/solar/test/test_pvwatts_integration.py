@@ -88,11 +88,16 @@ def test_pvwatts_with_meteosat_pm(
     pysam_performance_model,
     model,
     which,
+    resource_year,
     plant_simulation,
     site_config,
     lon_tol,
     expected_aep,
 ):
+    if model == "MeteosatPrimeMeridianTMYSolarAPI" and resource_year == "tmy-2022":
+        site_config["resources"]["solar_resource"]["resource_parameters"]["resource_filename"].replace(
+            resource_year, "tmy-2020"
+        )
     plant_config = {
         "site": site_config,
         "plant": plant_simulation,
