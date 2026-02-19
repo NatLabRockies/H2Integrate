@@ -28,6 +28,11 @@ class NuclearPerformanceModel(PerformanceModelBaseClass):
     Simple nuclear performance model producing electricity.
 
     The model limits output by a fixed capacity factor and optional demand profile.
+
+    Based on Quinn, J. et al., 2023.
+    Small modular reactor light water reactor techno-economic analysis.
+    Applied Energy 120669.
+    https://doi.org/10.1016/j.apenergy.2023.120669
     """
 
     def initialize(self):
@@ -115,6 +120,11 @@ class NuclearCostModel(CostModelBaseClass):
     Cost model for nuclear power plants.
 
     The model supports type-based parameters and optional scaling by size.
+
+    Based on Quinn, J. et al., 2023.
+    Small modular reactor light water reactor techno-economic analysis.
+    Applied Energy 120669.
+    https://doi.org/10.1016/j.apenergy.2023.120669
     """
 
     def setup(self):
