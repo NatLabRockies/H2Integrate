@@ -439,7 +439,7 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
             estimated_cdr=inputs["co2_capture_mtpy"][0],  # TODO: replace with annual_co2_produced
             base_added_seawater_max_power=inputs["based_added_seawater_max_power"][0],
             mass_rca=inputs["mass_rca"][0],
-            annual_energy_cost=annual_energy_cost_usd_yr,
+            annual_energy_cost=annual_energy_cost_usd_yr[0],
         )
 
         results = costs.run()
