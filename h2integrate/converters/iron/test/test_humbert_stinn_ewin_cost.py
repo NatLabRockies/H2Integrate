@@ -92,16 +92,16 @@ def setup_and_run(plant_config, tech_config, feedstocks_dict):
 
 def test_humbert_stinn_ewin_cost_component(plant_config, tech_config, feedstocks_dict, subtests):
     expected_capex_ahe = 6038571901.89  # USD
-    expected_vopex_ahe = 835954.89  # USD/year
-    expected_fopex_ahe = 67050786.5 - expected_vopex_ahe  # USD/year
+    expected_vopex_ahe = 0  # USD/year
+    expected_fopex_ahe = 66214831.6097561  # USD/year
 
     expected_capex_mse = 19918313452.1  # USD
-    expected_vopex_mse = 1220341.02  # USD/year
-    expected_fopex_mse = 51295503.77 - expected_vopex_mse  # USD/year
+    expected_vopex_mse = 789379.76182615  # USD/year
+    expected_fopex_mse = 50075162.74496414  # USD/year
 
     expected_capex_moe = 7307164315.34  # USD
-    expected_vopex_moe = 3316122.05  # USD/year
-    expected_fopex_moe = 21761330.82 - expected_vopex_moe  # USD/year
+    expected_vopex_moe = 3316122.05290725  # USD/year
+    expected_fopex_moe = 18445208.76294278  # USD/year
 
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "ahe"
     capex, fopex, vopex = setup_and_run(plant_config, tech_config, feedstocks_dict)

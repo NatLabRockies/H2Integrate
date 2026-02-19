@@ -18,6 +18,7 @@ technology_interconnections: [
   # but iron_ore is set up as an output of an iron_mine.
   ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["ewin_grid_feedstock","iron_plant","electricity","cable"],
+  ["ewin_chemical_feedstock","iron_plant","NaOH","pipe"]
 ]
 
 plant:
@@ -67,3 +68,4 @@ finance_parameters:
       - "iron_transport"
       - "iron_plant"
       - "ewin_grid_feedstock"
+      - "ewin_chemical_feedstock"

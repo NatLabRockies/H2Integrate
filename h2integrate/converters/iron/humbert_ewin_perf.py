@@ -59,6 +59,10 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             high and low stated values in Table 10 of Humbert et al., but this is exposed as an
             OpenMDAO variable to probe the effect of specific energy consumption on iron cost.
         capacity (float): The electrical capacity of the electrowinning plant in MW.
+        NaOH_in (array): Mass flow of NaOH available in kg/h for each timestep.
+        CaCl2_in (array): Mass flow of CaCl2 available in kg/h for each timestep.
+        NaOH_ratio (float): Ratio of NaOH consumption to annual iron production in kg/kg.
+        CaCl2_ratio (float): Ratio of CaCl2 consumption to annual iron production in kg/kg.
 
         OpenMDAO Outputs:
 
@@ -68,6 +72,8 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         sponge_iron_out (array): Sponge iron production in kg/h for each timestep.
         total_sponge_iron_produced (float): Total annual sponge iron production in kg/y.
         output_capacity (float): Maximum possible annual sponge iron production in kg/y.
+        NaOH_consumed (array): Mass flow of NaOH consumed in kg/h for each timestep.
+        CaCl2_consumed (array): Mass flow of CaCl2 consumed in kg/h for each timestep.
 
     """
 
@@ -95,16 +101,25 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             E_all_hi = 3.779
             E_electrolysis_lo = 1.869
             E_electrolysis_hi = 2.72
+            # Humbert opex model
+            NaOH_ratio = 25130.2 * 0.1 / 2e6  # Ratio of NaOH consumption to annual iron production
+            CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
         elif self.config.electrolysis_type == "mse":
             E_all_lo = 2.720
             E_all_hi = 3.138
             E_electrolysis_lo = 1.81
             E_electrolysis_hi = 2.08
+            # Humbert opex model
+            NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
+            CaCl2_ratio = 23138 * 0.1 / 2e6  # Ratio of CaCl2 consumption to annual iron production
         elif self.config.electrolysis_type == "moe":
             E_all_lo = 2.89
             E_all_hi = 4.45
             E_electrolysis_lo = 2.89
             E_electrolysis_hi = 4.45
+            # Humbert opex model
+            NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
+            CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
         E_all = (E_all_lo + E_all_hi) / 2  # kWh/kg_Fe
         E_electrolysis = (E_electrolysis_lo + E_electrolysis_hi) / 2  # kWh/kg_Fe
 
@@ -114,7 +129,20 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         self.add_input("spec_energy_all", val=E_all, units="kW*h/kg")
         self.add_input("spec_energy_electrolysis", val=E_electrolysis, units="kW*h/kg")
         self.add_input("capacity", val=self.config.capacity_mw, units="MW")
-
+        self.add_input(
+            "NaOH_in",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        self.add_input(
+            "CaCl2_in",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        self.add_input("NaOH_ratio", val=NaOH_ratio, units="unitless")
+        self.add_input("CaCl2_ratio", val=CaCl2_ratio, units="unitless")
         self.add_output(
             "electricity_consumed",
             val=0.0,
@@ -125,6 +153,18 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         self.add_output("iron_ore_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("limiting_input", val=0.0, shape=self.n_timesteps, units=None)
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
+        self.add_output(
+            "NaOH_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+        self.add_output(
+            "CaCl2_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
 
     def compute(self, inputs, outputs):
         # Parse inputs
@@ -134,17 +174,25 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         kwh_kg_fe = inputs["spec_energy_all"]
         kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]
         cap_kw = inputs["capacity"] * 1000
+        naoh_ratio = inputs["NaOH_ratio"]
+        cacl2_ratio = inputs["CaCl2_ratio"]
 
         # Calculate max iron production for each input
         fe_from_ore = ore_in * pct_fe
         fe_from_elec = elec_in / kwh_kg_fe
+        fe_from_naoh = (
+            inputs["NaOH_in"] / naoh_ratio if naoh_ratio > 0 else np.full(len(elec_in), np.inf)
+        )
+        fe_from_cacl2 = (
+            inputs["CaCl2_in"] / cacl2_ratio if cacl2_ratio > 0 else np.full(len(elec_in), np.inf)
+        )
 
         # Limit iron production per hour by each input
-        fe_prod = np.minimum.reduce([fe_from_ore, fe_from_elec])
+        fe_prod = np.minimum.reduce([fe_from_ore, fe_from_elec, fe_from_naoh, fe_from_cacl2])
 
         # If production is limited by available ore at any timestep i, limiters[i] = 0
         # If limited by electricity, limiters[i] = 1
-        limiters = np.argmin([fe_from_ore, fe_from_elec], axis=0)
+        limiters = np.argmin([fe_from_ore, fe_from_elec, fe_from_naoh, fe_from_cacl2], axis=0)
 
         # Limiting iron production per hour by capacity
         fe_prod = np.minimum.reduce([fe_prod, np.full(len(fe_prod), cap_kw / kwh_kg_fe)])
@@ -175,3 +223,5 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             outputs["rated_sponge_iron_production"] * self.n_timesteps
         )
         outputs["specific_energy_electrolysis"] = kwh_kg_electrolysis
+        outputs["NaOH_consumed"] = fe_prod * naoh_ratio
+        outputs["CaCl2_consumed"] = fe_prod * cacl2_ratio

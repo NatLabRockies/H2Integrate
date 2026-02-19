@@ -88,7 +88,7 @@ def setup_and_run(plant_config, tech_config, feedstocks_dict):
     iron_cap = prob.get_val("perf.rated_sponge_iron_production", units="kg/h") * 8760
     # prob.get_val("perf.output_capacity", units="kg/year")
 
-    return elec_consumed, iron_out, iron_cap
+    return prob, elec_consumed, iron_out, iron_cap
 
 
 def test_humbert_ewin_performance_component(plant_config, tech_config, feedstocks_dict, subtests):
@@ -103,7 +103,14 @@ def test_humbert_ewin_performance_component(plant_config, tech_config, feedstock
     expected_output_capacity_moe = 1432152588.56  # kg/y
 
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "ahe"
-    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
+    feedstocks_dict["NaOH"] = {
+        "rated_capacity": 195,  # kg/h
+        "units": "kg/h",
+        "price": 415.179,  # USD/tonne
+    }
+    prob, elec_consumed, iron_out, iron_cap = setup_and_run(
+        plant_config, tech_config, feedstocks_dict
+    )
     with subtests.test("ahe_electricity"):
         assert (
             pytest.approx(
@@ -128,8 +135,23 @@ def test_humbert_ewin_performance_component(plant_config, tech_config, feedstock
             )
             == expected_output_capacity_ahe
         )
+    with subtests.test("NaOH_consumed"):
+        assert (
+            pytest.approx(
+                sum(prob.get_val("perf.NaOH_consumed", units="kg/h")),
+                rel=1e-3,
+            )
+            == 1701318.8377416783
+        )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "mse"
-    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
+    feedstocks_dict["CaCl2"] = {
+        "rated_capacity": 179,  # kg/h
+        "units": "kg/h",
+        "price": 207.59,  # USD/tonne
+    }
+    prob, elec_consumed, iron_out, iron_cap = setup_and_run(
+        plant_config, tech_config, feedstocks_dict
+    )
     with subtests.test("mse_electricity"):
         assert (
             pytest.approx(
@@ -154,8 +176,18 @@ def test_humbert_ewin_performance_component(plant_config, tech_config, feedstock
             )
             == expected_output_capacity_mse
         )
+    with subtests.test("CaCl2_consumed"):
+        assert (
+            pytest.approx(
+                sum(prob.get_val("perf.CaCl2_consumed", units="kg/h")),
+                rel=1e-3,
+            )
+            == 1566446.5570378024
+        )
     tech_config["model_inputs"]["shared_parameters"]["electrolysis_type"] = "moe"
-    elec_consumed, iron_out, iron_cap = setup_and_run(plant_config, tech_config, feedstocks_dict)
+    prob, elec_consumed, iron_out, iron_cap = setup_and_run(
+        plant_config, tech_config, feedstocks_dict
+    )
     with subtests.test("moe_electricity"):
         assert (
             pytest.approx(

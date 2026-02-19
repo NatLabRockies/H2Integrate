@@ -134,9 +134,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
             # AHE - Opex
             positions = 739.2 / 2e6  # Labor rate (position-years/tonne)
-            NaOH_ratio = 25130.2 * 0.1 / 2e6  # Ratio of NaOH consumption to annual iron production
-            CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
-            limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
             anode_ratio = 0  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
@@ -153,9 +150,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
             # MSE - Opex
             positions = 499.2 / 2e6  # Labor rate (position-years/tonne)
-            NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
-            CaCl2_ratio = 23138 * 0.1 / 2e6  # Ratio of CaCl2 consumption to annual iron production
-            limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
             anode_ratio = 1589.3 / 2e6  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
@@ -170,11 +164,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
             e = 0.95  # Current efficiency (dimensionless)
             N = 6  # Number of rectifier lines
 
-            # AHE - Opex
+            # MOE - Opex
             positions = 230.4 / 2e6  # Labor rate (position-years/tonne)
-            NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
-            CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
-            limestone_ratio = 0  # Ratio of limestone consumption to annual iron production
             anode_ratio = 8365.6 / 2e6  # Ratio of anode mass to annual iron production
             # Anode replacement interval not considered by Humbert, 3 years assumed here
             anode_replace_int = 3  # Replacement interval of anodes (years)
@@ -199,9 +190,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         # Set inputs for Humbert Opex model
         self.add_input("positions", val=positions, units="year/t")
-        self.add_input("NaOH_ratio", val=NaOH_ratio, units="unitless")
-        self.add_input("CaCl2_ratio", val=CaCl2_ratio, units="unitless")
-        self.add_input("limestone_ratio", val=limestone_ratio, units="unitless")
         self.add_input("anode_ratio", val=anode_ratio, units="unitless")
         self.add_input("anode_replacement_interval", val=anode_replace_int, units="year")
 
@@ -273,35 +261,25 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         # Parse inputs for Humbert Opex model (doi.org/10.1007/s40831-024-00878-3)
         positions = inputs["positions"]
-        NaOH_ratio = inputs["NaOH_ratio"]
-        CaCl2_ratio = inputs["CaCl2_ratio"]
-        limestone_ratio = inputs["limestone_ratio"]
         anode_ratio = inputs["anode_ratio"]
         anode_interval = inputs["anode_replacement_interval"]
 
         # Humbert Opex model - from SI spreadsheet (doi.org/10.1007/s40831-024-00878-3)
         # Default costs - adjusted to 2018 to match Stinn via CPI
         labor_rate = 55.90  # USD/person-hour
-        NaOH_cost = 415.179  # USD/tonne
-        CaCl2_cost = 207.59  # USD/tonne
-        limestone_cost = 0
+        # NaOH_cost = 415.179  # USD/tonne
+        # CaCl2_cost = 207.59  # USD/tonne
         anode_cost = 1660.716  # USD/tonne
         hours = 2000  # hours/position-year
 
         # All linear OpEx for now - TODO: apply scaling models
         labor_opex = labor_rate * P * positions * hours  # Labor OpEx USD/year
-        NaOH_opex = NaOH_ratio * P * NaOH_cost  # NaOH VarOpEx USD/year
-        CaCl2_opex = CaCl2_ratio * P * CaCl2_cost  # CaCl2 VarOpEx USD/year
-        limestone_opex = limestone_ratio * P * limestone_cost  # Limestone VarOpEx USD/year
         anode_opex = anode_ratio * P * anode_cost / anode_interval  # Anode VarOpEx USD/year
 
         # Opex outputs
         # Note: Opex is broken out into components of `labor_opex`, `NaOH_opex`, etc., which are
         # not used by the financial model but can be used for cost breakdowns.
         outputs["OpEx"] = labor_opex
-        outputs["VarOpEx"] = NaOH_opex + CaCl2_opex + limestone_opex + anode_opex
+        outputs["VarOpEx"] = anode_opex
         outputs["labor_opex"] = labor_opex
-        outputs["NaOH_opex"] = NaOH_opex
-        outputs["CaCl2_opex"] = CaCl2_opex
-        outputs["limestone_opex"] = limestone_opex
         outputs["anode_opex"] = anode_opex
