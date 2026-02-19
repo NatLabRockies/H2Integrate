@@ -15,8 +15,8 @@ class NuclearPerformanceConfig(BaseConfig):
     """Configuration class for the nuclear plant performance model.
 
     Args:
-            system_capacity_mw (float): Rated electric capacity in MW.
-            capacity_factor (float): Average availability (0-1).
+        system_capacity_mw (float): Rated electric capacity in MW.
+        capacity_factor (float): Average availability (0-1).
     """
 
     system_capacity_mw: float = field(validator=gt_zero)
@@ -86,12 +86,12 @@ class NuclearCostModelConfig(CostModelBaseConfig):
     """Configuration class for the nuclear plant cost model.
 
     Args:
-            system_capacity_mw (float): Rated electric capacity in MW.
-            reactor_type (str): Key selecting a reactor type in type_costs.
-            type_costs (dict): Reactor type cost data with keys:
-                    capex_per_kw, fixed_opex_per_kw_year, variable_opex_per_mwh
-                    Optional: reference_capacity_mw, capex_scaling_exponent
-            cost_year (int): Dollar year corresponding to input costs.
+        system_capacity_mw (float): Rated electric capacity in MW.
+        reactor_type (str): Key selecting a reactor type in type_costs.
+        type_costs (dict): Reactor type cost data with keys:
+                capex_per_kw, fixed_opex_per_kw_year, variable_opex_per_mwh
+                Optional: reference_capacity_mw, capex_scaling_exponent
+        cost_year (int): Dollar year corresponding to input costs.
     """
 
     system_capacity_mw: float = field(validator=gt_zero)

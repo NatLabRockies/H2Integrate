@@ -236,6 +236,8 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'NuclearPerformanceModel'`
     - cost models:
         + `'NuclearCostModel'`
+    - docs:
+        + [../technology_models/nuclear.md](../technology_models/nuclear.md)
 - `grid`: electricity grid connection
     - performance models:
         + `'GridPerformanceModel'`
