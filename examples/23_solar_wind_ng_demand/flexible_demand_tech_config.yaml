@@ -70,7 +70,7 @@ technologies:
     model_inputs:
       shared_parameters:
         feedstock_type: natural_gas
-        units: MMBtu
+        units: "MMBtu/h"
       performance_parameters:
         rated_capacity: 750. #MMBtu
       cost_parameters:
