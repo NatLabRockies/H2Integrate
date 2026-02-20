@@ -65,7 +65,7 @@ def ng_feedstock_availability_costs():
         },
         "natural_gas": {
             "rated_capacity": 1270,  # need 1268.934 MMBtu at each timestep
-            "units": "MMBtu",
+            "units": "MMBtu/h",
             "price": 0.0,
         },
         "reformer_catalyst": {
@@ -98,7 +98,7 @@ def h2_feedstock_availability_costs():
         },
         "natural_gas": {
             "rated_capacity": 81.0,  # need 80.101596 MMBtu at each timestep
-            "units": "MMBtu",
+            "units": "MMBtu/h",
             "price": 0.0,
         },
         "hydrogen": {

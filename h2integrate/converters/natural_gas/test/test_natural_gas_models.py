@@ -80,7 +80,7 @@ def test_ngcc_performance_outputs(plant_config, ngcc_performance_params, subtest
     }
 
     # Create a simple natural gas input profile (constant 750 MMBtu/h for 100 MW plant)
-    natural_gas_input = np.full(8760, 750.0)  # MMBtu
+    natural_gas_input = np.full(8760, 750.0)  # MMBtu/h
 
     prob = om.Problem()
     perf_comp = NaturalGasPerformanceModel(
@@ -182,7 +182,7 @@ def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
     }
 
     # Create a simple natural gas input profile (constant 750 MMBtu/h for 100 MW plant)
-    natural_gas_input = np.full(8760, 750.0)  # MMBtu
+    natural_gas_input = np.full(8760, 750.0)  # MMBtu/h
 
     prob = om.Problem()
     perf_comp = NaturalGasPerformanceModel(
@@ -218,7 +218,7 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
     }
 
     # Create a simple natural gas input profile (constant 575 MMBtu/h for 50 MW plant)
-    natural_gas_input = np.full(8760, 575.0)  # MMBtu
+    natural_gas_input = np.full(8760, 575.0)  # MMBtu/h
 
     prob = om.Problem()
     perf_comp = NaturalGasPerformanceModel(
@@ -352,7 +352,7 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
     }
 
     # Create a simple natural gas input profile (constant 750 MMBtu/h for 100 MW plant)
-    natural_gas_input = np.full(8760, 750.0)  # MMBtu
+    natural_gas_input = np.full(8760, 750.0)  # MMBtu/h
     electricity_demand_section = np.linspace(
         0, 1.2 * ngcc_performance_params["system_capacity_mw"], 12
     )

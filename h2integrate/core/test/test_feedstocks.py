@@ -32,7 +32,7 @@ class TestFeedstocks(unittest.TestCase):
     def create_basic_feedstock_config(
         self,
         feedstock_type="natural_gas",
-        units="MMBtu",
+        units="MMBtu/h",
         rated_capacity=100.0,
         price=4.2,
         annual_cost=0.0,
@@ -42,8 +42,8 @@ class TestFeedstocks(unittest.TestCase):
         tech_config = {
             "model_inputs": {
                 "shared_parameters": {
-                    "feedstock_type": feedstock_type,
-                    "units": units,
+                    "commodity": feedstock_type,
+                    "commodity_rate_units": units,
                 },
                 "performance_parameters": {
                     "rated_capacity": rated_capacity,
@@ -151,7 +151,7 @@ class TestFeedstocks(unittest.TestCase):
         """Test feedstocks of different types (natural gas, electricity, water)."""
         # Natural gas feedstock
         ng_config, plant_config, driver_config = self.create_basic_feedstock_config(
-            feedstock_type="natural_gas", units="MMBtu", rated_capacity=100.0, price=4.2
+            feedstock_type="natural_gas", units="MMBtu/h", rated_capacity=100.0, price=4.2
         )
 
         # Electricity feedstock
