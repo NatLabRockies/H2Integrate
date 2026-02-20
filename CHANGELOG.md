@@ -7,14 +7,10 @@
 - Added load following optimization dispatch
 - Added simple dispatch calculations to `StorageAutoSizingModel`
 - Adjust import of mcm package to use the PyPi version
-<<<<<<< ewin-merge
-- Added iron electrowinning model
-=======
 - Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
   found, and points to the file and line number that caused the error. The YAML `Loader` modification
   maintains compliance with the existing JSON validation protocols.
->>>>>>> develop
-
+- Added iron electrowinning model
 ## 0.6 [February 10, 2026]
 
 ### New Features and Technology Models
