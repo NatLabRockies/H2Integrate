@@ -83,7 +83,7 @@ def pysam_performance_model():
     ]
 )
 # fmt: on
-def test_pvwatts_with_meteosat_pm(
+def test_pvwatts_integration(
     subtests,
     pysam_performance_model,
     model,
