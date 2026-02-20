@@ -9,13 +9,14 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "electricity"
-        units: "MW"
+        commodity: "electricity"
+        commodity_rate_units: "MW"
       performance_parameters:
         rated_capacity: 30.
       cost_parameters:
+        commodity_amount_units: "MW*h"
         cost_year: 2022
-        price: 58.02 #USD/MW
+        price: 58.02 #USD/MWh
         annual_cost: 0.
         start_up_cost: 0.
 
@@ -26,8 +27,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "crude_ore"
-        units: "t/h"
+        commodity: "crude_ore"
+        commodity_rate_units: "t/h"
       performance_parameters:
         rated_capacity: 2000.
       cost_parameters:
@@ -67,8 +68,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "electricity"
-        units: "kW"
+        commodity: "electricity"
+        commodity_rate_units: "kW"
       performance_parameters:
         rated_capacity: 600000.
       cost_parameters:
@@ -96,8 +97,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "NaOH"
-        units: "t/h"
+        commodity: "NaOH"
+        commodity_rate_units: "t/h"
       performance_parameters:
         rated_capacity: 195.
       cost_parameters:
@@ -113,8 +114,8 @@ technologies:
       model: "FeedstockCostModel"
     model_inputs:
       shared_parameters:
-        feedstock_type: "CaCl2"
-        units: "t/h"
+        commodity: "CaCl2"
+        commodity_rate_units: "t/h"
       performance_parameters:
         rated_capacity: 0.
       cost_parameters:
