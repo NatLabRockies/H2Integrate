@@ -423,6 +423,26 @@ class H2IntegrateModel:
             )
             raise NameError(msg)
 
+        if any(
+            tech == "pipe" or tech == "cable" for tech in self.technology_config["technologies"]
+        ):
+            invalid_tech_name = [
+                tech
+                for tech in self.technology_config["technologies"]
+                if tech == "pipe" or tech == "cable"
+            ]
+            if len(invalid_tech_name) == 1:
+                invalid_tech_msg = f"'{invalid_tech_name}' is an invalid technology name and is"
+            else:
+                invalid_techs = ", ".join(f"'{invalid_tech}'" for invalid_tech in invalid_tech_name)
+                invalid_tech_msg = f"{invalid_techs} are invalid technology names and are"
+
+            msg = (
+                f"{invalid_tech_msg} reserved for internal H2I transport models. "
+                "Please change the technology name to something else."
+            )
+            raise NameError(msg)
+
         # Create a technology group for each technology
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             perf_model = individual_tech_config.get("performance_model", {}).get("model")
