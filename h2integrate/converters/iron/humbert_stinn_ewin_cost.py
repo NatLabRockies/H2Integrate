@@ -27,7 +27,12 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBase
 
 @define
 class HumbertStinnEwinCostConfig(CostModelBaseConfig):
-    """Configuration class for the Humbert iron electrowinning performance model.
+    """Configuration class for the Humbert iron electrowinning cost model.
+
+    Default values for the `labor_rate_cost`, `anode_cost_per_tonne`,
+    and `annual_labor_hours_per_position` came from the
+    `SI spreadsheet of the Humbert Opex model <https://link.springer.com/article/10.1007/s40831-024-00878-3#Sec31>`_
+    and were adjusted to 2018 dollars using CPI.
 
     Args:
         electrolysis_type (str): The type of electrowinning being performed. Options:
@@ -36,6 +41,13 @@ class HumbertStinnEwinCostConfig(CostModelBaseConfig):
             "moe": Molten Oxide Electrolysis (MOE)
         cost_year (int): The dollar year of costs output by the model. Defaults to 2018, the dollar
             year in which data was given in the Stinn paper
+        labor_rate_cost (float, optional): labor cost in USD/person-hour. Defaults to 55.90,
+            the number used in the Humbert OpEx model and adjusted to 2018 USD using CPI.
+        anode_cost_per_tonne (float, optional): anode cost in USD/tonne. Defaults to 1660.716,
+            the number used in the Humbert OpEx model and adjusted to 2018 USD using CPI.
+        annual_labor_hours_per_position (float | int, optional): The labor hours per position
+            per year. Defaults to 2000, the number used in the Humbert OpEx model.
+
     """
 
     electrolysis_type: str = field(
@@ -43,6 +55,9 @@ class HumbertStinnEwinCostConfig(CostModelBaseConfig):
     )  # product selection
     # Set cost year to 2018 - fixed for Stinn modeling
     cost_year: int = field(default=2018, converter=int, validator=must_equal(2018))
+    labor_rate_cost: float = field(default=55.90)
+    anode_cost_per_tonne: float = field(default=1660.716)
+    annual_labor_hours_per_position: int | float = field(default=2000)
 
 
 class HumbertStinnEwinCostComponent(CostModelBaseClass):
@@ -261,21 +276,20 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         anode_ratio = inputs["anode_ratio"]
         anode_interval = inputs["anode_replacement_interval"]
 
-        # Humbert Opex model - from SI spreadsheet (doi.org/10.1007/s40831-024-00878-3)
-        # Default costs - adjusted to 2018 to match Stinn via CPI
-        labor_rate = 55.90  # USD/person-hour
-        # NaOH_cost = 415.179  # USD/tonne, unused
-        # CaCl2_cost = 207.59  # USD/tonne, unused
-        anode_cost = 1660.716  # USD/tonne
-        hours = 2000  # hours/position-year
-
         # All linear OpEx for now - TODO: apply scaling models
-        labor_opex = labor_rate * P * positions * hours  # Labor OpEx USD/year
-        anode_opex = anode_ratio * P * anode_cost / anode_interval  # Anode VarOpEx USD/year
+        # Labor OpEx USD/year
+        labor_opex = (
+            self.config.labor_rate_cost
+            * P
+            * positions
+            * self.config.annual_labor_hours_per_position
+        )
+        anode_opex = (
+            anode_ratio * P * self.config.anode_cost_per_tonne / anode_interval
+        )  # Anode VarOpEx USD/year
 
         # Opex outputs
-        # Note: Opex is broken out into components of `labor_opex`, `NaOH_opex`, etc., which are
-        # not used by the financial model but can be used for cost breakdowns.
+        # Note: Opex is the labor_opex and VarOpEx is the cost of the anode.
         outputs["OpEx"] = labor_opex
         outputs["VarOpEx"] = anode_opex
         outputs["labor_opex"] = labor_opex
