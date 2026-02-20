@@ -50,7 +50,7 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
     def setup(self):
         self.product = "h2_dri"
         self.feedstocks_to_units = {
-            "natural_gas": "MMBtu",
+            "natural_gas": "MMBtu/h",
             "water": "galUS",  # "galUS/h"
             "iron_ore": "t/h",
             "electricity": "kW",
@@ -72,7 +72,7 @@ class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePer
 
     def setup(self):
         self.feedstocks_to_units = {
-            "natural_gas": "MMBtu",
+            "natural_gas": "MMBtu/h",
             "water": "galUS",  # "galUS/h"
             "iron_ore": "t/h",
             "electricity": "kW",
