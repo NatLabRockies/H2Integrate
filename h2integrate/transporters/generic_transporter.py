@@ -9,8 +9,8 @@ class GenericTransporterPerformanceConfig(BaseConfig):
     """Configuration class for a generic transporter.
 
     Attributes:
-        commodity (str): name of commodity type
-        commodity_rate_units (str): units of commodity production profile (such as kW or kg/h)
+        commodity (str): name of commodity to transport
+        commodity_rate_units (str): units of commodity transport profile (such as "kW" or "kg/h")
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
@@ -19,7 +19,7 @@ class GenericTransporterPerformanceConfig(BaseConfig):
 
 class GenericTransporterPerformanceModel(om.ExplicitComponent):
     """
-    Combine any commodity or resource from multiple sources into one output without losses.
+    Transport any commodity from a source technology to a destination technology.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.

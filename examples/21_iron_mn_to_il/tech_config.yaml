@@ -35,7 +35,13 @@ technologies:
         price: 0. #USD/t
         annual_cost: 0.
         start_up_cost: 0.
-
+  crude_ore_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "crude_ore"
+        commodity_rate_units: "t/h"
   iron_mine:
     performance_model:
       model: "MartinIronMinePerformanceComponent"
@@ -127,6 +133,14 @@ technologies:
         price: 17515.14 #USD 17515.14/m**3
         annual_cost: 0.
         start_up_cost: 0.
+
+  catalyst_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "reformer_catalyst"
+        commodity_rate_units: "(m**3)"
 
   dri_grid_feedstock: #electricity feedstock for iron dri
     performance_model:
