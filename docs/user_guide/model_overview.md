@@ -73,6 +73,7 @@ When the Primary Commodity is electricity, those converters are considered elect
 | `pipe`      |  most mass-based commodities         |
 | `combiner`      | Any    |
 | `splitter` |  Any|
+| `generic_transport` | Any |
 
 Connection: `[source_tech, dest_tech, transport_commodity, transport_technology]`
 
@@ -262,7 +263,9 @@ Below summarizes the available performance, cost, and financial models for each 
 - `splitter`:
     - performance models:
         + `'GenericSplitterPerformanceModel'`: can be used for any commodity
-
+- `generic_transport`:
+    - performance models:
+        + `'GenericTransporterPerformanceModel'`: can be used for any commodity
 (storage-models)=
 ## Storage Models
 - `h2_storage`: hydrogen storage
