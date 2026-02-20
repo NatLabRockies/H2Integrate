@@ -64,13 +64,13 @@ ng_feedstock:
 
 - `commodity` (str): Identifier for the feedstock type (e.g., "natural_gas", "water", "electricity")
 - `commodity_rate_units` (str): commodity_rate_units for feedstock consumption (e.g., "MMBtu/h", "kg/h", "galUS/h", or "MW")
-- `rated_capacity` (float): Maximum feedstock supply rate in `commodity_rate_units`/hour
+- `rated_capacity` (float): Maximum feedstock supply rate in `commodity_rate_units`
 
 ### Cost Model Parameters
 
 - `commodity` (str): Must match the performance model identifier
 - `commodity_rate_units` (str): Must match the performance model commodity_rate_units
-- `price` (float, int, or list): Cost per unit in USD/`commodity_amount_units`. Can be:
+- `price` (float, int, or list): Cost per unit in `USD/commodity_amount_units`. Can be:
   - Scalar: Constant price for all timesteps and years
   - List: Price per timestep
 - `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
