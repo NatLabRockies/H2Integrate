@@ -672,13 +672,13 @@ def test_hydro_example(subtests):
 
     model.post_process()
 
-    print(model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)"))
+    print(model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(kW*h)"))
 
     # Subtests for checking specific values
     with subtests.test("Check LCOE"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)"),
+                model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(kW*h)")[0],
                 rel=1e-3,
             )
             == 0.17653979
@@ -1226,7 +1226,7 @@ def test_simple_dispatch_example(subtests):
     with subtests.test("Check total electricity produced"):
         total_electricity = model.prob.get_val(
             "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
-            units="MW*h/year",
+            units="kW*h/year",
         )[0]
         assert pytest.approx(total_electricity, rel=1e-6) == 62797265.9296355
 

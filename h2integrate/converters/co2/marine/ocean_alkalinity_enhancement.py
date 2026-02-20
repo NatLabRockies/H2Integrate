@@ -94,7 +94,11 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
             desc="Alkaline seawater flow rate (m³/s)",
         )
         self.add_output(
-            "alkaline_seawater_pH", val=0.0, shape=n_timesteps, desc="pH of the alkaline seawater"
+            "alkaline_seawater_pH",
+            val=0.0,
+            shape=n_timesteps,
+            units="unitless",
+            desc="pH of the alkaline seawater",
         )
         self.add_output(
             "alkaline_seawater_dic",
