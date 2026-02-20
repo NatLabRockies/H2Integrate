@@ -42,8 +42,8 @@ class TestFeedstocks(unittest.TestCase):
         tech_config = {
             "model_inputs": {
                 "shared_parameters": {
-                    "feedstock_type": feedstock_type,
-                    "units": units,
+                    "commodity": feedstock_type,
+                    "commodity_rate_units": units,
                 },
                 "performance_parameters": {
                     "rated_capacity": rated_capacity,
