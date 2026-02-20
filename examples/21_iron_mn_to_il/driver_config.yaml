@@ -1,5 +1,5 @@
 name: "driver_config"
-description: "This analysis runs a hybrid plant to match the first example in H2Integrate"
+description: "Simply setting up an outputs folder, nothing fancy"
 
 general:
   folder_output: outputs

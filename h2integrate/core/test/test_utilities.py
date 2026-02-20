@@ -13,9 +13,11 @@ from h2integrate.core.utilities import (
     BaseConfig,
     get_path,
     find_file,
+    load_yaml,
     make_unique_case_name,
     dict_to_yaml_formatting,
 )
+from h2integrate.core.inputs.validation import load_tech_yaml
 
 
 def test_get_path(subtests):
@@ -509,6 +511,42 @@ def test_BaseConfig(subtests):
         msg = "The class definition for DemoConfig is missing the following inputs"
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({})
+
+
+def test_yaml_no_duplicate_keys(subtests):
+    inputs = Path(__file__).parent / "inputs"
+    with subtests.test("Check for duplicate in original file"):
+        fn = "duplicate_keys.yaml"
+        msg = (
+            f"Duplicate key found in {inputs / fn}:"
+            " Duplicate 'performance_parameters' key found at line 98"
+        )
+        with pytest.raises(ValueError, match=msg):
+            load_yaml(inputs / fn)
+
+    with subtests.test("Check for duplicates in included file"):
+        fn = "no_duplicates_use_include.yaml"
+        fn_err = "duplicate_keys_included.yaml"
+        msg = (
+            f"Duplicate key found in {inputs / fn_err}:"
+            " Duplicate 'wake_velocity_parameters' key found at line 70"
+        )
+        with pytest.raises(ValueError, match=msg):
+            load_yaml(inputs / fn)
+
+    def traverse_dict(sample_dict):
+        for key, value in sample_dict.items():
+            assert not key.startswith("__line__"), f"Invalid line numbering key found at: {key}"
+            if isinstance(value, dict):
+                traverse_dict(value)
+
+    with subtests.test(
+        "Ensure no __line__ properties are included in either intermediary or final results"
+    ):
+        fn = "no_duplicates.yaml"
+        sample = load_yaml(inputs / fn)
+        traverse_dict(sample)
+        load_tech_yaml(inputs / fn)
 
 
 if __name__ == "__main__":

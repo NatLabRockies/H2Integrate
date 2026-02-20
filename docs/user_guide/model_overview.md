@@ -44,6 +44,7 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `HOPPComponent`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
+| `h2_fuel_cell`   |  electricity  | hydrogen |
 | `steel`          |  steel        | hydrogen |
 | `ammonia`        |  ammonia      | nitrogen, hydrogen |
 | `doc`   |  co2     | electricity |
@@ -173,6 +174,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'StimulatedGeoH2PerformanceModel'`
     - cost models:
         + `'GeoH2SubsurfaceCostModel'`
+- `h2_fuel_cell`: hydrogen fuel cell
+    - performance models:
+        + `'LinearH2FuelCellPerformanceModel'`
+    - cost models:
+        + `'H2FuelCellCostModel'`
 - `steel`: steel production
     - performance models:
         + `'SteelPerformanceModel'`
