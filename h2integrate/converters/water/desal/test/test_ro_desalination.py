@@ -136,15 +136,15 @@ def test_brackish_performance(plant_config, subtests):
     prob.run_model()
 
     with subtests.test("fresh water"):
-        assert prob["water_out"] == approx(10.03, rel=1e-5)
+        assert prob.get_val("water_out", units="m**3/h") == approx(10.03, rel=1e-5)
     with subtests.test("mass"):
-        assert prob["mass"] == approx(3477.43, rel=1e-3)
+        assert prob.get_val("mass", units="kg") == approx(3477.43, rel=1e-3)
     with subtests.test("footprint"):
-        assert prob["footprint"] == approx(4.68, rel=1e-3)
+        assert prob.get_val("footprint", units="m**2") == approx(4.68, rel=1e-3)
     with subtests.test("feedwater"):
-        assert prob["feedwater"] == approx(13.37, rel=1e-3)
+        assert prob.get_val("feedwater", units="m**3/h") == approx(13.37, rel=1e-3)
     with subtests.test("electricity"):
-        assert prob["electricity_in"] == approx(15.04, rel=1e-3)
+        assert prob.get_val("electricity_in", units="kW") == approx(15.04, rel=1e-3)
 
 
 def test_seawater_performance(plant_config, subtests):
@@ -166,15 +166,15 @@ def test_seawater_performance(plant_config, subtests):
     prob.run_model()
 
     with subtests.test("fresh water"):
-        assert prob["water_out"] == approx(10.03, rel=1e-5)
+        assert prob.get_val("water_out", units="m**3/h") == approx(10.03, rel=1e-5)
     with subtests.test("mass"):
-        assert prob["mass"] == approx(3477.43, rel=1e-3)
+        assert prob.get_val("mass", units="kg") == approx(3477.43, rel=1e-3)
     with subtests.test("footprint"):
-        assert prob["footprint"] == approx(4.68, rel=1e-3)
+        assert prob.get_val("footprint", units="m**2") == approx(4.68, rel=1e-3)
     with subtests.test("feedwater"):
-        assert prob["feedwater"] == approx(20.06, rel=1e-5)
+        assert prob.get_val("feedwater", units="m**3/h") == approx(20.06, rel=1e-5)
     with subtests.test("electricity"):
-        assert prob["electricity_in"] == approx(40.12, rel=1e-5)
+        assert prob.get_val("electricity_in", units="kW") == approx(40.12, rel=1e-5)
 
 
 def test_ro_desalination_cost(subtests):
@@ -205,6 +205,6 @@ def test_ro_desalination_cost(subtests):
     prob.run_model()
 
     with subtests.test("capex"):
-        assert prob["CapEx"] == approx(91372, rel=1e-2)
+        assert prob.get_val("CapEx", units="USD") == approx(91372, rel=1e-2)
     with subtests.test("opex"):
-        assert prob["OpEx"] == approx(13447, rel=1e-2)
+        assert prob.get_val("OpEx", units="USD/year") == approx(13447, rel=1e-2)

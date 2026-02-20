@@ -79,7 +79,18 @@ input_config = {
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in [
+value_units = {
+    "electrolyzer.electricity_in": "kW",
+    "electrolyzer.electrolyzer_size_mw": "MW",
+    "electrolyzer.capacity_factor": "unitless",
+    "ammonia.hydrogen_in": "kg/h",
+    "ammonia.max_hydrogen_capacity": "kg/h",
+    "ammonia.capacity_factor": "unitless",
+    "finance_subgroup_h2.LCOH": "USD/kg",
+    "finance_subgroup_nh3.LCOA": "USD/kg",
+}
+
+report_values = [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
     "electrolyzer.capacity_factor",
@@ -88,8 +99,11 @@ for value in [
     "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
-]:
-    print(value + ": " + str(np.max(model.prob.get_val(value))))
+]
+
+for value in report_values:
+    units = value_units[value]
+    print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
 # In this case, the electrolyzer will be sized to match the maximum `electricity_in`
 # coming from HOPP. This increases the electrolyzer size to 1080 MW, the smallest
@@ -109,17 +123,9 @@ input_config["technology_config"] = tech_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in [
-    "electrolyzer.electricity_in",
-    "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.capacity_factor",
-    "ammonia.hydrogen_in",
-    "ammonia.max_hydrogen_capacity",
-    "ammonia.capacity_factor",
-    "finance_subgroup_h2.LCOH",
-    "finance_subgroup_nh3.LCOA",
-]:
-    print(value + ": " + str(np.max(model.prob.get_val(value))))
+for value in report_values:
+    units = value_units[value]
+    print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
 # In this case, the electrolyzer will be sized to match the maximum hydrogen capacity of
 # the ammonia plant. This requires the `technology_interconnections` entry to send the
@@ -150,17 +156,9 @@ input_config["plant_config"] = plant_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in [
-    "electrolyzer.electricity_in",
-    "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.capacity_factor",
-    "ammonia.hydrogen_in",
-    "ammonia.max_hydrogen_capacity",
-    "ammonia.capacity_factor",
-    "finance_subgroup_h2.LCOH",
-    "finance_subgroup_nh3.LCOA",
-]:
-    print(value + ": " + str(np.max(model.prob.get_val(value))))
+for value in report_values:
+    units = value_units[value]
+    print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
 
 tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_parameters"][
@@ -195,14 +193,6 @@ input_config["driver_config"] = driver_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in [
-    "electrolyzer.electricity_in",
-    "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.capacity_factor",
-    "ammonia.hydrogen_in",
-    "ammonia.max_hydrogen_capacity",
-    "ammonia.capacity_factor",
-    "finance_subgroup_h2.LCOH",
-    "finance_subgroup_nh3.LCOA",
-]:
-    print(value + ": " + str(np.max(model.prob.get_val(value))))
+for value in report_values:
+    units = value_units[value]
+    print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))

@@ -333,10 +333,14 @@ def test_ng_dri_performance_cost(
         )
     with subtests.test("CapEx"):
         # expected difference of 0.044534%
-        assert pytest.approx(prob.get_val("cost.CapEx")[0], rel=1e-3) == expected_capex
+        assert pytest.approx(prob.get_val("cost.CapEx", units="USD")[0], rel=1e-3) == expected_capex
     with subtests.test("OpEx"):
         assert (
-            pytest.approx(prob.get_val("cost.OpEx")[0] + prob.get_val("cost.VarOpEx")[0], rel=1e-3)
+            pytest.approx(
+                prob.get_val("cost.OpEx", units="USD/year")[0]
+                + prob.get_val("cost.VarOpEx", units="USD/year")[0],
+                rel=1e-3,
+            )
             == expected_fixed_om
         )
 
@@ -414,9 +418,13 @@ def test_h2_dri_performance_cost(
         )
     with subtests.test("CapEx"):
         # expected difference of 0.044534%
-        assert pytest.approx(prob.get_val("cost.CapEx")[0], rel=1e-3) == expected_capex
+        assert pytest.approx(prob.get_val("cost.CapEx", units="USD")[0], rel=1e-3) == expected_capex
     with subtests.test("OpEx"):
         assert (
-            pytest.approx(prob.get_val("cost.OpEx")[0] + prob.get_val("cost.VarOpEx")[0], rel=1e-3)
+            pytest.approx(
+                prob.get_val("cost.OpEx", units="USD/year")[0]
+                + prob.get_val("cost.VarOpEx", units="USD/year")[0],
+                rel=1e-3,
+            )
             == expected_fixed_om
         )

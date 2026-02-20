@@ -16,7 +16,7 @@ fig, ax = plt.subplots(2, 1, sharex=True)
 
 start_hour = 0
 end_hour = 200
-total_time_steps = model.prob.get_val("battery.electricity_soc").size
+total_time_steps = model.prob.get_val("battery.electricity_soc", units="unitless").size
 demand_profile = [
     model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
         "demand_profile"

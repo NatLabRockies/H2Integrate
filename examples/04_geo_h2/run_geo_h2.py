@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 hydrogen_out = h2i_nat.prob.model.plant.geoh2_well_subsurface.NaturalGeoH2PerformanceModel.get_val(
-    "hydrogen_out"
+    "hydrogen_out", units="kg/h"
 )
 plt.plot(hydrogen_out)
 plt.xlabel("Time (hours)")

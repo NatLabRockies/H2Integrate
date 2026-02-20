@@ -197,7 +197,7 @@ def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
     prob.set_val("natural_gas_in", natural_gas_input)
     prob.run_model()
 
-    electricity_out = prob.get_val("electricity_out")
+    electricity_out = prob.get_val("electricity_out", units="MW")
 
     with subtests.test("NGCC Electricity Output"):
         # Expected: 750 MMBtu / 7.5 MMBtu/MWh = 100 MW
@@ -233,7 +233,7 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
     prob.set_val("natural_gas_in", natural_gas_input)
     prob.run_model()
 
-    electricity_out = prob.get_val("electricity_out")
+    electricity_out = prob.get_val("electricity_out", units="MW")
 
     with subtests.test("NGCT Electricity Output"):
         # Expected: 575 MMBtu / 11.5 MMBtu/MWh = 50 MW
@@ -274,8 +274,8 @@ def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
     prob.set_val("electricity_out", electricity_out)
     prob.run_model()
 
-    capex = prob.get_val("CapEx")[0]
-    opex = prob.get_val("OpEx")[0]
+    capex = prob.get_val("CapEx", units="USD")[0]
+    opex = prob.get_val("OpEx", units="USD/year")[0]
     cost_year = prob.get_val("cost_year")
 
     # Calculate expected values
@@ -323,8 +323,8 @@ def test_ngct_cost(plant_config, ngct_cost_params, subtests):
     prob.set_val("electricity_out", electricity_out)
     prob.run_model()
 
-    capex = prob.get_val("CapEx")[0]
-    opex = prob.get_val("OpEx")[0]
+    capex = prob.get_val("CapEx", units="USD")[0]
+    opex = prob.get_val("OpEx", units="USD/year")[0]
     cost_year = prob.get_val("cost_year")
 
     # Calculate expected values
@@ -372,7 +372,7 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
     prob.set_val("electricity_demand", electricity_demand_MW)
     prob.run_model()
 
-    electricity_out = prob.get_val("electricity_out")
+    electricity_out = prob.get_val("electricity_out", units="MW")
 
     with subtests.test("NGCC Electricity Output"):
         # Expected: 750 MMBtu / 7.5 MMBtu/MWh = 100 MW

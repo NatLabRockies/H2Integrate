@@ -165,7 +165,7 @@ class TestGridPerformanceModel(unittest.TestCase):
         prob.run_model()
 
         # Should get full demand since it's below interconnection limit
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(electricity_out, demand)
 
     def test_buying_with_interconnection_limit(self):
@@ -193,7 +193,7 @@ class TestGridPerformanceModel(unittest.TestCase):
         prob.run_model()
 
         # Should be limited to interconnection size
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(
             electricity_out, np.full(self.n_timesteps, interconnection_size)
         )
@@ -227,7 +227,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         # The electricity_in represents what's being sold (no separate output needed)
         # Just verify it was accepted
-        actual_in = prob.get_val("grid.electricity_in")
+        actual_in = prob.get_val("grid.electricity_in", units="kW")
         np.testing.assert_array_almost_equal(actual_in, electricity_in)
 
     def test_simultaneous_buy_and_sell(self):
@@ -260,7 +260,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         prob.run_model()
 
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(electricity_out, electricity_demand)
 
     def test_varying_demand_profile(self):
@@ -284,7 +284,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         prob.run_model()
 
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         # Values above 100000 should be clipped
         expected = np.clip(demand, 0, 100000)
         np.testing.assert_array_almost_equal(electricity_out, expected)
@@ -338,17 +338,17 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check CapEx
         expected_capex = (interconnection_size * 50.0) + 100000.0
-        capex = prob.get_val("grid.CapEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
         self.assertAlmostEqual(capex, expected_capex)
 
         # Check OpEx
         expected_opex = interconnection_size * 2.0
-        opex = prob.get_val("grid.OpEx")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(opex, expected_opex)
 
         # Check VarOpEx (buying costs)
         expected_varopex = np.sum(electricity_out * buy_price)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_sell_only_mode(self):
@@ -389,17 +389,17 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check CapEx
         expected_capex = (interconnection_size * 50.0) + 100000.0
-        capex = prob.get_val("grid.CapEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
         self.assertAlmostEqual(capex, expected_capex)
 
         # Check OpEx
         expected_opex = interconnection_size * 2.0
-        opex = prob.get_val("grid.OpEx")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(opex, expected_opex)
 
         # Check VarOpEx (selling revenue - negative)
         expected_varopex = -np.sum(electricity_sold * sell_price)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_both_buy_and_sell_prices(self):
@@ -447,7 +447,7 @@ class TestGridCostModel(unittest.TestCase):
         selling_revenue = np.sum(electricity_sold * sell_price)
         expected_varopex = buying_cost - selling_revenue
 
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_time_varying_buy_price(self):
@@ -489,7 +489,7 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check VarOpEx with varying prices
         expected_varopex = np.sum(electricity_out * buy_prices)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_time_varying_sell_price(self):
@@ -531,7 +531,7 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check VarOpEx (negative for revenue)
         expected_varopex = -np.sum(electricity_sold * sell_prices)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_zero_interconnection_costs(self):
@@ -570,14 +570,14 @@ class TestGridCostModel(unittest.TestCase):
         prob.run_model()
 
         # Check that CapEx and OpEx are zero
-        capex = prob.get_val("grid.CapEx")
-        opex = prob.get_val("grid.OpEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(capex, 0.0)
         self.assertAlmostEqual(opex, 0.0)
 
         # VarOpEx should still be calculated
         expected_varopex = np.sum(electricity_out * 0.10) - np.sum(electricity_sold * 0.05)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
 

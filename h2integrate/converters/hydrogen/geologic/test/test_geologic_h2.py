@@ -309,11 +309,20 @@ def test_aspen_geoh2_performance_cost(
     prob.run_model()
 
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.CapEx"), rel=1e-6) == expected_capex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.CapEx", units="USD"), rel=1e-6)
+            == expected_capex
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.OpEx"), rel=1e-6) == expected_opex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.OpEx", units="USD/year"), rel=1e-6)
+            == expected_opex
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.VarOpEx")[0], rel=1e-6) == expected_varopex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == expected_varopex
+        )
 
 
 def test_aspen_geoh2_refit_coeffs(

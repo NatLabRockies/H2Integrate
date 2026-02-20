@@ -170,20 +170,28 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     with subtests.test("expected_battery_power"):
         np.testing.assert_allclose(
-            prob.get_val("battery_electricity_discharge"), expected_battery_power, rtol=1e-2
+            prob.get_val("battery_electricity_discharge", units="kW"),
+            expected_battery_power,
+            rtol=1e-2,
         )
 
     with subtests.test("expected_battery_SOC"):
-        np.testing.assert_allclose(prob.get_val("SOC"), expected_battery_SOC, rtol=1e-2)
+        np.testing.assert_allclose(
+            prob.get_val("SOC", units="percent"), expected_battery_SOC, rtol=1e-2
+        )
 
     with subtests.test("expected_battery_unmet_demand"):
         np.testing.assert_allclose(
-            prob.get_val("unmet_electricity_demand_out"), expected_unment_demand, rtol=1e-2
+            prob.get_val("unmet_electricity_demand_out", units="kW"),
+            expected_unment_demand,
+            rtol=1e-2,
         )
 
     with subtests.test("expected_battery_unused_commodity"):
         np.testing.assert_allclose(
-            prob.get_val("unused_electricity_out"), expected_unused_electricity, rtol=1e-2
+            prob.get_val("unused_electricity_out", units="kW"),
+            expected_unused_electricity,
+            rtol=1e-2,
         )
 
 
