@@ -7,9 +7,6 @@ and TEA literature for three different types of iron electrowinning:
     - Molten Salt Electrolysis (MSE)
     - Molten Oxide Electrolysis (MOE)
 
-This technology is selected in the tech_config as the performance_model
-"humbert_electrowinning_performance"
-
 Classes:
     HumbertEwinConfig: Sets the required model_inputs fields.
     HumbertEwinPerformanceComponent: Defines initialize(), setup(), and compute() methods.
@@ -104,6 +101,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             # Humbert opex model
             NaOH_ratio = 25130.2 * 0.1 / 2e6  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
+
         elif self.config.electrolysis_type == "mse":
             E_all_lo = 2.720
             E_all_hi = 3.138
@@ -112,6 +110,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             # Humbert opex model
             NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 23138 * 0.1 / 2e6  # Ratio of CaCl2 consumption to annual iron production
+
         elif self.config.electrolysis_type == "moe":
             E_all_lo = 2.89
             E_all_hi = 4.45
@@ -120,6 +119,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             # Humbert opex model
             NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
             CaCl2_ratio = 0  # Ratio of CaCl2 consumption to annual iron production
+
         E_all = (E_all_lo + E_all_hi) / 2  # kWh/kg_Fe
         E_electrolysis = (E_electrolysis_lo + E_electrolysis_hi) / 2  # kWh/kg_Fe
 

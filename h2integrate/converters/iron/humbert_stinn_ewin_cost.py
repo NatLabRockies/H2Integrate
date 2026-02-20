@@ -10,9 +10,6 @@ The opex model developed by Humbert et al. is imported from ./humbert/cost_model
 
 The capex model developed by Stinn & Allanore is imported from ./stinn/cost_model.py
 
-This technology is selected in the tech_config as the cost_model
-"humbert_stinn_electrowinning_cost"
-
 Classes:
     HumbertEwinCostConfig: Sets the required model_inputs fields.
     HumbertEwinCostComponent: Defines initialize(), setup(), and compute() methods.
@@ -267,8 +264,8 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         # Humbert Opex model - from SI spreadsheet (doi.org/10.1007/s40831-024-00878-3)
         # Default costs - adjusted to 2018 to match Stinn via CPI
         labor_rate = 55.90  # USD/person-hour
-        # NaOH_cost = 415.179  # USD/tonne
-        # CaCl2_cost = 207.59  # USD/tonne
+        # NaOH_cost = 415.179  # USD/tonne, unused
+        # CaCl2_cost = 207.59  # USD/tonne, unused
         anode_cost = 1660.716  # USD/tonne
         hours = 2000  # hours/position-year
 

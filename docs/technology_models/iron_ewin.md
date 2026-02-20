@@ -14,15 +14,15 @@ Currently, H2I models do not make these distinctions, as the technology is new a
 Instead, the models in their current form are based on two recent studies of electrowinning technology as a whole.
 
 The first study is by [Humbert et al.](doi.org/10.1007/s40831-024-00878-3), who focus specifically on iron and the three technologies above.
-These authors gather information on the specific energy required for electrolysis and associated pretreatments needed, which is applied in the `humbert_electrowinning_performance` performance model.
-In their supporting information, they also model the full operational expenditures for each process, which is applied in the `humbert_stinn_electrowinning_cost` cost model.
+These authors gather information on the specific energy required for electrolysis and associated pretreatments needed, which is applied in the `HumbertEwinPerformanceComponent` performance model.
+In their supporting information, they also model the full operational expenditures for each process, which is applied in the `HumbertStinnEwinCostComponent` cost model.
 
 The second study is by [Stinn & Allanore](doi.org/10.1149.2/2.F06202IF), who present a generalized capital cost model for electrowinning of many different metals.
 These authors use both cost data and physical parameters from existing studies to fit the model to be applicable to any metal, including iron.
-This model is applied in the `humbert_stinn_electrowinning_cost` cost model.
+This model is applied in the `HumbertStinnEwinCostComponent` cost model.
 
-To use this model, specify `"humbert_electrowinning_performance"` as the performance model and `"humbert_stinn_electrowinning_cost"` as the cost model.
-The performance model will Humbert et al.'s energy consumption data to consume electricity as a feedstock and feed this information to the cost model.
+To use this model, specify `"HumbertEwinPerformanceComponent"` as the performance model and `"HumbertStinnEwinCostComponent"` as the cost model.
+The performance model will use Humbert et al.'s energy consumption data to consume electricity as a feedstock and feed this information to the cost model.
 The cost model will calculate capex costs based on the Stinn correlations and opex costs based on the Humbert SI.
 
 ## Performance Model

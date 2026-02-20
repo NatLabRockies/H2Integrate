@@ -8,9 +8,8 @@ how their costs compare:
     - Molten Oxide Electrolysis (MOE)
 
 New users may find it helpful to look at the tech_config.yaml (particularly the iron_plant) to see
-how the technologies were set up, as well as the  plant_config.yaml (particularly the
-technology_interconnections) to see how the technologies were connected.
-
+how the technologies are set up, as well as the  plant_config.yaml (particularly the
+technology_interconnections) to see how the technologies are connected.
 """
 
 from h2integrate.core.h2integrate_model import H2IntegrateModel
