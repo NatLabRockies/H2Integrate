@@ -962,7 +962,7 @@ def test_natural_gas_example(subtests):
     # Test feedstock-specific values
     with subtests.test("Check feedstock output"):
         ng_output = model.prob.get_val("ng_feedstock_source.natural_gas_out", units="MMBtu/h")
-        # Should be rated capacity (100 MMBtu) for all timesteps
+        # Should be rated capacity (750 MMBtu/h) for all timesteps
         assert all(ng_output == 750.0)
 
     with subtests.test("Check feedstock consumption"):

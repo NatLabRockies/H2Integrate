@@ -90,18 +90,7 @@ value_units = {
     "finance_subgroup_nh3.LCOA": "USD/kg",
 }
 
-report_values = [
-    "electrolyzer.electricity_in",
-    "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.capacity_factor",
-    "ammonia.hydrogen_in",
-    "ammonia.max_hydrogen_capacity",
-    "ammonia.capacity_factor",
-    "finance_subgroup_h2.LCOH",
-    "finance_subgroup_nh3.LCOA",
-]
-
-for value in report_values:
+for value in value_units.keys():
     units = value_units[value]
     print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
@@ -123,7 +112,7 @@ input_config["technology_config"] = tech_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in report_values:
+for value in value_units.keys():
     units = value_units[value]
     print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
@@ -156,7 +145,7 @@ input_config["plant_config"] = plant_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in report_values:
+for value in value_units.keys():
     units = value_units[value]
     print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
@@ -193,6 +182,6 @@ input_config["driver_config"] = driver_config
 model = H2IntegrateModel(input_config)
 model.run()
 
-for value in report_values:
+for value in value_units.keys():
     units = value_units[value]
     print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
