@@ -423,19 +423,18 @@ class H2IntegrateModel:
             )
             raise NameError(msg)
 
-        if any(
-            tech == "pipe" or tech == "cable" for tech in self.technology_config["technologies"]
-        ):
-            invalid_tech_name = [
-                tech
-                for tech in self.technology_config["technologies"]
-                if tech == "pipe" or tech == "cable"
-            ]
-            if len(invalid_tech_name) == 1:
-                invalid_tech_msg = f"'{invalid_tech_name}' is an invalid technology name and is"
+        reserved_techs = {"pipe", "cable"}
+        # Use set intersection to find any reserved names present in the config
+        invalid_techs = sorted(
+            set(self.technology_config["technologies"]).intersection(reserved_techs)
+        )
+
+        if invalid_techs:
+            if len(invalid_techs) == 1:
+                invalid_tech_msg = f"'{invalid_techs[0]}' is an invalid technology name and is"
             else:
-                invalid_techs = ", ".join(f"'{invalid_tech}'" for invalid_tech in invalid_tech_name)
-                invalid_tech_msg = f"{invalid_techs} are invalid technology names and are"
+                names_str = ", ".join(f"'{tech}'" for tech in invalid_techs)
+                invalid_tech_msg = f"{names_str} are invalid technology names and are"
 
             msg = (
                 f"{invalid_tech_msg} reserved for internal H2I transport models. "
