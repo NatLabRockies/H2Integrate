@@ -52,7 +52,13 @@ technologies:
         mine: "Northshore"
         taconite_pellet_type: "drg"
         max_ore_production_rate_tonnes_per_hr: 221.2592636
-
+  iron_ore_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "iron_ore"
+        commodity_rate_units: "kg/h"
   processed_ore_feedstock: #iron ore feedstock
     performance_model:
       model: "FeedstockPerformanceModel"
@@ -172,6 +178,14 @@ technologies:
       cost_parameters:
         skilled_labor_cost: 40.85 #2022 USD/hr
         unskilled_labor_cost: 30.0 #2022 USD/hr
+
+  pig_iron_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "pig_iron"
+        commodity_rate_units: "kg/h"
 
   eaf_grid_feedstock: #electricity feedstock for EAF
     performance_model:

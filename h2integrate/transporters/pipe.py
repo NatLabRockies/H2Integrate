@@ -17,13 +17,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "nitrogen",
                 "natural_gas",
                 "wellhead_gas",
-                "iron_ore",
                 "water",
-                "carbon",
-                "lime",
-                "pig_iron",
-                "NaOH",
-                "CaCl2",
             ],
         )
 

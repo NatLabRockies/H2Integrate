@@ -11,15 +11,15 @@ technology_interconnections: [
   # Requires `electricity` and `crude ore`.
   # Both are set up as generic feedstock components - see tech_config.
   ["grid_feedstock","iron_mine","electricity","cable"],
-  ["mine_feedstock","iron_mine","crude_ore","pipe"],
+  ["mine_feedstock","iron_mine","crude_ore","crude_ore_transport"],
   # Connect feedstocks to iron electrowinning plant.
   # Requires `electricity` and `iron_ore`.
   # Electricity is set up as generic feedstock component,
   # but iron_ore is set up as an output of an iron_mine.
   ["iron_mine","iron_plant","iron_ore","iron_transport"],
   ["ewin_grid_feedstock","iron_plant","electricity","cable"],
-  ["ewin_NaOH_feedstock","iron_plant","NaOH","pipe"],
-  ["ewin_CaCl2_feedstock","iron_plant","CaCl2","pipe"]
+  ["ewin_NaOH_feedstock","iron_plant","NaOH","NaOH_transport"],
+  ["ewin_CaCl2_feedstock","iron_plant","CaCl2","CaCl2_transport"]
 ]
 
 plant:

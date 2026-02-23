@@ -36,7 +36,13 @@ technologies:
         price: 0.0
         annual_cost: 0.
         start_up_cost: 0.
-
+  crude_ore_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "crude_ore"
+        commodity_rate_units: "t/h"
   iron_mine: # iron mine - turns crude_iron into iron_ore
     performance_model:
       model: "MartinIronMinePerformanceComponent"
@@ -106,7 +112,13 @@ technologies:
         price: 415.179  # USD/tonne
         annual_cost: 0.
         start_up_cost: 0.
-
+  NaOH_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "NaOH"
+        commodity_rate_units: "t/h"
   ewin_CaCl2_feedstock:
     performance_model:
       model: "FeedstockPerformanceModel"
@@ -123,3 +135,10 @@ technologies:
         price: 207.59  # USD/tonne
         annual_cost: 0.
         start_up_cost: 0.
+  CaCl2_transport:
+    performance_model:
+      model: "GenericTransporterPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "CaCl2"
+        commodity_rate_units: "t/h"

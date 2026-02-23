@@ -263,7 +263,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'cable'`: specific to `electricity` commodity
 - `pipe`:
     - performance models:
-        + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", "pig_iron", "reformer_catalyst", "water", "carbon", "iron_ore", and "lime"
+        + `'pipe'`: compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", and "water"
 - `combiner`:
     - performance models:
         + `'GenericCombinerPerformanceModel'`: can be used for any commodity

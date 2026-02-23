@@ -13,7 +13,7 @@ class GenericTransporterPerformanceConfig(BaseConfig):
         commodity_rate_units (str): units of commodity transport profile (such as "kW" or "kg/h")
     """
 
-    commodity: str = field(converter=(str.lower, str.strip))
+    commodity: str = field(converter=(str.strip))
     commodity_rate_units: str = field()
 
 
