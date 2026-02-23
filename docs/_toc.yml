@@ -45,6 +45,7 @@ parts:
   - file: technology_models/grid
   - file: technology_models/hydrogen_storage.md
   - file: technology_models/h2_fuel_cell.md
+  - file: technology_models/iron_ewin.md
   - file: technology_models/iron_mine.md
 
 - caption: Resource Models
