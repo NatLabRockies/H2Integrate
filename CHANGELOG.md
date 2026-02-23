@@ -13,6 +13,7 @@
 - Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
   ensure units are properly handled and to prepare for the possibility of multiple variables with the
   same name but different units in the future.
+- Added a refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
 
 ## 0.6 [February 10, 2026]
 

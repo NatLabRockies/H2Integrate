@@ -24,6 +24,8 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "carbon",
                 "lime",
                 "pig_iron",
+                "NaOH",
+                "CaCl2",
             ],
         )
 

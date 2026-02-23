@@ -722,13 +722,42 @@ def test_hydrogen_dispatch_example(subtests):
             == 59.0962072084844
         )
 
+    with subtests.test("Check all h2 total_hydrogen_produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_all_hydrogen.total_hydrogen_produced", units="kg/year"
+                )[0],
+                rel=1e-5,
+            )
+            == model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0]
+        )
+
+    with subtests.test("Check total_hydrogen_produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg")[0],
+                rel=1e-5,
+            )
+            == 61656526.36295184
+        )
+
+    with subtests.test("Check annual hydrogen production"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0],
+                rel=1e-5,
+            )
+            == 58458965.601815335
+        )
+
     with subtests.test("Check all h2 LCOH"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.380013537850591
+            == 5.674286965
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -1129,7 +1158,7 @@ def test_pyomo_heuristic_dispatch_example(subtests):
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
         total_electricity = model.prob.get_val(
-            name="finance_subgroup_all_electricity.electricity_sum.total_electricity_produced",
+            name="finance_subgroup_all_electricity.total_electricity_produced",
             units="MW*h/year",
         )[0]
         assert total_electricity == pytest.approx(3125443.1089529935, rel=1e-6)
@@ -1248,7 +1277,7 @@ def test_simple_dispatch_example(subtests):
     # electricity produced from finance_subgroup_electricity
     with subtests.test("Check total electricity produced from wind"):
         wind_electricity_finance = model.prob.get_val(
-            "finance_subgroup_wind.electricity_sum.total_electricity_produced", units="kW*h/year"
+            "finance_subgroup_wind.total_electricity_produced", units="kW*h/year"
         )[0]
         assert pytest.approx(wind_electricity_finance, rel=1e-6) == total_electricity
 
@@ -1262,7 +1291,7 @@ def test_simple_dispatch_example(subtests):
     # to sum of "battery.electricity_out"
     with subtests.test("Check total electricity produced from battery"):
         battery_electricity_finance = model.prob.get_val(
-            "finance_subgroup_battery.electricity_sum.total_electricity_produced", units="MW*h/year"
+            "finance_subgroup_battery.total_electricity_produced", units="MW*h/year"
         )[0]
         battery_electricity_performance = np.sum(
             model.prob.get_val("battery.electricity_out", units="MW")
@@ -1350,7 +1379,7 @@ def test_windard_pv_battery_dispatch_example(subtests):
     # Subtest for total electricity produced
     with subtests.test("Check total electricity dispatched"):
         total_electricity_year_one = model.prob.get_val(
-            "finance_subgroup_dispatched_electricity.electricity_sum.total_electricity_produced",
+            "finance_subgroup_dispatched_electricity.total_electricity_produced",
             units="MW*h/year",
         )[0]
         assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
@@ -1473,7 +1502,7 @@ def test_csvgen_design_of_experiments(subtests):
             min_lcoh_case_num = i
 
     with subtests.test("Min LCOH value"):
-        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.468258
+        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.67280915
 
     with subtests.test("Min LCOH case number"):
         assert min_lcoh_case_num == 6
@@ -2057,6 +2086,49 @@ def test_21_iron_dri_eaf_example(subtests):
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
         assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
+
+
+def test_31_iron_electrowinning_example(subtests):
+    os.chdir(EXAMPLE_DIR / "31_iron_electrowinning")
+
+    model = H2IntegrateModel("31_iron_electrowinning.yaml")
+
+    with subtests.test("Value check on AHE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "ahe"
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
+
+    with subtests.test("Value check on MSE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "mse"
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
+        model.technology_config["technologies"]["ewin_CaCl2_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 179.0
+
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
+
+    with subtests.test("Value check on MOE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "moe"
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
 
 
 def test_sweeping_different_resource_sites_doe(subtests):
