@@ -79,7 +79,7 @@ class TestFeedstocks(unittest.TestCase):
         prob.run_model()
 
         # Check that output is generated correctly
-        ng_output = prob.get_val("feedstock_perf.natural_gas_out", units="MMBtu")
+        ng_output = prob.get_val("feedstock_perf.natural_gas_out", units="MMBtu/h")
         self.assertEqual(len(ng_output), 8760)
         self.assertTrue(np.all(ng_output == 100.0))  # rated_capacity
 
@@ -141,8 +141,8 @@ class TestFeedstocks(unittest.TestCase):
         prob.setup()
         prob.run_model()
 
-        ng_output1 = prob.get_val("feedstock1.natural_gas_out", units="MMBtu")
-        ng_output2 = prob.get_val("feedstock2.natural_gas_out", units="MMBtu")
+        ng_output1 = prob.get_val("feedstock1.natural_gas_out", units="MMBtu/h")
+        ng_output2 = prob.get_val("feedstock2.natural_gas_out", units="MMBtu/h")
 
         self.assertTrue(np.all(ng_output1 == 50.0))
         self.assertTrue(np.all(ng_output2 == 150.0))
@@ -196,7 +196,7 @@ class TestFeedstocks(unittest.TestCase):
         prob.run_model()
 
         # Check outputs
-        ng_out = prob.get_val("ng_feedstock.natural_gas_out", units="MMBtu")
+        ng_out = prob.get_val("ng_feedstock.natural_gas_out", units="MMBtu/h")
         elec_out = prob.get_val("elec_feedstock.electricity_out", units="MW*h")
         water_out = prob.get_val("water_feedstock.water_out", units="galUS")
 
