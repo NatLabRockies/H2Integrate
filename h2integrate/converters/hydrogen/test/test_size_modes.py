@@ -41,7 +41,10 @@ def test_resize_by_max_feedstock(subtests):
 
     with subtests.test("Check electrolyzer size"):
         assert (
-            pytest.approx(model.prob.get_val("electrolyzer.electrolyzer_size_mw")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("electrolyzer.electrolyzer_size_mw", units="MW")[0],
+                rel=1e-3,
+            )
             == 1080
         )
 
@@ -73,6 +76,9 @@ def test_resize_by_max_commodity(subtests):
 
     with subtests.test("Check electrolyzer size"):
         assert (
-            pytest.approx(model.prob.get_val("electrolyzer.electrolyzer_size_mw")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("electrolyzer.electrolyzer_size_mw", units="MW")[0],
+                rel=1e-3,
+            )
             == 560
         )

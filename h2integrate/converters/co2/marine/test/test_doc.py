@@ -219,10 +219,10 @@ class TestDOCPerformanceModel(unittest.TestCase):
         self.prob.run_model()
 
         # Additional asserts for output values
-        co2_out = self.prob.get_val("co2_out")
-        co2_capture_mtpy = self.prob.get_val("co2_capture_mtpy")
-        plant_mCC_capacity_mtph = self.prob.get_val("plant_mCC_capacity_mtph")
-        total_tank_volume_m3 = self.prob.get_val("total_tank_volume_m3")
+        co2_out = self.prob.get_val("co2_out", units="kg/h")
+        co2_capture_mtpy = self.prob.get_val("co2_capture_mtpy", units="t/year")
+        plant_mCC_capacity_mtph = self.prob.get_val("plant_mCC_capacity_mtph", units="t/h")
+        total_tank_volume_m3 = self.prob.get_val("total_tank_volume_m3", units="m**3")
 
         # Assert values (allowing for small numerical tolerance)
         assert_near_equal(np.linalg.norm(co2_out), 11394970.06218, tolerance=1e-1)

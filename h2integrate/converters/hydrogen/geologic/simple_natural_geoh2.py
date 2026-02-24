@@ -256,6 +256,14 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
             np.average(avg_h2_flow) * n_timesteps
         )  # np.sum(avg_h2_flow)
 
+        outputs["annual_hydrogen_produced"] = (
+            outputs["total_hydrogen_produced"] / self.fraction_of_year_simulated
+        )
+        outputs["rated_hydrogen_production"] = ramp_up_flow * w_h2
+        outputs["capacity_factor"] = outputs["total_hydrogen_produced"] / (
+            outputs["rated_hydrogen_production"] * self.n_timesteps
+        )
+
     def arps_decline_curve_fit(self, t, qi, Di, b):
         """Arps decline curve model based on Arps (1945)
             https://doi.org/10.2118/945228-G.

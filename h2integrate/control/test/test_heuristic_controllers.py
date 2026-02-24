@@ -258,28 +258,29 @@ def test_heuristic_load_following_battery_dispatch(subtests):
 
     with subtests.test("Check electricity_out"):
         assert (
-            pytest.approx(expected_electricity_out) == prob.get_val("battery.electricity_out")[0:24]
+            pytest.approx(expected_electricity_out)
+            == prob.get_val("battery.electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check battery_electricity_discharge"):
         assert (
             pytest.approx(expected_battery_electricity_discharge)
-            == prob.get_val("battery.battery_electricity_discharge")[0:24]
+            == prob.get_val("battery.battery_electricity_discharge", units="kW")[0:24]
         )
 
     with subtests.test("Check SOC"):
-        assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC")[0:24]
+        assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC", units="percent")[0:24]
 
     with subtests.test("Check unmet_demand"):
         assert (
             pytest.approx(expected_unmet_demand_out, abs=1e-4)
-            == prob.get_val("battery.unmet_electricity_demand_out")[0:24]
+            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[0:24]
         )
 
     with subtests.test("Check unused_electricity_out"):
         assert (
             pytest.approx(expected_unused_commodity_out)
-            == prob.get_val("battery.unused_electricity_out")[0:24]
+            == prob.get_val("battery.unused_electricity_out", units="kW")[0:24]
         )
 
     # Test the case where the battery is discharged to its lower SOC limit
@@ -312,28 +313,29 @@ def test_heuristic_load_following_battery_dispatch(subtests):
 
     with subtests.test("Check electricity_out for min SOC"):
         assert (
-            pytest.approx(expected_electricity_out) == prob.get_val("battery.electricity_out")[:5]
+            pytest.approx(expected_electricity_out)
+            == prob.get_val("battery.electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check battery_electricity_discharge for min SOC"):
         assert (
             pytest.approx(expected_battery_electricity_discharge)
-            == prob.get_val("battery.battery_electricity_discharge")[:5]
+            == prob.get_val("battery.battery_electricity_discharge", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for min SOC"):
-        assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC")[:5]
+        assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC", units="percent")[:5]
 
     with subtests.test("Check unmet_demand for min SOC"):
         assert (
             pytest.approx(expected_unmet_demand_out, abs=1e-6)
-            == prob.get_val("battery.unmet_electricity_demand_out")[:5]
+            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[:5]
         )
 
     with subtests.test("Check unused_commodity_out for min SOC"):
         assert (
             pytest.approx(expected_unused_commodity_out)
-            == prob.get_val("battery.unused_electricity_out")[:5]
+            == prob.get_val("battery.unused_electricity_out", units="kW")[:5]
         )
 
     # Test the case where the battery is charged to its upper SOC limit
@@ -376,26 +378,29 @@ def test_heuristic_load_following_battery_dispatch(subtests):
     with subtests.test("Check electricity_out for max SOC"):
         assert (
             pytest.approx(expected_electricity_out, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.electricity_out")[:5]
+            == prob.get_val("battery.electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check battery_electricity_discharge for max SOC"):
         assert (
             pytest.approx(expected_battery_electricity_discharge, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.battery_electricity_discharge")[:5]
+            == prob.get_val("battery.battery_electricity_discharge", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for max SOC"):
-        assert pytest.approx(expected_SOC, abs=abs_tol) == prob.get_val("battery.SOC")[:5]
+        assert (
+            pytest.approx(expected_SOC, abs=abs_tol)
+            == prob.get_val("battery.SOC", units="percent")[:5]
+        )
 
     with subtests.test("Check unmet_demand for max SOC"):
         assert (
             pytest.approx(expected_unmet_demand_out, abs=abs_tol)
-            == prob.get_val("battery.unmet_electricity_demand_out")[:5]
+            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[:5]
         )
 
     with subtests.test("Check unused_commodity_out for max SOC"):
         assert (
             pytest.approx(expected_unused_commodity_out, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.unused_electricity_out")[:5]
+            == prob.get_val("battery.unused_electricity_out", units="kW")[:5]
         )
