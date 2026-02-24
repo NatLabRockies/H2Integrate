@@ -177,5 +177,5 @@ class NuclearCostModel(CostModelBaseClass):
         variable_om = variable_opex_per_mwh * delivered_electricity_MWh
 
         outputs["CapEx"] = capex
-        outputs["OpEx"] = fixed_om + variable_om
+        outputs["OpEx"] = fixed_om
         outputs["VarOpEx"] = np.full(self.plant_life, variable_om)
