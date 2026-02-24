@@ -32,7 +32,7 @@ class TestFeedstocks(unittest.TestCase):
     def create_basic_feedstock_config(
         self,
         feedstock_type="natural_gas",
-        units="MMBtu",
+        units="MMBtu/h",
         rated_capacity=100.0,
         price=4.2,
         annual_cost=0.0,
@@ -42,8 +42,8 @@ class TestFeedstocks(unittest.TestCase):
         tech_config = {
             "model_inputs": {
                 "shared_parameters": {
-                    "feedstock_type": feedstock_type,
-                    "units": units,
+                    "commodity": feedstock_type,
+                    "commodity_rate_units": units,
                 },
                 "performance_parameters": {
                     "rated_capacity": rated_capacity,
@@ -79,7 +79,7 @@ class TestFeedstocks(unittest.TestCase):
         prob.run_model()
 
         # Check that output is generated correctly
-        ng_output = prob.get_val("feedstock_perf.natural_gas_out")
+        ng_output = prob.get_val("feedstock_perf.natural_gas_out", units="MMBtu/h")
         self.assertEqual(len(ng_output), 8760)
         self.assertTrue(np.all(ng_output == 100.0))  # rated_capacity
 
@@ -99,8 +99,8 @@ class TestFeedstocks(unittest.TestCase):
         prob_cost.run_model()
 
         # Check outputs
-        capex = prob_cost.get_val("feedstock_cost.CapEx")[0]
-        opex = prob_cost.get_val("feedstock_cost.VarOpEx")[0]
+        capex = prob_cost.get_val("feedstock_cost.CapEx", units="USD")[0]
+        opex = prob_cost.get_val("feedstock_cost.VarOpEx", units="USD/year")[0]
 
         self.assertEqual(capex, 100000.0)  # start_up_cost
         expected_opex = 0.0 + 4.2 * consumption.sum()  # annual_cost + price * consumption
@@ -141,8 +141,8 @@ class TestFeedstocks(unittest.TestCase):
         prob.setup()
         prob.run_model()
 
-        ng_output1 = prob.get_val("feedstock1.natural_gas_out")
-        ng_output2 = prob.get_val("feedstock2.natural_gas_out")
+        ng_output1 = prob.get_val("feedstock1.natural_gas_out", units="MMBtu/h")
+        ng_output2 = prob.get_val("feedstock2.natural_gas_out", units="MMBtu/h")
 
         self.assertTrue(np.all(ng_output1 == 50.0))
         self.assertTrue(np.all(ng_output2 == 150.0))
@@ -151,7 +151,7 @@ class TestFeedstocks(unittest.TestCase):
         """Test feedstocks of different types (natural gas, electricity, water)."""
         # Natural gas feedstock
         ng_config, plant_config, driver_config = self.create_basic_feedstock_config(
-            feedstock_type="natural_gas", units="MMBtu", rated_capacity=100.0, price=4.2
+            feedstock_type="natural_gas", units="MMBtu/h", rated_capacity=100.0, price=4.2
         )
 
         # Electricity feedstock
@@ -196,9 +196,9 @@ class TestFeedstocks(unittest.TestCase):
         prob.run_model()
 
         # Check outputs
-        ng_out = prob.get_val("ng_feedstock.natural_gas_out")
-        elec_out = prob.get_val("elec_feedstock.electricity_out")
-        water_out = prob.get_val("water_feedstock.water_out")
+        ng_out = prob.get_val("ng_feedstock.natural_gas_out", units="MMBtu/h")
+        elec_out = prob.get_val("elec_feedstock.electricity_out", units="MW*h")
+        water_out = prob.get_val("water_feedstock.water_out", units="galUS")
 
         self.assertTrue(np.all(ng_out == 100.0))
         self.assertTrue(np.all(elec_out == 50.0))
@@ -235,7 +235,7 @@ class TestFeedstocks(unittest.TestCase):
         prob.run_model()
 
         # Check that OpEx reflects variable pricing
-        opex = prob.get_val("feedstock_cost.VarOpEx")[0]
+        opex = prob.get_val("feedstock_cost.VarOpEx", units="USD/year")[0]
         expected_opex = 0.0 + np.sum(hourly_prices * consumption)
         self.assertAlmostEqual(opex, expected_opex, places=5)
 
@@ -262,8 +262,8 @@ class TestFeedstocks(unittest.TestCase):
         prob.set_val("feedstock_cost.natural_gas_consumed", consumption)
         prob.run_model()
 
-        capex = prob.get_val("feedstock_cost.CapEx")[0]
-        opex = prob.get_val("feedstock_cost.OpEx")[0]
+        capex = prob.get_val("feedstock_cost.CapEx", units="USD")[0]
+        opex = prob.get_val("feedstock_cost.OpEx", units="USD/year")[0]
 
         self.assertEqual(capex, 0.0)
         self.assertEqual(opex, 0.0)

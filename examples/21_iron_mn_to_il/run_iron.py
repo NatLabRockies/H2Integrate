@@ -57,35 +57,63 @@ model.post_process()
 for casename in casenames:
     model = modify_tech_config(model, cases[casename])
     model.run()
-    lcois_ore.append(float(model.model.get_val("finance_subgroup_iron_ore.price_iron_ore")[0]))
+    lcois_ore.append(
+        float(model.model.get_val("finance_subgroup_iron_ore.price_iron_ore", units="USD/kg")[0])
+    )
     capexes_ore.append(
-        float(model.model.get_val("finance_subgroup_iron_ore.total_capex_adjusted")[0])
+        float(model.model.get_val("finance_subgroup_iron_ore.total_capex_adjusted", units="USD")[0])
     )
     fopexes_ore.append(
-        float(model.model.get_val("finance_subgroup_iron_ore.total_opex_adjusted")[0])
+        float(
+            model.model.get_val("finance_subgroup_iron_ore.total_opex_adjusted", units="USD/year")[
+                0
+            ]
+        )
     )
     vopexes_ore.append(
-        float(model.model.get_val("finance_subgroup_iron_ore.total_varopex_adjusted")[0])
+        float(
+            model.model.get_val(
+                "finance_subgroup_iron_ore.total_varopex_adjusted", units="USD/year"
+            )[0]
+        )
     )
-    lcois_iron.append(float(model.model.get_val("finance_subgroup_pig_iron.price_pig_iron")[0]))
+    lcois_iron.append(
+        float(model.model.get_val("finance_subgroup_pig_iron.price_pig_iron", units="USD/kg")[0])
+    )
     capexes_iron.append(
-        float(model.model.get_val("finance_subgroup_pig_iron.total_capex_adjusted")[0])
+        float(model.model.get_val("finance_subgroup_pig_iron.total_capex_adjusted", units="USD")[0])
     )
     fopexes_iron.append(
-        float(model.model.get_val("finance_subgroup_pig_iron.total_opex_adjusted")[0])
+        float(
+            model.model.get_val("finance_subgroup_pig_iron.total_opex_adjusted", units="USD/year")[
+                0
+            ]
+        )
     )
     vopexes_iron.append(
-        float(model.model.get_val("finance_subgroup_pig_iron.total_varopex_adjusted")[0])
+        float(
+            model.model.get_val(
+                "finance_subgroup_pig_iron.total_varopex_adjusted", units="USD/year"
+            )[0]
+        )
     )
-    lcois_steel.append(float(model.model.get_val("finance_subgroup_steel.price_steel")[0]))
+    lcois_steel.append(
+        float(model.model.get_val("finance_subgroup_steel.price_steel", units="USD/kg")[0])
+    )
     capexes_steel.append(
-        float(model.model.get_val("finance_subgroup_steel.total_capex_adjusted")[0])
+        float(model.model.get_val("finance_subgroup_steel.total_capex_adjusted", units="USD")[0])
     )
     fopexes_steel.append(
-        float(model.model.get_val("finance_subgroup_steel.total_opex_adjusted")[0])
+        float(
+            model.model.get_val("finance_subgroup_steel.total_opex_adjusted", units="USD/year")[0]
+        )
     )
     vopexes_steel.append(
-        float(model.model.get_val("finance_subgroup_steel.total_varopex_adjusted")[0])
+        float(
+            model.model.get_val("finance_subgroup_steel.total_varopex_adjusted", units="USD/year")[
+                0
+            ]
+        )
     )
 
 # Compare the Capex, Fixed Opex, and Variable Opex across the 4 cases

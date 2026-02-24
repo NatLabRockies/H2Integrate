@@ -112,8 +112,8 @@ def test_wind_plant_costs_with_pysam(
         wind_plant_config["num_turbines"] * wind_plant_config["turbine_rating_kw"] / 1e3
     )
 
-    capex = prob.get_val("wind_cost.CapEx")
-    opex = prob.get_val("wind_cost.OpEx")
+    capex = prob.get_val("wind_cost.CapEx", units="USD")
+    opex = prob.get_val("wind_cost.OpEx", units="USD/year")
 
     with subtests.test("wind farm capacity"):
         assert (

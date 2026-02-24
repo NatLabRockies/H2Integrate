@@ -152,17 +152,19 @@ def test_simple_ASU_performance_model_set_capacity_kW(plant_config, subtests):
     prob.run_model()
     # Dummy expected values
     max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production", units="kg/h")[0]
-    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
+    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW", units="kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
     with subtests.test("max/rated efficiency"):
         assert pytest.approx(max_eff, rel=1e-6) == comp.config.efficiency_kWh_pr_kg_N2
 
     with subtests.test("max N2 production"):
-        assert max(prob.get_val("asu_perf.nitrogen_out")) <= max_n2_mfr
+        assert max(prob.get_val("asu_perf.nitrogen_out", units="kg/h")) <= max_n2_mfr
 
     with subtests.test("annual electricity usage"):
-        assert max(prob.get_val("asu_perf.annual_electricity_consumption")) <= sum(e_profile_in_kW)
+        assert max(prob.get_val("asu_perf.annual_electricity_consumption", units="kW")) <= sum(
+            e_profile_in_kW
+        )
 
 
 def test_simple_ASU_performance_model_size_for_demand(plant_config, subtests):
@@ -191,23 +193,24 @@ def test_simple_ASU_performance_model_size_for_demand(plant_config, subtests):
     prob.run_model()
     # Dummy expected values
     max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production", units="kg/h")[0]
-    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
+    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW", units="kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
     with subtests.test("max/rated efficiency"):
         assert pytest.approx(max_eff, rel=1e-6) == asu_perf.config.efficiency_kWh_pr_kg_N2
 
     with subtests.test("max N2 production"):
-        assert max(prob.get_val("asu_perf.nitrogen_out")) <= max_n2_mfr
+        assert max(prob.get_val("asu_perf.nitrogen_out", units="kg/h")) <= max_n2_mfr
 
     with subtests.test("max electricity usage"):
-        assert max(prob.get_val("asu_perf.electricity_in")) <= max_pwr_kw
+        assert max(prob.get_val("asu_perf.electricity_in", units="kW")) <= max_pwr_kw
 
     with subtests.test("nitrogen produced does not exceed nitrogen demand"):
         assert all(
             x <= y
             for x, y in zip(
-                prob.get_val("asu_perf.nitrogen_out"), prob.get_val("asu_perf.nitrogen_in")
+                prob.get_val("asu_perf.nitrogen_out", units="kg/h"),
+                prob.get_val("asu_perf.nitrogen_in", units="kg/h"),
             )
         )
 
@@ -252,7 +255,8 @@ def test_simple_ASU_cost_model_usd_pr_kw(plant_config, subtests):
 
     for out, expected in expected_outputs.items():
         with subtests.test(out):
-            val = prob.get_val(f"asu_cost.{out}")
+            units = "USD" if out == "CapEx" else "USD/year"
+            val = prob.get_val(f"asu_cost.{out}", units=units)
             assert pytest.approx(val, rel=1e-6) == expected[0]
 
 
@@ -297,7 +301,8 @@ def test_simple_ASU_cost_model_usd_pr_mw(plant_config, subtests):
 
     for out, expected in expected_outputs.items():
         with subtests.test(out):
-            val = prob.get_val(f"asu_cost.{out}")
+            units = "USD" if out == "CapEx" else "USD/year"
+            val = prob.get_val(f"asu_cost.{out}", units=units)
             assert pytest.approx(val, rel=1e-6) == expected[0]
 
 
@@ -343,35 +348,36 @@ def test_simple_ASU_performance_and_cost_size_for_demand(plant_config, subtests)
     prob.set_val("asu_perf.nitrogen_in", n2_dmd_kg_pr_hr.tolist(), units="kg/h")
     prob.run_model()
     # Dummy expected values
-    max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production")[0]
-    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW")[0]
+    max_n2_mfr = prob.get_val("asu_perf.rated_nitrogen_production", units="kg/h")[0]
+    max_pwr_kw = prob.get_val("asu_perf.ASU_capacity_kW", units="kW")[0]
     max_eff = max_pwr_kw / max_n2_mfr
 
     with subtests.test("max/rated efficiency"):
         assert pytest.approx(max_eff, rel=1e-6) == asu_perf.config.efficiency_kWh_pr_kg_N2
 
     with subtests.test("max N2 production"):
-        assert max(prob.get_val("asu_perf.nitrogen_out")) <= max_n2_mfr
+        assert max(prob.get_val("asu_perf.nitrogen_out", units="kg/h")) <= max_n2_mfr
 
     with subtests.test("max electricity usage"):
-        assert max(prob.get_val("asu_perf.electricity_in")) <= max_pwr_kw
+        assert max(prob.get_val("asu_perf.electricity_in", units="kW")) <= max_pwr_kw
 
     with subtests.test("nitrogen produced does not exceed nitrogen demand"):
         assert all(
             x <= y
             for x, y in zip(
-                prob.get_val("asu_perf.nitrogen_out"), prob.get_val("asu_perf.nitrogen_in")
+                prob.get_val("asu_perf.nitrogen_out", units="kg/h"),
+                prob.get_val("asu_perf.nitrogen_in", units="kg/h"),
             )
         )
 
     with subtests.test("CapEx"):
         assert (
-            pytest.approx(prob.get_val("asu_cost.CapEx")[0], rel=1e-6)
+            pytest.approx(prob.get_val("asu_cost.CapEx", units="USD")[0], rel=1e-6)
             == max_pwr_kw * cpx_usd_per_mw / 1e3
         )
 
     with subtests.test("OpEx"):
         assert (
-            pytest.approx(prob.get_val("asu_cost.OpEx")[0], rel=1e-6)
+            pytest.approx(prob.get_val("asu_cost.OpEx", units="USD/year")[0], rel=1e-6)
             == max_pwr_kw * opex_usd_per_mw / 1e3
         )

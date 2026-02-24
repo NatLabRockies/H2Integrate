@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add Arps decline rate to natural geologic hydrogen model
 - Added linearized hydrogen fuel cell model
 - Added load following optimization dispatch
 - Added simple dispatch calculations to `StorageAutoSizingModel`
@@ -10,6 +11,10 @@
   found, and points to the file and line number that caused the error. The YAML `Loader` modification
   maintains compliance with the existing JSON validation protocols.
 - Add a simple nuclear plant performance and cost model
+- Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
+  ensure units are properly handled and to prepare for the possibility of multiple variables with the
+  same name but different units in the future.
+- Added a refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
 
 ## 0.6 [February 10, 2026]
 

@@ -100,7 +100,7 @@ class TestProFastComp(unittest.TestCase):
 
         prob.run_model()
 
-        self.assertAlmostEqual(prob["LCOH"][0], 4.27529137, places=7)
+        self.assertAlmostEqual(prob.get_val("LCOH", units="USD/kg")[0], 4.27529137, places=7)
 
     def test_modified_lcoe_calc(self):
         # Set up paths
@@ -139,7 +139,9 @@ class TestProFastComp(unittest.TestCase):
 
         prob.run_model()
 
-        self.assertAlmostEqual(prob["LCOE"][0], 0.2116038814767319, places=7)
+        self.assertAlmostEqual(
+            prob.get_val("LCOE", units="USD/(kW*h)")[0], 0.2116038814767319, places=7
+        )
 
     def test_lcoe_with_selected_technologies(self):
         # Set up paths
@@ -184,7 +186,9 @@ class TestProFastComp(unittest.TestCase):
 
         prob.run_model()
 
-        self.assertAlmostEqual(prob["LCOE"][0], 0.2116038814767319, places=6)
+        self.assertAlmostEqual(
+            prob.get_val("LCOE", units="USD/(kW*h)")[0], 0.2116038814767319, places=6
+        )
 
 
 def test_profast_config_provided():
@@ -310,7 +314,7 @@ def test_profast_config_provided():
 
     prob.run_model()
 
-    assert prob["LCOH"] == approx(4.27529137)
+    assert prob.get_val("LCOH", units="USD/kg") == approx(4.27529137)
 
 
 def test_parameter_validation_clashing_values():

@@ -9,14 +9,14 @@ sites:
 technology_interconnections: [
   # Connect feedstocks to iron mine.
   ["mine_electricity_feedstock", "iron_mine", "electricity", "cable"],
-  ["mine_crude_ore_feedstock", "iron_mine", "crude_ore", "pipe"],
+  ["mine_crude_ore_feedstock", "iron_mine", "crude_ore", "crude_ore_transport"],
   # Connect iron_ore price and processed_ore_feedstock to iron_transport
   # Connect the LCOI of iron ore to the price of a feedstock component representing the ore to be used in DRI
   ["finance_subgroup_iron_ore", "processed_ore_feedstock", ["price_iron_ore", "price"]],
   # Connect the ore feedstock available to the iron plant
-  ["processed_ore_feedstock", "iron_plant", "iron_ore", "pipe"],
+  ["processed_ore_feedstock", "iron_plant", "iron_ore", "iron_ore_transport"],
   ["dri_grid_feedstock", "iron_plant", "electricity", "cable"],
-  ["catalyst_feedstock", "iron_plant", "reformer_catalyst", "pipe"],
+  ["catalyst_feedstock", "iron_plant", "reformer_catalyst", "catalyst_transport"],
   ["water_feedstock", "iron_plant", "water", "pipe"],
   ["natural_gas_feedstock", "iron_plant", "natural_gas", "pipe"],
   # Use the iron ore consumed by the iron plant to calculate transport costs
@@ -25,7 +25,7 @@ technology_interconnections: [
   ["eaf_grid_feedstock", "steel_plant", "electricity", "cable"],
   ["eaf_water_feedstock", "steel_plant", "water", "pipe"],
   ["eaf_natural_gas_feedstock", "steel_plant", "natural_gas", "pipe"],
-  ["iron_plant", "steel_plant", "pig_iron", "pipe"],
+  ["iron_plant", "steel_plant", "pig_iron", "pig_iron_transport"],
 ]
 
 plant:

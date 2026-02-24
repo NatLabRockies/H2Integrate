@@ -68,11 +68,20 @@ def test_mch_wrapper(plant_config, subtests):
     with subtests.test("Maximum storage capacity"):
         assert comp.Ms == approx(Ms_tpy, rel=1e-6)
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("sys.CapEx")[0], rel=max_cost_error_rel) == toc_actual
+        assert (
+            pytest.approx(prob.get_val("sys.CapEx", units="USD")[0], rel=max_cost_error_rel)
+            == toc_actual
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("sys.OpEx")[0], rel=max_cost_error_rel) == foc_actual
+        assert (
+            pytest.approx(prob.get_val("sys.OpEx", units="USD/year")[0], rel=max_cost_error_rel)
+            == foc_actual
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.get_val("sys.VarOpEx"), rel=max_cost_error_rel) == voc_actual
+        assert (
+            pytest.approx(prob.get_val("sys.VarOpEx", units="USD/year"), rel=max_cost_error_rel)
+            == voc_actual
+        )
     with subtests.test("Cost year"):
         assert prob.get_val("sys.cost_year") == 2024
 
@@ -121,10 +130,18 @@ def test_mch_wrapper_ex1(plant_config, subtests):
         assert comp.Ms == approx(storage_capacity_kg / 1e3, rel=1e-6)
 
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("sys.CapEx")[0], rel=1e-6) == 2.62304217 * 1e8
+        assert (
+            pytest.approx(prob.get_val("sys.CapEx", units="USD")[0], rel=1e-6) == 2.62304217 * 1e8
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("sys.OpEx")[0], rel=1e-6) == 7406935.548022923
+        assert (
+            pytest.approx(prob.get_val("sys.OpEx", units="USD/year")[0], rel=1e-6)
+            == 7406935.548022923
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.get_val("sys.VarOpEx")[0], rel=1e-6) == 9420636.00753175
+        assert (
+            pytest.approx(prob.get_val("sys.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == 9420636.00753175
+        )
     with subtests.test("Cost year"):
         assert prob.get_val("sys.cost_year") == 2024

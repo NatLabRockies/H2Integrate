@@ -131,10 +131,10 @@ def test_integrated_battery_cost_kW(
     expected_opex = expected_capex * 0.025
 
     with subtests.test("CapEx"):
-        assert prob.get_val("cost_model.CapEx") == expected_capex
+        assert prob.get_val("cost_model.CapEx", units="USD") == expected_capex
 
     with subtests.test("OpEx"):
-        assert prob.get_val("cost_model.OpEx") == expected_opex
+        assert prob.get_val("cost_model.OpEx", units="USD/year") == expected_opex
 
 
 def test_integrated_battery_cost_MW(
@@ -173,7 +173,7 @@ def test_integrated_battery_cost_MW(
     expected_opex = expected_capex * 0.025
 
     with subtests.test("CapEx"):
-        assert prob.get_val("cost_model.CapEx") == expected_capex
+        assert prob.get_val("cost_model.CapEx", units="USD") == expected_capex
 
     with subtests.test("OpEx"):
-        assert prob.get_val("cost_model.OpEx") == expected_opex
+        assert prob.get_val("cost_model.OpEx", units="USD/year") == expected_opex
