@@ -50,8 +50,8 @@ tech_config = {
                     "init_charge_percent": 0.5,
                     "max_charge_percent": 0.9,
                     "min_charge_percent": 0.1,
-                    "commodity_name": "electricity",
-                    "commodity_storage_units": "kW",
+                    "commodity": "electricity",
+                    "commodity_rate_units": "kW",
                     "time_weighting_factor": 0.995,
                     "charge_efficiency": 0.95,
                     "discharge_efficiency": 0.95,
@@ -78,12 +78,12 @@ tech_config = {
             "model_inputs": {
                 "performance_parameters": {
                     "commodity": "electricity",
-                    "commodity_units": "kW",
+                    "commodity_rate_units": "kW",
                     "in_streams": 1,
                 },
                 "dispatch_rule_parameters": {
-                    "commodity_name": "electricity",
-                    "commodity_storage_units": "kW",
+                    "commodity": "electricity",
+                    "commodity_rate_units": "kW",
                 },
             },
         },
@@ -276,29 +276,32 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
     with subtests.test("Check battery.electricity_out"):
         assert (
             pytest.approx(expected_electricity_out)
-            == model.prob.get_val("battery.electricity_out")[0:24]
+            == model.prob.get_val("battery.electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check battery_electricity_discharge"):
         assert (
             pytest.approx(expected_battery_electricity_discharge)
-            == model.prob.get_val("battery.battery_electricity_discharge")[0:24]
+            == model.prob.get_val("battery.battery_electricity_discharge", units="kW")[0:24]
         )
 
     # Check a longer portion of SOC to make sure SOC is getting linked between optimization periods
     with subtests.test("Check SOC"):
-        assert pytest.approx(expected_battery_soc) == model.prob.get_val("battery.SOC")[0:36]
+        assert (
+            pytest.approx(expected_battery_soc)
+            == model.prob.get_val("battery.SOC", units="percent")[0:36]
+        )
 
     with subtests.test("Check unmet_demand"):
         assert (
             pytest.approx(expected_unmet_demand, abs=1e-4)
-            == model.prob.get_val("battery.unmet_electricity_demand_out")[0:24]
+            == model.prob.get_val("battery.unmet_electricity_demand_out", units="kW")[0:24]
         )
 
     with subtests.test("Check unused_electricity_out"):
         assert (
             pytest.approx(expected_unused_electricity)
-            == model.prob.get_val("battery.unused_electricity_out")[0:24]
+            == model.prob.get_val("battery.unused_electricity_out", units="kW")[0:24]
         )
 
     # Test the case where the battery efficiency is lower
@@ -344,5 +347,5 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
     with subtests.test("Check electricity_out for different efficiency"):
         assert (
             pytest.approx(expected_electricity_out)
-            == model.prob.get_val("battery.electricity_out")[:12]
+            == model.prob.get_val("battery.electricity_out", units="kW")[:12]
         )

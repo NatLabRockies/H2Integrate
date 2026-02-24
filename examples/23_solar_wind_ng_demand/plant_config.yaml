@@ -5,19 +5,6 @@ sites:
   site:
     latitude: 30.6617
     longitude: -101.7096
-    year: 2013
-
-    # array of polygons defining boundaries with x/y coords
-    boundaries: [
-      {
-        x: [0.0, 1000.0, 1000.0, 0.0],
-        y: [0.0, 0.0, 100.0, 1000.0],
-      },
-      {
-        x: [2000.0, 2500.0, 2000.0],
-        y: [2000.0, 2000.0, 2500.0],
-      }
-    ]
 
     resources:
       wind_resource:

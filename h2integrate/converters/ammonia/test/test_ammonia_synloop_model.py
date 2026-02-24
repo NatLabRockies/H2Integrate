@@ -192,25 +192,25 @@ def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
     prob.set_val("synloop.nitrogen_in", n2, units="kg/h")
     prob.set_val("synloop.electricity_in", elec, units="MW")
     prob.run_model()
-    nh3 = prob.get_val("synloop.ammonia_out")
-    total = prob.get_val("synloop.total_ammonia_produced")
+    nh3 = prob.get_val("synloop.ammonia_out", units="kg/h")
+    total = prob.get_val("synloop.total_ammonia_produced", units="kg")
 
     # Check individual NH3 output values
     with subtests.test("N2 limiting"):
         assert pytest.approx(nh3[0], rel=1e-6) == 21520.21334466
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[0]) == 0
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[0]) == 0
 
     with subtests.test("H2 limiting"):
         assert pytest.approx(nh3[1], rel=1e-6) == 49840.21632252
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[1]) == 1
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[1]) == 1
 
     with subtests.test("Electricity limiting"):
         assert pytest.approx(nh3[2], rel=1e-6) == 18844.98190065
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[2]) == 2
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[2]) == 2
 
     with subtests.test("Capacity limiting"):
         assert pytest.approx(nh3[3], rel=1e-6) == 52777.6
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[3]) == 3
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[3]) == 3
 
     # Check total NH3 output
     with subtests.test("Total ammonia"):
@@ -250,7 +250,9 @@ def test_size_mode_outputs(subtests):
 
     with subtests.test("Test `resize_by_max_feedstock` mode"):
         assert (
-            pytest.approx(model.prob.get_val("ammonia.max_hydrogen_capacity")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("ammonia.max_hydrogen_capacity", units="kg/h")[0], rel=1e-3
+            )
             == 12543.68246215831
         )
 
@@ -294,7 +296,7 @@ def test_ammonia_synloop_performance(synloop_config, subtests):
             <= prob.get_val("comp.electricity_in", units="kW").max()
         )
     with subtests.test("Test limiting_output is electricity"):
-        assert np.all(prob.get_val("comp.limiting_input") == 2)
+        assert np.all(prob.get_val("comp.limiting_input", units="unitless") == 2)
     with subtests.test("Test hydrogen_consumed < hydrogen_in"):
         assert (
             prob.get_val("comp.hydrogen_consumed", units="kg/h").max()

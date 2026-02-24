@@ -15,7 +15,7 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()
+    commodity_rate_units: str = field()
     in_streams: int = field(default=2)
 
 
@@ -25,6 +25,20 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
+
+    The combined output capacity factor is computed as a weighted average of the
+    input stream capacity factors, weighted by each stream's rated production:
+
+    .. math::
+
+        CF_{out} = \\frac{\\sum_i CF_i \\cdot S_i}{\\sum_i S_i}
+
+    where :math:`CF_i` is the capacity factor and :math:`S_i` is the rated
+    commodity production of input stream *i*. If the total rated production is
+    zero, the output capacity factor is set to zero.
+
+    The total rated production is the sum of all input rated productions, and
+    the output commodity profile is the element-wise sum of all input profiles.
     """
 
     def initialize(self):
@@ -39,25 +53,69 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         for i in range(1, self.config.in_streams + 1):
             self.add_input(
                 f"{self.config.commodity}_in{i}",
                 val=0.0,
                 shape=n_timesteps,
-                units=self.config.commodity_units,
+                units=self.config.commodity_rate_units,
+            )
+            self.add_input(
+                f"rated_{self.config.commodity}_production{i}",
+                val=0.0,
+                units=self.config.commodity_rate_units,
+            )
+            self.add_input(
+                f"{self.config.commodity}_capacity_factor{i}",
+                val=0.0,
+                shape=plant_life,
+                units="unitless",
             )
 
         self.add_output(
             f"{self.config.commodity}_out",
             val=0.0,
             shape=n_timesteps,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
+        )
+        self.add_output(
+            f"{self.config.commodity}_capacity_factor",
+            val=0.0,
+            shape=plant_life,
+            units="unitless",
+        )
+        self.add_output(
+            f"rated_{self.config.commodity}_production",
+            val=0.0,
+            units=self.config.commodity_rate_units,
         )
 
     def compute(self, inputs, outputs):
-        total = 0.0
+        total_out = 0.0
+        weighted_cf = 0.0
+        total_rated = 0.0
         for key, value in inputs.items():
             if "_in" in key:
-                total = total + value
-        outputs[f"{self.config.commodity}_out"] = total
+                # add the commodity_in profile
+                total_out = total_out + value
+            if key.startswith("rated_"):
+                # add the rated_commodity_production
+                total_rated = total_rated + value
+            if "_capacity_factor" in key:
+                # get the stream number so we can get the proper rated capacity
+                stream_number = key.split("capacity_factor")[-1]
+                rated_capacity = inputs[f"rated_{self.config.commodity}_production{stream_number}"]
+                # weight the capacity factor with the rated capacity
+                weighted_cf = weighted_cf + (value * rated_capacity)
+
+        outputs[f"{self.config.commodity}_out"] = total_out
+        outputs[f"rated_{self.config.commodity}_production"] = total_rated
+        if total_rated > 0:
+            # weighted CF = (CF1*S1 + CF2*S2)/(S1 + S2)
+            # Where S is the rated commodity production of input stream i
+            # and CF is the capacity factor of input stream i
+            outputs[f"{self.config.commodity}_capacity_factor"] = weighted_cf / total_rated
+        else:
+            outputs[f"{self.config.commodity}_capacity_factor"] = 0.0

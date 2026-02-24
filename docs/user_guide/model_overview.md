@@ -44,7 +44,8 @@ The inputs, outputs, and corresponding technology that are currently available i
 | `HOPPComponent`           |  electricity  | N/A |
 | `electrolyzer`   |  hydrogen     | electricity |
 | `geoh2`          |  hydrogen     | rock type |
-| `steel`          |  steel        | hydrogen |
+| `h2_fuel_cell`   |  electricity  | hydrogen |
+| `steel`          |  steel        | iron ore |
 | `ammonia`        |  ammonia      | nitrogen, hydrogen |
 | `doc`   |  co2     | electricity |
 | `oae`   |  co2     | electricity |
@@ -72,6 +73,7 @@ When the Primary Commodity is electricity, those converters are considered elect
 | `pipe`      |  most mass-based commodities         |
 | `combiner`      | Any    |
 | `splitter` |  Any|
+| `generic_transport` | Any |
 
 Connection: `[source_tech, dest_tech, transport_commodity, transport_technology]`
 
@@ -173,6 +175,11 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'StimulatedGeoH2PerformanceModel'`
     - cost models:
         + `'GeoH2SubsurfaceCostModel'`
+- `h2_fuel_cell`: hydrogen fuel cell
+    - performance models:
+        + `'LinearH2FuelCellPerformanceModel'`
+    - cost models:
+        + `'H2FuelCellCostModel'`
 - `steel`: steel production
     - performance models:
         + `'SteelPerformanceModel'`
@@ -238,9 +245,16 @@ Below summarizes the available performance, cost, and financial models for each 
     - performance models:
         + `'NaturalGasIronReductionPlantPerformanceComponent'`
         + `'HydrogenIronReductionPlantPerformanceComponent'`
+        + `'HumbertEwinPerformanceComponent'`
     - cost models:
         + `'NaturalGasIronReductionPlantCostComponent'`
         + `'HydrogenIronReductionPlantCostComponent'`
+- `iron_ewin`: iron electrowinning
+    - performance models:
+        + `'HumbertEwinPerformanceComponent'`
+    - cost models:
+        + `'HumbertStinnEwinCostComponent'`
+
 
 (transport-models)=
 ## Transport Models
@@ -249,14 +263,16 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'cable'`: specific to `electricity` commodity
 - `pipe`:
     - performance models:
-        + `'pipe'`: currently compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", "pig_iron", "reformer_catalyst", "water", "carbon", "iron_ore", and "lime"
+        + `'pipe'`: compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", and "water"
 - `combiner`:
     - performance models:
         + `'GenericCombinerPerformanceModel'`: can be used for any commodity
 - `splitter`:
     - performance models:
         + `'GenericSplitterPerformanceModel'`: can be used for any commodity
-
+- `generic_transport`:
+    - performance models:
+        + `'GenericTransporterPerformanceModel'`: can be used for any commodity
 (storage-models)=
 ## Storage Models
 - `h2_storage`: hydrogen storage

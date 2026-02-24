@@ -69,8 +69,8 @@ technologies:
       model: FeedstockCostModel
     model_inputs:
       shared_parameters:
-        feedstock_type: natural_gas
-        units: MMBtu
+        commodity: natural_gas
+        commodity_rate_units: "MMBtu/h"
       performance_parameters:
         rated_capacity: 750. #MMBtu
       cost_parameters:
@@ -99,8 +99,8 @@ technologies:
         model: FlexibleDemandOpenLoopConverterController
       model_inputs:
         control_parameters:
-          commodity_name: electricity
-          commodity_units: kW
+          commodity: electricity
+          commodity_rate_units: kW
           rated_demand: 100000
           demand_profile: 100000 #100 MW
           turndown_ratio: 0.5
@@ -115,4 +115,4 @@ technologies:
     model_inputs:
       performance_parameters:
         commodity: electricity
-        commodity_units: kW
+        commodity_rate_units: kW

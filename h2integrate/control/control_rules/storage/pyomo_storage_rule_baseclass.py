@@ -32,21 +32,21 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         pyomo_model.minimum_storage = pyo.Param(
             doc=pyomo_model.name
             + " minimum storage rating ["
-            + self.config.commodity_storage_units
+            + self.config.commodity_rate_units
             + "]",
             default=0.0,
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_storage_units),
+            units=eval("pyo.units." + self.config.commodity_rate_units),
         )
         pyomo_model.maximum_storage = pyo.Param(
             doc=pyomo_model.name
             + " maximum storage rating ["
-            + self.config.commodity_storage_units
+            + self.config.commodity_rate_units
             + "]",
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_storage_units),
+            units=eval("pyo.units." + self.config.commodity_rate_units),
         )
         pyomo_model.minimum_soc = pyo.Param(
             doc=pyomo_model.name + " minimum state-of-charge [-]",
@@ -85,10 +85,10 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         ##################################
 
         pyomo_model.capacity = pyo.Param(
-            doc=pyomo_model.name + " capacity [" + self.config.commodity_storage_units + "]",
+            doc=pyomo_model.name + " capacity [" + self.config.commodity_rate_units + "]",
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_storage_units),
+            units=eval("pyo.units." + self.config.commodity_rate_units),
         )
 
     def _create_variables(self, pyomo_model: pyo.ConcreteModel, t):
@@ -128,24 +128,24 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             units=pyo.units.dimensionless,
         )
         pyomo_model.charge_commodity = pyo.Var(
-            doc=self.config.commodity_name
+            doc=self.config.commodity
             + " into "
             + pyomo_model.name
             + " ["
-            + self.config.commodity_storage_units
+            + self.config.commodity_rate_units
             + "]",
             domain=pyo.NonNegativeReals,
-            units=eval("pyo.units." + self.config.commodity_storage_units),
+            units=eval("pyo.units." + self.config.commodity_rate_units),
         )
         pyomo_model.discharge_commodity = pyo.Var(
-            doc=self.config.commodity_name
+            doc=self.config.commodity
             + " out of "
             + pyomo_model.name
             + " ["
-            + self.config.commodity_storage_units
+            + self.config.commodity_rate_units
             + "]",
             domain=pyo.NonNegativeReals,
-            units=eval("pyo.units." + self.config.commodity_storage_units),
+            units=eval("pyo.units." + self.config.commodity_rate_units),
         )
 
     def _create_constraints(self, pyomo_model: pyo.ConcreteModel, t):

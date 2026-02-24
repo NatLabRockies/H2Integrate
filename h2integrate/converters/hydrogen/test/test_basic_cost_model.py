@@ -62,7 +62,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
+        per_turb_electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
         electrolyzer_total_capital_cost = per_turb_electrolyzer_total_capital_cost * self.nturbines
 
         assert electrolyzer_total_capital_cost == approx(127698560.0)
@@ -74,7 +74,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        electrolyzer_total_capital_cost = prob["CapEx"]
+        electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
 
         assert electrolyzer_total_capital_cost == approx(125448560.0)
 
@@ -87,7 +87,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
+        per_turb_electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
         electrolyzer_total_capital_cost = per_turb_electrolyzer_total_capital_cost * self.nturbines
 
         assert electrolyzer_total_capital_cost == approx(116077280.00000003)
@@ -101,7 +101,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        per_turb_electrolyzer_OM_cost = prob["OpEx"]
+        per_turb_electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
         electrolyzer_OM_cost = per_turb_electrolyzer_OM_cost * self.nturbines
 
         assert electrolyzer_OM_cost == approx(1377207.4599629682)
@@ -113,7 +113,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        electrolyzer_OM_cost = prob["OpEx"]
+        electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
 
         assert electrolyzer_OM_cost == approx(1864249.9310054395)
 
@@ -126,7 +126,7 @@ class TestBasicH2Costs:
 
         prob.run_model()
 
-        per_turb_electrolyzer_OM_cost = prob["OpEx"]
+        per_turb_electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
         electrolyzer_OM_cost = per_turb_electrolyzer_OM_cost * self.nturbines
 
         assert electrolyzer_OM_cost == approx(1254447.4599629682)

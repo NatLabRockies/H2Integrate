@@ -1,4 +1,5 @@
 from attrs import field, define
+from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import must_equal
@@ -7,12 +8,6 @@ from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
     MarineCarbonCapturePerformanceConfig,
     MarineCarbonCapturePerformanceBaseClass,
 )
-
-
-try:
-    from mcm.capture import echem_oae
-except ImportError:
-    echem_oae = None
 
 
 def setup_ocean_alkalinity_enhancement_inputs(config):
@@ -43,6 +38,8 @@ class OAEPerformanceConfig(MarineCarbonCapturePerformanceConfig):
         initial_pH (float): Initial pH of seawater.
         initial_tank_volume_m3 (float): Initial volume of the tank (m³).
         acid_disposal_method (str): Method for acid disposal.
+        save_outputs (bool, optional): If true, save results to .csv files. Defaults to False.
+        save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
     assumed_CDR_rate: float = field()
@@ -54,6 +51,8 @@ class OAEPerformanceConfig(MarineCarbonCapturePerformanceConfig):
     initial_pH: float = field()
     initial_tank_volume_m3: float = field()
     acid_disposal_method: str = field()
+    save_outputs: bool = field(default=False)
+    save_plots: bool = field(default=False)
 
 
 class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
@@ -72,12 +71,6 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         self.config = OAEPerformanceConfig.from_dict(
@@ -101,7 +94,11 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
             desc="Alkaline seawater flow rate (m³/s)",
         )
         self.add_output(
-            "alkaline_seawater_pH", val=0.0, shape=n_timesteps, desc="pH of the alkaline seawater"
+            "alkaline_seawater_pH",
+            val=0.0,
+            shape=n_timesteps,
+            units="unitless",
+            desc="pH of the alkaline seawater",
         )
         self.add_output(
             "alkaline_seawater_dic",
@@ -209,8 +206,8 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
                     pH_i=self.config.initial_pH,
                 ),
             ),
-            save_outputs=True,
-            save_plots=True,
+            save_outputs=self.config.save_outputs,
+            save_plots=self.config.save_plots,
             output_dir=self.options["driver_config"]["general"]["folder_output"],
             plot_range=[3910, 4030],
         )
@@ -267,12 +264,6 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
@@ -325,13 +316,13 @@ class OAECostModel(MarineCarbonCaptureCostBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         costs = echem_oae.OAECosts(
-            mass_product=inputs["mass_sellable_product"],
-            value_product=inputs["value_products"],
-            waste_mass=inputs["mass_acid_disposed"],
-            waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
-            base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
-            mass_rca=inputs["mass_rca"],
+            mass_product=inputs["mass_sellable_product"][0],
+            value_product=inputs["value_products"][0],
+            waste_mass=inputs["mass_acid_disposed"][0],
+            waste_disposal_cost=inputs["cost_acid_disposal"][0],
+            estimated_cdr=inputs["co2_capture_mtpy"][0],  # TODO: replace with annual_co2_produced
+            base_added_seawater_max_power=inputs["based_added_seawater_max_power"][0],
+            mass_rca=inputs["mass_rca"][0],
             annual_energy_cost=0,  # Energy costs are calculated within H2I and added to LCOC calc
         )
 
@@ -357,12 +348,6 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
 
     def initialize(self):
         super().initialize()
-        if echem_oae is None:
-            raise ImportError(
-                "The `mcm` package is required to use the Ocean Alkalinity Enhancement model. "
-                "Install it via:\n"
-                "pip install git+https://github.com/NREL/MarineCarbonManagement.git"
-            )
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
@@ -451,14 +436,14 @@ class OAECostAndFinancialModel(MarineCarbonCaptureCostBaseClass):
             inputs["annual_energy"] - (sum(inputs["unused_energy"]) / 1000)  # Convert W to kW
         )  # remove unused power from the annual energy cost only used power considered
         costs = echem_oae.OAECosts(
-            mass_product=inputs["mass_sellable_product"],
-            value_product=inputs["value_products"],
-            waste_mass=inputs["mass_acid_disposed"],
-            waste_disposal_cost=inputs["cost_acid_disposal"],
-            estimated_cdr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
-            base_added_seawater_max_power=inputs["based_added_seawater_max_power"],
-            mass_rca=inputs["mass_rca"],
-            annual_energy_cost=annual_energy_cost_usd_yr,
+            mass_product=inputs["mass_sellable_product"][0],
+            value_product=inputs["value_products"][0],
+            waste_mass=inputs["mass_acid_disposed"][0],
+            waste_disposal_cost=inputs["cost_acid_disposal"][0],
+            estimated_cdr=inputs["co2_capture_mtpy"][0],  # TODO: replace with annual_co2_produced
+            base_added_seawater_max_power=inputs["based_added_seawater_max_power"][0],
+            mass_rca=inputs["mass_rca"][0],
+            annual_energy_cost=annual_energy_cost_usd_yr[0],
         )
 
         results = costs.run()

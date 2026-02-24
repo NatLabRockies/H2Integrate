@@ -49,7 +49,7 @@ technologies:
     model_inputs:
       performance_parameters:
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_rate_units: "kW"
         split_mode: "fraction"
         fraction_to_priority_tech: 0.243998425816608
   electrolyzer:
@@ -82,8 +82,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 103701.401563086  # kg
       control_parameters:
@@ -124,6 +124,9 @@ technologies:
         temp_C: 12.0  # degrees Celsius
         dic_i: 0.0022  # mol/L
         pH_i: 8.1  # initial pH
+      performance_parameters:
+        save_plots: True
+        save_outputs: True
       cost_parameters:
         infrastructure_type: "desal"
   co2_storage:
@@ -135,8 +138,8 @@ technologies:
       model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "co2"
-        commodity_units: "kg/h"
+        commodity: "co2"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 961456.376748904  # kg
       control_parameters:

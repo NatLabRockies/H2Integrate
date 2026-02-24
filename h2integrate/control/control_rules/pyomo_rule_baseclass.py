@@ -13,12 +13,12 @@ class PyomoRuleBaseConfig(BaseConfig):
     This class defines the parameters required to configure the `PyomoRuleBaseConfig`.
 
     Attributes:
-        commodity_name (str): Name of the commodity being controlled (e.g., "hydrogen").
+        commodity (str): Name of the commodity being controlled (e.g., "hydrogen").
         commodity_units (str): Units of the commodity (e.g., "kg/h").
     """
 
-    commodity_name: str = field()
-    commodity_storage_units: str = field()
+    commodity: str = field()
+    commodity_rate_units: str = field()
 
 
 class PyomoRuleBaseClass(om.ExplicitComponent):

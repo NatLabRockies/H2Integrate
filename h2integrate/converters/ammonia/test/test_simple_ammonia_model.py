@@ -165,11 +165,15 @@ def test_simple_ammonia_performance_model(tech_config, subtests):
     expected_out = expected_total / 2
 
     with subtests.test("total ammonia produced"):
-        assert pytest.approx(prob.get_val("ammonia_perf.total_ammonia_produced")) == expected_total
+        assert (
+            pytest.approx(prob.get_val("ammonia_perf.total_ammonia_produced", units="kg"))
+            == expected_total
+        )
 
     with subtests.test("performance output"):
         assert all(
-            pytest.approx(x) == expected_out for x in prob.get_val("ammonia_perf.ammonia_out")
+            pytest.approx(x) == expected_out
+            for x in prob.get_val("ammonia_perf.ammonia_out", units="kg/h")
         )
 
 
@@ -212,7 +216,28 @@ def test_simple_ammonia_cost_model(plant_config, tech_config, subtests):
         "credits_byproduct": [0.0],
     }
 
+    output_units = {
+        "capex_air_separation_cryogenic": "USD",
+        "capex_haber_bosch": "USD",
+        "capex_boiler": "USD",
+        "capex_cooling_tower": "USD",
+        "capex_direct": "USD",
+        "capex_depreciable_nonequipment": "USD",
+        "CapEx": "USD",
+        "land_cost": "USD",
+        "labor_cost": "USD/year",
+        "general_administration_cost": "USD/year",
+        "property_tax_insurance": "USD/year",
+        "maintenance_cost": "USD/year",
+        "OpEx": "USD/year",
+        "H2_cost_in_startup_year": "USD",
+        "energy_cost_in_startup_year": "USD",
+        "non_energy_cost_in_startup_year": "USD",
+        "variable_cost_in_startup_year": "USD",
+        "credits_byproduct": "USD",
+    }
+
     for out, expected in expected_outputs.items():
         with subtests.test(out):
-            val = prob.get_val(f"ammonia_cost.{out}")
+            val = prob.get_val(f"ammonia_cost.{out}", units=output_units[out])
             assert pytest.approx(val, rel=1e-6) == expected[0]
