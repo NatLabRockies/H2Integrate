@@ -66,7 +66,12 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
-        self.add_output("efficiency", val=0.0, desc="Average efficiency of the electrolyzer")
+        self.add_output(
+            "efficiency",
+            val=0.0,
+            units="unitless",
+            desc="Average efficiency of the electrolyzer",
+        )
 
         self.add_output(
             "time_until_replacement", val=80000.0, units="h", desc="Time until replacement"

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -7,7 +9,9 @@ from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanc
 
 
 @pytest.fixture
-def tech_config():
+def tech_config(save: bool):
+    if not isinstance(save, bool):
+        raise TypeError("`save` fixture parameter must be a boolean.")
     return {
         "model_inputs": {
             "performance_parameters": {
@@ -28,12 +32,15 @@ def tech_config():
                 "temp_C": 12.0,  # degrees Celsius
                 "dic_i": 0.0022,  # mol/L
                 "pH_i": 8.1,  # initial pH
+                "save_outputs": save,
+                "save_plots": save,
             },
         },
     }
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("save", [False])
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -130,6 +137,7 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
 
 
 @pytest.mark.regression
+@pytest.mark.parametrize("save", [True])
 def test_performance_model(tech_config, plant_config, driver_config):
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
@@ -159,3 +167,12 @@ def test_performance_model(tech_config, plant_config, driver_config):
     assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
     assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
     assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
+
+    # Check that output files were saved
+    # NOTE: the creation of the data and figures folders seems to be slightly malformed
+    # and joining the name of the last subfolder with "data" or "figures"
+    output_folder = Path(driver_config["general"]["folder_output"])
+    assert Path(f"{output_folder}data/DOC_operationScenarios.csv").is_file()
+    assert Path(f"{output_folder}data/DOC_resultTotals.csv").is_file()
+    assert Path(f"{output_folder}data/DOC_timeDependentResults.csv").is_file()
+    assert Path(f"{output_folder}figures/DOC_Time-Dependent_Results.png").is_file()

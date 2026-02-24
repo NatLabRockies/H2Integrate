@@ -158,4 +158,6 @@ def test_generic_summer_performance(plant_config, tech_config, commodity, operat
     prob.set_val(f"{commodity}_in", commodity_input, units=units)
     prob.run_model()
 
-    assert prob.get_val(f"total_{commodity}_{mode}") == approx(total_commodity, rel=1e-5)
+    assert prob.get_val(f"total_{commodity}_{mode}", units=f"{units}*h/yr") == approx(
+        total_commodity, rel=1e-5
+    )

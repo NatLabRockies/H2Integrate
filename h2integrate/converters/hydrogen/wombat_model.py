@@ -59,7 +59,10 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
             desc="Percent hydrogen lost due to O&M maintenance",
         )
         self.add_output(
-            "electrolyzer_availability", val=0.0, units=None, desc="Electrolyzer availability"
+            "electrolyzer_availability",
+            val=0.0,
+            units="unitless",
+            desc="Electrolyzer availability",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

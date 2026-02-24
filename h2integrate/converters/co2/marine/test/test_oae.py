@@ -146,12 +146,12 @@ def test_performance_model(tech_config, plant_config, driver_config):
     prob.run_model()
 
     # Get output values to determine expected values
-    co2_out = prob.get_val("co2_out")
-    co2_capture_mtpy = prob.get_val("co2_capture_mtpy")
-    plant_mCC_capacity_mtph = prob.get_val("plant_mCC_capacity_mtph")
-    alkaline_seawater_flow_rate = prob.get_val("alkaline_seawater_flow_rate")
-    alkaline_seawater_pH = prob.get_val("alkaline_seawater_pH")
-    excess_acid = prob.get_val("excess_acid")
+    co2_out = prob.get_val("co2_out", units="kg/h")
+    co2_capture_mtpy = prob.get_val("co2_capture_mtpy", units="t/year")
+    plant_mCC_capacity_mtph = prob.get_val("plant_mCC_capacity_mtph", units="t/h")
+    alkaline_seawater_flow_rate = prob.get_val("alkaline_seawater_flow_rate", units="m**3/s")
+    alkaline_seawater_pH = prob.get_val("alkaline_seawater_pH", units="unitless")
+    excess_acid = prob.get_val("excess_acid", units="m**3")
 
     # Assert values (allowing for small numerical tolerance)
     assert_near_equal(np.mean(co2_out), 1108.394704250361, tolerance=1e-3)

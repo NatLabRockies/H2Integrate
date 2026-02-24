@@ -59,14 +59,20 @@ def test_steel_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted CapEx (electricity)"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_electricity.total_capex_adjusted")[0], rel=1e-3
+                model.prob.get_val(
+                    "finance_subgroup_electricity.total_capex_adjusted", units="USD"
+                )[0],
+                rel=1e-3,
             )
             == 4314364438.840067
         )
     with subtests.test("Check total adjusted OpEx (electricity)"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_electricity.total_opex_adjusted")[0], rel=1e-3
+                model.prob.get_val(
+                    "finance_subgroup_electricity.total_opex_adjusted", units="USD/year"
+                )[0],
+                rel=1e-3,
             )
             == 75831805.27785796
         )
@@ -89,18 +95,25 @@ def test_steel_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered")[0], rel=1e-3
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered", units="USD/kg")[0],
+                rel=1e-3,
             )
             == 8.270362492342693
         )
 
     with subtests.test("Check LCOS"):
-        assert pytest.approx(model.prob.get_val("steel.LCOS")[0], rel=1e-3) == 1266.6193378846617
+        assert (
+            pytest.approx(model.prob.get_val("steel.LCOS", units="USD/t")[0], rel=1e-3)
+            == 1266.6193378846617
+        )
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
+                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted", units="USD")[
+                    0
+                ],
+                rel=1e-3,
             )
             == 5129491338.670795
         )
@@ -108,16 +121,24 @@ def test_steel_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
+                model.prob.get_val(
+                    "finance_subgroup_hydrogen.total_opex_adjusted", units="USD/year"
+                )[0],
+                rel=1e-3,
             )
             == 98169205.81687717
         )
 
     with subtests.test("Check steel CapEx"):
-        assert pytest.approx(model.prob.get_val("steel.CapEx"), rel=1e-3) == 5.78060014e08
+        assert (
+            pytest.approx(model.prob.get_val("steel.CapEx", units="USD"), rel=1e-3) == 5.78060014e08
+        )
 
     with subtests.test("Check steel OpEx"):
-        assert pytest.approx(model.prob.get_val("steel.OpEx"), rel=1e-3) == 1.0129052e08
+        assert (
+            pytest.approx(model.prob.get_val("steel.OpEx", units="USD/year"), rel=1e-3)
+            == 1.0129052e08
+        )
 
 
 @pytest.mark.integration
@@ -154,31 +175,48 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
         assert pytest.approx(wind_pv_opex, rel=1e-3) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
-        assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-3) == 6.00412524e08
+        assert (
+            pytest.approx(model.prob.get_val("electrolyzer.CapEx", units="USD"), rel=1e-3)
+            == 6.00412524e08
+        )
 
     with subtests.test("Check electrolyzer OpEx"):
-        assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-3) == 14703155.39207595
+        assert (
+            pytest.approx(model.prob.get_val("electrolyzer.OpEx", units="USD/year"), rel=1e-3)
+            == 14703155.39207595
+        )
 
     with subtests.test("Check H2 storage CapEx"):
         assert (
-            pytest.approx(model.prob.get_val("h2_storage.CapEx")[0], rel=1e-3) == 64599012.73829915
+            pytest.approx(model.prob.get_val("h2_storage.CapEx", units="USD")[0], rel=1e-3)
+            == 64599012.73829915
         )
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
-            pytest.approx(model.prob.get_val("h2_storage.OpEx")[0], rel=1e-3) == 3126204.813298109
+            pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year")[0], rel=1e-3)
+            == 3126204.813298109
         )
 
     with subtests.test("Check ammonia CapEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-3) == 1.0124126e08
+        assert (
+            pytest.approx(model.prob.get_val("ammonia.CapEx", units="USD"), rel=1e-3)
+            == 1.0124126e08
+        )
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx"), rel=1e-3) == 11178036.31197754
+        assert (
+            pytest.approx(model.prob.get_val("ammonia.OpEx", units="USD/year"), rel=1e-3)
+            == 11178036.31197754
+        )
 
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
+                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted", units="USD")[
+                    0
+                ],
+                rel=1e-3,
             )
             == 2577162708.3
         )
@@ -186,7 +224,10 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
+                model.prob.get_val(
+                    "finance_subgroup_hydrogen.total_opex_adjusted", units="USD/year"
+                )[0],
+                rel=1e-3,
             )
             == 54034051.95
         )
@@ -194,14 +235,18 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOH"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
+                rel=1e-3,
+            )
             == 4.025446
         )
 
     with subtests.test("Check price of hydrogen"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen")[0], rel=1e-3
+                model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen", units="USD/kg")[0],
+                rel=1e-3,
             )
             == 4.025446
         )
@@ -209,7 +254,10 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Currently underestimated compared to the Reference Design Doc
     with subtests.test("Check LCOA"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_ammonia.LCOA")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")[0],
+                rel=1e-3,
+            )
             == 1.027395
         )
 
@@ -250,7 +298,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             model.prob.get_val("wind.CapEx", units="USD")[0]
             + model.prob.get_val("solar.CapEx", units="USD")[0]
         )
-        battery_capex = model.prob.get_val("battery.CapEx")
+        battery_capex = model.prob.get_val("battery.CapEx", units="USD")
         re_capex = wind_pv_capex + battery_capex
         assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
@@ -259,27 +307,45 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             model.prob.get_val("wind.OpEx", units="USD/yr")[0]
             + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
         )
-        battery_opex = model.prob.get_val("battery.OpEx")
+        battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")
         re_opex = wind_pv_opex + battery_opex
         assert pytest.approx(re_opex, rel=1e-6) == 32953490.4
 
     with subtests.test("Check electrolyzer CapEx"):
-        assert pytest.approx(model.prob.get_val("electrolyzer.CapEx"), rel=1e-6) == 6.00412524e08
+        assert (
+            pytest.approx(model.prob.get_val("electrolyzer.CapEx", units="USD"), rel=1e-6)
+            == 6.00412524e08
+        )
 
     with subtests.test("Check electrolyzer OpEx"):
-        assert pytest.approx(model.prob.get_val("electrolyzer.OpEx"), rel=1e-6) == 14703155.39207595
+        assert (
+            pytest.approx(model.prob.get_val("electrolyzer.OpEx", units="USD/year"), rel=1e-6)
+            == 14703155.39207595
+        )
 
     with subtests.test("Check H2 storage CapEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.CapEx"), rel=1e-6) == 64553014.22218219
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.CapEx", units="USD"), rel=1e-6)
+            == 64553014.22218219
+        )
 
     with subtests.test("Check H2 storage OpEx"):
-        assert pytest.approx(model.prob.get_val("h2_storage.OpEx"), rel=1e-6) == 3124778.867314414
+        assert (
+            pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-6)
+            == 3124778.867314414
+        )
 
     with subtests.test("Check ammonia CapEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.CapEx"), rel=1e-6) == 1.15173753e09
+        assert (
+            pytest.approx(model.prob.get_val("ammonia.CapEx", units="USD"), rel=1e-6)
+            == 1.15173753e09
+        )
 
     with subtests.test("Check ammonia OpEx"):
-        assert pytest.approx(model.prob.get_val("ammonia.OpEx")[0], rel=1e-4) == 25414748.989416014
+        assert (
+            pytest.approx(model.prob.get_val("ammonia.OpEx", units="USD/year")[0], rel=1e-4)
+            == 25414748.989416014
+        )
 
     with subtests.test("Check ammonia production"):
         assert (
@@ -292,7 +358,8 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted")[0], rel=1e-6
+                model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted", units="USD")[0],
+                rel=1e-6,
             )
             == 3728034379.0699997
         )
@@ -300,20 +367,25 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted")[0], rel=1e-6
+                model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
+                rel=1e-6,
             )
             == 79421959.33317558
         )
 
     with subtests.test("Check LCOH"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_h2.LCOH")[0], rel=1e-6)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-6
+            )
             == 4.025385101169759
         )
 
     with subtests.test("Check LCOA"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_nh3.LCOA")[0], rel=1e-6)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-6
+            )
             == 1.1022714567388747
         )
 
@@ -333,7 +405,10 @@ def test_smr_methanol_example(subtests, temp_copy_of_example):
 
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check SMR LCOM"):
-        assert pytest.approx(model.prob.get_val("methanol.LCOM"), rel=1e-6) == 0.22116813
+        assert (
+            pytest.approx(model.prob.get_val("methanol.LCOM", units="USD/kg"), rel=1e-6)
+            == 0.22116813
+        )
 
 
 @pytest.mark.integration
@@ -380,7 +455,10 @@ def test_co2h_methanol_example(subtests, temp_copy_of_example):
 
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
-        assert pytest.approx(model.prob.get_val("methanol.LCOM")[0], rel=1e-6) == 1.7555607442
+        assert (
+            pytest.approx(model.prob.get_val("methanol.LCOM", units="USD/kg")[0], rel=1e-6)
+            == 1.7555607442
+        )
 
 
 @pytest.mark.integration
@@ -401,7 +479,10 @@ def test_doc_methanol_example(subtests, temp_copy_of_example):
     # Check levelized cost of methanol (LCOM)
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOM")[0], rel=1e-4)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_default.LCOM", units="USD/kg")[0],
+                rel=1e-4,
+            )
             == 2.5252588
         )
 
@@ -434,13 +515,19 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_electricity.LCOE")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)")[0],
+                rel=1e-3,
+            )
             == 0.059096
         )
 
     with subtests.test("Check electrolyzer size"):
         assert (
-            pytest.approx(model.prob.get_val("electrolyzer.electrolyzer_size_mw")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("electrolyzer.electrolyzer_size_mw", units="MW")[0],
+                rel=1e-3,
+            )
             == 320.0
         )
     # Read the resulting SQL file and compare initial and final LCOH values
@@ -472,14 +559,20 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
     with subtests.test("Check total adjusted CapEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted")[0], rel=1e-3
+                model.prob.get_val("finance_subgroup_hydrogen.total_capex_adjusted", units="USD")[
+                    0
+                ],
+                rel=1e-3,
             )
             == 978075832.46
         )
     with subtests.test("Check total adjusted OpEx"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.total_opex_adjusted")[0], rel=1e-3
+                model.prob.get_val(
+                    "finance_subgroup_hydrogen.total_opex_adjusted", units="USD/year"
+                )[0],
+                rel=1e-3,
             )
             == 27646299.56
         )
@@ -509,7 +602,10 @@ def test_paper_example(subtests, temp_copy_of_example):
 
     # Subtests for checking specific values
     with subtests.test("Check LCOP"):
-        assert pytest.approx(model.prob.get_val("paper_mill.LCOP"), rel=1e-3) == 51.733275
+        assert (
+            pytest.approx(model.prob.get_val("paper_mill.LCOP", units="USD/t"), rel=1e-3)
+            == 51.733275
+        )
 
 
 @pytest.mark.integration
@@ -533,7 +629,9 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
     # Subtests for checking specific values
     with subtests.test("Check LCOC"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
+            )
             == 1.803343170781246
         )
 
@@ -573,13 +671,19 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check LCOH"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
+                rel=1e-3,
+            )
             == 9.82319908
         )
 
     with subtests.test("Check LCOC"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 13.655268
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
+            )
+            == 13.655268
         )
 
     with subtests.test("Check LCOE"):
@@ -607,12 +711,15 @@ def test_hydro_example(subtests, temp_copy_of_example):
 
     model.post_process()
 
-    print(model.prob.get_val("finance_subgroup_default.LCOE"))
+    print(model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(kW*h)"))
 
     # Subtests for checking specific values
     with subtests.test("Check LCOE"):
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_default.LCOE"), rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(kW*h)")[0],
+                rel=1e-3,
+            )
             == 0.17653979
         )
 
@@ -660,13 +767,42 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
             == 59.0962072084844
         )
 
+    with subtests.test("Check all h2 total_hydrogen_produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_all_hydrogen.total_hydrogen_produced", units="kg/year"
+                )[0],
+                rel=1e-5,
+            )
+            == model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0]
+        )
+
+    with subtests.test("Check total_hydrogen_produced"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("electrolyzer.total_hydrogen_produced", units="kg")[0],
+                rel=1e-5,
+            )
+            == 61656526.36295184
+        )
+
+    with subtests.test("Check annual hydrogen production"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0],
+                rel=1e-5,
+            )
+            == 58458965.601815335
+        )
+
     with subtests.test("Check all h2 LCOH"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.380013537850591
+            == 5.674286965
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -703,7 +839,12 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
     # Note: These are placeholder values. Update with actual values after running the test
     # when MCM package is properly installed and configured
     with subtests.test("Check LCOC"):
-        assert pytest.approx(model.prob.get_val("finance_subgroup_co2.LCOC")[0], rel=1e-3) == 41.156
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
+            )
+            == 41.156
+        )
 
     with subtests.test("Check LCOE"):
         assert (
@@ -745,7 +886,8 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
 
     with subtests.test("Check Carbon Credit"):
         assert (
-            pytest.approx(model.prob.get_val("oae.carbon_credit_value")[0], rel=1e-3) == 574.37466
+            pytest.approx(model.prob.get_val("oae.carbon_credit_value", units="USD/t")[0], rel=1e-3)
+            == 574.37466
         )
 
 
@@ -825,11 +967,11 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
 
     # Subtests for checking specific values
     with subtests.test("Check Natural Gas CapEx"):
-        capex = model.prob.get_val("natural_gas_plant.CapEx")[0]
+        capex = model.prob.get_val("natural_gas_plant.CapEx", units="USD")[0]
         assert pytest.approx(capex, rel=1e-6) == 1e8
 
     with subtests.test("Check Natural Gas OpEx"):
-        opex = model.prob.get_val("natural_gas_plant.OpEx")[0]
+        opex = model.prob.get_val("natural_gas_plant.OpEx", units="USD/year")[0]
         assert pytest.approx(opex, rel=1e-6) == 2243167.24525
 
     with subtests.test("Check total electricity produced"):
@@ -837,61 +979,63 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check opex adjusted ng_feedstock"):
         opex_ng_feedstock = model.prob.get_val(
-            "finance_subgroup_natural_gas.varopex_adjusted_ng_feedstock"
-            # "finance_subgroup_natural_gas.opex_adjusted_ng_feedstock"
+            "finance_subgroup_natural_gas.varopex_adjusted_ng_feedstock",
+            units="USD/year",
         )[0]
         assert pytest.approx(opex_ng_feedstock, rel=1e-6) == 15281860.770986987
 
     with subtests.test("Check capex adjusted natural_gas_plant"):
         capex_ng_plant = model.prob.get_val(
-            "finance_subgroup_natural_gas.capex_adjusted_natural_gas_plant"
+            "finance_subgroup_natural_gas.capex_adjusted_natural_gas_plant", units="USD"
         )[0]
         assert pytest.approx(capex_ng_plant, rel=1e-6) == 97560975.60975611
 
     with subtests.test("Check opex adjusted natural_gas_plant"):
         opex_ng_plant = model.prob.get_val(
-            "finance_subgroup_natural_gas.opex_adjusted_natural_gas_plant"
+            "finance_subgroup_natural_gas.opex_adjusted_natural_gas_plant", units="USD/year"
         )[0]
         assert pytest.approx(opex_ng_plant, rel=1e-6) == 2188455.8490330363
 
     with subtests.test("Check total adjusted CapEx for natural gas subgroup"):
-        total_capex = model.prob.get_val("finance_subgroup_natural_gas.total_capex_adjusted")[0]
+        total_capex = model.prob.get_val(
+            "finance_subgroup_natural_gas.total_capex_adjusted", units="USD"
+        )[0]
         assert pytest.approx(total_capex, rel=1e-6) == 97658536.58536586
 
     with subtests.test("Check LCOE (natural gas plant)"):
-        lcoe_ng = model.prob.get_val("finance_subgroup_natural_gas.LCOE")[0]
+        lcoe_ng = model.prob.get_val("finance_subgroup_natural_gas.LCOE", units="USD/(kW*h)")[0]
         assert pytest.approx(lcoe_ng, rel=1e-6) == 0.05811033466
 
     with subtests.test("Check LCOE (renewables plant)"):
-        lcoe_re = model.prob.get_val("finance_subgroup_renewables.LCOE")[0]
+        lcoe_re = model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/(kW*h)")[0]
         assert pytest.approx(lcoe_re, rel=1e-6) == 0.07102560120
 
     with subtests.test("Check LCOE (renewables and natural gas plant)"):
-        lcoe_tot = model.prob.get_val("finance_subgroup_electricity.LCOE")[0]
+        lcoe_tot = model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)")[0]
         assert pytest.approx(lcoe_tot, rel=1e-6) == 0.063997927290
 
     # Test feedstock-specific values
     with subtests.test("Check feedstock output"):
-        ng_output = model.prob.get_val("ng_feedstock_source.natural_gas_out")
-        # Should be rated capacity (100 MMBtu) for all timesteps
+        ng_output = model.prob.get_val("ng_feedstock_source.natural_gas_out", units="MMBtu/h")
+        # Should be rated capacity (750 MMBtu/h) for all timesteps
         assert all(ng_output == 750.0)
 
     with subtests.test("Check feedstock consumption"):
-        ng_consumed = model.prob.get_val("ng_feedstock.natural_gas_consumed")
+        ng_consumed = model.prob.get_val("ng_feedstock.natural_gas_consumed", units="MMBtu/h")
         # Total consumption should match what the natural gas plant uses
         expected_consumption = (
-            model.prob.get_val("natural_gas_plant.electricity_out") * 7.5
+            model.prob.get_val("natural_gas_plant.electricity_out", units="MW") * 7.5
         )  # Convert MWh to MMBtu using heat rate
         assert pytest.approx(ng_consumed.sum(), rel=1e-3) == expected_consumption.sum()
 
     with subtests.test("Check feedstock CapEx"):
-        ng_capex = model.prob.get_val("ng_feedstock.CapEx")[0]
+        ng_capex = model.prob.get_val("ng_feedstock.CapEx", units="USD")[0]
         assert pytest.approx(ng_capex, rel=1e-6) == 100000.0  # start_up_cost
 
     with subtests.test("Check feedstock OpEx"):
-        ng_opex = model.prob.get_val("ng_feedstock.VarOpEx")[0]
+        ng_opex = model.prob.get_val("ng_feedstock.VarOpEx", units="USD/year")[0]
         # OpEx should be annual_cost (0) + price * consumption
-        ng_consumed = model.prob.get_val("ng_feedstock.natural_gas_consumed")
+        ng_consumed = model.prob.get_val("ng_feedstock.natural_gas_consumed", units="MMBtu/h")
         expected_opex = 4.2 * ng_consumed.sum()  # price = 4.2 $/MMBtu
         assert pytest.approx(ng_opex, rel=1e-6) == expected_opex
 
@@ -1043,7 +1187,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
     # Due to pysam simulation, bounds may not be fully respected,
     # but should not exceed the upper bound more than 4% SOC
     # and the lower bound more than 1% SOC
-    soc = model.prob.get_val("battery.SOC")
+    soc = model.prob.get_val("battery.SOC", units="percent")
     with subtests.test("Check battery SOC lower bound"):
         assert all(soc >= 9.0)
     with subtests.test("Check battery SOC upper bound"):
@@ -1051,11 +1195,11 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check wind generation out of the wind plant"):
         # Wind should generate some electricity
-        wind_electricity = model.prob.get_val("wind.electricity_out")
+        wind_electricity = model.prob.get_val("wind.electricity_out", units="MW")
         assert wind_electricity.sum() > 0
         # Wind electricity should match battery input (direct connection)
     with subtests.test("Check wind generation in to battery"):
-        battery_electricity_in = model.prob.get_val("battery.electricity_in")
+        battery_electricity_in = model.prob.get_val("battery.electricity_in", units="MW")
         assert wind_electricity.sum() == pytest.approx(battery_electricity_in.sum(), rel=1e-6)
 
     with subtests.test("Check demand satisfaction"):
@@ -1066,17 +1210,19 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
 
     # Subtest for LCOE
     with subtests.test("Check all LCOE value"):
-        lcoe = model.prob.get_val("finance_subgroup_all_electricity.LCOE")[0]
+        lcoe = model.prob.get_val("finance_subgroup_all_electricity.LCOE", units="USD/(kW*h)")[0]
         assert lcoe == pytest.approx(0.08157197567200995, rel=1e-6)
 
     with subtests.test("Check dispatched LCOE value"):
-        lcoe = model.prob.get_val("finance_subgroup_dispatched_electricity.LCOE")[0]
+        lcoe = model.prob.get_val(
+            "finance_subgroup_dispatched_electricity.LCOE", units="USD/(kW*h)"
+        )[0]
         assert lcoe == pytest.approx(0.5975902853904799, rel=1e-6)
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
         total_electricity = model.prob.get_val(
-            name="finance_subgroup_all_electricity.electricity_sum.total_electricity_produced",
+            name="finance_subgroup_all_electricity.total_electricity_produced",
             units="MW*h/year",
         )[0]
         assert total_electricity == pytest.approx(3125443.1089529935, rel=1e-6)
@@ -1129,17 +1275,17 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
 
     # Test battery storage functionality
     with subtests.test("Check battery SOC bounds"):
-        soc = model.prob.get_val("battery.electricity_soc")
+        soc = model.prob.get_val("battery.electricity_soc", units="unitless")
         # SOC should stay within configured bounds (10% to 100%)
         assert all(soc >= 0.1)
         assert all(soc <= 1.0)
 
     with subtests.test("Check wind generation"):
         # Wind should generate some electricity
-        wind_electricity = model.prob.get_val("wind.electricity_out")
+        wind_electricity = model.prob.get_val("wind.electricity_out", units="kW")
         assert wind_electricity.sum() > 0
         # Wind electricity should match battery input (direct connection)
-        battery_electricity_in = model.prob.get_val("battery.electricity_in")
+        battery_electricity_in = model.prob.get_val("battery.electricity_in", units="kW")
         assert pytest.approx(wind_electricity.sum(), rel=1e-6) == battery_electricity_in.sum()
 
     with subtests.test("Check demand satisfaction"):
@@ -1150,41 +1296,45 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
 
     # Subtest for LCOE
     with subtests.test("Check LCOE value"):
-        lcoe = model.prob.get_val("finance_subgroup_electricity.LCOE_all_electricity_profast")[0]
+        lcoe = model.prob.get_val(
+            "finance_subgroup_electricity.LCOE_all_electricity_profast", units="USD/(kW*h)"
+        )[0]
         assert pytest.approx(lcoe, rel=1e-6) == 0.07801723344476236
 
     # Subtest for NPV
     with subtests.test("Check NPV value"):
         npv = model.prob.get_val(
-            "finance_subgroup_electricity.NPV_electricity_all_electricity_npv"
+            "finance_subgroup_electricity.NPV_electricity_all_electricity_npv", units="USD"
         )[0]
         assert pytest.approx(npv, rel=1e-6) == 3791194.71
 
     # Subtest for ProFAST NPV
     with subtests.test("Check NPV value"):
         npv = model.prob.get_val(
-            "finance_subgroup_electricity.NPV_electricity_all_electricity_profast_npv"
+            "finance_subgroup_electricity.NPV_electricity_all_electricity_profast_npv",
+            units="USD",
         )[0]
         assert pytest.approx(npv, rel=1e-6) == 7518969.18
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
         total_electricity = model.prob.get_val(
-            "finance_subgroup_electricity.electricity_sum.total_electricity_produced"
+            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
+            units="kW*h/year",
         )[0]
         assert pytest.approx(total_electricity, rel=1e-6) == 62797265.9296355
 
     # Subtest for electricity unused_commodity
     with subtests.test("Check electricity unused commodity"):
         electricity_unused_commodity = np.linalg.norm(
-            model.prob.get_val("battery.electricity_unused_commodity")
+            model.prob.get_val("battery.electricity_unused_commodity", units="kW")
         )
         assert pytest.approx(electricity_unused_commodity, rel=1e-6) == 412531.73840450746
 
     # Subtest for unmet demand
     with subtests.test("Check electricity unmet demand"):
         electricity_unmet_demand = np.linalg.norm(
-            model.prob.get_val("battery.electricity_unmet_demand")
+            model.prob.get_val("battery.electricity_unmet_demand", units="kW")
         )
         assert pytest.approx(electricity_unmet_demand, rel=1e-6) == 165604.70758669
 
@@ -1192,7 +1342,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
     # electricity produced from finance_subgroup_electricity
     with subtests.test("Check total electricity produced from wind"):
         wind_electricity_finance = model.prob.get_val(
-            "finance_subgroup_wind.electricity_sum.total_electricity_produced", units="kW*h/year"
+            "finance_subgroup_wind.total_electricity_produced", units="kW*h/year"
         )[0]
         assert pytest.approx(wind_electricity_finance, rel=1e-6) == total_electricity
 
@@ -1206,7 +1356,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
     # to sum of "battery.electricity_out"
     with subtests.test("Check total electricity produced from battery"):
         battery_electricity_finance = model.prob.get_val(
-            "finance_subgroup_battery.electricity_sum.total_electricity_produced", units="MW*h/year"
+            "finance_subgroup_battery.total_electricity_produced", units="MW*h/year"
         )[0]
         battery_electricity_performance = np.sum(
             model.prob.get_val("battery.electricity_out", units="MW")
@@ -1281,17 +1431,21 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
 
     # Subtest for LCOE
     with subtests.test("Check dispatched LCOE value"):
-        lcoe = model.prob.get_val("finance_subgroup_dispatched_electricity.LCOE")[0]
+        lcoe = model.prob.get_val(
+            "finance_subgroup_dispatched_electricity.LCOE", units="USD/(kW*h)"
+        )[0]
         assert pytest.approx(lcoe, rel=1e-6) == 0.09289430342906849
 
     with subtests.test("Check generation LCOE value (excludes battery)"):
-        lcoe = model.prob.get_val("finance_subgroup_produced_electricity.LCOE")[0]
+        lcoe = model.prob.get_val("finance_subgroup_produced_electricity.LCOE", units="USD/(kW*h)")[
+            0
+        ]
         assert pytest.approx(lcoe, rel=1e-6) == 0.07204429286793802
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity dispatched"):
         total_electricity_year_one = model.prob.get_val(
-            "finance_subgroup_dispatched_electricity.electricity_sum.total_electricity_produced",
+            "finance_subgroup_dispatched_electricity.total_electricity_produced",
             units="MW*h/year",
         )[0]
         assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
@@ -1415,7 +1569,7 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
             min_lcoh_case_num = i
 
     with subtests.test("Min LCOH value"):
-        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.468258
+        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.67280915
 
     with subtests.test("Min LCOH case number"):
         assert min_lcoh_case_num == 6
@@ -1482,7 +1636,10 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     res_df = pd.DataFrame()
     for ci, case in enumerate(cases):
         solar_resource_data = case.get_val("site.solar_resource.solar_resource_data")
-        lat_lon = f"{case.get_val('site.latitude')[0]} {case.get_val('site.longitude')[0]}"
+        lat_lon = (
+            f"{case.get_val('site.latitude', units='deg')[0]} "
+            f"{case.get_val('site.longitude', units='deg')[0]}"
+        )
         solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
         aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
         lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
@@ -1494,12 +1651,12 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
 
         with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
             assert (
-                pytest.approx(case.get_val("site.latitude"), abs=0.1)
+                pytest.approx(case.get_val("site.latitude", units="deg"), abs=0.1)
                 == solar_resource_data["site_lat"]
             )
         with subtests.test(f"Case {ci}: Solar resource longitude matches site longitude"):
             assert (
-                pytest.approx(case.get_val("site.longitude"), abs=0.1)
+                pytest.approx(case.get_val("site.longitude", units="deg"), abs=0.1)
                 == solar_resource_data["site_lon"]
             )
 
@@ -1615,10 +1772,13 @@ def test_floris_example(subtests, temp_copy_of_example):
 
     with subtests.test("Distributed wind site location"):
         assert (
-            pytest.approx(h2i.prob.get_val("distributed_wind_site.latitude"), rel=1e-6) == 44.04218
+            pytest.approx(h2i.prob.get_val("distributed_wind_site.latitude", units="deg"), rel=1e-6)
+            == 44.04218
         )
         assert (
-            pytest.approx(h2i.prob.get_val("distributed_wind_site.longitude"), rel=1e-6)
+            pytest.approx(
+                h2i.prob.get_val("distributed_wind_site.longitude", units="deg"), rel=1e-6
+            )
             == -95.19757
         )
 
@@ -1637,9 +1797,13 @@ def test_floris_example(subtests, temp_copy_of_example):
         )
 
     with subtests.test("Utility wind site location"):
-        assert pytest.approx(h2i.prob.get_val("utility_wind_site.latitude"), rel=1e-6) == 35.2018863
         assert (
-            pytest.approx(h2i.prob.get_val("utility_wind_site.longitude"), rel=1e-6) == -101.945027
+            pytest.approx(h2i.prob.get_val("utility_wind_site.latitude", units="deg"), rel=1e-6)
+            == 35.2018863
+        )
+        assert (
+            pytest.approx(h2i.prob.get_val("utility_wind_site.longitude", units="deg"), rel=1e-6)
+            == -101.945027
         )
 
     with subtests.test("Utility wind plant resource location"):
@@ -1884,39 +2048,54 @@ def test_natural_geoh2(subtests, temp_copy_of_example):
         )
     with subtests.test("subsurface Capex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            pytest.approx(
+                h2i_nat.model.get_val("geoh2_well_subsurface.CapEx", units="USD"), rel=1e-6
+            )
             == 7667341.11417252
         )
     with subtests.test("subsurface fixed Opex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            pytest.approx(
+                h2i_nat.model.get_val("geoh2_well_subsurface.OpEx", units="USD/year"), rel=1e-6
+            )
             == 215100.7857875
         )
     with subtests.test("subsurface variable Opex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_subsurface.VarOpEx"), rel=1e-6) == 0.0
+            pytest.approx(
+                h2i_nat.model.get_val("geoh2_well_subsurface.VarOpEx", units="USD/year"),
+                rel=1e-6,
+            )
+            == 0.0
         )
     with subtests.test("subsurface adjusted opex"):
         adjusted_opex = h2i_nat.prob.get_val(
-            "finance_subgroup_h2.opex_adjusted_geoh2_well_subsurface"
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_subsurface", units="USD/year"
         )
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
     with subtests.test("surface Capex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx"), rel=1e-6)
+            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.CapEx", units="USD"), rel=1e-6)
             == 1800711.83796
         )
     with subtests.test("surface fixed Opex"):
-        assert pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.OpEx"), rel=1e-6) == 4567464
+        assert (
+            pytest.approx(
+                h2i_nat.model.get_val("geoh2_well_surface.OpEx", units="USD/year"), rel=1e-6
+            )
+            == 4567464
+        )
     with subtests.test("surface variable Opex"):
         assert (
-            pytest.approx(h2i_nat.model.get_val("geoh2_well_surface.VarOpEx"), rel=1e-6)
+            pytest.approx(
+                h2i_nat.model.get_val("geoh2_well_surface.VarOpEx", units="USD/year"), rel=1e-6
+            )
             == 989213.8787
         )
     with subtests.test("surface adjusted opex"):
         surface_adjusted_opex = h2i_nat.prob.get_val(
-            "finance_subgroup_h2.opex_adjusted_geoh2_well_surface"
+            "finance_subgroup_h2.opex_adjusted_geoh2_well_surface", units="USD/year"
         )
         assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
 
@@ -1935,7 +2114,7 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
         assert pytest.approx(np.mean(h2_prod), rel=1e-6) == 155.03934945719536
 
     with subtests.test("integrate LCOH"):
-        lcoh = h2i_stim.prob.get_val("finance_subgroup_default.LCOH")
+        lcoh = h2i_stim.prob.get_val("finance_subgroup_default.LCOH", units="USD/kg")
         assert lcoh == pytest.approx(
             2.29337734, 1e-6
         )  # previous val from custom finance model was 1.74903827
@@ -1943,20 +2122,26 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
     # failure is expected because we are inflating using general inflation rather than CPI and CEPCI
     with subtests.test("Capex"):
         assert (
-            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.CapEx"), rel=1e-6)
+            pytest.approx(
+                h2i_stim.model.get_val("geoh2_well_subsurface.CapEx", units="USD"), rel=1e-6
+            )
             == 19520122.88478073
         )
     with subtests.test("fixed Opex"):
         assert (
-            pytest.approx(h2i_stim.model.get_val("geoh2_well_subsurface.OpEx"), rel=1e-6)
+            pytest.approx(
+                h2i_stim.model.get_val("geoh2_well_subsurface.OpEx", units="USD/year"), rel=1e-6
+            )
             == 215100.7857875
         )
     with subtests.test("variable Opex"):
-        var_om_pr_h2 = h2i_stim.model.get_val("geoh2_well_subsurface.VarOpEx") / np.sum(h2_prod)
+        var_om_pr_h2 = h2i_stim.model.get_val(
+            "geoh2_well_subsurface.VarOpEx", units="USD/year"
+        ) / np.sum(h2_prod)
         assert pytest.approx(var_om_pr_h2, rel=1e-6) == 0.32105362
     with subtests.test("adjusted Opex"):
         adjusted_opex = h2i_stim.prob.get_val(
-            "finance_subgroup_default.opex_adjusted_geoh2_well_subsurface"
+            "finance_subgroup_default.opex_adjusted_geoh2_well_subsurface", units="USD/year"
         )
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
@@ -1984,6 +2169,53 @@ def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("31_iron_electrowinning", None)]
+)
+def test_31_iron_electrowinning_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "31_iron_electrowinning.yaml")
+
+    with subtests.test("Value check on AHE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "ahe"
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
+
+    with subtests.test("Value check on MSE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "mse"
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
+        model.technology_config["technologies"]["ewin_CaCl2_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 179.0
+
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
+
+    with subtests.test("Value check on MOE"):
+        model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
+            "electrolysis_type"
+        ] = "moe"
+        model.technology_config["technologies"]["ewin_NaOH_feedstock"]["model_inputs"][
+            "performance_parameters"
+        ]["rated_capacity"] = 0
+        model.setup()
+        model.run()
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("27_site_doe_diff", None)])
 def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2008,20 +2240,24 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
         wind_resource_data = case.get_val("wind_site.wind_resource.wind_resource_data")
         with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
             assert (
-                pytest.approx(case.get_val("solar_site.solar_resource.latitude"), abs=0.1)
+                pytest.approx(
+                    case.get_val("solar_site.solar_resource.latitude", units="deg"), abs=0.1
+                )
                 == solar_resource_data["site_lat"]
             )
         with subtests.test(f"Case {ci}: Wind resource latitude matches site latitude"):
             assert (
-                pytest.approx(case.get_val("wind_site.wind_resource.latitude"), abs=0.1)
+                pytest.approx(
+                    case.get_val("wind_site.wind_resource.latitude", units="deg"), abs=0.1
+                )
                 == wind_resource_data["site_lat"]
             )
 
-        s_lat = case.get_val("solar_site.solar_resource.latitude")[0]
-        s_lon = case.get_val("solar_site.solar_resource.longitude")[0]
+        s_lat = case.get_val("solar_site.solar_resource.latitude", units="deg")[0]
+        s_lon = case.get_val("solar_site.solar_resource.longitude", units="deg")[0]
         solar_lat_lon = f"{s_lat} {s_lon}"
-        w_lat = case.get_val("wind_site.wind_resource.latitude")[0]
-        w_lon = case.get_val("wind_site.wind_resource.longitude")[0]
+        w_lat = case.get_val("wind_site.wind_resource.latitude", units="deg")[0]
+        w_lon = case.get_val("wind_site.wind_resource.longitude", units="deg")[0]
         wind_lat_lon = f"{w_lat} {w_lon}"
 
         solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
@@ -2119,11 +2355,11 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert wind_total == pytest.approx(781_472_811.8, rel=1e-3)
 
     with subtests.test("Check wind capacity factor"):
-        wind_cf = model.prob.get_val("wind.capacity_factor")[0]
+        wind_cf = model.prob.get_val("wind.capacity_factor", units="unitless")[0]
         assert wind_cf == pytest.approx(0.4299, rel=1e-3)
 
     with subtests.test("Check wind CapEx"):
-        wind_capex = model.prob.get_val("wind.CapEx")[0]
+        wind_capex = model.prob.get_val("wind.CapEx", units="USD")[0]
         assert wind_capex == pytest.approx(311_250_000.0, rel=1e-3)
 
     # Battery checks
@@ -2132,15 +2368,15 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert battery_total == pytest.approx(645_787_407.02, rel=1e-3)
 
     with subtests.test("Check battery capacity factor"):
-        battery_cf = model.prob.get_val("battery.capacity_factor")[0]
+        battery_cf = model.prob.get_val("battery.capacity_factor", units="unitless")[0]
         assert battery_cf == pytest.approx(0.7372, rel=1e-3)
 
     with subtests.test("Check battery CapEx"):
-        battery_capex = model.prob.get_val("battery.CapEx")[0]
+        battery_capex = model.prob.get_val("battery.CapEx", units="USD")[0]
         assert battery_capex == pytest.approx(155_100_000.0, rel=1e-3)
 
     with subtests.test("Check battery OpEx"):
-        battery_opex = model.prob.get_val("battery.OpEx")[0]
+        battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
         assert battery_opex == pytest.approx(38_775_000.0, rel=1e-3)
 
     # Finance checks
@@ -2149,11 +2385,15 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert lcoe == pytest.approx(0.134, rel=1e-3)
 
     with subtests.test("Check total adjusted CapEx"):
-        total_capex = model.prob.get_val("finance_subgroup_all_electricity.total_capex_adjusted")[0]
+        total_capex = model.prob.get_val(
+            "finance_subgroup_all_electricity.total_capex_adjusted", units="USD"
+        )[0]
         assert total_capex == pytest.approx(490_282_207.03, rel=1e-3)
 
     with subtests.test("Check total adjusted OpEx"):
-        total_opex = model.prob.get_val("finance_subgroup_all_electricity.total_opex_adjusted")[0]
+        total_opex = model.prob.get_val(
+            "finance_subgroup_all_electricity.total_opex_adjusted", units="USD/year"
+        )[0]
         assert total_opex == pytest.approx(48_830_466.21, rel=1e-3)
 
     with subtests.test("Check total electricity produced"):
@@ -2164,5 +2404,7 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert total_electricity == pytest.approx(781_472_811.8, rel=1e-3)
 
     with subtests.test("Check electricity price"):
-        price = model.prob.get_val("finance_subgroup_all_electricity.price_electricity")[0]
+        price = model.prob.get_val(
+            "finance_subgroup_all_electricity.price_electricity", units="USD/(kW*h)"
+        )[0]
         assert price == pytest.approx(0.134, rel=1e-3)

@@ -65,12 +65,14 @@ def test_h2_storage_capex_opex(
     prob.run_model()
 
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("sys.CapEx")[0], rel=1e-6) == expected_capex
+        assert pytest.approx(prob.get_val("sys.CapEx", units="USD")[0], rel=1e-6) == expected_capex
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("sys.OpEx")[0], rel=1e-6) == expected_opex
+        assert pytest.approx(
+            prob.get_val("sys.OpEx", units="USD/year")[0], rel=1e-6
+        ) == expected_opex
     with subtests.test("VarOpEx"):
         assert (
-            pytest.approx(np.sum(prob.get_val("sys.VarOpEx")), rel=1e-6)
+            pytest.approx(np.sum(prob.get_val("sys.VarOpEx", units="USD/year")), rel=1e-6)
             == expected_var_opex
         )
     with subtests.test("Cost year"):
@@ -121,4 +123,4 @@ def test_h2_storage_capex_per_kg(
     cepci_overall = 1.29 / 1.30
     expected_capex = cepci_overall * capex_per_kg * h2_storage_kg
 
-    assert pytest.approx(prob.get_val("sys.CapEx")[0], rel=1e-6) == expected_capex
+    assert pytest.approx(prob.get_val("sys.CapEx", units="USD")[0], rel=1e-6) == expected_capex

@@ -319,17 +319,17 @@ def test_buy_only_mode(plant_config, n_timesteps):
 
     # Check CapEx
     expected_capex = (interconnection_size * 50.0) + 100000.0
-    capex = prob.get_val("grid.CapEx")
+    capex = prob.get_val("grid.CapEx", units="USD")
     assert capex == pytest.approx(expected_capex)
 
     # Check OpEx
     expected_opex = interconnection_size * 2.0
-    opex = prob.get_val("grid.OpEx")
+    opex = prob.get_val("grid.OpEx", units="USD/year")
     assert opex == pytest.approx(expected_opex)
 
     # Check VarOpEx (buying costs)
     expected_varopex = np.sum(electricity_out * buy_price)
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)
 
 
@@ -371,17 +371,17 @@ def test_sell_only_mode(plant_config, n_timesteps):
 
     # Check CapEx
     expected_capex = (interconnection_size * 50.0) + 100000.0
-    capex = prob.get_val("grid.CapEx")
+    capex = prob.get_val("grid.CapEx", units="USD")
     assert capex == pytest.approx(expected_capex)
 
     # Check OpEx
     expected_opex = interconnection_size * 2.0
-    opex = prob.get_val("grid.OpEx")
+    opex = prob.get_val("grid.OpEx", units="USD/year")
     assert opex == pytest.approx(expected_opex)
 
     # Check VarOpEx (selling revenue - negative)
     expected_varopex = -np.sum(electricity_sold * sell_price)
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)
 
 
@@ -430,7 +430,7 @@ def test_both_buy_and_sell_prices(plant_config, n_timesteps):
     selling_revenue = np.sum(electricity_sold * sell_price)
     expected_varopex = buying_cost - selling_revenue
 
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)
 
 
@@ -473,7 +473,7 @@ def test_time_varying_buy_price(plant_config, n_timesteps):
 
     # Check VarOpEx with varying prices
     expected_varopex = np.sum(electricity_out * buy_prices)
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)
 
 
@@ -516,7 +516,7 @@ def test_time_varying_sell_price(plant_config, n_timesteps):
 
     # Check VarOpEx (negative for revenue)
     expected_varopex = -np.sum(electricity_sold * sell_prices)
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)
 
 
@@ -556,12 +556,12 @@ def test_zero_interconnection_costs(plant_config, n_timesteps):
     prob.run_model()
 
     # Check that CapEx and OpEx are zero
-    capex = prob.get_val("grid.CapEx")
-    opex = prob.get_val("grid.OpEx")
+    capex = prob.get_val("grid.CapEx", units="USD")
+    opex = prob.get_val("grid.OpEx", units="USD/year")
     assert capex == pytest.approx(0.0)
     assert opex == pytest.approx(0.0)
 
     # VarOpEx should still be calculated
     expected_varopex = np.sum(electricity_out * 0.10) - np.sum(electricity_sold * 0.05)
-    varopex = prob.get_val("grid.VarOpEx")[0]
+    varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
     assert varopex == pytest.approx(expected_varopex)

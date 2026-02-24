@@ -16,14 +16,8 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "ammonia",
                 "nitrogen",
                 "natural_gas",
-                "crude_ore",
                 "wellhead_gas",
-                "iron_ore",
-                "reformer_catalyst",
                 "water",
-                "carbon",
-                "lime",
-                "pig_iron",
             ],
         )
 
@@ -33,9 +27,7 @@ class PipePerformanceModel(om.ExplicitComponent):
         self.output_name = transport_item + "_out"
 
         if transport_item == "natural_gas":
-            units = "MMBtu"
-        elif transport_item == "reformer_catalyst":
-            units = "(m**3)"
+            units = "MMBtu/h"
         elif transport_item == "water":
             units = "galUS"
         elif transport_item == "co2":

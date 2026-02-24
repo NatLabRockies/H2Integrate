@@ -14,7 +14,7 @@ from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformance
 
 def create_basic_feedstock_config(
     feedstock_type="natural_gas",
-    units="MMBtu",
+    units="MMBtu/h",
     rated_capacity=100.0,
     price=4.2,
     annual_cost=0.0,
@@ -24,8 +24,8 @@ def create_basic_feedstock_config(
     tech_config = {
         "model_inputs": {
             "shared_parameters": {
-                "feedstock_type": feedstock_type,
-                "units": units,
+                "commodity": feedstock_type,
+                "commodity_rate_units": units,
             },
             "performance_parameters": {
                 "rated_capacity": rated_capacity,
@@ -80,8 +80,8 @@ def test_single_feedstock_natural_gas():
     prob_cost.run_model()
 
     # Check outputs
-    capex = prob_cost.get_val("feedstock_cost.CapEx")[0]
-    opex = prob_cost.get_val("feedstock_cost.VarOpEx")[0]
+    capex = prob_cost.get_val("feedstock_cost.CapEx", units="USD")[0]
+    opex = prob_cost.get_val("feedstock_cost.VarOpEx", units="USD/year")[0]
 
     assert capex == 100000.0  # start_up_cost
     expected_opex = 0.0 + 4.2 * consumption.sum()  # annual_cost + price * consumption
@@ -92,11 +92,12 @@ def test_single_feedstock_natural_gas():
 def test_multiple_same_type_feedstocks():
     """Test multiple feedstocks of the same type with different parameters."""
     # Test two natural gas feedstocks with different capacities and prices
+    units = "MMBtu/h"
     tech_config1, plant_config, driver_config = create_basic_feedstock_config(
-        rated_capacity=50.0, price=4.0, start_up_cost=50000.0
+        rated_capacity=50.0, price=4.0, start_up_cost=50000.0, units=units
     )
     tech_config2, _, _ = create_basic_feedstock_config(
-        rated_capacity=150.0, price=4.5, start_up_cost=150000.0
+        rated_capacity=150.0, price=4.5, start_up_cost=150000.0, units=units
     )
 
     # Test both feedstocks can coexist and have different outputs
@@ -124,8 +125,8 @@ def test_multiple_same_type_feedstocks():
     prob.setup()
     prob.run_model()
 
-    ng_output1 = prob.get_val("feedstock1.natural_gas_out")
-    ng_output2 = prob.get_val("feedstock2.natural_gas_out")
+    ng_output1 = prob.get_val("feedstock1.natural_gas_out", units=units)
+    ng_output2 = prob.get_val("feedstock2.natural_gas_out", units=units)
 
     assert np.all(ng_output1 == 50.0)
     assert np.all(ng_output2 == 150.0)
@@ -135,18 +136,21 @@ def test_multiple_same_type_feedstocks():
 def test_multiple_different_type_feedstocks():
     """Test feedstocks of different types (natural gas, electricity, water)."""
     # Natural gas feedstock
+    ng_units = "MMBtu/h"
     ng_config, plant_config, driver_config = create_basic_feedstock_config(
-        feedstock_type="natural_gas", units="MMBtu", rated_capacity=100.0, price=4.2
+        feedstock_type="natural_gas", units=ng_units, rated_capacity=100.0, price=4.2
     )
 
     # Electricity feedstock
+    ec_units = "MW*h"
     elec_config, _, _ = create_basic_feedstock_config(
-        feedstock_type="electricity", units="MW*h", rated_capacity=50.0, price=0.05
+        feedstock_type="electricity", units=ec_units, rated_capacity=50.0, price=0.05
     )
 
     # Water feedstock
+    h2o_units = "galUS"
     water_config, _, _ = create_basic_feedstock_config(
-        feedstock_type="water", units="galUS", rated_capacity=1000.0, price=0.001
+        feedstock_type="water", units=h2o_units, rated_capacity=1000.0, price=0.001
     )
 
     # Test all three feedstock types
@@ -181,9 +185,9 @@ def test_multiple_different_type_feedstocks():
     prob.run_model()
 
     # Check outputs
-    ng_out = prob.get_val("ng_feedstock.natural_gas_out")
-    elec_out = prob.get_val("elec_feedstock.electricity_out")
-    water_out = prob.get_val("water_feedstock.water_out")
+    ng_out = prob.get_val("ng_feedstock.natural_gas_out", units=ng_units)
+    elec_out = prob.get_val("elec_feedstock.electricity_out", units=ec_units)
+    water_out = prob.get_val("water_feedstock.water_out", units=h2o_units)
 
     assert np.all(ng_out == 100.0)
     assert np.all(elec_out == 50.0)
@@ -222,7 +226,7 @@ def test_variable_pricing():
     prob.run_model()
 
     # Check that OpEx reflects variable pricing
-    opex = prob.get_val("feedstock_cost.VarOpEx")[0]
+    opex = prob.get_val("feedstock_cost.VarOpEx", units="USD/year")[0]
     expected_opex = 0.0 + np.sum(hourly_prices * consumption)
     assert opex == pytest.approx(expected_opex, abs=1e-5)
 
@@ -251,8 +255,8 @@ def test_zero_cost_feedstock():
     prob.set_val("feedstock_cost.natural_gas_consumed", consumption)
     prob.run_model()
 
-    capex = prob.get_val("feedstock_cost.CapEx")[0]
-    opex = prob.get_val("feedstock_cost.OpEx")[0]
+    capex = prob.get_val("feedstock_cost.CapEx", units="USD")[0]
+    opex = prob.get_val("feedstock_cost.OpEx", units="USD/year")[0]
 
     assert capex == 0.0
     assert opex == 0.0

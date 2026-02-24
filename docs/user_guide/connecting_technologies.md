@@ -31,7 +31,11 @@ There are two connection formats:
 - **source_tech**: Name of the technology providing the output
 - **destination_tech**: Name of the technology receiving the input
 - **variable_name**: The type of variable being transported (e.g., "electricity", "hydrogen", "ammonia")
-- **transport_type**: The transport component to use (e.g., "cable", "pipeline")
+- **transport_type**: The transport component to use (e.g., "cable", "pipe")
+
+```{note}
+"cable" and "pipe" are transport components that are internal to H2I and do not need to be defined in the technology configuration file. The "cable" can only transport electricity, and the "pipe" can transport a handful of commodities that are commonly used in H2I models (such as hydrogen, co2, methanol, ammonia, water, etc). To transport a commodity that is *not* supported with by "cable" or "pipe" transporters, the `GenericTransporterPerformanceModel` can be used instead. Example usage of the generic transporter is available in Example 21.
+```
 
 #### 3-element connections (direct connections)
 ##### Same shared parameter name

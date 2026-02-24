@@ -101,7 +101,7 @@ def test_electrolyzer_refurb_results(model_configs):
 
     prob.run_model()
 
-    assert prob["LCOH"][0] == pytest.approx(4.27529137, abs=1e-7)
+    assert prob.get_val("LCOH", units="USD/kg")[0] == pytest.approx(4.27529137, abs=1e-7)
 
 
 @pytest.mark.regression
@@ -142,7 +142,9 @@ def test_modified_lcoe_calc():
 
     prob.run_model()
 
-    assert prob["LCOE"][0] == pytest.approx(0.2116038814767319, abs=1e-7)
+    assert prob.get_val("LCOE", units="USD/(kW*h)")[0] == pytest.approx(
+        0.2116038814767319, abs=1e-7
+    )
 
 
 @pytest.mark.regression
@@ -189,7 +191,9 @@ def test_lcoe_with_selected_technologies():
 
     prob.run_model()
 
-    assert prob["LCOE"][0] == pytest.approx(0.2116038814767319, abs=1e-6)
+    assert prob.get_val("LCOE", units="USD/(kW*h)")[0] == pytest.approx(
+        0.2116038814767319, abs=1e-6
+    )
 
 
 @pytest.mark.integration
@@ -316,7 +320,7 @@ def test_profast_config_provided():
 
     prob.run_model()
 
-    assert prob["LCOH"] == approx(4.27529137)
+    assert prob.get_val("LCOH", units="USD/kg") == approx(4.27529137)
 
 
 @pytest.mark.unit

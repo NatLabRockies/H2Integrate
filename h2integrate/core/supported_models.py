@@ -59,6 +59,8 @@ from h2integrate.storage.hydrogen.h2_storage_cost import (
     SaltCavernStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
+from h2integrate.transporters.generic_transporter import GenericTransporterPerformanceModel
+from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopCostModel,
     AmmoniaSynLoopPerformanceModel,
@@ -84,6 +86,7 @@ from h2integrate.converters.ammonia.simple_ammonia_model import (
     SimpleAmmoniaCostModel,
     SimpleAmmoniaPerformanceModel,
 )
+from h2integrate.converters.iron.humbert_stinn_ewin_cost import HumbertStinnEwinCostComponent
 from h2integrate.converters.methanol.co2h_methanol_plant import (
     CO2HMethanolPlantCostModel,
     CO2HMethanolPlantFinanceModel,
@@ -209,6 +212,8 @@ supported_models = {
     "NaturalGasIronReductionPlantCostComponent": NaturalGasIronReductionPlantCostComponent,  # standalone model  # noqa: E501
     "HydrogenIronReductionPlantPerformanceComponent": HydrogenIronReductionPlantPerformanceComponent,  # noqa: E501
     "HydrogenIronReductionPlantCostComponent": HydrogenIronReductionPlantCostComponent,  # standalone model  # noqa: E501
+    "HumbertEwinPerformanceComponent": HumbertEwinPerformanceComponent,
+    "HumbertStinnEwinCostComponent": HumbertStinnEwinCostComponent,
     "NaturalGasEAFPlantPerformanceComponent": NaturalGasEAFPlantPerformanceComponent,
     "NaturalGasEAFPlantCostComponent": NaturalGasEAFPlantCostComponent,  # standalone model
     "HydrogenEAFPlantPerformanceComponent": HydrogenEAFPlantPerformanceComponent,
@@ -244,6 +249,7 @@ supported_models = {
     "pipe": PipePerformanceModel,
     "GenericCombinerPerformanceModel": GenericCombinerPerformanceModel,
     "GenericSplitterPerformanceModel": GenericSplitterPerformanceModel,
+    "GenericTransporterPerformanceModel": GenericTransporterPerformanceModel,
     "IronTransportPerformanceComponent": IronTransportPerformanceComponent,
     "IronTransportCostComponent": IronTransportCostComponent,
     # Simple Summers
