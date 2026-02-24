@@ -379,10 +379,10 @@ in conjunction with each other.
 
 #### Test coverage
 
-To test the code coverage of the testing suite, we utilize the
-[`pytest-cov`](https://pytest-cov.readthedocs.io/en/latest) package. To utilize, simply
+To test the code coverage of the testing suite, we use the
+[`pytest-cov`](https://pytest-cov.readthedocs.io/en/latest) package. To produce a coverage report in the terminal after the tests complete, simply
 run pytest as you normally would, with the following added to the end:
-`--cov=h2integrate`. This will produce a coverage report in the terminal after the tests complete.
+`--cov=h2integrate`..
 
 Additional helpful options are `--cov-report=html --no-cov-on-fail` will produce a detailed HTML
 report in `htmlcov/` that can be viewed in the browser (open
