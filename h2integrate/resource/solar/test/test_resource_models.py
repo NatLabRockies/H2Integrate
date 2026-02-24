@@ -43,9 +43,6 @@ def test_nrel_solar_resource_file_downloads(
     file_resource_year = None
     if model == "MeteosatPrimeMeridianTMYSolarAPI" and resource_year == "tmy-2022":
         file_resource_year = "tmy-2020"
-        site_config["resources"]["solar_resource"]["resource_parameters"]["resource_filename"].replace(
-            resource_year, file_resource_year
-        )
     plant_config = {
         "site": site_config,
         "plant": plant_simulation,

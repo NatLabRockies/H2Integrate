@@ -94,10 +94,6 @@ def test_pvwatts_integration(
     lon_tol,
     expected_aep,
 ):
-    if model == "MeteosatPrimeMeridianTMYSolarAPI" and resource_year == "tmy-2022":
-        site_config["resources"]["solar_resource"]["resource_parameters"]["resource_filename"].replace(
-            resource_year, "tmy-2020"
-        )
     plant_config = {
         "site": site_config,
         "plant": plant_simulation,
@@ -125,5 +121,5 @@ def test_pvwatts_integration(
         assert pytest.approx(resource_lat, rel=1e-3) == site_config["latitude"]
 
     with subtests.test("Site longitude"):
-        resource_lat = prob.get_val("pv_perf.solar_resource_data").get("site_lon", 0)
-        assert pytest.approx(resource_lat, abs=lon_tol) == site_config["longitude"]
+        resource_lon = prob.get_val("pv_perf.solar_resource_data").get("site_lon", 0)
+        assert pytest.approx(resource_lon, abs=lon_tol) == site_config["longitude"]
