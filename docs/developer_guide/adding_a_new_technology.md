@@ -351,7 +351,7 @@ system if it can be helped.
 Run `pytest -m regression` to run only the regression test suite or `pytest -m not-regression` to
 skip the regression tests.
 
-An example of a regression tesst is in the example berlow where the model's outputs are checked
+An example of a regression test is in the example below where the model's outputs are checked
 for stability with some tolerance.
 
 :::{literalinclude} ../../h2integrate/converters/co2/marine/test/test_doc.py
