@@ -373,7 +373,7 @@ systems.
 Run `pytest -m integration` to run only the integration test suite or `pytest -m not-integration`
 to skip the integration tests.
 
-For an example of an integration tests, please see the `examples/test/test_all_examples.py` module
+For examples of integration tests, please see the `examples/test/test_all_examples.py` module
 where multiple components are combined to test the models outputs for stability when using tools
 in conjunction with each other.
 
