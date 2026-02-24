@@ -300,7 +300,7 @@ without prompts using the `-f` flag. Use `--help` for further usage instructions
 #### Chunking Lengthy or Complex Tests
 
 At times these tests can be lengthy because many checks could be required in a single test function,
-so it can helpful to chunk these into subtests to allow the whole test to be run and fail at the end
+so it can be helpful to chunk these into subtests to allow the whole test to be run and fail at the end
 rather than failing at the first unsuccessful check. This is especially helpful when testing around
 complex logic and other subtests can provide insight into the nature of the failure. For these we
 utilize the [subtests](https://docs.pytest.org/en/stable/how-to/subtests.html) functionality. The
