@@ -41,17 +41,17 @@ jobs:
           touch .env
       - name: Run unit tests
         run: |
-          pytest . -m unit --cov=h2integrate --cov-report=xml:./unit-coverage.xml
+          pytest . -m unit --cov=h2integrate --cov-report=xml:unit-coverage.xml
       - name: Run regression tests
         run: |
-          pytest . -m regression --cov=h2integrate --cov-report=xml:./regression-coverage.xml
+          pytest . -m regression --cov=h2integrate --cov-report=xml:regression-coverage.xml
       - name: Run integration tests
         run: |
-          pytest . -m integration --cov=h2integrate --cov-report=xml:./integration-coverage.xml
+          pytest . -m integration --cov=h2integrate --cov-report=xml:integration-coverage.xml
 
       - name: Upload unit coverage to
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./unit-coverage.xml, ./regression-coverage.xml, ./integration-coverage.xml
+          files: unit-coverage.xml, regression-coverage.xml, integration-coverage.xml
           flags: unit,regression,integration
