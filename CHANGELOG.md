@@ -14,6 +14,11 @@
   ensure units are properly handled and to prepare for the possibility of multiple variables with the
   same name but different units in the future.
 - Added a refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
+- Test infrastructure updates:
+  - Introduces enforced test marking for `unit`, `regression`, and `integration` tests so that
+    all tests must be marked via `@pytest.mark.<test-type>`.
+  - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
+  - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
 
 ## 0.6 [February 10, 2026]
 
