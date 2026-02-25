@@ -22,7 +22,7 @@ def plant_simulation(timezone):
 
 
 @pytest.fixture
-def site_config(which, lat, lon, model, resource_year, model_name, elevation=0):
+def site_config(which, lat, lon, model, resource_year, model_name):
     site_config = {
         "latitude": lat,
         "longitude": lon,
