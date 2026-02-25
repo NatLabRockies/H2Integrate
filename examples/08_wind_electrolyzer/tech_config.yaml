@@ -38,7 +38,6 @@ technologies:
       shared_parameters:
         location: "onshore"
         electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022
-
       performance_parameters:
         size_mode: "normal"
         n_clusters: 13 #should be 12.5 to get 500 MW
@@ -49,5 +48,5 @@ technologies:
         turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years.
           replacement_cost_percent: 0.15 # percent of capex - H2A default case

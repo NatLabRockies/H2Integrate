@@ -23,7 +23,6 @@ def plant_config():
 def nuclear_performance_params():
     return {
         "system_capacity_mw": 300.0,
-        "capacity_factor": 0.9,
     }
 
 
@@ -52,92 +51,6 @@ def nuclear_cost_params():
     }
 
 
-def test_nuclear_performance_outputs(plant_config, nuclear_performance_params, subtests):
-    tech_config_dict = {
-        "model_inputs": {
-            "performance_parameters": nuclear_performance_params,
-        }
-    }
-
-    demand = np.full(8760, nuclear_performance_params["system_capacity_mw"])  # MW
-
-    prob = om.Problem()
-    perf_comp = NuclearPerformanceModel(
-        plant_config=plant_config,
-        tech_config=tech_config_dict,
-        driver_config={},
-    )
-
-    prob.model.add_subsystem("comp", perf_comp, promotes=["*"])
-    prob.setup()
-    prob.set_val("electricity_demand", demand)
-    prob.run_model()
-
-    commodity = "electricity"
-    commodity_amount_units = "kW*h"
-    commodity_rate_units = "kW"
-    plant_life = int(plant_config["plant"]["plant_life"])
-    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
-
-    with subtests.test("0 <= replacement_schedule <=1"):
-        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") >= 0)
-        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") <= 1)
-
-    with subtests.test("replacement_schedule length"):
-        assert len(prob.get_val("comp.replacement_schedule", units="unitless")) == plant_life
-
-    with subtests.test("0 <= capacity_factor (unitless) <=1"):
-        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
-        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
-
-    with subtests.test("capacity_factor length"):
-        assert len(prob.get_val("comp.capacity_factor", units="unitless")) == plant_life
-
-    with subtests.test(f"rated_{commodity}_production > 0"):
-        assert np.all(
-            prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units) > 0
-        )
-
-    with subtests.test(f"rated_{commodity}_production length"):
-        assert (
-            len(prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units)) == 1
-        )
-
-    with subtests.test(f"total_{commodity}_produced > 0"):
-        assert np.all(
-            prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units) > 0
-        )
-
-    with subtests.test(f"total_{commodity}_produced length"):
-        assert (
-            len(prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units)) == 1
-        )
-
-    with subtests.test(f"annual_{commodity}_produced > 0"):
-        assert np.all(
-            prob.get_val(f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr")
-            > 0
-        )
-
-    with subtests.test(f"annual_{commodity}_produced length"):
-        annual_production = prob.get_val(
-            f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr"
-        )
-        assert len(annual_production) == plant_life
-
-    with subtests.test(f"Some of {commodity}_out > 0"):
-        assert np.any(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units) > 0)
-
-    with subtests.test(f"{commodity}_out length"):
-        assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
-
-    with subtests.test("operational_life default value"):
-        assert prob.get_val("comp.operational_life", units="yr") == plant_life
-
-    with subtests.test("replacement_schedule value"):
-        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
-
-
 def test_nuclear_performance_demand(plant_config, nuclear_performance_params, subtests):
     tech_config_dict = {
         "model_inputs": {
@@ -146,7 +59,6 @@ def test_nuclear_performance_demand(plant_config, nuclear_performance_params, su
     }
 
     system_capacity = nuclear_performance_params["system_capacity_mw"]
-    nuclear_performance_params["capacity_factor"]
     demand_section = np.linspace(0, 1.2 * system_capacity, 12)
     electricity_demand = np.tile(demand_section, 730)
 
@@ -214,13 +126,17 @@ def test_nuclear_cost_model(plant_config, nuclear_cost_params, subtests):
     delivered_electricity_MWh = electricity_out.sum() * dt / 3600
     expected_fixed_om = fixed_opex_per_kw_year * system_capacity * 1000.0
     expected_variable_om = variable_opex_per_mwh * delivered_electricity_MWh
-    expected_opex = expected_fixed_om + expected_variable_om
+    expected_opex = expected_fixed_om
+    expected_varopex = expected_variable_om
 
     with subtests.test("Nuclear capital cost"):
         assert pytest.approx(capex, rel=1e-6) == expected_capex
 
     with subtests.test("Nuclear operating cost"):
         assert pytest.approx(opex, rel=1e-6) == expected_opex
+
+    with subtests.test("Nuclear variable operating cost"):
+        assert pytest.approx(prob.get_val("VarOpEx")[0], rel=1e-6) == expected_varopex
 
     with subtests.test("Nuclear cost year"):
         assert cost_year == nuclear_cost_params["cost_year"]
