@@ -40,7 +40,7 @@ def main(config):
 
     References:
         Rosner et al., "Direct Reduced Iron (DRI) Model," Energy Environ. Sci., 2023, 16, 4121.
-        DOI: `doi.org/10.1039/d3ee01077e`
+        DOI: https://doi.org/10.1039/d3ee01077e
     """
     # If re-fitting the model, load an inputs dataframe, otherwise, load up the coeffs
     if config.model["refit_coeffs"]:

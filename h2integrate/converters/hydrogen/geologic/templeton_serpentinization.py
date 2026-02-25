@@ -16,7 +16,7 @@ M_H2 = 1.00  # kg/kmol
 @define(kw_only=True)
 class StimulatedGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     """Configuration parameters for stimulated geologic hydrogen well subsurface
-        performance models.
+    performance models.
 
     Defines performance-related parameters specific to *stimulated* geologic hydrogen systems.
 

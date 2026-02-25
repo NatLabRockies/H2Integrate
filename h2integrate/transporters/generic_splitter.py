@@ -53,18 +53,20 @@ class GenericSplitterPerformanceConfig(BaseConfig):
 
 
 class GenericSplitterPerformanceModel(om.ExplicitComponent):
-    """
-    Split commodity from one source into two outputs.
+    """Split a commodity stream from one source into two outputs.
 
     This component supports two splitting modes:
-    1. Fraction-based splitting: Split based on a specified fraction sent to the priority technology
-    2. Prescribed commodity splitting: Send a prescribed amount to the priority technology,
-       remainder to the other technology
 
-    The priority_tech parameter determines which technology receives the primary allocation.
-    The outputs are:
-    - {commodity}_out1: commodity sent to the first technology
-    - {commodity}_out2: commodity sent to the second technology
+    - Fraction-based splitting: split based on a specified fraction sent to the
+        priority technology.
+    - Prescribed commodity splitting: send a prescribed amount to the priority
+        technology, with the remainder to the other technology.
+
+    The ``priority_tech`` parameter determines which technology receives the
+    primary allocation. The outputs are:
+
+    - ``{commodity}_out1``: commodity sent to the first technology.
+    - ``{commodity}_out2``: commodity sent to the second technology.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.

@@ -39,4 +39,4 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
 .. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellCostModel
    :members:
    :undoc-members:
-   :sho
+   :show-inheritance:

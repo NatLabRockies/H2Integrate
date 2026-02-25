@@ -1,4 +1,5 @@
 
+(model-overview)=
 # Model Overview
 Currently, H2I recognizes four types of models:
 
@@ -88,6 +89,7 @@ Connection: `[source_tech, dest_tech, transport_commodity, transport_technology]
 | `generic_storage` |  Any              |
 
 (control)=
+(controller)=
 ## Control
 `Control` models are used to control the `Storage` models and resource flows.
 
@@ -99,6 +101,7 @@ Connection: `[source_tech, dest_tech, transport_commodity, transport_technology]
 | `FlexibleDemandOpenLoopConverterController`  |  open-loop control. manages resource flow based on demand and flexibility constraints     |
 | `HeuristicLoadFollowingController` | open-loop control that works on a time window basis to set dispatch commands. Uses pyomo |
 
+(technology-models-overview)=
 # Technology Models Overview
 
 Below summarizes the available performance, cost, and financial models for each model type. The list of supported models is also available in [supported_models.py](../../h2integrate/core/supported_models.py)

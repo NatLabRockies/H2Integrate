@@ -8,6 +8,8 @@
 
 H2Integrate is an open-source Python package for modeling and designing hybrid energy systems producing electricity, hydrogen, ammonia, steel, and other products.
 
+Browse the example workflows in the GitHub repository: https://github.com/NREL/H2Integrate/tree/main/examples
+
 ```{note}
 H2Integrate is under active development and may be missing features that existed in previous versions. H2Integrate v0.2.0 is the last version that uses the prior framework.
 ```

@@ -18,6 +18,7 @@ def main(config):
             cost (object): Contains cost data in a DataFrame.
             site (dict): Contains site-specific parameters, including the site name.
             params (dict): Contains financial and operational parameters such as:
+
                 - operational_year (int): The first year of plant operation.
                 - installation_years (int): Duration of installation in years.
                 - plant_life (int): Expected operational life of the plant in years.
