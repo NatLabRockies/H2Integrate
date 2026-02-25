@@ -14,18 +14,9 @@ class GenericStorageCostConfig(CostModelBaseConfig):
         This could be expanded to allow for different types of commodity units in the future.
         Currently only supports electrical, mass, and some thermal units.
 
-    Attributes:
-        capacity_capex (float|int): storage energy capital cost in $/capacity_units
-        charge_capex (float|int): storage power capital cost in $/charge_units/h
-        opex_fraction (float): annual operating cost as a fraction of the total system cost.
-        cost_year (int): dollar year corresponding to input costs
-        max_capacity (float): Maximum storage capacity (in non-rate units,
-            e.g., "kW*h" if `commodity_rate_units` is "kW").
-        max_charge_rate (float): Maximum rate at which storage can be charged (in units
-            per time step, e.g., "kW/time step").
-        commodity_rate_units (str): Units of the storage resource used to define the charge rate.
-            max_capacity and max_charge_rate. Must have a base of Watts ('W') or grams ('g/h')
-            or heat ('MMBtu/h')
+    Fields include `capacity_capex`, `charge_capex`, `opex_fraction`, `max_capacity`,
+    `max_charge_rate`, and `commodity_rate_units`. The `cost_year` field is inherited
+    from `CostModelBaseConfig`.
     """
 
     capacity_capex: float | int = field(validator=gte_zero)

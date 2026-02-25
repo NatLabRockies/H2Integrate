@@ -10,17 +10,8 @@ from h2integrate.core.validators import contains, range_val_or_none
 class GenericSplitterPerformanceConfig(BaseConfig):
     """Configuration class for the GenericSplitterPerformanceModel.
 
-    Attributes:
-        split_mode (str): what method to use to split input commodity stream.
-            Must be either "prescribed_commodity" or "fraction" to split commodity stream.
-        commodity (str): name of commodity
-        commodity_rate_units (str): units of commodity production profile
-        fraction_to_priority_tech (float, optional): fraction of input commodity to
-            send to first output stream. Only used if `split_mode` is "fraction".
-            Defaults to None.
-        prescribed_commodity_to_priority_tech (float, optional): constant amount
-            of input commodity to send to first output stream in units of `commodity_rate_units`.
-            Only used if `split_mode` is "prescribed_commodity". Defaults to None.
+    Fields include `split_mode`, `commodity`, `commodity_rate_units`,
+    `fraction_to_priority_tech`, and `prescribed_commodity_to_priority_tech`.
     """
 
     split_mode: str = field(

@@ -11,21 +11,8 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 class MCHTOLStorageCostModelConfig(BaseConfig):
     """Config class for MCHTOLStorageCostModel
 
-    Attributes:
-        max_capacity (float): Maximum hydrogen storage capacity (in non-rate units,
-            e.g., "kg" if `commodity_units` is "kg/h").
-        max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time step, e.g., "kg/time step"). This is the hydrogenation capacity.
-        charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
-            max_charge_rate. If False, specify the max_discharge_rate as a value different than
-            the max_charge_rate. Defaults to True. This is the dehydrogenation capacity.
-        max_discharge_rate (float | None, optional): Maximum rate at which the commodity can be
-            discharged (in units per time step, e.g., "kg/time step"). This rate does not include
-            the discharge_efficiency. Only required if `charge_equals_discharge` is False.
-        commodity_name (str, optional): Name of the commodity being controlled (e.g., "hydrogen").
-            Defaults to "hydrogen"
-        commodity_units (str, optional): Units of the commodity (e.g., "kg/h"). Defaults to "kg/h"
-        cost_year (int, optional): Dollar year corresponding to the costs, must be 2024.
+    Fields include `max_capacity`, `max_charge_rate`, `max_discharge_rate`,
+    `charge_equals_discharge`, `commodity_name`, `commodity_units`, and `cost_year`.
     """
 
     max_capacity: float = field()

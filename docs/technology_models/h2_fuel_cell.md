@@ -13,17 +13,19 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
 ## Performance Model
 
 ```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellPerformanceConfig
+.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceConfig
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellPerformanceModel
+.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceModel
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ## Cost Model
@@ -33,6 +35,7 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ```{eval-rst}
@@ -40,3 +43,4 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:

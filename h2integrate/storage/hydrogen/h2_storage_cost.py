@@ -10,27 +10,11 @@ from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
 @define(kw_only=True)
 class HydrogenStorageBaseCostModelConfig(BaseConfig):
-    """Base config class for HydrogenStorageBaseCostModel
+    """Base config class for HydrogenStorageBaseCostModel.
 
-    Attributes:
-        max_capacity (float): Maximum hydrogen storage capacity (in non-rate units,
-            e.g., "kg" if `commodity_units` is "kg/h").
-        max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time step, e.g., "kg/time step"). This is the hydrogenation capacity.
-        commodity_name (str, optional): Name of the commodity being controlled (e.g., "hydrogen").
-            Defaults to "hydrogen"
-        commodity_units (str, optional): Units of the commodity (e.g., "kg/h"). Defaults to "kg/h"
-        cost_year (int, optional): Dollar year corresponding to the costs, must be 2018.
-        labor_rate (float, optional): hourly cost of labor in 2018 USD/hr. Defaults to 37.39817.
-        insurance_rate (float, optional): insurance cost as a percent (between 0 and 1) of
-            storage capex. Defaults to 0.01 (or 1.0%).
-        property_taxes (float, optional): property tax cost as a percent (between 0 and 1) of
-            storage capex. Defaults to 0.01 (or 1.0%).
-        licensing_permits (float, optional): licensing and permitting costs as a percent
-            (between 0 and 1) of storage capex. Defaults to 0.001 (or 0.1%).
-        compressor_om (float, optional): Compressor fixed operations and maintenance cost as a
-            percent (between 0 and 1) of compressor capex. Defaults to 0.04 (or 4.0%).
-        facility_om (float, optional):
+    Fields include `max_capacity`, `max_charge_rate`, `sizing_mode`, `commodity_name`,
+    `commodity_units`, `cost_year`, `labor_rate`, `insurance`, `property_taxes`,
+    `licensing_permits`, `compressor_om`, and `facility_om`.
     """
 
     max_capacity: float | None = field(default=None)
@@ -442,6 +426,7 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
             - compressor_om (float): (default: 4%) [decimal percent] - % of compressor investment
             - facility_om (float): (default: 1%) [decimal percent] - % of facility investment
                 minus compressor investment
+
         Notes:
             - Oversize pipe: pipe OD = 24'' schedule 60
             - Max pressure: 100 bar

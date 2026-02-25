@@ -479,12 +479,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
                 Starting index for writing into persistent output arrays (default 0).
 
         Returns:
-            tuple[np.ndarray, np.ndarray]:
-                (battery_power_kW, soc_percent)
-
-                battery_power_kW : array of PySAM P values (kW) per timestep
-                    (positive = discharge, negative = charge).
-                soc_percent : array of SOC values (%) per timestep.
+            tuple[np.ndarray, np.ndarray]: Battery power (kW) and SOC (%) per timestep.
 
         Notes:
             - SOC bounds may still be exceeded slightly due to PySAM internal dynamics.
