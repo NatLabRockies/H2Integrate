@@ -84,3 +84,10 @@ technologies:
         interconnection_capex_per_kw: 0.0  # $/kW capital cost
         interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
         fixed_interconnection_cost: 0.0  # $ one-time fixed cost
+  combiner:
+    performance_model:
+      model: "GenericCombinerPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_rate_units: "kW"

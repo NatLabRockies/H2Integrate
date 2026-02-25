@@ -754,84 +754,23 @@ class H2IntegrateModel:
             )
             finance_subgroup = om.Group()
 
-            # NOTE: Below logic on handling combiner and splitter is temporary. The combiner does
-            # not output the combiner annual_commodity_produced, it only outputs the combined
-            # capacity factor, rated capacity, and commodity profile. In the future, the
-            # capacity_factor and rated_commodity_production will be passed to the finance models
-            # instead of the annual_commodity_production. At that point, the temporary logic
-            # for handling combiners will be removed
-            if commodity_stream is not None:
-                # If commodity stream is specified and is a combiner, then create use
-                # the "summer" model  to sum the commodity production profile from the
-                # commodity stream
-                if "combiner" in commodity_stream or "splitter" in commodity_stream:
-                    # get the generic summer model
-                    commodity_summer_model = self.supported_models.get(
-                        "GenericSummerPerformanceModel"
-                    )
-                    commodity_summer_config = self.technology_config["technologies"][
-                        commodity_stream
-                    ]
-                    # create the commodity production summer model
-                    commodity_summer = commodity_summer_model(
-                        driver_config=self.driver_config,
-                        plant_config=self.plant_config,
-                        tech_config=commodity_summer_config,
-                    )
-                    # add the production summer as a subsystem
-                    finance_subgroup.add_subsystem(f"{commodity}_sum", commodity_summer)
-
             # Default logic for handling cases without specified commodity streams
             if commodity_stream is None:
                 if commodity == "electricity":
-                    # Add combiner to the finance group to combine the electricity produced
                     elec_tech_names = [
                         tech for tech in tech_configs if is_electricity_producer(tech)
                     ]
-                    commodity_combiner_config = {
-                        "model_inputs": {
-                            "performance_parameters": {
-                                "commodity": commodity,
-                                "commodity_rate_units": "kW",
-                                "in_streams": len(elec_tech_names),
-                            }
-                        }
-                    }
-                    commodity_combiner_model = self.supported_models.get(
-                        "GenericCombinerPerformanceModel"
-                    )
-
-                    finance_subgroup.add_subsystem(
-                        "electricity_combiner_comp",
-                        commodity_combiner_model(
-                            plant_config=self.plant_config,
-                            tech_config=commodity_combiner_config,
-                            driver_config=self.driver_config,
-                        ),
-                    )
-
-                    # Add summer to the finance group to sum the electricity profile from
-                    # the combiner
-                    commodity_summer_model = self.supported_models.get(
-                        "GenericSummerPerformanceModel"
-                    )
-                    commodity_summer_config = {
-                        "model_inputs": {
-                            "performance_parameters": {
-                                "commodity": commodity,
-                                "commodity_rate_units": "kW",
-                            }
-                        }
-                    }
-
-                    finance_subgroup.add_subsystem(
-                        "electricity_sum",
-                        commodity_summer_model(
-                            plant_config=self.plant_config,
-                            tech_config=commodity_summer_config,
-                            driver_config=self.driver_config,
-                        ),
-                    )
+                    if len(elec_tech_names) != 1:
+                        msg = (
+                            f"Multiple electricity producing technologies found in finance subgroup"
+                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
+                            f"finance subgroup {subgroup_name}."
+                        )
+                        raise ValueError(msg)
+                    else:
+                        finance_subgroups[subgroup_name].update(
+                            {"commodity_stream": elec_tech_names[0]}
+                        )
 
                 else:
                     # Default logic for tech-names and the primary commodity streams
@@ -855,6 +794,19 @@ class H2IntegrateModel:
                             finance_subgroups[subgroup_name].update(
                                 {"commodity_stream": commodity_stream_tech_name[0]}
                             )
+
+                # Check if a default commodity_stream was found, throw error if not
+                missing_commodity_stream = (
+                    finance_subgroups[subgroup_name].get("commodity_stream", None) is None
+                )
+                if missing_commodity_stream and len(tech_names) > 1:
+                    msg = (
+                        "Could not find a default technology to use as the commodity stream "
+                        f"for commodity {finance_subgroups[subgroup_name]['commodity']}. "
+                        "Please specify the `commodity_stream` for finance subgroup "
+                        f"{subgroup_name}."
+                    )
+                    raise UserWarning(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
@@ -880,7 +832,10 @@ class H2IntegrateModel:
                     # this is created in create_technologies()
                     if tech_finance_group_name is not None:
                         # tech specific finance models are created in create_technologies()
-                        # and do not need to be included in the general finance models
+                        # and do not need to be included in the general finance models.
+                        # set commodity_stream to None so that inputs needed for system-level
+                        # finance models are not connected to tech-specific finance models.
+                        finance_subgroups[subgroup_name].update({"commodity_stream": None})
                         continue
 
                 # if not using a tech-specific finance group, get the finance model and inputs for
@@ -1155,66 +1110,15 @@ class H2IntegrateModel:
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
                 if commodity_stream is not None:
-                    if primary_commodity_type == "co2":
-                        self.plant.connect(
-                            f"{commodity_stream}.co2_capture_mtpy",
-                            f"finance_subgroup_{group_id}.co2_capture_kgpy",
-                        )
+                    self.plant.connect(
+                        f"{commodity_stream}.rated_{primary_commodity_type}_production",
+                        f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
+                    )
 
-                    # NOTE: below logic on special handling for commodity stream of
-                    # combiner or splitter is temporary
-                    elif "combiner" in commodity_stream or "splitter" in commodity_stream:
-                        # Connect the commodity out of the commodity combiner to the input
-                        # of the commodity summer
-                        self.plant.connect(
-                            f"{commodity_stream}.{primary_commodity_type}_out",
-                            f"finance_subgroup_{group_id}.{primary_commodity_type}_sum.{primary_commodity_type}_in",
-                        )
-                        # Connect total commodity produced to the finance group
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.{primary_commodity_type}_sum.total_{primary_commodity_type}_produced",
-                            f"finance_subgroup_{group_id}.total_{primary_commodity_type}_produced",
-                        )
-                    else:
-                        # connect commodity stream technology output to the finance group
-                        self.plant.connect(
-                            f"{commodity_stream}.annual_{primary_commodity_type}_produced",
-                            f"finance_subgroup_{group_id}.total_{primary_commodity_type}_produced",
-                        )
-
-                # if commodity stream was not specified, follow existing logic
-                else:
-                    plant_producing_electricity = False
-
-                    # Loop through technologies and connect electricity outputs to the ExecComp
-                    # Only connect if the technology is included in at least one commodity's stackup
-                    # and in this finance group
-                    elec_combiner_cnt = 1
-                    for tech_name in tech_configs.keys():
-                        if (
-                            is_electricity_producer(tech_name)
-                            and primary_commodity_type == "electricity"
-                        ):
-                            # connect technologies to electricity combiner
-                            self.plant.connect(
-                                f"{tech_name}.electricity_out",
-                                f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_in{elec_combiner_cnt}",
-                            )
-                            plant_producing_electricity = True
-                            elec_combiner_cnt += 1
-
-                    if plant_producing_electricity and primary_commodity_type == "electricity":
-                        # Connect the electricity out of the electricity combiner to the input
-                        # of the electricity summer
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_out",
-                            f"finance_subgroup_{group_id}.electricity_sum.electricity_in",
-                        )
-                        # Connect total electricity produced to the finance group
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.electricity_sum.total_electricity_produced",
-                            f"finance_subgroup_{group_id}.total_electricity_produced",
-                        )
+                    self.plant.connect(
+                        f"{commodity_stream}.capacity_factor",
+                        f"finance_subgroup_{group_id}.capacity_factor",
+                    )
 
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():

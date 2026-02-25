@@ -60,8 +60,9 @@ def tech_config(commodity, operation_mode):
     [("electricity", None), ("hydrogen", None)],
     ids=["electricity", "hydrogen"],
 )
-def test_generic_combiner_performance(plant_config, tech_config, commodity):
-    units = "kg" if commodity == "hydrogen" else "kW"
+def test_generic_combiner_performance(subtests, plant_config, tech_config, commodity):
+    is_electricity = commodity == "electricity"
+    units = "kW" if is_electricity else "kg"
     prob = om.Problem()
     comp = GenericCombinerPerformanceModel(
         plant_config=plant_config, tech_config=tech_config, driver_config={}
@@ -70,6 +71,11 @@ def test_generic_combiner_performance(plant_config, tech_config, commodity):
     ivc = om.IndepVarComp()
     ivc.add_output(f"{commodity}_in1", val=np.zeros(8760), units=units)
     ivc.add_output(f"{commodity}_in2", val=np.zeros(8760), units=units)
+    if is_electricity:
+        ivc.add_output("rated_electricity_production1", val=0, units="kW")
+        ivc.add_output("rated_electricity_production2", val=0, units="kW")
+        ivc.add_output("electricity_capacity_factor1", val=np.zeros(30), units="unitless")
+        ivc.add_output("electricity_capacity_factor2", val=np.zeros(30), units="unitless")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
 
     prob.setup()
@@ -77,12 +83,36 @@ def test_generic_combiner_performance(plant_config, tech_config, commodity):
     commodity_input1 = rng.random(8760)
     commodity_input2 = rng.random(8760)
     commodity_output = commodity_input1 + commodity_input2
-
     prob.set_val(f"{commodity}_in1", commodity_input1, units=units)
     prob.set_val(f"{commodity}_in2", commodity_input2, units=units)
+    if is_electricity:
+        max1 = np.max(commodity_input1)
+        max2 = np.max(commodity_input2)
+        rated_electricity_output = max1 + max2
+        cf_input1 = np.sum(commodity_input1) / (max1 * commodity_input1.size)
+        cf_input2 = np.sum(commodity_input2) / (max2 * commodity_input2.size)
+        prob.set_val("rated_electricity_production1", max1, units=units)
+        prob.set_val("rated_electricity_production2", max2, units=units)
+        prob.set_val("electricity_capacity_factor1", cf_input1 * np.ones(30), units="unitless")
+        prob.set_val("electricity_capacity_factor2", cf_input2 * np.ones(30), units="unitless")
+
     prob.run_model()
 
-    assert prob.get_val(f"{commodity}_out", units=units) == approx(commodity_output, rel=1e-5)
+    with subtests.test(f"combined {commodity}_out"):
+        assert prob.get_val(f"{commodity}_out", units=units) == approx(commodity_output, rel=1e-5)
+
+    if is_electricity:
+        with subtests.test("combined rated_electricity_production"):
+            assert prob.get_val("rated_electricity_production", units="kW") == approx(
+                rated_electricity_output, rel=1e-5
+            )
+        with subtests.test("combined electricity_capacity_factor"):
+            combined_cf = np.sum(commodity_output) / (
+                rated_electricity_output * len(commodity_output)
+            )
+            assert prob.get_val("capacity_factor", units="unitless") == approx(
+                combined_cf, rel=1e-5
+            )
 
 
 @pytest.mark.unit

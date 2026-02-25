@@ -25,7 +25,9 @@ sites:
 technology_interconnections: [
     ["solar", "battery", "electricity", "cable"], # connect solar to battery
     ["battery", "grid_buy", ["electricity_unmet_demand", "electricity_demand"]], # connect battery demand to grid buying
-    ["battery", "grid_sell", ["electricity_unused_commodity", "electricity_in"]] # connect battery surplus to grid selling
+    ["battery", "grid_sell", ["electricity_unused_commodity", "electricity_in"]], # connect battery surplus to grid selling
+    ["solar", "combiner", "electricity", "cable"],
+    ["grid_buy","combiner","electricity","cable"],
 ]
 
 resource_to_tech_connections: [
@@ -69,5 +71,6 @@ finance_parameters:
   finance_subgroups:
     renewables:
       commodity: "electricity"
+      commodity_stream: "combiner"
       finance_groups: ["profast_model"]
       technologies: ["solar", "battery", "grid_buy", "grid_sell"]

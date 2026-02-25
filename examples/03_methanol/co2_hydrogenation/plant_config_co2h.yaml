@@ -62,6 +62,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
+      commodity_stream: "combiner"
       technologies: ["wind","solar"]
     hydrogen:
       commodity: "hydrogen"
