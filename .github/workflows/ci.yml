@@ -52,5 +52,6 @@ jobs:
       - name: Upload unit coverage to
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./unit-coverage.xml, ./regression-coverage.xml, ./integration-coverage.xml
           flags: unit,regression,integration
