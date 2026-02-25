@@ -116,6 +116,35 @@ More options exist, or the highlighted ones can be modified, for example to crea
 for a specific folder or file (e.g., `--cov=h2integrate/core/utilities`), which is especially
 helpful when developing tests for a new module.
 
+## Shared Fixtures
+
+In each test directory (or even subdirectory) there are a variety of common fixtures provided in
+each `conftest.py`. You may even notice that some top-level configuration and fixtures are imported
+insubsequent `conftest.py`. These fixtures and common setups enable streamlined setup and teardown
+for individual tests.
+
+In general, it is highly encouraged to define general fixtures that can be reused many times in place
+of single-use fixtures by parameterizing them. In the below example (taken from
+`h2integrate/resource/test/conftest.py`), the timezone argument is able to be parameterized by
+individual tests. For this particular example there are only 2 variations actually used, however,
+by writing the fixture once, it allows for a consistent and simplified setup for easier to
+maintain tests.
+
+```{literalinclude} ../../h2integrate/resource/test/conftest.py
+:start-at: @pytest.fixture
+:end-at: return plant
+```
+
+The `plant_simulation` fixture (this variation is for `h2integrate/resource` can now be used in the
+solar resource tests, like in the example below for `h2integrate/resource/solar/test/test_resource_models.py`
+`test_nrel_solar_resource_file_downloads`, which uses a combination of parameterizations, including
+the `plant_simulation` fixture.
+
+```{literalinclude} ../../h2integrate/resource/solar/test/test_resource_models.py
+:start-at: @pytest.mark.unit
+:end-at: }
+```
+
 ## Using temporary directories to avoid saving output data
 
 For tests that utilize caching (similar to the HOPP) or non-openmdao ouputs (i.e., plots, data, etc.),
