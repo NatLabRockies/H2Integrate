@@ -149,10 +149,6 @@ def test_custom_financial_model_grouping(temp_dir, subtests):
     # (assuming custom financial_model is allowed)
     H2IntegrateModel(temp_highlevel_yaml)
 
-    # Clean up temporary YAML files
-    temp_tech_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
-
 
 @pytest.mark.unit
 def test_unsupported_simulation_parameters(temp_dir):
