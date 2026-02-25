@@ -63,6 +63,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: "electricity"
+      commodity_stream: "combiner"
       technologies: ["hopp", "wind", "battery"]
     co2:
       commodity: "co2"

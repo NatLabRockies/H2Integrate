@@ -64,9 +64,14 @@ def test_simple_npv(npv_finance_inputs, fake_filtered_tech_config, fake_cost_dic
         description="no1",
     )
 
-    prob.model.add_subsystem("npv", pf)
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * 30, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("npv", pf, promotes=["*"])
     prob.setup()
-    prob.set_val("npv.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"npv.{variable}", cost, units=units)
@@ -112,9 +117,14 @@ def test_simple_npv_positive(
         description="no1",
     )
 
-    prob.model.add_subsystem("npv", pf)
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * 30, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("npv", pf, promotes=["*"])
     prob.setup()
-    prob.set_val("npv.total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"npv.{variable}", cost, units=units)

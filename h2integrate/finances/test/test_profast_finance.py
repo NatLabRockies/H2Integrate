@@ -76,12 +76,12 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         description="no1",
     )
     ivc = om.IndepVarComp()
-    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
-        "plant_life"
-    ]
-    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
+
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
     prob.setup()
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
@@ -148,12 +148,11 @@ def test_profast_comp_coproduct(
         description="no1",
     )
     ivc = om.IndepVarComp()
-    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
-        "plant_life"
-    ]
-    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
     prob.setup()
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"

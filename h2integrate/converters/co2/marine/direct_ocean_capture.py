@@ -127,16 +127,13 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         outputs["total_tank_volume_m3"] = range_outputs.V_aT_max + range_outputs.V_bT_max
         outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mCC"])  # TODO: remove
 
-        outputs["rated_co2_production"] = (
-            max(range_outputs.S1["mCC"]) * 1e3
-        )  # convert from t/h to kg/h
+        outputs["rated_co2_production"] = (ed_outputs.mCC_yr_MaxPwr / 8760) * 1e3
         outputs["total_co2_produced"] = outputs["co2_out"].sum()
 
-        max_production = outputs["rated_co2_production"] * len(outputs["co2_out"])
-        outputs["annual_co2_produced"] = max(
-            ed_outputs.mCC_yr * 1e3, 1e-6
-        )  # convert from metric tons/year to kg/year
-        outputs["capacity_factor"] = outputs["total_co2_produced"] / max_production
+        outputs["capacity_factor"] = ed_outputs.doc_capacity_factor
+
+        # convert from metric tons/year to kg/year
+        outputs["annual_co2_produced"] = max(ed_outputs.mCC_yr * 1e3, 1e-6)
 
 
 @define(kw_only=True)

@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 from openmdao.utils.assert_utils import assert_near_equal
@@ -153,6 +154,46 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
     with subtests.test("replacement_schedule value"):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
+
+
+def test_doc_standard_outputs(driver_config, plant_config, tech_config, subtests):
+    from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
+
+    doc_model = DOCPerformanceModel(
+        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
+    )
+    prob = om.Problem(model=om.Group())
+    prob.model.add_subsystem("comp", doc_model, promotes=["*"])
+    prob.setup()
+    rng = np.random.default_rng(seed=42)
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    power_profile = base_power + noise
+    prob.set_val("comp.electricity_in", power_profile, units="W")
+
+    # Run the model
+    prob.run_model()
+
+    int(plant_config["plant"]["plant_life"])
+    int(plant_config["plant"]["simulation"]["n_timesteps"])
+
+    with subtests.test("co2 captured mtpy == annual co2 produced"):
+        assert (
+            pytest.approx(prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0], rel=1e-6)
+            == prob.get_val("comp.annual_co2_produced", units="t/yr")[0]
+        )
+
+    annual_co2_from_cf_calc = (
+        prob.get_val("comp.capacity_factor", units="unitless")
+        * prob.get_val("comp.rated_co2_production", units="t/h")
+        * 8760
+    )
+
+    with subtests.test("CF calculated properly"):
+        assert (
+            pytest.approx(annual_co2_from_cf_calc[0], rel=1e-6)
+            == prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0]
+        )
 
 
 class TestDOCPerformanceModel(unittest.TestCase):

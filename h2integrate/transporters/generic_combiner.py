@@ -81,7 +81,7 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
             units=self.config.commodity_rate_units,
         )
         self.add_output(
-            f"{self.config.commodity}_capacity_factor",
+            "capacity_factor",
             val=0.0,
             shape=plant_life,
             units="unitless",
@@ -94,7 +94,7 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
 
     def compute(self, inputs, outputs):
         total_out = 0.0
-        weighted_cf = 0.0
+        combined_production = 0.0
         total_rated = 0.0
         for key, value in inputs.items():
             if "_in" in key:
@@ -107,15 +107,16 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
                 # get the stream number so we can get the proper rated capacity
                 stream_number = key.split("capacity_factor")[-1]
                 rated_capacity = inputs[f"rated_{self.config.commodity}_production{stream_number}"]
-                # weight the capacity factor with the rated capacity
-                weighted_cf = weighted_cf + (value * rated_capacity)
+                # weight the capacity factor with the rated capacity to get the combined production
+                combined_production += value * rated_capacity
 
         outputs[f"{self.config.commodity}_out"] = total_out
         outputs[f"rated_{self.config.commodity}_production"] = total_rated
         if total_rated > 0:
-            # weighted CF = (CF1*S1 + CF2*S2)/(S1 + S2)
+            # weighted CF = (CF1*S1 + CF2*S2)/(S1 + S2) = combined production/combined capacity
             # Where S is the rated commodity production of input stream i
             # and CF is the capacity factor of input stream i
-            outputs[f"{self.config.commodity}_capacity_factor"] = weighted_cf / total_rated
+            weighted_cf = combined_production / total_rated
+            outputs["capacity_factor"] = weighted_cf
         else:
-            outputs[f"{self.config.commodity}_capacity_factor"] = 0.0
+            outputs["capacity_factor"] = 0.0

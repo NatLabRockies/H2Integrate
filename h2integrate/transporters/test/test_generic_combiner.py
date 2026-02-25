@@ -153,9 +153,7 @@ def test_generic_combiner_performance_power(
         combined_cf = np.sum(electricity_output) / (
             rated_electricity_output * len(electricity_output)
         )
-        assert prob.get_val("electricity_capacity_factor", units="unitless") == approx(
-            combined_cf, rel=1e-5
-        )
+        assert prob.get_val("capacity_factor", units="unitless") == approx(combined_cf, rel=1e-5)
 
 
 def test_generic_combiner_performance_power_4_in(

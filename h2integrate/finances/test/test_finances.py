@@ -86,8 +86,13 @@ class TestProFastComp(unittest.TestCase):
             driver_config=self.driver_config,
             commodity_type="hydrogen",
         )
+
+        annual_h2 = 4.0e5
+        rated_h2_pr_hr = annual_h2 / 8760
+        capacity_factor = [1.0] * 30
         ivc = om.IndepVarComp()
-        ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
+        ivc.add_output("rated_hydrogen_production", rated_h2_pr_hr, units="kg/h")
+        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -121,7 +126,12 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
+        aep = 2.0e7
+        rated_elec_pr_hr = aep / 8760
+        capacity_factor = [1.0] * 30
+        ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
+        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -168,7 +178,13 @@ class TestProFastComp(unittest.TestCase):
             commodity_type="electricity",
         )
         ivc = om.IndepVarComp()
-        ivc.add_output("total_electricity_produced", [2.0e7] * 30, units="kW*h/year")
+
+        aep = 2.0e7
+        rated_elec_pr_hr = aep / 8760
+        capacity_factor = [1.0] * 30
+        ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
+        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+
         prob.model.add_subsystem("ivc", ivc, promotes=["*"])
         prob.model.add_subsystem("comp", comp, promotes=["*"])
 
@@ -301,7 +317,13 @@ def test_profast_config_provided():
         commodity_type="hydrogen",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_hydrogen_produced", [4.0e5] * 30, units="kg/year")
+    annual_h2 = 4.0e5
+    rated_h2_pr_hr = annual_h2 / 8760
+    capacity_factor = [1.0] * 30
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_hydrogen_production", rated_h2_pr_hr, units="kg/h")
+    ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("comp", comp, promotes=["*"])
 

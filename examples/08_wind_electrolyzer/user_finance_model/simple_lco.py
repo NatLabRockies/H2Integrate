@@ -22,11 +22,11 @@ class SimpleLCOFinance(om.ExplicitComponent):
 
     def setup(self):
         if self.options["commodity_type"] == "electricity":
-            commodity_units = "kW*h/year"
             lco_units = "USD/(kW*h)"
+            commodity_rate_units = "kW"
         else:
-            commodity_units = "kg/year"
             lco_units = "USD/kg"
+            commodity_rate_units = "kg/h"
 
         # Make unique names for outputs
         LCO_base_str = f"LCO{self.options['commodity_type'][0].upper()}"
@@ -43,12 +43,19 @@ class SimpleLCOFinance(om.ExplicitComponent):
 
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
-        # add inputs for commodity production and costs
         self.add_input(
-            f"total_{self.options['commodity_type']}_produced",
+            f"rated_{self.options['commodity_type']}_production",
             val=0.0,
+            units=commodity_rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
             shape=plant_life,
-            units=commodity_units,
+            require_connection=True,
         )
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
@@ -73,7 +80,11 @@ class SimpleLCOFinance(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
-        annual_output = float(inputs[f"total_{self.options['commodity_type']}_produced"][0])
+        annual_output = (
+            inputs["capacity_factor"]
+            * inputs[f"rated_{self.options['commodity_type']}_production"]
+            * 8760
+        )
 
         total_capex = 0
         total_fixed_om = 0
@@ -94,7 +105,7 @@ class SimpleLCOFinance(om.ExplicitComponent):
 
         for y in range(self.config.plant_life):
             denom = (1 + self.config.discount_rate) ** y
-            annual_production[y] = annual_output / denom
+            annual_production[y] = annual_output[y] / denom
             annual_OM[y] = total_fixed_om / denom
 
         lco = (total_capex + np.sum(annual_OM)) / np.sum(annual_production)
