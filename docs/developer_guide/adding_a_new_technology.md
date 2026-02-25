@@ -390,3 +390,43 @@ report in `htmlcov/` that can be viewed in the browser (open
 More options exist, or the highlighted ones can be modified, for example to create a coverage report
 for a specific folder or file (e.g., `--cov=h2integrate/core/utilities`), which is especially
 helpful when developing tests for a new module.
+
+#### Using temporary directories to avoid saving output data
+
+For tests that utilize caching (similar to the HOPP) or non-openmdao ouputs (i.e., plots, data, etc.),
+the `temp_dir` fixture should be utilized for 2 reasons.
+
+1. The `temp_dir` fixture successfully removes the temporarily created files after running a module,
+   including if a test fails.
+2. It avoids locally saving and manually removing example data or tested output files.
+
+`temp_dir` can be incorporated into anything accepts fixtures (i.e., other fixtures and tests).
+In the first example, we pass the `temp_dir` to the driver configuration fixture so that the outputs are not
+stored until manually cleaned, and the common setup can be recycled for all applicable tests.
+
+:::{literalinclude} ../../h2integrate/converters/co2/marine/test/conftest.py
+:start-at: @pytest.fixture(scope="module")
+:end-at: return driver_config
+:lineno-match:
+:::
+
+In the second example, we pass the fixture to another test to show that we can still access the
+output data and work with it.
+
+:::{literalinclude} ../../h2integrate/core/test/test_framework.py
+:start-at: def test_unsupported_simulation_parameters
+:end-at: load_plant_yaml(plant_config_data_dt)
+:lineno-match:
+:::
+
+The other feature for working more extensively with examples is the `temp_copy_of_example`
+located in `examples/test/test_all_examples.py`. This fixture creates a temporary copy
+of the example so that an example can be run as it's included in the examples directory.
+The example below demonstrates how to make use of the fixture and still have access to all the
+examples outputs during the test.
+
+:::{literalinclude} ../../examples/test/test_all_examples.py
+:start-at: @pytest.mark.integration
+:end-at: model = H2IntegrateModel
+:lineno-match:
+:::
