@@ -69,14 +69,15 @@ Results from these simulations are then processed across the project's lifecycle
 Depending on the models used and the size of the system, H2Integrate can simulate systems ranging from the kW to GW scale in seconds on a personal computer.
 Additionally, H2Integrate tracks the flow of electricity, molecules (e.g., hydrogen, ammonia, methanol), and other products (e.g., steel) between different technologies in the energy system.
 
+H2Integrate uses a set of models to simulate the control, performance, cost, and finance of each technology, where only the performance and cost are required for most technologies.
+![A representation of a single technology model in H2Integrate](tech-model.png)
 
-H2Integrate models hybrid energy systems by:
-- Generating electricity output profiles from renewable energy sources (e.g., wind, solar, hydro) and storage systems (e.g., batteries, pumped hydro, vanadium flow batteries)
-- Modeling the performance of hydrogen electrolyzers, steel furnaces, methanol plants, or ammonia synthesis systems using the generated electricity profiles
-- Performing techno-economic analysis of the system to evaluate its costs and financial viability
+The individual technology models are then connected to create the hybrid system model, as shown in the simplistic example below.
+![A representation of a system model in H2Integrate](system-model.png)
 
-This process is shown for an example energy system in the figure below:
+If technologies require resource or price profiles, they can be provided by the user, or in many cases pulled automatically from existing databases. The costs and performance of the technology models in the system are combined for the system performance and system finance components for techno-economic analysis of the hybrid system. H2Integrate systems may include multiple system-level finance models to asses results with different system boundaries if desired. Besides simulation and analysis, H2Integrate can also perform system and sub-system optimization.
 
+A more complex example of an H2Integrate model is shown below:
 ![H2Integrate Splash Image](./splash_image.png)
 
 ## How does H2Integrate differ from other tools?
