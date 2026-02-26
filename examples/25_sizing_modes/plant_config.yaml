@@ -13,6 +13,8 @@ sites:
 technology_interconnections: [
   ["hopp","electrolyzer","electricity","cable"],
   ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+  ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+  ["electricity_feedstock", "ammonia", "electricity", "cable"],
 ]
 
 plant:

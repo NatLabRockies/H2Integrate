@@ -38,6 +38,38 @@ technologies:
         enable_caching: True
         hopp_config: !include tech_inputs/hopp_config_tx.yaml
         electrolyzer_rating: 640. # MW
+  n2_feedstock:
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        commodity: "nitrogen"
+        commodity_rate_units: "t/h"
+      performance_parameters:
+        rated_capacity: 50.0 #metric tonnes of N2/hour
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.0
+  electricity_feedstock:
+    performance_model:
+      model: "FeedstockPerformanceModel"
+    cost_model:
+      model: "FeedstockCostModel"
+    model_inputs:
+      shared_parameters:
+        commodity: "electricity"
+        commodity_rate_units: "MW"
+      performance_parameters:
+        rated_capacity: 29.0 #MW of electricity
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.0
   ammonia:
     performance_model:
       model: "AmmoniaSynLoopPerformanceModel"

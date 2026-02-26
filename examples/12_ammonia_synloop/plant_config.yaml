@@ -27,6 +27,8 @@ technology_interconnections: [
   ["battery", "electrolyzer", "electricity", "cable"],
   ["electrolyzer", "h2_storage", "hydrogen", "pipe"],
   ["h2_storage", "ammonia", "hydrogen", "pipe"],
+  ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+  ["electricity_feedstock", "ammonia", "electricity", "cable"],
   # etc
 ]
 tech_to_dispatch_connections: [
@@ -73,4 +75,4 @@ finance_parameters:
       technologies: ["wind", "solar", "battery", "electrolyzer", "h2_storage"]
     nh3:
       commodity: "ammonia"
-      technologies: ["wind", "solar", "battery", "electrolyzer", "h2_storage", "ammonia"]
+      technologies: ["wind", "solar", "battery", "electrolyzer", "h2_storage", "n2_feedstock", "ammonia"]
