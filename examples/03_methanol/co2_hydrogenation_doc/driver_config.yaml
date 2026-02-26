@@ -1,5 +1,5 @@
-name: "driver_config"
-description: "This analysis runs a hybrid plant to produce methanol from CO2 hydrogenation using H2 from electrolysis and CO2 from direct ocean capture."
-
+name: driver_config
+description: This analysis runs a hybrid plant to produce methanol from CO2 hydrogenation using H2 from electrolysis and CO2
+  from direct ocean capture.
 general:
   folder_output: outputs

@@ -1,6 +1,5 @@
 name: technology_config
 description: This hybrid plant produces geologic hydrogen
-
 technologies:
   geoh2_well_subsurface:
     performance_model:
@@ -13,21 +12,21 @@ technologies:
         well_diameter: small
         well_geometry: vertical
       performance_parameters:
-        rock_type: 'peridotite'
+        rock_type: peridotite
         grain_size: 0.01
-        use_prospectivity: False
+        use_prospectivity: false
         site_prospectivity: 0.7
         wellhead_h2_concentration: 95
         initial_wellhead_flow: 4000
-        gas_flow_density: 0.11741 # for 95% h2
-        ramp_up_time_months: 6 #months
-        percent_increase_during_rampup: 5 # percent
+        gas_flow_density: 0.11741  # for 95% h2
+        ramp_up_time_months: 6  # months
+        percent_increase_during_rampup: 5  # percent
         gas_reservoir_size: 1000000
-        use_arps_decline_curve: True
+        use_arps_decline_curve: true
         decline_fit_params:
           fit_name: Eagle_Ford
       cost_parameters:
-        use_cost_curve: True
+        use_cost_curve: true
         test_drill_cost: 500000
         permit_fees: 905
         acreage: 500
@@ -47,17 +46,17 @@ technologies:
     model_inputs:
       shared_parameters:
         refit_coeffs: false
-        curve_input_fn: "aspen_results.csv"
+        curve_input_fn: aspen_results.csv
       performance_parameters:
-        size_from_wellhead_flow: True
+        size_from_wellhead_flow: true
         max_flow_in: 0
-        perf_coeff_fn: "aspen_perf_coeffs.csv"
+        perf_coeff_fn: aspen_perf_coeffs.csv
       cost_parameters:
         cost_year: 2022
-        cost_from_fit: True
+        cost_from_fit: true
         custom_capex: 0
         custom_opex: 0
-        cost_coeff_fn: "aspen_cost_coeffs.csv"
+        cost_coeff_fn: aspen_cost_coeffs.csv
         op_labor_rate: 69.52
         overhead_rate: 0.5
         electricity_price: 0.0832

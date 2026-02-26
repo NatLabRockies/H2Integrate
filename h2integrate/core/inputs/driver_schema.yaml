@@ -1,4 +1,4 @@
-$schema: "http://json-schema.org/draft-07/schema#"
+$schema: http://json-schema.org/draft-07/schema#
 $id: driver_config_schema_v01
 title: Driver Configuration Schema
 description: Schema to validate driver configurations H2Integrate
@@ -16,7 +16,7 @@ properties:
       folder_output:
         type: string
         description: Name of the folder for output files
-        default: "output"
+        default: output
       create_om_reports:
         type: boolean
         description: Whether to create OpenMDAO reports (N2 diagrams, etc.)
@@ -48,7 +48,7 @@ properties:
           form:
             type: string
             description: Derivative form for optimization
-            default: "forward"
+            default: forward
           debug_print:
             type: boolean
             description: Debug print flag
@@ -59,7 +59,7 @@ properties:
       type: object
       additionalProperties:
         type: object
-        required: ["flag", "units"]
+        required: [flag, units]
         properties:
           flag:
             type: boolean
@@ -73,7 +73,7 @@ properties:
             description: Upper bound for the variable
             default: null
           units:
-            type: ["string", "null"]
+            type: [string, 'null']
             description: Units of the variable
   objective:
     type: object
@@ -84,7 +84,4 @@ properties:
       ref:
         type: number
         description: Reference value for normalization
-required:
-  - name
-  - description
-  - general
+required: [name, description, general]

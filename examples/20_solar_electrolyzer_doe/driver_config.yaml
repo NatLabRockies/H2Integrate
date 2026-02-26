@@ -1,6 +1,5 @@
 description: Driver config for CSVGen design of experiments
 name: driver_config
-
 general:
   folder_output: ex_20_out
   create_om_reports: true
@@ -8,8 +7,8 @@ driver:
   design_of_experiments:
     flag: true
     debug_print: true
-    generator: "csvgen"
-    filename: "csv_doe_cases.csv"
+    generator: csvgen
+    filename: csv_doe_cases.csv
     run_parallel: false
 design_variables:
   solar:
@@ -17,18 +16,18 @@ design_variables:
       flag: true
       lower: 5000.0
       upper: 5000000.0
-      units: "kW"
+      units: kW
   electrolyzer:
     n_clusters:
       flag: true
       lower: 1
       upper: 25
-      units: "unitless"
+      units: unitless
 objective:
   name: finance_subgroup_hydrogen.LCOH_optimistic
 recorder:
-    file: cases.sql
-    overwrite_recorder: true
-    flag: true
-    includes: ['*']
-    excludes: ['*_resource*']
+  file: cases.sql
+  overwrite_recorder: true
+  flag: true
+  includes: ['*']
+  excludes: ['*_resource*']

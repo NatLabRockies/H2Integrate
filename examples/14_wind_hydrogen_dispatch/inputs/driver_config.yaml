@@ -1,5 +1,4 @@
-name: "driver_config"
-description: "This analysis runs a hybrid plant with wind, electrolysis, and hydrogen storage."
-
+name: driver_config
+description: This analysis runs a hybrid plant with wind, electrolysis, and hydrogen storage.
 general:
   folder_output: outputs

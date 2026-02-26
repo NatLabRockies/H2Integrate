@@ -1,7 +1,5 @@
-name: "H2Integrate Config"
-
-system_summary: "This plant uses wind to run an electrochemical mCC system for ocean alkalinity enhancement (OAE)."
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config_financials.yaml"
-plant_config: "plant_config_financials.yaml"
+name: H2Integrate Config
+system_summary: This plant uses wind to run an electrochemical mCC system for ocean alkalinity enhancement (OAE).
+driver_config: driver_config.yaml
+technology_config: tech_config_financials.yaml
+plant_config: plant_config_financials.yaml

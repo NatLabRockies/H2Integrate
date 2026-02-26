@@ -1,7 +1,5 @@
-name: "H2Integrate_config"
-
-system_summary: "This reference hybrid plant contains a methanol plant that uses CO2 from DOC and H2 from electrolysis"
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config_co2h.yaml"
-plant_config: "plant_config_co2h.yaml"
+name: H2Integrate_config
+system_summary: This reference hybrid plant contains a methanol plant that uses CO2 from DOC and H2 from electrolysis
+driver_config: driver_config.yaml
+technology_config: tech_config_co2h.yaml
+plant_config: plant_config_co2h.yaml
