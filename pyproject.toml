@@ -261,3 +261,4 @@ allow_duplicate_keys = true
 line_length = 120
 none_representation = "null"
 explicit_start = false
+sequence_style = "keep_style"
