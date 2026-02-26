@@ -261,4 +261,3 @@ allow_duplicate_keys = true
 line_length = 120
 none_representation = "null"
 explicit_start = false
-exclude = ["h2integrate/core/test/inputs/duplicate_keys.yaml", "h2integrate/core/test/inputs/duplicate_keys_included.yaml", "h2integrate/core/test/inputs/no_duplicates_use_include.yaml", "h2integrate/core/test/inputs/no_duplicates.yaml"]

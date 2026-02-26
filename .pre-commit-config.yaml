@@ -25,6 +25,7 @@ repos:
     rev: 1.19.1
     hooks:
       - id: yamlfix
+        exclude: h2integrate/core/test/inputs/.*
   - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
     rev: v0.8.1
