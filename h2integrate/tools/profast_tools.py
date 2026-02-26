@@ -288,14 +288,9 @@ def format_profast_price_breakdown_per_year(price_breakdown):
     Args:
         price_breakdown (pd.DataFrame): A DataFrame containing "Type", "Name", "Amount", and "NPV"
             - "Amount" should be an array-like object per row, representing values for each year.
+
     Returns:
-        pd.DataFrame: A formatted DataFrame with columns:
-            - "Type"
-            - "Name"
-            - "Year {i} Amount" for each year (e.g., "Year 0 Amount", "Year 1 Amount", ...)
-            - "NPV"
-        Each row corresponds to an entry in the input DataFrame,
-        with yearly amounts expanded into separate columns.
+        pd.DataFrame: Formatted DataFrame with yearly amounts expanded into separate columns.
     """
     n_years = len(price_breakdown.iloc[0]["Amount"])
     year_cols = [f"Year {i} Amount" for i in range(n_years)]

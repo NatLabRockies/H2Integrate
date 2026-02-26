@@ -11,13 +11,7 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 class StorageSizingModelConfig(BaseConfig):
     """Configuration class for the StorageAutoSizingModel.
 
-    Attributes:
-        commodity (str, optional): Name of the commodity being controlled (e.g., "hydrogen").
-            Defaults to "hydrogen"
-        commodity_rate_units (str, optional): Units of the commodity (e.g., "kg/h").
-            Defaults to "kg/h".
-        demand_profile (scalar or list): The demand values for each time step (in the same units
-            as `commodity_rate_units`) or a scalar for a constant demand.
+    Fields include `commodity`, `commodity_rate_units`, and `demand_profile`.
     """
 
     commodity: str = field(default="hydrogen")
@@ -47,7 +41,6 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             used as the available input commodity to meet the demand.
         {commodity}_demand_profile (float): Demand profile of commodity.
             - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
-
 
     Outputs:
         max_capacity (float): Maximum storage capacity of the commodity.

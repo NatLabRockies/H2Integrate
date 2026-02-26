@@ -6,7 +6,7 @@ Pyomo control allows for the possibility of feedback control at specified interv
 
 An example of an N2 diagram for a system using the Pyomo control framework for hydrogen storage and dispatch is shown below ([click here for an interactive version](./figures/pyomo-n2.html)). Note the control rules being passed to the dispatch component and the dispatch function, containing the full Pyomo model, being passed to the performance model for the battery/storage technology. Another important thing to recognize, in contrast to the open-loop control framework, is that the storage technology outputs (commodity out, SOC, unused commodity, etc) are passed out of the performance model when using the Pyomo control framework rather than from the control component.
 
-![](./figures/Pyomo-n2.png)
+![](./figures/pyomo-n2.png)
 
 The Pyomo control framework currently supports both a simple heuristic method and an optimized dispatch method for load following control.
 

@@ -6,7 +6,7 @@ class PyomoDispatchPlantModel:
     """Class defining Pyomo model and rule for the optimized dispatch for load following
     for the overall optimization problem describing the system.
 
-        Args:
+    Args:
         pyomo_model (pyo.ConcreteModel): Externally defined Pyomo model that works as the base
             model that this class builds off of.
         index_set (pyo.Set):  Externally defined Pyomo index set for time steps. This should be

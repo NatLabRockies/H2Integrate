@@ -92,12 +92,15 @@ def load_physics_h2integrate_setup(config):
 
     Args:
         config: A configuration object that contains the simulation settings, including:
+
             - hopp_config: A dictionary with site data, including latitude ('lat'),
                 longitude ('lon'), and year ('year').
             - run_full_simulation_fn: A string representing the path to the directory where
                 simulation results are stored.
+
     Returns:
         tuple: A tuple containing:
+
             - config: The loaded configuration object from the pickle file.
             - wind_cost_results: The loaded wind cost results from the pickle file.
     """

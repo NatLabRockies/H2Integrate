@@ -8,9 +8,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 class GenericTransporterPerformanceConfig(BaseConfig):
     """Configuration class for a generic transporter.
 
-    Attributes:
-        commodity (str): name of commodity to transport
-        commodity_rate_units (str): units of commodity transport profile (such as "kW" or "kg/h")
+    Fields include `commodity` and `commodity_rate_units`.
     """
 
     commodity: str = field(converter=(str.strip))

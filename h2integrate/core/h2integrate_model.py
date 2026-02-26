@@ -104,48 +104,47 @@ class H2IntegrateModel:
     def load_config(self, config_input):
         """Load and validate configuration files for the H2I model.
 
-        This method loads the main configuration and the three component configuration files
-        (driver, technology, and plant configurations). Each configuration can be provided
-        either as a dictionary object or as a filepath. When filepaths are provided,
-        the method resolves them using multiple search strategies.
+        This method loads the main configuration and the component configuration files
+        (driver, technology, and plant). Each configuration can be provided either as
+        a dictionary or as a file path. When file paths are provided, the method
+        resolves them using multiple search strategies.
 
         Args:
             config_input (dict | str | Path): Main configuration containing references to
-                driver, technology, and plant configurations. Can be:
-                - A dictionary containing the configuration data directly
-                - A string or Path object pointing to a YAML file containing the configuration
+                driver, technology, and plant configurations. This can be:
+
+                - A dictionary containing the configuration data directly.
+                - A string or Path pointing to a YAML file containing the configuration.
 
         Behavior:
-            - If `config_input` is a dict: Uses it directly as the main configuration
-            - If `config_input` is a path: Uses `get_path()` to resolve and load the YAML file
-              from multiple search locations (absolute path, relative to CWD, relative to
-              H2Integrate package)
 
-            For each component config (driver_config, technology_config, plant_config):
-            - If the config value is a dict: Validates it directly using the appropriate
-              validation function (`load_driver_yaml`, `load_tech_yaml`, `load_plant_yaml`)
-            - If the config value is a path string:
-                - When main config was loaded from file: Uses `find_file()` to search
-                  relative to the main config file's directory first, then falls back
-                  to other search locations (CWD, H2Integrate package, glob patterns)
-                - When main config was provided as dict: Uses `get_path()` with standard
-                  search strategy (absolute, relative to CWD, relative to H2Integrate package)
+            - If ``config_input`` is a dict, uses it directly as the main configuration.
+            - If ``config_input`` is a path, uses ``get_path()`` to resolve and load the YAML
+              file from multiple search locations (absolute path, relative to CWD, relative to
+              the H2Integrate package).
+            - For component configs provided as dicts, validates them directly using
+              ``load_driver_yaml``, ``load_tech_yaml``, and ``load_plant_yaml``.
+            - For component configs provided as paths and a file-based main config, uses
+              ``find_file()`` to search relative to the main config directory first, then
+              falls back to other search locations (CWD, H2Integrate package, glob patterns).
+            - For component configs provided as paths and a dict-based main config, uses
+              ``get_path()`` with standard search locations (absolute, CWD, H2Integrate package).
 
         Sets:
-            self.name (str): Name of the system from main config
-            self.system_summary (str): Summary description from main config
-            self.driver_config (dict): Validated driver configuration
-            self.technology_config (dict): Validated technology configuration
-            self.plant_config (dict): Validated plant configuration
-            self.driver_config_path (Path | None): Path to driver config file (None if dict)
-            self.tech_config_path (Path | None): Path to technology config file (None if dict)
-            self.plant_config_path (Path | None): Path to plant config file (None if dict)
-            self.tech_parent_path (Path | None): Parent directory of technology config file
-            self.plant_parent_path (Path | None): Parent directory of plant config file
+            self.name (str): Name of the system from main config.
+            self.system_summary (str): Summary description from main config.
+            self.driver_config (dict): Validated driver configuration.
+            self.technology_config (dict): Validated technology configuration.
+            self.plant_config (dict): Validated plant configuration.
+            self.driver_config_path (Path | None): Path to driver config file (None if dict).
+            self.tech_config_path (Path | None): Path to technology config file (None if dict).
+            self.plant_config_path (Path | None): Path to plant config file (None if dict).
+            self.tech_parent_path (Path | None): Parent directory of technology config file.
+            self.plant_parent_path (Path | None): Parent directory of plant config file.
 
         Note:
-            The parent path attributes (tech_parent_path, plant_parent_path) are used later
-            for resolving relative paths to custom models and other referenced files within
+            The parent path attributes (``tech_parent_path``, ``plant_parent_path``) are used
+            later to resolve relative paths to custom models and other referenced files within
             the technology and plant configurations.
 
         Example:
@@ -195,14 +194,17 @@ class H2IntegrateModel:
 
         Args:
             model_config (dict): dictionary containing models, such as
-                `technology_config["technologies"]`
-            config_parent_path (Path): parent path of the input file that `model_config` comes from.
-                Should either be `plant_config_path.parent` or `tech_config_path.parent`
-            model_types (list[str]): list of keynames to search for in `model_config.values()`.
-                Should be ["performance_model", "cost_model", "financial_model"] if `model_config`
-                is technology_config["technologies"].
-            prefix (str, optional): Prefix of "model_class_name", "model_location" and "model".
-                Defaults to "". Should be "finance_" if looking for custom general finance models.
+                ``technology_config["technologies"]``.
+            config_parent_path (Path): parent path of the input file that ``model_config`` comes
+                from. Should either be ``plant_config_path.parent`` or
+                ``tech_config_path.parent``.
+            model_types (list[str]): list of key names to search for in
+                ``model_config.values()``. Should be
+                ``["performance_model", "cost_model", "financial_model"]`` if ``model_config``
+                is ``technology_config["technologies"]``.
+            prefix (str, optional): Prefix of ``model_class_name``, ``model_location`` and
+                ``model``. Defaults to "". Should be ``"finance_"`` if looking for custom
+                general finance models.
         """
 
         included_custom_models = {}

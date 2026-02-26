@@ -8,10 +8,7 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 class GenericCombinerPerformanceConfig(BaseConfig):
     """Configuration class for a generic combiner.
 
-    Attributes:
-        commodity (str): name of commodity type
-        commodity_units (str): units of commodity production profile
-        in_streams (int): how many inflow streams will be connected, defaults to 2
+    Fields include `commodity`, `commodity_rate_units`, and `in_streams`.
     """
 
     commodity: str = field(converter=(str.lower, str.strip))

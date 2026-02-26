@@ -17,11 +17,11 @@ def main(config):
 
     Args:
         config (object): Configuration object containing:
-            - model (dict): Includes `refit_coeffs` (bool) to determine
-              whether to refit coefficients, `inputs_fp` (str) for input
-              file path, and `coeffs_fp` (str) for coefficients file path.
+                        - model (dict): Includes ``refit_coeffs`` (bool) to determine
+                            whether to refit coefficients, ``inputs_fp`` (str) for input
+                            file path, and ``coeffs_fp`` (str) for coefficients file path.
             - product_selection (str): The selected product to process.
-            - site (dict): Contains `name` (str), the site name.
+            - site (dict): Contains ``name`` (str), the site name.
 
     Returns:
         pandas.DataFrame: Processed DataFrame with selected product data,

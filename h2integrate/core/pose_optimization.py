@@ -97,10 +97,10 @@ class PoseOptimization:
     def _set_optimizer_properties(
         self, opt_prob, options_keys=[], opt_settings_keys=[], mapped_keys={}
     ):
-        """Set the optimizer properties, both the `driver.options` and
-        `driver.opt_settings`. See OpenMDAO documentation on drivers
-        to determine which settings are set by either options or
-        opt_settings.
+        """Set optimizer properties on ``driver.options`` and ``driver.opt_settings``.
+
+        Refer to OpenMDAO driver documentation to determine which settings belong
+        in ``driver.options`` versus ``driver.opt_settings``.
 
         Args:
             opt_prob (OpenMDAO problem object):  The hybrid plant OpenMDAO problem object.
@@ -108,12 +108,10 @@ class PoseOptimization:
                 to be set. Defaults to [].
             opt_settings_keys (list, optional): List of keys for driver options
                 to be set. Defaults to [].
-            mapped_keys (dict, optional): Key pairs where the yaml name differs
-                from what's expected
-                                          by the driver. Specifically, the key
-                                          is what's given in the yaml
-                                          and the value is what's expected by
-                                          the driver. Defaults to {}.
+            mapped_keys (dict, optional): Key pairs where the YAML name differs
+                from what is expected by the driver. Specifically, the key is
+                what is given in the YAML and the value is what is expected by
+                the driver. Defaults to {}.
 
         Returns:
             opt_prob (OpenMDAO problem object): The updated openmdao problem
