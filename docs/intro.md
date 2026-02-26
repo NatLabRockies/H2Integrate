@@ -80,6 +80,8 @@ If technologies require resource or price profiles, they can be provided by the 
 A more complex example of an H2Integrate model is shown below:
 ![H2Integrate Splash Image](./splash_image.png)
 
+The modular nature of the H2Integrate system also makes adding custom models, including proprietary models for local analysis only, very straightforward.
+
 ## How does H2Integrate differ from other tools?
 
 H2Integrate is developed at NREL, which has a long history of developing high-quality tools for renewable energy systems.
