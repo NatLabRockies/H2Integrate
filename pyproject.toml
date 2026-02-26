@@ -100,7 +100,8 @@ develop = [
     "pytest-cov",
     "ruff",
     "sphinxcontrib-napoleon",
-    "h2integrate[gis,ard]"
+    "h2integrate[gis,ard]",
+    "yamlfix"
 ]
 examples = [
   "jupyterlab",
@@ -261,4 +262,5 @@ allow_duplicate_keys = true
 line_length = 120
 none_representation = "null"
 explicit_start = false
+quote_representation = '"'
 sequence_style = "keep_style"
