@@ -118,8 +118,27 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
             Hourly wellhead gas production profile from natural accumulations,
             covering one simulated year (8760 hours), in kg/h.
 
+        wellhead_gas_out (ndarray):
+            Hourly wellhead gas production profile used for downstream modeling, in kg/h.
+
         max_wellhead_gas (float):
             Maximum wellhead gas output over the system lifetime, in kg/h.
+
+        rated_hydrogen_production (float):
+            Rated hydrogen production at the wellhead, in kg/h.
+
+        total_wellhead_gas_produced (float):
+            Total mass of gas produced at the wellhead over the simulation period, in kg/year.
+
+        total_hydrogen_produced (float):
+            Total mass of hydrogen produced at the wellhead over the simulation period, in kg/year.
+
+        annual_hydrogen_produced (list):
+            List of total hydrogen produced for each year of the simulation, in kg/year.
+
+        capacity_factor (list):
+            List of capacity factors for each year of the simulation, calculated as the ratio
+            of annual hydrogen production to the maximum hydrogen production of the well.
     """
 
     def setup(self):
