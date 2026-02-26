@@ -8,9 +8,8 @@ sites:
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
-technology_interconnections:
-  - [hopp, electrolyzer, electricity, cable]
-  - [electrolyzer, ammonia, hydrogen, pipe]
+technology_interconnections: [[hopp, electrolyzer, electricity, cable], [electrolyzer, ammonia, hydrogen, pipe], [n2_feedstock,
+      ammonia, nitrogen, pipe], [electricity_feedstock, ammonia, electricity, cable]]
 plant:
   plant_life: 30
 finance_parameters:
