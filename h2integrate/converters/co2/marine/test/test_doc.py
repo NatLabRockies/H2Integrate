@@ -1,28 +1,17 @@
-import unittest
 from pathlib import Path
 
 import numpy as np
+import pytest
 import openmdao.api as om
-from pytest import fixture
 from openmdao.utils.assert_utils import assert_near_equal
 
-
-@fixture
-def plant_config():
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-    }
-    return plant_config
+from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
 
 
-@fixture
-def tech_config():
+@pytest.fixture
+def tech_config(save: bool):
+    if not isinstance(save, bool):
+        raise TypeError("`save` fixture parameter must be a boolean.")
     return {
         "model_inputs": {
             "performance_parameters": {
@@ -43,24 +32,16 @@ def tech_config():
                 "temp_C": 12.0,  # degrees Celsius
                 "dic_i": 0.0022,  # mol/L
                 "pH_i": 8.1,  # initial pH
+                "save_outputs": save,
+                "save_plots": save,
             },
         },
     }
 
 
-@fixture
-def driver_config():
-    driver_config = {
-        "general": {
-            "folder_output": "output",
-        },
-    }
-    return driver_config
-
-
+@pytest.mark.unit
+@pytest.mark.parametrize("save", [False])
 def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
-    from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
-
     doc_model = DOCPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
     )
@@ -68,8 +49,8 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     prob.model.add_subsystem("comp", doc_model, promotes=["*"])
     prob.setup()
     rng = np.random.default_rng(seed=42)
-    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
-    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)
     power_profile = base_power + noise
     prob.set_val("comp.electricity_in", power_profile, units="W")
 
@@ -155,89 +136,87 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
-class TestDOCPerformanceModel(unittest.TestCase):
-    def setUp(self):
-        from h2integrate.converters.co2.marine.direct_ocean_capture import DOCPerformanceModel
+# docs fencepost start: DO NOT REMOVE
+@pytest.mark.regression
+@pytest.mark.parametrize("save", [False])
+def test_doc_standard_outputs(driver_config, plant_config, tech_config, subtests):
+    doc_model = DOCPerformanceModel(
+        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
+    )
+    prob = om.Problem(model=om.Group())
+    prob.model.add_subsystem("comp", doc_model, promotes=["*"])
+    prob.setup()
+    rng = np.random.default_rng(seed=42)
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    power_profile = base_power + noise
+    prob.set_val("comp.electricity_in", power_profile, units="W")
 
-        self.config = {
-            "model_inputs": {
-                "performance_parameters": {
-                    "power_single_ed_w": 24000000.0,  # W
-                    "flow_rate_single_ed_m3s": 0.6,  # m^3/s
-                    "number_ed_min": 1,
-                    "number_ed_max": 10,
-                    "E_HCl": 0.05,  # kWh/mol
-                    "E_NaOH": 0.05,  # kWh/mol
-                    "y_ext": 0.9,
-                    "y_pur": 0.2,
-                    "y_vac": 0.6,
-                    "frac_ed_flow": 0.01,
-                    "use_storage_tanks": True,
-                    "initial_tank_volume_m3": 0.0,  # m^3
-                    "store_hours": 12.0,  # hours
-                    "sal": 33.0,  # ppt
-                    "temp_C": 12.0,  # degrees Celsius
-                    "dic_i": 0.0022,  # mol/L
-                    "pH_i": 8.1,  # initial pH
-                    "save_outputs": True,
-                    "save_plots": True,
-                },
-            },
-        }
-        plant_config = {
-            "plant": {
-                "plant_life": 30,
-                "simulation": {
-                    "n_timesteps": 8760,  # Default number of timesteps for the simulation
-                    "dt": 3600,
-                },
-            },
-        }
+    # Run the model
+    prob.run_model()
 
-        driver_config = {
-            "general": {
-                "folder_output": "output/",
-            },
-        }
+    int(plant_config["plant"]["plant_life"])
+    int(plant_config["plant"]["simulation"]["n_timesteps"])
 
-        doc_model = DOCPerformanceModel(
-            driver_config=driver_config, plant_config=plant_config, tech_config=self.config
+    with subtests.test("co2 captured mtpy == annual co2 produced"):
+        assert (
+            pytest.approx(prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0], rel=1e-6)
+            == prob.get_val("comp.annual_co2_produced", units="t/yr")[0]
         )
-        self.prob = om.Problem(model=om.Group())
-        self.prob.model.add_subsystem("DOC", doc_model, promotes=["*"])
-        self.prob.setup()
 
-    def test_performance_model(self):
-        # Set inputs
-        rng = np.random.default_rng(seed=42)
-        base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
-        noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
-        power_profile = base_power + noise
-        self.prob.set_val("DOC.electricity_in", power_profile, units="W")
+    annual_co2_from_cf_calc = (
+        prob.get_val("comp.capacity_factor", units="unitless")
+        * prob.get_val("comp.rated_co2_production", units="t/h")
+        * 8760
+    )
 
-        # Run the model
-        self.prob.run_model()
+    with subtests.test("CF calculated properly"):
+        assert (
+            pytest.approx(annual_co2_from_cf_calc[0], rel=1e-6)
+            == prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0]
+        )
 
-        # Additional asserts for output values
-        co2_out = self.prob.get_val("co2_out", units="kg/h")
-        co2_capture_mtpy = self.prob.get_val("co2_capture_mtpy", units="t/year")
-        plant_mCC_capacity_mtph = self.prob.get_val("plant_mCC_capacity_mtph", units="t/h")
-        total_tank_volume_m3 = self.prob.get_val("total_tank_volume_m3", units="m**3")
 
-        # Assert values (allowing for small numerical tolerance)
-        assert_near_equal(np.linalg.norm(co2_out), 11394970.06218, tolerance=1e-1)
-        assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
-        assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
-        assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
+# docs fencepost end: DO NOT REMOVE
 
-        # Check that output files were saved
-        assert Path("output/data/DOC_operationScenarios.csv").is_file()
-        assert Path("output/data/DOC_resultTotals.csv").is_file()
-        assert Path("output/data/DOC_timeDependentResults.csv").is_file()
-        assert Path("output/figures/DOC_Time-Dependent_Results.png").is_file()
 
-        # Remove files
-        Path("output/data/DOC_operationScenarios.csv").unlink(missing_ok=True)
-        Path("output/data/DOC_resultTotals.csv").unlink(missing_ok=True)
-        Path("output/data/DOC_timeDependentResults.csv").unlink(missing_ok=True)
-        Path("output/figures/DOC_Time-Dependent_Results.png").unlink(missing_ok=True)
+@pytest.mark.regression
+@pytest.mark.parametrize("save", [True])
+def test_performance_model(tech_config, plant_config, driver_config):
+    doc_model = DOCPerformanceModel(
+        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
+    )
+    prob = om.Problem(model=om.Group())
+    prob.model.add_subsystem("DOC", doc_model, promotes=["*"])
+    prob.setup()
+
+    # Set inputs
+    rng = np.random.default_rng(seed=42)
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    power_profile = base_power + noise
+    prob.set_val("DOC.electricity_in", power_profile, units="W")
+
+    # Run the model
+    prob.run_model()
+
+    # Additional asserts for output values
+    co2_out = prob.get_val("co2_out")
+    co2_capture_mtpy = prob.get_val("co2_capture_mtpy")
+    plant_mCC_capacity_mtph = prob.get_val("plant_mCC_capacity_mtph")
+    total_tank_volume_m3 = prob.get_val("total_tank_volume_m3")
+
+    # Assert values (allowing for small numerical tolerance)
+    assert_near_equal(np.linalg.norm(co2_out), 11394970.06218, tolerance=1e-1)
+    assert_near_equal(np.linalg.norm(co2_capture_mtpy), [1041164.44000004], tolerance=1e-5)
+    assert_near_equal(plant_mCC_capacity_mtph, [176.34], tolerance=1e-2)
+    assert_near_equal(total_tank_volume_m3, [25920.0], tolerance=1e-2)
+
+    # Check that output files were saved
+    # NOTE: the creation of the data and figures folders seems to be slightly malformed
+    # and joining the name of the last subfolder with "data" or "figures"
+    output_folder = Path(driver_config["general"]["folder_output"])
+    assert Path(f"{output_folder}data/DOC_operationScenarios.csv").is_file()
+    assert Path(f"{output_folder}data/DOC_resultTotals.csv").is_file()
+    assert Path(f"{output_folder}data/DOC_timeDependentResults.csv").is_file()
+    assert Path(f"{output_folder}figures/DOC_Time-Dependent_Results.png").is_file()

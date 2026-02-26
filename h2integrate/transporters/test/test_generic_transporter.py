@@ -17,6 +17,7 @@ def plant_config():
     return plant_dict
 
 
+@pytest.mark.regression
 def test_generic_transporter_in_out(plant_config, subtests):
     commodities_and_units = {
         "postassium": "kg/h",

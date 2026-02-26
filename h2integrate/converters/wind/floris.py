@@ -31,7 +31,7 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
         operational_losses (float | int): non-wake losses represented as a percentage
             (between 0 and 100).
         hub_height (float | int, optional): a value of -1 indicates to use the hub-height
-            from the `floris_turbine_config`. Otherwise, is the turbine hub-height
+            from the ``floris_turbine_config``. Otherwise, is the turbine hub-height
             in meters. Defaults to -1.
         operation_model (str, optional): turbine operation model. Defaults to 'cosine-loss'.
         default_turbulence_intensity (float): default turbulence intensity to use if not found
@@ -41,6 +41,7 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
             adjust or select resource data if no resource data is available at a height
             exactly equal to the turbine hub-height. Defaults to 'weighted_average'.
             The available methods are:
+
             - 'weighted_average': average the resource data at the heights that most closely bound
                 the hub-height, weighted by the difference between the resource heights and the
                 hub-height.

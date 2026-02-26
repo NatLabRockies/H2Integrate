@@ -89,10 +89,11 @@ def load_tech_config_cases(case_file):
             and the different case names as the column names.
 
     Note:
-        The CSV format should be:
-        |   "Index 1"    |...|  "Index <N>"   | "Type"  | <Case 1 Name>  |...| <Case N Name>  |
-        | "technologies" |...| <param_1_name> | "float" | <Case 1 value> |...| <Case N value> |
-        | "technologies" |...| <param_2_name> | "str"   | <Case 1 value> |...| <Case N value> |
+        The CSV format should be::
+
+            |   "Index 1"    |...|  "Index <N>"   | "Type"  | <Case 1 Name>  |...| <Case N Name>  |
+            | "technologies" |...| <param_1_name> | "float" | <Case 1 value> |...| <Case N value> |
+            | "technologies" |...| <param_2_name> | "str"   | <Case 1 value> |...| <Case N value> |
 
     If some parameters are nested deeper than others, make as many Index columns for the deepest-
     nested parameters and leave any unused Indexes blank.

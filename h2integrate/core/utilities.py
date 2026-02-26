@@ -126,20 +126,18 @@ class BaseConfig:
 
     @classmethod
     def from_dict(cls, data: dict, strict=True, additional_cls_name: str | None = None):
-        """Maps a data dictionary to an `attr`-defined class.
+        """Maps a data dictionary to an ``attrs``-defined class.
 
         Args:
-            data : dict
-                The data dictionary to be mapped.
-            strict: bool
-                A flag enabling strict parameter processing, meaning that no extra parameters
-                    may be passed in or an AttributeError will be raised.
+            data (dict): The data dictionary to be mapped.
+            strict (bool): A flag enabling strict parameter processing, meaning that no extra
+                parameters may be passed in or an AttributeError will be raised.
             additional_cls_name (str | None): The name of the model class creating the configuration
                 data class. Provides an easier to diagnose error message for end users when
                 the class name is provided.
+
         Returns:
-            cls
-                The `attr`-defined class.
+            cls: The ``attrs``-defined class.
         """
         # Check for any inputs that aren't part of the class definition
         if strict is True:

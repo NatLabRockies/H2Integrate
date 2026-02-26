@@ -13,11 +13,11 @@ In reality, the exact composition and structure of the resulting sponge iron wil
 Currently, H2I models do not make these distinctions, as the technology is new and we are still building out the capability.
 Instead, the models in their current form are based on two recent studies of electrowinning technology as a whole.
 
-The first study is by [Humbert et al.](doi.org/10.1007/s40831-024-00878-3), who focus specifically on iron and the three technologies above.
+The first study is by [Humbert et al.](https://doi.org/10.1007/s40831-024-00878-3), who focus specifically on iron and the three technologies above.
 These authors gather information on the specific energy required for electrolysis and associated pretreatments needed, which is applied in the `HumbertEwinPerformanceComponent` performance model.
 In their supporting information, they also model the full operational expenditures for each process, which is applied in the `HumbertStinnEwinCostComponent` cost model.
 
-The second study is by [Stinn & Allanore](doi.org/10.1149.2/2.F06202IF), who present a generalized capital cost model for electrowinning of many different metals.
+The second study is by [Stinn & Allanore](https://doi.org/10.1149.2/2.F06202IF), who present a generalized capital cost model for electrowinning of many different metals.
 These authors use both cost data and physical parameters from existing studies to fit the model to be applicable to any metal, including iron.
 This model is applied in the `HumbertStinnEwinCostComponent` cost model.
 

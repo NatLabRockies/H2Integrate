@@ -5,7 +5,6 @@ import yaml
 import numpy as np
 import pytest
 import openmdao.api as om
-from pytest import fixture
 
 from h2integrate.storage.battery.pysam_battery import (
     PySAMBatteryPerformanceModel,
@@ -13,18 +12,8 @@ from h2integrate.storage.battery.pysam_battery import (
 )
 
 
-@fixture
-def plant_config():
-    plant = {
-        "plant_life": 30,
-        "simulation": {
-            "dt": 3600,
-            "n_timesteps": 24,
-        },
-    }
-    return {"plant": plant}
-
-
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [24])
 def test_pysam_battery_performance_model_without_controller(plant_config, subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -195,6 +184,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
         )
 
 
+@pytest.mark.regression
 def test_battery_config(subtests):
     batt_kw = 5e3
     config_data = {
@@ -261,6 +251,8 @@ def test_battery_config(subtests):
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [24])
 def test_battery_initialization(plant_config, subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent

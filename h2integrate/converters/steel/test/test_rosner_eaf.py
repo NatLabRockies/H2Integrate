@@ -3,8 +3,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.steel.steel_eaf_plant import (
     HydrogenEAFPlantCostComponent,
     NaturalGasEAFPlantCostComponent,
@@ -31,12 +29,6 @@ def plant_config():
         },
     }
     return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
 
 
 @fixture
@@ -120,6 +112,7 @@ def h2_feedstock_availability_costs():
     return feedstocks_dict
 
 
+@pytest.mark.unit
 def test_ng_eaf_performance_outputs(
     plant_config, ng_eaf_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -218,6 +211,7 @@ def test_ng_eaf_performance_outputs(
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_ng_eaf_performance(
     plant_config, ng_eaf_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -248,6 +242,7 @@ def test_ng_eaf_performance(
         )
 
 
+@pytest.mark.regression
 def test_ng_eaf_performance_limited_feedstock(
     plant_config, ng_eaf_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -284,6 +279,7 @@ def test_ng_eaf_performance_limited_feedstock(
         assert pytest.approx(annual_steel / 365, rel=1e-3) == expected_steel_annual_production_tpd
 
 
+@pytest.mark.regression
 def test_ng_eaf_performance_cost(
     plant_config, ng_eaf_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -341,6 +337,7 @@ def test_ng_eaf_performance_cost(
         )
 
 
+@pytest.mark.regression
 def test_h2_eaf_performance(
     plant_config, ng_eaf_base_config, h2_feedstock_availability_costs, subtests
 ):
@@ -369,6 +366,7 @@ def test_h2_eaf_performance(
         assert pytest.approx(annual_steel / 365, rel=1e-3) == expected_steel_annual_production_tpd
 
 
+@pytest.mark.regression
 def test_h2_eaf_performance_cost(
     plant_config, ng_eaf_base_config, h2_feedstock_availability_costs, subtests
 ):

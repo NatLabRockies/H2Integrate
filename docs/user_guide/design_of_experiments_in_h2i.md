@@ -42,6 +42,7 @@ H2Integrate currently supports the following types of generators:
 
 Documentation for each generator type can be found on [OpenMDAO's documentation page](https://openmdao.org/newdocs/versions/latest/_srcdocs/packages/drivers/doe_generators.html).
 
+(uniform)=
 ### Uniform
 
 ```yaml
@@ -53,6 +54,7 @@ driver:
     seed: #input is specific to this generator
 ```
 
+(fullfactorial)=
 ### FullFactorial
 
 ```yaml
@@ -73,6 +75,7 @@ import numpy as np
 design_variable_values = np.linspace(lower_bound,upper_bound,levels)
 ```
 
+(plackettburman)=
 ### PlackettBurman
 
 ```yaml
@@ -82,6 +85,7 @@ driver:
     generator: "plackettburman" #type of generator to use
 ```
 
+(boxbehnken)=
 ### BoxBehnken
 
 ```yaml
@@ -91,6 +95,7 @@ driver:
     generator: "boxbehnken" #type of generator to use
 ```
 
+(latinhypercube)=
 ### LatinHypercube
 
 ```yaml
@@ -103,6 +108,7 @@ driver:
     seed: #input is specific to this generator
 ```
 
+(csv)=
 ### CSV
 
 This method is useful if there are specific combinations of designs variables that you want to sweep. An example is shown here:
@@ -139,7 +145,7 @@ varying combinations of solar power and hydrogen electrolyzer capacities.
 The different combinations of solar and electrolyzer capacities are listed in the csv file `examples/20_solar_electrolyzer_doe/csv_doe_cases.csv`:
 
 ```{literalinclude} ../../examples/20_solar_electrolyzer_doe/csv_doe_cases.csv
-:language: csv
+:language: text
 ```
 
 Next, we'll import the required models and functions to complete run a successful design of experiments.
@@ -207,7 +213,7 @@ new_csv_filename.name
 Let's see the updates to combinations.
 
 ```{literalinclude} ../../examples/20_solar_electrolyzer_doe/csv_doe_cases0.csv
-:language: csv
+:language: text
 ```
 
 ```{code-cell} ipython3

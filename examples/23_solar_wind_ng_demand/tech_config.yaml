@@ -110,3 +110,11 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
+
+  fin_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW

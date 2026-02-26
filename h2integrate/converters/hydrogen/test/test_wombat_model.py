@@ -6,6 +6,7 @@ from pytest import approx
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 
 
+@pytest.mark.regression
 def test_wombat_model_outputs(subtests):
     prob = om.Problem()
     prob.model.add_subsystem(
@@ -72,6 +73,7 @@ def test_wombat_model_outputs(subtests):
         )
 
 
+@pytest.mark.unit
 def test_wombat_error(subtests):
     prob = om.Problem()
     prob.model.add_subsystem(

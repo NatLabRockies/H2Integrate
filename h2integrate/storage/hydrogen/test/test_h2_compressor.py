@@ -1,15 +1,18 @@
+"""Test that we get the results we got when the code was received."""
+
+import pytest
 from pytest import approx, raises
 
 from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
 
-# test that we get the results we got when the code was received
 class TestH2Compressor:
     p_inlet = 20  # bar
     p_outlet = 68  # bar
     flow_rate_kg_d = 9311
     n_compressors = 2
 
+    @pytest.mark.regression
     def test_capex(self):
         comp = Compressor(
             self.p_outlet,
@@ -21,6 +24,7 @@ class TestH2Compressor:
         total_capex, total_OM = comp.compressor_costs()
         assert total_capex == approx(680590.3412708649)
 
+    @pytest.mark.regression
     def test_opex(self):
         comp = Compressor(
             self.p_outlet,
@@ -32,6 +36,7 @@ class TestH2Compressor:
         total_capex, total_OM = comp.compressor_costs()
         assert total_OM == approx(200014.00244504173)
 
+    @pytest.mark.regression
     def test_system_power(self):
         comp = Compressor(
             self.p_outlet,
@@ -43,6 +48,7 @@ class TestH2Compressor:
         _motor_rating, total_system_power = comp.compressor_system_power()
         assert total_system_power == approx(246.27314443197918)
 
+    @pytest.mark.regression
     def test_system_power_report(self):
         """
         H2A Hydrogen Delivery Infrastructure Analysis Models and Conventional Pathway Options
@@ -71,6 +77,7 @@ class TestH2Compressor:
         _motor_rating, total_system_power = comp.compressor_system_power()
         assert total_system_power == approx(3627.3907562149357)
 
+    @pytest.mark.unit
     def test_max_flow_rate_per_compressor(self):
         p_inlet = 20  # bar
         p_outlet = 68  # bar

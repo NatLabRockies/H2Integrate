@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -6,20 +7,6 @@ from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
 from h2integrate.control.control_strategies.storage.demand_openloop_controller import (
     DemandOpenLoopStorageController,
 )
-
-
-@fixture
-def plant_config():
-    plant_cnfg = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-    }
-    return plant_cnfg
 
 
 @fixture
@@ -93,6 +80,8 @@ def battery_tech_config_MW():
     return battery_inputs
 
 
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [8760])
 def test_integrated_battery_cost_kW(
     plant_config, battery_tech_config_kW, electricity_profile_kW, subtests
 ):
@@ -137,6 +126,8 @@ def test_integrated_battery_cost_kW(
         assert prob.get_val("cost_model.OpEx", units="USD/year") == expected_opex
 
 
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [8760])
 def test_integrated_battery_cost_MW(
     plant_config, battery_tech_config_MW, electricity_profile_kW, subtests
 ):

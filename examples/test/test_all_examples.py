@@ -1,21 +1,42 @@
 import os
+import shutil
 import importlib
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR
+from h2integrate.core.utilities import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
-def test_steel_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "01_onshore_steel_mn")
+ROOT = Path(__file__).parents[1]
+
+
+@pytest.fixture(scope="function")
+def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
+    original = EXAMPLE_DIR / example_folder
+    shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
+    if resource_example_folder is not None:
+        secondary = EXAMPLE_DIR / resource_example_folder
+        shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
+    os.chdir(temp_dir / example_folder)
+    yield temp_dir / example_folder
+    os.chdir(Path(__file__).parent)
+
+
+# docs fencepost start: DO NOT REMOVE
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_steel_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "01_onshore_steel_mn.yaml")
+    model = H2IntegrateModel(example_folder / "01_onshore_steel_mn.yaml")
+    # docs fencepost end: DO NOT REMOVE
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 720.0
     model.setup()
@@ -29,9 +50,7 @@ def test_steel_example(subtests):
     with subtests.test("Check total electricity produced"):
         assert (
             pytest.approx(
-                model.prob.get_val(
-                    "finance_subgroup_electricity.total_electricity_produced", units="MW*h/yr"
-                )[0],
+                model.prob.get_val("combiner.electricity_out", units="MW").sum(),
                 rel=1e-3,
             )
             == 5901098.278035271
@@ -79,13 +98,13 @@ def test_steel_example(subtests):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 8.270362492342693
+            == 8.235313509720276
         )
 
     with subtests.test("Check LCOS"):
         assert (
             pytest.approx(model.prob.get_val("steel.LCOS", units="USD/t")[0], rel=1e-3)
-            == 1266.6193378846617
+            == 1264.2821232584045
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -122,12 +141,13 @@ def test_steel_example(subtests):
         )
 
 
-def test_simple_ammonia_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "02_texas_ammonia")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
+def test_simple_ammonia_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "02_texas_ammonia.yaml")
+    model = H2IntegrateModel(example_folder / "02_texas_ammonia.yaml")
 
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
@@ -219,7 +239,7 @@ def test_simple_ammonia_example(subtests):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.025446
+            == 4.0155433
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -228,7 +248,7 @@ def test_simple_ammonia_example(subtests):
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.025446
+            == 4.0155433
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -242,7 +262,7 @@ def test_simple_ammonia_example(subtests):
         )
 
     # Check that the expected output files exist
-    outputs_dir = Path.cwd() / "outputs"
+    outputs_dir = example_folder / "outputs"
     assert (
         outputs_dir / "profast_output_ammonia_config.yaml"
     ).is_file(), "profast_output_ammonia.yaml not found"
@@ -254,12 +274,13 @@ def test_simple_ammonia_example(subtests):
     ).is_file(), "profast_output_hydrogen.yaml not found"
 
 
-def test_ammonia_synloop_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "12_ammonia_synloop")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("12_ammonia_synloop", None)])
+def test_ammonia_synloop_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "12_ammonia_synloop.yaml")
+    model = H2IntegrateModel(example_folder / "12_ammonia_synloop.yaml")
 
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
@@ -357,7 +378,7 @@ def test_ammonia_synloop_example(subtests):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-6
             )
-            == 4.025385101169759
+            == 4.015543377027795
         )
 
     with subtests.test("Check LCOA"):
@@ -369,12 +390,13 @@ def test_ammonia_synloop_example(subtests):
         )
 
 
-def test_smr_methanol_example(subtests):
-    # Change the current working directory to the SMR example's directory
-    os.chdir(EXAMPLE_DIR / "03_methanol" / "smr")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("03_methanol/smr", None)])
+def test_smr_methanol_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "03_smr_methanol.yaml")
+    model = H2IntegrateModel(example_folder / "03_smr_methanol.yaml")
 
     # Run the model
     model.run()
@@ -389,12 +411,15 @@ def test_smr_methanol_example(subtests):
         )
 
 
-def test_co2h_methanol_example(subtests):
-    # Change the current working directory to the CO2 Hydrogenation example's directory
-    os.chdir(EXAMPLE_DIR / "03_methanol" / "co2_hydrogenation")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation", None)]
+)
+def test_co2h_methanol_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "03_co2h_methanol.yaml")
+    model = H2IntegrateModel(example_folder / "03_co2h_methanol.yaml")
 
     # Run the model
     model.run()
@@ -422,7 +447,7 @@ def test_co2h_methanol_example(subtests):
         combined_cf = (wind_weighted_cf + solar_weighted_cf) / combined_rated_input
         assert (
             pytest.approx(
-                model.prob.get_val("combiner.electricity_capacity_factor", units="unitless"),
+                model.prob.get_val("combiner.capacity_factor", units="unitless"),
                 rel=1e-6,
             )
             == combined_cf
@@ -432,16 +457,19 @@ def test_co2h_methanol_example(subtests):
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
             pytest.approx(model.prob.get_val("methanol.LCOM", units="USD/kg")[0], rel=1e-6)
-            == 1.7555607442
+            == 1.7516172
         )
 
 
-def test_doc_methanol_example(subtests):
-    # Change the current working directory to the CO2 Hydrogenation example's directory
-    os.chdir(EXAMPLE_DIR / "03_methanol" / "co2_hydrogenation_doc")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation_doc", None)]
+)
+def test_doc_methanol_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "03_co2h_methanol.yaml")
+    model = H2IntegrateModel(example_folder / "03_co2h_methanol.yaml")
 
     # Run the model
     model.run()
@@ -459,12 +487,13 @@ def test_doc_methanol_example(subtests):
         )
 
 
-def test_wind_h2_opt_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "05_wind_h2_opt")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("05_wind_h2_opt", None)])
+def test_wind_h2_opt_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Run without optimization
-    model_init = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer0.yaml")
+    model_init = H2IntegrateModel(example_folder / "wind_plant_electrolyzer0.yaml")
 
     # Run the model
     model_init.run()
@@ -476,7 +505,7 @@ def test_wind_h2_opt_example(subtests):
     ]
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer.yaml")
+    model = H2IntegrateModel(example_folder / "wind_plant_electrolyzer.yaml")
 
     # Run the model
     model.run()
@@ -504,7 +533,7 @@ def test_wind_h2_opt_example(subtests):
     # Read the resulting SQL file and compare initial and final LCOH values
 
     sql_path = None
-    for root, _dirs, files in os.walk(Path.cwd()):
+    for root, _dirs, files in os.walk(example_folder):
         for file in files:
             if file == "wind_h2_opt.sql":
                 sql_path = Path(root) / file
@@ -558,12 +587,13 @@ def test_wind_h2_opt_example(subtests):
         )
 
 
-def test_paper_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "06_custom_tech")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("06_custom_tech", None)])
+def test_paper_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "wind_plant_paper.yaml")
+    model = H2IntegrateModel(example_folder / "wind_plant_paper.yaml")
 
     # Run the model
     model.run()
@@ -578,12 +608,15 @@ def test_paper_example(subtests):
         )
 
 
-def test_wind_wave_doc_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "09_co2/direct_ocean_capture")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("09_co2/direct_ocean_capture", None)]
+)
+def test_wind_wave_doc_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "offshore_plant_doc.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_doc.yaml")
     # Set battery demand profile
     demand_profile = np.ones(8760) * 340.0
     model.setup()
@@ -612,12 +645,15 @@ def test_wind_wave_doc_example(subtests):
         )
 
 
-def test_splitter_wind_doc_h2_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "17_splitter_wind_doc_h2")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
+)
+def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "offshore_plant_splitter_doc_h2.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_splitter_doc_h2.yaml")
 
     # Run the model
     model.run()
@@ -626,9 +662,16 @@ def test_splitter_wind_doc_h2_example(subtests):
 
     # Subtests for checking specific values
     with subtests.test("Check Electrical AEP"):
-        electrical_aep = model.prob.get_val(
-            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
-            units="MW*h/year",
+        electrical_aep = (
+            model.prob.get_val(
+                "finance_subgroup_electricity.rated_electricity_production",
+                units="MW",
+            )
+            * model.prob.get_val(
+                "finance_subgroup_electricity.capacity_factor",
+                units="unitless",
+            ).mean()
+            * 8760
         )
 
         assert pytest.approx(electrical_aep[0], rel=1e-3) == 511267.03627
@@ -639,7 +682,7 @@ def test_splitter_wind_doc_h2_example(subtests):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 9.82319908
+            == 9.8059083
         )
 
     with subtests.test("Check LCOC"):
@@ -660,12 +703,15 @@ def test_splitter_wind_doc_h2_example(subtests):
         )
 
 
-def test_hydro_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "07_run_of_river_plant")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
+)
+def test_hydro_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "07_run_of_river.yaml")
+    model = H2IntegrateModel(example_folder / "07_run_of_river.yaml")
 
     # Run the model
     model.run()
@@ -685,12 +731,15 @@ def test_hydro_example(subtests):
         )
 
 
-def test_hybrid_energy_plant_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "11_hybrid_energy_plant")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("11_hybrid_energy_plant", None)]
+)
+def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "wind_pv_battery.yaml")
+    model = H2IntegrateModel(example_folder / "wind_pv_battery.yaml")
 
     # Run the model
     model.run()
@@ -702,12 +751,15 @@ def test_hybrid_energy_plant_example(subtests):
         assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
 
 
-def test_hydrogen_dispatch_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "14_wind_hydrogen_dispatch")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("14_wind_hydrogen_dispatch", None)]
+)
+def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "inputs" / "h2i_wind_to_h2_storage.yaml")
+    model = H2IntegrateModel(example_folder / "inputs" / "h2i_wind_to_h2_storage.yaml")
 
     model.run()
 
@@ -723,11 +775,18 @@ def test_hydrogen_dispatch_example(subtests):
         )
 
     with subtests.test("Check all h2 total_hydrogen_produced"):
+        all_h2_annual_prod = (
+            model.prob.get_val(
+                "finance_subgroup_all_hydrogen.rated_hydrogen_production", units="kg/h"
+            )[0]
+            * model.prob.get_val(
+                "finance_subgroup_all_hydrogen.capacity_factor", units="unitless"
+            ).mean()
+            * 8760
+        )
         assert (
             pytest.approx(
-                model.prob.get_val(
-                    "finance_subgroup_all_hydrogen.total_hydrogen_produced", units="kg/year"
-                )[0],
+                all_h2_annual_prod,
                 rel=1e-5,
             )
             == model.prob.get_val("electrolyzer.annual_hydrogen_produced", units="kg/year")[0]
@@ -757,7 +816,7 @@ def test_hydrogen_dispatch_example(subtests):
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.674286965
+            == 5.65452960
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -770,12 +829,15 @@ def test_hydrogen_dispatch_example(subtests):
         )
 
 
-def test_wind_wave_oae_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("09_co2/ocean_alkalinity_enhancement", None)]
+)
+def test_wind_wave_oae_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "offshore_plant_oae.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_oae.yaml")
 
     # Set battery demand profile
     demand_profile = np.ones(8760) * 330.0
@@ -808,12 +870,16 @@ def test_wind_wave_oae_example(subtests):
         )
 
 
-def test_wind_wave_oae_example_with_finance(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement_financials")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("09_co2/ocean_alkalinity_enhancement_financials", None)],
+)
+def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "offshore_plant_oae.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_oae.yaml")
 
     # Run the model
     model.run()
@@ -839,12 +905,15 @@ def test_wind_wave_oae_example_with_finance(subtests):
         )
 
 
-def test_natural_gas_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "16_natural_gas")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
+def test_natural_gas_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "natgas.yaml")
+    model = H2IntegrateModel(example_folder / "natgas.yaml")
 
     # Run the model
 
@@ -857,15 +926,31 @@ def test_natural_gas_example(subtests):
         model.prob.get_val("battery.electricity_unused_commodity", units="kW")
     )
 
-    renewable_subgroup_total_electricity = model.prob.get_val(
-        "finance_subgroup_renewables.electricity_sum.total_electricity_produced", units="kW*h/year"
-    )[0]
-    electricity_subgroup_total_electricity = model.prob.get_val(
-        "finance_subgroup_electricity.electricity_sum.total_electricity_produced", units="kW*h/year"
-    )[0]
-    natural_gas_subgroup_total_electricity = model.prob.get_val(
-        "finance_subgroup_natural_gas.electricity_sum.total_electricity_produced", units="kW*h/year"
-    )[0]
+    renewable_subgroup_total_electricity = (
+        model.prob.get_val("finance_subgroup_renewables.rated_electricity_production", units="kW")[
+            0
+        ]
+        * model.prob.get_val("finance_subgroup_renewables.capacity_factor", units="unitless").mean()
+        * 8760
+    )
+    electricity_subgroup_total_electricity = (
+        model.prob.get_val("finance_subgroup_electricity.rated_electricity_production", units="kW")[
+            0
+        ]
+        * model.prob.get_val(
+            "finance_subgroup_electricity.capacity_factor", units="unitless"
+        ).mean()
+        * 8760
+    )
+    natural_gas_subgroup_total_electricity = (
+        model.prob.get_val("finance_subgroup_natural_gas.rated_electricity_production", units="kW")[
+            0
+        ]
+        * model.prob.get_val(
+            "finance_subgroup_natural_gas.capacity_factor", units="unitless"
+        ).mean()
+        * 8760
+    )
 
     # NOTE: battery output power is not included in any of the financials
 
@@ -985,12 +1070,16 @@ def test_natural_gas_example(subtests):
         assert pytest.approx(ng_opex, rel=1e-6) == expected_opex
 
 
-def test_wind_solar_electrolyzer_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "15_wind_solar_electrolyzer")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("15_wind_solar_electrolyzer", "11_hybrid_energy_plant/")],
+)
+def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "15_wind_solar_electrolyzer.yaml")
+    model = H2IntegrateModel(example_folder / "15_wind_solar_electrolyzer.yaml")
     model.run()
 
     solar_fpath = model.model.get_val("solar_site.solar_resource.solar_resource_data")["filepath"]
@@ -1005,9 +1094,7 @@ def test_wind_solar_electrolyzer_example(subtests):
 
     wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW"))
     solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW"))
-    total_aep = model.prob.get_val(
-        "finance_subgroup_electricity.electricity_sum.total_electricity_produced", units="kW*h/year"
-    )[0]
+    total_aep = model.prob.get_val("combiner.electricity_out", units="kW").sum()
 
     with subtests.test("Check total energy production"):
         assert pytest.approx(wind_aep + solar_aep, rel=1e-6) == total_aep
@@ -1027,7 +1114,7 @@ def test_wind_solar_electrolyzer_example(subtests):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.3277923
+            == 5.3063358423
         )
 
     wind_generation = model.prob.get_val("wind.electricity_out", units="kW")
@@ -1043,12 +1130,13 @@ def test_wind_solar_electrolyzer_example(subtests):
         assert pytest.approx(total_generation.sum(), rel=1e-5) == total_energy_to_electrolyzer.sum()
 
 
-def test_electrolyzer_om_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "10_electrolyzer_om")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("10_electrolyzer_om", None)])
+def test_electrolyzer_om_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "electrolyzer_om.yaml")
+    model = H2IntegrateModel(example_folder / "electrolyzer_om.yaml")
 
     model.run()
 
@@ -1062,17 +1150,18 @@ def test_electrolyzer_om_example(subtests):
     with subtests.test("Check LCOE"):
         assert pytest.approx(lcoe, rel=1e-4) == 39.98869
     with subtests.test("Check LCOH with lcoh_financials"):
-        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 13.0858012
+        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 16.9204156301
     with subtests.test("Check LCOH with lcoe_financials"):
-        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 7.9935907
+        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 10.3360027653
 
 
-def test_wombat_electrolyzer_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "08_wind_electrolyzer")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("08_wind_electrolyzer", None)])
+def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "wind_plant_electrolyzer.yaml")
+    model = H2IntegrateModel(example_folder / "wind_plant_electrolyzer.yaml")
 
     model.run()
 
@@ -1091,21 +1180,24 @@ def test_wombat_electrolyzer_example(subtests):
     )[0]
 
     with subtests.test("Check LCOH from custom  model"):
-        assert pytest.approx(lcoh_with_custom_model, rel=1e-5) == 4.19232346
+        assert pytest.approx(lcoh_with_custom_model, rel=1e-5) == 4.1783979573
     with subtests.test("Check LCOH from ProFAST model"):
-        assert pytest.approx(lcoh_with_profast_model, rel=1e-5) == 5.32632237
+        assert pytest.approx(lcoh_with_profast_model, rel=1e-5) == 5.3086307305
     with subtests.test("Check LCOE from custom model"):
         assert pytest.approx(lcoe_with_custom_model, rel=1e-5) == 51.17615298
     with subtests.test("Check LCOE from ProFAST model"):
         assert pytest.approx(lcoe_with_profast_model, rel=1e-5) == 59.0962084
 
 
-def test_pyomo_heuristic_dispatch_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "18_pyomo_heuristic_dispatch")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("18_pyomo_heuristic_dispatch", None)]
+)
+def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "pyomo_heuristic_dispatch.yaml")
+    model = H2IntegrateModel(example_folder / "pyomo_heuristic_dispatch.yaml")
 
     demand_profile = np.ones(8760) * 50.0
 
@@ -1157,10 +1249,17 @@ def test_pyomo_heuristic_dispatch_example(subtests):
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
-        total_electricity = model.prob.get_val(
-            name="finance_subgroup_all_electricity.total_electricity_produced",
-            units="MW*h/year",
-        )[0]
+        total_electricity = (
+            model.prob.get_val(
+                name="finance_subgroup_all_electricity.rated_electricity_production",
+                units="MW",
+            )[0]
+            * model.prob.get_val(
+                name="finance_subgroup_all_electricity.capacity_factor",
+                units="unitless",
+            ).mean()
+            * 8760
+        )
         assert total_electricity == pytest.approx(3125443.1089529935, rel=1e-6)
 
     # Subtest for electricity unused_commodity
@@ -1184,15 +1283,16 @@ def test_pyomo_heuristic_dispatch_example(subtests):
             r"the top-level name of the tech group \(battery\)"
         )
         with pytest.raises(ValueError, match=expected_error):
-            H2IntegrateModel(Path.cwd() / "pyomo_heuristic_dispatch_error_for_testing.yaml")
+            H2IntegrateModel(example_folder / "pyomo_heuristic_dispatch_error_for_testing.yaml")
 
 
-def test_simple_dispatch_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "19_simple_dispatch")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
+def test_simple_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "wind_battery_dispatch.yaml")
+    model = H2IntegrateModel(example_folder / "wind_battery_dispatch.yaml")
 
     # Run the model
     model.run()
@@ -1200,9 +1300,15 @@ def test_simple_dispatch_example(subtests):
     model.post_process()
 
     wind_aep = sum(model.prob.get_val("wind.electricity_out", units="kW"))
-    aep_for_finance = model.prob.get_val(
-        "finance_subgroup_electricity.total_electricity_produced", units="kW*h/year"
-    )[0]
+    aep_for_finance = (
+        model.prob.get_val("finance_subgroup_electricity.rated_electricity_production", units="kW")[
+            0
+        ]
+        * model.prob.get_val(
+            "finance_subgroup_electricity.capacity_factor", units="unitless"
+        ).mean()
+        * 8760
+    )
     battery_init_energy = 30000.0 * 0.25  # max capacity in kW and initial charge rate percentage
 
     with subtests.test("Check electricity is not double counted"):
@@ -1237,14 +1343,14 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(lcoe, rel=1e-6) == 0.07801723344476236
 
     # Subtest for NPV
-    with subtests.test("Check NPV value"):
+    with subtests.test("Check NPV value (numpy financial)"):
         npv = model.prob.get_val(
             "finance_subgroup_electricity.NPV_electricity_all_electricity_npv", units="USD"
         )[0]
         assert pytest.approx(npv, rel=1e-6) == 3791194.71
 
     # Subtest for ProFAST NPV
-    with subtests.test("Check NPV value"):
+    with subtests.test("Check NPV value (profast)"):
         npv = model.prob.get_val(
             "finance_subgroup_electricity.NPV_electricity_all_electricity_profast_npv",
             units="USD",
@@ -1253,10 +1359,13 @@ def test_simple_dispatch_example(subtests):
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
-        total_electricity = model.prob.get_val(
-            "finance_subgroup_electricity.electricity_sum.total_electricity_produced",
-            units="kW*h/year",
-        )[0]
+        total_electricity = (
+            model.prob.get_val(
+                "finance_subgroup_electricity.rated_electricity_production", units="kW"
+            )[0]
+            * model.prob.get_val("finance_subgroup_electricity.capacity_factor").mean()
+            * 8760
+        )
         assert pytest.approx(total_electricity, rel=1e-6) == 62797265.9296355
 
     # Subtest for electricity unused_commodity
@@ -1276,9 +1385,11 @@ def test_simple_dispatch_example(subtests):
     # Subtest for total electricity produced from wind, should be equal to total
     # electricity produced from finance_subgroup_electricity
     with subtests.test("Check total electricity produced from wind"):
-        wind_electricity_finance = model.prob.get_val(
-            "finance_subgroup_wind.total_electricity_produced", units="kW*h/year"
-        )[0]
+        wind_electricity_finance = (
+            model.prob.get_val("finance_subgroup_wind.rated_electricity_production", units="kW")[0]
+            * model.prob.get_val("finance_subgroup_wind.capacity_factor", units="unitless").mean()
+            * 8760
+        )
         assert pytest.approx(wind_electricity_finance, rel=1e-6) == total_electricity
 
     with subtests.test("Check total electricity produced from wind compared to wind aep"):
@@ -1290,11 +1401,19 @@ def test_simple_dispatch_example(subtests):
     # Subtest for total electricity produced from battery, should be equal
     # to sum of "battery.electricity_out"
     with subtests.test("Check total electricity produced from battery"):
-        battery_electricity_finance = model.prob.get_val(
-            "finance_subgroup_battery.total_electricity_produced", units="MW*h/year"
-        )[0]
-        battery_electricity_performance = np.sum(
-            model.prob.get_val("battery.electricity_out", units="MW")
+        battery_electricity_finance = (
+            model.prob.get_val(
+                "finance_subgroup_battery.rated_electricity_production", units="MW*h/year"
+            )[0]
+            * model.prob.get_val(
+                "finance_subgroup_battery.capacity_factor", units="unitless"
+            ).mean()
+            * 8760
+        )
+        battery_electricity_performance = (
+            model.prob.get_val("battery.rated_electricity_production", units="MW*h/year")[0]
+            * model.prob.get_val("battery.capacity_factor", units="unitless").mean()
+            * 8760
         )
         assert (
             pytest.approx(battery_electricity_finance, rel=1e-6) == battery_electricity_performance
@@ -1324,13 +1443,14 @@ def test_simple_dispatch_example(subtests):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
-def test_windard_pv_battery_dispatch_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "29_wind_ard")
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("29_wind_ard", None)])
+def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create the model
-    model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")
+    model = H2IntegrateModel(example_folder / "h2i_inputs/wind_pv_battery.yaml")
 
     # Run the model
     model.run()
@@ -1378,10 +1498,17 @@ def test_windard_pv_battery_dispatch_example(subtests):
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity dispatched"):
-        total_electricity_year_one = model.prob.get_val(
-            "finance_subgroup_dispatched_electricity.total_electricity_produced",
-            units="MW*h/year",
-        )[0]
+        total_electricity_year_one = (
+            model.prob.get_val(
+                "finance_subgroup_dispatched_electricity.rated_electricity_production",
+                units="MW",
+            )[0]
+            * model.prob.get_val(
+                "finance_subgroup_dispatched_electricity.capacity_factor",
+                units="unitless",
+            )[0]
+            * 8760
+        )
         assert total_electricity_year_one == pytest.approx(dispatched_electricity.sum())
 
     # Subtest for electricity curtailed
@@ -1401,15 +1528,16 @@ def test_windard_pv_battery_dispatch_example(subtests):
         assert electricity_missed_load == pytest.approx(1403.5372787817894)
 
 
-def test_csvgen_design_of_experiments(subtests):
-    os.chdir(EXAMPLE_DIR / "20_solar_electrolyzer_doe")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
+)
+def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     with pytest.raises(UserWarning) as excinfo:
-        model = H2IntegrateModel(Path.cwd() / "20_solar_electrolyzer_doe.yaml")
+        model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
         assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
-
-    import pandas as pd
-    from hopp.utilities.utilities import load_yaml
 
     from h2integrate.core.utilities import check_file_format_for_csv_generator
     from h2integrate.core.dict_utils import update_defaults
@@ -1430,8 +1558,8 @@ def test_csvgen_design_of_experiments(subtests):
     driver_config["driver"].update(updated_driver)
 
     # save the updated driver to a new file
-    new_driver_fpath = Path.cwd() / "driver_config_test.yaml"
-    new_toplevel_fpath = Path.cwd() / "20_solar_electrolyzer_doe_test.yaml"
+    new_driver_fpath = example_folder / "driver_config_test.yaml"
+    new_toplevel_fpath = example_folder / "20_solar_electrolyzer_doe_test.yaml"
     write_yaml(driver_config, new_driver_fpath)
 
     # update the driver config filename in the top-level config
@@ -1462,7 +1590,7 @@ def test_csvgen_design_of_experiments(subtests):
     # delete summary file
     summarized_filepath.unlink()
 
-    sql_fpath = Path.cwd() / "ex_20_out" / "cases.sql"
+    sql_fpath = example_folder / "ex_20_out" / "cases.sql"
     cr = om.CaseReader(str(sql_fpath))
     cases = list(cr.get_cases())
 
@@ -1502,7 +1630,7 @@ def test_csvgen_design_of_experiments(subtests):
             min_lcoh_case_num = i
 
     with subtests.test("Min LCOH value"):
-        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.67280915
+        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.663014422338
 
     with subtests.test("Min LCOH case number"):
         assert min_lcoh_case_num == 6
@@ -1547,18 +1675,19 @@ def test_csvgen_design_of_experiments(subtests):
     new_csv_filename.unlink()
 
 
-def test_sweeping_solar_sites_doe(subtests):
-    os.chdir(EXAMPLE_DIR / "22_site_doe")
-    import pandas as pd
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("22_site_doe", None)])
+def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create the model
-    model = H2IntegrateModel("22_solar_site_doe.yaml")
+    model = H2IntegrateModel(example_folder / "22_solar_site_doe.yaml")
 
     # Run the model
     model.run()
 
     # Specify the filepath to the sql file, the folder and filename are in the driver_config
-    sql_fpath = EXAMPLE_DIR / "22_site_doe" / "ex_22_out" / "cases.sql"
+    sql_fpath = example_folder / "ex_22_out" / "cases.sql"
 
     # load the cases
     cr = om.CaseReader(sql_fpath)
@@ -1607,14 +1736,14 @@ def test_sweeping_solar_sites_doe(subtests):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
 
 
-def test_floris_example(subtests):
-    from h2integrate.core.utilities import load_yaml
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("26_floris", None)])
+def test_floris_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
-    os.chdir(EXAMPLE_DIR / "26_floris")
-
-    driver_config = load_yaml(EXAMPLE_DIR / "26_floris" / "driver_config.yaml")
-    tech_config = load_yaml(EXAMPLE_DIR / "26_floris" / "tech_config.yaml")
-    plant_config = load_yaml(EXAMPLE_DIR / "26_floris" / "plant_config.yaml")
+    driver_config = load_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_yaml(example_folder / "tech_config.yaml")
+    plant_config = load_yaml(example_folder / "plant_config.yaml")
 
     h2i_config = {
         "name": "H2Integrate_config",
@@ -1753,19 +1882,27 @@ def test_floris_example(subtests):
         )
 
 
-def test_24_solar_battery_grid_example(subtests):
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+)
+def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     # NOTE: would be good to compare LCOE against the same example without grid selling
     # and see that LCOE reduces with grid selling
-    os.chdir(EXAMPLE_DIR / "24_solar_battery_grid")
+    example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(Path.cwd() / "solar_battery_grid.yaml")
+    model = H2IntegrateModel(example_folder / "solar_battery_grid.yaml")
 
     model.run()
 
     model.post_process()
 
-    energy_for_financials = model.prob.get_val(
-        "finance_subgroup_renewables.electricity_sum.total_electricity_produced", units="kW*h/year"
+    energy_for_financials = (
+        model.prob.get_val("finance_subgroup_renewables.rated_electricity_production", units="kW")[
+            0
+        ]
+        * model.prob.get_val("finance_subgroup_renewables.capacity_factor", units="unitless").mean()
+        * 8760
     )
 
     electricity_bought = sum(model.prob.get_val("grid_buy.electricity_out", units="kW"))
@@ -1792,7 +1929,9 @@ def test_24_solar_battery_grid_example(subtests):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
-def test_28_iron_map_example(subtests):
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("28_iron_map", None)])
+def test_28_iron_map_example(subtests, temp_copy_of_example):
     import geopandas as gpd
     import matplotlib
 
@@ -1801,10 +1940,10 @@ def test_28_iron_map_example(subtests):
         plot_straight_line_shipping_routes,
     )
 
-    os.chdir(EXAMPLE_DIR / "28_iron_map")
+    example_folder = temp_copy_of_example
 
     # Define filepaths
-    ex_28_dir = Path.cwd()
+    ex_28_dir = example_folder
     ex_28_out_dir = ex_28_dir / "ex_28_out"
     ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
@@ -1948,10 +2087,12 @@ def test_28_iron_map_example(subtests):
     ex_png_fpath.unlink(missing_ok=True)
 
 
-def test_natural_geoh2(subtests):
-    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
+def test_natural_geoh2(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
-    h2i_nat = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_natural.yaml")
+    h2i_nat = H2IntegrateModel(example_folder / "04_geo_h2_natural.yaml")
     h2i_nat.run()
 
     with subtests.test("H2 Production"):
@@ -2024,10 +2165,12 @@ def test_natural_geoh2(subtests):
         assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
 
 
-def test_stimulated_geoh2(subtests):
-    os.chdir(EXAMPLE_DIR / "04_geo_h2")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
+def test_stimulated_geoh2(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
-    h2i_stim = H2IntegrateModel(EXAMPLE_DIR / "04_geo_h2" / "04_geo_h2_stimulated.yaml")
+    h2i_stim = H2IntegrateModel(example_folder / "04_geo_h2_stimulated.yaml")
     h2i_stim.run()
 
     h2_prod = h2i_stim.model.get_val("geoh2_well_subsurface.hydrogen_out", units="kg/h")
@@ -2068,10 +2211,12 @@ def test_stimulated_geoh2(subtests):
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
 
-def test_21_iron_dri_eaf_example(subtests):
-    os.chdir(EXAMPLE_DIR / "21_iron_mn_to_il")
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("21_iron_mn_to_il", None)])
+def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
-    h2i = H2IntegrateModel("21_iron.yaml")
+    h2i = H2IntegrateModel(example_folder / "21_iron.yaml")
 
     h2i.run()
 
@@ -2088,10 +2233,14 @@ def test_21_iron_dri_eaf_example(subtests):
         assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
 
 
-def test_31_iron_electrowinning_example(subtests):
-    os.chdir(EXAMPLE_DIR / "31_iron_electrowinning")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("31_iron_electrowinning", None)]
+)
+def test_31_iron_electrowinning_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel("31_iron_electrowinning.yaml")
+    model = H2IntegrateModel(example_folder / "31_iron_electrowinning.yaml")
 
     with subtests.test("Value check on AHE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2131,18 +2280,19 @@ def test_31_iron_electrowinning_example(subtests):
         assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
 
 
-def test_sweeping_different_resource_sites_doe(subtests):
-    os.chdir(EXAMPLE_DIR / "27_site_doe_diff")
-    import pandas as pd
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("27_site_doe_diff", None)])
+def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create the model
-    model = H2IntegrateModel("27_wind_solar_site_doe.yaml")
+    model = H2IntegrateModel(example_folder / "27_wind_solar_site_doe.yaml")
 
     # # Run the model
     model.run()
 
     # Specify the filepath to the sql file, the folder and filename are in the driver_config
-    sql_fpath = EXAMPLE_DIR / "27_site_doe_diff" / "ex_27_out" / "cases.sql"
+    sql_fpath = example_folder / "ex_27_out" / "cases.sql"
 
     # load the cases
     cr = om.CaseReader(sql_fpath)
@@ -2244,12 +2394,15 @@ def test_sweeping_different_resource_sites_doe(subtests):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
 
 
-def test_pyomo_optimized_dispatch_example(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "30_pyomo_optimized_dispatch")
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
+)
+def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(Path.cwd() / "pyomo_optimized_dispatch.yaml")
+    model = H2IntegrateModel(example_folder / "pyomo_optimized_dispatch.yaml")
 
     demand_profile = np.ones(8760) * 100.0
 
@@ -2309,10 +2462,17 @@ def test_pyomo_optimized_dispatch_example(subtests):
         assert total_opex == pytest.approx(48_830_466.21, rel=1e-3)
 
     with subtests.test("Check total electricity produced"):
-        total_electricity = model.prob.get_val(
-            "finance_subgroup_all_electricity.electricity_sum.total_electricity_produced",
-            units="kW*h/year",
-        )[0]
+        total_electricity = (
+            model.prob.get_val(
+                "finance_subgroup_all_electricity.rated_electricity_production",
+                units="kW",
+            )[0]
+            * model.prob.get_val(
+                "finance_subgroup_all_electricity.capacity_factor",
+                units="unitless",
+            ).mean()
+            * 8760
+        )
         assert total_electricity == pytest.approx(781_472_811.8, rel=1e-3)
 
     with subtests.test("Check electricity price"):

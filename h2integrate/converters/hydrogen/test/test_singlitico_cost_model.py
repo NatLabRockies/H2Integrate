@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import approx
 
@@ -57,6 +58,7 @@ class TestSingliticoCostModel:
 
         return prob
 
+    @pytest.mark.regression
     def test_calc_capex_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
@@ -64,6 +66,7 @@ class TestSingliticoCostModel:
         capex_usd = prob.get_val("CapEx", units="USD")
         assert capex_usd == approx(BASELINE_USD[0][0][0], rel=TOL)
 
+    @pytest.mark.regression
     def test_calc_capex_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()
@@ -71,6 +74,7 @@ class TestSingliticoCostModel:
         capex_usd = prob.get_val("CapEx", units="USD")
         assert capex_usd == approx(BASELINE_USD[1][0][0], rel=TOL)
 
+    @pytest.mark.regression
     def test_calc_opex_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
@@ -78,6 +82,7 @@ class TestSingliticoCostModel:
         opex_usd = prob.get_val("OpEx", units="USD/year")
         assert opex_usd == approx(BASELINE_USD[0][0][1], rel=TOL)
 
+    @pytest.mark.regression
     def test_calc_opex_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()
@@ -85,6 +90,7 @@ class TestSingliticoCostModel:
         opex_usd = prob.get_val("OpEx", units="USD/year")
         assert opex_usd == approx(BASELINE_USD[1][0][1], rel=TOL)
 
+    @pytest.mark.regression
     def test_run_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
@@ -95,6 +101,7 @@ class TestSingliticoCostModel:
         assert capex_usd == approx(BASELINE_USD[0][0][0], rel=TOL)
         assert opex_usd == approx(BASELINE_USD[0][0][1], rel=TOL)
 
+    @pytest.mark.regression
     def test_run_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()

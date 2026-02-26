@@ -80,10 +80,6 @@ parts:
       - file: finance_models/ProFastNPV
       - file: finance_models/numpy_financial_npv
 
-- caption: Examples
-  chapters:
-  - file: examples/01-green-hydrogen
-
 - caption: Developer Guide
   chapters:
   - file: CONTRIBUTING
@@ -93,6 +89,7 @@ parts:
   - file: developer_guide/features_not_currently_implemented
   - file: developer_guide/class_structure
   - file: developer_guide/describing_whats_in_classes
+  - file: developer_guide/testing
 
 - caption: Miscellaneous Resources
   chapters:

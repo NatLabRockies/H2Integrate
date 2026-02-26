@@ -2,8 +2,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.iron.iron_mine import (
     IronMineCostComponent,
     IronMinePerformanceComponent,
@@ -64,33 +62,8 @@ def iron_ore_config_rosner_om():
     return tech_config
 
 
-@fixture
-def plant_config():
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-        "finance_parameters": {
-            "cost_adjustment_parameters": {
-                "cost_year_adjustment_inflation": 0.025,
-                "target_dollar_year": 2022,
-            }
-        },
-    }
-    return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
-
-
 # baseline case
+@pytest.mark.regression
 def test_baseline_iron_ore_costs_martin(
     plant_config, driver_config, iron_ore_config_martin_om, subtests
 ):
@@ -136,6 +109,7 @@ def test_baseline_iron_ore_costs_martin(
         )
 
 
+@pytest.mark.regression
 def test_baseline_iron_ore_costs_rosner(
     plant_config, driver_config, iron_ore_config_rosner_om, subtests
 ):

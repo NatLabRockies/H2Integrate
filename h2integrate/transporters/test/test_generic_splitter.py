@@ -27,6 +27,7 @@ def splitter_tech_config_hydrogen():
 rng = np.random.default_rng(seed=0)
 
 
+@pytest.mark.regression
 def test_splitter_ratio_mode_edge_cases_electricity(splitter_tech_config_electricity):
     """Test the splitter in fraction mode with edge case fractions."""
     performance_config = {
@@ -76,6 +77,7 @@ def test_splitter_ratio_mode_edge_cases_electricity(splitter_tech_config_electri
     assert prob.get_val("electricity_out2", units="kW") == approx(electricity_input, rel=1e-5)
 
 
+@pytest.mark.regression
 def test_splitter_prescribed_electricity_mode(splitter_tech_config_electricity):
     """Test the splitter in prescribed_electricity mode."""
     performance_config = {
@@ -116,6 +118,7 @@ def test_splitter_prescribed_electricity_mode(splitter_tech_config_electricity):
     assert total_output == approx(electricity_input, rel=1e-5)
 
 
+@pytest.mark.regression
 def test_splitter_prescribed_electricity_mode_limited_input(splitter_tech_config_electricity):
     """
     Test the splitter in prescribed_electricity mode
@@ -155,6 +158,7 @@ def test_splitter_prescribed_electricity_mode_limited_input(splitter_tech_config
     assert prob.get_val("electricity_out2", units="kW") == approx(expected_output2, abs=1e-10)
 
 
+@pytest.mark.unit
 def test_splitter_invalid_mode(splitter_tech_config_electricity):
     """Test that an invalid split mode raises an error."""
     performance_config = {
@@ -175,6 +179,7 @@ def test_splitter_invalid_mode(splitter_tech_config_electricity):
         prob.setup()
 
 
+@pytest.mark.regression
 def test_splitter_scalar_inputs(splitter_tech_config_electricity):
     """Test the splitter with scalar inputs instead of arrays."""
     performance_config_ratio = {
@@ -225,6 +230,7 @@ def test_splitter_scalar_inputs(splitter_tech_config_electricity):
     assert prob2.get_val("electricity_out2", units="kW") == approx(70.0, rel=1e-5)
 
 
+@pytest.mark.regression
 def test_splitter_prescribed_electricity_varied_array(splitter_tech_config_electricity):
     """Test the splitter in prescribed_electricity mode with a varied array (50-100 MW)."""
     performance_config = {
@@ -287,6 +293,7 @@ def test_splitter_prescribed_electricity_varied_array(splitter_tech_config_elect
     )
 
 
+@pytest.mark.unit
 def test_splitter_missing_config():
     """Test that missing required config fields cause an error."""
 

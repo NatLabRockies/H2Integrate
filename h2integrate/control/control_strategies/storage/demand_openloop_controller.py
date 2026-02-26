@@ -129,7 +129,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         {commodity}_soc (float): State of charge (SOC) timeseries for the storage system.
             - Units: "unitless" (percentage of maximum capacity given as a ratio between 0 and 1).
         {commodity}_unused_commodity (float): Curtailment timeseries for unused
-        input commodity.
+            input commodity.
             - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
             - Note: curtailment in this case does not reduce what the converter produces, but
                 rather the system just does not use it (throws it away) because this controller is
@@ -159,7 +159,7 @@ class DemandOpenLoopStorageController(DemandOpenLoopControlBase):
         Outputs defined:
             * ``<commodity>_soc``: Timeseries of storage state of charge.
             * ``storage_duration``: Estimated duration (hours) the storage can
-            discharge at its maximum rate.
+                discharge at its maximum rate.
 
         Returns:
             None

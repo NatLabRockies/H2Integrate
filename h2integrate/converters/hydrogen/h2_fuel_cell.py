@@ -88,7 +88,7 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         Args:
             inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
-                HHV efficiency,and system_capacity.
+                HHV efficiency, and system_capacity.
             outputs: OpenMDAO outputs object for electricity_out,
                 hydrogen_consumed.
         """
@@ -127,15 +127,8 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 class H2FuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the hydrogen fuel cell cost model.
 
-    Attributes:
-        system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
-
-        capex_per_kw (float): Capital expenditure per kilowatt of fuel cell capacity.
-
-        fixed_opex_per_kw_per_year (float|int): Fixed operating expenses per unit capacity
-            in $/kW/year. This includes fixed O&M costs that don't vary with generation.
-
-        cost_year (int): Dollar year corresponding to input costs.
+    Fields include `system_capacity_kw`, `capex_per_kw`, and `fixed_opex_per_kw_per_year`.
+    The `cost_year` field is inherited from `CostModelBaseConfig`.
     """
 
     system_capacity_kw: float = field(validator=gte_zero)

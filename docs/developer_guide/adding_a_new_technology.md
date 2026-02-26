@@ -267,5 +267,8 @@ Your feedback and suggestions help you and others use H2Integrate successfully.
 
 ## Pull Request Checklist for New Technologies
 
-When you're ready to submit a pull request for your new technology, please ensure you complete all items in the "New Technology Checklist" section of the pull request template.
-Remember that adding a new technology typically requires review from both a core maintainer and ideally a second team member, as these additions significantly expand H2Integrate's capabilities and set patterns for future development.
+When you're ready to submit a pull request for your new model please ensure you complete all
+items in the "New Model Checklist" section of the pull request template. Remember that adding
+a new technology typically requires review from both a core maintainer and ideally a second team
+member, as these additions significantly expand H2Integrate's capabilities and set patterns for
+future development.

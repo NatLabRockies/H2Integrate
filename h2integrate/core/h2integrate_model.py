@@ -104,48 +104,47 @@ class H2IntegrateModel:
     def load_config(self, config_input):
         """Load and validate configuration files for the H2I model.
 
-        This method loads the main configuration and the three component configuration files
-        (driver, technology, and plant configurations). Each configuration can be provided
-        either as a dictionary object or as a filepath. When filepaths are provided,
-        the method resolves them using multiple search strategies.
+        This method loads the main configuration and the component configuration files
+        (driver, technology, and plant). Each configuration can be provided either as
+        a dictionary or as a file path. When file paths are provided, the method
+        resolves them using multiple search strategies.
 
         Args:
             config_input (dict | str | Path): Main configuration containing references to
-                driver, technology, and plant configurations. Can be:
-                - A dictionary containing the configuration data directly
-                - A string or Path object pointing to a YAML file containing the configuration
+                driver, technology, and plant configurations. This can be:
+
+                - A dictionary containing the configuration data directly.
+                - A string or Path pointing to a YAML file containing the configuration.
 
         Behavior:
-            - If `config_input` is a dict: Uses it directly as the main configuration
-            - If `config_input` is a path: Uses `get_path()` to resolve and load the YAML file
-              from multiple search locations (absolute path, relative to CWD, relative to
-              H2Integrate package)
 
-            For each component config (driver_config, technology_config, plant_config):
-            - If the config value is a dict: Validates it directly using the appropriate
-              validation function (`load_driver_yaml`, `load_tech_yaml`, `load_plant_yaml`)
-            - If the config value is a path string:
-                - When main config was loaded from file: Uses `find_file()` to search
-                  relative to the main config file's directory first, then falls back
-                  to other search locations (CWD, H2Integrate package, glob patterns)
-                - When main config was provided as dict: Uses `get_path()` with standard
-                  search strategy (absolute, relative to CWD, relative to H2Integrate package)
+            - If ``config_input`` is a dict, uses it directly as the main configuration.
+            - If ``config_input`` is a path, uses ``get_path()`` to resolve and load the YAML
+              file from multiple search locations (absolute path, relative to CWD, relative to
+              the H2Integrate package).
+            - For component configs provided as dicts, validates them directly using
+              ``load_driver_yaml``, ``load_tech_yaml``, and ``load_plant_yaml``.
+            - For component configs provided as paths and a file-based main config, uses
+              ``find_file()`` to search relative to the main config directory first, then
+              falls back to other search locations (CWD, H2Integrate package, glob patterns).
+            - For component configs provided as paths and a dict-based main config, uses
+              ``get_path()`` with standard search locations (absolute, CWD, H2Integrate package).
 
         Sets:
-            self.name (str): Name of the system from main config
-            self.system_summary (str): Summary description from main config
-            self.driver_config (dict): Validated driver configuration
-            self.technology_config (dict): Validated technology configuration
-            self.plant_config (dict): Validated plant configuration
-            self.driver_config_path (Path | None): Path to driver config file (None if dict)
-            self.tech_config_path (Path | None): Path to technology config file (None if dict)
-            self.plant_config_path (Path | None): Path to plant config file (None if dict)
-            self.tech_parent_path (Path | None): Parent directory of technology config file
-            self.plant_parent_path (Path | None): Parent directory of plant config file
+            self.name (str): Name of the system from main config.
+            self.system_summary (str): Summary description from main config.
+            self.driver_config (dict): Validated driver configuration.
+            self.technology_config (dict): Validated technology configuration.
+            self.plant_config (dict): Validated plant configuration.
+            self.driver_config_path (Path | None): Path to driver config file (None if dict).
+            self.tech_config_path (Path | None): Path to technology config file (None if dict).
+            self.plant_config_path (Path | None): Path to plant config file (None if dict).
+            self.tech_parent_path (Path | None): Parent directory of technology config file.
+            self.plant_parent_path (Path | None): Parent directory of plant config file.
 
         Note:
-            The parent path attributes (tech_parent_path, plant_parent_path) are used later
-            for resolving relative paths to custom models and other referenced files within
+            The parent path attributes (``tech_parent_path``, ``plant_parent_path``) are used
+            later to resolve relative paths to custom models and other referenced files within
             the technology and plant configurations.
 
         Example:
@@ -195,14 +194,17 @@ class H2IntegrateModel:
 
         Args:
             model_config (dict): dictionary containing models, such as
-                `technology_config["technologies"]`
-            config_parent_path (Path): parent path of the input file that `model_config` comes from.
-                Should either be `plant_config_path.parent` or `tech_config_path.parent`
-            model_types (list[str]): list of keynames to search for in `model_config.values()`.
-                Should be ["performance_model", "cost_model", "financial_model"] if `model_config`
-                is technology_config["technologies"].
-            prefix (str, optional): Prefix of "model_class_name", "model_location" and "model".
-                Defaults to "". Should be "finance_" if looking for custom general finance models.
+                ``technology_config["technologies"]``.
+            config_parent_path (Path): parent path of the input file that ``model_config`` comes
+                from. Should either be ``plant_config_path.parent`` or
+                ``tech_config_path.parent``.
+            model_types (list[str]): list of key names to search for in
+                ``model_config.values()``. Should be
+                ``["performance_model", "cost_model", "financial_model"]`` if ``model_config``
+                is ``technology_config["technologies"]``.
+            prefix (str, optional): Prefix of ``model_class_name``, ``model_location`` and
+                ``model``. Defaults to "". Should be ``"finance_"`` if looking for custom
+                general finance models.
         """
 
         included_custom_models = {}
@@ -754,84 +756,23 @@ class H2IntegrateModel:
             )
             finance_subgroup = om.Group()
 
-            # NOTE: Below logic on handling combiner and splitter is temporary. The combiner does
-            # not output the combiner annual_commodity_produced, it only outputs the combined
-            # capacity factor, rated capacity, and commodity profile. In the future, the
-            # capacity_factor and rated_commodity_production will be passed to the finance models
-            # instead of the annual_commodity_production. At that point, the temporary logic
-            # for handling combiners will be removed
-            if commodity_stream is not None:
-                # If commodity stream is specified and is a combiner, then create use
-                # the "summer" model  to sum the commodity production profile from the
-                # commodity stream
-                if "combiner" in commodity_stream or "splitter" in commodity_stream:
-                    # get the generic summer model
-                    commodity_summer_model = self.supported_models.get(
-                        "GenericSummerPerformanceModel"
-                    )
-                    commodity_summer_config = self.technology_config["technologies"][
-                        commodity_stream
-                    ]
-                    # create the commodity production summer model
-                    commodity_summer = commodity_summer_model(
-                        driver_config=self.driver_config,
-                        plant_config=self.plant_config,
-                        tech_config=commodity_summer_config,
-                    )
-                    # add the production summer as a subsystem
-                    finance_subgroup.add_subsystem(f"{commodity}_sum", commodity_summer)
-
             # Default logic for handling cases without specified commodity streams
             if commodity_stream is None:
                 if commodity == "electricity":
-                    # Add combiner to the finance group to combine the electricity produced
                     elec_tech_names = [
                         tech for tech in tech_configs if is_electricity_producer(tech)
                     ]
-                    commodity_combiner_config = {
-                        "model_inputs": {
-                            "performance_parameters": {
-                                "commodity": commodity,
-                                "commodity_rate_units": "kW",
-                                "in_streams": len(elec_tech_names),
-                            }
-                        }
-                    }
-                    commodity_combiner_model = self.supported_models.get(
-                        "GenericCombinerPerformanceModel"
-                    )
-
-                    finance_subgroup.add_subsystem(
-                        "electricity_combiner_comp",
-                        commodity_combiner_model(
-                            plant_config=self.plant_config,
-                            tech_config=commodity_combiner_config,
-                            driver_config=self.driver_config,
-                        ),
-                    )
-
-                    # Add summer to the finance group to sum the electricity profile from
-                    # the combiner
-                    commodity_summer_model = self.supported_models.get(
-                        "GenericSummerPerformanceModel"
-                    )
-                    commodity_summer_config = {
-                        "model_inputs": {
-                            "performance_parameters": {
-                                "commodity": commodity,
-                                "commodity_rate_units": "kW",
-                            }
-                        }
-                    }
-
-                    finance_subgroup.add_subsystem(
-                        "electricity_sum",
-                        commodity_summer_model(
-                            plant_config=self.plant_config,
-                            tech_config=commodity_summer_config,
-                            driver_config=self.driver_config,
-                        ),
-                    )
+                    if len(elec_tech_names) != 1:
+                        msg = (
+                            f"Multiple electricity producing technologies found in finance subgroup"
+                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
+                            f"finance subgroup {subgroup_name}."
+                        )
+                        raise ValueError(msg)
+                    else:
+                        finance_subgroups[subgroup_name].update(
+                            {"commodity_stream": elec_tech_names[0]}
+                        )
 
                 else:
                     # Default logic for tech-names and the primary commodity streams
@@ -855,6 +796,19 @@ class H2IntegrateModel:
                             finance_subgroups[subgroup_name].update(
                                 {"commodity_stream": commodity_stream_tech_name[0]}
                             )
+
+                # Check if a default commodity_stream was found, throw error if not
+                missing_commodity_stream = (
+                    finance_subgroups[subgroup_name].get("commodity_stream", None) is None
+                )
+                if missing_commodity_stream and len(tech_names) > 1:
+                    msg = (
+                        "Could not find a default technology to use as the commodity stream "
+                        f"for commodity {finance_subgroups[subgroup_name]['commodity']}. "
+                        "Please specify the `commodity_stream` for finance subgroup "
+                        f"{subgroup_name}."
+                    )
+                    raise UserWarning(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
@@ -880,7 +834,10 @@ class H2IntegrateModel:
                     # this is created in create_technologies()
                     if tech_finance_group_name is not None:
                         # tech specific finance models are created in create_technologies()
-                        # and do not need to be included in the general finance models
+                        # and do not need to be included in the general finance models.
+                        # set commodity_stream to None so that inputs needed for system-level
+                        # finance models are not connected to tech-specific finance models.
+                        finance_subgroups[subgroup_name].update({"commodity_stream": None})
                         continue
 
                 # if not using a tech-specific finance group, get the finance model and inputs for
@@ -1155,66 +1112,15 @@ class H2IntegrateModel:
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
                 if commodity_stream is not None:
-                    if primary_commodity_type == "co2":
-                        self.plant.connect(
-                            f"{commodity_stream}.co2_capture_mtpy",
-                            f"finance_subgroup_{group_id}.co2_capture_kgpy",
-                        )
+                    self.plant.connect(
+                        f"{commodity_stream}.rated_{primary_commodity_type}_production",
+                        f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
+                    )
 
-                    # NOTE: below logic on special handling for commodity stream of
-                    # combiner or splitter is temporary
-                    elif "combiner" in commodity_stream or "splitter" in commodity_stream:
-                        # Connect the commodity out of the commodity combiner to the input
-                        # of the commodity summer
-                        self.plant.connect(
-                            f"{commodity_stream}.{primary_commodity_type}_out",
-                            f"finance_subgroup_{group_id}.{primary_commodity_type}_sum.{primary_commodity_type}_in",
-                        )
-                        # Connect total commodity produced to the finance group
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.{primary_commodity_type}_sum.total_{primary_commodity_type}_produced",
-                            f"finance_subgroup_{group_id}.total_{primary_commodity_type}_produced",
-                        )
-                    else:
-                        # connect commodity stream technology output to the finance group
-                        self.plant.connect(
-                            f"{commodity_stream}.annual_{primary_commodity_type}_produced",
-                            f"finance_subgroup_{group_id}.total_{primary_commodity_type}_produced",
-                        )
-
-                # if commodity stream was not specified, follow existing logic
-                else:
-                    plant_producing_electricity = False
-
-                    # Loop through technologies and connect electricity outputs to the ExecComp
-                    # Only connect if the technology is included in at least one commodity's stackup
-                    # and in this finance group
-                    elec_combiner_cnt = 1
-                    for tech_name in tech_configs.keys():
-                        if (
-                            is_electricity_producer(tech_name)
-                            and primary_commodity_type == "electricity"
-                        ):
-                            # connect technologies to electricity combiner
-                            self.plant.connect(
-                                f"{tech_name}.electricity_out",
-                                f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_in{elec_combiner_cnt}",
-                            )
-                            plant_producing_electricity = True
-                            elec_combiner_cnt += 1
-
-                    if plant_producing_electricity and primary_commodity_type == "electricity":
-                        # Connect the electricity out of the electricity combiner to the input
-                        # of the electricity summer
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.electricity_combiner_comp.electricity_out",
-                            f"finance_subgroup_{group_id}.electricity_sum.electricity_in",
-                        )
-                        # Connect total electricity produced to the finance group
-                        self.plant.connect(
-                            f"finance_subgroup_{group_id}.electricity_sum.total_electricity_produced",
-                            f"finance_subgroup_{group_id}.total_electricity_produced",
-                        )
+                    self.plant.connect(
+                        f"{commodity_stream}.capacity_factor",
+                        f"finance_subgroup_{group_id}.capacity_factor",
+                    )
 
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():

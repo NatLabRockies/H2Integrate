@@ -152,6 +152,11 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         )
         super().setup()
 
+        # Capacity inputs
+        self.add_input(
+            "ammonia_production_capacity", val=self.config.production_capacity, units="kg/h"
+        )
+
         # Feedstocks input
         self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
@@ -166,16 +171,18 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Feedstock consumption profiles
         self.add_output("hydrogen_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("electricity_consumed", val=0.0, shape=self.n_timesteps, units="kW")
+        self.add_output("nitrogen_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
 
-        self.add_output("total_hydrogen_consumed", val=0.0, units="kg/year")
-        self.add_output("total_nitrogen_consumed", val=0.0, units="kg/year")
-        self.add_output("total_electricity_consumed", val=0.0, units="kW*h/year")
+        self.add_output("total_hydrogen_consumed", val=0.0, units="kg")
+        self.add_output("total_nitrogen_consumed", val=0.0, units="kg")
+        self.add_output("total_electricity_consumed", val=0.0, units="kW*h")
+
         self.add_output("limiting_input", val=0, shape=self.n_timesteps, units="unitless")
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values
-        nh3_cap = self.config.production_capacity  # kg NH3 per hour
+        nh3_cap = inputs["ammonia_production_capacity"][0]
         cat_consume = self.config.catalyst_consumption_rate  # kg Cat per kg NH3
         cat_replace = self.config.catalyst_replacement_interval  # years
         energy_demand = self.config.energy_demand  # kWh electric per kg NH3
@@ -210,18 +217,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Inputs (arrays of length n_timesteps)
         h2_in = inputs["hydrogen_in"]
         n2_in = inputs["nitrogen_in"]
-        if np.max(n2_in) == 0:  # Temporary until ASU is added
-            n2_in = h2_in / H_MW * 3 * N_MW  # TODO: Replace with connected input
-        elec_in = inputs["electricity_in"]  # Temporary until HOPP is connected
-        if np.max(elec_in) == 0:
-            # elec_in is in kW
-            elec_in = (
-                np.ones(
-                    len(h2_in),
-                )
-                * nh3_cap
-                * energy_demand
-            )  # TODO: replace with connected input
+        elec_in = inputs["electricity_in"]
 
         # Calculate max NH3 production for each input
         feed_mw = x_h2_feed * H_MW * 2 + x_n2_feed * N_MW * 2  # g / mol
@@ -272,12 +268,18 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         outputs["electricity_out"] = elec_in - used_elec  # kW
         outputs["heat_out"] = nh3_prod * heat_output
         outputs["catalyst_mass"] = cat_mass
-        outputs["total_ammonia_produced"] = max(nh3_prod.sum(), 1e-6)
-        outputs["total_hydrogen_consumed"] = h2_in.sum()
-        outputs["total_nitrogen_consumed"] = n2_in.sum()
-        outputs["total_electricity_consumed"] = elec_in.sum()  # kW*h/year
+        outputs["total_ammonia_produced"] = max(nh3_prod.sum(), 1e-6) * (self.dt / 3600)
+
+        # Total consumption of feedstocks
+        outputs["total_hydrogen_consumed"] = h2_in.sum() * (self.dt / 3600)
+        outputs["total_nitrogen_consumed"] = n2_in.sum() * (self.dt / 3600)
+        outputs["total_electricity_consumed"] = elec_in.sum() * (self.dt / 3600)  # kW*h
+
+        # Feedstock consumption profiles
         outputs["electricity_consumed"] = used_elec  # kW
-        outputs["hydrogen_consumed"] = used_h2  # kg
+        outputs["hydrogen_consumed"] = used_h2  # kg/h
+        outputs["nitrogen_consumed"] = used_n2  # kg/h
+
         h2_cap = nh3_cap * h2_rate  # kg H2 per hour
         outputs["max_hydrogen_capacity"] = h2_cap
 

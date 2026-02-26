@@ -20,6 +20,7 @@ def profast_config():
     return pf_config
 
 
+@pytest.mark.regression
 def test_lco_breakdown(profast_config, subtests):
     pf = create_and_populate_profast(profast_config)
     sol, summary, price_breakdown = run_profast(pf)

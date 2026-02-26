@@ -9,10 +9,7 @@ from h2integrate.core.validators import contains
 class GenericSummerPerformanceConfig(BaseConfig):
     """Configuration class for a generic summer for commodities or feedstocks.
 
-    Attributes:
-        commodity (str): name of commodity/feedstock type
-        commodity_units (str): units of commodity/feedstock profile
-        operation_mode (str): either "production" or "consumption" to determine input/output naming
+    Fields include `commodity`, `commodity_rate_units`, and `operation_mode`.
     """
 
     commodity: str = field(converter=(str.lower, str.strip))

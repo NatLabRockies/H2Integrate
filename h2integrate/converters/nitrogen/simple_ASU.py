@@ -14,19 +14,20 @@ from h2integrate.core.model_baseclasses import (
 @define(kw_only=True)
 class SimpleASUPerformanceConfig(BaseConfig):
     """Configuration for ASU model. To represent a cryogenic ASU, it is
-    recommended to set the parameter `efficiency_kWh_pr_kg_N2` to 0.119.
+    recommended to set the parameter ``efficiency_kWh_pr_kg_N2`` to 0.119.
     To represent a pressure swing absorption ASU, it is
-    recommended to set the parameter `efficiency_kWh_pr_kg_N2` to 0.29.
+    recommended to set the parameter ``efficiency_kWh_pr_kg_N2`` to 0.29.
 
     Attributes:
         size_from_N2_demand (bool): if True, size the system based on some input demand. If False,
-            size the system from user input (`rated_N2_kg_pr_hr` or `ASU_rated_power_kW`).
+            size the system from user input (``rated_N2_kg_pr_hr`` or ``ASU_rated_power_kW``).
         rated_N2_kg_pr_hr (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
-            `size_from_N2_demand` is False and ASU_rated_power_kW is not input.
+            ``size_from_N2_demand`` is False and ASU_rated_power_kW is not input.
         ASU_rated_power_kW (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
-            `size_from_N2_demand` is False and `rated_N2_kg_pr_hr` is not input.
+            ``size_from_N2_demand`` is False and ``rated_N2_kg_pr_hr`` is not input.
         efficiency_kWh_pr_kg_N2 (float): efficiency of the ASU in kWh/kg-N2, defaults to 0.29.
             Should be between 0.1 and 0.5. Some reference efficiencies are::
+
                 - 0.29 for pressure swing absorption
                 - 0.119 for cryogenic
         N2_fraction_in_air (float, optional): nitrogen content of input air stream as mole fraction.

@@ -29,6 +29,8 @@ technology_interconnections: [
   ["ng_feedstock", "natural_gas_plant", "natural_gas", "pipe"], #connect NG feedstock to NG plant
   ["combiner", "electrical_load_demand", ["electricity_out", "electricity_in"]], # subtract wind and solar from demand
   ["electrical_load_demand", "natural_gas_plant", ["electricity_unmet_demand", "electricity_demand"]], #give remaining load demand to natural gas plant
+  ["combiner", "fin_combiner", "electricity", "cable"],
+  ["natural_gas_plant", "fin_combiner", "electricity", "cable"],
 ]
 
 resource_to_tech_connections: [
@@ -93,14 +95,17 @@ finance_parameters:
   finance_subgroups:
     renewables:
       commodity: electricity
+      commodity_stream: "combiner"
       finance_groups: ["profast_lco","profast_npv"]
       technologies: ["solar", "wind"]
     natural_gas:
       commodity: electricity
+      commodity_stream: "natural_gas_plant"
       finance_groups: ["profast_lco"]
       technologies: ["natural_gas_plant", "ng_feedstock"]
     electricity:
       commodity: electricity
+      commodity_stream: "fin_combiner"
       finance_groups: ["profast_lco"]
       technologies: ["solar", "wind", "natural_gas_plant", "ng_feedstock"]
   cost_adjustment_parameters:

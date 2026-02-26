@@ -21,7 +21,7 @@ from scipy.optimize import curve_fit
 
 
 # Constants
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parents[1]
 CURVE_FIT_TOLERANCE = 0.0001
 STEAM_CONSTANT = 0.61  # kt/h - little variance between Aspen results
 

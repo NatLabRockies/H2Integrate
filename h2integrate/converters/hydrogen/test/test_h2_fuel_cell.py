@@ -51,6 +51,7 @@ def cost_config():
     return config
 
 
+@pytest.mark.regression
 def test_fuel_cell_performance(tech_config, plant_config, subtests):
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
 
@@ -124,6 +125,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_fuel_cell_cost(cost_config, plant_config, subtests):
     int(plant_config["plant"]["simulation"]["n_timesteps"])
 

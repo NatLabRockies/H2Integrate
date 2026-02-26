@@ -87,3 +87,10 @@ technologies:
         fixed_opex_per_kw_per_year: 10.0  # $/kW/year
         variable_opex_per_mwh: 2.5  # $/MWh
         cost_year: 2023
+  fin_combiner:
+    performance_model:
+      model: "GenericCombinerPerformanceModel"
+    model_inputs:
+      performance_parameters:
+        commodity: "electricity"
+        commodity_rate_units: "kW"

@@ -1,15 +1,34 @@
 import os
+from pathlib import Path
 
 import numpy as np
+import pytest
 from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate.core.inputs.validation import load_yaml, load_tech_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 @fixture
-def run_example_02_sql_fpath():
+def configuration(temp_dir):
+    config = load_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "02_texas_ammonia.yaml")
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = str(temp_dir)
+    config["driver_config"] = driver_config
+
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "tech_config.yaml")
+    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
+        str(temp_dir)
+    )
+    config["technology_config"] = tech_config
+    return config
+
+
+@fixture
+def run_example_02_sql_fpath(configuration):
     # check if case file exists, if so, return the filepath
     sql_fpath = EXAMPLE_DIR / "02_texas_ammonia" / "outputs" / "cases.sql"
     if sql_fpath.exists():
@@ -17,7 +36,7 @@ def run_example_02_sql_fpath():
     else:
         os.chdir(EXAMPLE_DIR / "02_texas_ammonia")
         # Create a H2Integrate model
-        h2i = H2IntegrateModel("02_texas_ammonia.yaml")
+        h2i = H2IntegrateModel(configuration)
 
         # Set the battery demand profile
         demand_profile = np.ones(8760) * 640.0
@@ -30,12 +49,15 @@ def run_example_02_sql_fpath():
         return h2i.recorder_path.absolute()
 
 
-def test_save_csv_all_results(subtests, run_example_02_sql_fpath):
-    expected_csv_fpath = EXAMPLE_DIR / "02_texas_ammonia" / "outputs" / "cases_Case-1.csv"
+@pytest.mark.unit
+def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath):
+    expected_csv_fpath = (
+        Path(configuration["driver_config"]["general"]["folder_output"]) / "cases_Case-1.csv"
+    )
     res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
-        assert len(res.columns.to_list()) == 38
+        assert len(res.columns.to_list()) == 34
 
     with subtests.test("Check number of rows"):
         assert len(res) == 8760
@@ -44,6 +66,7 @@ def test_save_csv_all_results(subtests, run_example_02_sql_fpath):
         assert expected_csv_fpath.exists()
 
 
+@pytest.mark.unit
 def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
     vars_to_save = [
         "electrolyzer.hydrogen_out",
@@ -67,6 +90,7 @@ def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
         assert all(var_name in colnames_no_units for var_name in vars_to_save)
 
 
+@pytest.mark.unit
 def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
     vars_units_to_save = {
         "ammonia.hydrogen_in": "kg/h",
@@ -91,6 +115,7 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
         assert all(c_name in res.columns.to_list() for c_name in expected_colnames)
 
 
+@pytest.mark.unit
 def test_alternative_column_names(subtests, run_example_02_sql_fpath):
     vars_to_save = {
         "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},

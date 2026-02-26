@@ -44,6 +44,7 @@ class DemandOpenLoopControlBase(om.ExplicitComponent):
                 simulation timesteps.
             tech_config (dict): Technology-specific configuration, including
                 controller settings.
+
         """
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

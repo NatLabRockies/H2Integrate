@@ -3,9 +3,10 @@
 This module contains H2I performance configs and components for modeling iron electrowinning. It is
 based on the work of Humbert et al. (doi.org/10.1007/s40831-024-00878-3) which reviews performance
 and TEA literature for three different types of iron electrowinning:
-    - Aqueous Hydroxide Electrolysis (AHE)
-    - Molten Salt Electrolysis (MSE)
-    - Molten Oxide Electrolysis (MOE)
+
+- Aqueous Hydroxide Electrolysis (AHE)
+- Molten Salt Electrolysis (MSE)
+- Molten Oxide Electrolysis (MOE)
 
 Classes:
     HumbertEwinConfig: Sets the required model_inputs fields.

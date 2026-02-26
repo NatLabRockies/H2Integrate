@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -29,6 +30,7 @@ def plant_config():
     return plant_config
 
 
+@pytest.mark.unit
 def test_simple_steel_performance_outputs(tech_config, plant_config, subtests):
     prob = om.Problem()
 

@@ -213,14 +213,13 @@ class OAEPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         )
 
         outputs["co2_out"] = oae_outputs.OAE_outputs["mass_CO2_absorbed"]
-        outputs["rated_co2_production"] = max(range_outputs.S1["mass_CO2_absorbed"])  # kg/h
-        outputs["total_co2_produced"] = outputs["co2_out"].sum()
+        outputs["rated_co2_production"] = (oae_outputs.M_co2cap / 8760) * 1e3  # kg/h
+        outputs["total_co2_produced"] = outputs["co2_out"].sum()  # kg
 
-        max_production = outputs["rated_co2_production"] * len(outputs["co2_out"])
         outputs["annual_co2_produced"] = (
             oae_outputs.M_co2est * 1e3
         )  # convert from metric tons/year to kg/year
-        outputs["capacity_factor"] = outputs["total_co2_produced"] / max_production
+        outputs["capacity_factor"] = oae_outputs.oae_capacity_factor
 
         outputs["co2_capture_mtpy"] = oae_outputs.M_co2est  # TODO: remove
         outputs["plant_mCC_capacity_mtph"] = max(
