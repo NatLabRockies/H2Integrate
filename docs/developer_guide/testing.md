@@ -80,8 +80,8 @@ An example of a regression test is in the example below where the model's output
 for stability with some tolerance.
 
 :::{literalinclude} ../../h2integrate/converters/co2/marine/test/test_doc.py
-:start-at: @pytest.mark.regression
-:end-at: assert_near_equal(total_tank_volume_m3
+:start-after: fencepost start
+:end-before: fencepost end
 :::
 
 ## Integration Tests
@@ -131,8 +131,8 @@ by writing the fixture once, it allows for a consistent and simplified setup for
 maintain tests.
 
 ```{literalinclude} ../../h2integrate/resource/test/conftest.py
-:start-at: @pytest.fixture
-:end-at: return plant
+:start-after: fencepost start
+:end-before: fencepost end
 ```
 
 The `plant_simulation` fixture (this variation is for `h2integrate/resource` can now be used in the
@@ -141,8 +141,8 @@ solar resource tests, like in the example below for `h2integrate/resource/solar/
 the `plant_simulation` fixture.
 
 ```{literalinclude} ../../h2integrate/resource/solar/test/test_resource_models.py
-:start-at: @pytest.mark.unit
-:end-at: }
+:start-after: fencepost start
+:end-before: fencepost end
 ```
 
 ## Using temporary directories to avoid saving output data
@@ -159,8 +159,8 @@ In the first example, we pass the `temp_dir` to the driver configuration fixture
 stored until manually cleaned, and the common setup can be recycled for all applicable tests.
 
 :::{literalinclude} ../../h2integrate/converters/co2/marine/test/conftest.py
-:start-at: @pytest.fixture(scope="module")
-:end-at: return driver_config
+:start-after: fencepost start
+:end-before: fencepost end
 :lineno-match:
 :::
 
@@ -168,8 +168,8 @@ In the second example, we pass the fixture to another test to show that we can s
 output data and work with it.
 
 :::{literalinclude} ../../h2integrate/core/test/test_framework.py
-:start-at: def test_unsupported_simulation_parameters
-:end-at: load_plant_yaml(plant_config_data_dt)
+:start-after: fencepost start
+:end-before: fencepost end
 :lineno-match:
 :::
 
@@ -180,7 +180,7 @@ The example below demonstrates how to make use of the fixture and still have acc
 examples outputs during the test.
 
 :::{literalinclude} ../../examples/test/test_all_examples.py
-:start-at: @pytest.mark.integration
-:end-at: model = H2IntegrateModel
+:start-after: fencepost start
+:end-before: fencepost end
 :lineno-match:
 :::

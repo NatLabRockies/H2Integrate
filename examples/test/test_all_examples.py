@@ -28,6 +28,7 @@ def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
     os.chdir(Path(__file__).parent)
 
 
+# docs fencepost start: DO NOT REMOVE
 @pytest.mark.integration
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
 def test_steel_example(subtests, temp_copy_of_example):
@@ -35,6 +36,7 @@ def test_steel_example(subtests, temp_copy_of_example):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "01_onshore_steel_mn.yaml")
+    # docs fencepost end: DO NOT REMOVE
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 720.0
     model.setup()

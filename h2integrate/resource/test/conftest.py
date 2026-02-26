@@ -7,6 +7,7 @@ from h2integrate.resource.utilities.nrel_developer_api_keys import set_nrel_key_
 from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 
+# docs fencepost start: DO NOT REMOVE
 @pytest.fixture
 def plant_simulation(timezone):
     plant = {
@@ -19,6 +20,9 @@ def plant_simulation(timezone):
         },
     }
     return plant
+
+
+# docs fencepost end: DO NOT REMOVE
 
 
 @pytest.fixture

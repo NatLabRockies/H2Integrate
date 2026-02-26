@@ -49,8 +49,8 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
     prob.model.add_subsystem("comp", doc_model, promotes=["*"])
     prob.setup()
     rng = np.random.default_rng(seed=42)
-    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 5 MW to 10 MW over 8760 hours
-    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±0.5 MW noise
+    base_power = np.linspace(3.0e8, 2.0e8, 8760)
+    noise = rng.normal(loc=0, scale=0.5e8, size=8760)
     power_profile = base_power + noise
     prob.set_val("comp.electricity_in", power_profile, units="W")
 
@@ -136,6 +136,7 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+# docs fencepost start: DO NOT REMOVE
 @pytest.mark.regression
 @pytest.mark.parametrize("save", [False])
 def test_doc_standard_outputs(driver_config, plant_config, tech_config, subtests):
@@ -174,6 +175,9 @@ def test_doc_standard_outputs(driver_config, plant_config, tech_config, subtests
             pytest.approx(annual_co2_from_cf_calc[0], rel=1e-6)
             == prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0]
         )
+
+
+# docs fencepost end: DO NOT REMOVE
 
 
 @pytest.mark.regression

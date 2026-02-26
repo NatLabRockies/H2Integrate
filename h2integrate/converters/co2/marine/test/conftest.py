@@ -22,6 +22,7 @@ def plant_config():
     return plant_config
 
 
+# docs fencepost start: DO NOT REMOVE
 @pytest.fixture(scope="module")
 def driver_config(temp_dir):  # noqa: F811
     driver_config = {
@@ -30,3 +31,6 @@ def driver_config(temp_dir):  # noqa: F811
         },
     }
     return driver_config
+
+
+# docs fencepost end: DO NOT REMOVE

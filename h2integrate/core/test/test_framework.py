@@ -150,6 +150,7 @@ def test_custom_financial_model_grouping(temp_dir, subtests):
     H2IntegrateModel(temp_highlevel_yaml)
 
 
+# docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
 def test_unsupported_simulation_parameters(temp_dir):
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
@@ -162,6 +163,7 @@ def test_unsupported_simulation_parameters(temp_dir):
     # Load the plant_config YAML content
     plant_config_data_ntimesteps = load_plant_yaml(temp_plant_config_ntimesteps)
     plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
+    # docs fencepost end: DO NOT REMOVE
 
     # Modify the n_timesteps entry for the temp_plant_config_ntimesteps
     plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 8759

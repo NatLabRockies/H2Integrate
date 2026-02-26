@@ -7,6 +7,7 @@ from h2integrate import RESOURCE_DEFAULT_DIR
 from h2integrate.core.supported_models import supported_models
 
 
+# docs fencepost start: DO NOT REMOVE
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
@@ -47,6 +48,7 @@ def test_nrel_solar_resource_file_downloads(
         "site": site_config,
         "plant": plant_simulation,
     }
+    # docs fencepost end: DO NOT REMOVE
 
     prob = om.Problem()
     comp = supported_models[model](
