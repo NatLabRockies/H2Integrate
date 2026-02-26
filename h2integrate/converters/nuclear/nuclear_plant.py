@@ -15,13 +15,13 @@ class NuclearPerformanceConfig(BaseConfig):
     """Configuration class for the nuclear plant performance model.
 
     Args:
-        system_capacity_mw (float): Rated electric capacity in MW.
+        system_capacity_kw (float): Rated electric capacity in kW.
     """
 
-    system_capacity_mw: float = field(validator=gt_zero)
+    system_capacity_kw: float = field(validator=gt_zero)
 
 
-class NuclearPerformanceModel(PerformanceModelBaseClass):
+class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     """
     Simple nuclear performance model producing electricity.
 
@@ -36,8 +36,8 @@ class NuclearPerformanceModel(PerformanceModelBaseClass):
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
-        self.commodity_rate_units = "MW"
-        self.commodity_amount_units = "MW*h"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
         super().setup()
@@ -50,13 +50,13 @@ class NuclearPerformanceModel(PerformanceModelBaseClass):
 
         self.add_input(
             "system_capacity",
-            val=self.config.system_capacity_mw,
-            units="MW",
+            val=self.config.system_capacity_kw,
+            units="kW",
             desc="Nuclear plant rated capacity",
         )
         self.add_input(
             f"{self.commodity}_demand",
-            val=self.config.system_capacity_mw,
+            val=self.config.system_capacity_kw,
             shape=n_timesteps,
             units=self.commodity_rate_units,
             desc="Electricity demand for nuclear plant",
@@ -85,34 +85,34 @@ class NuclearPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class NuclearCostModelConfig(CostModelBaseConfig):
+class QuinnNuclearCostModelConfig(CostModelBaseConfig):
     """Configuration class for the nuclear plant cost model.
 
     Args:
-        system_capacity_mw (float): Rated electric capacity in MW.
+        system_capacity_kw (float): Rated electric capacity in kW.
         capex_per_kw (float): Capital cost per kW.
         fixed_opex_per_kw_year (float): Fixed O&M per kW per year.
         variable_opex_per_mwh (float): Variable O&M per MWh.
-        reference_capacity_mw (float | None): Reference capacity for capex scaling.
+        reference_capacity_kw (float | None): Reference capacity for capex scaling in kW.
         capex_scaling_exponent (float): Capex scaling exponent.
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_mw: float = field(validator=gt_zero)
+    system_capacity_kw: float = field(validator=gt_zero)
     capex_per_kw: float = field(validator=gt_zero)
     fixed_opex_per_kw_year: float = field(validator=gt_zero)
     variable_opex_per_mwh: float = field(validator=gt_zero)
-    reference_capacity_mw: float | None = field(default=None)
+    reference_capacity_kw: float | None = field(default=None)
     capex_scaling_exponent: float = field(default=1.0, validator=gt_zero)
 
     def __attrs_post_init__(self):
-        if self.reference_capacity_mw is None:
-            self.reference_capacity_mw = self.system_capacity_mw
-        if self.reference_capacity_mw <= 0:
-            raise ValueError("reference_capacity_mw must be greater than zero")
+        if self.reference_capacity_kw is None:
+            self.reference_capacity_kw = self.system_capacity_kw
+        if self.reference_capacity_kw <= 0:
+            raise ValueError("reference_capacity_kw must be greater than zero")
 
 
-class NuclearCostModel(CostModelBaseClass):
+class QuinnNuclearCostModel(CostModelBaseClass):
     """
     Cost model for nuclear power plants.
 
@@ -125,7 +125,7 @@ class NuclearCostModel(CostModelBaseClass):
     """
 
     def setup(self):
-        self.config = NuclearCostModelConfig.from_dict(
+        self.config = QuinnNuclearCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -136,15 +136,15 @@ class NuclearCostModel(CostModelBaseClass):
 
         self.add_input(
             "system_capacity",
-            val=self.config.system_capacity_mw,
-            units="MW",
+            val=self.config.system_capacity_kw,
+            units="kW",
             desc="Nuclear plant capacity",
         )
         self.add_input(
             "electricity_out",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units="kW",
             desc="Hourly electricity output from performance model",
         )
 
@@ -152,22 +152,21 @@ class NuclearCostModel(CostModelBaseClass):
         capex_per_kw = self.config.capex_per_kw
         fixed_opex_per_kw_year = self.config.fixed_opex_per_kw_year
         variable_opex_per_mwh = self.config.variable_opex_per_mwh
-        reference_capacity_mw = self.config.reference_capacity_mw
+        reference_capacity_kw = self.config.reference_capacity_kw
         capex_scaling_exponent = self.config.capex_scaling_exponent
 
-        system_capacity_mw = inputs["system_capacity"]
-        capacity_kw = system_capacity_mw * 1000
-        scale_ratio = system_capacity_mw / reference_capacity_mw
+        system_capacity_kw = inputs["system_capacity"]
+        scale_ratio = system_capacity_kw / reference_capacity_kw
 
         scaled_capex_per_kw = capex_per_kw * (scale_ratio ** (capex_scaling_exponent - 1.0))
-        capex = scaled_capex_per_kw * capacity_kw
+        capex = scaled_capex_per_kw * system_capacity_kw
 
         electricity_out = inputs["electricity_out"]
         dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        delivered_electricity_MWh = electricity_out.sum() * dt / 3600
+        delivered_electricity_mwh = electricity_out.sum() * dt / 3600 / 1000.0
 
-        fixed_om = fixed_opex_per_kw_year * capacity_kw
-        variable_om = variable_opex_per_mwh * delivered_electricity_MWh
+        fixed_om = fixed_opex_per_kw_year * system_capacity_kw
+        variable_om = variable_opex_per_mwh * delivered_electricity_mwh
 
         outputs["CapEx"] = capex
         outputs["OpEx"] = fixed_om

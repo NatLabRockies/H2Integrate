@@ -237,9 +237,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'NaturalGasCostModel'`
 - `nuclear`: nuclear power plant
     - performance models:
-        + `'NuclearPerformanceModel'`
+        + `'QuinnNuclearPerformanceModel'`
     - cost models:
-        + `'NuclearCostModel'`
+        + `'QuinnNuclearCostModel'`
     - docs:
         + [../technology_models/nuclear.md](../technology_models/nuclear.md)
 - `grid`: electricity grid connection
