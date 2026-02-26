@@ -1,14 +1,13 @@
-name: "technology_config"
-description: "This hybrid plant stores and discharges electricity"
-
+name: technology_config
+description: This hybrid plant stores and discharges electricity
 technologies:
-   battery:
+  battery:
     dispatch_rule_set:
-      model: "PyomoRuleStorageBaseclass"
+      model: PyomoRuleStorageBaseclass
     performance_model:
-      model: "PySAMBatteryPerformanceModel"
+      model: PySAMBatteryPerformanceModel
     cost_model:
-      model: "PySAMBatteryPerformanceModel"
+      model: PySAMBatteryPerformanceModel
     model_inputs:
       shared_parameters:
         max_charge_rate: 50000
@@ -21,8 +20,8 @@ technologies:
         max_charge_percent: 0.9
         min_charge_percent: 0.1
       performance_parameters:
-        system_model_source: "pysam"
-        chemistry: "LFPGraphite"
+        system_model_source: pysam
+        chemistry: LFPGraphite
       dispatch_rule_parameters:
-        commodity_name: "electricity"
-        commodity_storage_units: "kW"
+        commodity_name: electricity
+        commodity_storage_units: kW

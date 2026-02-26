@@ -1,21 +1,20 @@
-name: "technology_config"
-description: "This plant produces electricity from river hydro"
-
+name: technology_config
+description: This plant produces electricity from river hydro
 technologies:
   river:
     performance_model:
-      model: "RunOfRiverHydroPerformanceModel"
+      model: RunOfRiverHydroPerformanceModel
     cost_model:
-      model: "RunOfRiverHydroCostModel"
+      model: RunOfRiverHydroCostModel
     model_inputs:
       shared_parameters:
         plant_capacity_mw: 10.0
       performance_parameters:
-        water_density: 998 # kg/m^3
-        acceleration_gravity: 9.81 # m/s^2
+        water_density: 998  # kg/m^3
+        acceleration_gravity: 9.81  # m/s^2
         turbine_efficiency: 0.9
-        head: 10.0 # m
+        head: 10.0  # m
       cost_parameters:
-        capital_cost_usd_per_kw: 7648. # $/kW
-        operational_cost_usd_per_kw_year: 50. # $/kW-yr
+        capital_cost_usd_per_kw: 7648.  # $/kW
+        operational_cost_usd_per_kw_year: 50.  # $/kW-yr
         cost_year: 2024

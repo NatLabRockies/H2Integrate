@@ -1,6 +1,5 @@
 name: technology_config
 description: This hybrid plant produces geologic hydrogen
-
 technologies:
   geoh2_well_subsurface:
     performance_model:
@@ -24,7 +23,7 @@ technologies:
         water_temp: 90
       cost_parameters:
         test_drill_cost: 500000
-        use_cost_curve: True
+        use_cost_curve: true
         permit_fees: 905
         acreage: 500
         rights_cost: 3

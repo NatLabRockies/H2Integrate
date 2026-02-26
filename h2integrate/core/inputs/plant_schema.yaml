@@ -1,4 +1,4 @@
-$schema: "http://json-schema.org/draft-07/schema#"
+$schema: http://json-schema.org/draft-07/schema#
 $id: plant_config_schema_v01
 title: Plant Configuration Schema
 description: Schema to validate plant configurations including site details and plant properties
@@ -31,7 +31,7 @@ properties:
             type: number
             description: Elevation of the site in meters
             minimum: 0
-          required: ["latitude", "longitude"]
+          required: [latitude, longitude]
   plant:
     type: object
     properties:
@@ -56,14 +56,14 @@ properties:
           start_time:
             type: string
             description: simulation start time formatted as mm/dd/yyyy HH:MM:SS or mm/dd HH:MM:SS
-            default: "01/01 00:30:00"
+            default: 01/01 00:30:00
           timezone:
             type: number
             description: timezone as UTC offset corresponding to start_time
             minimum: -12
             maximum: 14
-        required: ["dt", "n_timesteps"]
-    required: ["plant_life", "simulation"]
+        required: [dt, n_timesteps]
+    required: [plant_life, simulation]
   technology_interconnections:
     type: array
     description: Array of arrays representing technology interconnections
@@ -72,7 +72,4 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
-required:
-  - name
-  - description
-  - sites
+required: [name, description, sites]

@@ -260,4 +260,4 @@ docstring-code-format = true
 allow_duplicate_keys = true
 line_length = 120
 none_representation = "null"
-explicit_start = true
+explicit_start = false

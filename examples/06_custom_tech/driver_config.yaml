@@ -1,5 +1,4 @@
-name: "driver_config"
-description: "Runs a wind plant and a custom paper mill"
-
+name: driver_config
+description: Runs a wind plant and a custom paper mill
 general:
   folder_output: wind_plant_run

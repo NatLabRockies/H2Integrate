@@ -1,29 +1,23 @@
-name: "plant_config"
-description: "This plant models a wind plant with a custom paper mill model in CO."
-
+name: plant_config
+description: This plant models a wind plant with a custom paper mill model in CO.
 sites:
   site:
     latitude: 35.2018863
     longitude: -101.945027
-
     resources:
       wind_resource:
-        resource_model: "WTKNRELDeveloperAPIWindResource"
+        resource_model: WTKNRELDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2012
-
 plant:
   plant_life: 30
-
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
-technology_interconnections: [
-  ["wind", "paper_mill", "electricity", "cable"],
+technology_interconnections:
+  - [wind, paper_mill, electricity, cable]
   # etc
-]
-resource_to_tech_connections: [
+resource_to_tech_connections:
   # connect the wind resource to the wind technology
-  ['site.wind_resource', 'wind', 'wind_resource_data'],
-]
+  - [site.wind_resource, wind, wind_resource_data]
