@@ -39,6 +39,7 @@ def nuclear_cost_params():
     }
 
 
+@pytest.mark.unit
 def test_nuclear_performance_demand(plant_config, nuclear_performance_params, subtests):
     tech_config_dict = {
         "model_inputs": {
@@ -71,6 +72,7 @@ def test_nuclear_performance_demand(plant_config, nuclear_performance_params, su
         assert pytest.approx(electricity_out, rel=1e-6) == expected_output
 
 
+@pytest.mark.unit
 def test_nuclear_cost_model(plant_config, nuclear_cost_params, subtests):
     tech_config_dict = {
         "model_inputs": {
