@@ -34,7 +34,10 @@ html:
   use_repository_button: true
   baseurl: https://nrel.github.io/H2Integrate/
 sphinx:
-  extra_extensions: [sphinx.ext.autodoc, sphinx.ext.autosummary, sphinx.ext.napoleon]
+  extra_extensions:
+    - sphinx.ext.autodoc
+    - sphinx.ext.autosummary
+    - sphinx.ext.napoleon
   config:
     # html_theme: sphinx_book_theme
     # html_theme_options:

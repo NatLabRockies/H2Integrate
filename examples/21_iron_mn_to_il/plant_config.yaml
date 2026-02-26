@@ -60,7 +60,10 @@ finance_parameters:
     iron_ore:
       commodity: iron_ore
       commodity_stream: iron_mine
-      technologies: [iron_mine, mine_electricity_feedstock, mine_crude_ore_feedstock]
+      technologies:
+        - iron_mine
+        - mine_electricity_feedstock
+        - mine_crude_ore_feedstock
     pig_iron:
       commodity: pig_iron
       commodity_stream: iron_plant

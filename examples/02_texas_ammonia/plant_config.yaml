@@ -74,4 +74,10 @@ finance_parameters:
       technologies: [wind, solar, battery, electrolyzer, h2_storage]
     ammonia:
       commodity: ammonia
-      technologies: [wind, solar, battery, electrolyzer, h2_storage, ammonia]
+      technologies:
+        - wind
+        - solar
+        - battery
+        - electrolyzer
+        - h2_storage
+        - ammonia
