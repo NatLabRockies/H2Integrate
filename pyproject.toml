@@ -255,3 +255,9 @@ known-third-party = ["pytest"]
 quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
+
+[tool.yamlfix]
+allow_duplicate_keys = true
+line_length = 120
+none_representation = "null"
+explicit_start = true
