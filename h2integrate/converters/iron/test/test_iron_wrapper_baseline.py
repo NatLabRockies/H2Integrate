@@ -3,76 +3,16 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_plant_yaml, load_driver_yaml
+from h2integrate.core.inputs.validation import load_plant_yaml
 from h2integrate.converters.iron.iron_wrapper import IronComponent
 
 
 @fixture
-def baseline_iron_tech():
+def iron_config(lcoe, lcoh, site):
     iron_config = {
-        "LCOE": 58.02,
-        "LCOH": 7.10,
-        "ROM_iron_site_name": "Northshore",
-        "iron_ore_product_selection": "drg_taconite_pellets",
-        "reduced_iron_site_latitude": 41.717,
-        "reduced_iron_site_longitude": -88.398,
-        "reduced_iron_product_selection": "ng_dri",
-        "structural_iron_product_selection": "none",
-        "win_capacity_denom": "iron",
-        "iron_post_capacity": 1000000,
-        "iron_win_capacity": 1418095,
-        "ore_cf_estimate": 0.9,
-        "cost_year": 2020,
-    }
-    return iron_config
-
-
-@fixture
-def mine_iron_tech():
-    iron_config = {
-        "LCOE": 58.02,
-        "LCOH": 7.10,
-        "ROM_iron_site_name": "Hibbing",
-        "iron_ore_product_selection": "drg_taconite_pellets",
-        "reduced_iron_site_latitude": 41.717,
-        "reduced_iron_site_longitude": -88.398,
-        "reduced_iron_product_selection": "ng_dri",
-        "structural_iron_product_selection": "none",
-        "win_capacity_denom": "iron",
-        "iron_post_capacity": 1000000,
-        "iron_win_capacity": 1418095,
-        "ore_cf_estimate": 0.9,
-        "cost_year": 2020,
-    }
-    return iron_config
-
-
-@fixture
-def lcoe50_iron_tech():
-    iron_config = {
-        "LCOE": 50.0,
-        "LCOH": 7.10,
-        "ROM_iron_site_name": "Northshore",
-        "iron_ore_product_selection": "drg_taconite_pellets",
-        "reduced_iron_site_latitude": 41.717,
-        "reduced_iron_site_longitude": -88.398,
-        "reduced_iron_product_selection": "ng_dri",
-        "structural_iron_product_selection": "none",
-        "win_capacity_denom": "iron",
-        "iron_post_capacity": 1000000,
-        "iron_win_capacity": 1418095,
-        "ore_cf_estimate": 0.9,
-        "cost_year": 2020,
-    }
-    return iron_config
-
-
-@fixture
-def lcoh6_iron_tech():
-    iron_config = {
-        "LCOE": 58.02,
-        "LCOH": 6.00,
-        "ROM_iron_site_name": "Northshore",
+        "LCOE": lcoe,
+        "LCOH": lcoh,
+        "ROM_iron_site_name": site,
         "iron_ore_product_selection": "drg_taconite_pellets",
         "reduced_iron_site_latitude": 41.717,
         "reduced_iron_site_longitude": -88.398,
@@ -113,13 +53,9 @@ def plant_config():
     return plant_config
 
 
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
-
-
-def test_baseline_iron(plant_config, driver_config, baseline_iron_tech, subtests):
+@pytest.mark.regression
+@pytest.mark.parametrize("lcoe,lcoh,site", [(58.02, 7.1, "Northshore")])
+def test_baseline_iron(plant_config, driver_config, iron_config, subtests):
     test_cases = {
         "ng/none": {
             "reduced_iron_product_selection": "ng_dri",
@@ -146,11 +82,11 @@ def test_baseline_iron(plant_config, driver_config, baseline_iron_tech, subtests
     }
 
     for test_name, test_inputs in test_cases.items():
-        baseline_iron_tech.update(test_inputs)
+        iron_config.update(test_inputs)
         prob = om.Problem()
         comp = IronComponent(
             plant_config=plant_config,
-            tech_config={"model_inputs": {"cost_parameters": baseline_iron_tech}},
+            tech_config={"model_inputs": {"cost_parameters": iron_config}},
             driver_config=driver_config,
         )
         prob.model.add_subsystem("iron", comp)
@@ -162,7 +98,9 @@ def test_baseline_iron(plant_config, driver_config, baseline_iron_tech, subtests
             assert pytest.approx(lcoi, abs=0.3) == expected_lcoi[test_name]
 
 
-def test_changing_mine_iron(plant_config, driver_config, mine_iron_tech, subtests):
+@pytest.mark.regression
+@pytest.mark.parametrize("lcoe,lcoh,site", [(58.02, 7.1, "Hibbing")])
+def test_changing_mine_iron(plant_config, driver_config, iron_config, subtests):
     test_cases = {
         "ng/none": {
             "reduced_iron_product_selection": "ng_dri",
@@ -188,11 +126,11 @@ def test_changing_mine_iron(plant_config, driver_config, mine_iron_tech, subtest
         "h2/eaf": 843.5372131093657,
     }
     for test_name, test_inputs in test_cases.items():
-        mine_iron_tech.update(test_inputs)
+        iron_config.update(test_inputs)
         prob = om.Problem()
         comp = IronComponent(
             plant_config=plant_config,
-            tech_config={"model_inputs": {"cost_parameters": mine_iron_tech}},
+            tech_config={"model_inputs": {"cost_parameters": iron_config}},
             driver_config=driver_config,
         )
         prob.model.add_subsystem("iron", comp)
@@ -204,7 +142,9 @@ def test_changing_mine_iron(plant_config, driver_config, mine_iron_tech, subtest
             assert pytest.approx(lcoi, abs=0.3) == expected_lcoi[test_name]
 
 
-def test_lcoe50_iron(plant_config, driver_config, lcoe50_iron_tech, subtests):
+@pytest.mark.regression
+@pytest.mark.parametrize("lcoe,lcoh,site", [(50.0, 7.1, "Northshore")])
+def test_lcoe50_iron(plant_config, driver_config, iron_config, subtests):
     test_cases = {
         "ng/none": {
             "reduced_iron_product_selection": "ng_dri",
@@ -231,11 +171,11 @@ def test_lcoe50_iron(plant_config, driver_config, lcoe50_iron_tech, subtests):
         "h2/eaf": 855.2282058088431,
     }
     for test_name, test_inputs in test_cases.items():
-        lcoe50_iron_tech.update(test_inputs)
+        iron_config.update(test_inputs)
         prob = om.Problem()
         comp = IronComponent(
             plant_config=plant_config,
-            tech_config={"model_inputs": {"cost_parameters": lcoe50_iron_tech}},
+            tech_config={"model_inputs": {"cost_parameters": iron_config}},
             driver_config=driver_config,
         )
         prob.model.add_subsystem("iron", comp)
@@ -247,7 +187,9 @@ def test_lcoe50_iron(plant_config, driver_config, lcoe50_iron_tech, subtests):
             assert pytest.approx(lcoi, abs=0.3) == expected_lcoi[test_name]
 
 
-def test_lcoh6_iron(plant_config, driver_config, lcoh6_iron_tech, subtests):
+@pytest.mark.regression
+@pytest.mark.parametrize("lcoe,lcoh,site", [(58.02, 6.0, "Northshore")])
+def test_lcoh6_iron(plant_config, driver_config, iron_config, subtests):
     test_cases = {
         "ng/none": {
             "reduced_iron_product_selection": "ng_dri",
@@ -274,11 +216,11 @@ def test_lcoh6_iron(plant_config, driver_config, lcoh6_iron_tech, subtests):
         "h2/eaf": 797.2788136434048,
     }
     for test_name, test_inputs in test_cases.items():
-        lcoh6_iron_tech.update(test_inputs)
+        iron_config.update(test_inputs)
         prob = om.Problem()
         comp = IronComponent(
             plant_config=plant_config,
-            tech_config={"model_inputs": {"cost_parameters": lcoh6_iron_tech}},
+            tech_config={"model_inputs": {"cost_parameters": iron_config}},
             driver_config=driver_config,
         )
         prob.model.add_subsystem("iron", comp)
@@ -290,6 +232,7 @@ def test_lcoh6_iron(plant_config, driver_config, lcoh6_iron_tech, subtests):
             assert pytest.approx(lcoi, abs=0.3) == expected_lcoi[test_name]
 
 
+@pytest.mark.regression
 def test_location_iron(plant_config, driver_config, location_iron_tech, subtests):
     test_cases = {
         "ng/none": {

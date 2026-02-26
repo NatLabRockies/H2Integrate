@@ -1,5 +1,3 @@
-import shutil
-
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -16,6 +14,7 @@ from h2integrate.preprocess.wind_turbine_file_tools import (
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
+@pytest.mark.unit
 def test_turbine_export_error(subtests):
     invalid_turbine_name = "NREL_1.5MW"
     with pytest.raises(ValueError) as excinfo:
@@ -27,6 +26,7 @@ def test_turbine_export_error(subtests):
         assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
 
 
+@pytest.mark.regression
 def test_pysam_turbine_export(subtests):
     turbine_name = "NREL_6MW_196"
     output_fpath = export_turbine_to_pysam_format(turbine_name)
@@ -102,7 +102,8 @@ def test_pysam_turbine_export(subtests):
         )
 
 
-def test_floris_turbine_export(subtests):
+@pytest.mark.regression
+def test_floris_turbine_export(temp_dir, subtests):
     turbine_name = "NREL_6MW_196"
     output_fpath = export_turbine_to_floris_format(turbine_name)
 
@@ -118,7 +119,6 @@ def test_floris_turbine_export(subtests):
     plant_config = load_plant_yaml(plant_config_path)
     tech_config = load_tech_yaml(tech_config_path)
 
-    cache_dir = tech_config_path.parent / "test_cache"
     plant_config_for_resource = {k: v for k, v in plant_config.items() if k != "sites"}
     plant_config_for_resource.update(plant_config["sites"])
 
@@ -126,7 +126,7 @@ def test_floris_turbine_export(subtests):
         "hub_height": -1,
         "floris_turbine_config": floris_options,
         "enable_caching": True,
-        "cache_dir": cache_dir,
+        "cache_dir": temp_dir,
     }
 
     tech_config["technologies"]["distributed_wind_plant"]["model_inputs"][
@@ -191,7 +191,3 @@ def test_floris_turbine_export(subtests):
             )
             == 2814944.574
         )
-
-    # delete cache dir if it exists
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)

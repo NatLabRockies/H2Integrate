@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -44,6 +45,7 @@ def tech_config():
     return {"model_inputs": {"performance_parameters": model_inputs}}
 
 
+@pytest.mark.unit
 def test_hydro_power_performance_outputs(tech_config, plant_config, subtests):
     prob = om.Problem()
 

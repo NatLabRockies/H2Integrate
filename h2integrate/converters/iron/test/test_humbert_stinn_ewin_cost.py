@@ -90,6 +90,7 @@ def setup_and_run(plant_config, tech_config, feedstocks_dict):
     return capex, fopex, vopex
 
 
+@pytest.mark.regression
 def test_humbert_stinn_ewin_cost_component(plant_config, tech_config, feedstocks_dict, subtests):
     expected_capex_ahe = 6038571901.89  # USD
     expected_vopex_ahe = 0  # USD/year

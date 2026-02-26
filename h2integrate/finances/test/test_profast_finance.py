@@ -59,6 +59,7 @@ def fake_cost_dict():
     return fake_costs
 
 
+@pytest.mark.regression
 def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -125,6 +126,7 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
 
 
+@pytest.mark.regression
 def test_profast_comp_coproduct(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):

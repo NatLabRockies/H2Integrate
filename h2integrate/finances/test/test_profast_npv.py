@@ -92,6 +92,7 @@ def fake_cost_dict():
     return fake_costs
 
 
+@pytest.mark.regression
 def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -137,6 +138,7 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         )
 
 
+@pytest.mark.regression
 def test_profast_npv_no1_change_sell_price(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):
@@ -227,6 +229,7 @@ def test_profast_npv_no1_change_sell_price(
         )
 
 
+@pytest.mark.regression
 def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()

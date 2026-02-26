@@ -2,68 +2,43 @@ import shutil
 import hashlib
 from pathlib import Path
 
+import pytest
 import openmdao.api as om
-from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
-
-
-@fixture
-def plant_simulation_utc_start():
-    plant = {
-        "plant_life": 30,
-        "simulation": {
-            "dt": 3600,
-            "n_timesteps": 8760,
-            "start_time": "01/01/1900 00:30:00",
-            "timezone": 0,
-        },
-    }
-    return plant
+from h2integrate import RESOURCE_DEFAULT_DIR
+from h2integrate.core.supported_models import supported_models
 
 
-@fixture
-def plant_simulation_nonutc_start():
-    plant = {
-        "plant_life": 30,
-        "simulation": {
-            "dt": 3600,
-            "n_timesteps": 8760,
-            "start_time": "01/01 00:30:00",
-            "timezone": -6,
-        },
-    }
-    return plant
+@pytest.fixture
+def wtk_site_config(site_config, lat2, lon2):
+    site_config["resources"]["wind_resource"]["resource_parameters"]["latitude"] = lat2
+    site_config["resources"]["wind_resource"]["resource_parameters"]["longitude"] = lon2
+    return site_config
 
 
-@fixture
-def site_config():
-    site = {
-        "latitude": 34.22,
-        "longitude": -102.75,
-        "resources": {
-            "wind_resource": {
-                "resource_model": "WTKNRELDeveloperAPIWindResource",
-                "resource_parameters": {
-                    "latitude": 35.2018863,
-                    "longitude": -101.945027,
-                    "resource_year": 2012,  # 2013,
-                },
-            }
-        },
-    }
-    return site
-
-
-def test_wind_resource_loaded_from_default_dir(plant_simulation_utc_start, site_config, subtests):
+# fmt: off
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone",
+    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_api_v2", 0)],  # noqa: E501
+    ids=["WTKNRELDeveloperAPIWindResource"],
+)
+# fmt: on
+def test_wind_resource_loaded_from_default_dir(
+    subtests,
+    plant_simulation,
+    wtk_site_config,
+    lat,
+    lon,
+    model,
+    resource_year,
+):
     plant_config = {
-        "site": site_config,
-        "plant": plant_simulation_utc_start,
+        "site": wtk_site_config,
+        "plant": plant_simulation,
     }
-
     prob = om.Problem()
-    comp = WTKNRELDeveloperAPIWindResource(
+    comp = supported_models[model](
         plant_config=plant_config,
         resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
         driver_config={},
@@ -90,11 +65,11 @@ def test_wind_resource_loaded_from_default_dir(plant_simulation_utc_start, site_
     with subtests.test("same number of temperature keys and wind speed"):
         assert len(temp_keys) == len(wspd_keys)
     with subtests.test("3 heights for pressure data"):
-        assert len(pressure_keys) == 3
+        assert len(pressure_keys) == len(pressure_keys)
     with subtests.test("Start time"):
-        assert wtk_data["start_time"] == "2012/01/01 00:30:00 (+0000)"
+        assert wtk_data["start_time"] == f"{resource_year}/01/01 00:30:00 (+0000)"
     with subtests.test("Time step"):
-        assert wtk_data["dt"] == 3600
+        assert wtk_data["dt"] == plant_simulation["simulation"]["dt"]
 
     data_keys = temp_keys + wdir_keys + wspd_keys + pressure_keys
     with subtests.test("resource data is 8760 in length"):
@@ -108,31 +83,42 @@ def test_wind_resource_loaded_from_default_dir(plant_simulation_utc_start, site_
         assert hash_init != hash_modified
 
 
-def test_wind_resource_loaded_from_weather_dir(plant_simulation_utc_start, site_config, subtests):
-    site_config["resources"]["wind_resource"]["resource_parameters"]["resource_dir"] = (
-        EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
-    )
+# fmt: off
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone",
+    [("WTKNRELDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_v2", 0)],  # noqa: E501
+    ids=["WTKNRELDeveloperAPIWindResource"],
+)
+# fmt: on
+def test_wind_resource_loaded_from_weather_dir(
+    temp_dir,
+    plant_simulation,
+    wtk_site_config,
+    subtests,
+    model,
+    lat2,
+    lon2,
+    resource_year,
+    model_name
+):
+
+    wtk_site_config["resources"]["wind_resource"]["resource_parameters"]["resource_dir"] = temp_dir
     plant_config = {
-        "site": site_config,
-        "plant": plant_simulation_utc_start,
+        "site": wtk_site_config,
+        "plant": plant_simulation,
     }
 
-    source_fpath = (
-        RESOURCE_DEFAULT_DIR / "wind" / "35.2018863_-101.945027_2012_wtk_v2_60min_utc_tz.csv"
-    )
-    destination_fpath = (
-        EXAMPLE_DIR
-        / "11_hybrid_energy_plant"
-        / "tech_inputs"
-        / "weather"
-        / "35.2018863_-101.945027_2012_wtk_v2_60min_utc_tz.csv"
-    )
+    source_fn = f"{lat2}_{lon2}_{resource_year}_{model_name}_60min_utc_tz.csv"
+    source_fpath = RESOURCE_DEFAULT_DIR / "wind" / source_fn
+    destination_fpath = temp_dir / source_fn
+
     # If the destination fpath doesn't exist, copy the file there
     if not destination_fpath.is_file():
         shutil.copyfile(source_fpath, destination_fpath)
 
     prob = om.Problem()
-    comp = WTKNRELDeveloperAPIWindResource(
+    comp = supported_models[model](
         plant_config=plant_config,
         resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
         driver_config={},
@@ -146,7 +132,3 @@ def test_wind_resource_loaded_from_weather_dir(plant_simulation_utc_start, site_
         assert Path(wtk_data["filepath"]).exists()
         assert Path(wtk_data["filepath"]).parent == destination_fpath.parent
         assert Path(wtk_data["filepath"]).name == destination_fpath.name
-
-    # delete the file that was copied
-    if destination_fpath.is_file():
-        destination_fpath.unlink()

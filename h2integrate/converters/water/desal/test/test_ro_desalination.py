@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
@@ -21,6 +22,7 @@ def plant_config():
     return {"plant": plant}
 
 
+@pytest.mark.unit
 def test_brackish_desal_outputs(plant_config, subtests):
     tech_config = {
         "model_inputs": {
@@ -117,6 +119,7 @@ def test_brackish_desal_outputs(plant_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_brackish_performance(plant_config, subtests):
     tech_config = {
         "model_inputs": {
@@ -147,6 +150,7 @@ def test_brackish_performance(plant_config, subtests):
         assert prob.get_val("electricity_in", units="kW") == approx(15.04, rel=1e-3)
 
 
+@pytest.mark.regression
 def test_seawater_performance(plant_config, subtests):
     tech_config = {
         "model_inputs": {
@@ -177,6 +181,7 @@ def test_seawater_performance(plant_config, subtests):
         assert prob.get_val("electricity_in", units="kW") == approx(40.12, rel=1e-5)
 
 
+@pytest.mark.regression
 def test_ro_desalination_cost(subtests):
     tech_config = {
         "model_inputs": {

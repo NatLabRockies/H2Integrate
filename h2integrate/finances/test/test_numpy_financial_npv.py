@@ -47,6 +47,7 @@ def fake_cost_dict():
     return fake_costs
 
 
+@pytest.mark.regression
 def test_simple_npv(npv_finance_inputs, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -93,6 +94,7 @@ def test_simple_npv(npv_finance_inputs, fake_filtered_tech_config, fake_cost_dic
         )
 
 
+@pytest.mark.regression
 def test_simple_npv_positive(
     npv_finance_inputs, fake_filtered_tech_config, fake_cost_dict, subtests
 ):

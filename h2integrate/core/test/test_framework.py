@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 
@@ -8,21 +7,19 @@ import pytest
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
+from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
-examples_dir = Path(__file__).resolve().parent.parent.parent.parent / "examples/."
-
-
-def test_custom_model_name_clash(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(examples_dir / "01_onshore_steel_mn")
-
+@pytest.mark.unit
+def test_custom_model_name_clash(temp_dir, subtests):
     # Path to the original tech_config.yaml and high-level yaml in the example directory
-    orig_tech_config = Path.cwd() / "tech_config.yaml"
-    temp_tech_config = Path.cwd() / "temp_tech_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "01_onshore_steel_mn.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_01_onshore_steel_mn.yaml"
+    orig_tech_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml"
+    temp_tech_config = temp_dir / "temp_tech_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "01_onshore_steel_mn" / "01_onshore_steel_mn.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_01_onshore_steel_mn.yaml"
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
 
     # Copy the original tech_config.yaml and high-level yaml to temp files
     shutil.copy(orig_tech_config, temp_tech_config)
@@ -43,9 +40,11 @@ def test_custom_model_name_clash(subtests):
     # Load the high-level YAML content
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
+        highlevel_data["driver_config"] = driver_config
+        highlevel_data["plant_config"] = plant_config
 
     # Modify the high-level YAML to point to the temp tech_config file
-    highlevel_data["technology_config"] = str(temp_tech_config.name)
+    highlevel_data["technology_config"] = str(temp_tech_config)
 
     # Save the modified high-level YAML back
     with temp_highlevel_yaml.open("w") as f:
@@ -107,20 +106,16 @@ def test_custom_model_name_clash(subtests):
             r"classes must have different technology names\."
         )
 
-    # Clean up temporary YAML files
-    temp_tech_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
 
+@pytest.mark.unit
+def test_custom_financial_model_grouping(temp_dir, subtests):
+    orig_tech_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml"
+    temp_tech_config = temp_dir / "temp_tech_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "01_onshore_steel_mn" / "01_onshore_steel_mn.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_01_onshore_steel_mn.yaml"
 
-def test_custom_financial_model_grouping(subtests):
-    # Change the current working directory to the example's directory
-    os.chdir(examples_dir / "01_onshore_steel_mn")
-
-    # Path to the original tech_config.yaml and high-level yaml in the example directory
-    orig_tech_config = Path.cwd() / "tech_config.yaml"
-    temp_tech_config = Path.cwd() / "temp_tech_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "01_onshore_steel_mn.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_01_onshore_steel_mn.yaml"
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
 
     # Copy the original tech_config.yaml and high-level yaml to temp files
     shutil.copy(orig_tech_config, temp_tech_config)
@@ -140,9 +135,11 @@ def test_custom_financial_model_grouping(subtests):
     # Load the high-level YAML content
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
+        highlevel_data["driver_config"] = driver_config
+        highlevel_data["plant_config"] = plant_config
 
     # Modify the high-level YAML to point to the temp tech_config file
-    highlevel_data["technology_config"] = str(temp_tech_config.name)
+    highlevel_data["technology_config"] = str(temp_tech_config)
 
     # Save the modified high-level YAML back
     with temp_highlevel_yaml.open("w") as f:
@@ -152,15 +149,13 @@ def test_custom_financial_model_grouping(subtests):
     # (assuming custom financial_model is allowed)
     H2IntegrateModel(temp_highlevel_yaml)
 
-    # Clean up temporary YAML files
-    temp_tech_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
 
-
-def test_unsupported_simulation_parameters():
+# docs fencepost start: DO NOT REMOVE
+@pytest.mark.unit
+def test_unsupported_simulation_parameters(temp_dir):
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
-    temp_plant_config_ntimesteps = Path.cwd() / "temp_plant_config_ntimesteps.yaml"
-    temp_plant_config_dt = Path.cwd() / "temp_plant_config_dt.yaml"
+    temp_plant_config_ntimesteps = temp_dir / "temp_plant_config_ntimesteps.yaml"
+    temp_plant_config_dt = temp_dir / "temp_plant_config_dt.yaml"
 
     shutil.copy(orig_plant_config, temp_plant_config_ntimesteps)
     shutil.copy(orig_plant_config, temp_plant_config_dt)
@@ -168,6 +163,7 @@ def test_unsupported_simulation_parameters():
     # Load the plant_config YAML content
     plant_config_data_ntimesteps = load_plant_yaml(temp_plant_config_ntimesteps)
     plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
+    # docs fencepost end: DO NOT REMOVE
 
     # Modify the n_timesteps entry for the temp_plant_config_ntimesteps
     plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 8759
@@ -188,19 +184,17 @@ def test_unsupported_simulation_parameters():
     with pytest.raises(ValueError, match="with a time step that"):
         load_plant_yaml(plant_config_data_dt)
 
-    # Clean up temporary YAML files
-    temp_plant_config_ntimesteps.unlink(missing_ok=True)
-    temp_plant_config_dt.unlink(missing_ok=True)
 
-
-def test_technology_connections():
-    os.chdir(examples_dir / "01_onshore_steel_mn")
-
+@pytest.mark.unit
+def test_technology_connections(temp_dir):
     # Path to the original plant_config.yaml and high-level yaml in the example directory
-    orig_plant_config = Path.cwd() / "plant_config.yaml"
-    temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "01_onshore_steel_mn.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_01_onshore_steel_mn.yaml"
+    orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
+    temp_plant_config = temp_dir / "temp_plant_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "01_onshore_steel_mn" / "01_onshore_steel_mn.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_01_onshore_steel_mn.yaml"
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
 
     shutil.copy(orig_plant_config, temp_plant_config)
     shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
@@ -223,6 +217,8 @@ def test_technology_connections():
     # Load the high-level YAML content
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
+        highlevel_data["driver_config"] = driver_config
+        highlevel_data["technology_config"] = tech_config
 
     # Modify the high-level YAML to point to the temp tech_config file
     highlevel_data["plant_config"] = str(temp_plant_config.name)
@@ -237,19 +233,17 @@ def test_technology_connections():
     h2i_model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
     h2i_model.run()
 
-    # Clean up temporary YAML files
-    temp_plant_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
 
-
-def test_resource_connection_error_missing_connection():
-    os.chdir(examples_dir / "08_wind_electrolyzer")
-
+@pytest.mark.unit
+def test_resource_connection_error_missing_connection(temp_dir):
     # Path to the original plant_config.yaml and high-level yaml in the example directory
-    orig_plant_config = Path.cwd() / "plant_config.yaml"
-    temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "wind_plant_electrolyzer.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_08_wind_electrolyzer.yaml"
+    orig_plant_config = EXAMPLE_DIR / "08_wind_electrolyzer" / "plant_config.yaml"
+    temp_plant_config = temp_dir / "temp_plant_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "08_wind_electrolyzer" / "wind_plant_electrolyzer.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_08_wind_electrolyzer.yaml"
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "tech_config.yaml")
 
     shutil.copy(orig_plant_config, temp_plant_config)
     shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
@@ -267,6 +261,8 @@ def test_resource_connection_error_missing_connection():
     # Load the high-level YAML content
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
+        highlevel_data["driver_config"] = driver_config
+        highlevel_data["technology_config"] = tech_config
 
     # Modify the high-level YAML to point to the temp tech_config file
     highlevel_data["plant_config"] = str(temp_plant_config.name)
@@ -279,19 +275,17 @@ def test_resource_connection_error_missing_connection():
         H2IntegrateModel(temp_highlevel_yaml)
         assert "Resource models ['wind_resource'] are not in" in str(excinfo.value)
 
-    # Clean up temporary YAML files
-    temp_plant_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
 
-
-def test_resource_connection_error_missing_resource():
-    os.chdir(examples_dir / "08_wind_electrolyzer")
-
+@pytest.mark.unit
+def test_resource_connection_error_missing_resource(temp_dir):
     # Path to the original plant_config.yaml and high-level yaml in the example directory
-    orig_plant_config = Path.cwd() / "plant_config.yaml"
-    temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "wind_plant_electrolyzer.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_08_wind_electrolyzer.yaml"
+    orig_plant_config = EXAMPLE_DIR / "08_wind_electrolyzer" / "plant_config.yaml"
+    temp_plant_config = temp_dir / "temp_plant_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "08_wind_electrolyzer" / "wind_plant_electrolyzer.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_08_wind_electrolyzer.yaml"
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "tech_config.yaml")
 
     shutil.copy(orig_plant_config, temp_plant_config)
     shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
@@ -309,6 +303,8 @@ def test_resource_connection_error_missing_resource():
     # Load the high-level YAML content
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
+        highlevel_data["driver_config"] = driver_config
+        highlevel_data["technology_config"] = tech_config
 
     # Modify the high-level YAML to point to the temp tech_config file
     highlevel_data["plant_config"] = str(temp_plant_config.name)
@@ -326,27 +322,28 @@ def test_resource_connection_error_missing_resource():
     temp_highlevel_yaml.unlink(missing_ok=True)
 
 
-def test_reports_turned_off():
-    # Change the current working directory to the example's directory
-    os.chdir(examples_dir / "07_run_of_river_plant")
-
+@pytest.mark.unit
+def test_reports_turned_off(temp_dir):
     # Path to the original config files in the example directory
-    orig_plant_config = Path.cwd() / "plant_config.yaml"
-    orig_driver_config = Path.cwd() / "driver_config.yaml"
-    orig_tech_config = Path.cwd() / "tech_config.yaml"
-    orig_highlevel_yaml = Path.cwd() / "07_run_of_river.yaml"
+    orig_plant_config = EXAMPLE_DIR / "07_run_of_river_plant" / "plant_config.yaml"
+    orig_driver_config = EXAMPLE_DIR / "07_run_of_river_plant" / "driver_config.yaml"
+    orig_tech_config = EXAMPLE_DIR / "07_run_of_river_plant" / "tech_config.yaml"
+    orig_highlevel_yaml = EXAMPLE_DIR / "07_run_of_river_plant" / "07_run_of_river.yaml"
+    orig_csv = EXAMPLE_DIR / "07_run_of_river_plant" / "river_data.csv"
 
     # Create temporary config files
-    temp_plant_config = Path.cwd() / "temp_plant_config.yaml"
-    temp_driver_config = Path.cwd() / "temp_driver_config.yaml"
-    temp_tech_config = Path.cwd() / "temp_tech_config.yaml"
-    temp_highlevel_yaml = Path.cwd() / "temp_07_run_of_river.yaml"
+    temp_plant_config = temp_dir / "temp_plant_config.yaml"
+    temp_driver_config = temp_dir / "temp_driver_config.yaml"
+    temp_tech_config = temp_dir / "temp_tech_config.yaml"
+    temp_highlevel_yaml = temp_dir / "temp_07_run_of_river.yaml"
+    temp_csv = temp_dir / "river_data.csv"
 
     # Copy the original config files to temp files
+    shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
     shutil.copy(orig_plant_config, temp_plant_config)
     shutil.copy(orig_driver_config, temp_driver_config)
     shutil.copy(orig_tech_config, temp_tech_config)
-    shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
+    shutil.copy(orig_csv, temp_csv)
 
     # Load and modify the driver config to turn off reports
     with temp_driver_config.open() as f:
@@ -361,6 +358,15 @@ def test_reports_turned_off():
         yaml.safe_dump(driver_data, f)
 
     # Load the high-level YAML content and point to temp config files
+    with temp_plant_config.open("r") as f:
+        plant_data = yaml.safe_load(f)
+        plant_data["sites"]["site"]["resources"]["river_resource"]["resource_parameters"][
+            "filename"
+        ] = str(temp_csv)
+
+    with temp_plant_config.open("w") as f:
+        yaml.safe_dump(plant_data, f)
+
     with temp_highlevel_yaml.open() as f:
         highlevel_data = yaml.safe_load(f)
 
@@ -389,9 +395,3 @@ def test_reports_turned_off():
     assert (
         len(report_dirs) == 0
     ), f"Report directories were created despite create_om_reports=False: {report_dirs}"
-
-    # Clean up temporary YAML files
-    temp_plant_config.unlink(missing_ok=True)
-    temp_driver_config.unlink(missing_ok=True)
-    temp_tech_config.unlink(missing_ok=True)
-    temp_highlevel_yaml.unlink(missing_ok=True)
