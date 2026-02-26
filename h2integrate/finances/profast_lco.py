@@ -14,14 +14,12 @@ from h2integrate.core.inputs.validation import write_yaml
 
 
 class ProFastLCO(ProFastBase):
-    """Calculates the Levelized Cost of Commodity (LCO) using ProFAST for a given technology
-    configuration.
+    """Calculate the Levelized Cost of Commodity (LCO) with ProFAST.
 
-    This component estimates the levelized cost of user-defined commodities—such as hydrogen (LCOH),
-    electricity (LCOE), ammonia (LCOA), nitrogen (LCON), or CO₂ (LCOC)—based on the technologies
-    included in the configuration. It can output both scalar results (e.g., LCO, IRR, WACC) and
-    detailed cost breakdowns. Optionally, ProFAST inputs, configurations, and results can be
-    exported to YAML and CSV files for record-keeping or debugging.
+    This component estimates the levelized cost of user-defined commodities such as
+    hydrogen (LCOH), electricity (LCOE), ammonia (LCOA), nitrogen (LCON), or CO₂ (LCOC).
+    It can output scalar results (LCO, IRR, WACC) and detailed cost breakdowns. Optionally,
+    ProFAST inputs, configurations, and results can be exported to YAML and CSV files.
 
     Attributes:
         LCO_str (str): Name of the primary output variable (e.g., "LCOH").
@@ -31,8 +29,8 @@ class ProFastLCO(ProFastBase):
             USD/kWh).
 
     Outputs:
-        LCOx (float): Levelized cost of the commodity, where `x` corresponds to the first letter of
-            the commodity (e.g., LCOH for hydrogen). Units depend on commodity type.
+        LCOx (float): Levelized cost of the commodity, where ``x`` corresponds to the first letter
+            of the commodity (e.g., LCOH for hydrogen). Units depend on commodity type.
         wacc_<commodity> (float): Weighted average cost of capital, as a fraction.
         crf_<commodity> (float): Capital recovery factor, as a fraction.
         irr_<commodity> (float): Internal rate of return, as a fraction.
@@ -41,22 +39,21 @@ class ProFastLCO(ProFastBase):
             recovered (years).
         price_<commodity> (float): First-year selling price of the commodity in the same units
             as LCOx.
-        <LCOx>_breakdown (dict): Annualized breakdown of LCO costs by category.
+        ``<LCOx>_breakdown`` (dict): Annualized breakdown of LCO costs by category.
 
     Methods:
-        add_model_specific_outputs():
-            Creates model outputs for the LCO and associated financial metrics, including
-                cost breakdowns.
-
-        compute(inputs, outputs, discrete_inputs, discrete_outputs):
-            Runs the ProFAST simulation, calculates the LCO and financial outputs, generates
-            breakdowns, and optionally exports configuration and results to files.
+        add_model_specific_outputs(): Creates model outputs for the LCO and associated financial
+            metrics, including cost breakdowns.
+        compute(inputs, outputs, discrete_inputs, discrete_outputs): Runs the ProFAST simulation,
+            calculates the LCO and financial outputs, generates breakdowns, and optionally exports
+            configuration and results to files.
 
     Notes:
-        - The outputs and file exports are governed by user-specified finance parameters in the
-          plant configuration.
-        - The computation relies on `run_profast()` for core financial simulation and
-          `make_price_breakdown()` for cost disaggregation.
+
+        - Outputs and file exports are governed by user-specified finance parameters in the plant
+          configuration.
+        - The computation relies on ``run_profast()`` for the core financial simulation and
+          ``make_price_breakdown()`` for cost disaggregation.
     """
 
     def add_model_specific_outputs(self):

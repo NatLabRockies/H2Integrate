@@ -812,11 +812,9 @@ class PEM_H2_Clusters:
         # temperature (~80degC)
 
     def faradaic_efficiency(self, stack_current):  # ONLY EFFICIENCY CONSIDERED RIGHT NOW
-        """`
+        """
         Text background from:
-        [https://www.researchgate.net/publication/344260178_Faraday%27s_
-        Efficiency_Modeling_of_a_Proton_Exchange_Membrane_Electrolyzer_
-        Based_on_Experimental_Data]
+        https://www.researchgate.net/publication/344260178_Faraday%27s_Efficiency_Modeling_of_a_Proton_Exchange_Membrane_Electrolyzer_Based_on_Experimental_Data
 
         In electrolyzers, Faraday's efficiency is a relevant parameter to
         assess the amount of hydrogen generated according to the input

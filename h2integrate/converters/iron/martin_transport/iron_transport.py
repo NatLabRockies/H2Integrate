@@ -106,9 +106,9 @@ def calc_iron_ship_cost(iron_config):
 
     Args:
         iron_config (dict): Configuration dictionary containing:
-            - project_parameters (dict): Includes `cost_year` (int), the year for cost estimation.
-            - iron (dict): Contains `site` (dict) with `lat`
-                and `lon` keys for destination coordinates.
+            - project_parameters (dict): Includes ``cost_year`` (int), the year for cost estimation.
+            - iron (dict): Contains ``site`` (dict) with ``lat`` and ``lon`` keys for
+                destination coordinates.
 
     Returns:
         tuple:

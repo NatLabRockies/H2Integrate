@@ -87,11 +87,15 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
         system_model_source (str):
             Source software for the system model. "hopp" source has not been brought
             over from HOPP yet. Options are:
-                - "pysam"
+
+            - ``"pysam"``
+
         chemistry (str):
             Battery chemistry option. "LDES" has not been brought over from HOPP yet.
             Supported values include:
-                - PySAM: "LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"
+
+            - PySAM: ``"LFPGraphite"``, ``"LMOLTO"``, ``"LeadAcid"``, ``"NMCGraphite"``
+
         min_charge_percent (float):
             Minimum allowable state of charge as a fraction (0 to 1).
         max_charge_percent (float):
@@ -135,7 +139,7 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
 class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
     """OpenMDAO component wrapping the PySAM Battery Performance model.
 
-    This class integrates the NREL PySAM `BatteryStateful` model into
+    This class integrates the NREL PySAM ``BatteryStateful`` model into
     an OpenMDAO component. It provides inputs and outputs for battery
     capacity, charge/discharge power, state of charge, and unmet or unused
     demand.
@@ -146,7 +150,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
     Attributes:
         config (PySAMBatteryPerformanceModelConfig):
             Configuration parameters for the battery performance model.
-        system_model (BatteryStateful):
+        system_model (``BatteryStateful``):
             Instance of the PySAM BatteryStateful model, initialized with
             the selected chemistry and configuration parameters.
         outputs (BatteryOutputs):
@@ -449,43 +453,40 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
 
         Applies a sequence of dispatch commands (positive = discharge, negative = charge)
         one timestep at a time. Each command is clipped to allowable instantaneous
-        charge / discharge limits derived from:
-          1. Rated power (config.max_charge_rate)
-          2. PySAM internal estimates (P_chargeable / P_dischargeable)
-          3. Remaining energy headroom vs. SOC bounds
+        charge or discharge limits derived from:
 
-        The method updates internal rolling arrays in self.outputs in-place using
-        sim_start_index as an offset (enabling sliding / receding horizon logic).
+            1. Rated power (``config.max_charge_rate``)
+            2. PySAM internal estimates (``P_chargeable`` and ``P_dischargeable``)
+            3. Remaining energy headroom vs. SOC bounds
 
-        The simulate method is much of what would normally be in the compute() method
-        of a component, but is separated into its own function here to allow the dispatch()
+        The method updates internal rolling arrays in ``self.outputs`` in-place using
+        ``sim_start_index`` as an offset (enabling sliding / receding horizon logic).
+
+        The simulate method is much of what would normally be in the ``compute()`` method
+        of a component, but is separated into its own function here to allow the ``dispatch()``
         method to manage calls to the performance model.
 
         Args:
             storage_dispatch_commands : Sequence[float]
                 Commanded power per timestep (kW). Negative = charge, positive = discharge.
-                Length should be = config.n_control_window.
+                Length should be = ``config.n_control_window``.
             time_step_duration : float | Sequence[float]
                 Timestep duration in hours. Scalar applied uniformly or sequence matching
-                len(storage_dispatch_commands).
+                ``len(storage_dispatch_commands)``.
             control_variable : str
                 PySAM control input to set each step ("input_power" or "input_current").
             sim_start_index : int, optional
                 Starting index for writing into persistent output arrays (default 0).
 
         Returns:
-            tuple[np.ndarray, np.ndarray]
-                (battery_power_kW, soc_percent)
-                battery_power_kW : array of PySAM P values (kW) per timestep
-                                    (positive = discharge, negative = charge).
-                soc_percent      : array of SOC values (%) per timestep.
+            tuple[np.ndarray, np.ndarray]: Battery power (kW) and SOC (%) per timestep.
 
         Notes:
             - SOC bounds may still be exceeded slightly due to PySAM internal dynamics.
-            - self.outputs.stateful_attributes are updated only if the attribute exists
-            in StatePack or StateCell.
-            - self.outputs.component_attributes (e.g., unmet_demand) are not modified here;
-            they are populated in compute(), unless an external dispatcher manages them.
+            - ``self.outputs.stateful_attributes`` are updated only if the attribute exists
+              in StatePack or StateCell.
+            - ``self.outputs.component_attributes`` (e.g., unmet_demand) are not modified here;
+              they are populated in ``compute()``, unless an external dispatcher manages them.
         """
 
         # Loop through the provided input power/current (decided by control_variable)

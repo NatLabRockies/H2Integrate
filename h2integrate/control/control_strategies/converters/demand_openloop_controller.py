@@ -26,7 +26,7 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         """Set up the load controller configuration.
 
         Loads the controller configuration from ``tech_config`` and then calls
-        the base class ``setup``to create to inputs/outputs.
+        the base class ``setup`` to create inputs/outputs.
 
         Raises:
             KeyError: If the expected configuration keys are missing from
@@ -48,10 +48,12 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         Args:
             inputs (dict-like): Mapping of input variable names to their
                 current values, including:
+
                     * ``{commodity}_demand``: Demand profile.
                     * ``{commodity}_in``: Supplied commodity.
             outputs (dict-like): Mapping of output variable names where results
                 will be written, including:
+
                     * ``{commodity}_unmet_demand``: Unmet demand.
                     * ``{commodity}_unused_commodity``: Curtailed production.
                     * ``{commodity}_out``: Actual output delivered.

@@ -41,7 +41,7 @@ def main(config):
 
     Notes:
         - The function reads input cost data and inflates values to the
-            `cost_year` using CPI or CEPCI.
+            ``cost_year`` using CPI or CEPCI.
         - ProFAST is used to define financial parameters, capital
             and operational costs, and revenue streams.
         - Feedstock costs and coproduct revenues are incorporated based on performance metrics.
