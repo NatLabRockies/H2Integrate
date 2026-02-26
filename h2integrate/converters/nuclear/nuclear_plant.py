@@ -90,27 +90,26 @@ class NuclearCostModelConfig(CostModelBaseConfig):
 
     Args:
         system_capacity_mw (float): Rated electric capacity in MW.
-        reactor_type (str): Key selecting a reactor type in type_costs.
-        type_costs (dict): Reactor type cost data with keys:
-                capex_per_kw, fixed_opex_per_kw_year, variable_opex_per_mwh
-                Optional: reference_capacity_mw, capex_scaling_exponent
+        capex_per_kw (float): Capital cost per kW.
+        fixed_opex_per_kw_year (float): Fixed O&M per kW per year.
+        variable_opex_per_mwh (float): Variable O&M per MWh.
+        reference_capacity_mw (float | None): Reference capacity for capex scaling.
+        capex_scaling_exponent (float): Capex scaling exponent.
         cost_year (int): Dollar year corresponding to input costs.
     """
 
     system_capacity_mw: float = field(validator=gt_zero)
-    reactor_type: str = field()
-    type_costs: dict = field()
+    capex_per_kw: float = field(validator=gt_zero)
+    fixed_opex_per_kw_year: float = field(validator=gt_zero)
+    variable_opex_per_mwh: float = field(validator=gt_zero)
+    reference_capacity_mw: float | None = field(default=None)
+    capex_scaling_exponent: float = field(default=1.0, validator=gt_zero)
 
     def __attrs_post_init__(self):
-        if self.reactor_type not in self.type_costs:
-            raise ValueError(
-                f"reactor_type '{self.reactor_type}' not found in type_costs keys: "
-                f"{list(self.type_costs.keys())}"
-            )
-        required = {"capex_per_kw", "fixed_opex_per_kw_year", "variable_opex_per_mwh"}
-        missing = required - set(self.type_costs[self.reactor_type].keys())
-        if missing:
-            raise ValueError("type_costs entry is missing required keys: " f"{sorted(missing)}")
+        if self.reference_capacity_mw is None:
+            self.reference_capacity_mw = self.system_capacity_mw
+        if self.reference_capacity_mw <= 0:
+            raise ValueError("reference_capacity_mw must be greater than zero")
 
 
 class NuclearCostModel(CostModelBaseClass):
@@ -150,17 +149,11 @@ class NuclearCostModel(CostModelBaseClass):
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        type_costs = self.config.type_costs[self.config.reactor_type]
-        capex_per_kw = type_costs["capex_per_kw"]
-        fixed_opex_per_kw_year = type_costs["fixed_opex_per_kw_year"]
-        variable_opex_per_mwh = type_costs["variable_opex_per_mwh"]
-        reference_capacity_mw = type_costs.get(
-            "reference_capacity_mw", self.config.system_capacity_mw
-        )
-        capex_scaling_exponent = type_costs.get("capex_scaling_exponent", 1.0)
-
-        if reference_capacity_mw <= 0:
-            raise ValueError("reference_capacity_mw must be greater than zero")
+        capex_per_kw = self.config.capex_per_kw
+        fixed_opex_per_kw_year = self.config.fixed_opex_per_kw_year
+        variable_opex_per_mwh = self.config.variable_opex_per_mwh
+        reference_capacity_mw = self.config.reference_capacity_mw
+        capex_scaling_exponent = self.config.capex_scaling_exponent
 
         system_capacity_mw = inputs["system_capacity"]
         capacity_kw = system_capacity_mw * 1000

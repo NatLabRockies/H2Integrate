@@ -30,23 +30,11 @@ def nuclear_performance_params():
 def nuclear_cost_params():
     return {
         "system_capacity_mw": 450.0,
-        "reactor_type": "smr_lwr",
-        "type_costs": {
-            "smr_lwr": {
-                "capex_per_kw": 6000.0,
-                "fixed_opex_per_kw_year": 120.0,
-                "variable_opex_per_mwh": 2.5,
-                "reference_capacity_mw": 300.0,
-                "capex_scaling_exponent": 0.9,
-            },
-            "lwr": {
-                "capex_per_kw": 4500.0,
-                "fixed_opex_per_kw_year": 95.0,
-                "variable_opex_per_mwh": 2.0,
-                "reference_capacity_mw": 1000.0,
-                "capex_scaling_exponent": 0.95,
-            },
-        },
+        "capex_per_kw": 6000.0,
+        "fixed_opex_per_kw_year": 120.0,
+        "variable_opex_per_mwh": 2.5,
+        "reference_capacity_mw": 300.0,
+        "capex_scaling_exponent": 0.9,
         "cost_year": 2023,
     }
 
@@ -111,12 +99,11 @@ def test_nuclear_cost_model(plant_config, nuclear_cost_params, subtests):
     opex = prob.get_val("OpEx")[0]
     cost_year = prob.get_val("cost_year")
 
-    type_costs = nuclear_cost_params["type_costs"][nuclear_cost_params["reactor_type"]]
-    capex_per_kw = type_costs["capex_per_kw"]
-    fixed_opex_per_kw_year = type_costs["fixed_opex_per_kw_year"]
-    variable_opex_per_mwh = type_costs["variable_opex_per_mwh"]
-    reference_capacity_mw = type_costs["reference_capacity_mw"]
-    capex_scaling_exponent = type_costs["capex_scaling_exponent"]
+    capex_per_kw = nuclear_cost_params["capex_per_kw"]
+    fixed_opex_per_kw_year = nuclear_cost_params["fixed_opex_per_kw_year"]
+    variable_opex_per_mwh = nuclear_cost_params["variable_opex_per_mwh"]
+    reference_capacity_mw = nuclear_cost_params["reference_capacity_mw"]
+    capex_scaling_exponent = nuclear_cost_params["capex_scaling_exponent"]
 
     scale_ratio = system_capacity / reference_capacity_mw
     scaled_capex_per_kw = capex_per_kw * (scale_ratio ** (capex_scaling_exponent - 1.0))

@@ -29,7 +29,7 @@ The performance model limits electricity production by the rated capacity and an
 
 ## Cost model
 
-The cost model uses a reactor type selector and a `type_costs` mapping to compute capital and operating costs.
+The cost model uses direct cost parameters to compute capital and operating costs.
 It supports optional scaling of capex with size using a reference capacity and scaling exponent.
 
 **Inputs**
@@ -42,18 +42,12 @@ It supports optional scaling of capex with size using a reference capacity and s
 | Key | Type | Description |
 | --- | --- | --- |
 | `system_capacity_mw` | float | Rated electrical capacity (MW). |
-| `reactor_type` | str | Key to select a reactor type in `type_costs`. |
-| `type_costs` | dict | Mapping of reactor type to cost values. |
+| `capex_per_kw` | float | Capital cost per kW. |
+| `fixed_opex_per_kw_year` | float | Fixed O&M per kW per year. |
+| `variable_opex_per_mwh` | float | Variable O&M per MWh. |
+| `reference_capacity_mw` | float | Reference capacity for capex scaling (defaults to `system_capacity_mw`). |
+| `capex_scaling_exponent` | float | Capex scaling exponent (defaults to 1.0). |
 | `cost_year` | int | Dollar year for the input costs. |
-
-**type_costs schema**
-| Key | Type | Required | Description |
-| --- | --- | --- | --- |
-| `capex_per_kw` | float | yes | Capital cost per kW. |
-| `fixed_opex_per_kw_year` | float | yes | Fixed O&M per kW per year. |
-| `variable_opex_per_mwh` | float | yes | Variable O&M per MWh. |
-| `reference_capacity_mw` | float | no | Reference capacity for capex scaling (defaults to `system_capacity_mw`). |
-| `capex_scaling_exponent` | float | no | Capex scaling exponent (defaults to 1.0). |
 
 The capex calculation follows:
 
@@ -86,20 +80,11 @@ technologies:
         capacity_factor: 0.9
       cost_parameters:
         system_capacity_mw: 450.0
-        reactor_type: smr_lwr
-        type_costs:
-          smr_lwr:
-            capex_per_kw: 6000.0
-            fixed_opex_per_kw_year: 120.0
-            variable_opex_per_mwh: 2.5
-            reference_capacity_mw: 300.0
-            capex_scaling_exponent: 0.9
-          lwr:
-            capex_per_kw: 4500.0
-            fixed_opex_per_kw_year: 95.0
-            variable_opex_per_mwh: 2.0
-            reference_capacity_mw: 1000.0
-            capex_scaling_exponent: 0.95
+        capex_per_kw: 6000.0
+        fixed_opex_per_kw_year: 120.0
+        variable_opex_per_mwh: 2.5
+        reference_capacity_mw: 300.0
+        capex_scaling_exponent: 0.9
         cost_year: 2023
 ```
 
