@@ -3,16 +3,6 @@ Marine carbon dioxide (CO₂) capture technologies aim to remove CO₂ from the 
 
 This section provides an overview of the marine carbon dioxide capture models integrated into H2Integrate. The models are adapted from and maintained in NREL's [MarineCarbonManagement Repository](https://github.com/Nrel/MarineCarbonManagement) and have been integrated here for ease of scenario analysis and system-level optimization.
 
-````{note}
-The [MarineCarbonManagement repository](https://github.com/NREL/MarineCarbonManagement) is not available as a pip-installable package on PyPI. As a result, it is not included in the default installation of H2Integrate via pip or through the setup instructions on the H2Integrate GitHub page.
-
-To enable the DOC model in your environment, install the required dependency manually:
-
-```bash
-pip install git+https://github.com/NREL/MarineCarbonManagement.git
-```
-
-````
 
 ## Direct Ocean Capture (DOC) Model
 
@@ -65,7 +55,7 @@ The Ocean Alkalinity Enhancement (OAE) Model simulates the process of increasing
 This model estimates the CO₂ absorption potential of the ocean after the OAE process. CO₂ is not a usable downstream product.
 ```
 
-The OAE model is adapted from NREL’s MarineCarbonManagement Repository and includes both performance and cost components, as well as a financial model enabling users to explore a variety of system designs, operational strategies, and infrastructure setups.
+The OAE model is adapted from NREL’s MarineCarbonManagement Repository and includes both performance and cost components, as well as a financial model enabling users to explore a variety of system designs, operational strategies, and infrastructure setups. Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol8010012)
 
 ### Why Use This Model
 - Assess system performance — determine processing capacity, flow characteristics, and operational profiles.

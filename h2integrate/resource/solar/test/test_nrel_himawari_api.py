@@ -32,7 +32,7 @@ def himawari7_site_config_tmy():
         "longitude": 152.67935,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari_tmy_solar_v3_api",
+                "resource_model": "HimawariTMYSolarAPI",
                 "resource_parameters": {
                     "resource_year": "tmy-2020",
                 },
@@ -50,7 +50,7 @@ def himawari7_site_config():
         "longitude": 152.67935,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari7_solar_v3_api",
+                "resource_model": "Himawari7SolarAPI",
                 "resource_parameters": {
                     "resource_year": 2013,
                 },
@@ -68,7 +68,7 @@ def himawari8_site_config():
         "longitude": 101.656312,
         "resources": {
             "solar_resource": {
-                "resource_model": "himawari8_solar_v3_api",
+                "resource_model": "Himawari8SolarAPI",
                 "resource_parameters": {
                     "resource_year": 2020,
                 },

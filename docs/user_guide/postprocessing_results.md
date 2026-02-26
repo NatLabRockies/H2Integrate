@@ -19,17 +19,17 @@ Here is a snippet of the output from a simulation:
 varname                               val                  units     prom_name
 ------------------------------------  -------------------  --------  -----------------------------------------------
 plant
-  hopp
-    hopp
-      electricity_out                 |85694382.72934064|   kW         hopp.electricity_out
-      CapEx                           [4.00631628e+09]      USD        hopp.CapEx
-      OpEx                            [70417369.71000001]   USD/year   hopp.OpEx
+  HOPPComponent
+    HOPPComponent
+      electricity_out                 |85694382.72934064|   kW         HOPPComponent.electricity_out
+      CapEx                           [4.00631628e+09]      USD        HOPPComponent.CapEx
+      OpEx                            [70417369.71000001]   USD/year   HOPPComponent.OpEx
   hopp_to_steel_cable
     electricity_out                   |85694382.72934064|   kW         hopp_to_steel_cable.electricity_out
   hopp_to_electrolyzer_cable
     electricity_out                   |85694382.72934064|   kW         hopp_to_electrolyzer_cable.electricity_out
   electrolyzer
-    eco_pem_electrolyzer_performance
+    ECOElectrolyzerPerformanceModel
       hydrogen_out                    |1100221.2561732|     kg/h       electrolyzer.hydrogen_out
       time_until_replacement          [47705.10433122]      h          electrolyzer.time_until_replacement
       total_hydrogen_produced         [89334697.48304178]   kg/year    electrolyzer.total_hydrogen_produced
@@ -45,9 +45,9 @@ plant
     ProFastComp_1
       LCOE                            [0.09795931]          USD/(kW*h)   finance_subgroup_default.LCOE
   steel
-    steel_performance
+    SteelPerformanceModel
       steel                           |9615.91147134|       t/year     steel.steel
-    steel_cost
+    SteelCostAndFinancialModel
       CapEx                           [5.78060014e+08]      USD        steel.CapEx
       OpEx                            [1.0129052e+08]       USD/year   steel.OpEx
       LCOS                            [1213.87728644]       USD/t      steel.LCOS
@@ -122,7 +122,7 @@ When providing a list of variable names, the function uses the default units for
 # Get a subset of timeseries data using a list of variable names
 output_vars = [
     "electrolyzer.hydrogen_out",
-    "hopp.electricity_out",
+    "HOPPComponent.electricity_out",
     "ammonia.ammonia_out",
     "h2_storage.hydrogen_out",
 ]
@@ -158,7 +158,7 @@ When providing a dictionary with variable names as keys and dictionaries as valu
 # Specify variables with alternative names and/or units
 vars_with_options = {
     "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
-    "hopp.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
+    "HOPPComponent.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
     "ammonia.ammonia_out": {"alternative_name": None},  # Uses default variable name
     "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
 }

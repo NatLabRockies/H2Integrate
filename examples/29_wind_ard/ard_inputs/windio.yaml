@@ -1,0 +1,48 @@
+name: Wind plant definition for Ard example in H2Integrate
+site:
+  name: Wind site
+  boundaries:
+    polygons:
+    - x:
+      - -1000.0
+      - 1000.0
+      - 1000.0
+      - -1000.0
+      y:
+      - -1000.0
+      - -1000.0
+      - 1000.0
+      - 1000.0
+  energy_resource: !include ./open-meteo-56.20N8.54E86m.yaml
+wind_farm:
+  name: Small wind farm
+  layouts:
+    coordinates:
+      x:
+      - -3000.0
+      - -2250.0
+      - -1500.0
+      - -750.0
+      - 0.0
+      - 750.0
+      - 1500.0
+      - 2250.0
+      - 3000.0
+      y:
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+      - -3000.0
+  turbine: !include windIO-plant_turbine_NREL-5.0MW-126m-RWT.yaml
+  electrical_substations:
+  - electrical_substation:
+      coordinates:
+        x:
+        - 100.0
+        y:
+        - 100.0

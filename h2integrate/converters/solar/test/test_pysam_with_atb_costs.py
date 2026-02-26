@@ -255,8 +255,8 @@ def test_residential_pv_cost(
     prob.setup()
     prob.run_model()
 
-    capital_cost = prob.get_val("pv_cost.CapEx")[0]
-    operating_cost = prob.get_val("pv_cost.OpEx")[0]
+    capital_cost = prob.get_val("pv_cost.CapEx", units="USD")[0]
+    operating_cost = prob.get_val("pv_cost.OpEx", units="USD/year")[0]
 
     with subtests.test("Residential Capital Cost"):
         assert pytest.approx(capital_cost, rel=1e-6) == shared_value * cost_dict["capex_per_kWdc"]

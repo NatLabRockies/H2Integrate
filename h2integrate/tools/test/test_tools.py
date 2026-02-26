@@ -26,7 +26,9 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.327792370180044
         )
     with subtests.test("bool"):
@@ -34,7 +36,9 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.226443205147294
         )
     with subtests.test("int"):
@@ -42,7 +46,9 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.4601971211592115
         )
     with subtests.test("str"):
@@ -50,7 +56,9 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.22644320514729
         )
     with subtests.test("int repeat without run setup modify_tech_config"):
@@ -58,7 +66,9 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case, run_setup=False)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.22644320514729  # should still "str" test value
         )
     with subtests.test("int repeat with run setup outside modify_tech_config"):
@@ -67,6 +77,8 @@ def test_tech_config_modifier(subtests):
         model.setup()
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
             == 5.4601971211592115  # should still "str" test value
         )

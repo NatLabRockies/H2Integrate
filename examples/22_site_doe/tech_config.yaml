@@ -4,9 +4,9 @@ description: "This plant produces electricity from a solar-PV system"
 technologies:
   solar:
     performance_model:
-      model: "pysam_solar_plant_performance"
+      model: "PYSAMSolarPlantPerformanceModel"
     cost_model:
-      model: "atb_utility_pv_cost"
+      model: "ATBUtilityPVCostModel"
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 400000

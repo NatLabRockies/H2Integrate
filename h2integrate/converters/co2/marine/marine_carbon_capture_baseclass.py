@@ -1,8 +1,7 @@
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -22,7 +21,7 @@ class MarineCarbonCapturePerformanceConfig(BaseConfig):
     store_hours: float = field()
 
 
-class MarineCarbonCapturePerformanceBaseClass(om.ExplicitComponent):
+class MarineCarbonCapturePerformanceBaseClass(PerformanceModelBaseClass):
     """Base OpenMDAO component for modeling marine carbon capture performance.
 
     This class provides the basic input/output setup and requires subclassing to
@@ -34,21 +33,23 @@ class MarineCarbonCapturePerformanceBaseClass(om.ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "co2"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
+        super().setup()
+
         self.add_input(
-            "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
-        )
-        self.add_output(
-            "co2_out",
+            "electricity_in",
             val=0.0,
-            shape=8760,
-            units="kg/h",
-            desc="Hourly CO₂ capture rate (kg/h)",
+            shape=self.n_timesteps,
+            units="W",
+            desc="Hourly input electricity (W)",
         )
+
+        # TODO: remove this output once finance models are updated
         self.add_output("co2_capture_mtpy", units="t/year", desc="Annual CO₂ captured (t/year)")
 
 
@@ -68,6 +69,7 @@ class MarineCarbonCaptureCostBaseClass(CostModelBaseClass):
         self.add_input(
             "electricity_in", val=0.0, shape=8760, units="W", desc="Hourly input electricity (W)"
         )
+        # TODO: replaced with annual_co2_produced
         self.add_input(
             "co2_capture_mtpy",
             val=0.0,

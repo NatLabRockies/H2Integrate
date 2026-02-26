@@ -117,7 +117,7 @@ class ProFastLCO(ProFastBase):
         outputs[self.LCO_str] = sol["lco"]
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
-            if isinstance(val, (np.ndarray, list, tuple)):  # only for IRR
+            if isinstance(val, np.ndarray | list | tuple):  # only for IRR
                 # if len(val)>0:
                 val = val[-1]
             outputs[f"{output_var}_{self.output_txt}"] = val
@@ -140,7 +140,7 @@ class ProFastLCO(ProFastBase):
         if save_results or save_config:
             output_dir = self.options["driver_config"]["general"]["folder_output"]
             fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastComp"
+                "profast_output_description", "ProFastLCO"
             )
 
             fbasename = f"{fdesc}_{self.output_txt}"

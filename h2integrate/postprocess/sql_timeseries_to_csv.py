@@ -173,14 +173,14 @@ def save_case_timeseries_as_csv(
             continue
 
         # skip discrete inputs/outputs (like resource data)
-        if isinstance(val, (dict, pd.DataFrame, pd.Series)):
+        if isinstance(val, dict | pd.DataFrame | pd.Series):
             continue
 
         # skip scalar data
-        if isinstance(val, (int, float, str, bool)):
+        if isinstance(val, int | float | str | bool):
             continue
 
-        if isinstance(val, (np.ndarray, list, tuple)):
+        if isinstance(val, np.ndarray | list | tuple):
             if len(val) > 1:
                 user_units = None
                 alternative_name = None
@@ -211,6 +211,32 @@ def save_case_timeseries_as_csv(
     # update var_to_values and var_to_units with alternative names
     var_to_values = {alt_name_mapper[k]: v for k, v in var_to_values.items()}
     var_to_units = {alt_name_mapper[k]: v for k, v in var_to_units.items()}
+
+    # get length of timeseries profiles (n_timesteps)
+    timeseries_lengths = list(
+        {len(v) for k, v in var_to_values.items() if k.endswith("_out") or k.endswith("_in")}
+    )
+    if len(timeseries_lengths) != 1:
+        msg = (
+            "Unexpected: found zero or multiple lengths for timeseries variables "
+            f"{timeseries_lengths}. Try specifying the variables to save using the "
+            "vars_to_save input."
+        )
+        raise ValueError(msg)
+
+    # check for any values for variables that aren't timeseries profiles
+    if any(len(v) != timeseries_lengths[0] for k, v in var_to_values.items()):
+        # drop variables that aren't timeseries profiles
+        var_to_values = {
+            alt_name_mapper[k]: v
+            for k, v in var_to_values.items()
+            if len(v) == timeseries_lengths[0]
+        }
+        var_to_units = {
+            alt_name_mapper[k]: v
+            for k, v in var_to_units.items()
+            if alt_name_mapper[k] in var_to_values
+        }
 
     # rename columns to include units
     column_rename_mapper = {

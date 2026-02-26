@@ -1,0 +1,7 @@
+name: "H2Integrate_config"
+
+system_summary: "Run DOE over solar capacities and site locations"
+
+driver_config: "driver_config.yaml"
+technology_config: "tech_config.yaml"
+plant_config: "plant_config.yaml"

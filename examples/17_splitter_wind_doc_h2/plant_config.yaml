@@ -1,19 +1,18 @@
 name: "plant_config"
 description: "This plant is located in OR, USA"
 
-site:
-  latitude: 43.807
-  longitude: -124.81
-  resources:
-    wind_resource:
-      resource_model: "wind_toolkit_v2_api"
-      resource_parameters:
-        resource_year: 2010
+sites:
+  site:
+    latitude: 43.807
+    longitude: -124.81
+    resources:
+      wind_resource:
+        resource_model: "WTKNRELDeveloperAPIWindResource"
+        resource_parameters:
+          resource_year: 2010
 
 plant:
   plant_life: 30
-
-
 
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
@@ -27,11 +26,11 @@ technology_interconnections: [
 
 resource_to_tech_connections: [
   # connect the wind resource to the wind technology
-  ['wind_resource', 'wind', 'wind_resource_data'],
+  ['site.wind_resource', 'wind', 'wind_resource_data'],
 ]
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       params:
         analysis_start_year: 2032

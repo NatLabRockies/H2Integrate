@@ -223,6 +223,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         self.config = PySAMBatteryPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
@@ -239,7 +240,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
             desc="Battery storage capacity",
         )
 
-        BatteryPerformanceBaseClass.setup(self)
+        super().setup()
 
         self.add_input(
             "electricity_demand",
@@ -427,6 +428,15 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
         outputs["SOC"] = soc
         outputs["P_chargeable"] = self.outputs.P_chargeable
         outputs["P_dischargeable"] = self.outputs.P_dischargeable
+        outputs["rated_electricity_production"] = inputs["max_charge_rate"]
+
+        outputs["total_electricity_produced"] = np.sum(total_power_out)
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
+            outputs["rated_electricity_production"] * self.n_timesteps
+        )
 
     def simulate(
         self,

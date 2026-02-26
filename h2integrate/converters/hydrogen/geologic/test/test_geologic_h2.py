@@ -55,7 +55,12 @@ def geoh2_subsurface_well():
             "site_prospectivity": 0.7,
             "wellhead_h2_concentration": 95,
             "initial_wellhead_flow": 4000,
+            "gas_flow_density": 0.11741,
+            "ramp_up_time_months": 6,
+            "percent_increase_during_rampup": 5,
             "gas_reservoir_size": 1000000,
+            "use_arps_decline_curve": True,
+            "decline_fit_params": {"fit_name": "Eagle_Ford"},
         },
     }
     tech_config_dict = {"model_inputs": subsurface_perf_config}
@@ -91,6 +96,153 @@ def aspen_geoh2_config():
     return {"model_inputs": model_inputs}
 
 
+def test_natural_geoh2_well_performance(subtests, plant_config):
+    subsurface_perf_config = {
+        "shared_parameters": {
+            "borehole_depth": 300,
+            "well_diameter": "small",
+            "well_geometry": "vertical",
+        },
+        "performance_parameters": {
+            "rock_type": "peridotite",
+            "grain_size": 0.01,
+            "use_prospectivity": False,
+            "site_prospectivity": 0.7,
+            "wellhead_h2_concentration": 95,
+            "initial_wellhead_flow": 40000,
+            "gas_flow_density": 0.11741,
+            "ramp_up_time_months": 6,
+            "percent_increase_during_rampup": 5,
+            "gas_reservoir_size": 10000000,
+            "use_arps_decline_curve": True,
+            "decline_fit_params": {"fit_name": "Eagle_Ford"},
+        },
+    }
+    tech_config_dict = {"model_inputs": subsurface_perf_config}
+    subsurface_comp = NaturalGeoH2PerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+
+    prob = om.Problem()
+    prob.model.add_subsystem("perf", subsurface_comp, promotes=["*"])
+
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("Well hydrogen production"):
+        assert (
+            pytest.approx(np.mean(prob.model.get_val("perf.hydrogen_out", units="kg/h")), rel=1e-6)
+            == 6061.508855232839
+        ), 1e-6
+
+    with subtests.test("total h2 out"):
+        assert (
+            pytest.approx(prob.model.get_val("perf.total_hydrogen_produced", units="kg"), rel=1e-6)
+            == 53098817.57183966
+        ), 1e-6
+
+
+def test_aspen_geoh2_performance_outputs(
+    subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
+):
+    prob = om.Problem()
+    perf_comp = AspenGeoH2SurfacePerformanceModel(
+        plant_config=plant_config,
+        tech_config=aspen_geoh2_config,
+        driver_config={},
+    )
+
+    well_group = prob.model.add_subsystem("well", om.Group())
+    well_group.add_subsystem("perf", geoh2_subsurface_well, promotes=["*"])
+
+    tech_group = prob.model.add_subsystem("comp", om.Group())
+    tech_group.add_subsystem("perf", perf_comp, promotes=["*"])
+
+    prob.model.connect("well.wellhead_gas_out", "comp.wellhead_gas_in")
+    prob.model.connect("well.wellhead_h2_concentration_mol", "comp.wellhead_h2_concentration_mol")
+
+    prob.setup()
+    prob.run_model()
+    commodity = "hydrogen"
+    commodity_rate_units = "kg/h"
+    commodity_amount_units = "kg"
+    plant_life = int(plant_config["plant"]["plant_life"])
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+
+    # Check that replacement schedule is between 0 and 1
+    with subtests.test("0 <= replacement_schedule <=1"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") <= 1)
+
+    with subtests.test("replacement_schedule length"):
+        assert len(prob.get_val("comp.replacement_schedule", units="unitless")) == plant_life
+
+    # Check that capacity factor is between 0 and 1 with units of "unitless"
+    with subtests.test("0 <= capacity_factor (unitless) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
+
+    # Check that capacity factor is between 1 and 100 with units of "percent"
+    with subtests.test("1 <= capacity_factor (percent) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") >= 1)
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") <= 100)
+
+    with subtests.test("capacity_factor length"):
+        assert len(prob.get_val("comp.capacity_factor", units="unitless")) == plant_life
+
+    # Test that rated commodity production is greater than zero
+    with subtests.test(f"rated_{commodity}_production > 0"):
+        assert np.all(
+            prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units) > 0
+        )
+
+    with subtests.test(f"rated_{commodity}_production length"):
+        assert (
+            len(prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units)) == 1
+        )
+
+    # Test that total commodity production is greater than zero
+    with subtests.test(f"total_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units) > 0
+        )
+    with subtests.test(f"total_{commodity}_produced length"):
+        assert (
+            len(prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units)) == 1
+        )
+
+    # Test that annual commodity production is greater than zero
+    with subtests.test(f"annual_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr")
+            > 0
+        )
+
+    with subtests.test(f"annual_{commodity}_produced[1:] == annual_{commodity}_produced[0]"):
+        annual_production = prob.get_val(
+            f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr"
+        )
+        assert np.all(annual_production[1:] == annual_production[0])
+
+    with subtests.test(f"annual_{commodity}_produced length"):
+        assert len(annual_production) == plant_life
+
+    # Test that commodity output has some values greater than zero
+    with subtests.test(f"Some of {commodity}_out > 0"):
+        assert np.any(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units) > 0)
+
+    with subtests.test(f"{commodity}_out length"):
+        assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
+
+    # Test default values
+    with subtests.test("operational_life default value"):
+        assert prob.get_val("comp.operational_life", units="yr") == plant_life
+    with subtests.test("replacement_schedule value"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
+
+
 def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config):
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(
@@ -114,16 +266,22 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
-            == 603.4286677531819
+            == 606.1508855232839
+        ), 1e-6
+
+    with subtests.test("total h2 out well"):
+        assert (
+            pytest.approx(prob.model.get_val("well.total_hydrogen_produced", units="kg"), rel=1e-6)
+            == 5309881.757183
         ), 1e-6
 
 
 def test_aspen_geoh2_performance_cost(
     subtests, plant_config, geoh2_subsurface_well, aspen_geoh2_config
 ):
-    expected_capex = 1795733.55
+    expected_capex = 1800711.83796
     expected_opex = 4567464
-    expected_varopex = 984842.53
+    expected_varopex = 989213.8787
 
     prob = om.Problem()
     perf_comp = AspenGeoH2SurfacePerformanceModel(
@@ -151,11 +309,20 @@ def test_aspen_geoh2_performance_cost(
     prob.run_model()
 
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.CapEx"), rel=1e-6) == expected_capex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.CapEx", units="USD"), rel=1e-6)
+            == expected_capex
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.OpEx"), rel=1e-6) == expected_opex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.OpEx", units="USD/year"), rel=1e-6)
+            == expected_opex
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.model.get_val("geoh2.VarOpEx")[0], rel=1e-6) == expected_varopex
+        assert (
+            pytest.approx(prob.model.get_val("geoh2.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == expected_varopex
+        )
 
 
 def test_aspen_geoh2_refit_coeffs(
@@ -198,8 +365,8 @@ def test_aspen_geoh2_refit_coeffs(
 
     with subtests.test("Well hydrogen production"):
         assert (
-            pytest.approx(prob.model.get_val("well.hydrogen_out", units="kg/h"), rel=1e-6)
-            == 603.4286677531819
+            pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
+            == 606.1508855232839
         ), 1e-6
 
     with subtests.test("Refit Performance Coeff File"):

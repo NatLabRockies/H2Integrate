@@ -4,9 +4,9 @@ description: "This hybrid plant produces hydrogen"
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 100
@@ -31,9 +31,9 @@ technologies:
         cost_year: 2019
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -53,15 +53,15 @@ technologies:
           replacement_cost_percent: 0.15 # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "lined_rock_cavern_h2_storage_cost"
+      model: "LinedRockCavernStorageCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 12446.00729773  # kg/time step
         max_capacity: 2987042.0  # kg
       control_parameters:
@@ -71,4 +71,4 @@ technologies:
         max_discharge_rate: 12446.00729773  # kg/time step
         charge_efficiency: 1.0 # percent as decimal
         discharge_efficiency: 1.0 # percent as decimal
-        demand_profile: 5000 # constant demand of 5000 kg per hour (see commodity_units)
+        demand_profile: 5000 # constant demand of 5000 kg per hour (see commodity_rate_units)

@@ -19,6 +19,7 @@ BASELINE = np.array(
         ],
     ]
 )
+BASELINE_USD = BASELINE * 1e6
 
 
 class TestSingliticoCostModel:
@@ -53,56 +54,56 @@ class TestSingliticoCostModel:
         prob.setup()
         prob.set_val("electrolyzer_size_mw", self.P_elec_mw, units="MW")
         prob.set_val("electricity_in", np.ones(8760) * self.P_elec_mw, units="kW")
-        prob.set_val("total_hydrogen_produced", 1000.0, units="kg/year")
+
         return prob
 
     def test_calc_capex_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
 
-        capex_musd = prob["CapEx"] / 1e6
-        assert capex_musd == approx(BASELINE[0][0][0], TOL)
+        capex_usd = prob.get_val("CapEx", units="USD")
+        assert capex_usd == approx(BASELINE_USD[0][0][0], rel=TOL)
 
     def test_calc_capex_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()
 
-        capex_musd = prob["CapEx"] / 1e6
-        assert capex_musd == approx(BASELINE[1][0][0], TOL)
+        capex_usd = prob.get_val("CapEx", units="USD")
+        assert capex_usd == approx(BASELINE_USD[1][0][0], rel=TOL)
 
     def test_calc_opex_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
 
-        opex_musd = prob["OpEx"] / 1e6
-        assert opex_musd == approx(BASELINE[0][0][1], TOL)
+        opex_usd = prob.get_val("OpEx", units="USD/year")
+        assert opex_usd == approx(BASELINE_USD[0][0][1], rel=TOL)
 
     def test_calc_opex_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()
 
-        opex_musd = prob["OpEx"] / 1e6
-        assert opex_musd == approx(BASELINE[1][0][1], TOL)
+        opex_usd = prob.get_val("OpEx", units="USD/year")
+        assert opex_usd == approx(BASELINE_USD[1][0][1], rel=TOL)
 
     def test_run_onshore(self):
         prob = self._create_problem("onshore")
         prob.run_model()
 
-        capex_musd = prob["CapEx"] / 1e6
-        opex_musd = prob["OpEx"] / 1e6
+        capex_usd = prob.get_val("CapEx", units="USD")
+        opex_usd = prob.get_val("OpEx", units="USD/year")
 
-        assert capex_musd == approx(BASELINE[0][0][0], TOL)
-        assert opex_musd == approx(BASELINE[0][0][1], TOL)
+        assert capex_usd == approx(BASELINE_USD[0][0][0], rel=TOL)
+        assert opex_usd == approx(BASELINE_USD[0][0][1], rel=TOL)
 
     def test_run_offshore(self):
         prob = self._create_problem("offshore")
         prob.run_model()
 
-        capex_musd = prob["CapEx"] / 1e6
-        opex_musd = prob["OpEx"] / 1e6
+        capex_usd = prob.get_val("CapEx", units="USD")
+        opex_usd = prob.get_val("OpEx", units="USD/year")
 
-        assert capex_musd == approx(BASELINE[1][0][0], TOL)
-        assert opex_musd == approx(BASELINE[1][0][1], TOL)
+        assert capex_usd == approx(BASELINE_USD[1][0][0], rel=TOL)
+        assert opex_usd == approx(BASELINE_USD[1][0][1], rel=TOL)
 
 
 if __name__ == "__main__":

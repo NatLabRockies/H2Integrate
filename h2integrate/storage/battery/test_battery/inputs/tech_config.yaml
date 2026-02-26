@@ -4,11 +4,11 @@ description: "This hybrid plant stores and discharges electricity"
 technologies:
    battery:
     dispatch_rule_set:
-      model: "pyomo_dispatch_generic_storage"
+      model: "PyomoRuleStorageBaseclass"
     performance_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     cost_model:
-      model: "pysam_battery"
+      model: "PySAMBatteryPerformanceModel"
     model_inputs:
       shared_parameters:
         max_charge_rate: 50000

@@ -59,10 +59,10 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
+        per_turb_electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
         electrolyzer_total_capital_cost = per_turb_electrolyzer_total_capital_cost * self.nturbines
 
         assert electrolyzer_total_capital_cost == approx(127698560.0)
@@ -71,10 +71,10 @@ class TestBasicH2Costs:
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
         )
-        prob.set_val("total_hydrogen_produced", self.h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        electrolyzer_total_capital_cost = prob["CapEx"]
+        electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
 
         assert electrolyzer_total_capital_cost == approx(125448560.0)
 
@@ -84,10 +84,10 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        per_turb_electrolyzer_total_capital_cost = prob["CapEx"]
+        per_turb_electrolyzer_total_capital_cost = prob.get_val("CapEx", units="USD")
         electrolyzer_total_capital_cost = per_turb_electrolyzer_total_capital_cost * self.nturbines
 
         assert electrolyzer_total_capital_cost == approx(116077280.00000003)
@@ -98,10 +98,10 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        per_turb_electrolyzer_OM_cost = prob["OpEx"]
+        per_turb_electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
         electrolyzer_OM_cost = per_turb_electrolyzer_OM_cost * self.nturbines
 
         assert electrolyzer_OM_cost == approx(1377207.4599629682)
@@ -110,10 +110,10 @@ class TestBasicH2Costs:
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
         )
-        prob.set_val("total_hydrogen_produced", self.h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        electrolyzer_OM_cost = prob["OpEx"]
+        electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
 
         assert electrolyzer_OM_cost == approx(1864249.9310054395)
 
@@ -123,10 +123,10 @@ class TestBasicH2Costs:
             self.per_turb_electrolyzer_size_mw,
             self.per_turb_electrical_generation_timeseries,
         )
-        prob.set_val("total_hydrogen_produced", self.per_turb_h2_annual_output, units="kg/year")
+
         prob.run_model()
 
-        per_turb_electrolyzer_OM_cost = prob["OpEx"]
+        per_turb_electrolyzer_OM_cost = prob.get_val("OpEx", units="USD/year")
         electrolyzer_OM_cost = per_turb_electrolyzer_OM_cost * self.nturbines
 
         assert electrolyzer_OM_cost == approx(1254447.4599629682)

@@ -15,6 +15,7 @@ def plant_config():
             "plant_life": 30,
             "simulation": {
                 "n_timesteps": 8760,
+                "dt": 3600,
             },
         },
     }
@@ -29,13 +30,13 @@ def electricity_profile_kW():
 @fixture
 def battery_tech_config_kW():
     battery_inputs = {
-        "performance_model": {"model": "simple_generic_storage"},
-        "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "performance_model": {"model": "SimpleGenericStorage"},
+        "cost_model": {"model": "ATBBatteryCostModel"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
-                "commodity_name": "electricity",
-                "commodity_units": "kW",
+                "commodity": "electricity",
+                "commodity_rate_units": "kW",
                 "max_charge_rate": 5000.0,
                 "max_capacity": 30000.0,
             },
@@ -62,13 +63,13 @@ def battery_tech_config_kW():
 @fixture
 def battery_tech_config_MW():
     battery_inputs = {
-        "performance_model": {"model": "simple_generic_storage"},
-        "cost_model": {"model": "atb_battery_cost"},
-        "control_strategy": {"model": "demand_open_loop_storage_controller"},
+        "performance_model": {"model": "SimpleGenericStorage"},
+        "cost_model": {"model": "ATBBatteryCostModel"},
+        "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
             "shared_parameters": {
-                "commodity_name": "electricity",
-                "commodity_units": "MW",
+                "commodity": "electricity",
+                "commodity_rate_units": "MW",
                 "max_charge_rate": 5.0,
                 "max_capacity": 30.0,
             },
@@ -130,10 +131,10 @@ def test_integrated_battery_cost_kW(
     expected_opex = expected_capex * 0.025
 
     with subtests.test("CapEx"):
-        assert prob.get_val("cost_model.CapEx") == expected_capex
+        assert prob.get_val("cost_model.CapEx", units="USD") == expected_capex
 
     with subtests.test("OpEx"):
-        assert prob.get_val("cost_model.OpEx") == expected_opex
+        assert prob.get_val("cost_model.OpEx", units="USD/year") == expected_opex
 
 
 def test_integrated_battery_cost_MW(
@@ -172,7 +173,7 @@ def test_integrated_battery_cost_MW(
     expected_opex = expected_capex * 0.025
 
     with subtests.test("CapEx"):
-        assert prob.get_val("cost_model.CapEx") == expected_capex
+        assert prob.get_val("cost_model.CapEx", units="USD") == expected_capex
 
     with subtests.test("OpEx"):
-        assert prob.get_val("cost_model.OpEx") == expected_opex
+        assert prob.get_val("cost_model.OpEx", units="USD/year") == expected_opex

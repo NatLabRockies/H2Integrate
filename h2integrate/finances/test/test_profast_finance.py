@@ -76,7 +76,10 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         description="no1",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
+        "plant_life"
+    ]
+    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()
@@ -145,7 +148,10 @@ def test_profast_comp_coproduct(
         description="no1",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
+        "plant_life"
+    ]
+    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()

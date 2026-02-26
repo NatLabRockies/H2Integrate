@@ -109,7 +109,10 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         description="no1",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
+        "plant_life"
+    ]
+    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()
@@ -162,7 +165,11 @@ def test_profast_npv_no1_change_sell_price(
     )
 
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
+        "plant_life"
+    ]
+
+    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.model.add_subsystem("pf2", pf2, promotes=["total_electricity_produced"])
@@ -235,8 +242,11 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
         commodity_type="electricity",
         description="no2",
     )
+    annual_electricity_produced = [mean_hourly_production * 8760] * plant_config["plant"][
+        "plant_life"
+    ]
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    ivc.add_output("total_electricity_produced", annual_electricity_produced, units="kW*h/year")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
     prob.setup()

@@ -4,9 +4,9 @@ description: "This hybrid plant produces ammonia"
 technologies:
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -27,9 +27,9 @@ technologies:
           replacement_cost_percent: 0.15 # percent of capex - H2A default case
   hopp:
     performance_model:
-      model: "hopp"
+      model: "HOPPComponent"
     cost_model:
-      model: "hopp"
+      model: "HOPPComponent"
     model_inputs:
       shared_parameters:
         cost_year: 2019
@@ -40,9 +40,9 @@ technologies:
         electrolyzer_rating: 640. # MW
   ammonia:
     performance_model:
-      model: "synloop_ammonia_performance"
+      model: "AmmoniaSynLoopPerformanceModel"
     cost_model:
-      model: "synloop_ammonia_cost"
+      model: "AmmoniaSynLoopCostModel"
     model_inputs: # See converters/ammonia/Ammonia cost breakdown-ANL source.xlsx
       shared_parameters:
         production_capacity: 52777.6

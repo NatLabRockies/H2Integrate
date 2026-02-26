@@ -33,7 +33,8 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
                 ``tech_config``.
         """
         self.config = DemandOpenLoopControlBaseConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["control_parameters"]
+            self.options["tech_config"]["model_inputs"]["control_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -59,7 +60,7 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
         remaining_demand = inputs[f"{commodity}_demand"] - inputs[f"{commodity}_in"]
 
         # Calculate missed load and curtailed production
@@ -69,6 +70,6 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{commodity}_out"] = (
+        outputs[f"{commodity}_set_point"] = (
             inputs[f"{commodity}_in"] - outputs[f"{commodity}_unused_commodity"]
         )

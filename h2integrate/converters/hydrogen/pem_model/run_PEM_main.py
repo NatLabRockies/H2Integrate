@@ -11,8 +11,7 @@ from h2integrate.converters.hydrogen.pem_model.PEM_H2_LT_electrolyzer_Clusters i
 
 
 # from PyOMO import ipOpt !! FOR SANJANA!!
-warnings.filterwarnings("ignore")
-
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 """
 Perform a LCOH analysis for an offshore wind + Hydrogen PEM system
 

@@ -4,7 +4,7 @@ description: "This plant is a simple passthrough wind+solar+battery hybrid energ
 technologies:
   hopp:
     performance_model:
-      model: hopp
+      model: HOPPComponent
     model_inputs:
       shared_parameters:
         cost_year: 2024

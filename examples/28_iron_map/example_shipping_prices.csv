@@ -1,0 +1,4 @@
+﻿id,location,latitude,longitude,shipping_cost_per_tonne,shipping_cost_per_kg
+1,chicago,41.902367,-87.624086,111,0.111
+2,buffalo,42.883378,-78.8838,140,0.140
+3,Cleveland,41.494611,-81.720167,125,0.125

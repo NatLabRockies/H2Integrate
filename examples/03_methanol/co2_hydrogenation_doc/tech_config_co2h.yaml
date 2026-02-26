@@ -4,9 +4,9 @@ description: "This hybrid plant produces methanol"
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: "PYSAMWindPlantPerformanceModel"
     cost_model:
-      model: "atb_wind_cost"
+      model: "ATBWindPlantCostModel"
     model_inputs:
       performance_parameters:
         num_turbines: 24
@@ -45,18 +45,18 @@ technologies:
         cost_year: 2019
   electricity_splitter:
     performance_model:
-      model: "splitter_performance"
+      model: "GenericSplitterPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
-        commodity_units: "kW"
+        commodity_rate_units: "kW"
         split_mode: "fraction"
         fraction_to_priority_tech: 0.243998425816608
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: "ECOElectrolyzerPerformanceModel"
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: "SingliticoCostModel"
     model_inputs:
       shared_parameters:
         location: "onshore"
@@ -75,15 +75,15 @@ technologies:
           replacement_cost_percent: 0.15 # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "generic_storage_cost"
+      model: "GenericStorageCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: "hydrogen"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 103701.401563086  # kg
       control_parameters:
@@ -102,9 +102,9 @@ technologies:
         opex_fraction: .000001 # percent of capex
   doc:
     performance_model:
-      model: "direct_ocean_capture_performance"
+      model: "DOCPerformanceModel"
     cost_model:
-      model: "direct_ocean_capture_cost"
+      model: "DOCCostModel"
     model_inputs:
       shared_parameters:
         power_single_ed_w: 2858628.25565643  # W
@@ -124,19 +124,22 @@ technologies:
         temp_C: 12.0  # degrees Celsius
         dic_i: 0.0022  # mol/L
         pH_i: 8.1  # initial pH
+      performance_parameters:
+        save_plots: True
+        save_outputs: True
       cost_parameters:
         infrastructure_type: "desal"
   co2_storage:
     performance_model:
-      model: "simple_generic_storage"
+      model: "SimpleGenericStorage"
     cost_model:
-      model: "generic_storage_cost"
+      model: "GenericStorageCostModel"
     control_strategy:
-      model: "demand_open_loop_storage_controller"
+      model: "DemandOpenLoopStorageController"
     model_inputs:
       shared_parameters:
-        commodity_name: "co2"
-        commodity_units: "kg/h"
+        commodity: "co2"
+        commodity_rate_units: "kg/h"
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 961456.376748904  # kg
       control_parameters:
@@ -154,9 +157,9 @@ technologies:
         opex_fraction: .000001 # percent of capex
   methanol:
     performance_model:
-      model: "co2h_methanol_plant_performance"
+      model: "CO2HMethanolPlantPerformanceModel"
     cost_model:
-      model: "co2h_methanol_plant_cost"
+      model: "CO2HMethanolPlantCostModel"
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 94731053.0605257

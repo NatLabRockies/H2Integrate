@@ -38,6 +38,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         self.config = IronTransportPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_output("land_transport_distance", val=0.0, units="km")
         self.add_output("water_transport_distance", val=0.0, units="km")
@@ -77,8 +78,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         return land_transport_distance
 
     def compute(self, inputs, outputs):
-        lat = self.options["plant_config"].get("site", {}).get("latitude")
-        lon = self.options["plant_config"].get("site", {}).get("longitude")
+        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
+        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
         site_location = (lat, lon)
         shipping_coord_fpath = (
             ROOT_DIR / "converters" / "iron" / "martin_transport" / "shipping_coords.csv"
@@ -182,6 +183,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.config = IronTransportCostConfig.from_dict(
             config_dict,
             strict=True,
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 

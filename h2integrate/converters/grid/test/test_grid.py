@@ -2,8 +2,123 @@ import unittest
 
 import numpy as np
 import openmdao.api as om
+from pytest import fixture
 
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
+
+
+@fixture
+def plant_config():
+    return {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        }
+    }
+
+
+def test_grid_performance_outputs(plant_config, subtests):
+    prob = om.Problem()
+    plant_life = int(plant_config["plant"]["plant_life"])
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+    tech_config = {
+        "model_inputs": {
+            "shared_parameters": {
+                "interconnection_size": 50000.0  # 50 MW
+            }
+        }
+    }
+
+    prob.model.add_subsystem(
+        "comp",
+        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
+    )
+
+    prob.setup()
+
+    # Set demand below interconnection limit
+    demand = np.full(n_timesteps, 30000.0)  # 30 MW demand
+    prob.set_val("comp.electricity_demand", demand)
+
+    prob.run_model()
+
+    commodity = "electricity"
+    commodity_amount_units = "kW*h"
+    commodity_rate_units = "kW"
+
+    # Check that replacement schedule is between 0 and 1
+    with subtests.test("0 <= replacement_schedule <=1"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") <= 1)
+
+    with subtests.test("replacement_schedule length"):
+        assert len(prob.get_val("comp.replacement_schedule", units="unitless")) == plant_life
+
+    # Check that capacity factor is between 0 and 1 with units of "unitless"
+    with subtests.test("0 <= capacity_factor (unitless) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
+
+    # Check that capacity factor is between 1 and 100 with units of "percent"
+    with subtests.test("1 <= capacity_factor (percent) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") >= 1)
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") <= 100)
+
+    with subtests.test("capacity_factor length"):
+        assert len(prob.get_val("comp.capacity_factor", units="unitless")) == plant_life
+
+    # Test that rated commodity production is greater than zero
+    with subtests.test(f"rated_{commodity}_production > 0"):
+        assert np.all(
+            prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units) > 0
+        )
+
+    with subtests.test(f"rated_{commodity}_production length"):
+        assert (
+            len(prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units)) == 1
+        )
+
+    # Test that total commodity production is greater than zero
+    with subtests.test(f"total_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units) > 0
+        )
+    with subtests.test(f"total_{commodity}_produced length"):
+        assert (
+            len(prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units)) == 1
+        )
+
+    # Test that annual commodity production is greater than zero
+    with subtests.test(f"annual_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr")
+            > 0
+        )
+
+    with subtests.test(f"annual_{commodity}_produced[1:] == annual_{commodity}_produced[0]"):
+        annual_production = prob.get_val(
+            f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr"
+        )
+        assert np.all(annual_production[1:] == annual_production[0])
+
+    with subtests.test(f"annual_{commodity}_produced length"):
+        assert len(annual_production) == plant_life
+
+    # Test that commodity output has some values greater than zero
+    with subtests.test(f"Some of {commodity}_out > 0"):
+        assert np.any(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units) > 0)
+
+    with subtests.test(f"{commodity}_out length"):
+        assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
+
+    # Test default values
+    with subtests.test("operational_life default value"):
+        assert prob.get_val("comp.operational_life", units="yr") == plant_life
+    with subtests.test("replacement_schedule value"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
 class TestGridPerformanceModel(unittest.TestCase):
@@ -12,7 +127,15 @@ class TestGridPerformanceModel(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.n_timesteps = 10
-        self.plant_config = {"plant": {"simulation": {"n_timesteps": self.n_timesteps}}}
+        self.plant_config = {
+            "plant": {
+                "plant_life": 30,
+                "simulation": {
+                    "n_timesteps": self.n_timesteps,
+                    "dt": 3600,
+                },
+            }
+        }
 
     def test_buying_electricity(self):
         """Test buying electricity from grid (electricity flows out)."""
@@ -42,7 +165,7 @@ class TestGridPerformanceModel(unittest.TestCase):
         prob.run_model()
 
         # Should get full demand since it's below interconnection limit
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(electricity_out, demand)
 
     def test_buying_with_interconnection_limit(self):
@@ -70,7 +193,7 @@ class TestGridPerformanceModel(unittest.TestCase):
         prob.run_model()
 
         # Should be limited to interconnection size
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(
             electricity_out, np.full(self.n_timesteps, interconnection_size)
         )
@@ -104,7 +227,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         # The electricity_in represents what's being sold (no separate output needed)
         # Just verify it was accepted
-        actual_in = prob.get_val("grid.electricity_in")
+        actual_in = prob.get_val("grid.electricity_in", units="kW")
         np.testing.assert_array_almost_equal(actual_in, electricity_in)
 
     def test_simultaneous_buy_and_sell(self):
@@ -137,7 +260,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         prob.run_model()
 
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         np.testing.assert_array_almost_equal(electricity_out, electricity_demand)
 
     def test_varying_demand_profile(self):
@@ -161,7 +284,7 @@ class TestGridPerformanceModel(unittest.TestCase):
 
         prob.run_model()
 
-        electricity_out = prob.get_val("grid.electricity_out")
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
         # Values above 100000 should be clipped
         expected = np.clip(demand, 0, 100000)
         np.testing.assert_array_almost_equal(electricity_out, expected)
@@ -215,17 +338,17 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check CapEx
         expected_capex = (interconnection_size * 50.0) + 100000.0
-        capex = prob.get_val("grid.CapEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
         self.assertAlmostEqual(capex, expected_capex)
 
         # Check OpEx
         expected_opex = interconnection_size * 2.0
-        opex = prob.get_val("grid.OpEx")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(opex, expected_opex)
 
         # Check VarOpEx (buying costs)
         expected_varopex = np.sum(electricity_out * buy_price)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_sell_only_mode(self):
@@ -266,17 +389,17 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check CapEx
         expected_capex = (interconnection_size * 50.0) + 100000.0
-        capex = prob.get_val("grid.CapEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
         self.assertAlmostEqual(capex, expected_capex)
 
         # Check OpEx
         expected_opex = interconnection_size * 2.0
-        opex = prob.get_val("grid.OpEx")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(opex, expected_opex)
 
         # Check VarOpEx (selling revenue - negative)
         expected_varopex = -np.sum(electricity_sold * sell_price)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_both_buy_and_sell_prices(self):
@@ -324,7 +447,7 @@ class TestGridCostModel(unittest.TestCase):
         selling_revenue = np.sum(electricity_sold * sell_price)
         expected_varopex = buying_cost - selling_revenue
 
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_time_varying_buy_price(self):
@@ -366,7 +489,7 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check VarOpEx with varying prices
         expected_varopex = np.sum(electricity_out * buy_prices)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_time_varying_sell_price(self):
@@ -408,7 +531,7 @@ class TestGridCostModel(unittest.TestCase):
 
         # Check VarOpEx (negative for revenue)
         expected_varopex = -np.sum(electricity_sold * sell_prices)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
     def test_zero_interconnection_costs(self):
@@ -447,14 +570,14 @@ class TestGridCostModel(unittest.TestCase):
         prob.run_model()
 
         # Check that CapEx and OpEx are zero
-        capex = prob.get_val("grid.CapEx")
-        opex = prob.get_val("grid.OpEx")
+        capex = prob.get_val("grid.CapEx", units="USD")
+        opex = prob.get_val("grid.OpEx", units="USD/year")
         self.assertAlmostEqual(capex, 0.0)
         self.assertAlmostEqual(opex, 0.0)
 
         # VarOpEx should still be calculated
         expected_varopex = np.sum(electricity_out * 0.10) - np.sum(electricity_sold * 0.05)
-        varopex = prob.get_val("grid.VarOpEx")[0]
+        varopex = prob.get_val("grid.VarOpEx", units="USD/year")[0]
         self.assertAlmostEqual(varopex, expected_varopex)
 
 

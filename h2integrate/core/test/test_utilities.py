@@ -5,14 +5,19 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pytest
+from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
 from h2integrate.core.utilities import (
+    BaseConfig,
     get_path,
     find_file,
+    load_yaml,
     make_unique_case_name,
     dict_to_yaml_formatting,
 )
+from h2integrate.core.inputs.validation import load_tech_yaml
 
 
 def test_get_path(subtests):
@@ -425,6 +430,123 @@ class TestDictToYamlFormatting(unittest.TestCase):
         self.assertEqual(plant_config["technologies"]["wind"]["active"], True)
         self.assertEqual(plant_config["financial"]["project_life"], 25)
         self.assertEqual(plant_config["financial"]["discount_rate"], 0.08)
+
+
+@define
+class DemoConfig(BaseConfig):
+    """Test class for the basic functionality of `BaseConfig`."""
+
+    x: int = field()
+    y: str = field(default="y")
+
+
+class BaseDemoModel:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(
+            config, strict=False, additional_cls_name=self.__class__.__name__
+        )
+
+
+class BaseDemoModelStrict:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(config, strict=True)
+
+
+class BaseDemoModelStrictAdditional:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        self.config = DemoConfig.from_dict(
+            config, strict=True, additional_cls_name=self.__class__.__name__
+        )
+
+
+class BaseDemoModelAdditional:
+    """Demo base model for testing."""
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+
+
+def test_BaseConfig(subtests):
+    """Tests the BaseConfig class."""
+
+    with subtests.test("Check basic passing inputs"):
+        demo = BaseDemoModel({"x": 1})
+        assert demo.config.x == 1
+        assert demo.config.y == "y"
+
+    with subtests.test("Check allowed inputs overload"):
+        demo = BaseDemoModel({"x": 1, "z": 2})
+        assert demo.config.x == 1
+        assert demo.config.y == "y"
+
+    with subtests.test("Check prohibited inputs overload with additional"):
+        msg = (
+            "BaseDemoModelStrictAdditional setup failed as a result of DemoConfig"
+            " receiving extraneous inputs"
+        )
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrictAdditional({"x": 1, "z": 2})
+
+    with subtests.test("Check prohibited inputs overload w/o additional"):
+        msg = "The initialization for DemoConfig" " was given extraneous inputs"
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrict({"x": 1, "z": 2})
+        assert demo.config.y == "y"
+
+    with subtests.test("Check undefined inputs overload with additional"):
+        msg = (
+            "BaseDemoModelStrictAdditional setup failed as a result of DemoConfig"
+            " missing the following inputs"
+        )
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrictAdditional({})
+
+    with subtests.test("Check prohibited inputs overload w/o additional"):
+        msg = "The class definition for DemoConfig is missing the following inputs"
+        with pytest.raises(AttributeError, match=msg):
+            demo = BaseDemoModelStrict({})
+
+
+def test_yaml_no_duplicate_keys(subtests):
+    inputs = Path(__file__).parent / "inputs"
+    with subtests.test("Check for duplicate in original file"):
+        fn = "duplicate_keys.yaml"
+        msg = (
+            f"Duplicate key found in {inputs / fn}:"
+            " Duplicate 'performance_parameters' key found at line 98"
+        )
+        with pytest.raises(ValueError, match=msg):
+            load_yaml(inputs / fn)
+
+    with subtests.test("Check for duplicates in included file"):
+        fn = "no_duplicates_use_include.yaml"
+        fn_err = "duplicate_keys_included.yaml"
+        msg = (
+            f"Duplicate key found in {inputs / fn_err}:"
+            " Duplicate 'wake_velocity_parameters' key found at line 70"
+        )
+        with pytest.raises(ValueError, match=msg):
+            load_yaml(inputs / fn)
+
+    def traverse_dict(sample_dict):
+        for key, value in sample_dict.items():
+            assert not key.startswith("__line__"), f"Invalid line numbering key found at: {key}"
+            if isinstance(value, dict):
+                traverse_dict(value)
+
+    with subtests.test(
+        "Ensure no __line__ properties are included in either intermediary or final results"
+    ):
+        fn = "no_duplicates.yaml"
+        sample = load_yaml(inputs / fn)
+        traverse_dict(sample)
+        load_tech_yaml(inputs / fn)
 
 
 if __name__ == "__main__":
