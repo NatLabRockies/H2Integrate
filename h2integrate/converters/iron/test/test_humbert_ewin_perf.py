@@ -91,6 +91,7 @@ def setup_and_run(plant_config, tech_config, feedstocks_dict):
     return prob, elec_consumed, iron_out, iron_cap
 
 
+@pytest.mark.regression
 def test_humbert_ewin_performance_component(plant_config, tech_config, feedstocks_dict, subtests):
     expected_elec_consumption_ahe = 506978.45  # kW
     expected_elec_consumption_mse = 452725.57  # kW

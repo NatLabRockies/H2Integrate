@@ -1,24 +1,13 @@
 import numpy as np
 import pytest
 import openmdao.api as om
-from pytest import approx, fixture
+from pytest import approx
 
 from h2integrate.storage.hydrogen.mch_storage import MCHTOLStorageCostModel
 
 
-@fixture
-def plant_config():
-    plant_config_dict = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,  # Default number of timesteps for the simulation
-            },
-        },
-    }
-    return plant_config_dict
-
-
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [8760])
 def test_mch_wrapper(plant_config, subtests):
     Dc_tpd = 304
     Hc_tpd = 304
@@ -86,6 +75,8 @@ def test_mch_wrapper(plant_config, subtests):
         assert prob.get_val("sys.cost_year") == 2024
 
 
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [8760])
 def test_mch_wrapper_ex1(plant_config, subtests):
     # Ran Example 1 with MCH storage
     # Annual H2 Stored: 17878378.49459929

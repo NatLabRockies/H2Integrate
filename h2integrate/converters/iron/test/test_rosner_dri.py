@@ -3,40 +3,12 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.iron.iron_dri_plant import (
     HydrogenIronReductionPlantCostComponent,
     NaturalGasIronReductionPlantCostComponent,
     HydrogenIronReductionPlantPerformanceComponent,
     NaturalGasIronReductionPlantPerformanceComponent,
 )
-
-
-@fixture
-def plant_config():
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-        "finance_parameters": {
-            "cost_adjustment_parameters": {
-                "cost_year_adjustment_inflation": 0.025,
-                "target_dollar_year": 2022,
-            }
-        },
-    }
-    return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
 
 
 @fixture
@@ -120,6 +92,7 @@ def h2_feedstock_availability_costs():
     return feedstocks_dict
 
 
+@pytest.mark.unit
 def test_ng_dri_performance_outputs(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -218,6 +191,7 @@ def test_ng_dri_performance_outputs(
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.regression
 def test_ng_dri_performance(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -249,6 +223,7 @@ def test_ng_dri_performance(
         )
 
 
+@pytest.mark.regression
 def test_ng_dri_performance_limited_feedstock(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -288,6 +263,7 @@ def test_ng_dri_performance_limited_feedstock(
         )
 
 
+@pytest.mark.regression
 def test_ng_dri_performance_cost(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
@@ -345,6 +321,7 @@ def test_ng_dri_performance_cost(
         )
 
 
+@pytest.mark.regression
 def test_h2_dri_performance(
     plant_config, ng_dri_base_config, h2_feedstock_availability_costs, subtests
 ):
@@ -376,6 +353,7 @@ def test_h2_dri_performance(
         )
 
 
+@pytest.mark.regression
 def test_h2_dri_performance_cost(
     plant_config, ng_dri_base_config, h2_feedstock_availability_costs, subtests
 ):

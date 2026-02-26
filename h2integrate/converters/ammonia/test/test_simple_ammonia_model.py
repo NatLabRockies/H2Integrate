@@ -50,6 +50,7 @@ def tech_config():
     return tech_config_dict
 
 
+@pytest.mark.unit
 def test_simple_ammonia_performance_model_outputs(plant_config, tech_config, subtests):
     prob = om.Problem()
     comp = SimpleAmmoniaPerformanceModel(
@@ -141,6 +142,7 @@ def test_simple_ammonia_performance_model_outputs(plant_config, tech_config, sub
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.unit
 def test_simple_ammonia_performance_model(tech_config, subtests):
     plant_info = {
         "plant_life": 30,
@@ -177,6 +179,7 @@ def test_simple_ammonia_performance_model(tech_config, subtests):
         )
 
 
+@pytest.mark.regression
 def test_simple_ammonia_cost_model(plant_config, tech_config, subtests):
     plant_config["plant"]["simulation"]
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -38,6 +39,7 @@ def tech_config():
     return config
 
 
+@pytest.mark.unit
 def test_electrolyzer_outputs(tech_config, plant_config, subtests):
     plant_life = int(plant_config["plant"]["plant_life"])
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])

@@ -2,6 +2,7 @@ import copy
 import shutil
 from pathlib import Path
 
+import pytest
 from pytest import approx, fixture
 
 from h2integrate.converters.iron import iron
@@ -67,6 +68,7 @@ def iron_win():
     return iron_win
 
 
+@pytest.mark.regression
 def test_ng_dri(iron_win, subtests):
     performance, cost, finance = iron.run_iron_full_model(iron_win)
     perf_df = performance.performances_df
@@ -90,6 +92,7 @@ def test_ng_dri(iron_win, subtests):
         assert finance.sol["lco"] == approx(313.56, 1e-3)
 
 
+@pytest.mark.regression
 def test_h2_dri(iron_win, subtests):
     iron_win_copy = copy.deepcopy(iron_win)
     iron_win_copy["iron"]["product_selection"] = "h2_dri"
@@ -115,6 +118,7 @@ def test_h2_dri(iron_win, subtests):
         assert finance.sol["lco"] == approx(418.08, 1e-3)
 
 
+@pytest.mark.regression
 def test_steel_capacity_denominator(iron_win, subtests):
     iron_win_copy = copy.deepcopy(iron_win)
     iron_win_copy["iron"]["performance"]["capacity_denominator"] = "steel"
@@ -141,6 +145,7 @@ def test_steel_capacity_denominator(iron_win, subtests):
         assert finance.sol["lco"] == approx(492.62, 1e-3)
 
 
+@pytest.mark.regression
 def test_rosner_override(iron_win, subtests):
     iron_win_copy = copy.deepcopy(iron_win)
     iron_win_copy["iron"]["finance_model"]["name"] = "rosner_override"
@@ -164,11 +169,10 @@ def test_rosner_override(iron_win, subtests):
         assert finance.sol["lco"] == approx(427.2, 1e-3)
 
 
+@pytest.mark.regression
 def test_refit_coefficients(iron_win, subtests):
     # Determine the model directory based on the model name
-    iron_tech_dir = (
-        Path(__file__).parent.parent.parent.parent / "h2integrate" / "converters" / "iron"
-    )
+    iron_tech_dir = Path(__file__).parents[3] / "h2integrate" / "converters" / "iron"
     model_name = iron_win["iron"]["cost_model"]["name"]
     model_dir = iron_tech_dir / model_name
 

@@ -138,6 +138,7 @@ tests/h2integrate/test_hydrogen/output/
 *_out/
 **/test_*_out/
 **/wind_electrolyzer/*
+**.cache.sqlite
 docs/misc_resources/wind_electrolyzer/
 docs/_autosummary
 

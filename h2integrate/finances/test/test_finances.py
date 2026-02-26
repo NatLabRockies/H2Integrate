@@ -1,212 +1,218 @@
 import copy
-import unittest
-from pathlib import Path
 
 import pytest
 import openmdao.api as om
 from pytest import approx
 
+from h2integrate import EXAMPLE_DIR
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
-examples_dir = Path(__file__).resolve().parent.parent.parent.parent / "examples/."
+@pytest.fixture(scope="module")
+def model_configs():
+    """Base plant, tech, and driver configs for testing."""
+    plant_config = {
+        "finance_parameters": {
+            "finance_model": "ProFastLCO",
+            "model_inputs": {
+                "params": {
+                    "analysis_start_year": 2022,
+                    "installation_time": 24,
+                    "inflation_rate": 0.02,
+                    "discount_rate": 0.08,
+                    "debt_equity_ratio": 2.3333333333333335,
+                    "property_tax_and_insurance": 0.015,
+                    "total_income_tax_rate": 0.21,
+                    "capital_gains_tax_rate": 0.15,
+                    "sales_tax_rate": 0.07,
+                    "debt_interest_rate": 0.05,
+                    "debt_type": "Revolving debt",
+                    "loan_period_if_used": 10,
+                    "cash_onhand_months": 6,
+                    "admin_expense": 0.03,
+                },
+                "capital_items": {
+                    "depr_type": "Straight line",
+                    "depr_period": 20,
+                },
+            },
+            "cost_adjustment_parameters": {
+                "target_dollar_year": 2022,
+                "cost_year_adjustment_inflation": 0.0,
+            },
+        },
+        "plant": {
+            "plant_life": 30,
+            "grid_connection": True,
+            "ppa_price": 0.05,
+        },
+        "policy_parameters": {
+            "electricity_itc": 0.3,
+            "h2_storage_itc": 0.3,
+            "electricity_ptc": 25,
+            "h2_ptc": 3,
+        },
+    }
 
-
-class TestProFastComp(unittest.TestCase):
-    def setUp(self):
-        self.plant_config = {
-            "finance_parameters": {
-                "finance_model": "ProFastLCO",
-                "model_inputs": {
-                    "params": {
-                        "analysis_start_year": 2022,
-                        "installation_time": 24,
-                        "inflation_rate": 0.02,
-                        "discount_rate": 0.08,
-                        "debt_equity_ratio": 2.3333333333333335,
-                        "property_tax_and_insurance": 0.015,
-                        "total_income_tax_rate": 0.21,
-                        "capital_gains_tax_rate": 0.15,
-                        "sales_tax_rate": 0.07,
-                        "debt_interest_rate": 0.05,
-                        "debt_type": "Revolving debt",
-                        "loan_period_if_used": 10,
-                        "cash_onhand_months": 6,
-                        "admin_expense": 0.03,
-                    },
+    tech_config = {
+        "electrolyzer": {
+            "model_inputs": {
+                "financial_parameters": {
                     "capital_items": {
-                        "depr_type": "Straight line",
-                        "depr_period": 20,
-                    },
-                },
-                "cost_adjustment_parameters": {
-                    "target_dollar_year": 2022,
-                    "cost_year_adjustment_inflation": 0.0,
-                },
-            },
-            "plant": {
-                "plant_life": 30,
-                "grid_connection": True,
-                "ppa_price": 0.05,
-            },
-            "policy_parameters": {
-                "electricity_itc": 0.3,
-                "h2_storage_itc": 0.3,
-                "electricity_ptc": 25,
-                "h2_ptc": 3,
-            },
-        }
-
-        self.tech_config = {
-            "electrolyzer": {
-                "model_inputs": {
-                    "financial_parameters": {
-                        "capital_items": {
-                            "depr_period": 10,
-                            "replacement_cost_percent": 0.1,
-                        }
+                        "depr_period": 10,
+                        "replacement_cost_percent": 0.1,
                     }
                 }
-            },
-        }
+            }
+        },
+    }
 
-        self.driver_config = {"general": {}}
-
-    def test_electrolyzer_refurb_results(self):
-        prob = om.Problem()
-
-        # change name of tech to make sure that the refurb works with names
-        # that contain, not just match "electrolyzer"
-        edited_tech_config = {"electrolyzer1": copy.deepcopy(self.tech_config["electrolyzer"])}
-
-        comp = ProFastLCO(
-            plant_config=self.plant_config,
-            tech_config=edited_tech_config,
-            driver_config=self.driver_config,
-            commodity_type="hydrogen",
-        )
-
-        annual_h2 = 4.0e5
-        rated_h2_pr_hr = annual_h2 / 8760
-        capacity_factor = [1.0] * 30
-        ivc = om.IndepVarComp()
-        ivc.add_output("rated_hydrogen_production", rated_h2_pr_hr, units="kg/h")
-        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
-        prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-        prob.model.add_subsystem("comp", comp, promotes=["*"])
-
-        prob.setup()
-
-        prob.set_val("capex_adjusted_electrolyzer1", 1.0e7, units="USD")
-        prob.set_val("opex_adjusted_electrolyzer1", 1.0e4, units="USD/year")
-
-        prob.set_val("electrolyzer1_time_until_replacement", 5.0e3, units="h")
-
-        prob.run_model()
-
-        self.assertAlmostEqual(prob.get_val("LCOH", units="USD/kg")[0], 4.27529137, places=7)
-
-    def test_modified_lcoe_calc(self):
-        # Set up paths
-        example_case_dir = examples_dir / "01_onshore_steel_mn"
-
-        tech_config = load_tech_yaml(example_case_dir / "tech_config.yaml")
-        plant_config = load_plant_yaml(example_case_dir / "plant_config.yaml")
-        driver_config = load_driver_yaml(example_case_dir / "driver_config.yaml")
-        finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
-        plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
-        plant_config_filtered.update({"finance_parameters": finance_inputs})
-        # Run ProFastLCO with loaded configs
-        prob = om.Problem()
-        comp = ProFastLCO(
-            plant_config=plant_config_filtered,
-            tech_config=tech_config["technologies"],
-            driver_config=driver_config,
-            commodity_type="electricity",
-        )
-        ivc = om.IndepVarComp()
-        aep = 2.0e7
-        rated_elec_pr_hr = aep / 8760
-        capacity_factor = [1.0] * 30
-        ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
-        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
-
-        prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-        prob.model.add_subsystem("comp", comp, promotes=["*"])
-
-        prob.setup()
-
-        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
-        prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
-        prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
-        prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
-        prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
-        prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
-        prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
-        prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
-
-        prob.run_model()
-
-        self.assertAlmostEqual(
-            prob.get_val("LCOE", units="USD/(kW*h)")[0], 0.2116038814767319, places=7
-        )
-
-    def test_lcoe_with_selected_technologies(self):
-        # Set up paths
-        example_case_dir = examples_dir / "01_onshore_steel_mn"
-
-        tech_config = load_tech_yaml(example_case_dir / "tech_config.yaml")
-        plant_config = load_plant_yaml(example_case_dir / "plant_config.yaml")
-        driver_config = load_driver_yaml(example_case_dir / "driver_config.yaml")
-
-        # Only include HOPP and electrolyzer in metrics
-        plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
-            "wind",
-            "steel",
-        ]
-        finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
-        plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
-        plant_config_filtered.update({"finance_parameters": finance_inputs})
-
-        prob = om.Problem()
-        comp = ProFastLCO(
-            plant_config=plant_config_filtered,
-            tech_config=tech_config["technologies"],
-            driver_config=driver_config,
-            commodity_type="electricity",
-        )
-        ivc = om.IndepVarComp()
-
-        aep = 2.0e7
-        rated_elec_pr_hr = aep / 8760
-        capacity_factor = [1.0] * 30
-        ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
-        ivc.add_output("capacity_factor", capacity_factor, units="unitless")
-
-        prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-        prob.model.add_subsystem("comp", comp, promotes=["*"])
-
-        prob.setup()
-
-        prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
-        prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
-        prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
-        prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
-        prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
-        prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
-        prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
-        prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
-        prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
-
-        prob.run_model()
-
-        self.assertAlmostEqual(
-            prob.get_val("LCOE", units="USD/(kW*h)")[0], 0.2116038814767319, places=6
-        )
+    driver_config = {"general": {}}
+    return plant_config, tech_config, driver_config
 
 
+@pytest.mark.regression
+def test_electrolyzer_refurb_results(model_configs):
+    plant_config, tech_config, driver_config = model_configs
+    prob = om.Problem()
+
+    # change name of tech to make sure that the refurb works with names
+    # that contain, not just match "electrolyzer"
+    edited_tech_config = {"electrolyzer1": copy.deepcopy(tech_config["electrolyzer"])}
+
+    comp = ProFastLCO(
+        plant_config=plant_config,
+        tech_config=edited_tech_config,
+        driver_config=driver_config,
+        commodity_type="hydrogen",
+    )
+    annual_h2 = 4.0e5
+    rated_h2_pr_hr = annual_h2 / 8760
+    capacity_factor = [1.0] * 30
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_hydrogen_production", rated_h2_pr_hr, units="kg/h")
+    ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+
+    prob.setup()
+
+    prob.set_val("capex_adjusted_electrolyzer1", 1.0e7, units="USD")
+    prob.set_val("opex_adjusted_electrolyzer1", 1.0e4, units="USD/year")
+
+    prob.set_val("electrolyzer1_time_until_replacement", 5.0e3, units="h")
+
+    prob.run_model()
+
+    assert prob.get_val("LCOH", units="USD/kg")[0] == pytest.approx(4.27529137, abs=1e-7)
+
+
+@pytest.mark.regression
+def test_modified_lcoe_calc():
+    # Set up paths
+    example_case_dir = EXAMPLE_DIR / "01_onshore_steel_mn"
+
+    tech_config = load_tech_yaml(example_case_dir / "tech_config.yaml")
+    plant_config = load_plant_yaml(example_case_dir / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_case_dir / "driver_config.yaml")
+    finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
+    plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
+    plant_config_filtered.update({"finance_parameters": finance_inputs})
+    # Run ProFastLCO with loaded configs
+    prob = om.Problem()
+    comp = ProFastLCO(
+        plant_config=plant_config_filtered,
+        tech_config=tech_config["technologies"],
+        driver_config=driver_config,
+        commodity_type="electricity",
+    )
+    ivc = om.IndepVarComp()
+
+    aep = 2.0e7
+    rated_elec_pr_hr = aep / 8760
+    capacity_factor = [1.0] * 30
+    ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
+    ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+
+    prob.setup()
+
+    prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+    prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
+    prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
+    prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
+    prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
+    prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
+    prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
+    prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
+    prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
+
+    prob.run_model()
+
+    assert prob.get_val("LCOE", units="USD/(kW*h)")[0] == pytest.approx(
+        0.2116038814767319, abs=1e-7
+    )
+
+
+@pytest.mark.regression
+def test_lcoe_with_selected_technologies():
+    # Set up paths
+    example_case_dir = EXAMPLE_DIR / "01_onshore_steel_mn"
+
+    tech_config = load_tech_yaml(example_case_dir / "tech_config.yaml")
+    plant_config = load_plant_yaml(example_case_dir / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_case_dir / "driver_config.yaml")
+
+    # Only include HOPP and electrolyzer in metrics
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
+        "wind",
+        "steel",
+    ]
+    finance_inputs = plant_config["finance_parameters"]["finance_groups"].pop("profast_model")
+    plant_config_filtered = {k: v for k, v in plant_config.items() if k != "finance_parameters"}
+    plant_config_filtered.update({"finance_parameters": finance_inputs})
+
+    prob = om.Problem()
+    comp = ProFastLCO(
+        plant_config=plant_config_filtered,
+        tech_config=tech_config["technologies"],
+        driver_config=driver_config,
+        commodity_type="electricity",
+    )
+    ivc = om.IndepVarComp()
+
+    aep = 2.0e7
+    rated_elec_pr_hr = aep / 8760
+    capacity_factor = [1.0] * 30
+    ivc.add_output("rated_electricity_production", rated_elec_pr_hr, units="kW")
+    ivc.add_output("capacity_factor", capacity_factor, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+
+    prob.setup()
+
+    prob.set_val("capex_adjusted_wind", 2.0e7, units="USD")
+    prob.set_val("opex_adjusted_wind", 2.0e4, units="USD/year")
+    prob.set_val("capex_adjusted_electrolyzer", 1.0e7, units="USD")
+    prob.set_val("opex_adjusted_electrolyzer", 1.0e4, units="USD/year")
+    prob.set_val("capex_adjusted_h2_storage", 5.0e6, units="USD")
+    prob.set_val("opex_adjusted_h2_storage", 5.0e3, units="USD/year")
+    prob.set_val("capex_adjusted_steel", 3.0e6, units="USD")
+    prob.set_val("opex_adjusted_steel", 3.0e3, units="USD/year")
+    prob.set_val("electrolyzer_time_until_replacement", 80000.0, units="h")
+
+    prob.run_model()
+
+    assert prob.get_val("LCOE", units="USD/(kW*h)")[0] == pytest.approx(
+        0.2116038814767319, abs=1e-6
+    )
+
+
+@pytest.mark.integration
 def test_profast_config_provided():
     """Test that inputting ProFAST parameters gives same LCOH as specifying finance
     parameters directly (as is done in `test_electrolyzer_refurb_results`). Output
@@ -339,6 +345,7 @@ def test_profast_config_provided():
     assert prob.get_val("LCOH", units="USD/kg") == approx(4.27529137)
 
 
+@pytest.mark.unit
 def test_parameter_validation_clashing_values():
     """Test that parameter validation raises an error when plant config and params
     have different values for the same parameter."""
@@ -429,6 +436,7 @@ def test_parameter_validation_clashing_values():
         prob.setup()
 
 
+@pytest.mark.unit
 def test_parameter_validation_duplicate_parameters():
     """Test that parameter validation raises an error when plant config and pf_params
     have different values for the same parameter."""

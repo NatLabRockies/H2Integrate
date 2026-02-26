@@ -8,6 +8,7 @@ from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cas
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
+@pytest.mark.regression
 def test_tech_config_modifier(subtests):
     """Test cases for modifying and running tech_config from csv.
     Using 15 example as test case

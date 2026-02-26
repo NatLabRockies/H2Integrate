@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import approx
 
@@ -53,6 +54,7 @@ class TestBasicH2Costs:
         prob.set_val("electrolyzer_size_mw", electrolyzer_size_mw, units="MW")
         return prob
 
+    @pytest.mark.regression
     def test_on_turbine_capex(self):
         prob = self._create_problem(
             "offshore",
@@ -67,6 +69,7 @@ class TestBasicH2Costs:
 
         assert electrolyzer_total_capital_cost == approx(127698560.0)
 
+    @pytest.mark.regression
     def test_on_platform_capex(self):
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
@@ -78,6 +81,7 @@ class TestBasicH2Costs:
 
         assert electrolyzer_total_capital_cost == approx(125448560.0)
 
+    @pytest.mark.regression
     def test_on_land_capex(self):
         prob = self._create_problem(
             "onshore",
@@ -92,6 +96,7 @@ class TestBasicH2Costs:
 
         assert electrolyzer_total_capital_cost == approx(116077280.00000003)
 
+    @pytest.mark.regression
     def test_on_turbine_opex(self):
         prob = self._create_problem(
             "offshore",
@@ -106,6 +111,7 @@ class TestBasicH2Costs:
 
         assert electrolyzer_OM_cost == approx(1377207.4599629682)
 
+    @pytest.mark.regression
     def test_on_platform_opex(self):
         prob = self._create_problem(
             "offshore", self.electrolyzer_size_mw, self.electrical_generation_timeseries
@@ -117,6 +123,7 @@ class TestBasicH2Costs:
 
         assert electrolyzer_OM_cost == approx(1864249.9310054395)
 
+    @pytest.mark.regression
     def test_on_land_opex(self):
         prob = self._create_problem(
             "onshore",

@@ -20,6 +20,7 @@ def plant_config():
     return plant_config
 
 
+@pytest.mark.unit
 def test_simple_ASU_performance_model_outputs(plant_config, subtests):
     """Test user-defined capacity in kW and user input electricity profile"""
     p_max_kW = 1000.0
@@ -125,6 +126,7 @@ def test_simple_ASU_performance_model_outputs(plant_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.unit
 def test_simple_ASU_performance_model_set_capacity_kW(plant_config, subtests):
     """Test user-defined capacity in kW and user input electricity profile"""
     p_max_kW = 1000.0
@@ -167,6 +169,7 @@ def test_simple_ASU_performance_model_set_capacity_kW(plant_config, subtests):
         )
 
 
+@pytest.mark.unit
 def test_simple_ASU_performance_model_size_for_demand(plant_config, subtests):
     """Test user-defined capacity in kW and user input electricity profile"""
     n2_dmd_max_kg_pr_hr = 1000.0
@@ -215,6 +218,7 @@ def test_simple_ASU_performance_model_size_for_demand(plant_config, subtests):
         )
 
 
+@pytest.mark.unit
 def test_simple_ASU_cost_model_usd_pr_kw(plant_config, subtests):
     capex_usd_per_kw = 10.0
     opex_usd_per_kw = 5.0
@@ -260,6 +264,7 @@ def test_simple_ASU_cost_model_usd_pr_kw(plant_config, subtests):
             assert pytest.approx(val, rel=1e-6) == expected[0]
 
 
+@pytest.mark.unit
 def test_simple_ASU_cost_model_usd_pr_mw(plant_config, subtests):
     capex_usd_per_kw = 10.0
     opex_usd_per_kw = 5.0
@@ -306,6 +311,7 @@ def test_simple_ASU_cost_model_usd_pr_mw(plant_config, subtests):
             assert pytest.approx(val, rel=1e-6) == expected[0]
 
 
+@pytest.mark.unit
 def test_simple_ASU_performance_and_cost_size_for_demand(plant_config, subtests):
     """Test user-defined capacity in kW and user input electricity profile"""
     cpx_usd_per_mw = 10.0  # dummy number
