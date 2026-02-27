@@ -1276,6 +1276,21 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
         )
         assert electricity_unmet_demand == pytest.approx(711.1997294551337, rel=1e-6)
 
+    # Check that incorrect and no tech name provided will be replaced and validate
+    model_config = load_yaml(example_folder / "pyomo_heuristic_dispatch.yaml")
+    tech = load_yaml(example_folder / "tech_config.yaml")
+    with subtests.test("Ensure no-tech name validates"):
+        tech["technologies"]["battery"]["model_inputs"]["control_parameters"] = None
+        model_config["technology_config"] = tech
+        model = H2IntegrateModel(model_config)
+
+    with subtests.test("Ensure incorrect name is corrected"):
+        tech["technologies"]["battery"]["model_inputs"]["control_parameters"] = {
+            "tech_name": "goose"
+        }
+        model_config["technology_config"] = tech
+        model = H2IntegrateModel(model_config)
+
 
 @pytest.mark.integration
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
