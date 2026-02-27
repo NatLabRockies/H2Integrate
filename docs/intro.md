@@ -72,7 +72,7 @@ Additionally, H2Integrate tracks the flow of electricity, molecules (e.g., hydro
 H2Integrate uses a set of models to simulate the control, performance, cost, and finance of each technology, where only the performance and cost are required for most technologies.
 ![A representation of a single technology model in H2Integrate](tech-model.png)
 
-The individual technology models are then connected to create the hybrid system model, as shown in the simplistic example below.
+The individual technology models are then connected to create the hybrid system model, as shown in the simplistic example below. Here, data from the performance, cost, and finance models of the grid and battery technologies feed into the overall system performance and finance calculations. There is also a physical connection between the grid and battery performance models in the form of an electrical cable. Lastly, within the battery technology, the control model and performance models are connected for dispatching of electricity.
 ![A representation of a system model in H2Integrate](system-model.png)
 
 If technologies require resource or price profiles, they can be provided by the user, or in many cases pulled automatically from existing databases. The costs and performance of the technology models in the system are combined into system-level performance and finance components for techno-economic analysis of the hybrid system. H2Integrate systems may include multiple system-level finance models to assess results with different system boundaries if desired. Besides simulation and analysis, H2Integrate can also perform system and sub-system optimization.
