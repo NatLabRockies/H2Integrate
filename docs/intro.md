@@ -77,7 +77,7 @@ The individual technology models are then connected to create the hybrid system 
 
 If technologies require resource or price profiles, they can be provided by the user, or in many cases pulled automatically from existing databases. The costs and performance of the technology models in the system are combined into system-level performance and finance components for techno-economic analysis of the hybrid system. H2Integrate systems may include multiple system-level finance models to assess results with different system boundaries if desired. Besides simulation and analysis, H2Integrate can also perform system and sub-system optimization.
 
-A more complex example of an H2Integrate model is shown below:
+A more complex and generalized example of an H2Integrate model is shown below:
 ![H2Integrate Splash Image](./splash_image.png)
 
 The modular nature of the H2Integrate system also makes adding custom models, including proprietary models for local analysis only, very straightforward.
