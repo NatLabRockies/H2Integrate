@@ -1,4 +1,3 @@
-
 name: Gauss
 description: Onshore template
 floris_version: v4.0.0
@@ -19,7 +18,6 @@ flow_field:
   wind_shear: 0.33
   wind_speeds: []
   wind_veer: 0.0
-
 wake:
   model_strings:
     combination_model: sosfs
@@ -66,7 +64,6 @@ wake:
       ai: 0.8
       downstream: -0.32
   enable_active_wake_mixing: false
-
 farm:
   layout_x: []
   layout_y: []

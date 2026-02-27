@@ -1,104 +1,95 @@
 # Table of contents
 # Learn more at https://jupyterbook.org/customize/toc.html
-
 format: jb-book
 root: intro
 parts:
-- caption: Getting Started
-  chapters:
-    - file: getting_started/install
-    - file: getting_started/expected_user_knowledge
-    - file: getting_started/environment_variables
-
-- caption: User Guide
-  chapters:
-  - file: user_guide/model_overview
-  - file: user_guide/how_to_set_up_an_analysis
-  - file: user_guide/connecting_technologies
-  - file: user_guide/defining_sites_and_resources
-  - file: user_guide/design_optimization_in_h2i
-  - file: user_guide/design_of_experiments_in_h2i
-  - file: user_guide/postprocessing_results
-  - file: user_guide/recording_and_loading_data
-  - file: user_guide/how_to_interface_with_user_defined_model
-  - file: user_guide/how_to_run_several_cases_in_sequence
-  - file: user_guide/run_size_modes
-  - file: user_guide/plotting_geospatial_data_with_geopandas
-
-- caption: Technology Models
-  chapters:
-  - file: technology_models/feedstocks
-  - file: technology_models/run_of_river
-  - file: technology_models/natural_gas
-  - file: technology_models/wombat_electrolyzer_om
-  - file: technology_models/pvwattsv8_solar_pv.md
-  - file: technology_models/windpower_wind_plant.md
-  - file: technology_models/atb_costs_pv.md
-  - file: technology_models/atb_costs_wind.md
-  - file: technology_models/co2.md
-  - file: technology_models/simple_generic_storage.md
-  - file: technology_models/methanol.md
-  - file: technology_models/ammonia.md
-  - file: technology_models/pysam_battery.md
-  - file: technology_models/wind_plant_ard.md
-  - file: technology_models/geologic_hydrogen.md
-  - file: technology_models/grid
-  - file: technology_models/hydrogen_storage.md
-  - file: technology_models/h2_fuel_cell.md
-  - file: technology_models/iron_ewin.md
-  - file: technology_models/iron_mine.md
-
-- caption: Resource Models
-  chapters:
-  - file: resource/resource_index
-    sections:
-      - file: resource/wind_index
-      - file: resource/wind_toolkit_v2_api
-      - file: resource/openmeteo_wind_archive
-      - file: resource/solar_index
-      - file: resource/goes_solar_v4_api
-      - file: resource/himawari_v3_api
-      - file: resource/meteosat_prime_meridian_v4_api
-      - file: resource/openmeteo_solar_archive
-
-- caption: Control
-  chapters:
-  - file: control/control_overview
-  - file: control/open-loop_controllers
-  - file: control/pyomo_controllers
-  - file: control/controller_demonstrations
-
-- caption: Finance Models
-  chapters:
-    - file: finance_models/financial_analyses
-    - file: user_guide/specifying_finance_parameters
-    - file: user_guide/cost_years
-    - file: finance_models/finance_index
-      sections:
-      - file: finance_models/ProFastBase
-      - file: finance_models/ProFastComp
-      - file: finance_models/ProFastNPV
-      - file: finance_models/numpy_financial_npv
-
-- caption: Developer Guide
-  chapters:
-  - file: CONTRIBUTING
-  - file: developer_guide/coding_guidelines
-  - file: developer_guide/why_make_h2integrate
-  - file: developer_guide/adding_a_new_technology
-  - file: developer_guide/features_not_currently_implemented
-  - file: developer_guide/class_structure
-  - file: developer_guide/describing_whats_in_classes
-  - file: developer_guide/testing
-
-- caption: Miscellaneous Resources
-  chapters:
-    - file: misc_resources/FAQ
-    - file: misc_resources/glossary
-    - file: misc_resources/defining_filepaths
-    - file: misc_resources/turbine_models_library_preprocessing
-
-- caption: API Reference
-  maxdepth: 3
-  chapters:
-  - file: api
+  - caption: Getting Started
+    chapters:
+      - file: getting_started/install
+      - file: getting_started/expected_user_knowledge
+      - file: getting_started/environment_variables
+  - caption: User Guide
+    chapters:
+      - file: user_guide/model_overview
+      - file: user_guide/how_to_set_up_an_analysis
+      - file: user_guide/connecting_technologies
+      - file: user_guide/defining_sites_and_resources
+      - file: user_guide/design_optimization_in_h2i
+      - file: user_guide/design_of_experiments_in_h2i
+      - file: user_guide/postprocessing_results
+      - file: user_guide/recording_and_loading_data
+      - file: user_guide/how_to_interface_with_user_defined_model
+      - file: user_guide/how_to_run_several_cases_in_sequence
+      - file: user_guide/run_size_modes
+      - file: user_guide/plotting_geospatial_data_with_geopandas
+  - caption: Technology Models
+    chapters:
+      - file: technology_models/feedstocks
+      - file: technology_models/run_of_river
+      - file: technology_models/natural_gas
+      - file: technology_models/wombat_electrolyzer_om
+      - file: technology_models/pvwattsv8_solar_pv.md
+      - file: technology_models/windpower_wind_plant.md
+      - file: technology_models/atb_costs_pv.md
+      - file: technology_models/atb_costs_wind.md
+      - file: technology_models/co2.md
+      - file: technology_models/simple_generic_storage.md
+      - file: technology_models/methanol.md
+      - file: technology_models/ammonia.md
+      - file: technology_models/pysam_battery.md
+      - file: technology_models/wind_plant_ard.md
+      - file: technology_models/geologic_hydrogen.md
+      - file: technology_models/grid
+      - file: technology_models/hydrogen_storage.md
+      - file: technology_models/h2_fuel_cell.md
+      - file: technology_models/iron_ewin.md
+      - file: technology_models/iron_mine.md
+  - caption: Resource Models
+    chapters:
+      - file: resource/resource_index
+        sections:
+          - file: resource/wind_index
+          - file: resource/wind_toolkit_v2_api
+          - file: resource/openmeteo_wind_archive
+          - file: resource/solar_index
+          - file: resource/goes_solar_v4_api
+          - file: resource/himawari_v3_api
+          - file: resource/meteosat_prime_meridian_v4_api
+          - file: resource/openmeteo_solar_archive
+  - caption: Control
+    chapters:
+      - file: control/control_overview
+      - file: control/open-loop_controllers
+      - file: control/pyomo_controllers
+      - file: control/controller_demonstrations
+  - caption: Finance Models
+    chapters:
+      - file: finance_models/financial_analyses
+      - file: user_guide/specifying_finance_parameters
+      - file: user_guide/cost_years
+      - file: finance_models/finance_index
+        sections:
+          - file: finance_models/ProFastBase
+          - file: finance_models/ProFastComp
+          - file: finance_models/ProFastNPV
+          - file: finance_models/numpy_financial_npv
+  - caption: Developer Guide
+    chapters:
+      - file: CONTRIBUTING
+      - file: developer_guide/coding_guidelines
+      - file: developer_guide/why_make_h2integrate
+      - file: developer_guide/adding_a_new_technology
+      - file: developer_guide/features_not_currently_implemented
+      - file: developer_guide/class_structure
+      - file: developer_guide/describing_whats_in_classes
+      - file: developer_guide/testing
+  - caption: Miscellaneous Resources
+    chapters:
+      - file: misc_resources/FAQ
+      - file: misc_resources/glossary
+      - file: misc_resources/defining_filepaths
+      - file: misc_resources/turbine_models_library_preprocessing
+  - caption: API Reference
+    maxdepth: 3
+    chapters:
+      - file: api

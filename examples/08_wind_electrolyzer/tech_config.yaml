@@ -1,53 +1,51 @@
-name: "technology_config"
-description: "This plant has wind feeding into an electrolyzer without optimization"
-
+name: technology_config
+description: This plant has wind feeding into an electrolyzer without optimization
 technologies:
   wind:
     performance_model:
-      model: "PYSAMWindPlantPerformanceModel"
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: "ATBWindPlantCostModel"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 100
         turbine_rating_kw: 8300
         rotor_diameter: 196.
         hub_height: 130.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
+        create_model_from: default
+        config_name: WindPowerSingleOwner
         pysam_options: !include "pysam_options_8.3MW.yaml"
-        run_recalculate_power_curve: False
+        run_recalculate_power_curve: false
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 10.0
             turbine_D_spacing: 10.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1500.0
         opex_per_kW_per_year: 45
         cost_year: 2019
   electrolyzer:
     performance_model:
-      model: "ECOElectrolyzerPerformanceModel"
+      model: ECOElectrolyzerPerformanceModel
     cost_model:
-      model: "SingliticoCostModel"
+      model: SingliticoCostModel
     model_inputs:
       shared_parameters:
-        location: "onshore"
-        electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022
-
+        location: onshore
+        electrolyzer_capex: 1295  # $/kW overnight installed capital costs for a 1 MW system in 2022
       performance_parameters:
-        size_mode: "normal"
-        n_clusters: 13 #should be 12.5 to get 500 MW
+        size_mode: normal
+        n_clusters: 13  # should be 12.5 to get 500 MW
         cluster_rating_MW: 40
-        eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 80000. #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
+        eol_eff_percent_loss: 13  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case

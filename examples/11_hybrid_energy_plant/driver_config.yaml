@@ -1,63 +1,58 @@
-name: "driver_config"
-description: "Runs a wind, pv, and battery plant with optimization"
-
+name: driver_config
+description: Runs a wind, pv, and battery plant with optimization
 general:
   folder_output: wind_pv_battery_run
-
 driver:
   optimization:
-    flag: True
+    flag: true
     tol: 0.1
     max_iter: 6
     solver: COBYLA
     rhobeg: 1.0
-    debug_print: False
-
+    debug_print: false
 design_variables:
   hopp:
     wind_turbine_rating_kw:
-      flag: True
+      flag: true
       lower: 0.0
       upper: 5.
       units: MW
     pv_capacity_kw:
-      flag: True
+      flag: true
       lower: 0.0
       upper: 22.
       units: MW
     battery_capacity_kw:
-      flag: True
+      flag: true
       lower: 0.0
       upper: 22.
       units: MW
     battery_capacity_kwh:
-      flag: True
+      flag: true
       lower: 0.0
       upper: 22.
       units: MW*h
-
 constraints:
   hopp:
     percent_load_missed:
-      flag: True
+      flag: true
       lower: 20.
       units: percent
     curtailment_percent:
-      flag: True
+      flag: true
       lower: 20.0
       units: percent
     battery_duration:
-      flag: True
+      flag: true
       upper: 10
       units: h
     power_capacity_to_interconnect_ratio:
-      flag: True
+      flag: true
       lower: 0.2
       units: unitless
     annual_energy_to_interconnect_potential_ratio:
-      flag: True
+      flag: true
       lower: 0.2
       units: unitless
-
 objective:
   name: finance_subgroup_default.LCOE

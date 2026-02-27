@@ -1,19 +1,17 @@
 name: pre-commit
-
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: 3.13
-    - name: Run pre-commit
-      uses: pre-commit/action@v3.0.1
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.13
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1

@@ -1,22 +1,20 @@
-name: "driver_config"
-description: "This analysis runs a wind plant hooked up to an electrolyzer and simple tank"
-
+name: driver_config
+description: This analysis runs a wind plant hooked up to an electrolyzer and simple tank
 general:
   folder_output: wind_electrolyzer
-
 recorder:
   # required inputs
-  flag: True #record outputs
-  file: "cases.sql" #this file will be written to the folder `wind_electrolyzer`
+  flag: true  # record outputs
+  file: cases.sql  # this file will be written to the folder `wind_electrolyzer`
 
   # optional but recommended inputs
-  overwrite_recorder: True #If True, do not create a unique recorder file for subsequent runs. Defaults to False.
-  recorder_attachment: "model" #"driver" or "model", defaults to "model". Use "driver" if running a parallel simulation.
-  includes: ["*"] #include everything
-  excludes: ["*wind_resource*"] #exclude wind resource data
+  overwrite_recorder: true  # If True, do not create a unique recorder file for subsequent runs. Defaults to False.
+  recorder_attachment: model  #"driver" or "model", defaults to "model". Use "driver" if running a parallel simulation.
+  includes: ['*'] #include everything
+  excludes: ['*wind_resource*'] #exclude wind resource data
 
   # below are optional and defaulted to the OpenMDAO default
-  # record_inputs: True #defaults to True
-  # record_outputs: True #defaults to True
-  # record_residuals: True #defaults to True
-  # options_excludes: #this is only used if recorder_attachment is "model"
+  # record_inputs: True  # defaults to True
+  # record_outputs: True  # defaults to True
+  # record_residuals: True  # defaults to True
+  # options_excludes: # this is only used if recorder_attachment is "model"

@@ -1,45 +1,44 @@
-name: "technology_config"
-description: "This plant produces electricity from a solar-PV system"
-
+name: technology_config
+description: This plant produces electricity from a solar-PV system
 technologies:
   wind:
     performance_model:
-      model: "PYSAMWindPlantPerformanceModel"
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: "ATBWindPlantCostModel"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 100
         turbine_rating_kw: 6000
         rotor_diameter: 170.
         hub_height: 115.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
+        create_model_from: default
+        config_name: WindPowerSingleOwner
         pysam_options: !include pysam_options_6MW.yaml
-        run_recalculate_power_curve: False
+        run_recalculate_power_curve: false
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 7.0
             turbine_D_spacing: 7.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1500.0
         opex_per_kW_per_year: 45
         cost_year: 2019
   solar:
     performance_model:
-      model: "PYSAMSolarPlantPerformanceModel"
+      model: PYSAMSolarPlantPerformanceModel
     cost_model:
-      model: "ATBUtilityPVCostModel"
+      model: ATBUtilityPVCostModel
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 400000
         dc_ac_ratio: 1.34
-        create_model_from: "new"
-        tilt_angle_func: "lat-func"
+        create_model_from: new
+        tilt_angle_func: lat-func
         pysam_options:
           SystemDesign:
             gcr: 0.3
@@ -53,13 +52,13 @@ technologies:
           SolarResource:
             albedo_default: 0.2
       cost_parameters:
-        capex_per_kWac: 1367 #2022 costs from ATB 2024 v3
-        opex_per_kWac_per_year: 24 #2022 costs from ATB 2024 v3
+        capex_per_kWac: 1367  # 2022 costs from ATB 2024 v3
+        opex_per_kWac_per_year: 24  # 2022 costs from ATB 2024 v3
         cost_year: 2022
   combiner:
     performance_model:
       model: GenericCombinerPerformanceModel
     model_inputs:
       performance_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
+        commodity: electricity
+        commodity_rate_units: kW

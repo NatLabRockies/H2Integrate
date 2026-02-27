@@ -1,18 +1,17 @@
-name: "technology_config"
-description: "This hybrid plant produces methanol"
-
+name: technology_config
+description: This hybrid plant produces methanol
 technologies:
   methanol:
     performance_model:
-      model: "SMRMethanolPlantPerformanceModel"
+      model: SMRMethanolPlantPerformanceModel
     cost_model:
-      model: "SMRMethanolPlantCostModel"
+      model: SMRMethanolPlantCostModel
     finance_model:
-      model: "SMRMethanolPlantFinanceModel"
+      model: SMRMethanolPlantFinanceModel
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 127893196.8
-        plant_capacity_flow: "methanol"
+        plant_capacity_flow: methanol
       performance_parameters:
         capacity_factor: 0.9
         co2e_emit_ratio: 1.13442

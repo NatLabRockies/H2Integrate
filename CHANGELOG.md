@@ -19,6 +19,7 @@
     all tests must be marked via `@pytest.mark.<test-type>`.
   - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
   - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
+- Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
 
 ## 0.6 [February 10, 2026]
 

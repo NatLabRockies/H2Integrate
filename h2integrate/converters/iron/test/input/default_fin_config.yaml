@@ -14,8 +14,8 @@ system_costs:
   om_batt_replacement_cost: 0
   om_replacement_cost_escal: 0
 revenue:
-  ppa_price_input: [0.01] # cents/kWh
-  ppa_escalation: 1 # %
+  ppa_price_input: [0.01]  # cents/kWh
+  ppa_escalation: 1  # %
 system_use_lifetime_output: 0
 financial_parameters:
   inflation_rate: 2.5
@@ -32,8 +32,8 @@ financial_parameters:
   sales_tax_rate_state: 0.0
   admin_expense_percent_of_sales: 1.0
   capital_gains_tax_rate: 15.0
-  debt_type: "Revolving debt"
-  depreciation_method: "MACRS"
+  debt_type: Revolving debt
+  depreciation_method: MACRS
   depreciation_period: 5
 cp_capacity_credit_percent: [0]
 degradation: [0]

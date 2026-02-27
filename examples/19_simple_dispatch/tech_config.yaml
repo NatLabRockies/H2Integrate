@@ -1,45 +1,44 @@
-name: "technology_config"
-description: "This plant has wind feeding into an electrolyzer with optimization"
-
+name: technology_config
+description: This plant has wind feeding into an electrolyzer with optimization
 technologies:
   wind:
     performance_model:
-      model: "PYSAMWindPlantPerformanceModel"
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: "ATBWindPlantCostModel"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 2
         turbine_rating_kw: 8300
         rotor_diameter: 196.
         hub_height: 130.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
+        create_model_from: default
+        config_name: WindPowerSingleOwner
         pysam_options: !include "pysam_options_8.3MW.yaml"
-        run_recalculate_power_curve: False
+        run_recalculate_power_curve: false
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 10.0
             turbine_D_spacing: 10.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1500.0
         opex_per_kW_per_year: 45
         cost_year: 2019
   battery:
     performance_model:
-      model: "SimpleGenericStorage"
+      model: SimpleGenericStorage
     cost_model:
-      model: "ATBBatteryCostModel"
+      model: ATBBatteryCostModel
     control_strategy:
-      model: "DemandOpenLoopStorageController"
+      model: DemandOpenLoopStorageController
     model_inputs:
       shared_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
+        commodity: electricity
+        commodity_rate_units: kW
         max_charge_rate: 5000.0  # kW
         max_capacity: 30000.0  # kWh
       control_parameters:
@@ -47,11 +46,11 @@ technologies:
         min_charge_percent: 0.1  # percent as decimal
         init_charge_percent: 0.25  # percent as decimal
         max_discharge_rate: 5000.0  # kW
-        charge_efficiency: 1.0 # percent as decimal
-        discharge_efficiency: 1.0 # percent as decimal
-        demand_profile: 5000 # kW
+        charge_efficiency: 1.0  # percent as decimal
+        discharge_efficiency: 1.0  # percent as decimal
+        demand_profile: 5000  # kW
       cost_parameters:
         cost_year: 2022
-        energy_capex: 300 # $/kWh
-        power_capex: 100 # $/kW
-        opex_fraction: 0.02 # percent of capex
+        energy_capex: 300  # $/kWh
+        power_capex: 100  # $/kW
+        opex_fraction: 0.02  # percent of capex
