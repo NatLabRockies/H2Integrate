@@ -100,7 +100,8 @@ develop = [
     "pytest-cov",
     "ruff",
     "sphinxcontrib-napoleon",
-    "h2integrate[gis,ard]"
+    "h2integrate[gis,ard]",
+    "yamlfix"
 ]
 examples = [
   "jupyterlab",
@@ -255,3 +256,11 @@ known-third-party = ["pytest"]
 quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
+
+[tool.yamlfix]
+allow_duplicate_keys = true
+line_length = 120
+none_representation = "null"
+explicit_start = false
+# quote_representation = '"'  # NOTE: uncomment when issue is resolved: https://github.com/lyz-code/yamlfix/issues/252
+sequence_style = "keep_style"

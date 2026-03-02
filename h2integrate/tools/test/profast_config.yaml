@@ -1,119 +1,145 @@
 params:
-    capacity: 12000000.0
-    long term utilization: 1
-    demand rampup: 0.0
-    analysis start year: 2032
-    operating life: 30
-    installation months: 36
-    TOPC: {unit price: 0.0, decay: 0.0, sunset years: 0, support utilization: 0.0}
-    commodity: {name: electricity, unit: kWh, initial price: 100, escalation: 0.0}
-    annual operating incentive: {value: 0.0, decay: 0.0, sunset years: 0, taxable: true}
-    incidental revenue: {value: 0.0, escalation: 0.0}
-    credit card fees: 0.0
-    sales tax: 0.0
-    road tax: {value: 0.0, escalation: 0.0}
-    labor: {value: 0.0, rate: 0.0, escalation: 0.0}
-    maintenance: {value: 0.0, escalation: 0.0}
-    rent: {value: 0.0, escalation: 0.0}
-    license and permit: {value: 0.0, escalation: 0.0}
-    non depr assets: 0.0
-    end of proj sale non depr assets: 0.0
-    installation cost: {value: 0.0, depr type: Straight line, depr period: 4, depreciable: false}
-    one time cap inct: {value: 0.0, depr type: MACRS, depr period: 3, depreciable: false}
-    property tax and insurance: 0.015
-    admin expense: 0.0
-    tax loss carry forward years: 0
-    capital gains tax rate: 0.15
-    tax losses monetized: true
-    sell undepreciated cap: true
-    loan period if used: 0
-    debt equity ratio of initial financing: 2.82
-    debt interest rate: 0.0439
-    debt type: Revolving debt
-    total income tax rate: 0.2574
-    cash onhand: 1
-    general inflation rate: 0.0
-    leverage after tax nominal discount rate: 0.0615
+  capacity: 12000000.0
+  long term utilization: 1
+  demand rampup: 0.0
+  analysis start year: 2032
+  operating life: 30
+  installation months: 36
+  TOPC: {unit price: 0.0, decay: 0.0, sunset years: 0, support utilization: 0.0}
+  commodity: {name: electricity, unit: kWh, initial price: 100, escalation: 0.0}
+  annual operating incentive: {value: 0.0, decay: 0.0, sunset years: 0, taxable: true}
+  incidental revenue: {value: 0.0, escalation: 0.0}
+  credit card fees: 0.0
+  sales tax: 0.0
+  road tax: {value: 0.0, escalation: 0.0}
+  labor: {value: 0.0, rate: 0.0, escalation: 0.0}
+  maintenance: {value: 0.0, escalation: 0.0}
+  rent: {value: 0.0, escalation: 0.0}
+  license and permit: {value: 0.0, escalation: 0.0}
+  non depr assets: 0.0
+  end of proj sale non depr assets: 0.0
+  installation cost: {value: 0.0, depr type: Straight line, depr period: 4, depreciable: false}
+  one time cap inct: {value: 0.0, depr type: MACRS, depr period: 3, depreciable: false}
+  property tax and insurance: 0.015
+  admin expense: 0.0
+  tax loss carry forward years: 0
+  capital gains tax rate: 0.15
+  tax losses monetized: true
+  sell undepreciated cap: true
+  loan period if used: 0
+  debt equity ratio of initial financing: 2.82
+  debt interest rate: 0.0439
+  debt type: Revolving debt
+  total income tax rate: 0.2574
+  cash onhand: 1
+  general inflation rate: 0.0
+  leverage after tax nominal discount rate: 0.0615
 feedstocks:
-    ng_feedstock:
-        name: ng_feedstock
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': 0.006996177517553415, '2036': 0.006996177517553415, '2037': 0.006996177517553415, '2038': 0.006996177517553415, '2039': 0.006996177517553415, '2040': 0.006996177517553415, '2041': 0.006996177517553415, '2042': 0.006996177517553415, '2043': 0.006996177517553415, '2044': 0.006996177517553415, '2045': 0.006996177517553415, '2046': 0.006996177517553415, '2047': 0.006996177517553415, '2048': 0.006996177517553415, '2049': 0.006996177517553415, '2050': 0.006996177517553415, '2051': 0.006996177517553415, '2052': 0.006996177517553415, '2053': 0.006996177517553415, '2054': 0.006996177517553415, '2055': 0.006996177517553415, '2056': 0.006996177517553415, '2057': 0.006996177517553415, '2058': 0.006996177517553415, '2059': 0.006996177517553415, '2060': 0.006996177517553415, '2061': 0.006996177517553415, '2062': 0.006996177517553415, '2063': 0.006996177517553415, '2064': 0.006996177517553415}
-        escalation: 0.0
+  ng_feedstock:
+    name: ng_feedstock
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': 0.006996177517553415, '2036': 0.006996177517553415, '2037': 0.006996177517553415, '2038': 0.006996177517553415,
+      '2039': 0.006996177517553415, '2040': 0.006996177517553415, '2041': 0.006996177517553415, '2042': 0.006996177517553415,
+      '2043': 0.006996177517553415, '2044': 0.006996177517553415, '2045': 0.006996177517553415, '2046': 0.006996177517553415,
+      '2047': 0.006996177517553415, '2048': 0.006996177517553415, '2049': 0.006996177517553415, '2050': 0.006996177517553415,
+      '2051': 0.006996177517553415, '2052': 0.006996177517553415, '2053': 0.006996177517553415, '2054': 0.006996177517553415,
+      '2055': 0.006996177517553415, '2056': 0.006996177517553415, '2057': 0.006996177517553415, '2058': 0.006996177517553415,
+      '2059': 0.006996177517553415, '2060': 0.006996177517553415, '2061': 0.006996177517553415, '2062': 0.006996177517553415,
+      '2063': 0.006996177517553415, '2064': 0.006996177517553415}
+    escalation: 0.0
 capital_items:
-    battery:
-        name: battery
-        cost: 3402926.829268293
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
-    grid_selling:
-        name: grid_selling
-        cost: 0.0
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
-    natural_gas_plant:
-        name: natural_gas_plant
-        cost: 1170731707.3170733
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
-    ng_feedstock:
-        name: ng_feedstock
-        cost: 0.0
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
-    solar:
-        name: solar
-        cost: 439609756.097561
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
-    wind:
-        name: wind
-        cost: 1455588292.682927
-        depr_type: MACRS
-        depr_period: 5
-        refurb: [0.0]
+  battery:
+    name: battery
+    cost: 3402926.829268293
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
+  grid_selling:
+    name: grid_selling
+    cost: 0.0
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
+  natural_gas_plant:
+    name: natural_gas_plant
+    cost: 1170731707.3170733
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
+  ng_feedstock:
+    name: ng_feedstock
+    cost: 0.0
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
+  solar:
+    name: solar
+    cost: 439609756.097561
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
+  wind:
+    name: wind
+    cost: 1455588292.682927
+    depr_type: MACRS
+    depr_period: 5
+    refurb: [0.0]
 fixed_costs:
-    battery: {name: battery, usage: 1.0, unit: $/year, cost: 779.2702439024391, escalation: 0.0}
-    grid_selling: {name: grid_selling, usage: 1.0, unit: $/year, cost: 0.0, escalation: 0.0}
-    natural_gas_plant: {name: natural_gas_plant, usage: 1.0, unit: $/year, cost: 9129065.673328334, escalation: 0.0}
-    ng_feedstock: {name: ng_feedstock, usage: 1.0, unit: $/year, cost: 0.0, escalation: 0.0}
-    solar: {name: solar, usage: 1.0, unit: $/year, cost: 5920975.609756098, escalation: 0.0}
-    wind: {name: wind, usage: 1.0, unit: $/year, cost: 32318165.853658542, escalation: 0.0}
+  battery: {name: battery, usage: 1.0, unit: $/year, cost: 779.2702439024391, escalation: 0.0}
+  grid_selling: {name: grid_selling, usage: 1.0, unit: $/year, cost: 0.0, escalation: 0.0}
+  natural_gas_plant: {name: natural_gas_plant, usage: 1.0, unit: $/year, cost: 9129065.673328334, escalation: 0.0}
+  ng_feedstock: {name: ng_feedstock, usage: 1.0, unit: $/year, cost: 0.0, escalation: 0.0}
+  solar: {name: solar, usage: 1.0, unit: $/year, cost: 5920975.609756098, escalation: 0.0}
+  wind: {name: wind, usage: 1.0, unit: $/year, cost: 32318165.853658542, escalation: 0.0}
 incentives: {}
 coproducts:
-    battery:
-        name: battery
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0, '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0, '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0, '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
-        escalation: 0.0
-    grid_selling:
-        name: grid_selling
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': 0.014281829543690798, '2036': 0.014281829543690798, '2037': 0.014281829543690798, '2038': 0.014281829543690798, '2039': 0.014281829543690798, '2040': 0.014281829543690798, '2041': 0.014281829543690798, '2042': 0.014281829543690798, '2043': 0.014281829543690798, '2044': 0.014281829543690798, '2045': 0.014281829543690798, '2046': 0.014281829543690798, '2047': 0.014281829543690798, '2048': 0.014281829543690798, '2049': 0.014281829543690798, '2050': 0.014281829543690798, '2051': 0.014281829543690798, '2052': 0.014281829543690798, '2053': 0.014281829543690798, '2054': 0.014281829543690798, '2055': 0.014281829543690798, '2056': 0.014281829543690798, '2057': 0.014281829543690798, '2058': 0.014281829543690798, '2059': 0.014281829543690798, '2060': 0.014281829543690798, '2061': 0.014281829543690798, '2062': 0.014281829543690798, '2063': 0.014281829543690798, '2064': 0.014281829543690798}
-        escalation: 0.0
-    natural_gas_plant:
-        name: natural_gas_plant
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0, '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0, '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0, '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
-        escalation: 0.0
-    solar:
-        name: solar
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0, '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0, '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0, '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
-        escalation: 0.0
-    wind:
-        name: wind
-        usage: 1.0
-        unit: $/kW/h
-        cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0, '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0, '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0, '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
-        escalation: 0.0
+  battery:
+    name: battery
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0,
+      '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0,
+      '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0,
+      '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
+    escalation: 0.0
+  grid_selling:
+    name: grid_selling
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': 0.014281829543690798, '2036': 0.014281829543690798, '2037': 0.014281829543690798, '2038': 0.014281829543690798,
+      '2039': 0.014281829543690798, '2040': 0.014281829543690798, '2041': 0.014281829543690798, '2042': 0.014281829543690798,
+      '2043': 0.014281829543690798, '2044': 0.014281829543690798, '2045': 0.014281829543690798, '2046': 0.014281829543690798,
+      '2047': 0.014281829543690798, '2048': 0.014281829543690798, '2049': 0.014281829543690798, '2050': 0.014281829543690798,
+      '2051': 0.014281829543690798, '2052': 0.014281829543690798, '2053': 0.014281829543690798, '2054': 0.014281829543690798,
+      '2055': 0.014281829543690798, '2056': 0.014281829543690798, '2057': 0.014281829543690798, '2058': 0.014281829543690798,
+      '2059': 0.014281829543690798, '2060': 0.014281829543690798, '2061': 0.014281829543690798, '2062': 0.014281829543690798,
+      '2063': 0.014281829543690798, '2064': 0.014281829543690798}
+    escalation: 0.0
+  natural_gas_plant:
+    name: natural_gas_plant
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0,
+      '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0,
+      '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0,
+      '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
+    escalation: 0.0
+  solar:
+    name: solar
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0,
+      '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0,
+      '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0,
+      '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
+    escalation: 0.0
+  wind:
+    name: wind
+    usage: 1.0
+    unit: $/kW/h
+    cost: {'2035': -0.0, '2036': -0.0, '2037': -0.0, '2038': -0.0, '2039': -0.0, '2040': -0.0, '2041': -0.0, '2042': -0.0,
+      '2043': -0.0, '2044': -0.0, '2045': -0.0, '2046': -0.0, '2047': -0.0, '2048': -0.0, '2049': -0.0, '2050': -0.0, '2051': -0.0,
+      '2052': -0.0, '2053': -0.0, '2054': -0.0, '2055': -0.0, '2056': -0.0, '2057': -0.0, '2058': -0.0, '2059': -0.0, '2060': -0.0,
+      '2061': -0.0, '2062': -0.0, '2063': -0.0, '2064': -0.0}
+    escalation: 0.0

@@ -1,21 +1,16 @@
 version: 2
-
 # https://docs.readthedocs.io/en/stable/config-file/v2.html
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.11"
+    python: '3.11'
   jobs:
-    pre_build:
-      - "jupyter-book config sphinx docs/"
-
+    pre_build: [jupyter-book config sphinx docs/]
 python:
   install:
     - method: pip
       path: .
-      extra_requirements:
-      - develop
-
+      extra_requirements: [develop]
 sphinx:
   configuration: docs/conf.py
   builder: html

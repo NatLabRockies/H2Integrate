@@ -1,55 +1,85 @@
-name: "technology_config"
-description: "This hybrid plant produces ammonia"
-
+name: technology_config
+description: This hybrid plant produces ammonia
 technologies:
   electrolyzer:
     performance_model:
-      model: "ECOElectrolyzerPerformanceModel"
+      model: ECOElectrolyzerPerformanceModel
     cost_model:
-      model: "SingliticoCostModel"
+      model: SingliticoCostModel
     model_inputs:
       shared_parameters:
-        location: "onshore"
-        electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
+        location: onshore
+        electrolyzer_capex: 1295  # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
       performance_parameters:
-        size_mode: "normal"
+        size_mode: normal
         n_clusters: 16
         cluster_rating_MW: 40
-        pem_control_type: 'basic'
-        eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 80000 #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
-
+        pem_control_type: basic
+        eol_eff_percent_loss: 10  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case
   hopp:
     performance_model:
-      model: "HOPPComponent"
+      model: HOPPComponent
     cost_model:
-      model: "HOPPComponent"
+      model: HOPPComponent
     model_inputs:
       shared_parameters:
         cost_year: 2019
       performance_parameters:
-        cache_dir: "cache"
-        enable_caching: True
+        cache_dir: cache
+        enable_caching: true
         hopp_config: !include tech_inputs/hopp_config_tx.yaml
-        electrolyzer_rating: 640. # MW
+        electrolyzer_rating: 640.  # MW
+  n2_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: nitrogen
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 50.0  # metric tonnes of N2/hour
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.0
+  electricity_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
+      performance_parameters:
+        rated_capacity: 29.0  # MW of electricity
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.0
   ammonia:
     performance_model:
-      model: "AmmoniaSynLoopPerformanceModel"
+      model: AmmoniaSynLoopPerformanceModel
     cost_model:
-      model: "AmmoniaSynLoopCostModel"
-    model_inputs: # See converters/ammonia/Ammonia cost breakdown-ANL source.xlsx
+      model: AmmoniaSynLoopCostModel
+    model_inputs:  # See converters/ammonia/Ammonia cost breakdown-ANL source.xlsx
       shared_parameters:
         production_capacity: 52777.6
         catalyst_consumption_rate: 0.000091295354067341
         catalyst_replacement_interval: 3
       performance_parameters:
-        size_mode: "normal"
+        size_mode: normal
         capacity_factor: 0.9
         energy_demand: 0.530645243
         heat_output: 0.8299956
@@ -70,8 +100,8 @@ technologies:
         base_cost_year: 2016
         capex_scaling_exponent: 0.6
         labor_scaling_exponent: 0.25
-        asu_capex_base: 236920646 # See ASU + HB capex-NETL source.xlsx
-        synloop_capex_base: 302460908 # See ASU + HB capex-NETL source.xlsx
+        asu_capex_base: 236920646  # See ASU + HB capex-NETL source.xlsx
+        synloop_capex_base: 302460908  # See ASU + HB capex-NETL source.xlsx
         heat_capex_base: 7069100
         cool_capex_base: 4799200
         other_eqpt_capex_base: 0.001

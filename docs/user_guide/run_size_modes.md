@@ -258,6 +258,8 @@ plant_config["technology_interconnections"] = [
     ["hopp", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
+    ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+    ["electricity_feedstock", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 
@@ -308,6 +310,8 @@ input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
     ["hopp", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+    ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+    ["electricity_feedstock", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 driver_config["driver"]["optimization"]["flag"] = True

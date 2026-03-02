@@ -1,90 +1,86 @@
-name: "technology_config"
-description: "This hybrid plant produces steel"
-
+name: technology_config
+description: This hybrid plant produces steel
 technologies:
   wind:
     performance_model:
-      model: "FlorisWindPlantPerformanceModel"
+      model: FlorisWindPlantPerformanceModel
     cost_model:
-      model: "ATBWindPlantCostModel"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
-        num_turbines: 216 #number of turbines in the farm
-        hub_height: 115.0 # turbine hub-height
-        operational_losses: 12.83 #percentage of non-wake losses
+        num_turbines: 216  # number of turbines in the farm
+        hub_height: 115.0  # turbine hub-height
+        operational_losses: 12.83  # percentage of non-wake losses
         floris_wake_config: !include "floris_v4_default_template.yaml" #floris wake model file
         floris_turbine_config: !include "floris_turbine_NREL_6MW_170.yaml" #turbine model file formatted for floris
-        resource_data_averaging_method: "average" #"weighted_average", "average" or "nearest"
-        operation_model: "cosine-loss" #turbine operation model
+        resource_data_averaging_method: average   #"weighted_average", "average" or "nearest"
+        operation_model: cosine-loss  # turbine operation model
         default_turbulence_intensity: 0.06
-        enable_caching: True #whether to use cached results
-        cache_dir: "cache" #directory to save or load cached data
+        enable_caching: true  # whether to use cached results
+        cache_dir: cache  # directory to save or load cached data
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 7.0
             turbine_D_spacing: 7.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1380.0
         opex_per_kW_per_year: 29.0
         cost_year: 2019
-
   solar:
     performance_model:
-      model: "PYSAMSolarPlantPerformanceModel"
+      model: PYSAMSolarPlantPerformanceModel
     cost_model:
-      model: "ATBResComPVCostModel"
+      model: ATBResComPVCostModel
     model_inputs:
       shared_parameters:
-        pv_capacity_kWdc: 1500000 #1500 MWdc
+        pv_capacity_kWdc: 1500000  # 1500 MWdc
       performance_parameters:
         dc_ac_ratio: 1.3
-        create_model_from: "default"
-        config_name: "PVWattsSingleOwner"
-        tilt_angle_func: "lat-func"
+        create_model_from: default
+        config_name: PVWattsSingleOwner
+        tilt_angle_func: lat-func
         pysam_options:
           SystemDesign:
             inv_eff: 96.0
-            module_type: 0 #19% efficiency
-            losses: 14.08 #dc losses
+            module_type: 0  # 19% efficiency
+            losses: 14.08  # dc losses
           Lifetime:
             dc_degradation: [0]
       cost_parameters:
         capex_per_kWdc: 1323
         opex_per_kWdc_per_year: 18
         cost_year: 2019
-
   combiner:
     performance_model:
-      model: "GenericCombinerPerformanceModel"
+      model: GenericCombinerPerformanceModel
     dispatch_rule_set:
-      model: "PyomoDispatchGenericConverter"
+      model: PyomoDispatchGenericConverter
     model_inputs:
       performance_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
+        commodity: electricity
+        commodity_rate_units: kW
       dispatch_rule_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
-
+        commodity: electricity
+        commodity_rate_units: kW
   battery:
     dispatch_rule_set:
-      model: "PyomoRuleStorageBaseclass"
+      model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: "HeuristicLoadFollowingController"
+      model: HeuristicLoadFollowingController
     performance_model:
-      model: "PySAMBatteryPerformanceModel"
+      model: PySAMBatteryPerformanceModel
     cost_model:
-      model: "ATBBatteryCostModel"
+      model: ATBBatteryCostModel
     model_inputs:
       shared_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
-        max_charge_rate: 375740.4 #kW
-        max_capacity: 375745.2 #kWh
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 375740.4  # kW
+        max_capacity: 375745.2  # kWh
         n_control_window: 24
         n_horizon_window: 48
         init_charge_percent: 0.9
@@ -92,73 +88,69 @@ technologies:
         min_charge_percent: 0.2
         system_commodity_interface_limit: 1e12
       performance_parameters:
-        system_model_source: "pysam"
-        chemistry: "LFPGraphite"
+        system_model_source: pysam
+        chemistry: LFPGraphite
       cost_parameters:
         cost_year: 2019
-        energy_capex: 310 # $/kWh from 2024 ATB year 2025
-        power_capex: 311 # $/kW from 2024 ATB year 2025
+        energy_capex: 310  # $/kWh from 2024 ATB year 2025
+        power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.024999840573439444
       control_parameters:
-        tech_name: "battery"
-
+        tech_name: battery
   electrolyzer:
     performance_model:
-      model: "ECOElectrolyzerPerformanceModel"
+      model: ECOElectrolyzerPerformanceModel
     cost_model:
-      model: "SingliticoCostModel"
+      model: SingliticoCostModel
     model_inputs:
       shared_parameters:
-        location: "onshore"
-        electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005 Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
+        location: onshore
+        electrolyzer_capex: 1295  # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005 Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
       performance_parameters:
-        size_mode: "normal"
+        size_mode: normal
         n_clusters: 18
         cluster_rating_MW: 40
-        eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 80000. #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
+        eol_eff_percent_loss: 13  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
-
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: "StorageAutoSizingModel"
+      model: StorageAutoSizingModel
     control_strategy:
-      model: "PassThroughOpenLoopController"
+      model: PassThroughOpenLoopController
     cost_model:
-      model: "LinedRockCavernStorageCostModel"
+      model: LinedRockCavernStorageCostModel
     model_inputs:
       shared_parameters:
-        commodity: "hydrogen"
-        commodity_rate_units: "kg/h"
+        commodity: hydrogen
+        commodity_rate_units: kg/h
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities
         # in the input file
-        sizing_mode: "auto" # set as "auto" so storage capacity doesnt have to be defined
-
-
+        sizing_mode: auto  # set as "auto" so storage capacity doesnt have to be defined
   steel:
     performance_model:
-      model: "SteelPerformanceModel"
+      model: SteelPerformanceModel
     cost_model:
-      model: "SteelCostAndFinancialModel"
+      model: SteelCostAndFinancialModel
     finance_model:
-      model: "SteelCostAndFinancialModel"
+      model: SteelCostAndFinancialModel
     model_inputs:
       shared_parameters:
         capacity_factor: 0.9
         plant_capacity_mtpy: 1000000.
       cost_parameters:
         operational_year: 2035
-        o2_heat_integration: True
+        o2_heat_integration: true
         lcoh: 7.37
-        installation_time: 36 # months
-        inflation_rate: 0.0 # 0 for nominal analysis
+        installation_time: 36  # months
+        inflation_rate: 0.0  # 0 for nominal analysis
         # Feedstock parameters (flattened)
         excess_oxygen: 395
         lime_unitcost: 122.1
@@ -181,72 +173,72 @@ technologies:
         slag_production: 0.17433
         maintenance_materials_unitcost: 7.72
         natural_gas_prices:
-          "2035": 3.76232
-          "2036": 3.776032
-          "2037": 3.812906
-          "2038": 3.9107960000000004
-          "2039": 3.865776
-          "2040": 3.9617400000000003
-          "2041": 4.027136
-          "2042": 4.017166
-          "2043": 3.9715339999999997
-          "2044": 3.924314
-          "2045": 3.903287
-          "2046": 3.878192
-          "2047": 3.845413
-          "2048": 3.813366
-          "2049": 3.77735
-          "2050": 3.766164
-          "2051": 3.766164
-          "2052": 3.766164
-          "2053": 3.766164
-          "2054": 3.766164
-          "2055": 3.766164
-          "2056": 3.766164
-          "2057": 3.766164
-          "2058": 3.766164
-          "2059": 3.766164
-          "2060": 3.766164
-          "2061": 3.766164
-          "2062": 3.766164
-          "2063": 3.766164
-          "2064": 3.766164
+          '2035': 3.76232
+          '2036': 3.776032
+          '2037': 3.812906
+          '2038': 3.9107960000000004
+          '2039': 3.865776
+          '2040': 3.9617400000000003
+          '2041': 4.027136
+          '2042': 4.017166
+          '2043': 3.9715339999999997
+          '2044': 3.924314
+          '2045': 3.903287
+          '2046': 3.878192
+          '2047': 3.845413
+          '2048': 3.813366
+          '2049': 3.77735
+          '2050': 3.766164
+          '2051': 3.766164
+          '2052': 3.766164
+          '2053': 3.766164
+          '2054': 3.766164
+          '2055': 3.766164
+          '2056': 3.766164
+          '2057': 3.766164
+          '2058': 3.766164
+          '2059': 3.766164
+          '2060': 3.766164
+          '2061': 3.766164
+          '2062': 3.766164
+          '2063': 3.766164
+          '2064': 3.766164
         # Financial parameters (flattened)
         grid_prices:
-          "2035": 89.42320514456621
-          "2036": 89.97947569251141
-          "2037": 90.53574624045662
-          "2038": 91.09201678840184
-          "2039": 91.64828733634704
-          "2040": 92.20455788429224
-          "2041": 89.87291235917809
-          "2042": 87.54126683406393
-          "2043": 85.20962130894978
-          "2044": 82.87797578383562
-          "2045": 80.54633025872147
-          "2046": 81.38632144593608
-          "2047": 82.22631263315068
-          "2048": 83.0663038203653
-          "2049": 83.90629500757991
-          "2050": 84.74628619479452
-          "2051": 84.74628619479452
-          "2052": 84.74628619479452
-          "2053": 84.74628619479452
-          "2054": 84.74628619479452
-          "2055": 84.74628619479452
-          "2056": 84.74628619479452
-          "2057": 84.74628619479452
-          "2058": 84.74628619479452
-          "2059": 84.74628619479452
-          "2060": 84.74628619479452
-          "2061": 84.74628619479452
-          "2062": 84.74628619479452
-          "2063": 84.74628619479452
-          "2064": 84.74628619479452
+          '2035': 89.42320514456621
+          '2036': 89.97947569251141
+          '2037': 90.53574624045662
+          '2038': 91.09201678840184
+          '2039': 91.64828733634704
+          '2040': 92.20455788429224
+          '2041': 89.87291235917809
+          '2042': 87.54126683406393
+          '2043': 85.20962130894978
+          '2044': 82.87797578383562
+          '2045': 80.54633025872147
+          '2046': 81.38632144593608
+          '2047': 82.22631263315068
+          '2048': 83.0663038203653
+          '2049': 83.90629500757991
+          '2050': 84.74628619479452
+          '2051': 84.74628619479452
+          '2052': 84.74628619479452
+          '2053': 84.74628619479452
+          '2054': 84.74628619479452
+          '2055': 84.74628619479452
+          '2056': 84.74628619479452
+          '2057': 84.74628619479452
+          '2058': 84.74628619479452
+          '2059': 84.74628619479452
+          '2060': 84.74628619479452
+          '2061': 84.74628619479452
+          '2062': 84.74628619479452
+          '2063': 84.74628619479452
+          '2064': 84.74628619479452
         # Financial assumptions
         financial_assumptions:
-          "total income tax rate": 0.2574
-          "capital gains tax rate": 0.15
-          "leverage after tax nominal discount rate": 0.10893
-          "debt equity ratio of initial financing": 0.624788
-          "debt interest rate": 0.050049
+          total income tax rate: 0.2574
+          capital gains tax rate: 0.15
+          leverage after tax nominal discount rate: 0.10893
+          debt equity ratio of initial financing: 0.624788
+          debt interest rate: 0.050049
