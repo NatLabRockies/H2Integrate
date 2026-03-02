@@ -14,7 +14,11 @@ import matplotlib.pyplot as plt
 hydrogen_out = h2i_nat.prob.model.plant.geoh2_well_subsurface.NaturalGeoH2PerformanceModel.get_val(
     "annual_hydrogen_produced", units="t/year"
 )
-plt.plot(hydrogen_out)
+start_year = (
+    h2i_nat.prob.model.plant.finance_subgroup_h2.hydrogen_finance_default.params.analysis_start_year
+)
+years = range(start_year, start_year + len(hydrogen_out))
+plt.plot(years, hydrogen_out)
 plt.xlabel("Year")
 plt.ylabel("Hydrogen Production (tonne per annum)")
 plt.title("Hydrogen Production over Well Lifetime")
