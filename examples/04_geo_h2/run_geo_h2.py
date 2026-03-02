@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 
 
 hydrogen_out = h2i_nat.prob.model.plant.geoh2_well_subsurface.NaturalGeoH2PerformanceModel.get_val(
-    "hydrogen_out", units="kg/h"
+    "annual_hydrogen_produced", units="t/year"
 )
 plt.plot(hydrogen_out)
-plt.xlabel("Time (hours)")
-plt.ylabel("Wellhead Gas Flow (kg/h)")
-plt.title("Wellhead Gas Flow Profile Over First Year")
+plt.xlabel("Year")
+plt.ylabel("Hydrogen Production (tonne per annum)")
+plt.title("Hydrogen Production over Well Lifetime")
 plt.grid()
 plt.show()
 
