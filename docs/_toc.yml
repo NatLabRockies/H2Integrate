@@ -27,6 +27,7 @@ parts:
       - file: technology_models/feedstocks
       - file: technology_models/run_of_river
       - file: technology_models/natural_gas
+      - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
       - file: technology_models/pvwattsv8_solar_pv.md
       - file: technology_models/windpower_wind_plant.md

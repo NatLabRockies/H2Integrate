@@ -11,16 +11,8 @@ sites:
           resource_year: 2012
 plant:
   plant_life: 30
-# array of arrays containing left-to-right technology
-# interconnections; can support bidirectional connections
-# with the reverse definition.
-# this will naturally grow as we mature the interconnected tech
-technology_interconnections:
-  - [wind, electrolyzer, electricity, cable]
-  # etc
-resource_to_tech_connections:
-  # connect the wind resource to the wind technology
-  - [site.wind_resource, wind, wind_resource_data]
+technology_interconnections: [[wind, electrolyzer, electricity, cable]]
+resource_to_tech_connections: [[site.wind_resource, wind, wind_resource_data]]
 finance_parameters:
   finance_groups:
     custom_model:

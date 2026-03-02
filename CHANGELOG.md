@@ -10,6 +10,7 @@
 - Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
   found, and points to the file and line number that caused the error. The YAML `Loader` modification
   maintains compliance with the existing JSON validation protocols.
+- Add a simple nuclear plant performance and cost model
 - Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
   ensure units are properly handled and to prepare for the possibility of multiple variables with the
   same name but different units in the future.
@@ -20,6 +21,7 @@
   - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
   - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
 - Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
+- Insert model names for technologies with control strategies to simplify Pyomo workflows.
 
 ## 0.6 [February 10, 2026]
 
