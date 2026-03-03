@@ -1,8 +1,8 @@
 import numpy as np
+import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.control.control_strategies.controller_baseclass import ControllerBaseClass
 
 
 @define(kw_only=True)
@@ -11,7 +11,7 @@ class PassThroughOpenLoopControllerConfig(BaseConfig):
     commodity_rate_units: str = field()
 
 
-class PassThroughOpenLoopController(ControllerBaseClass):
+class PassThroughOpenLoopController(om.ExplicitComponent):
     """
     A simple pass-through controller for open-loop systems.
 
@@ -20,6 +20,16 @@ class PassThroughOpenLoopController(ControllerBaseClass):
     and for maintaining consistency between controlled and uncontrolled frameworks as this
     'controller' does not alter the system output in any way.
     """
+
+    def initialize(self):
+        """
+        Declare options for the component. See "Attributes" section in class doc strings for
+        details.
+        """
+
+        self.options.declare("driver_config", types=dict)
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("tech_config", types=dict)
 
     def setup(self):
         self.config = PassThroughOpenLoopControllerConfig.from_dict(

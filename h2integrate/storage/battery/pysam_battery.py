@@ -104,8 +104,6 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
             Initial state of charge as a fraction (0 to 1).
         n_control_window (int, optional):
             Number of timesteps in the control window. Defaults to 24.
-        n_horizon_window (int, optional):
-            Number of timesteps in the horizon window. Defaults to 48.
         control_variable (str):
             Control mode for the PySAM battery, either ``"input_power"``
             or ``"input_current"``.
@@ -128,7 +126,6 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
     max_charge_percent: float = field(validator=range_val(0, 1))
     init_charge_percent: float = field(validator=range_val(0, 1))
     n_control_window: int = field(validator=gt_zero, default=24)
-    n_horizon_window: int = field(validator=gt_zero, default=48)
     control_variable: str = field(
         default="input_power", validator=contains(["input_power", "input_current"])
     )

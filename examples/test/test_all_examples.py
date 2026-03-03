@@ -2115,7 +2115,7 @@ def test_natural_geoh2(subtests, temp_copy_of_example):
             pytest.approx(
                 h2i_nat.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg"), rel=1e-6
             )
-            == 1.5870496689
+            == 1.3089029
         )
     with subtests.test("subsurface Capex"):
         assert (

@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
-from h2integrate.control.control_strategies.pyomo_controllers import (
+from h2integrate.control.control_strategies.heuristic_pyomo_controller import (
     HeuristicLoadFollowingController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
@@ -42,7 +42,6 @@ tech_config = {
                     "max_charge_rate": 50000,
                     "max_capacity": 200000,
                     "n_control_window": 24,
-                    "n_horizon_window": 48,
                     "init_charge_percent": 0.5,
                     "max_charge_percent": 0.9,
                     "min_charge_percent": 0.1,
