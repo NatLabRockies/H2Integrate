@@ -1,4 +1,4 @@
-# Test YAML to identify a duplicate key at line 96
+# Test YAML to identify a duplicate key at line 95
 name: "technology_config"
 description: "This plant has offshore wind and battery connected to a ocean alkalinity enhancement device"
 
