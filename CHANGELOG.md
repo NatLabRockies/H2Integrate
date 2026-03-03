@@ -25,6 +25,7 @@
 - Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
 - Insert model names for technologies with control strategies to simplify Pyomo workflows.
 - Refactored pyomo code by splitting apart classes into separate files and removing unused properties
+- Add figures and more description about how technologies and systems are modeled and connected in H2INtegrate
 
 ## 0.6 [February 10, 2026]
 
