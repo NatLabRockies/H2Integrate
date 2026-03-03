@@ -189,19 +189,15 @@ class H2IntegrateModel:
         )
 
         for name, vals in self.technology_config["technologies"].items():
-            if "control_parameters" in vals["model_inputs"]:
-                val = self.technology_config["technologies"][name]["model_inputs"][
-                    "control_parameters"
-                ]
-                updated = {"tech_name": name}
-                if val is not None:
-                    self.technology_config["technologies"][name]["model_inputs"][
-                        "control_parameters"
-                    ].update(updated)
+            if "control_strategy" in vals:
+                model_inputs = self.technology_config["technologies"][name]["model_inputs"]
+                if (
+                    "control_parameters" not in model_inputs
+                    or model_inputs["control_parameters"] is None
+                ):
+                    model_inputs["control_parameters"] = {"tech_name": name}
                 else:
-                    self.technology_config["technologies"][name]["model_inputs"][
-                        "control_parameters"
-                    ] = updated
+                    model_inputs["control_parameters"]["tech_name"] = name
 
     def create_custom_models(self, model_config, config_parent_path, model_types, prefix=""):
         """This method loads custom models from the specified directory and adds them to the
