@@ -1,30 +1,40 @@
 # Changelog
 
-## Unreleased
+## 0.7 [March 3, 2026]
 
-- Add Arps decline rate to natural geologic hydrogen model
-- Added linearized hydrogen fuel cell model
-- Added load following optimization dispatch
-- Added simple dispatch calculations to `StorageAutoSizingModel`
-- Adjust import of mcm package to use the PyPi version
-- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
-  found, and points to the file and line number that caused the error. The YAML `Loader` modification
-  maintains compliance with the existing JSON validation protocols.
-- Add a simple nuclear plant performance and cost model
+### New Features
+
+- Simple nuclear plant performance and cost model
+- Refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
+- Load following optimization dispatch
+- Linearized hydrogen fuel cell model
+- Arps decline rate now incorporated into the natural geologic hydrogen model
+- Simple dispatch calculations now included in `StorageAutoSizingModel`
+
+### Updates
+
+#### Modeling
+
 - Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
   ensure units are properly handled and to prepare for the possibility of multiple variables with the
   same name but different units in the future.
-- Added a refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
+- Update finance models to use annual capacity factor and rated production rather than annual production.
+- `NaturalGeoH2PerformanceModel` outputs yearly metrics.
+
+#### Infrastructure
+
+- Insert model names for technologies with control strategies to simplify Pyomo workflows.
+- Refactored pyomo code by splitting apart classes into separate files and removing unused properties
+- Use the PyPI listed mcm package in place of installing from GitHub.
+- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
+  found, and points to the file and line number that caused the error. The YAML `Loader` modification
+  maintains compliance with the existing JSON validation protocols.
 - Test infrastructure updates:
   - Introduces enforced test marking for `unit`, `regression`, and `integration` tests so that
     all tests must be marked via `@pytest.mark.<test-type>`.
   - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
   - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
-- Update finance models to use annual capacity factor and rated production rather than annual production.
-- Update `NaturalGeoH2PerformanceModel` to output yearly metrics.
-- Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
-- Insert model names for technologies with control strategies to simplify Pyomo workflows.
-- Refactored pyomo code by splitting apart classes into separate files and removing unused properties
+- Adds a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
 
 ## 0.6 [February 10, 2026]
 
