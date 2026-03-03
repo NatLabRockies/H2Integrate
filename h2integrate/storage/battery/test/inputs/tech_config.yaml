@@ -13,7 +13,6 @@ technologies:
         max_charge_rate: 50000
         max_capacity: 200000
         n_control_window: 24
-        n_horizon_window: 48
         dt: 1.0
         n_timesteps: 24
         init_charge_percent: 0.5

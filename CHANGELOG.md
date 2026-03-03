@@ -20,8 +20,11 @@
     all tests must be marked via `@pytest.mark.<test-type>`.
   - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
   - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
+- Update finance models to use annual capacity factor and rated production rather than annual production.
+- Update `NaturalGeoH2PerformanceModel` to output yearly metrics.
 - Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
 - Insert model names for technologies with control strategies to simplify Pyomo workflows.
+- Refactored pyomo code by splitting apart classes into separate files and removing unused properties
 
 ## 0.6 [February 10, 2026]
 

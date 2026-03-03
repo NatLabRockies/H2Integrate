@@ -523,7 +523,7 @@ def test_yaml_no_duplicate_keys(subtests):
         fn = "duplicate_keys.yaml"
         msg = (
             f"Duplicate key found in {inputs / fn}:"
-            " Duplicate 'performance_parameters' key found at line 98"
+            " Duplicate 'performance_parameters' key found at line 97"
         )
         with pytest.raises(ValueError, match=msg):
             load_yaml(inputs / fn)

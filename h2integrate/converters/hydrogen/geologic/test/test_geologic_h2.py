@@ -142,17 +142,99 @@ def test_natural_geoh2_well_performance(subtests, plant_config):
     prob.setup()
     prob.run_model()
 
+    with subtests.test("max wellhead gas"):
+        assert (
+            pytest.approx(prob.model.get_val("perf.max_wellhead_gas", units="kg/h"), rel=1e-6)
+            == 42000.0
+        )
+    # test wellhead_h2_concentration_mass wellhead_h2_concentration_mol well_head_gas_out_natural
+    with subtests.test("wellhead_h2_concentration_mass"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("perf.wellhead_h2_concentration_mass", units="percent"), rel=1e-6
+            )
+            == 62.15760093
+        )
+
+    with subtests.test("wellhead_h2_concentration_mol"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("perf.wellhead_h2_concentration_mol", units="percent"), rel=1e-6
+            )
+            == 95.0
+        )
+    with subtests.test("well_head_gas_out_natural"):
+        assert (
+            pytest.approx(
+                np.sum(prob.model.get_val("perf.wellhead_gas_out_natural", units="kg/h")), rel=1e-6
+            )
+            == 85426105.21216634
+        )
+    with subtests.test("wellhead_gas_out"):
+        assert (
+            pytest.approx(
+                np.sum(prob.model.get_val("perf.wellhead_gas_out", units="kg/h")), rel=1e-6
+            )
+            == 85426105.21217233
+        )
     with subtests.test("Well hydrogen production"):
         assert (
             pytest.approx(np.mean(prob.model.get_val("perf.hydrogen_out", units="kg/h")), rel=1e-6)
             == 6061.508855232839
-        ), 1e-6
+        )
 
     with subtests.test("total h2 out"):
         assert (
             pytest.approx(prob.model.get_val("perf.total_hydrogen_produced", units="kg"), rel=1e-6)
             == 53098817.57183966
-        ), 1e-6
+        )
+    with subtests.test("total_wellhead_gas_produced"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("perf.total_wellhead_gas_produced", units="kg/year"), rel=1e-6
+            )
+            == 85426105.21217233
+        )
+
+    with subtests.test("cf"):
+        assert pytest.approx(
+            prob.model.get_val("perf.capacity_factor", units="unitless"), rel=1e-6
+        ) == [
+            0.8675885,
+            0.42536644,
+            0.25890337,
+            0.18514585,
+            0.14357352,
+            0.1169487,
+            0.09847076,
+            0.08491557,
+            0.07455868,
+            0.06639494,
+        ]
+
+    with subtests.test("annual_hydrogen_production"):
+        assert pytest.approx(
+            prob.model.get_val("perf.annual_hydrogen_produced", units="kg/yr"), rel=1e-6
+        ) == [
+            198409026.01277646,
+            97277155.59721786,
+            59208675.263037845,
+            42341049.07389179,
+            32833862.72029864,
+            26745026.520159103,
+            22519302.237744503,
+            19419361.600134037,
+            17050841.849094056,
+            15183874.84404233,
+        ]
+
+    with subtests.test("rated h2 production"):
+        assert (
+            pytest.approx(
+                prob.model.get_val("perf.rated_hydrogen_production", units="kg/h"), rel=1e-6
+            )
+            == 26106.19239257
+        )
 
 
 @pytest.mark.unit

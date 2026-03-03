@@ -75,7 +75,6 @@ technologies:
         max_charge_rate: 50000  # kW
         max_capacity: 200000  # kWh
         n_control_window: 24
-        n_horizon_window: 48
         init_charge_percent: 0.9
         max_charge_percent: 1.0
         min_charge_percent: 0.2
