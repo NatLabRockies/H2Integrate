@@ -1,7 +1,5 @@
-name: "H2Integrate_config"
-
-system_summary: "This reference hybrid plant..."
-
-driver_config: "driver_config_no_optimization.yaml"
-technology_config: "tech_config.yaml"
-plant_config: "plant_config.yaml"
+name: H2Integrate_config
+system_summary: This reference hybrid plant...
+driver_config: driver_config_no_optimization.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

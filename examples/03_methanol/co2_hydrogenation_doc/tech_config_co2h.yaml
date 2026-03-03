@@ -1,21 +1,20 @@
-name: "technology_config"
-description: "This hybrid plant produces methanol"
-
+name: technology_config
+description: This hybrid plant produces methanol
 technologies:
   wind:
     performance_model:
-      model: "PYSAMWindPlantPerformanceModel"
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: "ATBWindPlantCostModel"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 24
         turbine_rating_kw: 15000
         rotor_diameter: 240.
         hub_height: 115.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
-        run_recalculate_power_curve: True
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        run_recalculate_power_curve: true
         pysam_options:
           Turbine:
             wind_resource_shear: 0.14
@@ -23,7 +22,7 @@ technologies:
             wind_farm_wake_model: 0.0
             wind_resource_turbulence_coeff: 0.1
           Losses:
-            elec_eff_loss: 1.79442 # less than 1.81, greater than 1.75
+            elec_eff_loss: 1.79442  # less than 1.81, greater than 1.75
           Resource:
             weibull_k_factor: 2.0
             weibull_reference_height: 50.0
@@ -32,58 +31,58 @@ technologies:
           Uncertainty:
             total_uncert: 12.085
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 7.0
             turbine_D_spacing: 7.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1380.0
         opex_per_kW_per_year: 29.0
         cost_year: 2019
   electricity_splitter:
     performance_model:
-      model: "GenericSplitterPerformanceModel"
+      model: GenericSplitterPerformanceModel
     model_inputs:
       performance_parameters:
-        commodity: "electricity"
-        commodity_rate_units: "kW"
-        split_mode: "fraction"
+        commodity: electricity
+        commodity_rate_units: kW
+        split_mode: fraction
         fraction_to_priority_tech: 0.243998425816608
   electrolyzer:
     performance_model:
-      model: "ECOElectrolyzerPerformanceModel"
+      model: ECOElectrolyzerPerformanceModel
     cost_model:
-      model: "SingliticoCostModel"
+      model: SingliticoCostModel
     model_inputs:
       shared_parameters:
-        location: "onshore"
-        electrolyzer_capex: 1295 # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
+        location: onshore
+        electrolyzer_capex: 1295  # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005	Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
       performance_parameters:
-        size_mode: "normal"
+        size_mode: normal
         n_clusters: 4
         cluster_rating_MW: 40
-        eol_eff_percent_loss: 10 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 80000 #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
+        eol_eff_percent_loss: 10  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: "SimpleGenericStorage"
+      model: SimpleGenericStorage
     cost_model:
-      model: "GenericStorageCostModel"
+      model: GenericStorageCostModel
     control_strategy:
-      model: "DemandOpenLoopStorageController"
+      model: DemandOpenLoopStorageController
     model_inputs:
       shared_parameters:
-        commodity: "hydrogen"
-        commodity_rate_units: "kg/h"
+        commodity: hydrogen
+        commodity_rate_units: kg/h
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 103701.401563086  # kg
       control_parameters:
@@ -91,20 +90,20 @@ technologies:
         min_charge_percent: 0.1  # percent as decimal
         init_charge_percent: 0.25  # percent as decimal
         max_discharge_rate: 5000.0  # kg/time step
-        charge_equals_discharge: False
-        charge_efficiency: 1.0 # percent as decimal
-        discharge_efficiency: 1.0 # percent as decimal
+        charge_equals_discharge: false
+        charge_efficiency: 1.0  # percent as decimal
+        discharge_efficiency: 1.0  # percent as decimal
         demand_profile: 2108.73919484047
       cost_parameters:
         cost_year: 2022
-        capacity_capex: 383 # $/kg - based on https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review22/st235_houchins_2022_p-pdf.pdf?Status=Master
-        charge_capex: .000001 # $/kg/h
-        opex_fraction: .000001 # percent of capex
+        capacity_capex: 383  # $/kg - based on https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review22/st235_houchins_2022_p-pdf.pdf?Status=Master
+        charge_capex: .000001  # $/kg/h
+        opex_fraction: .000001  # percent of capex
   doc:
     performance_model:
-      model: "DOCPerformanceModel"
+      model: DOCPerformanceModel
     cost_model:
-      model: "DOCCostModel"
+      model: DOCCostModel
     model_inputs:
       shared_parameters:
         power_single_ed_w: 2858628.25565643  # W
@@ -117,7 +116,7 @@ technologies:
         y_pur: 0.2
         y_vac: 0.6
         frac_ed_flow: 0.01
-        use_storage_tanks: True
+        use_storage_tanks: true
         initial_tank_volume_m3: 0.0  # m^3
         store_hours: 12.0  # hours
         sal: 33.0  # ppt
@@ -125,21 +124,21 @@ technologies:
         dic_i: 0.0022  # mol/L
         pH_i: 8.1  # initial pH
       performance_parameters:
-        save_plots: True
-        save_outputs: True
+        save_plots: true
+        save_outputs: true
       cost_parameters:
-        infrastructure_type: "desal"
+        infrastructure_type: desal
   co2_storage:
     performance_model:
-      model: "SimpleGenericStorage"
+      model: SimpleGenericStorage
     cost_model:
-      model: "GenericStorageCostModel"
+      model: GenericStorageCostModel
     control_strategy:
-      model: "DemandOpenLoopStorageController"
+      model: DemandOpenLoopStorageController
     model_inputs:
       shared_parameters:
-        commodity: "co2"
-        commodity_rate_units: "kg/h"
+        commodity: co2
+        commodity_rate_units: kg/h
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 961456.376748904  # kg
       control_parameters:
@@ -147,23 +146,23 @@ technologies:
         min_charge_percent: 0.1  # percent as decimal
         init_charge_percent: 0.25  # percent as decimal
         max_discharge_rate: 50000.0  # kg/time step
-        charge_efficiency: 1.0 # percent as decimal
-        discharge_efficiency: 1.0 # percent as decimal
+        charge_efficiency: 1.0  # percent as decimal
+        discharge_efficiency: 1.0  # percent as decimal
         demand_profile: 15388.3891
       cost_parameters:
         cost_year: 2022
-        capacity_capex: 5 # $/kg - based on https://www.maritime.dot.gov/sites/marad.dot.gov/files/2024-11/LCE%20MARAD%20CCS%20TEA%20Final%20Report%20-%2031%20May%202024%20%283%29.pdf
-        charge_capex: .000001 # $/kg/h
-        opex_fraction: .000001 # percent of capex
+        capacity_capex: 5  # $/kg - based on https://www.maritime.dot.gov/sites/marad.dot.gov/files/2024-11/LCE%20MARAD%20CCS%20TEA%20Final%20Report%20-%2031%20May%202024%20%283%29.pdf
+        charge_capex: .000001  # $/kg/h
+        opex_fraction: .000001  # percent of capex
   methanol:
     performance_model:
-      model: "CO2HMethanolPlantPerformanceModel"
+      model: CO2HMethanolPlantPerformanceModel
     cost_model:
-      model: "CO2HMethanolPlantCostModel"
+      model: CO2HMethanolPlantCostModel
     model_inputs:
       shared_parameters:
         plant_capacity_kgpy: 94731053.0605257
-        plant_capacity_flow: "methanol"
+        plant_capacity_flow: methanol
       performance_parameters:
         capacity_factor: 1
         co2e_emit_ratio: 0.020296

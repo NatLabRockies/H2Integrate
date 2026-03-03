@@ -1,4 +1,4 @@
-$schema: "http://json-schema.org/draft-07/schema#"
+$schema: http://json-schema.org/draft-07/schema#
 $id: technology_config_schema_v01
 title: Technology Configuration Schema
 description: Schema to validate technology configurations, including performance and cost models
@@ -14,7 +14,7 @@ properties:
     type: object
     description: Technologies included in the configuration
     patternProperties:
-      ".*":  # Allows any string as the key (e.g., wind, electrolyzer)
+      .*:  # Allows any string as the key (e.g., wind, electrolyzer)
         type: object
         properties:
           performance_model:
@@ -23,7 +23,7 @@ properties:
               model:
                 type: string
                 description: Name of the performance model
-            required: ["model"]
+            required: [model]
             description: Performance model details
           cost_model:
             type: object
@@ -31,7 +31,7 @@ properties:
               model:
                 type: string
                 description: Name of the cost model
-            required: ["model"]
+            required: [model]
             description: Cost model details
           resource:
             type: object
@@ -53,7 +53,4 @@ properties:
             description: Financial model details (optional)
             additionalProperties: true
         required: []
-required:
-  - name
-  - description
-  - technologies
+required: [name, description, technologies]

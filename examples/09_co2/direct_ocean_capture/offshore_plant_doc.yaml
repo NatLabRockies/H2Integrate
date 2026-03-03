@@ -1,7 +1,5 @@
-name: "H2Integrate Config"
-
-system_summary: "This offshore hybrid plant combines wind and wave energy to produce CO2 via direct ocean capture"
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config.yaml"
-plant_config: "plant_config.yaml"
+name: H2Integrate Config
+system_summary: This offshore hybrid plant combines wind and wave energy to produce CO2 via direct ocean capture
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml
