@@ -90,6 +90,7 @@ class FeedstockCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         super().setup()
 
@@ -106,6 +107,9 @@ class FeedstockCostModel(CostModelBaseClass):
             units=f"USD/({self.config.commodity_amount_units})",
             desc=f"Consumption profile of {self.config.commodity}",
         )
+
+        # lifetime estimate of item replacements, represented as a fraction of the capacity.
+        self.add_output("replacement_schedule", val=0.0, shape=plant_life, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         price = inputs["price"]

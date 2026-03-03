@@ -219,7 +219,7 @@ class H2IntegrateModel:
                 is ``technology_config["technologies"]``.
             prefix (str, optional): Prefix of ``model_class_name``, ``model_location`` and
                 ``model``. Defaults to "". Should be ``"finance_"`` if looking for custom
-                general finance models.
+                system finance models.
         """
 
         included_custom_models = {}
@@ -302,7 +302,7 @@ class H2IntegrateModel:
 
     def collect_custom_models(self):
         """Collect custom models from the technology configuration and
-        general finance models found in the plant configuration.
+        system finance models found in the plant configuration.
         """
         # check for custom technology models
         self.create_custom_models(
@@ -766,6 +766,7 @@ class H2IntegrateModel:
                         "tech_configs": tech_configs,
                         "commodity": commodity,
                         "commodity_stream": commodity_stream,
+                        "is_system_finance_model": True,
                     }
                 }
             )
@@ -836,6 +837,9 @@ class H2IntegrateModel:
                 "adjusted_capex_opex_comp", adjusted_capex_opex_comp, promotes=["*"]
             )
 
+            # Initialize counter to check if invalid combination of finance
+            # groups exist within a finance subgroup
+            n_tech_finances_in_group = 0
             for finance_group_name in finance_group_names:
                 # check if using tech-specific finance model
                 if any(
@@ -848,11 +852,13 @@ class H2IntegrateModel:
 
                     # this is created in create_technologies()
                     if tech_finance_group_name is not None:
+                        n_tech_finances_in_group += 1
                         # tech specific finance models are created in create_technologies()
-                        # and do not need to be included in the general finance models.
+                        # and do not need to be included in the system finance models.
                         # set commodity_stream to None so that inputs needed for system-level
                         # finance models are not connected to tech-specific finance models.
-                        finance_subgroups[subgroup_name].update({"commodity_stream": None})
+                        # finance_subgroups[subgroup_name].update({"commodity_stream": None})
+                        finance_subgroups[subgroup_name].update({"is_system_finance_model": False})
                         continue
 
                 # if not using a tech-specific finance group, get the finance model and inputs for
@@ -896,12 +902,18 @@ class H2IntegrateModel:
                 # check if multiple finance models are specified for the subgroup
                 if len(finance_group_names) > 1:
                     # check that the finance model groups do not include tech-specific finances
-                    non_tech_finances = [
-                        k
-                        for k in finance_group_names
-                        if k in self.plant_config["finance_parameters"]["finance_groups"]
-                    ]
+                    finance_groups = self.plant_config["finance_parameters"]["finance_groups"]
+                    non_tech_finances = [k for k in finance_group_names if k in finance_groups]
+                    tech_finances = [k for k in finance_group_names if k not in finance_groups]
 
+                    if n_tech_finances_in_group > 0 and non_tech_finances:
+                        msg = (
+                            f"Cannot run a tech-specific finance model ({tech_finances}) in the "
+                            f"same finance subgroup as a system-level finance model "
+                            f"({non_tech_finances}). Please modify the finance_groups in finance "
+                            f"subgroup {subgroup_name}."
+                        )
+                        raise ValueError(msg)
                     # if multiple non-tech specific finance model groups are specified for the
                     # subgroup, the outputs of the finance model must have unique names to
                     # avoid errors.
@@ -998,12 +1010,6 @@ class H2IntegrateModel:
                         f"{connection_name}.{transport_item}_in",
                     )
 
-                elif "storage" in source_tech:
-                    # Connect the source technology to the connection component
-                    self.plant.connect(
-                        f"{source_tech}.{transport_item}_out",
-                        f"{connection_name}.{transport_item}_in",
-                    )
                 else:
                     # Connect the source technology to the connection component
                     self.plant.connect(
@@ -1033,13 +1039,6 @@ class H2IntegrateModel:
                     self.plant.connect(
                         f"{source_tech}.capacity_factor",
                         f"{dest_tech}.{transport_item}_capacity_factor{combiner_counts[dest_tech]}",
-                    )
-
-                elif "storage" in dest_tech:
-                    # Connect the connection component to the destination technology
-                    self.plant.connect(
-                        f"{connection_name}.{transport_item}_out",
-                        f"{dest_tech}.{transport_item}_in",
                     )
 
                 else:
@@ -1126,7 +1125,11 @@ class H2IntegrateModel:
                 tech_configs = group_configs.get("tech_configs")
                 primary_commodity_type = group_configs.get("commodity")
                 commodity_stream = group_configs.get("commodity_stream")
-                if commodity_stream is not None:
+                is_system_finance_model = group_configs.get("is_system_finance_model")
+
+                if is_system_finance_model:
+                    # Connect the rated commodity production and capacity factor
+                    # for system-level finance models
                     self.plant.connect(
                         f"{commodity_stream}.rated_{primary_commodity_type}_production",
                         f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
@@ -1141,6 +1144,8 @@ class H2IntegrateModel:
                 for tech_name in tech_configs.keys():
                     # For now, assume splitters and combiners do not add any costs
                     if "splitter" in tech_name or "combiner" in tech_name:
+                        continue
+                    if tech_name == "cable" or tech_name == "pipe":
                         continue
 
                     self.plant.connect(
@@ -1158,10 +1163,11 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                     )
 
-                    if "electrolyzer" in tech_name:
+                    if is_system_finance_model and "transport" not in tech_name:
+                        # connect replacement schedule to system-level finance models
                         self.plant.connect(
-                            f"{tech_name}.time_until_replacement",
-                            f"finance_subgroup_{group_id}.{tech_name}_time_until_replacement",
+                            f"{tech_name}.replacement_schedule",
+                            f"finance_subgroup_{group_id}.replacement_schedule_{tech_name}",
                         )
 
         self.plant.options["auto_order"] = True

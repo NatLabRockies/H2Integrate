@@ -20,6 +20,8 @@
   same name but different units in the future.
 - Update finance models to use annual capacity factor and rated production rather than annual production.
 - `NaturalGeoH2PerformanceModel` outputs yearly metrics.
+- Add figures and more description about how technologies and systems are modeled and connected in H2INtegrate
+- Generalize electrolyzer replacement schedule logic within the framework
 
 #### Infrastructure
 
