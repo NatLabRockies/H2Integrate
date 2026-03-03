@@ -299,7 +299,7 @@ class ProFASTDefaultCapitalItem(BaseConfig):
         depr_type (str, optional): depreciation "MACRS" or "Straight line". Defaults to 'MACRS'.
         refurb (list[float], optional): Replacement schedule as a fraction of the capital cost.
             Defaults to [0.].
-        replacement_cost_percent (float | int, optional): Replacement cost as a fraction of CapEx.
+        replacement_cost_percent (float, optional): Replacement cost as a fraction of CapEx.
             Defaults to 0.0
 
     """
@@ -307,7 +307,7 @@ class ProFASTDefaultCapitalItem(BaseConfig):
     depr_period: int = field(converter=int, validator=contains([3, 5, 7, 10, 15, 20]))
     depr_type: str = field(converter=str.strip, validator=contains(["MACRS", "Straight line"]))
     refurb: int | float | list[float] = field(default=[0.0])
-    replacement_cost_percent: int | float = field(default=0.0, validator=range_val(0, 1))
+    replacement_cost_percent: float = field(default=0.0, validator=range_val(0, 1))
 
     def create_dict(self):
         """Create a ProFAST-compatible dictionary of attributes.
@@ -473,10 +473,14 @@ class ProFastBase(om.ExplicitComponent):
             user-defined technology, in USD.
         opex_adjusted_{tech} (float): Adjusted operational expenditure for each
             user-defined technology, in USD/year.
-        total_{commodity}_produced (float): Total annual production of the selected commodity
+        varopex_adjusted_{tech} (np.ndarray): Adjusted variable operational expenditure
+            for each user-defined technology, in USD/year.
+        rated_{commodity}_production (float): Rated production of the selected commodity
             (units depend on commodity type).
-        {tech}_time_until_replacement (float): Time until technology is replaced, in hours
-            (currently only supported if "electrolyzer" is in tech_config).
+        capacity_factor (np.ndarray): Capacity factor of the commodity producing tech(s)
+            per year of the plant life.
+        replacement_schedule_{tech} (np.ndarray): Fraction of the technology capacity that
+            is replaced in each year of the plant life.
 
 
     Methods:
@@ -547,10 +551,9 @@ class ProFastBase(om.ExplicitComponent):
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
             self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
-
-            # Include electrolyzer replacement time if applicable
-            if tech.startswith("electrolyzer"):
-                self.add_input(f"{tech}_time_until_replacement", units="h")
+            self.add_input(
+                f"replacement_schedule_{tech}", val=0.0, shape=plant_life, units="unitless"
+            )
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -591,13 +594,6 @@ class ProFastBase(om.ExplicitComponent):
         coproduct_cost_params.setdefault("escalation", self.params.inflation_rate)
         coproduct_cost_params.setdefault("unit", self.price_units.replace("USD", "$"))
         self.coproduct_cost_settings = ProFASTDefaultCoproduct.from_dict(coproduct_cost_params)
-
-        # incentives - unused for now
-        # incentive_params = plant_config["finance_parameters"]["model_inputs"].get(
-        #     "incentives", {}
-        # )
-        # incentive_params.setdefault("decay", -1 * self.params.inflation_rate)
-        # self.incentive_params_settings = ProFASTDefaultIncentive.from_dict(incentive_params)
 
     def populate_profast(self, inputs):
         """Populate and configure the ProFAST financial model for analysis.
@@ -666,18 +662,23 @@ class ProFastBase(om.ExplicitComponent):
 
             # see if any refurbishment information was input
             if "replacement_cost_percent" in tech_capex_info:
-                refurb_schedule = np.zeros(self.params.plant_life)
-
                 if "refurbishment_period_years" in tech_capex_info:
+                    # Calculate replacement schedule using a user-defined replacement period
+                    refurb_schedule = np.zeros(self.params.plant_life)
                     refurb_period = tech_capex_info["refurbishment_period_years"]
-                else:
-                    refurb_period = round(
-                        float(inputs[f"{tech}_time_until_replacement"][0]) / (24 * 365)
+                    # Multiply the replacement schedule by the replacement cost
+                    # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
+                    refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
+                        tech_capex_info["replacement_cost_percent"]
                     )
 
-                refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
-                    tech_capex_info["replacement_cost_percent"]
-                )
+                else:
+                    # Use the replacement schedule from the technology performance model
+                    refurb_schedule = (
+                        inputs[f"replacement_schedule_{tech}"]
+                        * tech_capex_info["replacement_cost_percent"]
+                    )
+
                 # add refurbishment schedule to tech-specific capital item entry
                 tech_capex_info["refurb"] = list(refurb_schedule)
 

@@ -50,7 +50,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     positive. This follows the NumPy Financial convention:
 
     Reference:
-        NumpPy Financial NPV documentation:
+        NumPy Financial NPV documentation:
         https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv
 
         By convention:
@@ -133,10 +133,9 @@ class NumpyFinancialNPV(om.ExplicitComponent):
                 shape=plant_config["plant"]["plant_life"],
                 units="USD/year",
             )
-
-        # TODO: update below with standardized naming
-        if "electrolyzer" in tech_config:
-            self.add_input("electrolyzer_time_until_replacement", units="h")
+            self.add_input(
+                f"replacement_schedule_{tech}", val=0.0, shape=plant_life, units="unitless"
+            )
 
         self.add_input(
             f"sell_price_{self.output_txt}",
@@ -238,19 +237,19 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
                 # Find refurbishment period either from explicit config or calculated from hours
                 if "refurbishment_period_years" in tech_capex_info:
+                    refurb_schedule = np.zeros(self.params.plant_life)
                     refurb_period = tech_capex_info["refurbishment_period_years"]
-                else:
-                    # Calculate from hours until replacement (e.g., electrolyzer lifetime hours)
-                    # Convert hours to years: divide by (24 hours/day * 365 days/year)
-                    refurb_period = round(
-                        float(inputs[f"{tech}_time_until_replacement"][0]) / (24 * 365)
+                    # Set replacement cost at regular intervals (every refurb_period years)
+                    # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
+                    refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
+                        tech_capex_info["replacement_cost_percent"]
                     )
-
-                # Set replacement cost at regular intervals (every refurb_period years)
-                # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
-                refurb_schedule[refurb_period : self.config.plant_life : refurb_period] = (
-                    tech_capex_info["replacement_cost_percent"]
-                )
+                else:
+                    # Multiply the technology replacement schedule by the replacement cost
+                    refurb_schedule = (
+                        inputs[f"replacement_schedule_{tech}"]
+                        * tech_capex_info["replacement_cost_percent"]
+                    )
 
                 # Calculate actual replacement costs by multiplying CAPEX by schedule percentages
                 # capex is negative, so refurb_cost will also be negative (cash outflow)

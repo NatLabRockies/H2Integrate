@@ -61,6 +61,11 @@ class SimpleLCOFinance(om.ExplicitComponent):
         for tech in tech_config:
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
+            # Below is required for all system-level finance models but is unused in this one
+            self.add_input(
+                f"replacement_schedule_{tech}", val=0.0, shape=plant_life, units="unitless"
+            )
+            self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
 
         # add plant life to the input config dictionary
         finance_config = self.options["plant_config"]["finance_parameters"]["model_inputs"]

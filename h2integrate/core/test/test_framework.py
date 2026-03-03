@@ -395,3 +395,41 @@ def test_reports_turned_off(temp_dir):
     assert (
         len(report_dirs) == 0
     ), f"Report directories were created despite create_om_reports=False: {report_dirs}"
+
+
+@pytest.mark.unit
+def test_invalid_finance_group_combination(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+
+    invalid_finance_subgroup = {
+        "commodity": "steel",
+        "finance_groups": ["steel", "profast_model"],
+        "technologies": ["steel"],
+    }
+
+    plant_config["finance_parameters"]["finance_subgroups"].update(
+        {"steel_buggy": invalid_finance_subgroup}
+    )
+
+    h2i_config = {
+        "name": "H2I",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    with subtests.test("Test invalid finance groups"):
+        expected_msg = (
+            "Cannot run a tech-specific finance model (['steel']) in the "
+            "same finance subgroup as a system-level finance model "
+            "(['profast_model']). Please modify the finance_groups in finance "
+            "subgroup steel_buggy."
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            h2i = H2IntegrateModel(h2i_config)
+            h2i.setup()
+            assert expected_msg == str(excinfo.value)
