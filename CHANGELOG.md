@@ -1,31 +1,42 @@
 # Changelog
 
-## Unreleased
+## 0.7 [March 3, 2026]
 
-- Add Arps decline rate to natural geologic hydrogen model
-- Added linearized hydrogen fuel cell model
-- Added load following optimization dispatch
-- Added simple dispatch calculations to `StorageAutoSizingModel`
-- Adjust import of mcm package to use the PyPi version
-- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
-  found, and points to the file and line number that caused the error. The YAML `Loader` modification
-  maintains compliance with the existing JSON validation protocols.
-- Add a simple nuclear plant performance and cost model
+### New Features
+
+- Simple nuclear plant performance and cost model [PR 538](https://github.com/NatLabRockies/H2Integrate/pull/538)
+- Refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn [PR 432](https://github.com/NatLabRockies/H2Integrate/pull/432)
+- Load following optimization dispatch [PR 407](https://github.com/NatLabRockies/H2Integrate/pull/407)
+- Linearized hydrogen fuel cell model [PR 525](https://github.com/NatLabRockies/H2Integrate/pull/525)
+- Arps decline rate now incorporated into the natural geologic hydrogen model [PR 454](https://github.com/NatLabRockies/H2Integrate/pull/454)
+- Simple dispatch calculations now included in `StorageAutoSizingModel` [PR 493](https://github.com/NatLabRockies/H2Integrate/pull/493)
+
+### Updates
+
+#### Modeling
+
 - Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
   ensure units are properly handled and to prepare for the possibility of multiple variables with the
-  same name but different units in the future.
-- Added a refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn
-- Test infrastructure updates:
+  same name but different units in the future. [PR 539](https://github.com/NatLabRockies/H2Integrate/pull/539)
+- Update finance models to use annual capacity factor and rated production rather than annual production. [PR 552](https://github.com/NatLabRockies/H2Integrate/pull/552)
+- Update `NaturalGeoH2PerformanceModel` outputs yearly metrics. [PR 552](https://github.com/NatLabRockies/H2Integrate/pull/552)
+- Add figures and more description about how technologies and systems are modeled and connected in H2INtegrate. [PR 554](https://github.com/NatLabRockies/H2Integrate/pull/554)
+- Generalize electrolyzer replacement schedule logic within the framework. [PR 555](https://github.com/NatLabRockies/H2Integrate/pull/555)
+
+#### Infrastructure
+
+- Insert model names for technologies with control strategies to simplify Pyomo workflows. [PR 558](https://github.com/NatLabRockies/H2Integrate/pull/558)
+- Refactored pyomo code by splitting apart classes into separate files and removing unused properties [PR 549](https://github.com/NatLabRockies/H2Integrate/pull/549)
+- Use the PyPI listed mcm package in place of installing from GitHub. [PR 533](https://github.com/NatLabRockies/H2Integrate/pull/533)
+- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
+  found, and points to the file and line number that caused the error. The YAML `Loader` modification
+  maintains compliance with the existing JSON validation protocols. [PR 534](https://github.com/NatLabRockies/H2Integrate/pull/534)
+- Test infrastructure updates: [PR 531](https://github.com/NatLabRockies/H2Integrate/pull/531)
   - Introduces enforced test marking for `unit`, `regression`, and `integration` tests so that
     all tests must be marked via `@pytest.mark.<test-type>`.
   - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
   - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
-- Update finance models to use annual capacity factor and rated production rather than annual production.
-- Update `NaturalGeoH2PerformanceModel` to output yearly metrics.
-- Added a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting
-- Insert model names for technologies with control strategies to simplify Pyomo workflows; removed unnecessary values from yamls.
-- Refactored pyomo code by splitting apart classes into separate files and removing unused properties
-- Add figures and more description about how technologies and systems are modeled and connected in H2INtegrate
+- Adds a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting [PR 551](https://github.com/NatLabRockies/H2Integrate/pull/551)
 
 ## 0.6 [February 10, 2026]
 
