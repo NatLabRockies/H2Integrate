@@ -41,6 +41,13 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
 
         super().setup()
 
+        self.add_input(
+            "storage_capacity",
+            val=self.config.max_capacity,
+            units=f"{self.config.commodity_rate_units}*h",
+            desc="Storage capacity",
+        )
+
         self.max_charge_fraction = [0.0] * self.config.n_control_window
         self.max_discharge_fraction = [0.0] * self.config.n_control_window
         self._fixed_dispatch = [0.0] * self.config.n_control_window
@@ -50,10 +57,11 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
         if self.config.discharge_efficiency is not None:
             self.discharge_efficiency = self.config.discharge_efficiency
 
-    def initialize_parameters(self):
+    def initialize_parameters(self, inputs):
         """Initializes parameters."""
+
         self.minimum_storage = 0.0
-        self.maximum_storage = self.config.max_capacity
+        self.maximum_storage = inputs["storage_capacity"][0]
         self.minimum_soc = self.config.min_charge_percent
         self.maximum_soc = self.config.max_charge_percent
         self.initial_soc = self.config.init_charge_percent

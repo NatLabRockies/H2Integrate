@@ -1,10 +1,22 @@
 import pyomo.environ as pyo
 from pyomo.network import Port
 
-from h2integrate.control.control_rules.pyomo_rule_baseclass import PyomoRuleBaseClass
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.control.control_rules.pyomo_rule_baseclass import (
+    PyomoRuleBaseClass,
+    PyomoRuleBaseConfig,
+)
 
 
 class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
+    def setup(self):
+        self.config = PyomoRuleBaseConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
+        )
+        super().setup()
+
     def _create_variables(self, pyomo_model: pyo.ConcreteModel, tech_name: str):
         """Create generic converter variables to add to Pyomo model instance.
 

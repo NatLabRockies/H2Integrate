@@ -149,7 +149,7 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
         6000.0,
     ]
 
-    expected_battery_electricity_discharge = [
+    expected_battery_electricity = [
         4999.99997732,
         4992.25494845,
         4991.96052468,
@@ -279,10 +279,10 @@ def test_min_operating_cost_load_following_battery_dispatch(subtests):
             == model.prob.get_val("battery.electricity_out", units="kW")[0:24]
         )
 
-    with subtests.test("Check battery_electricity_discharge"):
+    with subtests.test("Check battery_electricity"):
         assert (
-            pytest.approx(expected_battery_electricity_discharge)
-            == model.prob.get_val("battery.battery_electricity_discharge", units="kW")[0:24]
+            pytest.approx(expected_battery_electricity)
+            == model.prob.get_val("battery.battery_electricity", units="kW")[0:24]
         )
 
     # Check a longer portion of SOC to make sure SOC is getting linked between optimization periods

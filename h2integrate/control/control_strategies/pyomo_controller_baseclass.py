@@ -259,7 +259,7 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
             # TODO: implement optional kwargs for this method: maybe this will remove if statement here
             if "Heuristic" in control_strategy:
                 # Initialize parameters for heuristic dispatch strategy
-                self.initialize_parameters()
+                self.initialize_parameters(inputs)
             elif "Optimized" in control_strategy:
                 # Initialize parameters for optimized dispatch strategy
                 self.initialize_parameters(

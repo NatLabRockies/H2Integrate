@@ -2,7 +2,7 @@ import openmdao.api as om
 import pyomo.environ as pyo
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import BaseConfig
 
 
 @define(kw_only=True)
@@ -28,12 +28,6 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = PyomoRuleBaseConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
-            strict=False,
-            additional_cls_name=self.__class__.__name__,
-        )
-
         self.add_discrete_output(
             "dispatch_block_rule_function",
             val=self.dispatch_block_rule_function,

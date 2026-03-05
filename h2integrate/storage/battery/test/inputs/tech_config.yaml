@@ -19,7 +19,6 @@ technologies:
         max_charge_percent: 0.9
         min_charge_percent: 0.1
       performance_parameters:
-        system_model_source: pysam
         chemistry: LFPGraphite
       dispatch_rule_parameters:
         commodity_name: electricity

@@ -61,7 +61,7 @@ ax[1].plot(
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.battery_electricity_discharge", units="MW")[start_hour:end_hour],
+    model.prob.get_val("battery.battery_electricity", units="MW")[start_hour:end_hour],
     linestyle="-.",
     label="Battery Electricity Out (MW)",
 )
