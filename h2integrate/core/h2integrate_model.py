@@ -17,6 +17,9 @@ from h2integrate.core.supported_models import supported_models, is_electricity_p
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
+    PyomoControllerBaseClass,
+)
 
 
 try:
@@ -189,19 +192,20 @@ class H2IntegrateModel:
         )
 
         for name, vals in self.technology_config["technologies"].items():
-            if "control_parameters" in vals["model_inputs"]:
-                val = self.technology_config["technologies"][name]["model_inputs"][
-                    "control_parameters"
-                ]
-                updated = {"tech_name": name}
-                if val is not None:
-                    self.technology_config["technologies"][name]["model_inputs"][
-                        "control_parameters"
-                    ].update(updated)
-                else:
-                    self.technology_config["technologies"][name]["model_inputs"][
-                        "control_parameters"
-                    ] = updated
+            if "control_strategy" in vals:
+                controller_model_name = vals["control_strategy"]["model"]
+                controller_cls = supported_models.get(controller_model_name)
+                if controller_cls is not None and issubclass(
+                    controller_cls, PyomoControllerBaseClass
+                ):
+                    model_inputs = self.technology_config["technologies"][name]["model_inputs"]
+                    if (
+                        "control_parameters" not in model_inputs
+                        or model_inputs["control_parameters"] is None
+                    ):
+                        model_inputs["control_parameters"] = {"tech_name": name}
+                    else:
+                        model_inputs["control_parameters"]["tech_name"] = name
 
     def create_custom_models(self, model_config, config_parent_path, model_types, prefix=""):
         """This method loads custom models from the specified directory and adds them to the

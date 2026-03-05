@@ -67,7 +67,6 @@ technologies:
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25  # 0.25% of capex per year from 2024 ATB
       control_parameters:
-        tech_name: battery
         cost_per_charge: 0.03  # in $/kW, cost to charge the storage (note that charging is incentivized)
         cost_per_discharge: 0.05  # in $/kW, cost to discharge the storage
         commodity_met_value: 0.1  # in $/kW, penalty for not meeting the desired load demand

@@ -8,6 +8,7 @@
   between 0 and 1, so the previous "percent" naming was misleading.
 - Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
   associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
+- Removed unnecessary `tech_name` designations for some control techs in yamls
 - PySAM battery now takes in charge rate and storage capacity as inputs[PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
 
 ## 0.7 [March 3, 2026]

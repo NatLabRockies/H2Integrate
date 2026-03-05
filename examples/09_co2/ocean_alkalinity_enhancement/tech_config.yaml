@@ -64,8 +64,6 @@ technologies:
         energy_capex: 246  # $/kWh from 2024 ATB year 2025
         power_capex: 317  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.02536510376633359
-      control_parameters:
-        tech_name: battery
   oae:
     performance_model:
       model: OAEPerformanceModel

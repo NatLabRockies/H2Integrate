@@ -94,8 +94,6 @@ technologies:
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
-      control_parameters:
-        tech_name: battery
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
