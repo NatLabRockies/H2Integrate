@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
+  associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
+
 ## 0.7 [March 3, 2026]
 
 ### New Features
