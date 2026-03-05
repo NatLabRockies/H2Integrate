@@ -50,7 +50,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     positive. This follows the NumPy Financial convention:
 
     Reference:
-        NumpPy Financial NPV documentation:
+        NumPy Financial NPV documentation:
         https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv
 
         By convention:
@@ -77,6 +77,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     def setup(self):
         commodity_type = self.options["commodity_type"]
         description = self.options["description"].strip() if "description" in self.options else ""
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Use description only if non-empty
         suffix = f"_{description}" if description else ""
@@ -86,22 +87,28 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
         # TODO: update below with standardized naming
         if self.options["commodity_type"] == "electricity":
-            commodity_units = "kW*h/year"
             commodity_price_units = "USD/(kW*h)"
+            commodity_rate_units = "kW"
         else:
-            commodity_units = "kg/year"
             commodity_price_units = "USD/kg"
+            commodity_rate_units = "kg/h"
 
         self.add_output(self.NPV_str, val=0.0, units="USD")
 
-        if self.options["commodity_type"] == "co2":
-            self.add_input("co2_capture_kgpy", val=0.0, units="kg/year")
-        else:
-            self.add_input(
-                f"total_{self.options['commodity_type']}_produced",
-                val=0.0,
-                units=commodity_units,
-            )
+        self.add_input(
+            f"rated_{self.options['commodity_type']}_production",
+            val=0.0,
+            units=commodity_rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            shape=plant_life,
+            require_connection=True,
+        )
 
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]
@@ -111,7 +118,10 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             )
         finance_params.update({"plant_life": plant_config["plant"]["plant_life"]})
 
-        self.config = NumpyFinancialNPVFinanceConfig.from_dict(finance_params)
+        self.config = NumpyFinancialNPVFinanceConfig.from_dict(
+            finance_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
@@ -123,10 +133,9 @@ class NumpyFinancialNPV(om.ExplicitComponent):
                 shape=plant_config["plant"]["plant_life"],
                 units="USD/year",
             )
-
-        # TODO: update below with standardized naming
-        if "electrolyzer" in tech_config:
-            self.add_input("electrolyzer_time_until_replacement", units="h")
+            self.add_input(
+                f"replacement_schedule_{tech}", val=0.0, shape=plant_life, units="unitless"
+            )
 
         self.add_input(
             f"sell_price_{self.output_txt}",
@@ -172,12 +181,11 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         sign_of_costs = -1
 
         # Extract annual production based on commodity type
-        # CO2 uses different input naming convention than other commodities
-        # TODO: update below for standardized naming and also variable simulation lengths
-        if self.options["commodity_type"] != "co2":
-            annual_production = float(inputs[f"total_{self.options['commodity_type']}_produced"][0])
-        else:
-            annual_production = float(inputs["co2_capture_kgpy"])
+        annual_production = (
+            inputs["capacity_factor"]
+            * inputs[f"rated_{self.options['commodity_type']}_production"]
+            * 8760
+        )
 
         # Calculate revenue from selling the commodity at the specified price
         # Revenue is only generated during operational years (not during construction year 0)
@@ -229,29 +237,25 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
                 # Find refurbishment period either from explicit config or calculated from hours
                 if "refurbishment_period_years" in tech_capex_info:
+                    refurb_schedule = np.zeros(self.params.plant_life)
                     refurb_period = tech_capex_info["refurbishment_period_years"]
-                else:
-                    # Calculate from hours until replacement (e.g., electrolyzer lifetime hours)
-                    # Convert hours to years: divide by (24 hours/day * 365 days/year)
-                    refurb_period = round(
-                        float(inputs[f"{tech}_time_until_replacement"][0]) / (24 * 365)
+                    # Set replacement cost at regular intervals (every refurb_period years)
+                    # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
+                    refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
+                        tech_capex_info["replacement_cost_percent"]
                     )
-
-                # Set replacement cost at regular intervals (every refurb_period years)
-                # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
-                refurb_schedule[refurb_period : self.config.plant_life : refurb_period] = (
-                    tech_capex_info["replacement_cost_percent"]
-                )
+                else:
+                    # Multiply the technology replacement schedule by the replacement cost
+                    refurb_schedule = (
+                        inputs[f"replacement_schedule_{tech}"]
+                        * tech_capex_info["replacement_cost_percent"]
+                    )
 
                 # Calculate actual replacement costs by multiplying CAPEX by schedule percentages
                 # capex is negative, so refurb_cost will also be negative (cash outflow)
                 refurb_cost = capex * refurb_schedule
                 # Add refurbishment schedule to cost breakdown
                 cost_breakdown[f"{tech}: replacement cost"] = refurb_cost
-
-        # Convert cost breakdown to list of arrays for aggregation (currently unused)
-        total_costs = [np.array(v) for k, v in cost_breakdown.items()]
-        np.array(total_costs).sum(axis=0)
 
         # Calculate NPV for each cost category and sum to get total NPV
         # This iterative approach also builds npv_cost_breakdown for optional reporting

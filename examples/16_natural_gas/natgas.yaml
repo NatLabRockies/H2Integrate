@@ -1,7 +1,5 @@
-name: "H2Integrate_config"
-
-system_summary: "This reference natural gas plant contains a simple natural gas combined cycle (NGCC) power plant"
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config.yaml"
-plant_config: "plant_config.yaml"
+name: H2Integrate_config
+system_summary: This reference natural gas plant contains a simple natural gas combined cycle (NGCC) power plant
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

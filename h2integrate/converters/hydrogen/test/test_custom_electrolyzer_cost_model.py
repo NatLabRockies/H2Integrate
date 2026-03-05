@@ -6,6 +6,7 @@ from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
 )
 
 
+@pytest.mark.unit
 def test_custom_electrolyzer_cost_model(subtests):
     capex_usd_per_kw = 10.0
     opex_usd_per_kw = 5.0
@@ -49,5 +50,6 @@ def test_custom_electrolyzer_cost_model(subtests):
 
     for out, expected in expected_outputs.items():
         with subtests.test(out):
-            val = prob.get_val(f"custom_elec_cost.{out}")
+            units = "USD" if out == "CapEx" else "USD/year"
+            val = prob.get_val(f"custom_elec_cost.{out}", units=units)
             assert pytest.approx(val, rel=1e-6) == expected[0]

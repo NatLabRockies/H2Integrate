@@ -21,7 +21,7 @@ Within this framework, there are two distinct layers, **finance groups** and **f
 #### Finance groups
   A finance group contains the attributes needed to run one finance model:
   - `finance_model`:
-    The name of the financial model to use (e.g., `ProFastComp`). Must correspond to one of the available models in `self.supported_models`.
+    The name of the financial model to use (e.g., `ProFastLCO`). Must correspond to one of the available models in `self.supported_models`.
   - `model_inputs`:
     A dictionary of parameters passed into the chosen finance model. These provide customization of assumptions such as discount rate, debt fraction, or cost escalation.
   - `commodity` (conditionally required):
@@ -65,7 +65,7 @@ General format:
 finance_parameters:
   finance_groups:
     commodity: "hydrogen"
-    finance_model: "ProFastComp"
+    finance_model: "ProFastLCO"
     model_inputs:
       discount_rate: 0.08
 ```
@@ -89,8 +89,8 @@ General format:
 ```yaml
 finance_parameters:
   finance_groups:
-    finance_model: "ProFastComp"
-    model_inputs: #dictionary of inputs for ProFastComp
+    finance_model: "ProFastLCO"
+    model_inputs: #dictionary of inputs for ProFastLCO
   finance_subgroups:
     subgroup_a:
       commodity: "hydrogen" #required
@@ -125,7 +125,7 @@ General format:
 finance_parameters:
   finance_groups:
     group_a:
-      finance_model: "ProFastComp"
+      finance_model: "ProFastLCO"
       model_inputs: {discount_rate: 0.08}
     group_b:
       finance_model: "NPVFinancial"

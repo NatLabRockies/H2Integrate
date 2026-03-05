@@ -31,7 +31,11 @@ There are two connection formats:
 - **source_tech**: Name of the technology providing the output
 - **destination_tech**: Name of the technology receiving the input
 - **variable_name**: The type of variable being transported (e.g., "electricity", "hydrogen", "ammonia")
-- **transport_type**: The transport component to use (e.g., "cable", "pipeline")
+- **transport_type**: The transport component to use (e.g., "cable", "pipe")
+
+```{note}
+"cable" and "pipe" are transport components that are internal to H2I and do not need to be defined in the technology configuration file. The "cable" can only transport electricity, and the "pipe" can transport a handful of commodities that are commonly used in H2I models (such as hydrogen, co2, methanol, ammonia, water, etc). To transport a commodity that is *not* supported with by "cable" or "pipe" transporters, the `GenericTransporterPerformanceModel` can be used instead. Example usage of the generic transporter is available in Example 21.
+```
 
 #### 3-element connections (direct connections)
 ##### Same shared parameter name
@@ -100,7 +104,7 @@ Add the combiner to your `tech_config.yaml`:
 technologies:
   combiner:
     performance_model:
-      model: "combiner_performance"
+      model: "GenericCombinerPerformanceModel"
     model_inputs:
       performance_parameters:
         commodity: "electricity"
@@ -111,13 +115,31 @@ No additional configuration parameters are needed in the `tech_config.yaml` - th
 
 ### Inputs and outputs
 
-- **Inputs**:
-  - `<commidty_name>_in1`: Power from the first source (kW)
-  - `<commidty_name>_in2`: Power from the second source (kW)
-- **Output**:
-  - `<commidty_name>_out`: Combined power output (kW)
+For each input stream *i* (numbered 1, 2, …, `in_streams`):
 
-The relationship is straightforward: `<commidty_name>_out = <commidty_name>_in1 + <commidty_name>_in2`
+- **Inputs** (per stream):
+  - `<commodity>_in<i>`: Time-series commodity profile from source *i* (commodity units)
+  - `rated_<commodity>_production<i>`: Rated (nameplate) production of source *i* (commodity units, scalar)
+  - `<commodity>_capacity_factor<i>`: Annual capacity factor of source *i* (unitless, shape = plant life)
+
+- **Outputs**:
+  - `<commodity>_out`: Combined commodity time-series profile — element-wise sum of all inputs
+  - `rated_<commodity>_production`: Total rated production — sum of all input rated productions
+  - `<commodity>_capacity_factor`: Combined capacity factor (unitless, shape = plant life)
+
+### Commodity output
+
+The combined output profile is the element-wise sum of all input profiles:
+
+`<commodity>_out = <commodity>_in1 + <commodity>_in2 + …`
+
+### Capacity factor calculation
+
+The combined capacity factor is a **weighted average** of the input capacity factors, weighted by each stream's rated production:
+
+`CF_out = (CF1 × S1 + CF2 × S2 + …) / (S1 + S2 + …)`
+
+where `CF_i` is the capacity factor and `S_i` is the rated commodity production of input stream *i*. This weighting ensures that larger sources contribute proportionally more to the combined capacity factor. If the total rated production is zero, the output capacity factor is set to zero.
 
 ### Usage example
 
@@ -143,7 +165,7 @@ Add the splitter to your `tech_config.yaml`:
 technologies:
   electricity_splitter:
     performance_model:
-      model: "splitter_performance"
+      model: "GenericSplitterPerformanceModel"
       config:
         commodity: "electricity"
         commodity_units: "kW"

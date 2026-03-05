@@ -1,33 +1,96 @@
 # Changelog
 
-## 0.5.x [TBD]
+## Unreleased
 
-- Updates models for NumPy version 2.4.0
-- Update test values for WOMBAT update to 0.13.0
-- Added standalone iron DRI and steel EAF performance and cost models
-- Added capability to have transport models that require user input parameters
-- Add geologic hydrogen surface processing converter
-- Add baseclass for caching functionality
-- Added postprocessing function to save timeseries
-- Minor reorg for profast tools
-- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NREL/H2Integrate/pull/413)
-- Removed hydrogen tank cost and performance models that were unused
-- Converted the documentation Jupyter notebooks to markdown files to simplify output diffs
+- Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
+  associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
+- Removed unnecessary `tech_name` designations for some control techs in yamls
+- PySAM battery now takes in charge rate and storage capacity as inputs[PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
+
+## 0.7 [March 3, 2026]
+
+### New Features
+
+- Simple nuclear plant performance and cost model [PR 538](https://github.com/NatLabRockies/H2Integrate/pull/538)
+- Refactored iron electrowinning model with performance and cost models based on recent literature from Humbert and Stinn [PR 432](https://github.com/NatLabRockies/H2Integrate/pull/432)
+- Load following optimization dispatch [PR 407](https://github.com/NatLabRockies/H2Integrate/pull/407)
+- Linearized hydrogen fuel cell model [PR 525](https://github.com/NatLabRockies/H2Integrate/pull/525)
+- Arps decline rate now incorporated into the natural geologic hydrogen model [PR 454](https://github.com/NatLabRockies/H2Integrate/pull/454)
+- Simple dispatch calculations now included in `StorageAutoSizingModel` [PR 493](https://github.com/NatLabRockies/H2Integrate/pull/493)
+
+### Updates
+
+#### Modeling
+
+- Removed all uses of `prob["<variable>"]` in favor of `prob.get_val("<variable>", units="<units>")` to
+  ensure units are properly handled and to prepare for the possibility of multiple variables with the
+  same name but different units in the future. [PR 539](https://github.com/NatLabRockies/H2Integrate/pull/539)
+- Update finance models to use annual capacity factor and rated production rather than annual production. [PR 552](https://github.com/NatLabRockies/H2Integrate/pull/552)
+- Update `NaturalGeoH2PerformanceModel` outputs yearly metrics. [PR 552](https://github.com/NatLabRockies/H2Integrate/pull/552)
+- Add figures and more description about how technologies and systems are modeled and connected in H2INtegrate. [PR 554](https://github.com/NatLabRockies/H2Integrate/pull/554)
+- Generalize electrolyzer replacement schedule logic within the framework. [PR 555](https://github.com/NatLabRockies/H2Integrate/pull/555)
+
+#### Infrastructure
+
+- Insert model names for technologies with control strategies to simplify Pyomo workflows. [PR 558](https://github.com/NatLabRockies/H2Integrate/pull/558)
+- Refactored pyomo code by splitting apart classes into separate files and removing unused properties [PR 549](https://github.com/NatLabRockies/H2Integrate/pull/549)
+- Use the PyPI listed mcm package in place of installing from GitHub. [PR 533](https://github.com/NatLabRockies/H2Integrate/pull/533)
+- Adds a duplicate key checker to the YAML `Loader` that raises an error when a duplicate key is
+  found, and points to the file and line number that caused the error. The YAML `Loader` modification
+  maintains compliance with the existing JSON validation protocols. [PR 534](https://github.com/NatLabRockies/H2Integrate/pull/534)
+- Test infrastructure updates: [PR 531](https://github.com/NatLabRockies/H2Integrate/pull/531)
+  - Introduces enforced test marking for `unit`, `regression`, and `integration` tests so that
+    all tests must be marked via `@pytest.mark.<test-type>`.
+  - Partial testing suite refactor to parameterize many of the common fixtures and test routines.
+  - `unittest` style tests are refactored to be `pytest` style tests for test consistency.
+- Adds a pre-commit hook for `yamlfix` to auto-format YAML files and `yamlfix`'d all YAML files for consistent formatting [PR 551](https://github.com/NatLabRockies/H2Integrate/pull/551)
+
+## 0.6 [February 10, 2026]
+
+### New Features and Technology Models
+
+- Added standalone iron DRI and steel EAF performance and cost models [PR 409](https://github.com/NatLabRockies/H2Integrate/pull/409)
+- Add geologic hydrogen surface processing converter [PR 405](https://github.com/NatLabRockies/H2Integrate/pull/405)
+- Added [Ard](https://github.com/NLRWindSystems/Ard) as an optional combined performance and cost model [PR 481](https://github.com/NatLabRockies/H2Integrate/pull/481)
+- Added ability to plot multi-layer geospatial point heat map and simple straight line transport routes with GeoPandas and Contextily [PR 413](https://github.com/NatLabRockies/H2Integrate/pull/413)
+
+### Improvements and Refactoring
+
+- Added `PerformanceModelBaseClass` and standardized outputs of converter performance models [PR 463](https://github.com/NatLabRockies/H2Integrate/pull/463)
+- Updates all models in `supported_models` to map between a string version of the class name and
+  the class itself. As such, all examples and documentation have been updated to properly instruct
+  users to the change in model configuration naming conventions. The naming convention is also
+  enforced by a newly added test to ensure adherence. [PR 468](https://github.com/NatLabRockies/H2Integrate/pull/468)
+- Adds `additional_cls_name` kwarg to `BaseConfig.from_dict()` to allow for configuration errors buried in parent or child classes to provide which model had the offending misconfiguration for simpler user debugging. [PR 479](https://github.com/NatLabRockies/H2Integrate/pull/479)
+- Added capability to have transport models that require user input parameters [PR 408](https://github.com/NatLabRockies/H2Integrate/pull/408)
+- Add baseclass for caching functionality [PR 422](https://github.com/NatLabRockies/H2Integrate/pull/422)
+- Minor reorg for profast tools [PR 450](https://github.com/NatLabRockies/H2Integrate/pull/450)
+- Added postprocessing function to save timeseries [PR 440](https://github.com/NatLabRockies/H2Integrate/pull/440)
+- Removed hydrogen tank cost and performance models that were unused [PR 457](https://github.com/NatLabRockies/H2Integrate/pull/457)
+- Allow design variables to be specified with None type units [PR 514](https://github.com/NatLabRockies/H2Integrate/pull/514)
+
+### Documentation, Examples, and Miscellaneous
+
+- Updates models for NumPy version 2.4.0 [PR 422](https://github.com/NatLabRockies/H2Integrate/pull/422)
+- Update test values for WOMBAT update to 0.13.0 [PR 425](https://github.com/NatLabRockies/H2Integrate/pull/425)
+- Converted the documentation Jupyter notebooks to markdown files to simplify output diffs [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464)
 - Updated the contributing documentation to clarify what developers should expect for including
-  executable content in the documentation.
+  executable content in the documentation. [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464)
 - Converted the example notebooks to documentation examples, and maintain a basic working example
-  in the examples folder:
+  in the examples folder [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464):
   - `examples/14_wind_hydrogen_dispatch/hydrogren_dispatch.ipynb` -> `docs/control/controller_demonstrations.md`
   - `examples/20_solar_electrolyzer_doe/run_csv_doe.ipynb` content added to `docs/user_guide/design_of_experiments_in_h2i.md`
   - `examples/25_sizing_modes/run_size_modes.ipynb` -> `docs/user_guide/run_size_modes.md`
 - `.gitignore` is updated to be more inclusive of example output data.
-- Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught.
-- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations.
+- Documentation builds will now fail if a demonstration errors during execution that is not marked as an allowed error, ensuring previously silent errors get caught. [PR 464](https://github.com/NatLabRockies/H2Integrate/pull/464)
+- `pyproject.toml` is tidied up after moving past Python 3.9 and early H2I limitations. [PR 471](https://github.com/NatLabRockies/H2Integrate/pull/471)
   - Cleans up unnecessary ignore rules in the ruff settings.
   - Removes duplicate dependency listings, and alphabetizes for legibility with NLR packages
     listed at the bottom.
   - Remove unused dependencies.
   - Fixes typos for skipped folders.
+  - Fixes missing dependencies for `gis` modifier used in new iron mapping tests.
+  - Remove `pytest-subtests` as it's incorporated into pytest as of v9, and is an archived project.
 
 ## 0.5.1 [December 18, 2025]
 

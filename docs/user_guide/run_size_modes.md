@@ -188,10 +188,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -225,10 +225,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -258,6 +258,8 @@ plant_config["technology_interconnections"] = [
     ["hopp", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
+    ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+    ["electricity_feedstock", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 
@@ -270,10 +272,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:
@@ -308,6 +310,8 @@ input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
     ["hopp", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+    ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
+    ["electricity_feedstock", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 driver_config["driver"]["optimization"]["flag"] = True
@@ -323,10 +327,10 @@ model.run()
 for value in [
     "electrolyzer.electricity_in",
     "electrolyzer.electrolyzer_size_mw",
-    "electrolyzer.hydrogen_capacity_factor",
+    "electrolyzer.capacity_factor",
     "ammonia.hydrogen_in",
     "ammonia.max_hydrogen_capacity",
-    "ammonia.ammonia_capacity_factor",
+    "ammonia.capacity_factor",
     "finance_subgroup_h2.LCOH",
     "finance_subgroup_nh3.LCOA",
 ]:

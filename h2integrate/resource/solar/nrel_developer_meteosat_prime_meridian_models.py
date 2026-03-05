@@ -51,7 +51,10 @@ class MeteosatPrimeMeridianSolarAPI(NRELDeveloperAPISolarResourceBase):
             "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-download.csv?"
         )
         # create the resource config
-        self.config = MeteosatPrimeMeridianAPIConfig.from_dict(resource_specs)
+        self.config = MeteosatPrimeMeridianAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -117,7 +120,10 @@ class MeteosatPrimeMeridianTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = MeteosatPrimeMeridianTMYAPIConfig.from_dict(resource_specs)
+        self.config = MeteosatPrimeMeridianTMYAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         self.base_url = f"https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-{self.config.resource_year.split('-')[0]}-download.csv?"
 

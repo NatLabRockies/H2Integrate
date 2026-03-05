@@ -16,16 +16,16 @@ def main(config):
 
     Args:
         config (object): Configuration object containing:
-            - cost (object): Includes `costs_df` (DataFrame) with cost names, types,
+                        - cost (object): Includes ``costs_df`` (DataFrame) with cost names, types,
               units, and site-specific costs.
-            - site (dict): Contains `name` (str), the site name.
+                        - site (dict): Contains ``name`` (str), the site name.
             - params (dict): Contains various financial and operational parameters, including:
-                - `operational_year` (int): Year the plant starts operation.
-                - `installation_years` (int): Number of years for installation.
-                - `plant_life` (int): Expected plant lifetime in years.
-                - `gen_inflation` (float): General inflation rate.
-                - `cost_year` (int): Reference year for cost inflation adjustments.
-                - `financial_assumptions` (dict): Key-value pairs of financial settings.
+                - ``operational_year`` (int): Year the plant starts operation.
+                - ``installation_years`` (int): Number of years for installation.
+                - ``plant_life`` (int): Expected plant lifetime in years.
+                - ``gen_inflation`` (float): General inflation rate.
+                - ``cost_year`` (int): Reference year for cost inflation adjustments.
+                - ``financial_assumptions`` (dict): Key-value pairs of financial settings.
 
     Returns:
         tuple: A tuple containing:

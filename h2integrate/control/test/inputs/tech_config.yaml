@@ -1,20 +1,19 @@
-name: "technology_config"
-description: "This hybrid plant produces hydrogen"
-
+name: technology_config
+description: This hybrid plant produces hydrogen
 technologies:
   h2_storage:
     control_strategy:
-      model: "pass_through_controller"
+      model: PassThroughOpenLoopController
     performance_model:
-      model: "storage_auto_sizing"
+      model: StorageAutoSizingModel
     cost_model:
-      model: "lined_rock_cavern_h2_storage_cost"
+      model: LinedRockCavernStorageCostModel
     model_inputs:
       shared_parameters:
-        commodity_name: "hydrogen"
-        commodity_units: "kg/h"
+        commodity: hydrogen
+        commodity_rate_units: kg/h
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities
         # in the input file
-        sizing_mode: "auto" # set as "auto" so storage capacity doesnt have to be defined
+        sizing_mode: auto  # set as "auto" so storage capacity doesnt have to be defined

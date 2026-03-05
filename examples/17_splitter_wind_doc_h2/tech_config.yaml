@@ -1,95 +1,90 @@
-name: "technology_config"
-description: "This plant has offshore wind and wave energy connected to a power splitter that sends prescribed electricity to DOC and remainder to an electrolyzer for hydrogen production"
-
+name: technology_config
+description: This plant has offshore wind and wave energy connected to a power splitter that sends prescribed electricity
+  to DOC and remainder to an electrolyzer for hydrogen production
 technologies:
   wind:
     performance_model:
-      model: "floris_wind_plant_performance"
+      model: FlorisWindPlantPerformanceModel
     cost_model:
-      model: "atb_wind_cost"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
-        num_turbines: 8 #number of turbines in the farm
-        hub_height: 150.0 # turbine hub-height
-        operational_losses: 12.83 #percentage of non-wake losses
+        num_turbines: 8  # number of turbines in the farm
+        hub_height: 150.0  # turbine hub-height
+        operational_losses: 12.83  # percentage of non-wake losses
         floris_wake_config: !include "floris_v4_default_template.yaml" #floris wake model file
         floris_turbine_config: !include "floris_turbine_osw_15MW.yaml" #turbine model file formatted for floris
-        resource_data_averaging_method: "weighted_average" #"weighted_average", "average" or "nearest"
-        operation_model: "cosine-loss" #turbine operation model
+        resource_data_averaging_method: weighted_average   #"weighted_average", "average" or "nearest"
+        operation_model: cosine-loss  # turbine operation model
         default_turbulence_intensity: 0.06
-        enable_caching: True #whether to use cached results
-        cache_dir: "cache" #directory to save or load cached data
+        enable_caching: true  # whether to use cached results
+        cache_dir: cache  # directory to save or load cached data
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 7.0
             turbine_D_spacing: 7.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 5390.0
         opex_per_kW_per_year: 52.0
         cost_year: 2022
-
   electricity_splitter:
     performance_model:
-      model: "splitter_performance"
+      model: GenericSplitterPerformanceModel
     model_inputs:
       performance_parameters:
-        split_mode: "fraction"
-        commodity: "electricity"
-        commodity_units: "kW"
+        split_mode: fraction
+        commodity: electricity
+        commodity_rate_units: kW
         fraction_to_priority_tech: 0.25
-
   doc:
     performance_model:
-      model: "direct_ocean_capture_performance"
+      model: DOCPerformanceModel
     cost_model:
-      model: "direct_ocean_capture_cost"
+      model: DOCCostModel
     model_inputs:
       shared_parameters:
-        power_single_ed_w: 240000. # W
-        flow_rate_single_ed_m3s: 0.4 # m^3/s
+        power_single_ed_w: 240000.  # W
+        flow_rate_single_ed_m3s: 0.4  # m^3/s
         number_ed_min: 1
         number_ed_max: 10
-        E_HCl: 0.05 # kWh/mol
-        E_NaOH: 0.05 # kWh/mol
+        E_HCl: 0.05  # kWh/mol
+        E_NaOH: 0.05  # kWh/mol
         y_ext: 0.9
         y_pur: 0.2
         y_vac: 0.6
         frac_ed_flow: 0.01
-        use_storage_tanks: True
-        initial_tank_volume_m3: 0. #m^3
-        store_hours: 12. # hours
-        sal: 33. # ppt
-        temp_C: 12. # degrees Celsius
-        dic_i: 0.0022 # mol/L
-        pH_i: 8.1 # initial pH
-
+        use_storage_tanks: true
+        initial_tank_volume_m3: 0.  # m^3
+        store_hours: 12.  # hours
+        sal: 33.  # ppt
+        temp_C: 12.  # degrees Celsius
+        dic_i: 0.0022  # mol/L
+        pH_i: 8.1  # initial pH
       cost_parameters:
-        infrastructure_type: "new"
+        infrastructure_type: new
         cost_year: 2023
-
   electrolyzer:
     performance_model:
-      model: "eco_pem_electrolyzer_performance"
+      model: ECOElectrolyzerPerformanceModel
     cost_model:
-      model: "singlitico_electrolyzer_cost"
+      model: SingliticoCostModel
     model_inputs:
       shared_parameters:
-        location: "onshore"
-        electrolyzer_capex: 250 # $/kW overnight installed capital costs for a 1 MW system in 2022
-
+        location: onshore
+        electrolyzer_capex: 250  # $/kW overnight installed capital costs for a 1 MW system in 2022
       performance_parameters:
-        size_mode: "normal"
-        n_clusters: 4 #should be 12.5 to get 500 MW
+        size_mode: normal
+        n_clusters: 4  # should be 12.5 to get 500 MW
         cluster_rating_MW: 20
-        eol_eff_percent_loss: 13 #eol defined as x% change in efficiency from bol
-        uptime_hours_until_eol: 80000. #number of 'on' hours until electrolyzer reaches eol
-        include_degradation_penalty: True #include degradation
-        turndown_ratio: 0.1 #turndown_ratio = minimum_cluster_power/cluster_rating_MW
+        eol_eff_percent_loss: 13  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
       financial_parameters:
         capital_items:
-          depr_period: 7 # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
-          replacement_cost_percent: 0.15 # percent of capex - H2A default case
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case

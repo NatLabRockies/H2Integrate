@@ -1,34 +1,39 @@
 default_language_version:
-    python: python3
+  python: python3
 repos:
-- repo: https://github.com/pycqa/isort
-  rev: 5.12.0
-  hooks:
-  - id: isort
-    name: isort
-    stages: [pre-commit]
-
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
-  hooks:
-  - id: trailing-whitespace
-  - id: end-of-file-fixer
-  - id: check-executables-have-shebangs
-  - id: check-json
-  - id: check-yaml
-    args: [--unsafe]  # allow Python constructors
-  - id: check-merge-conflict
-  - id: check-symlinks
-  - id: mixed-line-ending
-  - id: pretty-format-json
-    args: [--autofix]
-
-- repo: https://github.com/astral-sh/ruff-pre-commit
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort
+        stages: [pre-commit]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-yaml
+        args: [--unsafe]  # allow Python constructors
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: mixed-line-ending
+      - id: pretty-format-json
+        args: [--autofix]
+  - repo: https://github.com/lyz-code/yamlfix/
+    rev: 1.19.1
+    hooks:
+      - id: yamlfix
+        # Exclude YAML files that are used as inputs for testing or examples, or ones for desired schedule in HOPP as they
+        # expect misformatted YAML files.
+        exclude: ^(h2integrate/core/test/inputs/.*|examples/11_hybrid_energy_plant/tech_inputs/desired_schedules/.*)$
+  - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.8.1
-  hooks:
-    - id: ruff-format
-      types_or: [ python, pyi, jupyter ]
-    - id: ruff
-      types_or: [ python, pyi, jupyter ]
-      args: [ --fix, --unsafe-fixes]
+    rev: v0.8.1
+    hooks:
+      - id: ruff-format
+        types_or: [python, pyi, jupyter]
+      - id: ruff
+        types_or: [python, pyi, jupyter]
+        args: [--fix, --unsafe-fixes]

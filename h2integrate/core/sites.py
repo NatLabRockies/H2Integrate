@@ -43,7 +43,10 @@ class SiteLocationComponentConfig(SiteBaseConfig):
 
 class SiteLocationComponent(SiteBaseComponent):
     def __init__(self, site_config: dict, name=None, val=1.0, **kwargs):
-        self.config = SiteLocationComponentConfig.from_dict(site_config)
+        self.config = SiteLocationComponentConfig.from_dict(
+            site_config,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().__init__(name, val, **kwargs)
 
     def set_outputs(self):

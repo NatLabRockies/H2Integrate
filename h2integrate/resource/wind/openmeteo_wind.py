@@ -17,15 +17,14 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
+    Common resource fields are inherited from ``ResourceBaseAPIConfig``.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+        verify_download (bool, optional): Whether to verify the API download from the url.
+            If an `openmeteo_requests.Client.OpenMeteoRequestsError` error is thrown,
+            try setting to True. Defaults to False.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -44,6 +43,7 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
+    verify_download: bool = field(default=False)
 
 
 class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
@@ -52,7 +52,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(resource_specs)
+        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -156,7 +159,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
-        responses = openmeteo.weather_api(base_url, params=url, verify=False)
+        responses = openmeteo.weather_api(base_url, params=url, verify=self.config.verify_download)
         response = responses[0]
         hourly_data = response.Hourly()
         ts_data = {}

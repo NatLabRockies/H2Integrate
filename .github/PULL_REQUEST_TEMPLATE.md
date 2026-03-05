@@ -72,7 +72,11 @@ IMPORTANT NOTES
   - [ ] Related `docs/` files are up-to-date, or added when necessary
   - [ ] Documentation has been rebuilt successfully
   - [ ] Examples have been updated (if applicable)
-- [ ] `CHANGELOG.md` has been updated to describe the changes made in this PR
+- [ ] `CHANGELOG.md`
+  - [ ] At least one complete sentence has been provided to describe the changes made in this PR
+  - [ ] After the above, a hyperlink has been provided to the PR using the following format:
+    "A complete thought. [PR XYZ]((https://github.com/NatLabRockies/H2Integrate/pull/XYZ)", where
+    `XYZ` should be replaced with the actual number.
 
 ## Section 3: Related Issues
 <!--If this PR relates to an existing GitHub issue, please link the issue and indicate whether this PR would fully or partially resolve that issue. Please also link any issues that were created due to this PR-->

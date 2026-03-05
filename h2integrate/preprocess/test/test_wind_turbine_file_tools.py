@@ -14,6 +14,7 @@ from h2integrate.preprocess.wind_turbine_file_tools import (
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
+@pytest.mark.unit
 def test_turbine_export_error(subtests):
     invalid_turbine_name = "NREL_1.5MW"
     with pytest.raises(ValueError) as excinfo:
@@ -25,6 +26,7 @@ def test_turbine_export_error(subtests):
         assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
 
 
+@pytest.mark.regression
 def test_pysam_turbine_export(subtests):
     turbine_name = "NREL_6MW_196"
     output_fpath = export_turbine_to_pysam_format(turbine_name)
@@ -79,7 +81,10 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 300.0
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == 300.0
         )
 
     with subtests.test("File runs with WindPower, check turbine size"):
@@ -90,12 +95,15 @@ def test_pysam_turbine_export(subtests):
 
     with subtests.test("File runs with WindPower, check AEP"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.annual_energy", units="MW*h/yr")[0], rel=1e-6)
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+            )
             == 1391425.64
         )
 
 
-def test_floris_turbine_export(subtests):
+@pytest.mark.regression
+def test_floris_turbine_export(temp_dir, subtests):
     turbine_name = "NREL_6MW_196"
     output_fpath = export_turbine_to_floris_format(turbine_name)
 
@@ -117,6 +125,8 @@ def test_floris_turbine_export(subtests):
     updated_parameters = {
         "hub_height": -1,
         "floris_turbine_config": floris_options,
+        "enable_caching": True,
+        "cache_dir": temp_dir,
     }
 
     tech_config["technologies"]["distributed_wind_plant"]["model_inputs"][
@@ -145,7 +155,10 @@ def test_floris_turbine_export(subtests):
 
     with subtests.test("File runs with Floris, check total capacity"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.total_capacity", units="MW"), rel=1e-6) == 600.0
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW"), rel=1e-6
+            )
+            == 600.0
         )
 
     with subtests.test("File runs with Floris, check turbine size"):
@@ -163,10 +176,18 @@ def test_floris_turbine_export(subtests):
             == 53.556784
         )
 
+    with subtests.test("File runs with Floris, check total electricity produced"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.total_electricity_produced", units="MW*h")[0], rel=1e-6
+            )
+            == 2814944.574
+        )
+
     with subtests.test("File runs with Floris, check AEP"):
         assert (
             pytest.approx(
-                prob.get_val("wind_plant.total_electricity_produced", units="MW*h/yr")[0], rel=1e-6
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/yr")[0], rel=1e-6
             )
             == 2814944.574
         )

@@ -26,14 +26,15 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         """Set up the load controller configuration.
 
         Loads the controller configuration from ``tech_config`` and then calls
-        the base class ``setup``to create to inputs/outputs.
+        the base class ``setup`` to create inputs/outputs.
 
         Raises:
             KeyError: If the expected configuration keys are missing from
                 ``tech_config``.
         """
         self.config = DemandOpenLoopControlBaseConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["control_parameters"]
+            self.options["tech_config"]["model_inputs"]["control_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
@@ -47,10 +48,12 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         Args:
             inputs (dict-like): Mapping of input variable names to their
                 current values, including:
+
                     * ``{commodity}_demand``: Demand profile.
                     * ``{commodity}_in``: Supplied commodity.
             outputs (dict-like): Mapping of output variable names where results
                 will be written, including:
+
                     * ``{commodity}_unmet_demand``: Unmet demand.
                     * ``{commodity}_unused_commodity``: Curtailed production.
                     * ``{commodity}_out``: Actual output delivered.
@@ -59,7 +62,7 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
-        commodity = self.config.commodity_name
+        commodity = self.config.commodity
         remaining_demand = inputs[f"{commodity}_demand"] - inputs[f"{commodity}_in"]
 
         # Calculate missed load and curtailed production
@@ -69,6 +72,6 @@ class DemandOpenLoopConverterController(DemandOpenLoopControlBase):
         )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{commodity}_out"] = (
+        outputs[f"{commodity}_set_point"] = (
             inputs[f"{commodity}_in"] - outputs[f"{commodity}_unused_commodity"]
         )

@@ -8,6 +8,7 @@ from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cas
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
+@pytest.mark.regression
 def test_tech_config_modifier(subtests):
     """Test cases for modifying and running tech_config from csv.
     Using 15 example as test case
@@ -26,40 +27,50 @@ def test_tech_config_modifier(subtests):
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.327792370180044
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.306335842372589
         )
     with subtests.test("bool"):
         case = cases["Bool Test"]
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.226443205147294
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.205991056910428
         )
     with subtests.test("int"):
         case = cases["Int Test"]
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.4601971211592115
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.438566222420234
         )
     with subtests.test("str"):
         case = cases["Str Test"]
         model = modify_tech_config(model, case)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.22644320514729
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.205991056616438
         )
     with subtests.test("int repeat without run setup modify_tech_config"):
         case = cases["Int Test"]
         model = modify_tech_config(model, case, run_setup=False)
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.22644320514729  # should still "str" test value
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.205991056616438  # should still "str" test value
         )
     with subtests.test("int repeat with run setup outside modify_tech_config"):
         case = cases["Int Test"]
@@ -67,6 +78,8 @@ def test_tech_config_modifier(subtests):
         model.setup()
         model.run()
         assert (
-            pytest.approx(model.prob.get_val("finance_subgroup_hydrogen.LCOH")[0], rel=1e-3)
-            == 5.4601971211592115  # should still "str" test value
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
+            )
+            == 5.438566222420234  # should still "str" test value
         )

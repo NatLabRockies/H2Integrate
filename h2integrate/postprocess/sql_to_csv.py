@@ -58,6 +58,14 @@ def summarize_case(case, return_units=False):
             var_to_values.update({var: val[0]})
             var_to_units.update({var: case._get_units(var)})
 
+        # save average capacity factor and annual production
+        lifetime_prod_var = var.lower().split(".")[-1].startswith("annual") and var.lower().split(
+            "."
+        )[-1].endswith("production")
+        if "capacity_factor" in var.lower() or lifetime_prod_var:
+            if isinstance(val, np.ndarray):
+                val = [np.mean(val)]
+
         if isinstance(val, np.ndarray):
             # dont save information for non-scalar values
             if len(val) > 1:

@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pytest
 import openmdao.api as om
+from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
@@ -10,7 +11,8 @@ from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, 
 from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
 
 
-def make_synloop_config():
+@fixture
+def synloop_config():
     return {
         "model_inputs": {
             "shared_parameters": {
@@ -40,13 +42,129 @@ def make_synloop_config():
     }
 
 
-def test_ammonia_synloop_limiting_cases(subtests):
-    config = make_synloop_config()
+@pytest.mark.unit
+def test_ammonia_synloop_outputs(synloop_config, subtests):
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        }
+    }
+
+    cap_mult = 10.0e3
+    # none of these inputs are limiting
+    n2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 5.0 * cap_mult  # kg
+    h2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 2.0 * cap_mult
+    elec = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 0.006 * cap_mult
+    prob = om.Problem()
+
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec, units="MW")
+
+    prob.run_model()
+
+    commodity = "ammonia"
+    commodity_amount_units = "kg"
+    commodity_rate_units = "kg/h"
+    plant_life = int(plant_config["plant"]["plant_life"])
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+
+    # Check that replacement schedule is between 0 and 1
+    with subtests.test("0 <= replacement_schedule <=1"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") <= 1)
+
+    with subtests.test("replacement_schedule length"):
+        assert len(prob.get_val("comp.replacement_schedule", units="unitless")) == plant_life
+
+    # Check that capacity factor is between 0 and 1 with units of "unitless"
+    with subtests.test("0 <= capacity_factor (unitless) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
+        assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
+
+    # Check that capacity factor is between 1 and 100 with units of "percent"
+    with subtests.test("1 <= capacity_factor (percent) <=1"):
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") >= 1)
+        assert np.all(prob.get_val("comp.capacity_factor", units="percent") <= 100)
+
+    with subtests.test("capacity_factor length"):
+        assert len(prob.get_val("comp.capacity_factor", units="unitless")) == plant_life
+
+    # Test that rated commodity production is greater than zero
+    with subtests.test(f"rated_{commodity}_production > 0"):
+        assert np.all(
+            prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units) > 0
+        )
+
+    with subtests.test(f"rated_{commodity}_production length"):
+        assert (
+            len(prob.get_val(f"comp.rated_{commodity}_production", units=commodity_rate_units)) == 1
+        )
+
+    # Test that total commodity production is greater than zero
+    with subtests.test(f"total_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units) > 0
+        )
+    with subtests.test(f"total_{commodity}_produced length"):
+        assert (
+            len(prob.get_val(f"comp.total_{commodity}_produced", units=commodity_amount_units)) == 1
+        )
+
+    # Test that annual commodity production is greater than zero
+    with subtests.test(f"annual_{commodity}_produced > 0"):
+        assert np.all(
+            prob.get_val(f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr")
+            > 0
+        )
+
+    with subtests.test(f"annual_{commodity}_produced[1:] == annual_{commodity}_produced[0]"):
+        annual_production = prob.get_val(
+            f"comp.annual_{commodity}_produced", units=f"{commodity_amount_units}/yr"
+        )
+        assert np.all(annual_production[1:] == annual_production[0])
+
+    with subtests.test(f"annual_{commodity}_produced length"):
+        assert len(annual_production) == plant_life
+
+    # Test that commodity output has some values greater than zero
+    with subtests.test(f"Some of {commodity}_out > 0"):
+        assert np.any(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units) > 0)
+
+    with subtests.test(f"{commodity}_out length"):
+        assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
+
+    # Test default values
+    with subtests.test("operational_life default value"):
+        assert prob.get_val("comp.operational_life", units="yr") == plant_life
+    with subtests.test("replacement_schedule value"):
+        assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
+    with subtests.test("Test electricity_consumed < electricity_in"):
+        assert (
+            prob.get_val("comp.electricity_consumed", units="kW").max()
+            < prob.get_val("comp.electricity_in", units="kW").max()
+        )
+
+
+@pytest.mark.regression
+def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
     plant_info = {
+        "plant_life": 30,
         "simulation": {
             "n_timesteps": 4,  # Using 4 timesteps for this test
             "dt": 3600,
-        }
+        },
     }
 
     # Each test is a single array of 4 hours, each with a different limiting case
@@ -67,44 +185,48 @@ def test_ammonia_synloop_limiting_cases(subtests):
     )
 
     prob = om.Problem()
-    comp = AmmoniaSynLoopPerformanceModel(plant_config={"plant": plant_info}, tech_config=config)
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config={"plant": plant_info}, tech_config=synloop_config
+    )
     prob.model.add_subsystem("synloop", comp)
     prob.setup()
     prob.set_val("synloop.hydrogen_in", h2, units="kg/h")
     prob.set_val("synloop.nitrogen_in", n2, units="kg/h")
     prob.set_val("synloop.electricity_in", elec, units="MW")
     prob.run_model()
-    nh3 = prob.get_val("synloop.ammonia_out")
-    total = prob.get_val("synloop.total_ammonia_produced")
+    nh3 = prob.get_val("synloop.ammonia_out", units="kg/h")
+    total = prob.get_val("synloop.total_ammonia_produced", units="kg")
 
     # Check individual NH3 output values
     with subtests.test("N2 limiting"):
         assert pytest.approx(nh3[0], rel=1e-6) == 21520.21334466
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[0]) == 0
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[0]) == 0
 
     with subtests.test("H2 limiting"):
         assert pytest.approx(nh3[1], rel=1e-6) == 49840.21632252
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[1]) == 1
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[1]) == 1
 
     with subtests.test("Electricity limiting"):
         assert pytest.approx(nh3[2], rel=1e-6) == 18844.98190065
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[2]) == 2
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[2]) == 2
 
     with subtests.test("Capacity limiting"):
         assert pytest.approx(nh3[3], rel=1e-6) == 52777.6
-        assert pytest.approx(prob.get_val("synloop.limiting_input")[3]) == 3
+        assert pytest.approx(prob.get_val("synloop.limiting_input", units="unitless")[3]) == 3
 
     # Check total NH3 output
     with subtests.test("Total ammonia"):
         assert np.allclose(total, np.sum(expected_nh3), rtol=1e-6)
 
 
-def test_size_mode_outputs(subtests):
+@pytest.mark.regression
+def test_size_mode_outputs(subtests, temp_dir):
     # Change the current working directory to the example's directory
     os.chdir(EXAMPLE_DIR / "25_sizing_modes")
 
     # Load the 'base' configs needed to create the H2I model
     driver_config = load_driver_yaml(EXAMPLE_DIR / "25_sizing_modes" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = str(temp_dir)
     plant_config = load_plant_yaml(EXAMPLE_DIR / "25_sizing_modes" / "plant_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
     input_config = {
@@ -132,6 +254,56 @@ def test_size_mode_outputs(subtests):
 
     with subtests.test("Test `resize_by_max_feedstock` mode"):
         assert (
-            pytest.approx(model.prob.get_val("ammonia.max_hydrogen_capacity")[0], rel=1e-3)
+            pytest.approx(
+                model.prob.get_val("ammonia.max_hydrogen_capacity", units="kg/h")[0], rel=1e-3
+            )
             == 12543.68246215831
+        )
+
+
+@pytest.mark.unit
+def test_ammonia_synloop_performance(synloop_config, subtests):
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        }
+    }
+
+    cap_mult = 10.0e3
+    n2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 5.0 * cap_mult  # kg
+    h2 = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 2.0 * cap_mult
+    # electricity is limiting input
+    elec = np.ones(plant_config["plant"]["simulation"]["n_timesteps"]) * 0.001 * cap_mult
+    prob = om.Problem()
+
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec, units="MW")
+
+    prob.run_model()
+
+    prob.get_val("comp.electricity_consumed", units="kW")
+
+    with subtests.test("Test electricity_consumed <= electricity_in"):
+        assert (
+            prob.get_val("comp.electricity_consumed", units="kW").max()
+            <= prob.get_val("comp.electricity_in", units="kW").max()
+        )
+    with subtests.test("Test limiting_output is electricity"):
+        assert np.all(prob.get_val("comp.limiting_input", units="unitless") == 2)
+    with subtests.test("Test hydrogen_consumed < hydrogen_in"):
+        assert (
+            prob.get_val("comp.hydrogen_consumed", units="kg/h").max()
+            <= prob.get_val("comp.hydrogen_in", units="kg/h").max()
         )

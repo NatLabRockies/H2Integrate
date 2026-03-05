@@ -6,6 +6,7 @@ from pytest import approx
 from h2integrate.converters.hydrogen.wombat_model import WOMBATElectrolyzerModel
 
 
+@pytest.mark.regression
 def test_wombat_model_outputs(subtests):
     prob = om.Problem()
     prob.model.add_subsystem(
@@ -16,6 +17,7 @@ def test_wombat_model_outputs(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },
@@ -44,25 +46,34 @@ def test_wombat_model_outputs(subtests):
     prob.run_model()
 
     with subtests.test("hydrogen_out"):
-        assert np.linalg.norm(prob["hydrogen_out"]) == approx(72653.05815087, rel=1e-2)
+        assert np.linalg.norm(prob.get_val("hydrogen_out", units="kg/h")) == approx(
+            72653.05815087, rel=1e-2
+        )
     with subtests.test("total_hydrogen_produced"):
-        assert prob["total_hydrogen_produced"] == approx(6777348.33570215, rel=1e-2)
+        assert prob.get_val("total_hydrogen_produced", units="kg") == approx(
+            6777348.33570215, rel=1e-2
+        )
     with subtests.test("efficiency"):
-        assert prob["efficiency"] == approx(0.76733639, rel=1e-2)
+        assert prob.get_val("efficiency", units="unitless") == approx(0.76733639, rel=1e-2)
     with subtests.test("rated_h2_production_kg_pr_hr"):
-        assert prob["rated_h2_production_kg_pr_hr"] == approx(784.3544736, rel=1e-2)
+        assert prob.get_val("rated_hydrogen_production", units="kg/h") == approx(
+            784.3544736, rel=1e-2
+        )
     with subtests.test("capacity_factor"):
-        assert prob["capacity_factor"] == approx(0.75637315, rel=1e-2)
+        assert prob.get_val("capacity_factor", units="unitless") == approx(0.75637315, rel=1e-2)
     with subtests.test("CapEx"):
-        assert prob["CapEx"] == approx(51800000.0, rel=1e-2)
+        assert prob.get_val("CapEx", units="USD") == approx(51800000.0, rel=1e-2)
     with subtests.test("OpEx"):
-        assert prob["OpEx"] == approx(1004502.975183, rel=1e-2)
+        assert prob.get_val("OpEx", units="USD/year") == approx(1004502.975183, rel=1e-2)
     with subtests.test("percent_hydrogen_lost"):
-        assert prob["percent_hydrogen_lost"] == approx(1.50371, rel=1e-2)
+        assert prob.get_val("percent_hydrogen_lost", units="percent") == approx(1.50371, rel=1e-2)
     with subtests.test("electrolyzer_availability"):
-        assert prob["electrolyzer_availability"] == approx(0.993379, rel=1e-2)
+        assert prob.get_val("electrolyzer_availability", units="unitless") == approx(
+            0.993379, rel=1e-2
+        )
 
 
+@pytest.mark.unit
 def test_wombat_error(subtests):
     prob = om.Problem()
     prob.model.add_subsystem(
@@ -73,6 +84,7 @@ def test_wombat_error(subtests):
                     "plant_life": 20,
                     "simulation": {
                         "n_timesteps": 8760,
+                        "dt": 3600,
                     },
                 },
             },

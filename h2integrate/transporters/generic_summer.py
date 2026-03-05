@@ -9,14 +9,11 @@ from h2integrate.core.validators import contains
 class GenericSummerPerformanceConfig(BaseConfig):
     """Configuration class for a generic summer for commodities or feedstocks.
 
-    Attributes:
-        commodity (str): name of commodity/feedstock type
-        commodity_units (str): units of commodity/feedstock profile
-        operation_mode (str): either "production" or "consumption" to determine input/output naming
+    Fields include `commodity`, `commodity_rate_units`, and `operation_mode`.
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()
+    commodity_rate_units: str = field()
     operation_mode: str = field(
         default="production",
         converter=(str.lower, str.strip),
@@ -36,29 +33,41 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
 
     def setup(self):
         self.config = GenericSummerPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         if self.config.commodity == "electricity":
             # NOTE: this should be updated in overhaul required for flexible dt
             # and flexible simulation length
-            summed_units = f"{self.config.commodity_units}*h/year"
+            summed_units = f"{self.config.commodity_rate_units}*h/year"
         else:
-            summed_units = f"{self.config.commodity_units}*h/year"
+            summed_units = f"{self.config.commodity_rate_units}*h/year"
 
         self.add_input(
             f"{self.config.commodity}_in",
             val=0.0,
             shape=n_timesteps,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
         )
 
         if self.config.operation_mode == "consumption":
-            self.add_output(f"total_{self.config.commodity}_consumed", val=0.0, units=summed_units)
+            self.add_output(
+                f"total_{self.config.commodity}_consumed",
+                val=0.0,
+                shape=plant_life,
+                units=summed_units,
+            )
         else:  # production mode (default)
-            self.add_output(f"total_{self.config.commodity}_produced", val=0.0, units=summed_units)
+            self.add_output(
+                f"total_{self.config.commodity}_produced",
+                val=0.0,
+                shape=plant_life,
+                units=summed_units,
+            )
 
     def compute(self, inputs, outputs):
         if self.config.operation_mode == "consumption":

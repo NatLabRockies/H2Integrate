@@ -1,35 +1,33 @@
 name: technology_config
 description: This plant has wind feeding into an electrolyzer with optimization
-
 technologies:
   wind:
     performance_model:
-      model: "pysam_wind_plant_performance"
+      model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: "atb_wind_cost"
+      model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 4
         turbine_rating_kw: 8300
         rotor_diameter: 196.
         hub_height: 130.
-        create_model_from: "default"
-        config_name: "WindPowerSingleOwner"
+        create_model_from: default
+        config_name: WindPowerSingleOwner
         pysam_options: !include "pysam_options_8.3MW.yaml"
-        run_recalculate_power_curve: False
+        run_recalculate_power_curve: false
         layout:
-          layout_mode: "basicgrid"
+          layout_mode: basicgrid
           layout_options:
             row_D_spacing: 10.0
             turbine_D_spacing: 10.0
             rotation_angle_deg: 0.0
             row_phase_offset: 0.0
-            layout_shape: "square"
+            layout_shape: square
       cost_parameters:
         capex_per_kW: 1500.0
         opex_per_kW_per_year: 0
         cost_year: 2019
-
   paper_mill:
     performance_model:
       model: paper_mill_performance
@@ -52,4 +50,4 @@ technologies:
         opex_rate: 0.05  # 5% of CAPEX
         cost_year: 2024
       finance_parameters:
-        discount_rate: 0.09 # nominal return based on 2024 ATB baseline workbook for land-based wind
+        discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind

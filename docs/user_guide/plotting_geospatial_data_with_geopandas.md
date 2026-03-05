@@ -146,10 +146,10 @@ fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
         transport_layer2_gdf,
     ],
     show_plot=True,
-    save_plot_fpath="./ex_28_out/example_28_iron_map.png",
+    save_plot_fpath="./ex_28_out/example_26_iron_map.png",
 )
 ```
 
 After running the above code, a display window will show the image and the image will be saved to the specified `save_plot_fpath`.
 
-![example_28_iron_map.png](./figures/example_28_iron_map.png)
+![example_26_iron_map.png](./figures/example_26_iron_map.png)

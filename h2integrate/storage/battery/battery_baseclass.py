@@ -1,41 +1,36 @@
-import openmdao.api as om
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
-class BatteryPerformanceBaseClass(om.ExplicitComponent):
+class BatteryPerformanceBaseClass(PerformanceModelBaseClass):
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
+        super().setup()
+
         self.add_input(
             "electricity_in",
             val=0.0,
-            shape_by_conn=True,
+            shape=self.n_timesteps,
             units="kW",
             desc="Power input to Battery",
         )
 
         self.add_output(
-            "electricity_out",
-            val=0.0,
-            copy_shape="electricity_in",
-            units="kW",
-            desc="Total electricity out of Battery",
-        )
-
-        self.add_output(
             "SOC",
             val=0.0,
-            copy_shape="electricity_in",
+            shape=self.n_timesteps,
             units="percent",
             desc="State of charge of Battery",
         )
 
         self.add_output(
-            "battery_electricity_discharge",
+            "battery_electricity",
             val=0.0,
-            copy_shape="electricity_in",
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity output from Battery only",
         )

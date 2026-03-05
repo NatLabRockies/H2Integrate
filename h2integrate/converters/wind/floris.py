@@ -31,7 +31,7 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
         operational_losses (float | int): non-wake losses represented as a percentage
             (between 0 and 100).
         hub_height (float | int, optional): a value of -1 indicates to use the hub-height
-            from the `floris_turbine_config`. Otherwise, is the turbine hub-height
+            from the ``floris_turbine_config``. Otherwise, is the turbine hub-height
             in meters. Defaults to -1.
         operation_model (str, optional): turbine operation model. Defaults to 'cosine-loss'.
         default_turbulence_intensity (float): default turbulence intensity to use if not found
@@ -41,6 +41,7 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
             adjust or select resource data if no resource data is available at a height
             exactly equal to the turbine hub-height. Defaults to 'weighted_average'.
             The available methods are:
+
             - 'weighted_average': average the resource data at the heights that most closely bound
                 the hub-height, weighted by the difference between the resource heights and the
                 hub-height.
@@ -122,7 +123,8 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
 
         # initialize wind turbine config
         self.config = FlorisWindPlantPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         if self.config.hybrid_turbine_design:
@@ -143,18 +145,6 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
             val=self.config.hub_height,
             units="m",
             desc="turbine hub-height",
-        )
-
-        self.add_output(
-            "total_electricity_produced",
-            val=0.0,
-            units="kW*h/year",
-            desc="Annual energy production from WindPlant",
-        )
-        self.add_output("total_capacity", val=0.0, units="kW", desc="Wind farm rated capacity")
-
-        self.add_output(
-            "capacity_factor", val=0.0, units="unitless", desc="Wind farm capacity factor"
         )
 
         super().setup()
@@ -282,11 +272,15 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
 
         # set outputs
         outputs["electricity_out"] = gen
-        outputs["total_capacity"] = n_turbs * self.wind_turbine_rating_kW
+        outputs["rated_electricity_production"] = n_turbs * self.wind_turbine_rating_kW
 
-        max_production = n_turbs * self.wind_turbine_rating_kW * len(gen)
-        outputs["total_electricity_produced"] = np.sum(gen)
-        outputs["capacity_factor"] = np.sum(gen) / max_production
+        max_production = n_turbs * self.wind_turbine_rating_kW * len(gen) * (self.dt / 3600)
+        outputs["total_electricity_produced"] = np.sum(gen) * (self.dt / 3600)
+        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
+        # NOTE: below is not flexible
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
         # 3. Cache the results for future use if enabled
         self.cache_outputs(

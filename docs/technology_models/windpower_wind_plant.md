@@ -2,12 +2,12 @@
 
 This model uses the [Windpower module](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) available in PySAM to simulate the performance of a wind power plant.
 
-To use this model, specify `"pysam_wind_plant_performance"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
+To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#windpower-performance-parameters).
 
 ```yaml
 technologies:
   wind:
-     performance_model: "pysam_wind_plant_performance"
+     performance_model: "PYSAMWindPlantPerformanceModel"
      model_inputs:
          performance_parameters:
             num_turbines: 10
@@ -42,7 +42,7 @@ technologies:
               AdjustmentFactors:
 ```
 
-(performance-parameters)=
+(windpower-performance-parameters)=
 ## Performance Parameters
 - `num_turbines` (required): number of wind turbines in the wind farm
 - `hub_height` (required): wind turbine hub height in meters

@@ -1,14 +1,13 @@
-name: "technology_config"
-description: "This plant is a simple passthrough wind+solar+battery hybrid energy plant within HOPP"
-
+name: technology_config
+description: This plant is a simple passthrough wind+solar+battery hybrid energy plant within HOPP
 technologies:
   hopp:
     performance_model:
-      model: hopp
+      model: HOPPComponent
     model_inputs:
       shared_parameters:
         cost_year: 2024
       performance_parameters:
-        cache_dir: "cache"
-        enable_caching: True
+        cache_dir: cache
+        enable_caching: true
         hopp_config: !include tech_inputs/hopp_config.yaml

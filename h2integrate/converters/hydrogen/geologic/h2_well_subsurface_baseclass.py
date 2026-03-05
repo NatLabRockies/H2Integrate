@@ -1,9 +1,12 @@
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.tools.inflation.inflate import inflate_cepci
 
 
@@ -42,7 +45,7 @@ class GeoH2SubsurfacePerformanceConfig(BaseConfig):
     grain_size: float = field()
 
 
-class GeoH2SubsurfacePerformanceBaseClass(om.ExplicitComponent):
+class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
     """OpenMDAO component for modeling the performance of the well subsurface for
         geologic hydrogen.
 
@@ -84,20 +87,21 @@ class GeoH2SubsurfacePerformanceBaseClass(om.ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-        self.options.declare("driver_config", types=dict)
+        super().initialize()
+        self.commodity = "hydrogen"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
+        super().setup()
+
         # inputs
         self.add_input("borehole_depth", units="m", val=self.config.borehole_depth)
         self.add_input("grain_size", units="m", val=self.config.grain_size)
 
         # outputs
-        self.add_output("wellhead_gas_out", units="kg/h", shape=(8760,))
-        self.add_output("hydrogen_out", units="kg/h", shape=(8760,))
+        self.add_output("wellhead_gas_out", units="kg/h", shape=(self.n_timesteps,))
         self.add_output("total_wellhead_gas_produced", val=0.0, units="kg/year")
-        self.add_output("total_hydrogen_produced", val=0.0, units="kg/year")
 
 
 @define(kw_only=True)

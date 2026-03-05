@@ -87,7 +87,7 @@ def check_parameter_inputs(finance_params, plant_config):
             f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
         )
 
-        msg = f"Duplicate entries found in ProFastComp params. Duplicated entries are: {err_info}"
+        msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
         raise ValueError(msg)
 
     # Check for conflicts between nickname/realname pairs
@@ -299,7 +299,7 @@ class ProFASTDefaultCapitalItem(BaseConfig):
         depr_type (str, optional): depreciation "MACRS" or "Straight line". Defaults to 'MACRS'.
         refurb (list[float], optional): Replacement schedule as a fraction of the capital cost.
             Defaults to [0.].
-        replacement_cost_percent (float | int, optional): Replacement cost as a fraction of CapEx.
+        replacement_cost_percent (float, optional): Replacement cost as a fraction of CapEx.
             Defaults to 0.0
 
     """
@@ -307,7 +307,7 @@ class ProFASTDefaultCapitalItem(BaseConfig):
     depr_period: int = field(converter=int, validator=contains([3, 5, 7, 10, 15, 20]))
     depr_type: str = field(converter=str.strip, validator=contains(["MACRS", "Straight line"]))
     refurb: int | float | list[float] = field(default=[0.0])
-    replacement_cost_percent: int | float = field(default=0.0, validator=range_val(0, 1))
+    replacement_cost_percent: float = field(default=0.0, validator=range_val(0, 1))
 
     def create_dict(self):
         """Create a ProFAST-compatible dictionary of attributes.
@@ -459,8 +459,8 @@ class ProFastBase(om.ExplicitComponent):
             financial calculation.
         plant_config (dict): Plant configuration and financial parameter settings.
         driver_config (dict): Driver configuration parameters (not directly used in calculations).
-        commodity_type (str): Type of commodity analyzed. Supported: 'hydrogen', 'electricity',
-            'ammonia', 'nitrogen', and 'co2'.
+        commodity_type (str): Type of commodity analyzed. Supports electricity and mass-based
+            commodities.
         params (BasicProFASTParameterConfig): Financial parameters used in the ProFAST analysis.
         capital_item_settings (ProFASTDefaultCapitalItem): Default capital cost parameters.
         fixed_cost_settings (ProFASTDefaultFixedCost): Default fixed operating cost parameters.
@@ -473,12 +473,15 @@ class ProFastBase(om.ExplicitComponent):
             user-defined technology, in USD.
         opex_adjusted_{tech} (float): Adjusted operational expenditure for each
             user-defined technology, in USD/year.
-        total_{commodity}_produced (float): Total annual production of the selected commodity
+        varopex_adjusted_{tech} (np.ndarray): Adjusted variable operational expenditure
+            for each user-defined technology, in USD/year.
+        rated_{commodity}_production (float): Rated production of the selected commodity
             (units depend on commodity type).
-        {tech}_time_until_replacement (float): Time until technology is replaced, in hours
-            (currently only supported if "electrolyzer" is in tech_config).
-        co2_capture_kgpy (float): Total annual CO2 captured, in kg/year
-            (only for commodity_type "co2").
+        capacity_factor (np.ndarray): Capacity factor of the commodity producing tech(s)
+            per year of the plant life.
+        replacement_schedule_{tech} (np.ndarray): Fraction of the technology capacity that
+            is replaced in each year of the plant life.
+
 
     Methods:
         initialize(): Declares component options.
@@ -503,11 +506,13 @@ class ProFastBase(om.ExplicitComponent):
         """Set up component inputs and outputs based on plant and technology configurations."""
         # Determine commodity units
         if self.options["commodity_type"] == "electricity":
-            commodity_units = "kW*h/year"
             self.price_units = "USD/(kW*h)"
+            commodity_rate_units = "kW"
+            self.commodity_amount_units = "kWh"
         else:
-            commodity_units = "kg/year"
             self.price_units = "USD/kg"
+            commodity_rate_units = "kg/h"
+            self.commodity_amount_units = "kg"
 
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups
@@ -521,28 +526,34 @@ class ProFastBase(om.ExplicitComponent):
         # Add model-specific outputs defined by subclass
         self.add_model_specific_outputs()
 
-        # Add production input (CO2 capture or total commodity produced)
-        if self.options["commodity_type"] == "co2":
-            self.add_input("co2_capture_kgpy", val=0.0, units="kg/year", require_connection=True)
-        else:
-            self.add_input(
-                f"total_{self.options['commodity_type']}_produced",
-                val=-1.0,
-                units=commodity_units,
-                require_connection=True,
-            )
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
+        # Add rated capacity and capacity factor inputs
+        self.add_input(
+            f"rated_{self.options['commodity_type']}_production",
+            val=0.0,
+            units=commodity_rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            shape=plant_life,
+            require_connection=True,
+        )
 
         # Add inputs for CapEx, OpEx, and variable OpEx for each technology
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
         tech_config = self.tech_config = self.options["tech_config"]
         for tech in tech_config:
             self.add_input(f"capex_adjusted_{tech}", val=0.0, units="USD")
             self.add_input(f"opex_adjusted_{tech}", val=0.0, units="USD/year")
             self.add_input(f"varopex_adjusted_{tech}", val=0.0, shape=plant_life, units="USD/year")
-
-            # Include electrolyzer replacement time if applicable
-            if tech.startswith("electrolyzer"):
-                self.add_input(f"{tech}_time_until_replacement", units="h")
+            self.add_input(
+                f"replacement_schedule_{tech}", val=0.0, shape=plant_life, units="unitless"
+            )
 
         # Load plant configuration and financial parameters
         plant_config = self.options["plant_config"]
@@ -550,7 +561,10 @@ class ProFastBase(om.ExplicitComponent):
         fin_params = check_parameter_inputs(finance_params, plant_config)
 
         # initialize financial parameters
-        self.params = BasicProFASTParameterConfig.from_dict(fin_params)
+        self.params = BasicProFASTParameterConfig.from_dict(
+            fin_params,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         # initialize default capital item parameters
         capital_item_params = plant_config["finance_parameters"]["model_inputs"].get(
@@ -581,13 +595,6 @@ class ProFastBase(om.ExplicitComponent):
         coproduct_cost_params.setdefault("unit", self.price_units.replace("USD", "$"))
         self.coproduct_cost_settings = ProFASTDefaultCoproduct.from_dict(coproduct_cost_params)
 
-        # incentives - unused for now
-        # incentive_params = plant_config["finance_parameters"]["model_inputs"].get(
-        #     "incentives", {}
-        # )
-        # incentive_params.setdefault("decay", -1 * self.params.inflation_rate)
-        # self.incentive_params_settings = ProFASTDefaultIncentive.from_dict(incentive_params)
-
     def populate_profast(self, inputs):
         """Populate and configure the ProFAST financial model for analysis.
 
@@ -599,16 +606,6 @@ class ProFastBase(om.ExplicitComponent):
         Returns:
             ProFAST: A fully configured ProFAST financial model object ready for execution.
         """
-        # determine commodity units
-        mass_commodities = [
-            "hydrogen",
-            "ammonia",
-            "co2",
-            "nitrogen",
-            "methanol",
-            "iron_ore",
-            "pig_iron",
-        ]
 
         # create years of operation list
         years_of_operation = create_years_of_operation(
@@ -620,21 +617,20 @@ class ProFastBase(om.ExplicitComponent):
         # update parameters with commodity, capacity, and utilization
         profast_params = self.params.as_dict()
         profast_params["commodity"].update({"name": self.options["commodity_type"]})
-        profast_params["commodity"].update(
-            {"unit": "kg" if self.options["commodity_type"] in mass_commodities else "kWh"}
-        )
+        profast_params["commodity"].update({"unit": self.commodity_amount_units})
 
         # calculate capacity and total production based on commodity type
-        if self.options["commodity_type"] != "co2":
-            capacity = inputs[f"total_{self.options['commodity_type']}_produced"][0] / 365.0
-            total_production = inputs[f"total_{self.options['commodity_type']}_produced"][0]
-        else:
-            capacity = inputs["co2_capture_kgpy"][0] / 365.0
-            total_production = inputs["co2_capture_kgpy"][0]
+        capacity = inputs[f"rated_{self.options['commodity_type']}_production"][0] * 24
+        utilization = dict(zip(years_of_operation, inputs["capacity_factor"]))
+        total_production = (
+            inputs["capacity_factor"]
+            * inputs[f"rated_{self.options['commodity_type']}_production"]
+            * 8760
+        )
 
         # define profast parameters for capacity and utilization
-        profast_params["capacity"] = capacity  # TODO: update to actual daily capacity
-        profast_params["long term utilization"] = 1  # TODO: update to capacity factor
+        profast_params["capacity"] = capacity
+        profast_params["long term utilization"] = utilization
 
         # initialize profast dictionary
         pf_dict = {"params": profast_params, "capital_items": {}, "fixed_costs": {}}
@@ -666,18 +662,23 @@ class ProFastBase(om.ExplicitComponent):
 
             # see if any refurbishment information was input
             if "replacement_cost_percent" in tech_capex_info:
-                refurb_schedule = np.zeros(self.params.plant_life)
-
                 if "refurbishment_period_years" in tech_capex_info:
+                    # Calculate replacement schedule using a user-defined replacement period
+                    refurb_schedule = np.zeros(self.params.plant_life)
                     refurb_period = tech_capex_info["refurbishment_period_years"]
-                else:
-                    refurb_period = round(
-                        float(inputs[f"{tech}_time_until_replacement"][0]) / (24 * 365)
+                    # Multiply the replacement schedule by the replacement cost
+                    # replacement_cost_percent is fraction of original CAPEX (e.g., 0.15 = 15%)
+                    refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
+                        tech_capex_info["replacement_cost_percent"]
                     )
 
-                refurb_schedule[refurb_period : self.params.plant_life : refurb_period] = (
-                    tech_capex_info["replacement_cost_percent"]
-                )
+                else:
+                    # Use the replacement schedule from the technology performance model
+                    refurb_schedule = (
+                        inputs[f"replacement_schedule_{tech}"]
+                        * tech_capex_info["replacement_cost_percent"]
+                    )
+
                 # add refurbishment schedule to tech-specific capital item entry
                 tech_capex_info["refurb"] = list(refurb_schedule)
 

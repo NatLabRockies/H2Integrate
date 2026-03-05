@@ -2,23 +2,10 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 from h2integrate.converters.solar.atb_res_com_pv_cost import ATBResComPVCostModel
 from h2integrate.converters.solar.atb_utility_pv_cost import ATBUtilityPVCostModel
 from h2integrate.resource.solar.nrel_developer_goes_api_models import GOESAggregatedSolarAPI
-
-
-@fixture
-def solar_resource_dict():
-    pv_resource_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather" / "solar"
-    pv_filename = "30.6617_-101.7096_psmv3_60_2013.csv"
-    pv_resource_dict = {
-        "resource_year": 2013,
-        "resource_dir": pv_resource_dir,
-        "resource_filename": pv_filename,
-    }
-    return pv_resource_dict
 
 
 @fixture
@@ -47,21 +34,6 @@ def utility_scale_pv_performance_params():
         "pysam_options": pysam_options,
     }
     return tech_params
-
-
-@fixture
-def plant_config():
-    plant = {
-        "plant_life": 30,
-        "simulation": {
-            "dt": 3600,
-            "n_timesteps": 8760,
-            "start_time": "01/01/1900 00:30:00",
-            "timezone": 0,
-        },
-    }
-
-    return {"plant": plant, "site": {"latitude": 30.6617, "longitude": -101.7096, "resources": {}}}
 
 
 @fixture
@@ -108,6 +80,7 @@ def residential_pv_performance_params():
     return tech_params
 
 
+@pytest.mark.unit
 def test_utility_pv_cost(
     utility_scale_pv_performance_params, solar_resource_dict, plant_config, subtests
 ):
@@ -163,6 +136,7 @@ def test_utility_pv_cost(
         )
 
 
+@pytest.mark.unit
 def test_commercial_pv_cost(
     commercial_pv_performance_params, solar_resource_dict, plant_config, subtests
 ):
@@ -215,6 +189,7 @@ def test_commercial_pv_cost(
         )
 
 
+@pytest.mark.unit
 def test_residential_pv_cost(
     residential_pv_performance_params, solar_resource_dict, plant_config, subtests
 ):
@@ -255,8 +230,8 @@ def test_residential_pv_cost(
     prob.setup()
     prob.run_model()
 
-    capital_cost = prob.get_val("pv_cost.CapEx")[0]
-    operating_cost = prob.get_val("pv_cost.OpEx")[0]
+    capital_cost = prob.get_val("pv_cost.CapEx", units="USD")[0]
+    operating_cost = prob.get_val("pv_cost.OpEx", units="USD/year")[0]
 
     with subtests.test("Residential Capital Cost"):
         assert pytest.approx(capital_cost, rel=1e-6) == shared_value * cost_dict["capex_per_kWdc"]

@@ -92,6 +92,7 @@ def fake_cost_dict():
     return fake_costs
 
 
+@pytest.mark.regression
 def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -109,9 +110,12 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         description="no1",
     )
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
     prob.setup()
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
@@ -134,6 +138,7 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         )
 
 
+@pytest.mark.regression
 def test_profast_npv_no1_change_sell_price(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):
@@ -162,10 +167,15 @@ def test_profast_npv_no1_change_sell_price(
     )
 
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
-    prob.model.add_subsystem("pf2", pf2, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.model.add_subsystem(
+        "pf2", pf2, promotes=["rated_electricity_production", "capacity_factor"]
+    )
     prob.setup()
     # set inputs for 'pf' with commodity sell price of 0.04 USD/(kW*h)
     for variable, cost in fake_cost_dict.items():
@@ -219,6 +229,7 @@ def test_profast_npv_no1_change_sell_price(
         )
 
 
+@pytest.mark.regression
 def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -235,10 +246,13 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
         commodity_type="electricity",
         description="no2",
     )
+
     ivc = om.IndepVarComp()
-    ivc.add_output("total_electricity_produced", mean_hourly_production * 8760, units="kW*h/year")
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["total_electricity_produced"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
     prob.setup()
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"

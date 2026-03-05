@@ -1,7 +1,5 @@
-name: "H2Integrate_config"
-
-system_summary: "This reference hybrid plant contains a simple SMR methanol plant"
-
-driver_config: "driver_config.yaml"
-technology_config: "tech_config_smr.yaml"
-plant_config: "plant_config_smr.yaml"
+name: H2Integrate_config
+system_summary: This reference hybrid plant contains a simple SMR methanol plant
+driver_config: driver_config.yaml
+technology_config: tech_config_smr.yaml
+plant_config: plant_config_smr.yaml

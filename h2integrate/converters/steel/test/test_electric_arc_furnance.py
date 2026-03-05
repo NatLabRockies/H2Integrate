@@ -2,8 +2,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.steel.electric_arc_furnance import (
     EAFPlantCostComponent,
     EAFPlantPerformanceComponent,
@@ -56,12 +54,7 @@ def plant_config():
     return plant_config
 
 
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
-
-
+@pytest.mark.regression
 def test_baseline_steel_eaf_costs_rosner_ng(
     plant_config, driver_config, steel_eaf_config_rosner_ng, subtests
 ):
@@ -92,8 +85,17 @@ def test_baseline_steel_eaf_costs_rosner_ng(
     with subtests.test("Annual Steel"):
         assert pytest.approx(annual_steel[0] / 365, rel=1e-3) == capacity
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("eaf_cost.CapEx")[0], rel=1e-6) == expected_capex
+        assert (
+            pytest.approx(prob.get_val("eaf_cost.CapEx", units="USD")[0], rel=1e-6)
+            == expected_capex
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("eaf_cost.OpEx")[0], rel=1e-6) == expected_fixed_om
+        assert (
+            pytest.approx(prob.get_val("eaf_cost.OpEx", units="USD/year")[0], rel=1e-6)
+            == expected_fixed_om
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.get_val("eaf_cost.VarOpEx")[0], rel=1e-6) == expected_var_om
+        assert (
+            pytest.approx(prob.get_val("eaf_cost.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == expected_var_om
+        )

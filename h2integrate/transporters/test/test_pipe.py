@@ -5,6 +5,7 @@ from pytest import approx
 from h2integrate.transporters.pipe import PipePerformanceModel
 
 
+@pytest.mark.unit
 def test_pipe_with_hydrogen():
     """Test the pipe transport with hydrogen as transport_item."""
 
@@ -33,6 +34,7 @@ def test_pipe_with_hydrogen():
     assert hydrogen_out == approx(10.0, rel=1e-10)
 
 
+@pytest.mark.unit
 def test_pipe_with_invalid_transport_item():
     """Test that pipe raises an error with invalid transport_item."""
     with pytest.raises(ValueError) as excinfo:

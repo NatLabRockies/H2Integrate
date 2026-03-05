@@ -59,7 +59,7 @@ ax[1].plot(
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.battery_electricity_discharge", units="MW")[start_hour:end_hour],
+    model.prob.get_val("battery.battery_electricity", units="MW")[start_hour:end_hour],
     linestyle="-.",
     label="Battery Electricity Out (MW)",
 )
@@ -67,7 +67,7 @@ ax[1].plot(
     range(start_hour, end_hour),
     demand_profile[start_hour:end_hour],
     linestyle="--",
-    label="Eletrical Demand (MW)",
+    label="Electrical Demand (MW)",
 )
 ax[1].set_ylim([-7e2, 7e2])
 ax[1].set_ylabel("Electricity Hourly (MW)")

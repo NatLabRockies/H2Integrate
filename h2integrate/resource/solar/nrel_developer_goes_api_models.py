@@ -48,7 +48,10 @@ class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
         # create the resource config
-        self.config = GOESAggregatedAPIConfig.from_dict(resource_specs)
+        self.config = GOESAggregatedAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -96,7 +99,10 @@ class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
             "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESConusAPIConfig.from_dict(resource_specs)
+        self.config = GOESConusAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -141,7 +147,10 @@ class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
         # create the resource config
-        self.config = GOESFullDiscAPIConfig.from_dict(resource_specs)
+        self.config = GOESFullDiscAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()
 
 
@@ -212,5 +221,8 @@ class GOESTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
             "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESTMYAPIConfig.from_dict(resource_specs)
+        self.config = GOESTMYAPIConfig.from_dict(
+            resource_specs,
+            additional_cls_name=self.__class__.__name__,
+        )
         super().setup()

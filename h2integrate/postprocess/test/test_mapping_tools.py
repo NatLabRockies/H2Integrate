@@ -31,6 +31,7 @@ smaller_square_coords = Polygon(
 )
 
 
+@pytest.mark.unit
 def test_calculate_geodataframe_total_bounds(subtests):
     with subtests.test("Check invalid argument type"):
         expected_msg = "Must provide at least one GeoDataFrame."
@@ -96,6 +97,7 @@ def test_calculate_geodataframe_total_bounds(subtests):
             assert pytest.approx(coord_range_dict[key], rel=1e-3) == value
 
 
+@pytest.mark.unit
 def test_auto_detect_lat_long_columns(subtests):
     test_good_results_df1 = pd.DataFrame(columns=["index", "latitude", "longitude"])
     test_good_results_df2 = pd.DataFrame(columns=["index", "lat", "long"])
@@ -160,6 +162,7 @@ def test_auto_detect_lat_long_columns(subtests):
             auto_detect_lat_long_columns(results_df=test_bad_results_df2, which="long")
 
 
+@pytest.mark.unit
 def test_validate_gdfs_are_same_crs(subtests):
     gdf_1 = gpd.GeoDataFrame(
         data={"index": [0], "test1": ["larger_square"], "test2": [larger_square_coords]},
@@ -207,6 +210,7 @@ def test_validate_gdfs_are_same_crs(subtests):
             validate_gdfs_are_same_crs(base_layer_gdf=bad_gdf_tuple, results_gdf=gdf_3)
 
 
+@pytest.mark.unit
 def test_auto_colorbar_limits(subtests):
     with subtests.test("Test good value input types"):
         vmin, vmax = auto_colorbar_limits(values=pd.Series([0.62, 0.75, 0.93]))

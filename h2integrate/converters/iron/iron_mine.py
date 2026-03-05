@@ -67,6 +67,7 @@ class IronMinePerformanceComponent(om.ExplicitComponent):
         self.config = IronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
+            additional_cls_name=self.__class__.__name__,
         )
         self.add_discrete_output(
             "iron_mine_performance", val=pd.DataFrame, desc="iron mine performance results"
@@ -134,7 +135,11 @@ class IronMineCostComponent(CostModelBaseClass):
         config_dict.update({"cost_year": self.target_dollar_year})
         config_dict.update({"plant_life": self.plant_life})
 
-        self.config = IronMineCostConfig.from_dict(config_dict, strict=False)
+        self.config = IronMineCostConfig.from_dict(
+            config_dict,
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
+        )
 
         super().setup()
         self.add_input("LCOE", val=self.config.LCOE, units="USD/MW/h")

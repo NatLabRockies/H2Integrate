@@ -15,7 +15,7 @@ def recreate_hopp_config_for_optimization(
     """
     Adjusts the HOPP configuration dictionary for optimization based on system ratings.
 
-    This function modifies the HOPP configuration (`hopp_config`) to reflect the desired
+    This function modifies the HOPP configuration (``hopp_config``) to reflect the desired
     ratings for photovoltaic (PV), wind turbine, and battery systems. It ensures that the
     configuration adheres to specific tolerances and removes technologies if their ratings
     fall below certain thresholds. It also sets a range where a lower rating than given will
@@ -40,23 +40,23 @@ def recreate_hopp_config_for_optimization(
 
     Notes:
         - Technologies are removed from the configuration if their ratings fall below the
-          `smooth_tol` threshold.
-        - Ratings are interpolated between `smooth_tol` and `rating_tol` for values within this
-          range.
+            ``smooth_tol`` threshold.
+        - Ratings are interpolated between ``smooth_tol`` and ``rating_tol`` for values within
+            this range.
         - Cost information related to removed technologies is also removed from the configuration.
         - Battery operation and maintenance (O&M) costs are recalculated based on the provided
           ratings.
 
     Example:
-        ```python
-        updated_config = recreate_hopp_config_for_optimization(
-            hopp_config=original_config,
-            pv_rating_kw=500,
-            wind_turbine_rating_kw=1000,
-            battery_rating_kw=200,
-            battery_rating_kwh=400,
-        )
-        ```
+        ::
+
+            updated_config = recreate_hopp_config_for_optimization(
+                hopp_config=original_config,
+                pv_rating_kw=500,
+                wind_turbine_rating_kw=1000,
+                battery_rating_kw=200,
+                battery_rating_kwh=400,
+            )
 
     Raises:
         KeyError: If required keys are missing in the `hopp_config` dictionary.

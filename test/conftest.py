@@ -3,6 +3,9 @@ Pytest configuration file.
 """
 
 import os
+import shutil
+
+import pytest
 
 from h2integrate.resource.utilities.nrel_developer_api_keys import set_nrel_key_dot_env
 
@@ -43,3 +46,30 @@ def pytest_sessionfinish(session, exitstatus):
     if initial_om_report_setting is not None:
         os.environ["OPENMDAO_REPORTS"] = initial_om_report_setting
     os.environ.pop("TMP_OPENMDAO_REPORTS", None)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Enforce the usage marking tests as either unit, regression, or integration tests.
+    This method will need to be imported into all subsequent ``contest.py`` files.
+    """
+    test_types = {"unit", "regression", "integration"}
+    missing_type_mark = [
+        f"{item.path}::{item.name}"
+        for item in items
+        if not test_types.intersection([el.name for el in item.iter_markers()])
+    ]
+    if missing_type_mark:
+        errors = "\n".join(missing_type_mark)
+        msg = (
+            "The following tests must be marked as either 'unit', 'regression', or 'integration'"
+            f" tests using `@pytest.mark.<test-type>`:\n{errors}"
+        )
+        raise pytest.UsageError(msg)
+
+
+@pytest.fixture(scope="module")
+def temp_dir(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+    shutil.rmtree(str(temp_dir))

@@ -1,8 +1,11 @@
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define
@@ -24,7 +27,7 @@ class GeoH2SurfacePerformanceConfig(BaseConfig):
     max_flow_in: float = field()
 
 
-class GeoH2SurfacePerformanceBaseClass(om.ExplicitComponent):
+class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
     """OpenMDAO component for modeling the performance of the wellhead surface processing for
         geologic hydrogen.
 
@@ -64,9 +67,10 @@ class GeoH2SurfacePerformanceBaseClass(om.ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-        self.options.declare("driver_config", types=dict)
+        super().initialize()
+        self.commodity = "hydrogen"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
         super().setup()
@@ -77,9 +81,7 @@ class GeoH2SurfacePerformanceBaseClass(om.ExplicitComponent):
         self.add_input("wellhead_h2_concentration_mol", units="mol/mol", val=-1.0)
 
         # outputs
-        self.add_output("hydrogen_out", units="kg/h", shape=(n_timesteps,))
         self.add_output("hydrogen_concentration_out", units="mol/mol", val=-1.0)
-        self.add_output("total_hydrogen_produced", val=-1.0, units="kg/year")
         self.add_output("max_flow_size", units="kg/h", val=self.config.max_flow_in)
 
 
@@ -159,7 +161,7 @@ class GeoH2SurfaceCostBaseClass(CostModelBaseClass):
             units="kg/h",
             desc=f"Hydrogen production rate in kg/h over {n_timesteps} hours.",
         )
-        self.add_input("total_hydrogen_produced", val=0.0, units="kg/year")
+        self.add_input("total_hydrogen_produced", val=0.0, units="kg")
         self.add_input("custom_capex", val=self.config.custom_capex, units="USD")
         self.add_input("custom_opex", val=self.config.custom_opex, units="USD/year")
 

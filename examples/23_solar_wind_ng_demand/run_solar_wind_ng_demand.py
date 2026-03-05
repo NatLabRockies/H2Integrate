@@ -31,7 +31,7 @@ fig, ax = plt.subplots(2, 1, sharex=True, figsize=(11, 9))
 
 start_hour = 0
 end_hour = 200
-total_time_steps = model.prob.get_val("wind.electricity_out").size
+total_time_steps = model.prob.get_val("wind.electricity_out", units="MW").size
 demand_profile = [
     model.technology_config["technologies"]["electrical_load_demand"]["model_inputs"][
         "control_parameters"

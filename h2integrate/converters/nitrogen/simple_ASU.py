@@ -1,29 +1,33 @@
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains, range_val
 from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 
 
 @define(kw_only=True)
 class SimpleASUPerformanceConfig(BaseConfig):
     """Configuration for ASU model. To represent a cryogenic ASU, it is
-    recommended to set the parameter `efficiency_kWh_pr_kg_N2` to 0.119.
+    recommended to set the parameter ``efficiency_kWh_pr_kg_N2`` to 0.119.
     To represent a pressure swing absorption ASU, it is
-    recommended to set the parameter `efficiency_kWh_pr_kg_N2` to 0.29.
+    recommended to set the parameter ``efficiency_kWh_pr_kg_N2`` to 0.29.
 
     Attributes:
         size_from_N2_demand (bool): if True, size the system based on some input demand. If False,
-            size the system from user input (`rated_N2_kg_pr_hr` or `ASU_rated_power_kW`).
+            size the system from user input (``rated_N2_kg_pr_hr`` or ``ASU_rated_power_kW``).
         rated_N2_kg_pr_hr (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
-            `size_from_N2_demand` is False and ASU_rated_power_kW is not input.
+            ``size_from_N2_demand`` is False and ASU_rated_power_kW is not input.
         ASU_rated_power_kW (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
-            `size_from_N2_demand` is False and `rated_N2_kg_pr_hr` is not input.
+            ``size_from_N2_demand`` is False and ``rated_N2_kg_pr_hr`` is not input.
         efficiency_kWh_pr_kg_N2 (float): efficiency of the ASU in kWh/kg-N2, defaults to 0.29.
             Should be between 0.1 and 0.5. Some reference efficiencies are::
+
                 - 0.29 for pressure swing absorption
                 - 0.119 for cryogenic
         N2_fraction_in_air (float, optional): nitrogen content of input air stream as mole fraction.
@@ -56,20 +60,24 @@ class SimpleASUPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
-class SimpleASUPerformanceModel(om.ExplicitComponent):
+class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     """Simple linear converter to model nitrogen production from an
     Air Separation Unit.
     """
 
     def initialize(self):
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-        self.options.declare("driver_config", types=dict)
+        super().initialize()
+        self.commodity = "nitrogen"
+        self.commodity_amount_units = "kg"
+        self.commodity_rate_units = "kg/h"
 
     def setup(self):
+        super().setup()
+
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleASUPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
         if self.config.size_from_N2_demand:
             self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
@@ -80,9 +88,6 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
 
         self.add_output("air_in", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("ASU_capacity_kW", val=0.0, units="kW", desc="ASU rated capacity in kW")
-        self.add_output(
-            "rated_N2_kg_pr_hr", val=0.0, units="kg/h", desc="ASU rated capacity in kg-N2/hour"
-        )
 
         self.add_output(
             "annual_electricity_consumption",
@@ -90,26 +95,7 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
             units="kW",
             desc="ASU annual electricity consumption in kWh/year",
         )
-        self.add_output(
-            "total_nitrogen_produced",
-            val=0.0,
-            units="kg/year",
-            desc="ASU annual nitrogen production in kg-N2/year",
-        )
-        self.add_output(
-            "annual_max_nitrogen_production",
-            val=0.0,
-            units="kg/year",
-            desc="ASU maximum annual nitrogen production in kg-N2/year",
-        )
-        self.add_output(
-            "nitrogen_production_capacity_factor",
-            val=0.0,
-            units=None,
-            desc="ASU annual nitrogen production in kg-N2/year",
-        )
 
-        self.add_output("nitrogen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("oxygen_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("argon_out", val=0.0, shape=n_timesteps, units="kg/h")
 
@@ -201,7 +187,7 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
 
         # calculate the annual rated production of nitrogen in kg-N2/year
         max_annual_N2 = rated_N2_kg_pr_hr * len(n2_profile_out_kg)
-        outputs["rated_N2_kg_pr_hr"] = rated_N2_kg_pr_hr  # rated ASU capacity in kg-N2/hour
+        outputs["rated_nitrogen_production"] = rated_N2_kg_pr_hr  # rated ASU capacity in kg-N2/hour
         outputs["ASU_capacity_kW"] = ASU_rated_power_kW  # rated ASU capacity in kW
         outputs["air_in"] = air_profile_kg  # air feedstock profile in kg/hour
         outputs["oxygen_out"] = o2_profile_kg  # O2 secondary output profile in kg/hour
@@ -209,11 +195,13 @@ class SimpleASUPerformanceModel(om.ExplicitComponent):
         outputs["nitrogen_out"] = n2_profile_out_kg  # N2 primary output profile in kg/hour
 
         # capacity factor of ASU
-        outputs["nitrogen_production_capacity_factor"] = sum(n2_profile_out_kg) / max_annual_N2
+        outputs["capacity_factor"] = sum(n2_profile_out_kg) / max_annual_N2
         # annual N2 production in kg-N2/year
         outputs["total_nitrogen_produced"] = sum(n2_profile_out_kg)
         # maximum annual N2 production in kg-N2/year
-        outputs["annual_max_nitrogen_production"] = max_annual_N2
+        outputs["annual_nitrogen_produced"] = outputs["total_nitrogen_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
         # annual electricity consumption in kWh/year
         outputs["annual_electricity_consumption"] = sum(electricity_kWh)
 
@@ -297,12 +285,13 @@ class SimpleASUCostModel(CostModelBaseClass):
 
     def setup(self):
         self.config = SimpleASUCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
         self.add_input("ASU_capacity_kW", val=0.0, units="kW")
-        self.add_input("rated_N2_kg_pr_hr", val=0.0, units="kg/h")
+        self.add_input("rated_nitrogen_production", val=0.0, units="kg/h")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values
@@ -311,14 +300,14 @@ class SimpleASUCostModel(CostModelBaseClass):
         if capex_based_unit == "power":
             capex_usd = unit_capex * inputs["ASU_capacity_kW"]
         else:
-            capex_usd = unit_capex * inputs["rated_N2_kg_pr_hr"]
+            capex_usd = unit_capex * inputs["rated_nitrogen_production"]
 
         opex_k, opex_based_unit = make_cost_unit_multiplier(self.config.opex_unit)
         unit_opex = self.config.opex_usd_per_unit_per_year * opex_k
         if opex_based_unit == "power":
             opex_usd_per_year = unit_opex * inputs["ASU_capacity_kW"]
         else:
-            opex_usd_per_year = unit_opex * inputs["rated_N2_kg_pr_hr"]
+            opex_usd_per_year = unit_opex * inputs["rated_nitrogen_production"]
 
         outputs["CapEx"] = capex_usd
         outputs["OpEx"] = opex_usd_per_year

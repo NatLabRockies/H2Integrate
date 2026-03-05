@@ -1,38 +1,35 @@
-name: "plant_config"
-description: "This plant is located in TX, USA near Sheffield"
-
+name: plant_config
+description: This plant is located in TX, USA near Sheffield
 sites:
   site:
     latitude: 30.6617
     longitude: -101.7096
-
 plant:
   plant_life: 30
-
 finance_parameters:
   finance_groups:
-    commodity: "electricity"
-    finance_model: "ProFastComp"
+    commodity: electricity
+    finance_model: ProFastLCO
     model_inputs:
       params:
         analysis_start_year: 2032
-        installation_time: 12 # months
-        inflation_rate: 0.025 # 0 for nominal analysis
-        discount_rate: 0.089 # nominal return
-        debt_equity_ratio: 2.1746031746031744 # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.015 # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
-        total_income_tax_rate: 0.257 # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
-        capital_gains_tax_rate: 0.15 # H2FAST default
+        installation_time: 12  # months
+        inflation_rate: 0.025  # 0 for nominal analysis
+        discount_rate: 0.089  # nominal return
+        debt_equity_ratio: 2.1746031746031744  # 2024 ATB uses 72.4% debt for land-based wind
+        property_tax_and_insurance: 0.015  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
+        capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.045
-        debt_interest_rate: 0.06 # based on 2024 ATB nominal interest rate for land-based wind
-        debt_type: "Revolving debt" # can be "Revolving debt" or "One time loan". Revolving debt is H2FAST default and leads to much lower LCOH
-        loan_period_if_used: 0 # H2FAST default, not used for revolving debt
-        cash_onhand_months: 1 # H2FAST default
+        debt_interest_rate: 0.06  # based on 2024 ATB nominal interest rate for land-based wind
+        debt_type: Revolving debt  # can be "Revolving debt" or "One time loan". Revolving debt is H2FAST default and leads to much lower LCOH
+        loan_period_if_used: 0  # H2FAST default, not used for revolving debt
+        cash_onhand_months: 1  # H2FAST default
         admin_expense: 0.01
       capital_items:
-        depr_type: "MACRS" # can be "MACRS" or "Straight line"
-        depr_period: 5 # 5  years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+        depr_type: MACRS   # can be "MACRS" or "Straight line"
+        depr_period: 5  # 5  years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
         refurb: [0.]
   cost_adjustment_parameters:
-    cost_year_adjustment_inflation: 0.025 # used to adjust modeled costs to target_dollar_year
+    cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2025

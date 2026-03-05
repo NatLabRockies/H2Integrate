@@ -2,8 +2,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
 from h2integrate.converters.iron.iron_plant import (
     IronPlantCostComponent,
     IronPlantPerformanceComponent,
@@ -40,32 +38,7 @@ def iron_dri_config_rosner_ng():
     return tech_config
 
 
-@fixture
-def plant_config():
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-        "finance_parameters": {
-            "cost_adjustment_parameters": {
-                "cost_year_adjustment_inflation": 0.025,
-                "target_dollar_year": 2022,
-            }
-        },
-    }
-    return plant_config
-
-
-@fixture
-def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
-    return driver_config
-
-
+@pytest.mark.regression
 def test_baseline_iron_dri_costs_rosner_ng(
     plant_config, driver_config, iron_dri_config_rosner_ng, subtests
 ):
@@ -96,13 +69,23 @@ def test_baseline_iron_dri_costs_rosner_ng(
     with subtests.test("Annual Ore"):
         assert pytest.approx(annual_pig_iron[0] / 365, rel=1e-3) == capacity
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("dri_cost.CapEx")[0], rel=1e-6) == expected_capex
+        assert (
+            pytest.approx(prob.get_val("dri_cost.CapEx", units="USD")[0], rel=1e-6)
+            == expected_capex
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("dri_cost.OpEx")[0], rel=1e-6) == expected_fixed_om
+        assert (
+            pytest.approx(prob.get_val("dri_cost.OpEx", units="USD/year")[0], rel=1e-6)
+            == expected_fixed_om
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.get_val("dri_cost.VarOpEx")[0], rel=1e-6) == expected_var_om
+        assert (
+            pytest.approx(prob.get_val("dri_cost.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == expected_var_om
+        )
 
 
+@pytest.mark.regression
 def test_baseline_iron_dri_costs_rosner_h2(
     plant_config, driver_config, iron_dri_config_rosner_ng, subtests
 ):
@@ -134,8 +117,17 @@ def test_baseline_iron_dri_costs_rosner_h2(
     with subtests.test("Annual Ore"):
         assert pytest.approx(annual_pig_iron[0] / 365, rel=1e-3) == capacity
     with subtests.test("CapEx"):
-        assert pytest.approx(prob.get_val("dri_cost.CapEx")[0], rel=1e-6) == expected_capex
+        assert (
+            pytest.approx(prob.get_val("dri_cost.CapEx", units="USD")[0], rel=1e-6)
+            == expected_capex
+        )
     with subtests.test("OpEx"):
-        assert pytest.approx(prob.get_val("dri_cost.OpEx")[0], rel=1e-6) == expected_fixed_om
+        assert (
+            pytest.approx(prob.get_val("dri_cost.OpEx", units="USD/year")[0], rel=1e-6)
+            == expected_fixed_om
+        )
     with subtests.test("VarOpEx"):
-        assert pytest.approx(prob.get_val("dri_cost.VarOpEx")[0], rel=1e-6) == expected_var_om
+        assert (
+            pytest.approx(prob.get_val("dri_cost.VarOpEx", units="USD/year")[0], rel=1e-6)
+            == expected_var_om
+        )

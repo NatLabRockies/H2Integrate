@@ -10,24 +10,15 @@ from h2integrate.core.validators import contains, range_val_or_none
 class GenericSplitterPerformanceConfig(BaseConfig):
     """Configuration class for the GenericSplitterPerformanceModel.
 
-    Attributes:
-        split_mode (str): what method to use to split input commodity stream.
-            Must be either "prescribed_commodity" or "fraction" to split commodity stream.
-        commodity (str): name of commodity
-        commodity_units (str): units of commodity production profile
-        fraction_to_priority_tech (float, optional): fraction of input commodity to
-            send to first output stream. Only used if `split_mode` is "fraction".
-            Defaults to None.
-        prescribed_commodity_to_priority_tech (float, optional): constant amount
-            of input commodity to send to first output stream in same units as ``commodity_units``.
-            Only used if `split_mode` is "prescribed_commodity". Defaults to None.
+    Fields include `split_mode`, `commodity`, `commodity_rate_units`,
+    `fraction_to_priority_tech`, and `prescribed_commodity_to_priority_tech`.
     """
 
     split_mode: str = field(
         converter=(str.lower, str.strip), validator=contains(["prescribed_commodity", "fraction"])
     )
     commodity: str = field(converter=(str.lower, str.strip))
-    commodity_units: str = field()
+    commodity_rate_units: str = field()
     fraction_to_priority_tech: float = field(default=None, validator=range_val_or_none(0, 1))
     prescribed_commodity_to_priority_tech: float = field(default=None)
 
@@ -53,18 +44,20 @@ class GenericSplitterPerformanceConfig(BaseConfig):
 
 
 class GenericSplitterPerformanceModel(om.ExplicitComponent):
-    """
-    Split commodity from one source into two outputs.
+    """Split a commodity stream from one source into two outputs.
 
     This component supports two splitting modes:
-    1. Fraction-based splitting: Split based on a specified fraction sent to the priority technology
-    2. Prescribed commodity splitting: Send a prescribed amount to the priority technology,
-       remainder to the other technology
 
-    The priority_tech parameter determines which technology receives the primary allocation.
-    The outputs are:
-    - {commodity}_out1: commodity sent to the first technology
-    - {commodity}_out2: commodity sent to the second technology
+    - Fraction-based splitting: split based on a specified fraction sent to the
+        priority technology.
+    - Prescribed commodity splitting: send a prescribed amount to the priority
+        technology, with the remainder to the other technology.
+
+    The ``priority_tech`` parameter determines which technology receives the
+    primary allocation. The outputs are:
+
+    - ``{commodity}_out1``: commodity sent to the first technology.
+    - ``{commodity}_out2``: commodity sent to the second technology.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
@@ -78,14 +71,15 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     def setup(self):
         # Initialize config from tech config
         self.config = GenericSplitterPerformanceConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["performance_parameters"]
+            self.options["tech_config"]["model_inputs"]["performance_parameters"],
+            additional_cls_name=self.__class__.__name__,
         )
 
         self.add_input(
             f"{self.config.commodity}_in",
             val=0.0,
             shape_by_conn=True,
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
         )
 
         split_mode = self.config.split_mode
@@ -101,7 +95,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
                 "prescribed_commodity_to_priority_tech",
                 val=self.config.prescribed_commodity_to_priority_tech,
                 copy_shape=f"{self.config.commodity}_in",
-                units=self.config.commodity_units,
+                units=self.config.commodity_rate_units,
                 desc="Prescribed amount of commodity to send to the priority technology",
             )
 
@@ -109,14 +103,14 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             f"{self.config.commodity}_out1",
             val=0.0,
             copy_shape=f"{self.config.commodity}_in",
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the first technology",
         )
         self.add_output(
             f"{self.config.commodity}_out2",
             val=0.0,
             copy_shape=f"{self.config.commodity}_in",
-            units=self.config.commodity_units,
+            units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the second technology",
         )
 
