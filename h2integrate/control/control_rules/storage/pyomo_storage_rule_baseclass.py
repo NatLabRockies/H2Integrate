@@ -14,8 +14,8 @@ from h2integrate.control.control_rules.pyomo_rule_baseclass import (
 class PyomoStorageRuleBaseConfig(PyomoRuleBaseConfig):
     max_capacity: float = field(validator=gt_zero)
 
-    min_charge_percent: float = field(default=0.1, validator=range_val(0, 1))
-    max_charge_percent: float = field(default=0.9, validator=range_val(0, 1))
+    min_charge_fraction: float = field(default=0.1, validator=range_val(0, 1))
+    max_charge_fraction: float = field(default=0.9, validator=range_val(0, 1))
 
     charge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
     discharge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
@@ -75,14 +75,14 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         )
         pyomo_model.minimum_soc = pyo.Param(
             doc=pyomo_model.name + " minimum state-of-charge [-]",
-            default=self.config.min_charge_percent,
+            default=self.config.min_charge_fraction,
             within=pyo.PercentFraction,
             mutable=True,
             units=pyo.units.dimensionless,
         )
         pyomo_model.maximum_soc = pyo.Param(
             doc=pyomo_model.name + " maximum state-of-charge [-]",
-            default=self.config.max_charge_percent,
+            default=self.config.max_charge_fraction,
             within=pyo.PercentFraction,
             mutable=True,
             units=pyo.units.dimensionless,

@@ -31,11 +31,11 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
 
             - PySAM: ``"LFPGraphite"``, ``"LMOLTO"``, ``"LeadAcid"``, ``"NMCGraphite"``
 
-        min_charge_percent (float):
+        min_charge_fraction (float):
             Minimum allowable state of charge as a fraction (0 to 1).
-        max_charge_percent (float):
+        max_charge_fraction (float):
             Maximum allowable state of charge as a fraction (0 to 1).
-        init_charge_percent (float):
+        init_charge_fraction (float):
             Initial state of charge as a fraction (0 to 1).
         n_control_window (int, optional):
             Number of timesteps in the control window. Defaults to 24.
@@ -62,9 +62,9 @@ class PySAMBatteryPerformanceModelConfig(BaseConfig):
     chemistry: str = field(
         validator=contains(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
     )
-    min_charge_percent: float = field(validator=range_val(0, 1))
-    max_charge_percent: float = field(validator=range_val(0, 1))
-    init_charge_percent: float = field(validator=range_val(0, 1))
+    min_charge_fraction: float = field(validator=range_val(0, 1))
+    max_charge_fraction: float = field(validator=range_val(0, 1))
+    init_charge_fraction: float = field(validator=range_val(0, 1))
     n_control_window: int = field(validator=gt_zero, default=24)
     control_variable: str = field(
         default="input_power", validator=contains(["input_power", "input_current"])
@@ -147,7 +147,7 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
     Notes:
         - Default timestep is 1 hour (``dt=1.0``).
         - State of charge (SOC) bounds are set using the configuration's
-          ``min_charge_percent`` and ``max_charge_percent``.
+          ``min_charge_fraction`` and ``max_charge_fraction``.
         - If a Pyomo dispatch solver is provided, the battery will simulate
           dispatch decisions using solver inputs.
     """
@@ -286,9 +286,9 @@ class PySAMBatteryPerformanceModel(BatteryPerformanceBaseClass):
 
         self.system_model.value("input_current", 0.0)
         self.system_model.value("dt_hr", self.dt_hr)
-        self.system_model.value("minimum_SOC", self.config.min_charge_percent * 100)
-        self.system_model.value("maximum_SOC", self.config.max_charge_percent * 100)
-        self.system_model.value("initial_SOC", self.config.init_charge_percent * 100)
+        self.system_model.value("minimum_SOC", self.config.min_charge_fraction * 100)
+        self.system_model.value("maximum_SOC", self.config.max_charge_fraction * 100)
+        self.system_model.value("initial_SOC", self.config.init_charge_fraction * 100)
 
         # Setup PySAM battery model using PySAM method
         self.system_model.setup()

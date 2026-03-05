@@ -50,9 +50,9 @@ technologies:
         commodity: electricity
         max_charge_rate: 100000
         max_capacity: 400000
-        init_charge_percent: 0.5  # Initial SOC for the storage
-        max_charge_percent: 0.9  # Maximum SOC allowable for the storage technology
-        min_charge_percent: 0.1  # Minimum SOC allowable for the storage technology
+        init_charge_fraction: 0.5  # Initial SOC for the storage
+        max_charge_fraction: 0.9  # Maximum SOC allowable for the storage technology
+        min_charge_fraction: 0.1  # Minimum SOC allowable for the storage technology
         system_commodity_interface_limit: 1e12
         charge_efficiency: 0.95  # Charge efficiency of the storage technology
         discharge_efficiency: 0.95  # Discharge efficiency of the storage technology

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Renamed `min_charge_percent`, `max_charge_percent`, and `init_charge_percent` to
+  `min_charge_fraction`, `max_charge_fraction`, and `init_charge_fraction` across all
+  configuration classes, YAML configs, tests, and examples. These values are fractions
+  between 0 and 1, so the previous "percent" naming was misleading.
 - Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
   associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
 - PySAM battery now takes in charge rate and storage capacity as inputs[PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)

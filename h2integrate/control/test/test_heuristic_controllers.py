@@ -45,9 +45,9 @@ def tech_config():
                         "max_capacity": 200000,
                         "n_control_window": 24,
                         "n_horizon_window": 48,
-                        "init_charge_percent": 0.5,
-                        "max_charge_percent": 0.9,
-                        "min_charge_percent": 0.1,
+                        "init_charge_fraction": 0.5,
+                        "max_charge_fraction": 0.9,
+                        "min_charge_fraction": 0.1,
                     },
                     "performance_parameters": {
                         "chemistry": "LFPGraphite",
