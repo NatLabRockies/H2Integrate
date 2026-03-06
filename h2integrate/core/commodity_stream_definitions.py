@@ -7,7 +7,7 @@ This module contains:
 """
 
 multivariable_streams = {
-    "wellhead_gas": {
+    "gas_mixture": {
         "gas_flow": {
             "units": "kg/h",
             "desc": "Total mass flow rate of gas in the stream",

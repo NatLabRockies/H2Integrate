@@ -8,7 +8,7 @@ This example demonstrates:
 Two gas producers with different properties feed into a combiner, which outputs
 a single combined stream to a consumer.
 
-The wellhead_gas stream includes:
+The gas_mixture stream includes:
 - gas_flow (kg/h): Total mass flow rate
 - hydrogen_fraction: Fraction of hydrogen
 - oxygen_fraction: Fraction of oxygen

@@ -2,7 +2,7 @@
 Dummy components for demonstrating multivariable streams.
 
 These components are used in example 29 to showcase the multivariable stream
-connection feature. They produce and consume wellhead_gas streams with
+connection feature. They produce and consume gas_mixture streams with
 5 constituent variables.
 """
 
@@ -42,10 +42,10 @@ class DummyGasProducerPerformanceConfig(BaseConfig):
 
 class DummyGasProducerPerformance(om.ExplicitComponent):
     """
-    A dummy gas producer component that outputs a 'wellhead_gas' multivariable stream.
+    A dummy gas producer component that outputs a 'gas_mixture' multivariable stream.
 
     This component produces time-varying outputs for each constituent variable
-    of the wellhead_gas stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    of the gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
     gas_temperature, gas_pressure).
 
     The outputs use random variations around base values.
@@ -62,8 +62,8 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
         )
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # Add all wellhead_gas stream outputs
-        for var_name, var_props in multivariable_streams["wellhead_gas"].items():
+        # Add all gas_mixture stream outputs
+        for var_name, var_props in multivariable_streams["gas_mixture"].items():
             self.add_output(
                 f"{var_name}_out",
                 val=0.0,
@@ -110,10 +110,10 @@ class DummyGasProducerPerformance(om.ExplicitComponent):
 
 class DummyGasConsumerPerformance(om.ExplicitComponent):
     """
-    A dummy gas consumer component that takes in a 'wellhead_gas' multivariable stream.
+    A dummy gas consumer component that takes in a 'gas_mixture' multivariable stream.
 
     This component demonstrates receiving all constituent variables of a
-    wellhead_gas stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
     gas_temperature, gas_pressure) and performing simple calculations.
 
     The component calculates some derived quantities from the input stream.
@@ -127,8 +127,8 @@ class DummyGasConsumerPerformance(om.ExplicitComponent):
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # Add all wellhead_gas stream inputs
-        for var_name, var_props in multivariable_streams["wellhead_gas"].items():
+        # Add all gas_mixture stream inputs
+        for var_name, var_props in multivariable_streams["gas_mixture"].items():
             self.add_input(
                 f"{var_name}_in",
                 val=0.0,

@@ -45,7 +45,7 @@ technologies:
       model: GasStreamCombinerPerformanceModel
     model_inputs:
       performance_parameters:
-        stream_type: wellhead_gas
+        stream_type: gas_mixture
         in_streams: 2
   gas_consumer:
     performance_model:

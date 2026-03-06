@@ -6,5 +6,5 @@ plant:
   simulation:
     n_timesteps: 8760
     timezone: -6
-technology_interconnections: [[gas_producer_1, gas_combiner, wellhead_gas, pipe], [gas_producer_2, gas_combiner, wellhead_gas,
-      pipe], [gas_combiner, gas_consumer, wellhead_gas]]
+technology_interconnections: [[gas_producer_1, gas_combiner, gas_mixture, pipe], [gas_producer_2, gas_combiner, gas_mixture,
+      pipe], [gas_combiner, gas_consumer, gas_mixture]]
