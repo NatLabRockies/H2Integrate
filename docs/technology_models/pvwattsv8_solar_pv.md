@@ -110,6 +110,6 @@ Some common design parameters that a user may want to specify within the [System
 
 (solarresource-group)=
 ### SolarResource group
-Solar resource data is downloaded from the [National Solar Resource Database](https://developer.nrel.gov/docs/solar/nsrdb/psm3-2-2-download/) and input as the `solar_resource_data` variable in the Pvwattsv8 SolarResource Group. Some other common resource parameters that a user may want to specify within the [SolarResource Group](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html#solarresource-group) are:
+Solar resource data is downloaded from the [National Solar Resource Database](https://developer.nlr.gov/docs/solar/nsrdb/psm3-2-2-download/) and input as the `solar_resource_data` variable in the Pvwattsv8 SolarResource Group. Some other common resource parameters that a user may want to specify within the [SolarResource Group](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html#solarresource-group) are:
 - `use_wf_albedo` (bool): if True, use albedo from weather file (if valid). If False, use value for `albedo_default`. Defaults to True.
 - `albedo_default` (float). Value in range (0,1) to use as the albedo if albedo value in weather file is invalid OR if `use_wf_albedo` is set to False.

@@ -227,11 +227,11 @@ pip install -e ".[all]"
       pip install -e ".[all]"
       ```
 
-5. The functions which download resource data require an NREL API key. Obtain a key from:
+5. The functions which download resource data require an NLR API key. Obtain a key from:
 
-    [https://developer.nrel.gov/signup/](https://developer.nrel.gov/signup/)
+    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/)
 
-6. To set up the `NREL_API_KEY` and `NREL_API_EMAIL` required for resource downloads, follow the steps
+6. To set up the `NLR_API_KEY` and `NLR_API_EMAIL` required for resource downloads, follow the steps
     outlined in [this doc page](https://h2integrate.readthedocs.io/en/latest/getting_started/environment_variables.html).
 
 7. Verify setup by running tests:

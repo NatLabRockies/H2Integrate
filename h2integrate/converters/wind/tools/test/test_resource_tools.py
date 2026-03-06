@@ -4,12 +4,12 @@ import CoolProp
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
     average_wind_data_for_hubheight,
     weighted_average_wind_data_for_hubheight,
 )
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
 @fixture

@@ -4,13 +4,13 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NRELDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
 class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Aggregated PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
+    `GOES Aggregated PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
     Args:
@@ -46,7 +46,7 @@ class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
-        self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
+        self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
         # create the resource config
         self.config = GOESAggregatedAPIConfig.from_dict(
             resource_specs,
@@ -58,7 +58,7 @@ class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class GOESConusAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Conus PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
+    `GOES Conus PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
     This dataset covers regions within the continental United States at a spatial resolution of
     2 km.
 
@@ -96,7 +96,7 @@ class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
         resource_specs = self.helper_setup_method()
 
         self.base_url = (
-            "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
+            "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
         )
         # create the resource config
         self.config = GOESConusAPIConfig.from_dict(
@@ -109,7 +109,7 @@ class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
+    `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 2 km.
 
     Args:
@@ -145,7 +145,9 @@ class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
-        self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
+        self.base_url = (
+            "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
+        )
         # create the resource config
         self.config = GOESFullDiscAPIConfig.from_dict(
             resource_specs,
@@ -157,7 +159,7 @@ class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Full Disc PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
+    `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
     Args:
@@ -218,7 +220,7 @@ class GOESTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
         resource_specs = self.helper_setup_method()
 
         self.base_url = (
-            "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
+            "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
         )
         # create the resource config
         self.config = GOESTMYAPIConfig.from_dict(

@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
 @pytest.mark.unit

@@ -1,16 +1,16 @@
 (solar_resource:models)=
 # Solar Resource: Model Overview
 
-- [GOES PSM v4 API](goes_solar_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
+- [GOES PSM v4 API](goes_solar_v4_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
     - "GOESAggregatedSolarAPI"
     - "GOESConusSolarAPI"
     - "GOESFullDiscSolarAPI"
     - "GOESTMYSolarAPI"
-- [Himawari PSM v4 API](himawari_v3_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
+- [Himawari PSM v4 API](himawari_v3_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
     - "Himawari7SolarAPI"
     - "Himawari8SolarAPI"
     - "HimawariTMYSolarAPI"
-- [Meteosat Prime Meridian PSM v4 API](meteosat_prime_meridian_v4_api): these models require an API key from the [NREL developer network](https://developer.nrel.gov/signup/), the available models are:
+- [Meteosat Prime Meridian PSM v4 API](meteosat_prime_meridian_v4_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
     - "MeteosatPrimeMeridianSolarAPI"
     - "MeteosatPrimeMeridianTMYSolarAPI"
 

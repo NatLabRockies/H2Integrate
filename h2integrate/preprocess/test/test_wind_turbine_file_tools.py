@@ -11,7 +11,7 @@ from h2integrate.preprocess.wind_turbine_file_tools import (
     export_turbine_to_pysam_format,
     export_turbine_to_floris_format,
 )
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
 @pytest.mark.unit
