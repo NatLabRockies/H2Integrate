@@ -6,6 +6,7 @@
   associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
 - Removed unnecessary `tech_name` designations for some control techs in yamls
 - PySAM battery now takes in charge rate and storage capacity as inputs[PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
+- Added a test and docs for sql to csv.
 
 ## 0.7 [March 3, 2026]
 
