@@ -62,9 +62,9 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
 
         self.minimum_storage = 0.0
         self.maximum_storage = inputs["storage_capacity"][0]
-        self.minimum_soc = self.config.min_charge_percent
-        self.maximum_soc = self.config.max_charge_percent
-        self.initial_soc = self.config.init_charge_percent
+        self.minimum_soc = self.config.min_charge_fraction
+        self.maximum_soc = self.config.max_charge_fraction
+        self.initial_soc = self.config.init_charge_fraction
 
     def update_time_series_parameters(self, start_time: int = 0):
         """Updates time series parameters.

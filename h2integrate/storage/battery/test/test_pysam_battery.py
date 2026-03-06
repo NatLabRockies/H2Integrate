@@ -191,9 +191,9 @@ def test_battery_config(subtests):
         "max_capacity": batt_kw * 4,
         "max_charge_rate": batt_kw,
         "chemistry": "LFPGraphite",
-        "init_charge_percent": 0.1,
-        "max_charge_percent": 0.9,
-        "min_charge_percent": 0.1,
+        "init_charge_fraction": 0.1,
+        "max_charge_fraction": 0.9,
+        "min_charge_fraction": 0.1,
     }
 
     config = PySAMBatteryPerformanceModelConfig.from_dict(config_data)
@@ -204,15 +204,15 @@ def test_battery_config(subtests):
         assert config.max_capacity == batt_kw * 4
     with subtests.test("with minimal params minimum_SOC"):
         assert (
-            config.min_charge_percent == 0.1
+            config.min_charge_fraction == 0.1
         )  # Decimal percent as compared to test_battery.py in HOPP 10%
     with subtests.test("with minimal params maximum_SOC"):
         assert (
-            config.max_charge_percent == 0.9
+            config.max_charge_fraction == 0.9
         )  # Decimal percent as compared to test_battery.py in HOPP 90%
     with subtests.test("with minimal params initial_SOC"):
         assert (
-            config.init_charge_percent == 0.1
+            config.init_charge_fraction == 0.1
         )  # Decimal percent as compared to test_battery.py in HOPP 10%
 
     with subtests.test("with minimal params n_control_window"):
@@ -233,17 +233,17 @@ def test_battery_config(subtests):
         # SOC values must be between 0-100
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["min_charge_percent"] = -1.0
+            data["min_charge_fraction"] = -1.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["max_charge_percent"] = 120.0
+            data["max_charge_fraction"] = 120.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["init_charge_percent"] = 120.0
+            data["init_charge_fraction"] = 120.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
 
@@ -306,9 +306,9 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
                 "max_charge_rate": init_charge_rate,
                 "max_capacity": init_capacity,
                 "n_control_window": 48,
-                "init_charge_percent": 0.1,
-                "max_charge_percent": 1.0,
-                "min_charge_percent": 0.1,
+                "init_charge_fraction": 0.1,
+                "max_charge_fraction": 1.0,
+                "min_charge_fraction": 0.1,
             },
             "performance_parameters": {"chemistry": "LFPGraphite"},
         }

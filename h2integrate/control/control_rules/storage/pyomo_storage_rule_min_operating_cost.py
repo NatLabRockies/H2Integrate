@@ -73,10 +73,10 @@ class PyomoRuleStorageMinOperatingCosts:
         self.set_timeseries_parameter("minimum_storage", 0.0)
         self.set_timeseries_parameter("maximum_storage", dispatch_inputs["max_capacity"])
 
-        self.set_timeseries_parameter("minimum_soc", dispatch_inputs["min_charge_percent"])
-        self.set_timeseries_parameter("maximum_soc", dispatch_inputs["max_charge_percent"])
+        self.set_timeseries_parameter("minimum_soc", dispatch_inputs["min_charge_fraction"])
+        self.set_timeseries_parameter("maximum_soc", dispatch_inputs["max_charge_fraction"])
 
-        self.initial_soc = dispatch_inputs["initial_soc_percent"]
+        self.initial_soc = dispatch_inputs["initial_soc_fraction"]
         self.charge_efficiency = dispatch_inputs.get("charge_efficiency")
         self.discharge_efficiency = dispatch_inputs.get("discharge_efficiency")
 

@@ -4,8 +4,12 @@
 
 - Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
   associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
-- Removed unnecessary `tech_name` designations for some control techs in yamls
-- PySAM battery now takes in charge rate and storage capacity as inputs[PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
+- Removed unnecessary `tech_name` designations for some control techs in yamls [PR 559](https://github.com/NatLabRockies/H2Integrate/pull/559)
+- PySAM battery now takes in charge rate and storage capacity as inputs [PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
+- Renamed `min_charge_percent`, `max_charge_percent`, and `init_charge_percent` to
+  `min_charge_fraction`, `max_charge_fraction`, and `init_charge_fraction` across all
+  configuration classes, YAML configs, tests, and examples. These values are fractions
+  between 0 and 1, so the previous "percent" naming was misleading. [PR 581](https://github.com/NatLabRockies/H2Integrate/pull/581)
 
 ## 0.7 [March 3, 2026]
 
