@@ -42,12 +42,12 @@ technologies:
         max_charge_rate: 5000.0  # kW
         max_capacity: 30000.0  # kWh
       control_parameters:
-        max_charge_percent: 1.0  # percent as decimal
-        min_charge_percent: 0.1  # percent as decimal
-        init_charge_percent: 0.25  # percent as decimal
+        max_charge_fraction: 1.0  # fraction (0-1)
+        min_charge_fraction: 0.1  # fraction (0-1)
+        init_charge_fraction: 0.25  # fraction (0-1)
         max_discharge_rate: 5000.0  # kW
-        charge_efficiency: 1.0  # percent as decimal
-        discharge_efficiency: 1.0  # percent as decimal
+        charge_efficiency: 1.0  # fraction (0-1)
+        discharge_efficiency: 1.0  # fraction (0-1)
         demand_profile: 5000  # kW
       cost_parameters:
         cost_year: 2022

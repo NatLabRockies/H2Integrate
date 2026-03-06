@@ -51,9 +51,9 @@ technologies:
         max_charge_rate: 50000  # kW
         max_capacity: 200000  # kWh
         n_control_window: 24
-        init_charge_percent: 0.9
-        max_charge_percent: 1.0
-        min_charge_percent: 0.2
+        init_charge_fraction: 0.9
+        max_charge_fraction: 1.0
+        min_charge_fraction: 0.2
         system_commodity_interface_limit: 1e12
       performance_parameters:
         system_model_source: pysam
