@@ -62,7 +62,6 @@ sites:
 
 Some examples that define a single site without resource data are:
 - `examples/03_methanol/smr/plant_config_smr.yaml`
-- `examples/11_hybrid_energy_plant/plant_config.yaml`
 
 ### Single site with a single resource
 If a single technology (named `"wind"` in this example) requires resource data, then the `sites` configuration and `resource_to_tech_connections` may look like:

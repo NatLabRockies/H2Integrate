@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from h2integrate import EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
+from h2integrate import RESOURCE_DEFAULT_DIR
 from h2integrate.resource.utilities.file_tools import check_resource_dir
 
 
@@ -21,15 +21,15 @@ def test_check_resource_dir_no_dir(subtests):
 
 @pytest.mark.unit
 def test_check_resource_dir_relative_dir_exists(subtests):
-    os.chdir(EXAMPLE_DIR / "11_hybrid_energy_plant")
-    relative_dir = "tech_inputs/weather"
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    os.chdir(RESOURCE_DEFAULT_DIR)
+    relative_dir = "wind"
+    expected_dir = RESOURCE_DEFAULT_DIR / "wind"
     output_dir = check_resource_dir(resource_dir=relative_dir)
     with subtests.test("Relative resource_dir, no resource_subdir"):
         assert output_dir == expected_dir
 
-    relative_dir = "tech_inputs/weather"
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather" / "wind"
+    relative_dir = "."
+    expected_dir = RESOURCE_DEFAULT_DIR / "wind"
     output_dir = check_resource_dir(resource_dir=relative_dir, resource_subdir="wind")
     with subtests.test("Relative resource_dir, with resource_subdir"):
         assert output_dir == expected_dir
@@ -37,11 +37,12 @@ def test_check_resource_dir_relative_dir_exists(subtests):
 
 @pytest.mark.unit
 def test_check_resource_dir_full_dir_exists(subtests):
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    expected_dir = RESOURCE_DEFAULT_DIR / "wind"
     output_dir = check_resource_dir(resource_dir=expected_dir)
     with subtests.test("Full resource_dir, no resource_subdir"):
         assert output_dir == expected_dir
 
+    expected_dir = RESOURCE_DEFAULT_DIR
     output_dir = check_resource_dir(resource_dir=expected_dir, resource_subdir="wind")
     with subtests.test("Full resource_dir, with resource_subdir"):
         assert str(output_dir) == str(expected_dir / "wind")
@@ -49,7 +50,7 @@ def test_check_resource_dir_full_dir_exists(subtests):
 
 @pytest.mark.unit
 def test_check_resource_dir_environment_var(subtests):
-    resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
+    resource_dir = str(RESOURCE_DEFAULT_DIR)
     os.environ["RESOURCE_DIR"] = resource_dir
     output_dir = check_resource_dir()
     with subtests.test("Environment variable resource_dir, no resource_subdir"):

@@ -733,26 +733,6 @@ def test_hydro_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("11_hybrid_energy_plant", None)]
-)
-def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
-    example_folder = temp_copy_of_example
-
-    # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "wind_pv_battery.yaml")
-
-    # Run the model
-    model.run()
-
-    model.post_process()
-
-    # Subtests for checking specific values
-    with subtests.test("Check LCOE"):
-        assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
-
-
-@pytest.mark.integration
-@pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("14_wind_hydrogen_dispatch", None)]
 )
 def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
@@ -906,9 +886,7 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
-)
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("16_natural_gas", None)])
 def test_natural_gas_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1073,7 +1051,7 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("15_wind_solar_electrolyzer", "11_hybrid_energy_plant/")],
+    [("15_wind_solar_electrolyzer", None)],
 )
 def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1890,7 +1868,7 @@ def test_floris_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", None)]
 )
 def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     # NOTE: would be good to compare LCOE against the same example without grid selling
