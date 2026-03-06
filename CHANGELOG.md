@@ -11,6 +11,7 @@
   configuration classes, YAML configs, tests, and examples. These values are fractions
   between 0 and 1, so the previous "percent" naming was misleading. [PR 581](https://github.com/NatLabRockies/H2Integrate/pull/581)
 - Switch to using NLR instead of NREL throughout, especially for API key usage for resource acquisition. [PR 583](https://github.com/NatLabRockies/H2Integrate/pull/583)
+- Remove HOPP from remaining examples where possible, relocate existing resource files. [PR 585](https://github.com/NatLabRockies/H2Integrate/pull/585)
 
 ## 0.7 [March 3, 2026]
 
