@@ -116,9 +116,9 @@ def test_storage_demand_controller(subtests):
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["control_parameters"] = {
         "max_capacity": 10.0,  # kg
-        "max_charge_percent": 1.0,  # percent as decimal
-        "min_charge_percent": 0.0,  # percent as decimal
-        "init_charge_percent": 1.0,  # percent as decimal
+        "max_charge_fraction": 1.0,  # fraction (0-1)
+        "min_charge_fraction": 0.0,  # fraction (0-1)
+        "init_charge_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -191,9 +191,9 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
     )
     tech_config["technologies"]["h2_storage"]["model_inputs"]["control_parameters"] = {
         "max_capacity": 10.0,  # kg
-        "max_charge_percent": 1.0,  # percent as decimal
-        "min_charge_percent": 0.0,  # percent as decimal
-        "init_charge_percent": 1.0,  # percent as decimal
+        "max_charge_fraction": 1.0,  # fraction (0-1)
+        "min_charge_fraction": 0.0,  # fraction (0-1)
+        "init_charge_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -205,9 +205,9 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
     tech_config_rte = deepcopy(tech_config)
     tech_config_rte["technologies"]["h2_storage"]["model_inputs"]["control_parameters"] = {
         "max_capacity": 10.0,  # kg
-        "max_charge_percent": 1.0,  # percent as decimal
-        "min_charge_percent": 0.0,  # percent as decimal
-        "init_charge_percent": 1.0,  # percent as decimal
+        "max_charge_fraction": 1.0,  # fraction (0-1)
+        "min_charge_fraction": 0.0,  # fraction (0-1)
+        "init_charge_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -293,12 +293,12 @@ def test_generic_storage_demand_controller(subtests):
                 "commodity": "hydrogen",
                 "commodity_rate_units": "kg",
                 "max_capacity": 10.0,  # kg
-                "max_charge_rate": 1.0,  # percent as decimal
+                "max_charge_rate": 1.0,  # fraction (0-1)
             },
             "control_parameters": {
-                "max_charge_percent": 1.0,  # percent as decimal
-                "min_charge_percent": 0.0,  # percent as decimal
-                "init_charge_percent": 1.0,  # percent as decimal
+                "max_charge_fraction": 1.0,  # fraction (0-1)
+                "min_charge_fraction": 0.0,  # fraction (0-1)
+                "init_charge_fraction": 1.0,  # fraction (0-1)
                 "max_discharge_rate": 0.5,  # kg/time step
                 "charge_efficiency": 1.0,
                 "charge_equals_discharge": False,
