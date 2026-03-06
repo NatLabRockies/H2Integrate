@@ -1,17 +1,13 @@
 import importlib.util
 
+import numpy as np
 import networkx as nx
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
 from h2integrate.core.sites import SiteLocationComponent
-from h2integrate.core.utilities import (
-    get_path,
-    find_file,
-    load_yaml,
-    print_results,
-    create_xdsm_from_config,
-)
+from h2integrate.core.utilities import create_xdsm_from_config
+from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.supported_models import supported_models, is_electricity_producer
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
@@ -1263,7 +1259,7 @@ class H2IntegrateModel:
         """
         # Use custom summary printer instead of OpenMDAO's built-in printing so we can
         # suppress internal value printing and display only mean values.
-        print_results(self.prob.model, excludes=["*resource_data"])
+        self.print_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
             convert_sql_to_csv_summary(self.recorder_path, save_to_file=True)
@@ -1273,3 +1269,168 @@ class H2IntegrateModel:
                 model.post_process(show_plots=show_plots)
                 if show_plots:
                     plt.show()
+
+    @staticmethod
+    def print_results(model, includes=None, excludes=None, show_units=True):
+        """Print hierarchical inputs plus explicit/implicit outputs (means only) using Rich.
+
+        Order of rows preserves OpenMDAO's original ordering from list_inputs/list_outputs.
+        Group rows are emitted lazily the first time a variable within that path appears.
+        """
+
+        def _gather_outputs(explicit=True, implicit=False):
+            return model.list_outputs(
+                explicit=explicit,
+                implicit=implicit,
+                val=True,
+                prom_name=True,
+                units=show_units,
+                shape=True,
+                includes=includes,
+                excludes=excludes,
+                out_stream=None,
+                return_format="list",
+            )
+
+        explicit_meta = _gather_outputs(explicit=True, implicit=False)
+        implicit_meta = _gather_outputs(explicit=False, implicit=True)
+
+        # Gather inputs (no explicit/implicit split in OpenMDAO API)
+        input_meta = model.list_inputs(
+            val=True,
+            prom_name=True,
+            units=show_units,
+            shape=True,
+            includes=includes,
+            excludes=excludes,
+            out_stream=None,
+            return_format="list",
+        )
+
+        def _mean(val):
+            if isinstance(val, np.ndarray):
+                return "nan" if val.size == 0 else f"{np.mean(val)}"
+            if isinstance(val, int | float | np.number):
+                return f"{val}"
+            return "n/a"
+
+        from rich import box
+        from rich.table import Table
+        from rich.console import Console
+
+        console = Console()
+
+        def _emit_section(title, meta_list, kind_label="outputs"):
+            if not meta_list:
+                return
+            console.print(f"\n{len(meta_list)} {title.lower()} {kind_label}:")
+            table = Table(show_header=True, header_style="bold", box=box.MINIMAL, pad_edge=False)
+            table.add_column("Variable", overflow="fold")
+            table.add_column("Mean", justify="right")
+            if show_units:
+                table.add_column("Units")
+            table.add_column("Shape")
+            table.add_column("Promoted name", overflow="fold")
+
+            emitted_groups = set()
+            for abs_name, meta in meta_list:
+                parts = abs_name.split(".")
+                # emit group rows
+                for depth in range(len(parts) - 1):
+                    grp_path = ".".join(parts[: depth + 1])
+                    if grp_path not in emitted_groups:
+                        emitted_groups.add(grp_path)
+                        indent = "  " * depth
+                        grp_name = parts[depth]
+                        if show_units:
+                            table.add_row(f"{indent}{grp_name}", "", "", "", "")
+                        else:
+                            table.add_row(f"{indent}{grp_name}", "", "", "")
+                var = parts[-1]
+                indent = "  " * (len(parts) - 1)
+                mean_raw = _mean(meta.get("val"))
+                try:
+                    val = float(mean_raw)
+                    units_val_raw = meta.get("units")
+                    # Format as integer if units are 'year' or variable name is 'cost_year'
+                    if units_val_raw == "year" or var == "cost_year":
+                        mean_val = str(int(val))
+                    elif abs(val) >= 1e5:
+                        formatted = f"{val:,.2f}"
+                        mean_val = formatted.rstrip("0")
+                        if mean_val.endswith("."):
+                            mean_val = mean_val  # Keep e.g. "520." format
+                        else:
+                            mean_val = mean_val + "." if "." not in mean_val else mean_val
+                    else:
+                        formatted = f"{val:,.4f}"
+                        mean_val = formatted.rstrip("0")
+                        # Ensure we end with "." if all decimals were zeros
+                        if mean_val.endswith("."):
+                            pass  # Keep as e.g. "520." or "0."
+                        elif "." not in mean_val:
+                            mean_val = mean_val + "."
+                except (ValueError, TypeError):
+                    mean_val = str(mean_raw)
+                units_val = (
+                    "n/a"
+                    if (var == "cost_year" or meta.get("units") is None)
+                    else str(meta.get("units"))
+                    if show_units
+                    else ""
+                )
+                shape_meta = meta.get("shape", "")
+                if var == "cost_year":
+                    shape_str = "n/a"
+                elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
+                    shape_str = str(shape_meta[0])
+                else:
+                    shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
+                promoted = meta.get("prom_name", "")
+                if show_units:
+                    table.add_row(f"{indent}{var}", mean_val, units_val, shape_str, promoted)
+                else:
+                    table.add_row(f"{indent}{var}", mean_val, shape_str, promoted)
+            console.print(table)
+
+        # Emit sections (inside function scope)
+        _emit_section("Explicit", input_meta, kind_label="inputs")
+        _emit_section("Explicit", explicit_meta, kind_label="outputs")
+        _emit_section("Implicit", implicit_meta, kind_label="outputs")
+
+        # structured return
+        def _structured(meta_list):
+            return {
+                name: {
+                    "mean": _mean(meta.get("val")),
+                    **(
+                        {
+                            "units": (
+                                "n/a"
+                                if name.split(".")[-1] == "cost_year" or meta.get("units") is None
+                                else meta.get("units")
+                            )
+                        }
+                        if show_units
+                        else {}
+                    ),
+                    "shape": (
+                        "n/a"
+                        if name.split(".")[-1] == "cost_year"
+                        else meta.get("shape")[0]
+                        if isinstance(meta.get("shape"), tuple | list)
+                        and len(meta.get("shape")) > 0
+                        else ""
+                        if meta.get("shape") in (None, "", ())
+                        else meta.get("shape")
+                    ),
+                    "promoted_name": meta.get("prom_name"),
+                }
+                for name, meta in meta_list
+            }
+
+        return {
+            "inputs": _structured(input_meta),
+            "explicit_outputs": _structured(explicit_meta),
+            "implicit_outputs": _structured(implicit_meta),
+        }

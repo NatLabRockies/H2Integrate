@@ -9,7 +9,8 @@ from xyzservices import TileProvider
 from shapely.geometry import LineString
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-from h2integrate.core.utilities import BaseConfig, find_file
+from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.file_utils import find_file
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
 
 

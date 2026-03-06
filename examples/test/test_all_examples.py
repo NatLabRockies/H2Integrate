@@ -9,7 +9,7 @@ import pytest
 import openmdao.api as om
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -1545,8 +1545,8 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
         assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
-    from h2integrate.core.utilities import check_file_format_for_csv_generator
     from h2integrate.core.dict_utils import update_defaults
+    from h2integrate.core.file_utils import check_file_format_for_csv_generator
     from h2integrate.core.inputs.validation import write_yaml, load_driver_yaml
 
     # load the driver config file

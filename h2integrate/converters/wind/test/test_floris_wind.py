@@ -6,7 +6,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import ROOT_DIR, H2I_LIBRARY_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
 from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
