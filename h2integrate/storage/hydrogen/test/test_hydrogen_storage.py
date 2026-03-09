@@ -49,6 +49,8 @@ def test_h2_storage_capex_opex(
     plant_config,
     tech_config,
     model,
+    n_timesteps,
+    max_charge_rate,
     expected_capex,
     expected_opex,
     expected_var_opex,
@@ -62,6 +64,11 @@ def test_h2_storage_capex_opex(
     )
     prob.model.add_subsystem("sys", comp)
     prob.setup()
+
+    # Set hydrogen_in to a constant timeseries equal to max_charge_rate so that
+    # the average flow rate equals the max charge rate (preserving regression values)
+    prob.set_val("sys.hydrogen_in", np.full(n_timesteps, max_charge_rate), units="kg/h")
+
     prob.run_model()
 
     with subtests.test("CapEx"):
@@ -99,7 +106,9 @@ def test_h2_storage_capex_per_kg(
     plant_config,
     tech_config,
     model,
+    n_timesteps,
     max_capacity,
+    max_charge_rate,
     a,
     b,
     c,
@@ -113,6 +122,10 @@ def test_h2_storage_capex_per_kg(
     )
     prob.model.add_subsystem("sys", comp)
     prob.setup()
+
+    # Set hydrogen_in to a constant timeseries equal to max_charge_rate
+    prob.set_val("sys.hydrogen_in", np.full(n_timesteps, max_charge_rate), units="kg/h")
+
     prob.run_model()
 
     # Calculate expected capex per kg
@@ -124,3 +137,77 @@ def test_h2_storage_capex_per_kg(
     expected_capex = cepci_overall * capex_per_kg * h2_storage_kg
 
     assert pytest.approx(prob.get_val("sys.CapEx", units="USD")[0], rel=1e-6) == expected_capex
+
+
+@pytest.mark.regression
+def test_h2_storage_average_flow_rate():
+    """Test that system_flow_rate uses the average of hydrogen_in, not the max charge rate.
+
+    This test verifies the fix for the incorrect system sizing bug where
+    the HDSAM-based cost models were using the maximum fill rate instead of
+    the average system flow rate (per Papadias 2021 / HDSAM V4.0).
+
+    We run the same model twice:
+    1. With a constant hydrogen_in timeseries (mean == max)
+    2. With a variable hydrogen_in timeseries (mean < max)
+
+    The CapEx should be the same (depends on storage capacity, not flow rate),
+    but the OpEx should differ because it depends on system_flow_rate (compressor
+    sizing, labor, etc.).
+    """
+    n_timesteps = 8760
+    max_capacity = 1000000  # kg
+    max_charge_rate = 100000 / 24  # kg/h
+
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"dt": 3600, "n_timesteps": n_timesteps},
+        },
+    }
+    tech_config = {
+        "model_inputs": {
+            "shared_parameters": {
+                "max_capacity": max_capacity,
+                "max_charge_rate": max_charge_rate,
+            }
+        }
+    }
+
+    # Run 1: constant hydrogen_in = max_charge_rate (mean == max)
+    prob1 = om.Problem()
+    comp1 = supported_models["LinedRockCavernStorageCostModel"](
+        plant_config=plant_config,
+        tech_config=tech_config,
+        driver_config={},
+    )
+    prob1.model.add_subsystem("sys", comp1)
+    prob1.setup()
+    prob1.set_val("sys.hydrogen_in", np.full(n_timesteps, max_charge_rate), units="kg/h")
+    prob1.run_model()
+
+    # Run 2: variable hydrogen_in with mean = max_charge_rate / 2
+    # (half the time at max, half the time at zero)
+    hydrogen_in_variable = np.zeros(n_timesteps)
+    hydrogen_in_variable[: n_timesteps // 2] = max_charge_rate
+    prob2 = om.Problem()
+    comp2 = supported_models["LinedRockCavernStorageCostModel"](
+        plant_config=plant_config,
+        tech_config=tech_config,
+        driver_config={},
+    )
+    prob2.model.add_subsystem("sys", comp2)
+    prob2.setup()
+    prob2.set_val("sys.hydrogen_in", hydrogen_in_variable, units="kg/h")
+    prob2.run_model()
+
+    capex1 = prob1.get_val("sys.CapEx", units="USD")[0]
+    capex2 = prob2.get_val("sys.CapEx", units="USD")[0]
+    opex1 = prob1.get_val("sys.OpEx", units="USD/year")[0]
+    opex2 = prob2.get_val("sys.OpEx", units="USD/year")[0]
+
+    # CapEx should be the same (depends on storage capacity, not flow rate)
+    assert pytest.approx(capex1, rel=1e-6) == capex2
+
+    # OpEx should be lower for the variable case (lower average flow rate)
+    assert opex2 < opex1
