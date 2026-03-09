@@ -74,7 +74,7 @@ from h2integrate.converters.water.desal.desalination import (
     ReverseOsmosisCostModel,
     ReverseOsmosisPerformanceModel,
 )
-from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNRELDeveloperAPIWindResource
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.hydrogen.basic_cost_model import BasicElectrolyzerCostModel
 from h2integrate.converters.hydrogen.pem_electrolyzer import ECOElectrolyzerPerformanceModel
 from h2integrate.converters.solar.atb_res_com_pv_cost import ATBResComPVCostModel
@@ -175,7 +175,8 @@ from h2integrate.control.control_strategies.converters.flexible_demand_openloop_
 supported_models = {
     # Resources
     "RiverResource": RiverResource,
-    "WTKNRELDeveloperAPIWindResource": WTKNRELDeveloperAPIWindResource,
+    "WTKNLRDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,
+    "WTKNRELDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,  # deprecated alias
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
     "OpenMeteoHistoricalSolarResource": OpenMeteoHistoricalSolarResource,
     "GOESAggregatedSolarAPI": GOESAggregatedSolarAPI,

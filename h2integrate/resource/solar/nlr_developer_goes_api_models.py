@@ -4,7 +4,7 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
@@ -42,7 +42,7 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESAggregatedSolarAPI(NRELDeveloperAPISolarResourceBase):
+class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -91,7 +91,7 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESConusSolarAPI(NRELDeveloperAPISolarResourceBase):
+class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -141,7 +141,7 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class GOESFullDiscSolarAPI(NRELDeveloperAPISolarResourceBase):
+class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -215,7 +215,7 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "goes_tgy_v4"
 
 
-class GOESTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
+class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 

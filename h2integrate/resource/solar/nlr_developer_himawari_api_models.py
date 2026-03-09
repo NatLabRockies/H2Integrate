@@ -4,7 +4,7 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
@@ -43,7 +43,7 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class Himawari7SolarAPI(NRELDeveloperAPISolarResourceBase):
+class Himawari7SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -92,7 +92,7 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class Himawari8SolarAPI(NRELDeveloperAPISolarResourceBase):
+class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -157,7 +157,7 @@ class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "himawari_tgy_v3"
 
 
-class HimawariTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
+class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 

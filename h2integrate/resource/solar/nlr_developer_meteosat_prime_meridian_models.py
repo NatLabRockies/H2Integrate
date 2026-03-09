@@ -4,7 +4,7 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
@@ -43,7 +43,7 @@ class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class MeteosatPrimeMeridianSolarAPI(NRELDeveloperAPISolarResourceBase):
+class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -115,7 +115,7 @@ class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "nsrdb_msg_tgy_v4"
 
 
-class MeteosatPrimeMeridianTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
+class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 

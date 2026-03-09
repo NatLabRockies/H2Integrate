@@ -15,7 +15,7 @@ sites:
     longitude: -101.945027
     resources:
       wind_resource:  # name of the resource model for this site
-        resource_model: WTKNRELDeveloperAPIWindResource
+        resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2012
 technology_interconnections:

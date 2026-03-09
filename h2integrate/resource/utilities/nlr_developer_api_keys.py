@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from h2integrate import ROOT_DIR
 
 
-developer_nrel_gov_key = ""
-developer_nrel_gov_email = ""
+developer_nlr_gov_key = ""
+developer_nlr_gov_email = ""
 
 # Mapping from new env var names to deprecated old names
 _ENV_KEY_NEW = "NLR_API_KEY"
@@ -48,26 +48,26 @@ def _get_env_with_fallback(new_name, old_name):
     return None
 
 
-def set_developer_nrel_gov_key(key: str):
-    """Set `key` as the global variable `developer_nrel_gov_key`.
+def set_developer_nlr_gov_key(key: str):
+    """Set `key` as the global variable `developer_nlr_gov_key`.
 
     Args:
         key (str): API key for NLR Developer Network. Should be length 40.
     """
-    global developer_nrel_gov_key
-    developer_nrel_gov_key = key
-    return developer_nrel_gov_key
+    global developer_nlr_gov_key
+    developer_nlr_gov_key = key
+    return developer_nlr_gov_key
 
 
-def set_developer_nrel_gov_email(email: str):
-    """Set `email` as the global variable `developer_nrel_gov_email`.
+def set_developer_nlr_gov_email(email: str):
+    """Set `email` as the global variable `developer_nlr_gov_email`.
 
     Args:
         email (str): email corresponding to the API key for NLR Developer Network.
     """
-    global developer_nrel_gov_email
-    developer_nrel_gov_email = email
-    return developer_nrel_gov_email
+    global developer_nlr_gov_email
+    developer_nlr_gov_email = email
+    return developer_nlr_gov_email
 
 
 def load_file_with_variables(fpath, variables=["NLR_API_KEY", "NLR_API_EMAIL"]):
@@ -123,14 +123,14 @@ def load_file_with_variables(fpath, variables=["NLR_API_KEY", "NLR_API_EMAIL"]):
         val = line_w_var[0].split(f"{var}=").strip()
         # if var is an API key, set it as a global variable
         if var in (_ENV_KEY_NEW, _ENV_KEY_OLD):
-            set_developer_nrel_gov_key(val)
+            set_developer_nlr_gov_key(val)
         # if var is an API email, set it as a global variable
         if var in (_ENV_EMAIL_NEW, _ENV_EMAIL_OLD):
-            set_developer_nrel_gov_email(val)
+            set_developer_nlr_gov_email(val)
     return
 
 
-def set_nrel_key_dot_env(path=None):
+def set_nlr_key_dot_env(path=None):
     """Sets the environment variables NLR_API_EMAIL and NLR_API_KEY from a .env file.
 
     Also supports the deprecated ``NREL_API_EMAIL`` and ``NREL_API_KEY`` variable
@@ -153,7 +153,7 @@ def set_nrel_key_dot_env(path=None):
 
     3) Get the environment variables NLR_API_KEY and NLR_API_EMAIL (falling back to the
         deprecated NREL_API_KEY / NREL_API_EMAIL). If found, set them as global variables
-        using `set_developer_nrel_gov_key()` / `set_developer_nrel_gov_email()`.
+        using `set_developer_nlr_gov_key()` / `set_developer_nlr_gov_email()`.
 
     Args:
         path (Path | str, optional): Path to environment file.
@@ -173,19 +173,19 @@ def set_nrel_key_dot_env(path=None):
     api_key = _get_env_with_fallback(_ENV_KEY_NEW, _ENV_KEY_OLD)
     api_email = _get_env_with_fallback(_ENV_EMAIL_NEW, _ENV_EMAIL_OLD)
     if api_key is not None:
-        set_developer_nrel_gov_key(api_key)
+        set_developer_nlr_gov_key(api_key)
     if api_email is not None:
-        set_developer_nrel_gov_email(api_email)
+        set_developer_nlr_gov_email(api_email)
 
 
-def get_nrel_developer_api_key(env_path=None):
+def get_nlr_developer_api_key(env_path=None):
     """Load the API key (NLR_API_KEY). This method does the following:
 
     1) check for NLR_API_KEY (or deprecated NREL_API_KEY) environment variable,
         return if found. Otherwise, proceed to Step 2.
     2) check if the key has already been set as a global variable from
-        running `set_nrel_key_dot_env()`. If not set, proceed to Step 3.
-    3) Attempt to set the key by calling `set_nrel_key_dot_env()`.
+        running `set_nlr_key_dot_env()`. If not set, proceed to Step 3.
+    3) Attempt to set the key by calling `set_nlr_key_dot_env()`.
     4) Check if the key has been set as a global variable. If found, return.
         Otherwise, raises a ValueError.
 
@@ -209,28 +209,28 @@ def get_nrel_developer_api_key(env_path=None):
         return env_val
 
     # check if set as a global variable
-    global developer_nrel_gov_key
-    if len(developer_nrel_gov_key) == 0:
+    global developer_nlr_gov_key
+    if len(developer_nlr_gov_key) == 0:
         # attempt to set the variable from a .env file
-        set_nrel_key_dot_env(path=env_path)
+        set_nlr_key_dot_env(path=env_path)
 
-    if len(developer_nrel_gov_key) == 0:
+    if len(developer_nlr_gov_key) == 0:
         # variable was not found
         raise ValueError(
             "NLR_API_KEY (or NREL_API_KEY) has not been set. "
             "Please set the NLR_API_KEY environment variable."
         )
-    return developer_nrel_gov_key
+    return developer_nlr_gov_key
 
 
-def get_nrel_developer_api_email(env_path=None):
+def get_nlr_developer_api_email(env_path=None):
     """Load the API email (NLR_API_EMAIL). This method does the following:
 
     1) check for NLR_API_EMAIL (or deprecated NREL_API_EMAIL) environment variable,
         return if found. Otherwise, proceed to Step 2.
     2) check if the email has already been set as a global variable from running
-        `set_nrel_key_dot_env()`. If not set, proceed to Step 3.
-    3) Attempt to set the email by calling `set_nrel_key_dot_env()`.
+        `set_nlr_key_dot_env()`. If not set, proceed to Step 3.
+    3) Attempt to set the email by calling `set_nlr_key_dot_env()`.
     4) Check if the email has been set as a global variable. If found, return.
         Otherwise, raises a ValueError.
 
@@ -254,15 +254,15 @@ def get_nrel_developer_api_email(env_path=None):
         return env_val
 
     # check if set as a global variable
-    global developer_nrel_gov_email
-    if len(developer_nrel_gov_email) == 0:
+    global developer_nlr_gov_email
+    if len(developer_nlr_gov_email) == 0:
         # attempt to set the variable from a .env file
-        set_nrel_key_dot_env(path=env_path)
+        set_nlr_key_dot_env(path=env_path)
 
-    if len(developer_nrel_gov_email) == 0:
+    if len(developer_nlr_gov_email) == 0:
         # variable was not found
         raise ValueError(
             "NLR_API_EMAIL (or NREL_API_EMAIL) has not been set. "
             "Please set the NLR_API_EMAIL environment variable."
         )
-    return developer_nrel_gov_email
+    return developer_nlr_gov_email

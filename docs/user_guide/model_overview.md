@@ -16,7 +16,7 @@ Currently, H2I recognizes four types of models:
 | Resource name     | Resource Type  |
 | :---------------- | :---------------: |
 | `RiverResource`  | river resource |
-| `WTKNRELDeveloperAPIWindResource` | wind resource |
+| `WTKNLRDeveloperAPIWindResource` | wind resource |
 | `OpenMeteoHistoricalWindResource` | wind resource |
 | `GOESAggregatedSolarAPI` | solar resource |
 | `GOESConusSolarAPI` | solar resource |
@@ -127,7 +127,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `RiverResource`
 - `wind_resource`:
     - resource models:
-        + `WTKNRELDeveloperAPIWindResource`
+        + `WTKNLRDeveloperAPIWindResource`
         + `OpenMeteoHistoricalWindResource`
 - `solar_resource`:
     - resource models:
