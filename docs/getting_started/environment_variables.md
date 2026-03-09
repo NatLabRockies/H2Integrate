@@ -13,7 +13,7 @@ for backward compatibility, but are deprecated and will be removed in a future r
 Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 ```
 
-In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NREL API key and `'email-for-api-key'` should be replaced with your email address.
+In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NLR API key and `'email-for-api-key'` should be replaced with your email address.
 
 An optional environment variable is `RESOURCE_DIR`. If set, this will be used as the default folder to save resource data to that is downloaded from the API. If setting this, please set its value as the full filepath to the folder you'd like to save resource files to, and ensure that the folder exists.
 

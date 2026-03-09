@@ -6,7 +6,7 @@
 
 
 ```{note}
-Please refer to the `Setting Environment Variables` doc page for information on setting up an NREL API key if you haven't yet.
+Please refer to the `Setting Environment Variables` doc page for information on setting up an NLR API key if you haven't yet.
 ```
 
 (windresource:overview)=

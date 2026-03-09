@@ -176,7 +176,6 @@ supported_models = {
     # Resources
     "RiverResource": RiverResource,
     "WTKNLRDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,
-    "WTKNRELDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,  # deprecated alias
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
     "OpenMeteoHistoricalSolarResource": OpenMeteoHistoricalSolarResource,
     "GOESAggregatedSolarAPI": GOESAggregatedSolarAPI,

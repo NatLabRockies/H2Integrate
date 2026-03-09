@@ -16,7 +16,7 @@
 
 
 ```{note}
-Please refer to the [Setting Environment Variables](../getting_started/environment_variables) doc page for information on setting up an NREL API key if you haven't yet.
+Please refer to the [Setting Environment Variables](../getting_started/environment_variables) doc page for information on setting up an NLR API key if you haven't yet.
 ```
 
 (solarresource:overview)=
