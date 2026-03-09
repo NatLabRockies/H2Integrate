@@ -11,6 +11,8 @@
   configuration classes, YAML configs, tests, and examples. These values are fractions
   between 0 and 1, so the previous "percent" naming was misleading. [PR 581](https://github.com/NatLabRockies/H2Integrate/pull/581)
 - Switch to using NLR instead of NREL throughout, especially for API key usage for resource acquisition. [PR 583](https://github.com/NatLabRockies/H2Integrate/pull/583)
+- Reorganized utilities, split them out to appropriate modules [PR 586](https://github.com/NatLabRockies/H2Integrate/pull/586)
+- Added a generic storage model that is compatible with the Pyomo controllers [PR 571](https://github.com/NatLabRockies/H2Integrate/pull/571)
 
 ## 0.7 [March 3, 2026]
 

@@ -16,6 +16,7 @@ from h2integrate.converters.iron.iron_plant import (
     IronPlantPerformanceComponent,
 )
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
+from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
 from h2integrate.converters.iron.iron_wrapper import IronComponent
@@ -264,6 +265,7 @@ supported_models = {
     "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
     # Storage
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
+    "StoragePerformanceModel": StoragePerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
     "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
     "SaltCavernStorageCostModel": SaltCavernStorageCostModel,
