@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from h2integrate.core.utilities import dict_to_yaml_formatting
+from h2integrate.core.dict_utils import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
     convert_pf_to_dict,

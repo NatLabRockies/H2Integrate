@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel

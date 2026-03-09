@@ -1,3 +1,122 @@
+import copy
+import operator
+from functools import reduce
+
+import numpy as np
+
+
+def dict_to_yaml_formatting(orig_dict):
+    """Recursive method to convert arrays to lists and numerical entries to floats.
+    This is primarily used before writing a dictionary to a YAML file to ensure
+    proper output formatting.
+
+    Args:
+        orig_dict (dict): input dictionary
+
+    Returns:
+        dict: input dictionary with reformatted values.
+    """
+    for key, val in orig_dict.items():
+        if isinstance(val, dict):
+            tmp = dict_to_yaml_formatting(orig_dict.get(key, {}))
+            orig_dict[key] = tmp
+        else:
+            if isinstance(key, list):
+                for i, k in enumerate(key):
+                    if isinstance(orig_dict[k], str | bool | int):
+                        orig_dict[k] = orig_dict.get(k, []) + val[i]
+                    elif isinstance(orig_dict[k], list | np.ndarray):
+                        orig_dict[k] = np.array(val, dtype=float).tolist()
+                    else:
+                        orig_dict[k] = float(val[i])
+            elif isinstance(key, str):
+                if isinstance(orig_dict[key], str | bool | int):
+                    continue
+                if orig_dict[key] is None:
+                    continue
+                if isinstance(orig_dict[key], list | np.ndarray):
+                    if any(isinstance(v, dict) for v in val):
+                        for vii, v in enumerate(val):
+                            if isinstance(v, dict):
+                                new_val = dict_to_yaml_formatting(v)
+                            else:
+                                new_val = v if isinstance(v, str | bool | int) else float(v)
+                            orig_dict[key][vii] = new_val
+                    else:
+                        new_val = [v if isinstance(v, str | bool | int) else float(v) for v in val]
+                        orig_dict[key] = new_val
+                else:
+                    orig_dict[key] = float(val)
+    return orig_dict
+
+
+def remove_numpy(fst_vt: dict) -> dict:
+    """
+    Recursively converts numpy array elements within a nested dictionary to lists and ensures
+    all values are simple types (float, int, dict, bool, str) for writing to a YAML file.
+
+    Args:
+        fst_vt (dict): The dictionary to process.
+
+    Returns:
+        dict: The processed dictionary with numpy arrays converted to lists
+            and unsupported types to simple types.
+    """
+
+    def get_dict(vartree, branch):
+        return reduce(operator.getitem, branch, vartree)
+
+    # Define conversion dictionary for numpy types
+    conversions = {
+        np.int_: int,
+        np.intc: int,
+        np.intp: int,
+        np.int8: int,
+        np.int16: int,
+        np.int32: int,
+        np.int64: int,
+        np.uint8: int,
+        np.uint16: int,
+        np.uint32: int,
+        np.uint64: int,
+        np.single: float,
+        np.double: float,
+        np.longdouble: float,
+        np.csingle: float,
+        np.cdouble: float,
+        np.float16: float,
+        np.float32: float,
+        np.float64: float,
+        np.complex64: float,
+        np.complex128: float,
+        np.bool_: bool,
+        np.ndarray: lambda x: x.tolist(),
+    }
+
+    def loop_dict(vartree, branch):
+        if not isinstance(vartree, dict):
+            return fst_vt
+        for var in vartree.keys():
+            branch_i = copy.copy(branch)
+            branch_i.append(var)
+            if isinstance(vartree[var], dict):
+                loop_dict(vartree[var], branch_i)
+            else:
+                current_value = get_dict(fst_vt, branch_i[:-1])[branch_i[-1]]
+                data_type = type(current_value)
+                if data_type in conversions:
+                    get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = conversions[data_type](
+                        current_value
+                    )
+                elif isinstance(current_value, list | tuple):
+                    for i, item in enumerate(current_value):
+                        current_value[i] = remove_numpy(item)
+
+    # set fast variables to update values
+    loop_dict(fst_vt, [])
+    return fst_vt
+
+
 def update_defaults(orig_dict, keyname, new_val):
     """Recursive method to update all entries in a dictionary with key 'keyname'
     with value 'new_val'

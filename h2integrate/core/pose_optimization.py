@@ -9,7 +9,7 @@ from pathlib import Path
 
 import openmdao.api as om
 
-from h2integrate.core.utilities import check_file_format_for_csv_generator
+from h2integrate.core.file_utils import check_file_format_for_csv_generator
 
 
 class PoseOptimization:

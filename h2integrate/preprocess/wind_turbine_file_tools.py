@@ -5,7 +5,8 @@ from turbine_models.tools.library_tools import check_turbine_library_for_turbine
 from turbine_models.tools.interface_tools import get_pysam_turbine_specs, get_floris_turbine_specs
 
 from h2integrate import H2I_LIBRARY_DIR
-from h2integrate.core.utilities import BaseConfig, get_path, write_readable_yaml
+from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.file_utils import get_path, write_readable_yaml
 
 
 def export_turbine_to_pysam_format(
