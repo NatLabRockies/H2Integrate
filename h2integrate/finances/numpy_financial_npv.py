@@ -6,7 +6,8 @@ import openmdao.api as om
 import numpy_financial as npf
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, check_plant_config_and_profast_params
+from h2integrate.core.utilities import BaseConfig
+from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
 
 

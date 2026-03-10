@@ -1,8 +1,9 @@
 import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs, check_pysam_input_params
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import contains, range_val_or_none
+from h2integrate.converters.tools import check_pysam_input_params
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import jsonschema as json
 
-from h2integrate.core.utilities import load_yaml, write_yaml
+from h2integrate.core.file_utils import load_yaml, write_yaml
 
 
 fschema_tech = Path(__file__).parent / "tech_schema.yaml"

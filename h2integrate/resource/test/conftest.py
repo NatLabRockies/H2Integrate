@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from h2integrate.resource.utilities.nrel_developer_api_keys import set_nrel_key_dot_env
+from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
 
 from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
@@ -49,7 +49,7 @@ def site_config(which, lat, lon, model, resource_year, model_name):
         case str(x) if "GOES" in x:
             additional = {"latitude": lat, "longitude": lon}
             site_config["resources"]["solar_resource"]["resource_parameters"].update(additional)
-        case "WTKNRELDeveloperAPIWindResource":
+        case "WTKNLRDeveloperAPIWindResource":
             additional = {"latitude": lat, "longitude": lon}
             site_config["resources"]["wind_resource"]["resource_parameters"].update(additional)
         case _:
@@ -65,8 +65,8 @@ def pytest_sessionstart(session):
     os.environ["OPENMDAO_REPORTS"] = "none"
 
     # Set a dummy API key
-    os.environ["NREL_API_KEY"] = "a" * 40
-    set_nrel_key_dot_env()
+    os.environ["NLR_API_KEY"] = "a" * 40
+    set_nlr_key_dot_env()
 
     # Set RESOURCE_DIR to None so pulls example files from default DIR
     initial_resource_dir = os.getenv("RESOURCE_DIR")

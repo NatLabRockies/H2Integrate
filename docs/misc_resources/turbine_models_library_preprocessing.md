@@ -38,7 +38,7 @@ import numpy as np
 
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.inputs.validation import load_tech_yaml
 from h2integrate.preprocess.wind_turbine_file_tools import export_turbine_to_pysam_format
 from h2integrate.core.h2integrate_model import H2IntegrateModel
@@ -126,7 +126,7 @@ print(f"LCOH is ${lcoh[0]:.2f}/kg")
 ### Option 2: Save new tech_config to file and run H2I from file
 
 ```{code-cell} ipython3
-from h2integrate.core.utilities import write_readable_yaml
+from h2integrate.core.file_utils import write_readable_yaml
 
 # Define a new filepath for the updated tech config
 tech_config_path_new = EXAMPLE_DIR / "08_wind_electrolyzer" / f"tech_config_{turbine_name}.yaml"

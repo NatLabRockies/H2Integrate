@@ -4,12 +4,12 @@ import CoolProp
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
     average_wind_data_for_hubheight,
     weighted_average_wind_data_for_hubheight,
 )
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 
 
 @fixture
@@ -20,7 +20,7 @@ def wind_resource_data():
             "longitude": -102.75,
             "resources": {
                 "wind_resource": {
-                    "resource_model": "WTKNRELDeveloperAPIWindResource",
+                    "resource_model": "WTKNLRDeveloperAPIWindResource",
                     "resource_parameters": {
                         "latitude": 35.2018863,
                         "longitude": -101.945027,
@@ -41,7 +41,7 @@ def wind_resource_data():
     }
 
     prob = om.Problem()
-    comp = WTKNRELDeveloperAPIWindResource(
+    comp = WTKNLRDeveloperAPIWindResource(
         plant_config=plant_config,
         resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
         driver_config={},

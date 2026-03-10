@@ -8,14 +8,9 @@ import pytest
 from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.core.utilities import (
-    BaseConfig,
-    get_path,
-    find_file,
-    load_yaml,
-    make_unique_case_name,
-    dict_to_yaml_formatting,
-)
+from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.dict_utils import dict_to_yaml_formatting
+from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
 from h2integrate.core.inputs.validation import load_tech_yaml
 
 

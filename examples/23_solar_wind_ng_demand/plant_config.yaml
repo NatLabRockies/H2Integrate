@@ -6,7 +6,7 @@ sites:
     longitude: -101.7096
     resources:
       wind_resource:
-        resource_model: WTKNRELDeveloperAPIWindResource
+        resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2013
       solar_resource:
