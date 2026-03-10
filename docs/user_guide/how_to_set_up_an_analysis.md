@@ -128,7 +128,7 @@ For more information on how to define and interpret technology interconnections,
 Once you have the config files defined, you can run the analysis using a simple Python script that inputs the top-level config yaml.
 Here, we will show a script that runs one of the example analyses included in the H2Integrate package.
 
-```python
+```{code-cell} ipython3
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 import os
 
@@ -160,7 +160,7 @@ This is an advanced approach that isn't necessarily recommended for basic users,
 The same behavior shown here with a manual for-loop can be achieved by using the [design of experiments capability](design_of_experiments_in_h2i.md).
 ```
 
-```python
+```{code-cell} ipython3
 # Access the configuration dictionaries
 tech_config = h2i_model.technology_config
 
@@ -185,7 +185,7 @@ If you want to do a simple parameter sweep, you can wrap this in a loop and modi
 
 In the example below, we modify the electrolyzer `n_clusters` and plot the impact on the LCOH.
 
-```python
+```{code-cell} ipython3
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -225,8 +225,4 @@ plt.ylabel("LCOH ($/kg)")
 plt.title("LCOH vs Electrolyzer Rating")
 plt.grid(True)
 plt.show()
-```
-
-```python
-
 ```
