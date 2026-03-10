@@ -160,10 +160,6 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             outputs["land_transport_distance"] = land_distance_km
             outputs["water_transport_distance"] = water_distance_km
 
-        print(
-            site_location, outputs["land_transport_distance"], outputs["water_transport_distance"]
-        )
-
 
 @define(kw_only=True)
 class IronTransportCostConfig(BaseConfig):
