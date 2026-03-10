@@ -4,13 +4,13 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
 class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `Himawari 2011-15: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari7-download/>`_.
+    `Himawari 2011-15: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari7-download/>`_.
     This dataset covers regions covered by the Himawari-7 satellite (Asia, Australia & Pacific)
     at a spatial resolution of 4 km.
 
@@ -43,11 +43,11 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class Himawari7SolarAPI(NRELDeveloperAPISolarResourceBase):
+class Himawari7SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
-        self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari7-download.csv?"
+        self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/himawari7-download.csv?"
         # create the resource config
         self.config = Himawari7SolarAPIConfig.from_dict(
             resource_specs,
@@ -59,7 +59,7 @@ class Himawari7SolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `Himawari 2016-2020: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari-download/>`_.
+    `Himawari 2016-2020: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari-download/>`_.
     This dataset covers regions covered by the Himawari-8 satellite (Asia, Australia & Pacific)
     at a spatial resolution of 2 km.
 
@@ -92,11 +92,11 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class Himawari8SolarAPI(NRELDeveloperAPISolarResourceBase):
+class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
-        self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari-download.csv?"
+        self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/himawari-download.csv?"
         # create the resource config
         self.config = Himawari8SolarAPIConfig.from_dict(
             resource_specs,
@@ -108,7 +108,7 @@ class Himawari8SolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `Himawari TMY: PSM v3 <https://developer.nrel.gov/docs/solar/nsrdb/himawari-tmy-download/>`_.
+    `Himawari TMY: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari-tmy-download/>`_.
     This dataset covers regions within Asia, Australia & Pacific at a spatial resolution of 4 km.
 
     Args:
@@ -157,11 +157,11 @@ class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "himawari_tgy_v3"
 
 
-class HimawariTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
+class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
-        self.base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/himawari-tmy-download.csv?"
+        self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/himawari-tmy-download.csv?"
         # create the resource config
         self.config = HimawariTMYAPIConfig.from_dict(
             resource_specs,

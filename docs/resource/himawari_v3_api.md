@@ -1,7 +1,7 @@
 (solar_resource:himawari_v3_api)=
 # Solar Resource: Himawari PSM v3
 
-There are three datasets that use the [NSRDB Himawari PSM v3 API](https://developer.nrel.gov/docs/solar/nsrdb/himawari7-download/) calls:
+There are three datasets that use the [NSRDB Himawari PSM v3 API](https://developer.nlr.gov/docs/solar/nsrdb/himawari7-download/) calls:
 - "Himawari7SolarAPI"
 - "Himawari8SolarAPI"
 - "HimawariTMYSolarAPI"
@@ -11,9 +11,9 @@ These datasets allow for resource data to be downloaded for **locations** within
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |
 | :--------- | :---------------: | :---------------: | :---------------: | :---------------: | :---------------: |
-| `Himawari7SolarAPI`  | 30, 60 min  | 4 km | 2011-2015  | Asia, Australia & Pacific | [Himawari 2011-15](https://developer.nrel.gov/docs/solar/nsrdb/himawari7-download/) |
-| `Himawari8SolarAPI`  | 10, 30, 60 min  | 2 km | 2016-2020  | Asia, Australia & Pacific | [Himawari 2016-2020](https://developer.nrel.gov/docs/solar/nsrdb/himawari-download/) |
-| `HimawariTMYSolarAPI`  | 60 min  | 4 km | 2020, for tmy, tdy and tgy  | Asia, Australia & Pacific |  [Himawari TMY](https://developer.nrel.gov/docs/solar/nsrdb/himawari-tmy-download/) |
+| `Himawari7SolarAPI`  | 30, 60 min  | 4 km | 2011-2015  | Asia, Australia & Pacific | [Himawari 2011-15](https://developer.nlr.gov/docs/solar/nsrdb/himawari7-download/) |
+| `Himawari8SolarAPI`  | 10, 30, 60 min  | 2 km | 2016-2020  | Asia, Australia & Pacific | [Himawari 2016-2020](https://developer.nlr.gov/docs/solar/nsrdb/himawari-download/) |
+| `HimawariTMYSolarAPI`  | 60 min  | 4 km | 2020, for tmy, tdy and tgy  | Asia, Australia & Pacific |  [Himawari TMY](https://developer.nlr.gov/docs/solar/nsrdb/himawari-tmy-download/) |
 
 
 ```{note}

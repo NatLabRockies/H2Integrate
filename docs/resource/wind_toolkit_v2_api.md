@@ -1,8 +1,8 @@
 (wind_resource:wtk_v2_api)=
 # Wind Resource: WTK V2 API
 
-This resource class downloads wind resource data from [Wind Toolkit Data V2](https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/)
-and requires an NREL API key to use.
+This resource class downloads wind resource data from [Wind Toolkit Data V2](https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/)
+and requires an NLR API key to use.
 
 This dataset allows for resource data to be downloaded for:
 - **resource years** from 2007 to 2014.

@@ -4,13 +4,13 @@ from attrs import field, define
 
 from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nrel_developer_api_base import NRELDeveloperAPISolarResourceBase
+from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
 class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `Meteosat Prime Meridian PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-download/>`_.
+    `Meteosat Prime Meridian PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-download/>`_.
     This dataset covers regions covered by the Meteosat Prime Meridian satellite (Africa and Europe)
     at a spatial resolution of 4 km.
 
@@ -43,12 +43,12 @@ class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class MeteosatPrimeMeridianSolarAPI(NRELDeveloperAPISolarResourceBase):
+class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
         self.base_url = (
-            "https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-download.csv?"
+            "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-download.csv?"
         )
         # create the resource config
         self.config = MeteosatPrimeMeridianAPIConfig.from_dict(
@@ -61,9 +61,9 @@ class MeteosatPrimeMeridianSolarAPI(NRELDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `Meteosat Prime Meridian TMY: PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tmy-download/>`_,
-    `Meteosat Prime Meridian TDY: PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tdy-download/>`_,
-    and `Meteosat Prime Meridian TGY: PSM v4 <https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tgy-download/>`_,
+    `Meteosat Prime Meridian TMY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tmy-download/>`_,
+    `Meteosat Prime Meridian TDY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tdy-download/>`_,
+    and `Meteosat Prime Meridian TGY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tgy-download/>`_,
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
     Args:
@@ -115,7 +115,7 @@ class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "nsrdb_msg_tgy_v4"
 
 
-class MeteosatPrimeMeridianTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
+class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -125,6 +125,6 @@ class MeteosatPrimeMeridianTMYSolarAPI(NRELDeveloperAPISolarResourceBase):
             additional_cls_name=self.__class__.__name__,
         )
 
-        self.base_url = f"https://developer.nrel.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-{self.config.resource_year.split('-')[0]}-download.csv?"
+        self.base_url = f"https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-{self.config.resource_year.split('-')[0]}-download.csv?"
 
         super().setup()

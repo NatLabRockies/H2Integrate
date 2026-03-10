@@ -3,13 +3,13 @@ import urllib.parse
 import pandas as pd
 
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
-from h2integrate.resource.utilities.nrel_developer_api_keys import (
-    get_nrel_developer_api_key,
-    get_nrel_developer_api_email,
+from h2integrate.resource.utilities.nlr_developer_api_keys import (
+    get_nlr_developer_api_key,
+    get_nlr_developer_api_email,
 )
 
 
-class NRELDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
+class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
@@ -76,8 +76,8 @@ class NRELDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
             "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
-            "api_key": get_nrel_developer_api_key(),
-            "email": get_nrel_developer_api_email(),
+            "api_key": get_nlr_developer_api_key(),
+            "email": get_nlr_developer_api_email(),
         }
         url = self.base_url + urllib.parse.urlencode(input_data, True)
         return url

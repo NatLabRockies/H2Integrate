@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
@@ -11,7 +11,7 @@ from h2integrate.preprocess.wind_turbine_file_tools import (
     export_turbine_to_pysam_format,
     export_turbine_to_floris_format,
 )
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 
 
 @pytest.mark.unit
@@ -60,7 +60,7 @@ def test_pysam_turbine_export(subtests):
     )
 
     prob = om.Problem()
-    wind_resource = WTKNRELDeveloperAPIWindResource(
+    wind_resource = WTKNLRDeveloperAPIWindResource(
         plant_config=plant_config_for_resource,
         resource_config=plant_config["sites"]["site"]["resources"]["wind_resource"][
             "resource_parameters"
@@ -134,7 +134,7 @@ def test_floris_turbine_export(temp_dir, subtests):
     ].update(updated_parameters)
 
     prob = om.Problem()
-    wind_resource = WTKNRELDeveloperAPIWindResource(
+    wind_resource = WTKNLRDeveloperAPIWindResource(
         plant_config=plant_config_for_resource,
         resource_config=plant_config["sites"]["site"]["resources"]["wind_resource"][
             "resource_parameters"

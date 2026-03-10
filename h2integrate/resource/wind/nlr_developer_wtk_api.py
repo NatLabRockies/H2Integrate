@@ -7,16 +7,16 @@ from attrs import field, define
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
-from h2integrate.resource.utilities.nrel_developer_api_keys import (
-    get_nrel_developer_api_key,
-    get_nrel_developer_api_email,
+from h2integrate.resource.utilities.nlr_developer_api_keys import (
+    get_nlr_developer_api_key,
+    get_nlr_developer_api_email,
 )
 
 
 @define(kw_only=True)
-class WTKNRELDeveloperAPIConfig(ResourceBaseAPIConfig):
+class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
-    `Wind Toolkit Data V2 <https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/>`_.
+    `Wind Toolkit Data V2 <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/>`_.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -47,13 +47,13 @@ class WTKNRELDeveloperAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
+class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
     def setup(self):
-        # create the input dictionary for WTKNRELDeveloperAPIConfig
+        # create the input dictionary for WTKNLRDeveloperAPIConfig
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = WTKNRELDeveloperAPIConfig.from_dict(
+        self.config = WTKNLRDeveloperAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -122,10 +122,10 @@ class WTKNRELDeveloperAPIWindResource(WindResourceBaseAPIModel):
             "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
-            "api_key": get_nrel_developer_api_key(),
-            "email": get_nrel_developer_api_email(),
+            "api_key": get_nlr_developer_api_key(),
+            "email": get_nlr_developer_api_email(),
         }
-        base_url = "https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-download.csv?"
+        base_url = "https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download.csv?"
         url = base_url + urllib.parse.urlencode(input_data, True)
         return url
 
