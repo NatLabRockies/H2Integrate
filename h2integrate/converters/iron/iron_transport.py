@@ -40,6 +40,11 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             strict=False,
             additional_cls_name=self.__class__.__name__,
         )
+        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
+        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
+        self.add_input("destination_latitude", val=lat, units="deg")
+        self.add_input("destination_longitude", val=lon, units="deg")
+
         self.add_output("land_transport_distance", val=0.0, units="km")
         self.add_output("water_transport_distance", val=0.0, units="km")
         self.add_output("total_transport_distance", val=0.0, units="km")
@@ -78,8 +83,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         return land_transport_distance
 
     def compute(self, inputs, outputs):
-        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
-        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
+        lat = inputs["destination_latitude"][0]
+        lon = inputs["destination_longitude"][0]
         site_location = (lat, lon)
         shipping_coord_fpath = (
             ROOT_DIR / "converters" / "iron" / "martin_transport" / "shipping_coords.csv"
@@ -154,6 +159,10 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             outputs["total_transport_distance"] = transport_distance
             outputs["land_transport_distance"] = land_distance_km
             outputs["water_transport_distance"] = water_distance_km
+
+        print(
+            site_location, outputs["land_transport_distance"], outputs["water_transport_distance"]
+        )
 
 
 @define(kw_only=True)
