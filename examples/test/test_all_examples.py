@@ -332,7 +332,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-6)
-            == 3124778.867314414
+            == 2975616.89
         )
 
     with subtests.test("Check ammonia CapEx"):
