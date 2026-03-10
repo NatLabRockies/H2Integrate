@@ -1,16 +1,14 @@
 ---
-jupyter:
-  jupytext:
-    default_lexer: ipython3
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.19.1
-  kernelspec:
-    display_name: hopp
-    language: python
-    name: python3
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.18.1
+kernelspec:
+  display_name: Python 3.11.13 ('h2i_env')
+  language: python
+  name: python3
 ---
 
 # How to set up an analysis
