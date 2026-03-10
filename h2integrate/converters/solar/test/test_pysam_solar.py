@@ -4,7 +4,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
-from h2integrate.resource.solar.nrel_developer_goes_api_models import GOESAggregatedSolarAPI
+from h2integrate.resource.solar.nlr_developer_goes_api_models import GOESAggregatedSolarAPI
 
 
 @fixture

@@ -37,7 +37,7 @@ def plant_config_wtk():
         "longitude": -101.945027,
         "resource": {
             "wind_resource": {
-                "resource_model": "WTKNRELDeveloperAPIWindResource",
+                "resource_model": "WTKNLRDeveloperAPIWindResource",
                 "resource_parameters": {
                     "resource_year": 2012,
                 },

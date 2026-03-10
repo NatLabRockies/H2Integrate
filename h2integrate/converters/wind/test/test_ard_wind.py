@@ -6,7 +6,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 
 

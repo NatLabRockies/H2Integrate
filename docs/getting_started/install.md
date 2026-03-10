@@ -14,19 +14,19 @@ If you want to develop new models or contribute to H2Integrate, you can install 
 
 ### NREL Resource Data
 
-1. The functions which download resource data require an NREL API key. Obtain a key from:
+1. The functions which download resource data require an NLR API key. Obtain a key from:
 
-    [https://developer.nrel.gov/signup/](https://developer.nrel.gov/signup/)
+    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/)
 
-2. To set up the `NREL_API_KEY` and `NREL_API_EMAIL` required for resource downloads, you can create
-   Environment Variables called `NREL_API_KEY` and `NREL_API_EMAIL`. Otherwise, you can keep the key
+2. To set up the `NLR_API_KEY` and `NLR_API_EMAIL` required for resource downloads, you can create
+   Environment Variables called `NLR_API_KEY` and `NLR_API_EMAIL`. Otherwise, you can keep the key
    in a new file called ".env" in the root directory of this project.
 
     Create a file ".env" that contains the single line:
 
     ```bash
-    NREL_API_KEY=key
-    NREL_API_EMAIL=your.name@email.com
+    NLR_API_KEY=key
+    NLR_API_EMAIL=your.name@email.com
     ```
 
 ### NREL-Provided Conda Environment Specification (recommended)
@@ -43,8 +43,8 @@ If you want to develop new models or contribute to H2Integrate, you can install 
     cd H2Integrate
     ```
 
-3. (Optional) If using NREL resource data, you will need an NREL API key, which can be obtained from:
-    [https://developer.nrel.gov/signup/](https://developer.nrel.gov/signup/)
+3. (Optional) If using NLR resource data, you will need an NLR API key, which can be obtained from:
+    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/)
 
     1. In `environment.yml`, add the following lines to the bottom of the file, and replace the
        items in angle brackets (`<>`), including the brackets with your information. Be sure that
@@ -52,8 +52,8 @@ If you want to develop new models or contribute to H2Integrate, you can install 
 
         ```yaml
         variables:
-          NREL_API_KEY=<API-KEY>
-          NREL_API_EMAIL=<email-address>
+          NLR_API_KEY=<API-KEY>
+          NLR_API_EMAIL=<email-address>
         ```
 
 4. Create a conda environment and install H2Integrate and all its dependencies. Please read the

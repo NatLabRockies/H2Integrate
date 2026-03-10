@@ -2,12 +2,18 @@
 # Setting Environment Variables
 
 H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
-To use resource datasets from the NREL developer network, you will need an NREL API key, which can be obtained from:
-    [https://developer.nrel.gov/signup/](https://developer.nrel.gov/signup/).
+To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
+    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/).
 
-You will need to set the API key and the email you used to get the API key for downloading resource data from the NREL developer network. The 40 character API key is referred to in following sections as the value for the `NREL_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NREL_API_EMAIL` environment variable.
+You will need to set the API key and the email you used to get the API key for downloading resource data from the NLR developer network. The 40 character API key is referred to in following sections as the value for the `NLR_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NLR_API_EMAIL` environment variable.
 
-In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NREL API key and `'email-for-api-key'` should be replaced with your email address.
+```{note}
+The old environment variable names ``NREL_API_KEY`` and ``NREL_API_EMAIL`` are still supported
+for backward compatibility, but are deprecated and will be removed in a future release.
+Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
+```
+
+In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NLR API key and `'email-for-api-key'` should be replaced with your email address.
 
 An optional environment variable is `RESOURCE_DIR`. If set, this will be used as the default folder to save resource data to that is downloaded from the API. If setting this, please set its value as the full filepath to the folder you'd like to save resource files to, and ensure that the folder exists.
 
@@ -29,15 +35,15 @@ The specific variable names and values to set are listed below; use these for st
 
 The `.\etc\conda\activate.d\env_vars.bat` file may look like below:
 ```bash
-set NREL_API_KEY='api-key-value'
-set NREL_API_EMAIL='email-for-api-key'
+set NLR_API_KEY='api-key-value'
+set NLR_API_EMAIL='email-for-api-key'
 set RESOURCE_DIR=C:\path\to\my\resource\folder
 ```
 
 The `.\etc\conda\deactivate.d\env_vars.bat` file may look like below:
 ```bash
-set NREL_API_KEY=
-set NREL_API_EMAIL=
+set NLR_API_KEY=
+set NLR_API_EMAIL=
 set RESOURCE_DIR=
 ```
 
@@ -48,8 +54,8 @@ If you are using a macOS or Linux machine, please follow the steps documented fo
 The `./etc/conda/activate.d/env_vars.sh` file may look like below:
 ```bash
 #!/bin/sh
-export NREL_API_KEY='api-key-value'
-export NREL_API_EMAIL='email-for-api-key'
+export NLR_API_KEY='api-key-value'
+export NLR_API_EMAIL='email-for-api-key'
 export RESOURCE_DIR=/path/to/my/resource/folder/
 ```
 
@@ -57,8 +63,8 @@ The `./etc/conda/deactivate.d/env_vars.sh` file may look like below:
 ```bash
 #!/bin/sh
 
-unset NREL_API_KEY
-unset NREL_API_EMAIL
+unset NLR_API_KEY
+unset NLR_API_EMAIL
 unset RESOURCE_DIR
 ```
 
@@ -71,8 +77,8 @@ unset RESOURCE_DIR
 
     ```yaml
     variables:
-        NREL_API_KEY='api-key-value'
-        NREL_API_EMAIL='email-for-api-key'
+        NLR_API_KEY='api-key-value'
+        NLR_API_EMAIL='email-for-api-key'
         RESOURCE_DIR='/path/to/my/resource/folder/'
     ```
 
@@ -86,7 +92,7 @@ unset RESOURCE_DIR
 ## Set Environment Variables with .env file
 
 ```{note}
-This method only works for setting the `NREL_API_KEY` and `NREL_API_EMAIL` environment variables; this method should not be used to set the `RESOURCE_DIR` environment variable.
+This method only works for setting the `NLR_API_KEY` and `NLR_API_EMAIL` environment variables; this method should not be used to set the `RESOURCE_DIR` environment variable.
 ```
 
 The ".env" file will be looked for in all of the following locations:
@@ -96,7 +102,7 @@ The ".env" file will be looked for in all of the following locations:
 1. Choose which of the above directories you want to host your .env file, and create a file named ".env" in that folder.
 2. Open the ".env" file and add the environment variables:
     ```bash
-    NREL_API_KEY='api-key-value'
-    NREL_API_EMAIL='email-for-api-key'
+    NLR_API_KEY='api-key-value'
+    NLR_API_EMAIL='email-for-api-key'
     ```
 3. Save and close the ".env" file.
