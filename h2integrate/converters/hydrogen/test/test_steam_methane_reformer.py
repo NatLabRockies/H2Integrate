@@ -4,6 +4,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.converters.hydrogen.steam_methane_reformer import (
+    SteamMethaneReformerCostModel,
     SteamMethaneReformerPerformanceModel,
 )
 
@@ -194,5 +195,47 @@ def test_h2_smr_performance_outputs(plant_config, smr_performance_params, subtes
         )
 
 
-# @pytest.mark.regression
-# def test_h2_smr_cost(per)
+@pytest.mark.regression
+def test_h2_smr_cost(smr_performance_params, smr_cost_params, plant_config, subtests):
+    """Test SMR cost model with typical operating conditions."""
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": smr_performance_params,
+            "cost_parameters": smr_cost_params,
+        }
+    }
+
+    # Set the natural gas input and electricity input
+    natural_gas_input = np.full(8760, 1920.0)
+    electricity_input = np.full(8760, 8800.0)
+
+    prob = om.Problem()
+    perf_comp = SteamMethaneReformerPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+    )
+
+    cost_comp = SteamMethaneReformerCostModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+    )
+
+    prob.model.add_subsystem("comp", perf_comp, promotes=["*"])
+    prob.model.add_subsystem("cost_comp", cost_comp, promotes=["*"])
+    prob.setup()
+
+    # Set the natural gas input and electricity input
+    prob.set_val("comp.natural_gas_in", natural_gas_input)
+    prob.set_val("comp.electricity_in", electricity_input)
+    prob.run_model()
+
+    with subtests.test("capex value"):
+        assert pytest.approx(prob.get_val("cost_comp.CapEx", units="USD"), rel=1e-6) == (
+            394.05555 * 1000.0 * 500.0
+        )
+
+    with subtests.test("opex value"):
+        assert pytest.approx(prob.get_val("cost_comp.OpEx", units="USD/year"), rel=1e-6) == (
+            (394.05555 * 1000.0 * 20.0)  # fixed opex
+            + (3451926666.666666 * 1000 * 0.05)  # variable opex
+        )

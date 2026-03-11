@@ -257,7 +257,7 @@ class SteamMethaneReformerCostModel(CostModelBaseClass):
             "hydrogen_out",
             val=0.0,
             shape=n_timesteps,
-            units="MW",
+            units="kg/h",
             desc="Hourly hydrogen output from performance model",
         )
         self.add_input(
@@ -289,14 +289,16 @@ class SteamMethaneReformerCostModel(CostModelBaseClass):
         """
         Compute capital and operating costs for the hydrogen SMR plant.
         """
-        plant_capacity_kw = inputs["electrical_rated_system_capacity"] * 1000  # Convert MW to kW
+        plant_capacity_kw = (
+            inputs["electrical_rated_hydrogen_production"] * 1000
+        )  # Convert MW to kW
         hydrogen_out = inputs["hydrogen_out"]  # kg/h hourly profile
         electricity_equivalent_out = (hydrogen_out * HHV_H2_MJ_PER_KG) / (
             3600.0 * 0.001
         )  # Convert kg/h to kW
         capex_per_kw = inputs["capex_per_kw"]
         fixed_opex_per_kw_per_year = inputs["fixed_opex_per_kw_per_year"]
-        variable_opex_per_mwh = inputs["variable_opex_per_mwh"]
+        variable_opex_per_kwh = inputs["variable_opex_per_kwh"]
 
         # Sum hourly electricity output to get annual generation
         # electricity_out is in MW, so sum gives MWh for hourly data
@@ -311,7 +313,9 @@ class SteamMethaneReformerCostModel(CostModelBaseClass):
         fixed_om = fixed_opex_per_kw_per_year * plant_capacity_kw
 
         # Calculate variable operating expenses over project life
-        variable_om = variable_opex_per_mwh * delivered_electricity_MWh
+        variable_om = (
+            variable_opex_per_kwh * delivered_electricity_MWh * 1000
+        )  # convert MWh to kWh for variable O&M calculation
 
         # Total operating expenditure includes all O&M
         opex = fixed_om + variable_om
