@@ -995,7 +995,7 @@ class H2IntegrateModel:
                     # Add the connection component to the model
                     self.plant.add_subsystem(connection_name, connection_component)
 
-                    # reorder the subsystems so transporters comes after their source technology
+                    # Reorder the subsystems so transporters comes after their source technology
                     # NOTE: the private method must be used because setup() has not been called
                     subsystem_names = list(self.plant._static_subsystems_allprocs)
                     subsystem_names.remove(connection_name)
