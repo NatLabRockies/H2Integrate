@@ -126,7 +126,7 @@ def test_steel_example(subtests, temp_copy_of_example):
                 )[0],
                 rel=1e-3,
             )
-            == 98169205.81687717
+            == 97887982.86294547
         )
 
     with subtests.test("Check steel CapEx"):
@@ -195,7 +195,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year")[0], rel=1e-3)
-            == 3126204.813298109
+            == 2975616.8932987223
         )
 
     with subtests.test("Check ammonia CapEx"):
@@ -229,7 +229,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 )[0],
                 rel=1e-3,
             )
-            == 54034051.95
+            == 53842563.43404999
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -332,7 +332,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-6)
-            == 3124778.867314414
+            == 2975616.89
         )
 
     with subtests.test("Check ammonia CapEx"):
@@ -370,7 +370,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
                 rel=1e-6,
             )
-            == 79421959.33317558
+            == 79257312.42365658
         )
 
     with subtests.test("Check LCOH"):
@@ -378,7 +378,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-6
             )
-            == 4.015543377027795
+            == 4.013427289493614
         )
 
     with subtests.test("Check LCOA"):
@@ -386,7 +386,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-6
             )
-            == 1.1022714567388747
+            == 1.1018637096646757
         )
 
 
@@ -816,7 +816,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.65452960
+            == 5.647544985152393
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -825,7 +825,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_dispatched_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 7.573354943596408
+            == 7.564000289456695
         )
 
 

@@ -172,3 +172,56 @@ timeseries_data = save_case_timeseries_as_csv(
 ```{note}
 The `electricity_base_unit` argument (default: `"MW"`) controls the units used for electricity-based variables when no specific units are provided. Valid options are `"W"`, `"kW"`, `"MW"`, or `"GW"`.
 ```
+
+### Summarizing scalar results to CSV
+
+While `save_case_timeseries_as_csv` exports time-series data, the `convert_sql_to_csv_summary` function extracts **scalar** results from one or more SQL recorder files and writes them to a single CSV summary.
+This is especially useful when running parameter sweeps or DOE studies, where each row in the output corresponds to a different case.
+
+The function:
+
+- Collects every scalar output (single-element arrays) plus design variables.
+- Reports VarOpEx values for the first year only.
+- Averages capacity-factor and annual-production arrays over the project lifetime.
+- Renames columns to include units, e.g. `plant.LCOH (USD/kg)`.
+- When running in parallel, automatically aggregates results from all partitioned SQL files (e.g. `cases.sql_0`, `cases.sql_1`, ...) while skipping the `_meta` companion file.
+
+#### Basic usage
+
+```python
+from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+
+# Summarize scalar results and write a CSV next to the SQL file
+df = convert_sql_to_csv_summary("path/to/cases.sql")  # creates path/to/cases.csv
+```
+
+#### Return only the DataFrame (no file written)
+
+```python
+df = convert_sql_to_csv_summary("path/to/cases.sql", save_to_file=False)
+print(df.head())
+```
+
+#### Postprocessing the results of a completed H2Integrate model run
+
+```python
+from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+
+model = H2IntegrateModel("top_level_config.yaml")
+model.run()
+model.post_process()
+
+# Produce a one-row CSV summary of the scalar results
+summary_df = convert_sql_to_csv_summary(model.recorder_path)
+```
+
+#### Summarizing parallel DOE results
+
+When a DOE or parallel study is executed, H2Integrate writes one SQL file per process (e.g. `cases.sql_0`, `cases.sql_1`).
+Pass the base name and the function handles the rest:
+
+```python
+# Aggregates cases.sql_0, cases.sql_1, ... into a single DataFrame
+summary_df = convert_sql_to_csv_summary("output_dir/cases.sql")
+```
