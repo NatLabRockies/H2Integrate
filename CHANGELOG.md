@@ -14,6 +14,8 @@
 - Reorganized utilities, split them out to appropriate modules [PR 586](https://github.com/NatLabRockies/H2Integrate/pull/586)
 - Added a generic storage model that is compatible with the Pyomo controllers [PR 571](https://github.com/NatLabRockies/H2Integrate/pull/571)
 - Fixed a bug within the H2 storage cost models that used max rate instead of average for H2 flows [PR 588](https://github.com/NatLabRockies/H2Integrate/pull/588)
+- Fixed a bug in model setup where transporters were added to the system at the end of the system instead after their source [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)
+- Fixed a bug in example 1 (steel) where a cable was included between the combiner to steel, but steel uses an internal grid connection [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)
 
 ## 0.7 [March 3, 2026]
 
