@@ -18,6 +18,7 @@
 - Fixed a bug within the H2 storage cost models that used max rate instead of average for H2 flows [PR 588](https://github.com/NatLabRockies/H2Integrate/pull/588)
 - Fixed a bug in model setup where transporters were added to the system at the end of the system instead after their source [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)
 - Fixed a bug in example 1 (steel) where a cable was included between the combiner to steel, but steel uses an internal grid connection [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)
+- Fixed a bug in the discrete variable instantiation within the iron processing stack that caused a failure with OpenMDAO v3.43 [PR 595](https://github.com/NatLabRockies/H2Integrate/pull/595)
 
 ## 0.7 [March 3, 2026]
 
