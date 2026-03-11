@@ -70,7 +70,7 @@ class IronPlantPerformanceComponent(om.ExplicitComponent):
         )
         self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
         self.add_discrete_output(
-            "iron_plant_performance", val=pd.DataFrame, desc="iron plant performance results"
+            "iron_plant_performance", val=pd.DataFrame(), desc="iron plant performance results"
         )
         self.add_output("pig_iron_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("total_pig_iron_produced", val=0.0, units="t/year")
@@ -155,10 +155,10 @@ class IronPlantCostComponent(CostModelBaseClass):
         self.add_input("ore_profit_pct", val=self.config.ore_profit_pct, units="USD/t")
         self.add_input("total_pig_iron_produced", val=1.0, units="t/year")
         self.add_discrete_input(
-            "iron_plant_performance", val=pd.DataFrame, desc="iron plant performance results"
+            "iron_plant_performance", val=pd.DataFrame(), desc="iron plant performance results"
         )
         self.add_discrete_output(
-            "iron_plant_cost", val=pd.DataFrame, desc="iron plant cost results"
+            "iron_plant_cost", val=pd.DataFrame(), desc="iron plant cost results"
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

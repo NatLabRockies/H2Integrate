@@ -62,7 +62,7 @@ class EAFPlantPerformanceComponent(om.ExplicitComponent):
         )
 
         self.add_discrete_output(
-            "steel_plant_performance", val=pd.DataFrame, desc="steel plant performance results"
+            "steel_plant_performance", val=pd.DataFrame(), desc="steel plant performance results"
         )
 
         self.add_output("total_steel_produced", val=0.0, units="t/year")
@@ -143,10 +143,10 @@ class EAFPlantCostComponent(CostModelBaseClass):
         self.add_input("iron_transport_cost", val=self.config.iron_transport_cost, units="USD/t")
         self.add_input("ore_profit_pct", val=self.config.ore_profit_pct, units="USD/t")
         self.add_discrete_input(
-            "steel_plant_performance", val=pd.DataFrame, desc="steel plant performance results"
+            "steel_plant_performance", val=pd.DataFrame(), desc="steel plant performance results"
         )
         self.add_discrete_output(
-            "steel_plant_cost", val=pd.DataFrame, desc="steel plant cost results"
+            "steel_plant_cost", val=pd.DataFrame(), desc="steel plant cost results"
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
