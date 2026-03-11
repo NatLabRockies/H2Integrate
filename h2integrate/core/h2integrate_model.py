@@ -995,16 +995,12 @@ class H2IntegrateModel:
                     # Add the connection component to the model
                     self.plant.add_subsystem(connection_name, connection_component)
 
-                    # get order in which subsystems have been added to the plant
-                    # the private method must be used here because setup() has not yet been called
+                    # reorder the subsystems so that the transporter comes after the source technology
+                    # NOTE: the private method must be used here because setup() has not yet been called
                     subsystem_names = list(self.plant._static_subsystems_allprocs)
-                    # temporarily remove the connection component from the list of names
                     subsystem_names.remove(connection_name)
-                    # get the desired index of the connection component (directly after its source)
                     insert_idx = subsystem_names.index(source_tech) + 1
-                    # insert the connection component directly after its source
                     subsystem_names.insert(insert_idx, connection_name)
-                    # update the subsystem order in the plant
                     self.plant.set_order(subsystem_names)
 
                 # Check if the source technology is a splitter
