@@ -202,7 +202,7 @@ df = convert_sql_to_csv_summary("path/to/cases.sql", save_to_file=False)
 print(df.head())
 ```
 
-#### Using with a completed H2Integrate model
+#### Postprocessing the results of a completed H2Integrate model run
 
 ```python
 from h2integrate.core.h2integrate_model import H2IntegrateModel
