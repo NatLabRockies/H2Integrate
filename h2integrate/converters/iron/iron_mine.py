@@ -70,7 +70,7 @@ class IronMinePerformanceComponent(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
         self.add_discrete_output(
-            "iron_mine_performance", val=pd.DataFrame, desc="iron mine performance results"
+            "iron_mine_performance", val=pd.DataFrame(), desc="iron mine performance results"
         )
         self.add_output("iron_ore_out", val=0.0, shape=n_timesteps, units="kg/h")
         self.add_output("total_iron_ore_produced", val=0.0, units="t/year")
@@ -146,9 +146,11 @@ class IronMineCostComponent(CostModelBaseClass):
         self.add_input("LCOH", val=self.config.LCOH, units="USD/kg")
         self.add_input("total_iron_ore_produced", val=1.0, units="t/year")
         self.add_discrete_input(
-            "iron_mine_performance", val=pd.DataFrame, desc="iron mine performance results"
+            "iron_mine_performance", val=pd.DataFrame(), desc="iron mine performance results"
         )
-        self.add_discrete_output("iron_mine_cost", val=pd.DataFrame, desc="iron mine cost results")
+        self.add_discrete_output(
+            "iron_mine_cost", val=pd.DataFrame(), desc="iron mine cost results"
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         ore_performance = IronPerformanceModelOutputs(
