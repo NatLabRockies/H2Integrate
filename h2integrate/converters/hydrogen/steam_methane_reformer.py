@@ -14,14 +14,14 @@ from h2integrate.core.model_baseclasses import (
 @define(kw_only=True)
 class SteamMethaneReformerPerformanceConfig(BaseConfig):
     """
-    Configuration class for steam methane reformer performance model.
+    Configuration class for steam methane reformer (SMR) performance model.
 
     This configuration class handles the parameters for natural gas
     steam methane reforming for hydrogen production.
 
     Attributes:
-        system_capacity_tonnes_per_day (float): rated capacity of the natural gas plant
-            metric tonnes/day.
+        system_capacity_tonnes_per_day (float): rated capacity of the SMR plant
+            in metric tonnes/day.
         natural_gas_usage_mmbtu_per_kg (float): Natural gas usage for steam
             methane reforming process in MMBtu/kg.
         electricity_usage_kwh_per_kg (float): Electricity usage for steam methane
@@ -35,7 +35,7 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
 
 class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
     """
-    Performance model for steam methane reforming hydrogen production plants.
+    Performance model for steam methane reforming (SMR) hydrogen production plants.
 
     Outputs:
         hydrogen_out (array): Hydrogen output in kg/h for each timestep
@@ -77,7 +77,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
 
         # Add rated capacity as an input with config value as default
         self.add_input(
-            "system_capacity",
+            "system_capacity_tonnes_per_day",
             val=self.config.system_capacity_tonnes_per_day,
             units="t/d",
             desc="SMR plant rated capacity in t/d",
@@ -136,6 +136,14 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
             desc="Electrical equivalent rated hydrogen production of the plant",
         )
 
+        self.add_output(
+            "unmet_hydrogen_demand",
+            val=0.0,
+            shape=n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Unmet hydrogen demand for SMR plant",
+        )
+
     def compute(self, inputs, outputs):
         """
         Compute hydrogen output from natural gas input.
@@ -147,22 +155,24 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         Args:
             inputs: OpenMDAO inputs object containing natural_gas_in,
                 natural_gas_usage_mmbtu_per_kg, electricity_usage_kwh_per_kg,
-                system_capacity, and hydrogen_demand.
+                system_capacity_tonnes_per_day, and hydrogen_demand.
             outputs: OpenMDAO outputs object for hydrogen_out, natural_gas_consumed,
-                and electricity_consumed.
+                electricity_consumed, and unmet_hydrogen_demand.
         """
 
         # calculate max input and output
-        system_capacity = inputs["system_capacity"] * (1000 / 24)  # plant capacity in kg/h
+        system_capacity_kg_per_hour = inputs["system_capacity_tonnes_per_day"] * (
+            1000 / 24
+        )  # plant capacity in kg/h
         natural_gas_usage_mmbtu_per_kg = inputs["natural_gas_usage_mmbtu_per_kg"]
-        max_natural_gas_consumption = system_capacity * natural_gas_usage_mmbtu_per_kg
+        max_natural_gas_consumption = system_capacity_kg_per_hour * natural_gas_usage_mmbtu_per_kg
         electricity_usage_kWh_per_kg = inputs["electricity_usage_kwh_per_kg"]
-        max_electricity_consumption = system_capacity * electricity_usage_kWh_per_kg
+        max_electricity_consumption = system_capacity_kg_per_hour * electricity_usage_kWh_per_kg
 
         # hydrogen demand, saturated at maximum rated system capacity
         hydrogen_demand = np.where(
-            inputs["hydrogen_demand"] > system_capacity,
-            system_capacity,
+            inputs["hydrogen_demand"] > system_capacity_kg_per_hour,
+            system_capacity_kg_per_hour,
             inputs["hydrogen_demand"],
         )
         natural_gas_demand = hydrogen_demand * natural_gas_usage_mmbtu_per_kg
@@ -195,18 +205,19 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         outputs["natural_gas_consumed"] = natural_gas_consumed
         outputs["electricity_consumed"] = electricity_consumed
 
-        outputs["rated_hydrogen_production"] = system_capacity  # kg/h
+        outputs["rated_hydrogen_production"] = system_capacity_kg_per_hour  # kg/h
         outputs["electrical_rated_hydrogen_production"] = (
-            system_capacity * HHV_H2_MJ_PER_KG / (3600.0 * 0.001)
+            system_capacity_kg_per_hour * HHV_H2_MJ_PER_KG / (3600.0 * 0.001)
         ) / 1000  # convert kg/h to MW using HHV of hydrogen
 
-        max_production = system_capacity * len(hydrogen_out) * (self.dt / 3600)
+        max_production = system_capacity_kg_per_hour * len(hydrogen_out) * (self.dt / 3600)
 
         outputs["total_hydrogen_produced"] = np.sum(hydrogen_out) * (self.dt / 3600)
         outputs["capacity_factor"] = outputs["total_hydrogen_produced"].sum() / max_production
         outputs["annual_hydrogen_produced"] = outputs["total_hydrogen_produced"] * (
             1 / self.fraction_of_year_simulated
         )
+        outputs["unmet_hydrogen_demand"] = inputs["hydrogen_demand"] - hydrogen_out
 
 
 @define(kw_only=True)
