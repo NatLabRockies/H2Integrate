@@ -151,8 +151,12 @@ This will run the analysis defined in the config files and generate the output f
 
 ## Modifying and rerunning the analysis
 
-Once the configs are loaded into H2I, they are stored in the `H2IntegrateModel` instance as dictionaries, so you can modify them and rerun the analysis without having to reload the config files.
-Here is an example of how to modify the config files and rerun the analysis:
+Once the configs are loaded into H2I and the model is instantiated, you can directly modify the underlying OpenMDAO variables within H2I.
+This is an advanced approach that isn't necessarily recommended for basic users, but showcases the level of flexibility possible with H2I.
+
+```{note}
+The same behavior shown here with a manual for-loop can be achieved by using the [design of experiments capability](design_of_experiments_in_h2i.md).
+```
 
 ```{code-cell} ipython3
 # Access the configuration dictionaries
@@ -177,7 +181,7 @@ print(f"Total hydrogen produced by the electrolyzer: {annual_hydrogen:.2f} kg/ye
 This is especially useful when you want to run an H2I model as a script and modify parameters dynamically without changing the original YAML configuration file.
 If you want to do a simple parameter sweep, you can wrap this in a loop and modify the parameters as needed.
 
-In the example below, we modify the electrolyzer end-of-life efficiency drop and plot the impact on the LCOH.
+In the example below, we modify the electrolyzer `n_clusters` and plot the impact on the LCOH.
 
 ```{code-cell} ipython3
 import numpy as np
@@ -200,16 +204,14 @@ for rating in ratings:
     # Calculate the number of clusters from the rating
     n_clusters = int(rating / cluster_size_mw)
 
-    # Update the number of clusters
-    tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_parameters"][
-        "n_clusters"
-    ] = n_clusters
+    # Set the n_clusters value directly
+    h2i_model.model.set_val("electrolyzer.n_clusters", n_clusters)
 
     # Rerun the model with the updated configurations
     h2i_model.run()
 
     # Get the LCOH value
-    lcoh = h2i_model.model.get_val("finance_subgroup_hydrogen.LCOH_produced_profast_model", units="USD/kg")[0]
+    lcoh = h2i_model.model.get_val("finance_subgroup_hydrogen.LCOH_produced_custom_model", units="USD/kg")[0]
 
     # Store the results
     lcoh_results.append(lcoh)
@@ -221,8 +223,4 @@ plt.ylabel("LCOH ($/kg)")
 plt.title("LCOH vs Electrolyzer Rating")
 plt.grid(True)
 plt.show()
-```
-
-```{code-cell} ipython3
-
 ```
