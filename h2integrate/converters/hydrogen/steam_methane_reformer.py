@@ -41,7 +41,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         hydrogen_out (array): Hydrogen output in kg/h for each timestep
         natural_gas_consumed (array): Natural gas consumed in MMBtu/h
         electricity_consumed (array): Electricity consumed in kW for each timestep
-
+        unmet_hydrogen_demand (array): Unmet hydrogen demand in kg/h for each timestep
     """
 
     def initialize(self):
@@ -228,13 +228,10 @@ class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
     Attributes:
         capex_per_kw (float|int): Capital cost per unit capacity in $/kW. This includes
             all equipment, installation, and construction costs.
-
         fixed_opex_per_kw_per_year (float|int): Fixed operating expenses per unit capacity
             in $/kW/year. This includes fixed O&M costs that don't vary with generation.
-
         variable_opex_per_kwh (float|int): Variable operating expenses per unit generation in $/kWh.
             This includes variable O&M costs that scale with electricity generation.
-
         cost_year (int): Dollar year corresponding to input costs.
     """
 
