@@ -24,8 +24,6 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
             metric tonnes/day.
         natural_gas_usage_mmbtu_per_kg (float): Natural gas usage for steam
             methane reforming process in MMBtu/kg.
-            This represents the amount of fuel energy required to produce
-            one kg of hydrogen.
         electricity_usage_kwh_per_kg (float): Electricity usage for steam methane
             reforming process in kWh/kg.
     """
@@ -40,9 +38,9 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
     Performance model for steam methane reforming hydrogen production plants.
 
     Outputs:
-        hydrogen_out (array): Hydrogen output in MW for each timestep
+        hydrogen_out (array): Hydrogen output in kg/h for each timestep
         natural_gas_consumed (array): Natural gas consumed in MMBtu/h
-        electricity_consumed (array): Electricity consumed in MW for each timestep
+        electricity_consumed (array): Electricity consumed in kW for each timestep
 
     """
 
@@ -142,8 +140,9 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         """
         Compute hydrogen output from natural gas input.
 
-        The computation uses the natural gas usage rate (and some electricity)
-            to convert natural gas energy input to hydrogen energy output.
+        The computation uses the natural gas usage rate and the electricity
+            usage rate to convert natural gas energy input to hydrogen
+            energy output.
 
         Args:
             inputs: OpenMDAO inputs object containing natural_gas_in,
@@ -213,7 +212,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
 @define(kw_only=True)
 class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
     """
-    Configuration class for steam methane reformer plant cost model.
+    Configuration class for hydrogen steam methane reformer plant cost model.
 
     Attributes:
         capex_per_kw (float|int): Capital cost per unit capacity in $/kW. This includes

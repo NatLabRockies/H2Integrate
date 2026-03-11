@@ -16,6 +16,7 @@
 - Reorganized utilities, split them out to appropriate modules [PR 586](https://github.com/NatLabRockies/H2Integrate/pull/586)
 - Added a generic storage model that is compatible with the Pyomo controllers [PR 571](https://github.com/NatLabRockies/H2Integrate/pull/571)
 - Fixed a bug within the H2 storage cost models that used max rate instead of average for H2 flows [PR 588](https://github.com/NatLabRockies/H2Integrate/pull/588)
+- Add hydrogen steam methane reforming (SMR) performance and cost converter [PR 594](https://github.com/NatLabRockies/H2Integrate/pull/594)
 
 ## 0.7 [March 3, 2026]
 
