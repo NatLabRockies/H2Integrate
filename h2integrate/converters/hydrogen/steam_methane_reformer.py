@@ -201,7 +201,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
             system_capacity * HHV_H2_MJ_PER_KG / (3600.0 * 0.001)
         ) / 1000  # convert kg/h to MW using HHV of hydrogen
 
-        max_production = inputs["system_capacity"] * len(hydrogen_out) * (self.dt / 3600)
+        max_production = system_capacity * len(hydrogen_out) * (self.dt / 3600)
 
         outputs["total_hydrogen_produced"] = np.sum(hydrogen_out) * (self.dt / 3600)
         outputs["capacity_factor"] = outputs["total_hydrogen_produced"].sum() / max_production
