@@ -6,7 +6,7 @@ sites:
     longitude: -101.945027
     resources:
       wind_resource:  # name of the resource model for the wind_site
-        resource_model: WTKNRELDeveloperAPIWindResource
+        resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2012
           use_fixed_resource_location: false  # set to False so the resource data is updated when the site location changes in the design sweep

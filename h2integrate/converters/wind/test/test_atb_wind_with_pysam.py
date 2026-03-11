@@ -3,7 +3,7 @@ import openmdao.api as om
 
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 
 
 @pytest.mark.regression
@@ -22,7 +22,7 @@ def test_wind_plant_costs_with_pysam(plant_config_wtk, wind_plant_config, subtes
 
     prob = om.Problem()
 
-    wind_resource = WTKNRELDeveloperAPIWindResource(
+    wind_resource = WTKNLRDeveloperAPIWindResource(
         plant_config=plant_config_wtk,
         resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
             "resource_parameters"

@@ -16,6 +16,7 @@ from h2integrate.converters.iron.iron_plant import (
     IronPlantPerformanceComponent,
 )
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
+from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
 from h2integrate.converters.iron.iron_wrapper import IronComponent
@@ -74,11 +75,11 @@ from h2integrate.converters.water.desal.desalination import (
     ReverseOsmosisCostModel,
     ReverseOsmosisPerformanceModel,
 )
+from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.hydrogen.basic_cost_model import BasicElectrolyzerCostModel
 from h2integrate.converters.hydrogen.pem_electrolyzer import ECOElectrolyzerPerformanceModel
 from h2integrate.converters.solar.atb_res_com_pv_cost import ATBResComPVCostModel
 from h2integrate.converters.solar.atb_utility_pv_cost import ATBUtilityPVCostModel
-from h2integrate.resource.wind.nrel_developer_wtk_api import WTKNRELDeveloperAPIWindResource
 from h2integrate.converters.iron.martin_mine_cost_model import MartinIronMineCostComponent
 from h2integrate.converters.iron.martin_mine_perf_model import MartinIronMinePerformanceComponent
 from h2integrate.converters.methanol.smr_methanol_plant import (
@@ -103,7 +104,7 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
-from h2integrate.resource.solar.nrel_developer_goes_api_models import (
+from h2integrate.resource.solar.nlr_developer_goes_api_models import (
     GOESTMYSolarAPI,
     GOESConusSolarAPI,
     GOESFullDiscSolarAPI,
@@ -113,13 +114,13 @@ from h2integrate.converters.water_power.hydro_plant_run_of_river import (
     RunOfRiverHydroCostModel,
     RunOfRiverHydroPerformanceModel,
 )
-from h2integrate.converters.hydrogen.geologic.simple_natural_geoh2 import (
-    NaturalGeoH2PerformanceModel,
-)
-from h2integrate.resource.solar.nrel_developer_himawari_api_models import (
+from h2integrate.resource.solar.nlr_developer_himawari_api_models import (
     Himawari7SolarAPI,
     Himawari8SolarAPI,
     HimawariTMYSolarAPI,
+)
+from h2integrate.converters.hydrogen.geologic.simple_natural_geoh2 import (
+    NaturalGeoH2PerformanceModel,
 )
 from h2integrate.control.control_rules.converters.generic_converter import (
     PyomoDispatchGenericConverter,
@@ -151,7 +152,7 @@ from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass impo
 from h2integrate.control.control_strategies.passthrough_openloop_controller import (
     PassThroughOpenLoopController,
 )
-from h2integrate.resource.solar.nrel_developer_meteosat_prime_meridian_models import (
+from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models import (
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
 )
@@ -175,7 +176,7 @@ from h2integrate.control.control_strategies.converters.flexible_demand_openloop_
 supported_models = {
     # Resources
     "RiverResource": RiverResource,
-    "WTKNRELDeveloperAPIWindResource": WTKNRELDeveloperAPIWindResource,
+    "WTKNLRDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
     "OpenMeteoHistoricalSolarResource": OpenMeteoHistoricalSolarResource,
     "GOESAggregatedSolarAPI": GOESAggregatedSolarAPI,
@@ -264,6 +265,7 @@ supported_models = {
     "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
     # Storage
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
+    "StoragePerformanceModel": StoragePerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
     "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
     "SaltCavernStorageCostModel": SaltCavernStorageCostModel,

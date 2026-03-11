@@ -3,12 +3,8 @@ import numpy as np
 import openmdao.api as om
 from attrs import field, define
 
-from h2integrate.core.utilities import (
-    BaseConfig,
-    attr_filter,
-    attr_serializer,
-    check_plant_config_and_profast_params,
-)
+from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
+from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast

@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from h2integrate.resource.utilities.nrel_developer_api_keys import set_nrel_key_dot_env
+from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
 
 
 def pytest_sessionstart(session):
@@ -18,8 +18,8 @@ def pytest_sessionstart(session):
     os.environ["OPENMDAO_REPORTS"] = "none"
 
     # Set a dummy API key
-    os.environ["NREL_API_KEY"] = "a" * 40
-    set_nrel_key_dot_env()
+    os.environ["NLR_API_KEY"] = "a" * 40
+    set_nlr_key_dot_env()
 
     # Set RESOURCE_DIR to None so pulls example files from default DIR
     initial_resource_dir = os.getenv("RESOURCE_DIR")

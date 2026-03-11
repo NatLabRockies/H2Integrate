@@ -84,6 +84,8 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
         super().setup()
 
         self.add_input(
@@ -100,6 +102,14 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             desc="Hydrogen storage capacity",
         )
 
+        self.add_input(
+            "hydrogen_in",
+            val=0.0,
+            shape=n_timesteps,
+            units=f"{self.config.commodity_units}",
+            desc="Hydrogen input timeseries for average flow rate calculation",
+        )
+
     def make_storage_input_dict(self, inputs):
         storage_input = {}
 
@@ -110,15 +120,16 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             inputs["max_capacity"], f"({self.config.commodity_units})*h", "kg"
         )
 
-        # convert charge rate to kg/day (required for storage models)
-        storage_max_fill_rate = units.convert_units(
-            inputs["max_charge_rate"], f"{self.config.commodity_units}", "kg/d"
-        )
-
         storage_input["h2_storage_kg"] = max_capacity_kg[0]
 
-        # system_flow_rate must be in kg/day
-        storage_input["system_flow_rate"] = storage_max_fill_rate[0]  # kg/day
+        # system_flow_rate must be in kg/day.
+        # Per HDSAM (Papadias 2021), system_flow_rate is the average flow rate,
+        # not the maximum fill rate.
+        avg_hydrogen_in = np.mean(inputs["hydrogen_in"])
+        system_flow_rate = units.convert_units(
+            avg_hydrogen_in, f"{self.config.commodity_units}", "kg/d"
+        )
+        storage_input["system_flow_rate"] = system_flow_rate  # kg/day
 
         return storage_input
 
@@ -129,46 +140,43 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
 
 
 class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
-    """
-    Author: Kaitlin Brunik
-    Created: 7/20/2023
-    Institution: National Renewable Energy Lab
-    Description: This file outputs capital and operational costs of lined rock cavern
-    hydrogen storage.
-    It needs to be updated to with operational dynamics.
-    Costs are in 2018 USD
+    """Capital and operational cost model for lined rock cavern hydrogen storage.
 
-    Sources:
-        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-              hydrogen_storage.md in the docs
-        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+    Costs are in 2018 USD. Operational dynamics are not yet included.
+
+    References:
+        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+            hydrogen_storage.md in the docs
+        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """
-        Calculates the installed capital cost and operation and maintenance costs for lined rock
-        cavern hydrogen storage.
+        """Calculate installed capital and O&M costs for lined rock cavern hydrogen storage.
 
         Args:
-            inputs: OpenMDAO inputs containing:
-                - max_capacity: total capacity of hydrogen storage [kg]
-                - max_charge_rate: hydrogen storage charge rate [kg/h]
+            inputs: OpenMDAO inputs containing ``max_capacity`` (total capacity [kg]),
+                ``max_charge_rate`` (charge rate [kg/h]), and ``hydrogen_in``
+                (timeseries [kg/h]).
+            outputs: OpenMDAO outputs dict.
+            discrete_inputs: OpenMDAO discrete inputs dict.
+            discrete_outputs: OpenMDAO discrete outputs dict.
 
-        Returns via outputs:
-            - CapEx (float): the installed capital cost in 2018 [USD] (including compressor)
-            - OpEx (float): the OPEX (annual, fixed) in 2018 excluding electricity costs [USD/yr]
+        Sets:
+            outputs["CapEx"]: Installed capital cost in 2018 USD (including compressor).
+            outputs["OpEx"]: Annual fixed O&M in 2018 USD/yr (excluding electricity).
 
-        Additional parameters from storage_input:
-            - h2_storage_kg (float): total capacity of hydrogen storage [kg]
-            - system_flow_rate (float): [kg/day]
-            - labor_rate (float): (default: 37.40) [$2018/hr]
-            - insurance (float): (default: 1%) [decimal percent] - % of total investment
-            - property_taxes (float): (default: 1%) [decimal percent] - % of total investment
-            - licensing_permits (float): (default: 0.1%) [decimal percent] - % of total investment
-            - compressor_om (float): (default: 4%) [decimal percent] - % of compressor investment
-            - facility_om (float): (default: 1%) [decimal percent] - % of facility investment
-                minus compressor investment
+        Notes:
+            Additional parameters from ``storage_input``:
+
+            - h2_storage_kg (float): Total capacity of hydrogen storage [kg].
+            - system_flow_rate (float): Average flow rate [kg/day].
+            - labor_rate (float): Labor rate, default 37.40 [$2018/hr].
+            - insurance (float): Fraction of total investment, default 1%.
+            - property_taxes (float): Fraction of total investment, default 1%.
+            - licensing_permits (float): Fraction of total investment, default 0.1%.
+            - compressor_om (float): Fraction of compressor investment, default 4%.
+            - facility_om (float): Fraction of facility investment minus compressor, default 1%.
         """
         storage_input = self.make_storage_input_dict(inputs)
 
@@ -257,45 +265,43 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
 
 
 class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
-    """
-    Author: Kaitlin Brunik
-    Created: 7/20/2023
-    Institution: National Renewable Energy Lab
-    Description: This file outputs capital and operational costs of salt cavern hydrogen storage.
-    It needs to be updated to with operational dynamics.
-    Costs are in 2018 USD
+    """Capital and operational cost model for salt cavern hydrogen storage.
 
-    Sources:
-        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-              hydrogen_storage.md in the docs
-        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+    Costs are in 2018 USD. Operational dynamics are not yet included.
+
+    References:
+        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+            hydrogen_storage.md in the docs
+        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """
-        Calculates the installed capital cost and operation and maintenance costs for salt cavern
-        hydrogen storage.
+        """Calculate installed capital and O&M costs for salt cavern hydrogen storage.
 
         Args:
-            inputs: OpenMDAO inputs containing:
-                - max_capacity: total capacity of hydrogen storage [kg]
-                - max_charge_rate: hydrogen storage charge rate [kg/h]
+            inputs: OpenMDAO inputs containing ``max_capacity`` (total capacity [kg]),
+                ``max_charge_rate`` (charge rate [kg/h]), and ``hydrogen_in``
+                (timeseries [kg/h]).
+            outputs: OpenMDAO outputs dict.
+            discrete_inputs: OpenMDAO discrete inputs dict.
+            discrete_outputs: OpenMDAO discrete outputs dict.
 
-        Returns via outputs:
-            - CapEx (float): the installed capital cost in 2018 [USD] (including compressor)
-            - OpEx (float): the OPEX (annual, fixed) in 2018 excluding electricity costs [USD/yr]
+        Sets:
+            outputs["CapEx"]: Installed capital cost in 2018 USD (including compressor).
+            outputs["OpEx"]: Annual fixed O&M in 2018 USD/yr (excluding electricity).
 
-        Additional parameters from storage_input:
-            - h2_storage_kg (float): total capacity of hydrogen storage [kg]
-            - system_flow_rate (float): [kg/day]
-            - labor_rate (float): (default: 37.40) [$2018/hr]
-            - insurance (float): (default: 1%) [decimal percent] - % of total investment
-            - property_taxes (float): (default: 1%) [decimal percent] - % of total investment
-            - licensing_permits (float): (default: 0.1%) [decimal percent] - % of total investment
-            - compressor_om (float): (default: 4%) [decimal percent] - % of compressor investment
-            - facility_om (float): (default: 1%) [decimal percent] - % of facility investment
-                minus compressor investment
+        Notes:
+            Additional parameters from ``storage_input``:
+
+            - h2_storage_kg (float): Total capacity of hydrogen storage [kg].
+            - system_flow_rate (float): Average flow rate [kg/day].
+            - labor_rate (float): Labor rate, default 37.40 [$2018/hr].
+            - insurance (float): Fraction of total investment, default 1%.
+            - property_taxes (float): Fraction of total investment, default 1%.
+            - licensing_permits (float): Fraction of total investment, default 0.1%.
+            - compressor_om (float): Fraction of compressor investment, default 4%.
+            - facility_om (float): Fraction of facility investment minus compressor, default 1%.
         """
         storage_input = self.make_storage_input_dict(inputs)
 
@@ -384,53 +390,52 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
 
 
 class PipeStorageCostModel(HydrogenStorageBaseCostModel):
-    """
-    Author: Kaitlin Brunik
-    Updated: 7/20/2023
-    Institution: National Renewable Energy Lab
-    Description: This file outputs capital and operational costs of underground pipeline hydrogen
-    storage. It needs to be updated to with operational dynamics and physical size
-    (footprint and mass).
-    Oversize pipe: pipe OD = 24'' schedule 60 [1]
-    Max pressure: 100 bar
-    Costs are in 2018 USD
+    """Capital and operational cost model for underground pipeline hydrogen storage.
 
-    Sources:
-        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-              hydrogen_storage.md in the docs
-        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+    Costs are in 2018 USD. Operational dynamics and physical size (footprint and
+    mass) are not yet included.
+
+    Notes:
+        - Oversize pipe: pipe OD = 24" schedule 60 [1].
+        - Max pressure: 100 bar.
+
+    References:
+        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+            hydrogen_storage.md in the docs
+        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """
-        Calculates the installed capital cost and operation and maintenance costs for underground
-        pipe hydrogen storage.
+        """Calculate installed capital and O&M costs for underground pipe hydrogen storage.
 
         Args:
-            inputs: OpenMDAO inputs containing:
-                - max_capacity: total capacity of hydrogen storage [kg]
-                - max_charge_rate: hydrogen storage charge rate [kg/h]
+            inputs: OpenMDAO inputs containing ``max_capacity`` (total capacity [kg]),
+                ``max_charge_rate`` (charge rate [kg/h]), and ``hydrogen_in``
+                (timeseries [kg/h]).
+            outputs: OpenMDAO outputs dict.
+            discrete_inputs: OpenMDAO discrete inputs dict.
+            discrete_outputs: OpenMDAO discrete outputs dict.
 
-        Returns via outputs:
-            - CapEx (float): the installed capital cost in 2018 [USD] (including compressor)
-            - OpEx (float): the OPEX (annual, fixed) in 2018 excluding electricity costs [USD/yr]
-
-        Additional parameters from storage_input:
-            - h2_storage_kg (float): total capacity of hydrogen storage [kg]
-            - system_flow_rate (float): [kg/day]
-            - labor_rate (float): (default: 37.40) [$2018/hr]
-            - insurance (float): (default: 1%) [decimal percent] - % of total investment
-            - property_taxes (float): (default: 1%) [decimal percent] - % of total investment
-            - licensing_permits (float): (default: 0.1%) [decimal percent] - % of total investment
-            - compressor_om (float): (default: 4%) [decimal percent] - % of compressor investment
-            - facility_om (float): (default: 1%) [decimal percent] - % of facility investment
-                minus compressor investment
+        Sets:
+            outputs["CapEx"]: Installed capital cost in 2018 USD (including compressor).
+            outputs["OpEx"]: Annual fixed O&M in 2018 USD/yr (excluding electricity).
 
         Notes:
-            - Oversize pipe: pipe OD = 24'' schedule 60
-            - Max pressure: 100 bar
-            - compressor_output_pressure must be 100 bar for underground pipe storage
+            - Oversize pipe: pipe OD = 24" schedule 60.
+            - Max pressure: 100 bar.
+            - ``compressor_output_pressure`` must be 100 bar for underground pipe storage.
+
+            Additional parameters from ``storage_input``:
+
+            - h2_storage_kg (float): Total capacity of hydrogen storage [kg].
+            - system_flow_rate (float): Average flow rate [kg/day].
+            - labor_rate (float): Labor rate, default 37.40 [$2018/hr].
+            - insurance (float): Fraction of total investment, default 1%.
+            - property_taxes (float): Fraction of total investment, default 1%.
+            - licensing_permits (float): Fraction of total investment, default 0.1%.
+            - compressor_om (float): Fraction of compressor investment, default 4%.
+            - facility_om (float): Fraction of facility investment minus compressor, default 1%.
         """
         storage_input = self.make_storage_input_dict(inputs)
 

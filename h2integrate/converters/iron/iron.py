@@ -7,7 +7,7 @@ import pandas as pd
 from attrs import define
 from pandas import DataFrame
 
-from h2integrate.core.utilities import load_yaml
+from h2integrate.core.file_utils import load_yaml
 
 
 # Get model locations loaded up to refer to
