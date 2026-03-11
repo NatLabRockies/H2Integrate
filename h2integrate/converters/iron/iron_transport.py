@@ -20,6 +20,8 @@ class IronTransportPerformanceConfig(BaseConfig):
         converter=(str.lower, str.capitalize),
         validator=contains(["None", "Duluth", "Chicago", "Cleveland", "Buffalo"]),
     )
+    origin: str = field()
+    destination: str = field()
 
     #
     def __attrs_post_init__(self):
@@ -40,10 +42,19 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             strict=False,
             additional_cls_name=self.__class__.__name__,
         )
-        lat = self.options["plant_config"]["sites"].get("site", {}).get("latitude")
-        lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
-        self.add_input("destination_latitude", val=lat, units="deg")
-        self.add_input("destination_longitude", val=lon, units="deg")
+
+        # Look up origin and destination from config
+        origin = self.options["tech_config"]["sites"].get("ore_site")
+        destination = self.options["tech_config"]["sites"].get("plant_site")
+        orig_lat = self.options["plant_config"]["sites"].get(origin, {}).get("latitude")
+        orig_lon = self.options["plant_config"]["sites"].get(origin, {}).get("longitude")
+        dest_lat = self.options["plant_config"]["sites"].get(destination, {}).get("latitude")
+        dest_lon = self.options["plant_config"]["sites"].get(destination, {}).get("longitude")
+
+        self.add_input("origin_latitude", val=orig_lat, units="deg")
+        self.add_input("origin_longitude", val=orig_lon, units="deg")
+        self.add_input("destination_latitude", val=dest_lat, units="deg")
+        self.add_input("destination_longitude", val=dest_lon, units="deg")
 
         self.add_output("land_transport_distance", val=0.0, units="km")
         self.add_output("water_transport_distance", val=0.0, units="km")
@@ -160,6 +171,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             outputs["land_transport_distance"] = land_distance_km
             outputs["water_transport_distance"] = water_distance_km
 
+        print(outputs["land_transport_distance"])
+
 
 @define(kw_only=True)
 class IronTransportCostConfig(BaseConfig):
@@ -202,6 +215,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.add_output("ore_profit_margin", val=0.0, units="USD/t")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        print(inputs["land_transport_distance"])
         water_coeff_dict = load_top_down_coeffs(
             ["Barge Shipping Cost"], cost_year=self.config.cost_year
         )
