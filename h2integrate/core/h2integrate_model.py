@@ -1251,7 +1251,7 @@ class H2IntegrateModel:
 
         self.prob.run_driver()
 
-    def post_process(self, summarize_sql=False, show_plots=False):
+    def post_process(self, print_results=True, summarize_sql=False, show_plots=False):
         """
         Post-process the results of the OpenMDAO model.
 
@@ -1265,9 +1265,10 @@ class H2IntegrateModel:
         Also, if `show_plots` is set to True, then any performance models with post-processing
         plots available will be run and shown.
         """
-        # Use custom summary printer instead of OpenMDAO's built-in printing so we can
-        # suppress internal value printing and display only mean values.
-        self.print_results(self.prob.model, excludes=["*resource_data"])
+        if print_results:
+            # Use custom summary printer instead of OpenMDAO's built-in printing so we can
+            # suppress internal value printing and display only mean values.
+            self.print_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
             convert_sql_to_csv_summary(self.recorder_path, save_to_file=True)
