@@ -1,7 +1,7 @@
 """
 Dummy components for demonstrating multivariable streams.
 
-These components are used in example 29 to showcase the multivariable stream
+These components are used in example 32 to showcase the multivariable stream
 connection feature. They produce and consume gas_mixture streams with
 5 constituent variables.
 """

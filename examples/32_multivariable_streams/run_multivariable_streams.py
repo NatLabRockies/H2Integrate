@@ -1,5 +1,5 @@
 """
-Example 29: Multivariable Streams with Gas Combiner
+Example 32: Multivariable Streams with Gas Combiner
 
 This example demonstrates:
 1. Multivariable streams - connecting multiple related variables with a single connection
@@ -23,7 +23,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create and setup the H2Integrate model
-model = H2IntegrateModel("29_multivariable_streams.yaml")
+model = H2IntegrateModel("32_multivariable_streams.yaml")
 
 model.setup()
 
