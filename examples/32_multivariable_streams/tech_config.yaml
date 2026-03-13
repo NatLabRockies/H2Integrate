@@ -14,7 +14,7 @@ technologies:
         base_flow_rate: 150.0  # kg/hr
         base_temperature: 310.0  # K
         base_pressure: 12.0  # bar
-        flow_variation: 0.3  # ±30% variation
+        flow_variation: 45.0  # ±45 kg/hr variation
         temp_variation: 15.0  # ±15 K variation
         pressure_variation: 2.0  # ±2 bar variation
         random_seed: 42  # for reproducibility
@@ -32,7 +32,7 @@ technologies:
         base_flow_rate: 100.0  # kg/hr - different flow rate
         base_temperature: 350.0  # K - hotter stream
         base_pressure: 8.0  # bar - lower pressure
-        flow_variation: 0.25  # ±25% variation
+        flow_variation: 25.0  # ±25 kg/hr variation
         temp_variation: 20.0  # ±20 K variation
         pressure_variation: 1.5  # ±1.5 bar variation
         random_seed: 123  # different seed for different random pattern
@@ -45,7 +45,7 @@ technologies:
       model: GasStreamCombinerPerformanceModel
     model_inputs:
       performance_parameters:
-        stream_type: gas_mixture
+        stream_type: wellhead_gas_mixture
         in_streams: 2
   gas_consumer:
     performance_model:

@@ -2,17 +2,20 @@
 Dummy components for demonstrating multivariable streams.
 
 These components are used in example 32 to showcase the multivariable stream
-connection feature. They produce and consume gas_mixture streams with
+connection feature. They produce and consume wellhead_gas_mixture streams with
 5 constituent variables.
 """
 
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, gte_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseClass,
+    CostModelBaseConfig,
+    PerformanceModelBaseClass,
+)
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 
 
@@ -25,7 +28,7 @@ class DummyGasProducerPerformanceConfig(BaseConfig):
         base_flow_rate: Base gas flow rate in kg/h
         base_temperature: Base gas temperature in K
         base_pressure: Base gas pressure in bar
-        flow_variation: Fractional variation in flow rate (0-1)
+        flow_variation: Absolute variation in flow rate in kg/h
         temp_variation: Variation in temperature in K
         pressure_variation: Variation in pressure in bar
         random_seed: Seed for random number generator (for reproducibility)
@@ -34,117 +37,122 @@ class DummyGasProducerPerformanceConfig(BaseConfig):
     base_flow_rate: float = field(default=100.0, validator=gt_zero)
     base_temperature: float = field(default=300.0, validator=gt_zero)
     base_pressure: float = field(default=10.0, validator=gt_zero)
-    flow_variation: float = field(default=0.2, validator=gte_zero)
+    flow_variation: float = field(default=20.0, validator=gte_zero)
     temp_variation: float = field(default=10.0, validator=gte_zero)
     pressure_variation: float = field(default=1.0, validator=gte_zero)
     random_seed: int | None = field(default=None)
 
 
-class DummyGasProducerPerformance(om.ExplicitComponent):
+class DummyGasProducerPerformance(PerformanceModelBaseClass):
     """
-    A dummy gas producer component that outputs a 'gas_mixture' multivariable stream.
+    A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
 
     This component produces time-varying outputs for each constituent variable
-    of the gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    of the wellhead_gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
     gas_temperature, gas_pressure).
 
     The outputs use random variations around base values.
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "gas"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
         self.config = DummyGasProducerPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        super().setup()
 
-        # Add all gas_mixture stream outputs
-        for var_name, var_props in multivariable_streams["gas_mixture"].items():
+        # Add all wellhead_gas_mixture stream outputs
+        for var_name, var_props in multivariable_streams["wellhead_gas_mixture"].items():
             self.add_output(
                 f"{var_name}_out",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=var_props.get("units"),
                 desc=var_props.get("desc", ""),
             )
 
     def compute(self, inputs, outputs):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         # Set random seed for reproducibility if specified
         rng = np.random.default_rng(self.config.random_seed)
 
-        # Generate random variations around base values
         base_flow = self.config.base_flow_rate
         base_temp = self.config.base_temperature
         base_pressure = self.config.base_pressure
 
-        # Gas flow varies randomly within ±variation fraction
+        # Gas flow varies randomly within ±flow_variation (absolute, kg/h)
         flow_noise = rng.uniform(
-            -self.config.flow_variation, self.config.flow_variation, n_timesteps
+            -self.config.flow_variation, self.config.flow_variation, self.n_timesteps
         )
-        outputs["gas_flow_out"] = base_flow * (1.0 + flow_noise)
+        outputs["gas_flow_out"] = base_flow + flow_noise
 
         # Hydrogen fraction: 0.7 to 0.9 (random)
-        outputs["hydrogen_fraction_out"] = rng.uniform(0.7, 0.9, n_timesteps)
+        outputs["hydrogen_fraction_out"] = rng.uniform(0.7, 0.9, self.n_timesteps)
 
         # Oxygen fraction: 0.0 to 0.05 (random)
-        outputs["oxygen_fraction_out"] = rng.uniform(0.0, 0.05, n_timesteps)
+        outputs["oxygen_fraction_out"] = rng.uniform(0.0, 0.05, self.n_timesteps)
 
         # Temperature varies randomly within ±temp_variation K
         temp_noise = rng.uniform(
-            -self.config.temp_variation, self.config.temp_variation, n_timesteps
+            -self.config.temp_variation, self.config.temp_variation, self.n_timesteps
         )
         outputs["gas_temperature_out"] = base_temp + temp_noise
 
         # Pressure varies randomly within ±pressure_variation bar
         pres_noise = rng.uniform(
-            -self.config.pressure_variation, self.config.pressure_variation, n_timesteps
+            -self.config.pressure_variation, self.config.pressure_variation, self.n_timesteps
         )
         outputs["gas_pressure_out"] = base_pressure + pres_noise
 
+        # Standardized outputs from PerformanceModelBaseClass
+        rated_production = base_flow + self.config.flow_variation
+        outputs["gas_out"] = outputs["gas_flow_out"]
+        outputs["total_gas_produced"] = np.sum(outputs["gas_flow_out"]) * (self.dt / 3600)
+        outputs["rated_gas_production"] = rated_production
+        outputs["annual_gas_produced"] = (
+            outputs["total_gas_produced"] / self.fraction_of_year_simulated
+        )
+        outputs["capacity_factor"] = outputs["total_gas_produced"] / (
+            rated_production * self.n_timesteps * (self.dt / 3600)
+        )
 
-class DummyGasConsumerPerformance(om.ExplicitComponent):
+
+class DummyGasConsumerPerformance(PerformanceModelBaseClass):
     """
-    A dummy gas consumer component that takes in a 'gas_mixture' multivariable stream.
+    A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
 
     This component demonstrates receiving all constituent variables of a
-    gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    wellhead_gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
     gas_temperature, gas_pressure) and performing simple calculations.
 
     The component calculates some derived quantities from the input stream.
+    The primary commodity output is hydrogen (extracted from the gas stream).
     """
 
     def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
+        super().initialize()
+        self.commodity = "hydrogen"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        super().setup()
 
-        # Add all gas_mixture stream inputs
-        for var_name, var_props in multivariable_streams["gas_mixture"].items():
+        # Add all wellhead_gas_mixture stream inputs
+        for var_name, var_props in multivariable_streams["wellhead_gas_mixture"].items():
             self.add_input(
                 f"{var_name}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=var_props.get("units"),
                 desc=var_props.get("desc", ""),
             )
 
         # Add some derived outputs
-        self.add_output(
-            "hydrogen_mass_flow",
-            val=0.0,
-            shape=n_timesteps,
-            units="kg/h",
-            desc="Mass flow rate of hydrogen component",
-        )
         self.add_output(
             "total_gas_consumed", val=0.0, units="kg", desc="Total gas consumed over the simulation"
         )
@@ -159,14 +167,26 @@ class DummyGasConsumerPerformance(om.ExplicitComponent):
         pressure = inputs["gas_pressure_in"]
 
         # Hydrogen mass flow is total flow times hydrogen fraction
-        outputs["hydrogen_mass_flow"] = gas_flow * h2_fraction
+        hydrogen_mass_flow = gas_flow * h2_fraction
 
         # Total gas consumed (assuming hourly data, sum all flow rates)
-        outputs["total_gas_consumed"] = np.sum(gas_flow)
+        outputs["total_gas_consumed"] = np.sum(gas_flow) * (self.dt / 3600)
 
         # Average temperature and pressure
         outputs["avg_temperature"] = np.mean(temperature)
         outputs["avg_pressure"] = np.mean(pressure)
+
+        # Standardized outputs from PerformanceModelBaseClass
+        outputs["hydrogen_out"] = hydrogen_mass_flow
+        outputs["total_hydrogen_produced"] = np.sum(hydrogen_mass_flow) * (self.dt / 3600)
+        outputs["rated_hydrogen_production"] = np.max(hydrogen_mass_flow)
+        outputs["annual_hydrogen_produced"] = (
+            outputs["total_hydrogen_produced"] / self.fraction_of_year_simulated
+        )
+        max_possible = np.max(hydrogen_mass_flow) * self.n_timesteps * (self.dt / 3600)
+        outputs["capacity_factor"] = (
+            outputs["total_hydrogen_produced"] / max_possible if max_possible > 0 else 0.0
+        )
 
 
 @define(kw_only=True)

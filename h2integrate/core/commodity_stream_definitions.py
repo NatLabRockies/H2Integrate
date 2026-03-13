@@ -7,7 +7,7 @@ This module contains:
 """
 
 multivariable_streams = {
-    "gas_mixture": {
+    "wellhead_gas_mixture": {
         "gas_flow": {
             "units": "kg/h",
             "desc": "Total mass flow rate of gas in the stream",
@@ -29,20 +29,7 @@ multivariable_streams = {
             "desc": "Pressure of the gas stream",
         },
     },
-    "electricity_ac": {
-        "ac_power": {
-            "units": "kW",
-            "desc": "AC power of the electricity stream",
-        },
-        "voltage": {
-            "units": "V",
-            "desc": "Voltage of the electricity stream",
-        },
-        "frequency": {
-            "units": "Hz",
-            "desc": "Frequency of the electricity stream",
-        },
-    },
+    # Future multivariable stream definitions can be added here
 }
 
 

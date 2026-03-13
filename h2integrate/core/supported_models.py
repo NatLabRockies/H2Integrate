@@ -104,14 +104,15 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
 )
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
+from h2integrate.converters.hydrogen.steam_methane_reformer import (
+    SteamMethaneReformerCostModel,
+    SteamMethaneReformerPerformanceModel,
+)
 from h2integrate.converters.natural_gas.dummy_gas_components import (
     DummyGasConsumerCost,
     DummyGasProducerCost,
     DummyGasConsumerPerformance,
     DummyGasProducerPerformance,
-from h2integrate.converters.hydrogen.steam_methane_reformer import (
-    SteamMethaneReformerCostModel,
-    SteamMethaneReformerPerformanceModel,
 )
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import (

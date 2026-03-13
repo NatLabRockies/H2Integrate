@@ -8,7 +8,7 @@ This example demonstrates:
 Two gas producers with different properties feed into a combiner, which outputs
 a single combined stream to a consumer.
 
-The gas_mixture stream includes:
+The wellhead_gas_mixture stream includes:
 - gas_flow (kg/h): Total mass flow rate
 - hydrogen_fraction: Fraction of hydrogen
 - oxygen_fraction: Fraction of oxygen
@@ -60,7 +60,7 @@ print(f"  H2 Fraction: mean={h2_out.mean():.3f} (weighted avg)")
 
 # Get derived outputs from gas_consumer
 print("\nGas Consumer Derived Outputs:")
-h2_mass_flow = model.prob.get_val("gas_consumer.hydrogen_mass_flow", units="kg/h")
+h2_mass_flow = model.prob.get_val("gas_consumer.hydrogen_out", units="kg/h")
 total_consumed = model.prob.get_val("gas_consumer.total_gas_consumed", units="kg")
 avg_temp = model.prob.get_val("gas_consumer.avg_temperature", units="K")
 avg_pressure = model.prob.get_val("gas_consumer.avg_pressure", units="bar")
