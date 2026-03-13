@@ -1,4 +1,5 @@
 import shutil
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -72,8 +73,6 @@ def test_custom_model_name_clash(temp_dir, subtests):
             "model": "new_electrolyzer_cost",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
-
-        from copy import deepcopy
 
         tech_config_data["technologies"]["electrolyzer2"] = deepcopy(
             tech_config_data["technologies"]["electrolyzer"]
@@ -433,3 +432,47 @@ def test_invalid_finance_group_combination(subtests):
             h2i = H2IntegrateModel(h2i_config)
             h2i.setup()
             assert expected_msg == str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_system_order(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+
+    h2i_config = {
+        "name": "H2I",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    h2i = H2IntegrateModel(h2i_config)
+    h2i.setup()
+
+    expected_names = [
+        "wind",
+        "wind_to_combiner_cable",
+        "solar",
+        "solar_to_combiner_cable",
+        "combiner",
+        "combiner_to_battery_cable",
+        "battery",
+        "battery_to_electrolyzer_cable",
+        "electrolyzer",
+        "electrolyzer_to_h2_storage_pipe",
+        "h2_storage",
+        "steel",
+        "finance_subgroup_electricity",
+        "finance_subgroup_hydrogen",
+        "finance_subgroup_steel",
+    ]
+
+    names = [sys.name for sys in h2i.model.plant.system_iter(include_self=False, recurse=False)]
+
+    with subtests.test("Test expected names are all present"):
+        assert sorted(names) == sorted(expected_names)
+
+    with subtests.test("Test expected names are in the correct order"):
+        assert names == expected_names

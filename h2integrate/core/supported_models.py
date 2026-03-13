@@ -109,6 +109,9 @@ from h2integrate.converters.natural_gas.dummy_gas_components import (
     DummyGasProducerCost,
     DummyGasConsumerPerformance,
     DummyGasProducerPerformance,
+from h2integrate.converters.hydrogen.steam_methane_reformer import (
+    SteamMethaneReformerCostModel,
+    SteamMethaneReformerPerformanceModel,
 )
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import (
@@ -212,6 +215,8 @@ supported_models = {
     "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
     "LinearH2FuelCellPerformanceModel": LinearH2FuelCellPerformanceModel,
     "H2FuelCellCostModel": H2FuelCellCostModel,
+    "SteamMethaneReformerPerformanceModel": SteamMethaneReformerPerformanceModel,
+    "SteamMethaneReformerCostModel": SteamMethaneReformerCostModel,
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
