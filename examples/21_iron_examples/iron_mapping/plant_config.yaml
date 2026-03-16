@@ -1,16 +1,30 @@
 name: plant_config
-description: This plant is located in MN, USA...
+description: This file contains plant-specific parameters for the iron mapping example.
 sites:
   site:
     latitude: 41.717
     longitude: -88.398
-# array of arrays containing left-to-right technology
-# interconnections; can support bidirectional connections
-# with the reverse definition.
-# this will naturally grow as we mature the interconnected tech
-technology_interconnections: []
+technology_interconnections:
+  # Connect feedstocks to iron mine.
+  - [mine_electricity_feedstock, iron_mine, electricity, cable]
+  - [mine_crude_ore_feedstock, iron_mine, crude_ore, crude_ore_transport]
+  # Connect iron_ore price and processed_ore_feedstock to iron_transport
+  # Connect the LCOI of iron ore to the price of a feedstock component representing the ore to be used in DRI
+  - [finance_subgroup_iron_ore, processed_ore_feedstock, [price_iron_ore, price]]
+  # Connect the ore feedstock available to the iron plant
+  - [processed_ore_feedstock, iron_plant, iron_ore, iron_ore_transport]
+  - [dri_grid_feedstock, iron_plant, electricity, cable]
+  - [hydrogen_feedstock, iron_plant, hydrogen, pipe]
+  - [water_feedstock, iron_plant, water, pipe]
+  - [natural_gas_feedstock, iron_plant, natural_gas, pipe]
+  # Use the iron ore consumed by the iron plant to calculate transport costs
+  - [iron_plant, iron_transport, [iron_ore_consumed, iron_ore_in]]
 plant:
   plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+    timezone: 0
 finance_parameters:
   finance_groups:
     finance_model: ProFastLCO
@@ -38,7 +52,21 @@ finance_parameters:
     cost_year_adjustment_inflation: 0.025
     target_dollar_year: 2022
   finance_subgroups:
-    iron:
-      commodity: iron
-      commodity_stream: iron
-      technologies: [iron]
+    iron_ore:
+      commodity: iron_ore
+      commodity_stream: iron_mine
+      technologies:
+        - iron_mine
+        - mine_electricity_feedstock
+        - mine_crude_ore_feedstock
+    pig_iron:
+      commodity: pig_iron
+      commodity_stream: iron_plant
+      technologies:
+        - processed_ore_feedstock
+        - iron_transport
+        - iron_plant
+        - dri_grid_feedstock
+        - hydrogen_feedstock
+        - water_feedstock
+        - natural_gas_feedstock

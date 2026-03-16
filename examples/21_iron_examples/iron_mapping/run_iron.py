@@ -26,21 +26,23 @@ if rerun_model:
     model = H2IntegrateModel("iron_map.yaml")
     model.run()
 
+    model.post_process(summarize_sql=True)
+
 # Define filepaths
-ex_28_dir = EXAMPLE_DIR / "28_iron_map"
-ex_28_out_dir = EXAMPLE_DIR / "28_iron_map/ex_28_out"
-save_plot_filepath = ex_28_out_dir / "example_28_iron_map.png"
+ex_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
+ex_out_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping/ex_out"
+save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
-case_results_filepath = ex_28_out_dir / "cases.csv"
-ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
+case_results_filepath = ex_out_dir / "cases.csv"
+ore_prices_filepath = ex_dir / "example_ore_prices.csv"
 shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
+shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
 
 # Plot the LCOI results with geopandas and contextily
 # NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=case_results_filepath,
-    metric_to_plot="iron.LCOI (USD/kg)",
+    metric_to_plot="finance_subgroup_pig_iron.LCOP (USD/kg)",
     map_preferences={
         "figsize": (10, 8),
         "colorbar_label": "Levelized Cost of\nIron [$/kg]",

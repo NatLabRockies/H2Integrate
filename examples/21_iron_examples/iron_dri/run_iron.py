@@ -21,7 +21,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model
-model = H2IntegrateModel("21_iron.yaml")
+model = H2IntegrateModel("single_site_iron.yaml")
 
 # Load cases
 case_file = Path("test_inputs.csv")

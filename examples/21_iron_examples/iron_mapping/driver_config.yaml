@@ -1,7 +1,7 @@
 name: driver_config
 description: This analysis runs a hybrid plant to match the first example in H2Integrate
 general:
-  folder_output: outputs
+  folder_output: ex_out
 driver:
   design_of_experiments:
     flag: true
@@ -21,22 +21,23 @@ design_variables:
       units: deg
       lower: -180.0
       upper: 180.0
-  iron:
-    LCOE:
+  dri_grid_feedstock:
+    price:
       flag: true
       units: USD/MW/h
       lower: 0
       upper: 100
-    LCOH:
+  hydrogen_feedstock:
+    price:
       flag: true
       units: USD/kg
       lower: 0
       upper: 10
 objective:
-  name: iron.LCOI
+  name: finance_subgroup_pig_iron.LCOP
 recorder:
   file: cases.sql
   overwrite_recorder: true
   flag: true
-  includes: [site.latitude, site.longitude, iron.LCOI]
+  includes: [site.latitude, site.longitude, finance_subgroup_pig_iron.LCOP]
   excludes: ['*']

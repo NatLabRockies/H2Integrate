@@ -7,19 +7,10 @@ from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
-from h2integrate.converters.iron.iron_mine import (
-    IronMineCostComponent,
-    IronMinePerformanceComponent,
-)
-from h2integrate.converters.iron.iron_plant import (
-    IronPlantCostComponent,
-    IronPlantPerformanceComponent,
-)
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
-from h2integrate.converters.iron.iron_wrapper import IronComponent
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 from h2integrate.finances.numpy_financial_npv import NumpyFinancialNPV
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
@@ -214,11 +205,6 @@ supported_models = {
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
-    "IronComponent": IronComponent,
-    "IronMinePerformanceComponent": IronMinePerformanceComponent,
-    "IronMineCostComponent": IronMineCostComponent,
-    "IronPlantPerformanceComponent": IronPlantPerformanceComponent,
-    "IronPlantCostComponent": IronPlantCostComponent,
     "MartinIronMinePerformanceComponent": MartinIronMinePerformanceComponent,  # standalone model
     "MartinIronMineCostComponent": MartinIronMineCostComponent,  # standalone model
     "NaturalGasIronReductionPlantPerformanceComponent": NaturalGasIronReductionPlantPerformanceComponent,  # noqa: E501

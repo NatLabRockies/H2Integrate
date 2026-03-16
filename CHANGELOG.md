@@ -1,23 +1,35 @@
 # Changelog
 
 ## Unreleased
+- Update iron models and examples [PR 601](https://github.com/NatLabRockies/H2Integrate/pull/601)
+  - Remove outdated iron files
+  - Consolidate iron examples into a single main folder
+  - Add documentation for Rosner iron DRI and steel EAF models
+- Breaks out pyomo controller simulation code from base class to individual controllers. [PR 587](https://github.com/NatLabRockies/H2Integrate/pull/587)
 
-- Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
-  associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
-- Removed unnecessary `tech_name` designations for some control techs in yamls [PR 559](https://github.com/NatLabRockies/H2Integrate/pull/559)
+## 0.7.1 [March 13, 2026]
+
+### Updates
+
 - PySAM battery now takes in charge rate and storage capacity as inputs [PR 557](https://github.com/NatLabRockies/H2Integrate/pull/557)
+- Removed unnecessary `tech_name` designations for some control techs in yamls [PR 559](https://github.com/NatLabRockies/H2Integrate/pull/559)
+- Added a generic storage model that is compatible with the Pyomo controllers [PR 571](https://github.com/NatLabRockies/H2Integrate/pull/571)
+- Add hydrogen steam methane reforming (SMR) performance and cost converter [PR 594](https://github.com/NatLabRockies/H2Integrate/pull/594)
+- Introduced a keyword arg to `post_process` to allow users to choose if results are printed to the console. [PR 597](https://github.com/NatLabRockies/H2Integrate/pull/597)
 - Renamed `min_charge_percent`, `max_charge_percent`, and `init_charge_percent` to
   `min_charge_fraction`, `max_charge_fraction`, and `init_charge_fraction` across all
   configuration classes, YAML configs, tests, and examples. These values are fractions
   between 0 and 1, so the previous "percent" naming was misleading. [PR 581](https://github.com/NatLabRockies/H2Integrate/pull/581)
-- Breaks out pyomo controller simulation code from base class to individual controllers. [PR 587](https://github.com/NatLabRockies/H2Integrate/pull/587)
-- Added a test and docs for sql to csv. [PR 582](https://github.com/NatLabRockies/H2Integrate/pull/582)
-- Fixed docs/example drift in design of experiments case. [PR 584](https://github.com/NatLabRockies/H2Integrate/pull/584)
-- Switch to using NLR instead of NREL throughout, especially for API key usage for resource acquisition. [PR 583](https://github.com/NatLabRockies/H2Integrate/pull/583)
 - Reorganized utilities, split them out to appropriate modules [PR 586](https://github.com/NatLabRockies/H2Integrate/pull/586)
-- Added a generic storage model that is compatible with the Pyomo controllers [PR 571](https://github.com/NatLabRockies/H2Integrate/pull/571)
+- Updates the PR Changelog requirement to include complete descriptions of updates and a link to the
+  associated PR. [PR 572](https://github.com/NatLabRockies/H2Integrate/pull/572)
+- Added a test and docs for sql to csv. [PR 582](https://github.com/NatLabRockies/H2Integrate/pull/582)
+- Switch to using NLR instead of NREL throughout, especially for API key usage for resource acquisition. [PR 583](https://github.com/NatLabRockies/H2Integrate/pull/583)
+
+### Fixes
+
+- Fixed docs/example drift in design of experiments case. [PR 584](https://github.com/NatLabRockies/H2Integrate/pull/584)
 - Fixed a bug within the H2 storage cost models that used max rate instead of average for H2 flows [PR 588](https://github.com/NatLabRockies/H2Integrate/pull/588)
-- Add hydrogen steam methane reforming (SMR) performance and cost converter [PR 594](https://github.com/NatLabRockies/H2Integrate/pull/594)
 - Fixed a bug in the discrete variable instantiation within the iron processing stack that caused a failure with OpenMDAO v3.43 [PR 595](https://github.com/NatLabRockies/H2Integrate/pull/595)
 - Fixed a bug in model setup where transporters were added to the system at the end of the system instead after their source [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)
 - Fixed a bug in example 1 (steel) where a cable was included between the combiner to steel, but steel uses an internal grid connection [PR 591](https://github.com/NatLabRockies/H2Integrate/pull/591)

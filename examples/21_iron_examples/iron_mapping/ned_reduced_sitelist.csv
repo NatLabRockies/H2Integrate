@@ -1,4 +1,4 @@
-site.latitude,site.longitude,iron.LCOE,iron.LCOH
+site.latitude,site.longitude,dri_grid_feedstock.price,hydrogen_feedstock.price
 39.179,-94.644,58.24602573,7.819127689
 40.639,-94.179,51.41859144,6.486845574
 42.135,-74.231,54.87195632,9.087358988
