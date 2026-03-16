@@ -290,7 +290,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
         "max_capacity": 10.0,  # kg
         "max_charge_fraction": 1.0,  # fraction (0-1)
         "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 0.0,  # fraction (0-1)
+        "init_charge_fraction": 0.75,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 1.0,  # kg/time step
         "charge_equals_discharge": False,
@@ -302,10 +302,10 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
             0.0,
             0.0,
             0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
             1.0,
         ],  # Example: 10 time steps
     }
@@ -315,7 +315,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
         "max_capacity": 10.0,  # kg
         "max_charge_fraction": 1.0,  # fraction (0-1)
         "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 0.0,  # fraction (0-1)
+        "init_charge_fraction": 0.75,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 1.0,  # kg/time step
         "charge_equals_discharge": False,
@@ -326,10 +326,10 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
             0.0,
             0.0,
             0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
             1.0,
         ],  # Example: 10 time steps with 10 kg/time step demand
     }
@@ -342,7 +342,9 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
 
         prob.model.add_subsystem(
             name="IVC",
-            subsys=om.IndepVarComp(name="hydrogen_in", val=np.ones(10)),
+            subsys=om.IndepVarComp(
+                name="hydrogen_in", val=[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            ),
             promotes=["*"],
         )
 
@@ -390,7 +392,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
     pdb.set_trace()
     with subtests.test("Check output value"):
         assert prob_ioe.get_val("hydrogen_set_point", units="kg/h") == pytest.approx(
-            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         )
 
     with subtests.test("Check curtailment value"):
@@ -400,7 +402,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies_charge(s
 
     with subtests.test("Check soc value"):
         assert pytest.approx(prob_ioe.get_val("hydrogen_soc", units="unitless")) == np.array(
-            [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.45]
+            [0.8, 0.85, 0.9, 0.95, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
         )
 
     with subtests.test("Check missed load value"):
