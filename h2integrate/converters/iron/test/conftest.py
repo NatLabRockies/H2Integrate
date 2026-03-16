@@ -8,7 +8,9 @@ from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
 
 @fixture
 def driver_config():
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "21_iron_mn_to_il" / "driver_config.yaml")
+    driver_config = load_driver_yaml(
+        EXAMPLE_DIR / "21_iron_examples" / "iron_dri" / "driver_config.yaml"
+    )
     return driver_config
 
 

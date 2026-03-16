@@ -1936,8 +1936,10 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("28_iron_map", None)])
-def test_28_iron_map_example(subtests, temp_copy_of_example):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_mapping", None)]
+)
+def test_iron_mapping_example(subtests, temp_copy_of_example):
     import geopandas as gpd
     import matplotlib
 
@@ -1949,19 +1951,19 @@ def test_28_iron_map_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     # Define filepaths
-    ex_28_dir = example_folder
-    ex_28_out_dir = ex_28_dir / "ex_28_out"
-    ore_prices_filepath = ex_28_dir / "example_ore_prices.csv"
+    ex_dir = example_folder
+    ex_out_dir = ex_dir / "ex_out"
+    ore_prices_filepath = ex_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
-    shipping_prices_filepath = ex_28_dir / "example_shipping_prices.csv"
-    cases_csv_fpath = ex_28_out_dir / "cases.csv"
-    ex_png_fpath = ex_28_out_dir / "example_28_iron_map.png"
+    shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
+    cases_csv_fpath = ex_out_dir / "cases.csv"
+    ex_png_fpath = ex_out_dir / "example_iron_map.png"
     ex_png_fpath.unlink(missing_ok=True)
 
     # Plot LCOI results from cases.sql file, save sql data to csv
     fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=cases_csv_fpath,
-        metric_to_plot="iron.LCOI (USD/kg)",
+        metric_to_plot="finance_subgroup_pig_iron.LCOP (USD/kg)",
         map_preferences={
             "figsize": (10, 8),
             "colorbar_label": "Levelized Cost of\nIron [$/kg]",
@@ -2218,11 +2220,13 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("21_iron_mn_to_il", None)])
-def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri", None)]
+)
+def test_iron_dri_eaf_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    h2i = H2IntegrateModel(example_folder / "21_iron.yaml")
+    h2i = H2IntegrateModel(example_folder / "single_site_iron.yaml")
 
     h2i.run()
 
@@ -2241,12 +2245,12 @@ def test_21_iron_dri_eaf_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("31_iron_electrowinning", None)]
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_electrowinning", None)]
 )
-def test_31_iron_electrowinning_example(subtests, temp_copy_of_example):
+def test_iron_electrowinning_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(example_folder / "31_iron_electrowinning.yaml")
+    model = H2IntegrateModel(example_folder / "iron_electrowinning.yaml")
 
     with subtests.test("Value check on AHE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
