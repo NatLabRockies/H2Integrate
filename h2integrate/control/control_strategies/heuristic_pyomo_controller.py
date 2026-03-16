@@ -29,7 +29,7 @@ class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
             `round_trip_efficiency` is provided.
         round_trip_efficiency (float | None, optional): Combined efficiency of charging and
             discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
-            81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
+            81% efficiency). Must be `None` if `charge_efficiency` or `discharge_efficiency` are
             provided.
     """
 
