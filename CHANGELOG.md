@@ -6,6 +6,7 @@
   - Remove outdated iron files
   - Consolidate iron examples into a single main folder
   - Add documentation for Rosner iron DRI and steel EAF models
+- Breaks out pyomo controller simulation code from base class to individual controllers. [PR 587](https://github.com/NatLabRockies/H2Integrate/pull/587)
 
 ## 0.7.1 [March 13, 2026]
 

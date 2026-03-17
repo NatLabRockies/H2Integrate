@@ -6,8 +6,6 @@ technologies:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
       model: ATBWindPlantCostModel
-    dispatch_rule_set:
-      model: PyomoDispatchGenericConverter
     resource:
       type: pysam_wind
       wind_speed: 9.
@@ -37,8 +35,6 @@ technologies:
         commodity: electricity
         commodity_rate_units: kW
   battery:
-    dispatch_rule_set:
-      model: PyomoRuleStorageBaseclass
     control_strategy:
       model: OptimizedDispatchController
     performance_model:

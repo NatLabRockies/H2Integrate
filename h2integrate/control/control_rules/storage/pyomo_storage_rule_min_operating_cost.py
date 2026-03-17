@@ -53,17 +53,19 @@ class PyomoRuleStorageMinOperatingCosts:
         #   The units of this are in hours, so half an hour would be 0.5, etc.
         self.time_duration = [time_duration] * len(self.blocks.index_set())
 
-    def initialize_parameters(
-        self, commodity_in: list, commodity_demand: list, dispatch_inputs: dict
-    ):
+    def initialize_parameters(self, inputs: dict, dispatch_inputs: dict):
         """Initialize parameters for optimization model
 
         Args:
-            commodity_in (list): List of generated commodity in for this time slice.
-            commodity_demand (list): The demanded commodity for this time slice.
+            inputs (dict):
+                Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
+                    f"{commodity}_in"       : Available generated commodity profile.
+                    f"{commodity}_demand"   : Demanded commodity output profile.
             dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
 
         """
+        commodity_demand = inputs[f"{self.commodity_name}_demand"]
+
         # Dispatch Parameters
         self.set_timeseries_parameter("cost_per_charge", dispatch_inputs["cost_per_charge"])
         self.set_timeseries_parameter("cost_per_discharge", dispatch_inputs["cost_per_discharge"])
