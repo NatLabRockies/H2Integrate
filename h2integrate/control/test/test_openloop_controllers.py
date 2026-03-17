@@ -174,6 +174,7 @@ def test_storage_demand_controller(subtests):
 
 @pytest.mark.unit
 def test_storage_demand_controller_round_trip_efficiency(subtests):
+    # This tests the behavior of storage efficiencies when the storage is charging and discharging
     # Get the directory of the current script
     current_dir = Path(__file__).parent
 
@@ -306,7 +307,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
             1.0,
             1.0,
             1.0,
-            1.0,
+            2.0,
         ],  # Example: 10 time steps
     }
 
@@ -330,7 +331,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
             1.0,
             1.0,
             1.0,
-            1.0,
+            2.0,
         ],  # Example: 10 time steps with 10 kg/time step demand
     }
 
@@ -343,7 +344,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         prob.model.add_subsystem(
             name="IVC",
             subsys=om.IndepVarComp(
-                name="hydrogen_in", val=[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                name="hydrogen_in", val=[2.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             ),
             promotes=["*"],
         )
@@ -388,23 +389,23 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
 
     # Run the absolute value tests for charge/discharge and round trip efficiencies
     with subtests.test("Check output value"):
-        assert prob_ioe.get_val("hydrogen_set_point", units="kg/h") == pytest.approx(
+        assert prob_rte.get_val("hydrogen_set_point", units="kg/h") == pytest.approx(
             np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         )
 
     with subtests.test("Check curtailment value"):
-        assert prob_ioe.get_val("hydrogen_unused_commodity", units="kg/h") == pytest.approx(
-            np.zeros(10)
+        assert prob_rte.get_val("hydrogen_unused_commodity", units="kg/h") == pytest.approx(
+            np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         )
 
     with subtests.test("Check soc value"):
-        assert prob_ioe.get_val("hydrogen_soc", units="unitless") == pytest.approx(
+        assert prob_rte.get_val("hydrogen_soc", units="unitless") == pytest.approx(
             np.array([0.8, 0.85, 0.9, 0.95, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0])
         )
 
     with subtests.test("Check missed load value"):
-        assert prob_ioe.get_val("hydrogen_unmet_demand", units="kg/h") == pytest.approx(
-            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        assert prob_rte.get_val("hydrogen_unmet_demand", units="kg/h") == pytest.approx(
+            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         )
 
 
