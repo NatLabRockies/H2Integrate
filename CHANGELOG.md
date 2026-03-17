@@ -7,6 +7,7 @@
   - Consolidate iron examples into a single main folder
   - Add documentation for Rosner iron DRI and steel EAF models
 - Breaks out pyomo controller simulation code from base class to individual controllers. [PR 587](https://github.com/NatLabRockies/H2Integrate/pull/587)
+- Add tests for non-one valued charge, discharge, and round-trip efficiencies for the open-loop demand controller [PR 610](https://github.com/NatLabRockies/H2Integrate/pull/610)
 
 ## 0.7.1 [March 13, 2026]
 
