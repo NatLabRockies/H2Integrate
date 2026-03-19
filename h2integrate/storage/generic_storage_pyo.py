@@ -81,21 +81,14 @@ class StoragePerformanceModelConfig(BaseConfig):
         it calculates `charge_efficiency` and `discharge_efficiency` as the square root
         of `round_trip_efficiency`.
         """
-        if self.round_trip_efficiency is not None:
-            if self.charge_efficiency is not None or self.discharge_efficiency is not None:
-                raise ValueError(
-                    "Exactly one of the following sets of parameters must be set: (a) "
-                    "`round_trip_efficiency`, or (b) both `charge_efficiency` "
-                    "and `discharge_efficiency`."
-                )
-
+        if (self.round_trip_efficiency is not None) and (
+            self.charge_efficiency is None and self.discharge_efficiency is None
+        ):
             # Calculate charge and discharge efficiencies from round-trip efficiency
             self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-        elif self.charge_efficiency is not None and self.discharge_efficiency is not None:
-            # Ensure both charge and discharge efficiencies are provided
-            pass
-        else:
+            self.round_trip_efficiency = None
+        if self.charge_efficiency is None or self.discharge_efficiency is None:
             raise ValueError(
                 "Exactly one of the following sets of parameters must be set: (a) "
                 "`round_trip_efficiency`, or (b) both `charge_efficiency` "
@@ -205,11 +198,64 @@ class StoragePerformanceModel(PerformanceModelBaseClass):
         super().setup()
 
         self.add_input(
+            f"{self.commodity}_demand",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"{self.commodity} demand",
+        )
+        self.add_input(
             f"{self.commodity}_in",
             val=0.0,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc=f"{self.commodity} input to storage",
+            desc=f"{self.commodity} in",
+        )
+
+        # Input design parameters
+        self.add_input(
+            "max_charge_rate",
+            val=self.config.max_charge_rate,
+            units=self.config.commodity_rate_units,
+            desc="Storage charge/discharge rate",
+        )
+        if not self.config.charge_equals_discharge:
+            self.add_input(
+                "max_discharge_rate",
+                val=self.config.max_discharge_rate,
+                units=self.config.commodity_rate_units,
+                desc="Storage discharge rate",
+            )
+
+        self.add_input(
+            "storage_capacity",
+            val=self.config.max_capacity,
+            units=self.commodity_amount_units,
+            desc="Storage capacity",
+        )
+
+        # Output design info
+        self.add_output(
+            "storage_duration",
+            units=f"({self.commodity_amount_units})/({self.commodity_rate_units})",
+            desc="Estimated storage duration based on max capacity and discharge rate",
+        )
+
+        # Output profiles
+        self.add_output(
+            f"unmet_{self.commodity}_demand_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Unmet {self.commodity} demand",
+        )
+
+        self.add_output(
+            f"unused_{self.commodity}_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Unused generated commodity",
         )
 
         self.add_output(
@@ -242,52 +288,6 @@ class StoragePerformanceModel(PerformanceModelBaseClass):
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc=f"{self.commodity} input and output from storage",
-        )
-
-        self.add_input(
-            "max_charge_rate",
-            val=self.config.max_charge_rate,
-            units=self.config.commodity_rate_units,
-            desc="Storage charge rate",
-        )
-
-        if not self.config.charge_equals_discharge:
-            self.add_input(
-                "max_discharge_rate",
-                val=self.config.max_discharge_rate,
-                units=self.config.commodity_rate_units,
-                desc="Storage discharge rate",
-            )
-
-        self.add_input(
-            "storage_capacity",
-            val=self.config.max_capacity,
-            units=self.commodity_amount_units,
-            desc="Storage capacity",
-        )
-
-        self.add_input(
-            f"{self.commodity}_demand",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.commodity_rate_units,
-            desc=f"{self.commodity} demand",
-        )
-
-        self.add_output(
-            f"unmet_{self.commodity}_demand_out",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.commodity_rate_units,
-            desc=f"Unmet {self.commodity} demand",
-        )
-
-        self.add_output(
-            f"unused_{self.commodity}_out",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.commodity_rate_units,
-            desc="Unused generated commodity",
         )
 
         self.dt_hr = int(self.options["plant_config"]["plant"]["simulation"]["dt"]) / (
@@ -400,23 +400,39 @@ class StoragePerformanceModel(PerformanceModelBaseClass):
             storage_commodity_out > 0, storage_commodity_out, 0
         )
 
+        if max_discharge_rate > 0:
+            outputs["storage_duration"] = inputs["storage_capacity"][0] / max_discharge_rate
+        else:
+            outputs["storage_duration"] = 0.0
+
         outputs[f"unmet_{self.commodity}_demand_out"] = unmet_demand
         outputs[f"unused_{self.commodity}_out"] = unused_commodity
         outputs[f"storage_{self.commodity}_out"] = storage_commodity_out
-        outputs[f"{self.commodity}_out"] = total_commodity_out
 
+        outputs[f"{self.commodity}_out"] = total_commodity_out
         outputs["SOC"] = soc
+
+        # Set the rated commodity production from the discharge rate
         outputs[f"rated_{self.commodity}_production"] = max_discharge_rate
-        outputs[f"total_{self.commodity}_produced"] = np.sum(total_commodity_out)
+
+        # Calculate the total and annual commodity produced
+        outputs[f"total_{self.commodity}_produced"] = outputs[f"{self.commodity}_out"].sum() * (
+            self.dt / 3600
+        )
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
 
-        if outputs[f"rated_{self.commodity}_production"] <= 0:
+        # Calculate the maximum theoretical commodity production over the simulation
+        rated_production = (
+            outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * (self.dt / 3600)
+        )
+
+        if rated_production <= 0:
             outputs["capacity_factor"] = 0.0
         else:
             outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                rated_production
             )
 
     def simulate(
@@ -495,12 +511,6 @@ class StoragePerformanceModel(PerformanceModelBaseClass):
         soc_max = self.config.max_charge_fraction
         soc_min = self.config.min_charge_fraction
 
-        # max_charge_input / max_discharge_input are the hardware rate limits
-        # expressed in *pre-efficiency* rate units so they can be compared
-        # directly against the SOC headroom and the raw command magnitude.
-        max_charge_input = charge_rate / charge_eff
-        max_discharge_input = discharge_rate / discharge_eff
-
         commands = np.asarray(storage_dispatch_commands, dtype=float)
         soc = float(self.current_soc)
 
@@ -514,23 +524,34 @@ class StoragePerformanceModel(PerformanceModelBaseClass):
                 # Clip to the most restrictive limit, then apply efficiency.
                 # max(0, ...) guards against negative headroom when SOC
                 # slightly exceeds soc_max.
-                actual_charge = max(0.0, min(headroom, max_charge_input, -cmd)) * charge_eff
+                # correct headroom to not include charge_eff.
+                actual_charge = max(0.0, min(headroom / charge_eff, charge_rate, -cmd)) * charge_eff
 
                 # Update SOC (actual_charge is in post-efficiency units)
                 soc += actual_charge / storage_capacity
-                storage_commodity_out_timesteps[t] = -actual_charge
+
+                # Update the amount of commodity used to charge from the input stream
+                # If charge_eff<1, more commodity is pulled from the input stream than
+                # the commodity that goes into the storage.
+                storage_commodity_out_timesteps[t] = -actual_charge / charge_eff
             else:
                 # --- Discharging ---
                 # headroom: how much commodity can still be drawn before
                 # hitting the minimum SOC, expressed as a rate.
                 headroom = (soc - soc_min) * storage_capacity / self.dt_hr
 
-                # Clip and apply discharge efficiency.
-                actual_discharge = max(0.0, min(headroom, max_discharge_input, cmd)) * discharge_eff
+                # Clip to the most restrictive limit without applied efficiency.
+                # Discharge efficiency losses occur as energy leaves storage.
+                actual_discharge = max(
+                    0.0, min(headroom, discharge_rate / discharge_eff, cmd / discharge_eff)
+                )
 
-                # Update SOC (actual_discharge is in post-efficiency units)
+                # Update SOC (actual_discharge is before efficiency losses are applied.)
                 soc -= actual_discharge / storage_capacity
-                storage_commodity_out_timesteps[t] = actual_discharge
+
+                # If discharge_eff<1, then less commodity is output from the storage
+                # than the commodity discharged from storage
+                storage_commodity_out_timesteps[t] = actual_discharge * discharge_eff
 
             soc_timesteps[t] = soc * 100.0
 

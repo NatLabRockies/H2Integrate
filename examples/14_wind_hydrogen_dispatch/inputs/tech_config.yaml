@@ -62,7 +62,6 @@ technologies:
         commodity_rate_units: kg/h
         max_charge_rate: 12446.00729773  # kg/time step
         max_capacity: 2987042.0  # kg
-      control_parameters:
         max_charge_fraction: 1.0  # fraction (0-1)
         min_charge_fraction: 0.1  # fraction (0-1)
         init_charge_fraction: 0.25  # fraction (0-1)

@@ -52,9 +52,9 @@ fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6), layout="tight"
 
 start_hour = 0
 end_hour = 200
-total_time_steps = model.prob.get_val("h2_storage.hydrogen_soc").size
+total_time_steps = model.prob.get_val("h2_storage.SOC").size
 demand_profile = [
-    model.technology_config["technologies"]["h2_storage"]["model_inputs"]["control_parameters"][
+    model.technology_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"][
         "demand_profile"
     ]
     * 1e-3
@@ -63,7 +63,7 @@ xvals = list(range(start_hour, end_hour))
 
 ax1.plot(
     xvals,
-    model.prob.get_val("h2_storage.hydrogen_soc", units="percent")[start_hour:end_hour],
+    model.prob.get_val("h2_storage.SOC", units="percent")[start_hour:end_hour],
     label="SOC",
 )
 ax2.plot(
@@ -74,13 +74,13 @@ ax2.plot(
 )
 ax2.plot(
     xvals,
-    model.prob.get_val("h2_storage.hydrogen_unused_commodity", units="t/h")[start_hour:end_hour],
+    model.prob.get_val("h2_storage.unused_hydrogen_out", units="t/h")[start_hour:end_hour],
     linestyle=":",
     label="H$_2$ Unused (kg)",
 )
 ax2.plot(
     xvals,
-    model.prob.get_val("h2_storage.hydrogen_unmet_demand", units="t/h")[start_hour:end_hour],
+    model.prob.get_val("h2_storage.unmet_hydrogen_demand_out", units="t/h")[start_hour:end_hour],
     linestyle=":",
     label="H$_2$ Unmet Demand (kg)",
 )

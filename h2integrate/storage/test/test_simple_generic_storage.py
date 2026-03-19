@@ -2,9 +2,10 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
-from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
+from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 
 
+# NOTE: these tests are basically a copy of the tests in test_generic_storage_pyo.py
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
 def test_generic_storage_without_controller_dmd_lessthan_charge_rate(plant_config, subtests):
@@ -12,12 +13,12 @@ def test_generic_storage_without_controller_dmd_lessthan_charge_rate(plant_confi
     performance_model_config = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
+        "demand_profile": 5.0,
         "max_capacity": 40,
         "max_charge_rate": 10,
         "min_charge_fraction": 0.1,
         "max_charge_fraction": 1.0,
         "init_charge_fraction": 0.1,
-        "n_control_window": 24,
         "commodity_amount_units": "kg",
         "charge_equals_discharge": True,
         "charge_efficiency": 1.0,
@@ -42,8 +43,16 @@ def test_generic_storage_without_controller_dmd_lessthan_charge_rate(plant_confi
     )
 
     prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
         "storage",
-        StoragePerformanceModel(
+        SimpleGenericStorage(
             plant_config=plant_config,
             tech_config={"model_inputs": {"performance_parameters": performance_model_config}},
         ),
@@ -173,12 +182,12 @@ def test_generic_storage_without_controller_charge_rate_lessthan_demand(plant_co
     performance_model_config = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
+        "demand_profile": 11.0,
         "max_capacity": 400,
         "max_charge_rate": 100,
         "min_charge_fraction": 0.1,
         "max_charge_fraction": 1.0,
         "init_charge_fraction": 0.1,
-        "n_control_window": 24,
         "commodity_amount_units": "kg",
         "charge_equals_discharge": True,
         "charge_efficiency": 1.0,
@@ -203,8 +212,16 @@ def test_generic_storage_without_controller_charge_rate_lessthan_demand(plant_co
     )
 
     prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
         "storage",
-        StoragePerformanceModel(
+        SimpleGenericStorage(
             plant_config=plant_config,
             tech_config={"model_inputs": {"performance_parameters": performance_model_config}},
         ),
@@ -348,13 +365,13 @@ def test_generic_storage_without_controller_zero_size(plant_config, subtests):
     performance_model_config = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
+        "demand_profile": 11.0,
         "max_capacity": 40,
         "max_charge_rate": 10,
         "max_discharge_rate": 10,
         "min_charge_fraction": 0.1,
         "max_charge_fraction": 1.0,
         "init_charge_fraction": 0.1,
-        "n_control_window": 24,
         "commodity_amount_units": "kg",
         "charge_equals_discharge": False,
         "charge_efficiency": 1.0,
@@ -379,8 +396,16 @@ def test_generic_storage_without_controller_zero_size(plant_config, subtests):
     )
 
     prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
         "storage",
-        StoragePerformanceModel(
+        SimpleGenericStorage(
             plant_config=plant_config,
             tech_config={"model_inputs": {"performance_parameters": performance_model_config}},
         ),
@@ -491,15 +516,18 @@ def test_generic_storage_without_controller_with_losses(plant_config, subtests):
     # this tests a case where the demand < charge rate and charge_rate=discharge_rate
     charge_eff = 0.80
     discharge_eff = 0.75
+    # demand is below then above the charge rate
+    commodity_demand = np.concat([np.full(12, 5.0), np.full(12, 20.0)])
+
     performance_model_config = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
+        "demand_profile": list(commodity_demand),
         "max_capacity": 40,
         "max_charge_rate": 10,
         "min_charge_fraction": 0.1,
         "max_charge_fraction": 1.0,
         "init_charge_fraction": 0.1,
-        "n_control_window": 24,
         "commodity_amount_units": "kg",
         "charge_equals_discharge": True,
         "charge_efficiency": charge_eff,
@@ -508,8 +536,6 @@ def test_generic_storage_without_controller_with_losses(plant_config, subtests):
 
     prob = om.Problem()
 
-    # demand is below then above the charge rate
-    commodity_demand = np.concat([np.full(12, 5.0), np.full(12, 20.0)])
     # start with charging for first 3 hours (in>demand),
     # then discharging at last 6 hours (in<demand)
     commodity_in = np.concat([np.full(3, 8.0), np.arange(1, 16, 1), np.full(6, 4.0)])
@@ -527,8 +553,16 @@ def test_generic_storage_without_controller_with_losses(plant_config, subtests):
     )
 
     prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
         "storage",
-        StoragePerformanceModel(
+        SimpleGenericStorage(
             plant_config=plant_config,
             tech_config={"model_inputs": {"performance_parameters": performance_model_config}},
         ),
@@ -705,12 +739,12 @@ def test_generic_storage_without_controller_with_losses_round_trip(plant_config,
     performance_model_config = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
+        "demand_profile": 5.0,
         "max_capacity": 40,
         "max_charge_rate": 10,
         "min_charge_fraction": 0.1,
         "max_charge_fraction": 1.0,
         "init_charge_fraction": 0.1,
-        "n_control_window": 24,
         "commodity_amount_units": "kg",
         "charge_equals_discharge": True,
         "round_trip_efficiency": round_trip_eff,
@@ -734,8 +768,16 @@ def test_generic_storage_without_controller_with_losses_round_trip(plant_config,
     )
 
     prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
         "storage",
-        StoragePerformanceModel(
+        SimpleGenericStorage(
             plant_config=plant_config,
             tech_config={"model_inputs": {"performance_parameters": performance_model_config}},
         ),

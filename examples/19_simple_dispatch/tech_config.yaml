@@ -41,7 +41,6 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 5000.0  # kW
         max_capacity: 30000.0  # kWh
-      control_parameters:
         max_charge_fraction: 1.0  # fraction (0-1)
         min_charge_fraction: 0.1  # fraction (0-1)
         init_charge_fraction: 0.25  # fraction (0-1)

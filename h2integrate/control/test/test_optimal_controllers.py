@@ -38,7 +38,6 @@ tech_config = {
     "description": "...",
     "technologies": {
         "battery": {
-            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
             "control_strategy": {"model": "OptimizedDispatchController"},
             "performance_model": {"model": "PySAMBatteryPerformanceModel"},
             "model_inputs": {
@@ -73,16 +72,11 @@ tech_config = {
         },
         "combiner": {
             "performance_model": {"model": "GenericCombinerPerformanceModel"},
-            "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
             "model_inputs": {
                 "performance_parameters": {
                     "commodity": "electricity",
                     "commodity_rate_units": "kW",
                     "in_streams": 1,
-                },
-                "dispatch_rule_parameters": {
-                    "commodity": "electricity",
-                    "commodity_rate_units": "kW",
                 },
             },
         },

@@ -7,19 +7,10 @@ from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
-from h2integrate.converters.iron.iron_mine import (
-    IronMineCostComponent,
-    IronMinePerformanceComponent,
-)
-from h2integrate.converters.iron.iron_plant import (
-    IronPlantCostComponent,
-    IronPlantPerformanceComponent,
-)
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
-from h2integrate.converters.iron.iron_wrapper import IronComponent
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 from h2integrate.finances.numpy_financial_npv import NumpyFinancialNPV
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
@@ -160,18 +151,12 @@ from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import 
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
 )
-from h2integrate.control.control_strategies.passthrough_openloop_controller import (
-    PassThroughOpenLoopController,
-)
 from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models import (
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
 )
-from h2integrate.control.control_strategies.storage.demand_openloop_controller import (
-    DemandOpenLoopStorageController,
-)
-from h2integrate.control.control_strategies.converters.demand_openloop_controller import (
-    DemandOpenLoopConverterController,
+from h2integrate.control.control_strategies.storage.passthrough_openloop_controller import (
+    PassThroughOpenLoopController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
@@ -179,8 +164,14 @@ from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_
 from h2integrate.control.control_rules.converters.generic_converter_min_operating_cost import (
     PyomoDispatchGenericConverterMinOperatingCosts,
 )
+from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
+    DemandOpenLoopStorageController,
+)
 from h2integrate.control.control_strategies.converters.flexible_demand_openloop_controller import (
     FlexibleDemandOpenLoopConverterController,
+)
+from h2integrate.control.control_strategies.converters.demand_openloop_converter_controller import (
+    DemandOpenLoopConverterController,
 )
 
 
@@ -221,11 +212,6 @@ supported_models = {
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
-    "IronComponent": IronComponent,
-    "IronMinePerformanceComponent": IronMinePerformanceComponent,
-    "IronMineCostComponent": IronMineCostComponent,
-    "IronPlantPerformanceComponent": IronPlantPerformanceComponent,
-    "IronPlantCostComponent": IronPlantCostComponent,
     "MartinIronMinePerformanceComponent": MartinIronMinePerformanceComponent,  # standalone model
     "MartinIronMineCostComponent": MartinIronMineCostComponent,  # standalone model
     "NaturalGasIronReductionPlantPerformanceComponent": NaturalGasIronReductionPlantPerformanceComponent,  # noqa: E501

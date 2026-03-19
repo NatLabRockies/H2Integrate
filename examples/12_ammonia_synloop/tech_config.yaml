@@ -126,6 +126,13 @@ technologies:
       shared_parameters:
         commodity: hydrogen
         commodity_rate_units: kg/h
+        set_demand_as_avg_commodity_in: true
+      performance_parameters:
+        min_charge_fraction: 0.0
+        max_charge_fraction: 1.0
+        charge_efficiency: 1.0
+        discharge_efficiency: 1.0
+        commodity_amount_units: kg
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities

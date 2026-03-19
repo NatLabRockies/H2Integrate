@@ -96,7 +96,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         )
 
         self.add_input(
-            "max_capacity",
+            "storage_capacity",
             val=self.config.max_capacity,
             units=f"{self.config.commodity_units}*h",
             desc="Hydrogen storage capacity",
@@ -117,7 +117,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
 
         # convert capacity to kg
         max_capacity_kg = units.convert_units(
-            inputs["max_capacity"], f"({self.config.commodity_units})*h", "kg"
+            inputs["storage_capacity"], f"({self.config.commodity_units})*h", "kg"
         )
 
         storage_input["h2_storage_kg"] = max_capacity_kg[0]

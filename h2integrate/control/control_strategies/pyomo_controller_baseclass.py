@@ -109,9 +109,7 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
     def setup(self):
         """Register per-technology dispatch rule inputs and expose the solver callable.
 
-        Adds discrete inputs named 'dispatch_block_rule_function' (and variants
-        suffixed with source tech names for cross-tech connections) plus a
-        discrete output 'pyomo_dispatch_solver' that will hold the assembled
+        Adds discrete output 'pyomo_dispatch_solver' that will hold the assembled
         callable after compute().
         """
 
@@ -123,20 +121,6 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
 
         # create inputs for all pyomo object creation functions from all connected technologies
         self.dispatch_connections = self.options["plant_config"]["tech_to_dispatch_connections"]
-        for connection in self.dispatch_connections:
-            # get connection definition
-            source_tech, intended_dispatch_tech = connection
-            if any(intended_dispatch_tech in name for name in self.tech_group_name):
-                if source_tech == intended_dispatch_tech:
-                    # When getting rules for the same tech, the tech name is not used in order to
-                    # allow for automatic connections rather than complicating the h2i model set up
-                    self.add_discrete_input("dispatch_block_rule_function", val=self.dummy_method)
-                else:
-                    self.add_discrete_input(
-                        f"{'dispatch_block_rule_function'}_{source_tech}", val=self.dummy_method
-                    )
-            else:
-                continue
 
         # create output for the pyomo control model
         self.add_discrete_output(
@@ -151,42 +135,15 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
         discrete_outputs["pyomo_dispatch_solver"] = self.pyomo_setup(discrete_inputs)
 
     def pyomo_setup(self, discrete_inputs):
-        """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
+        """Create the Pyomo model and return dispatch solver.
 
         Returns:
             callable: Function(performance_model, performance_model_kwargs, inputs, commodity)
-                executing rolling-window heuristic dispatch or optimization and returning:
+                executing rolling-window dispatch and returning:
                 (total_out, storage_out, unmet_demand, unused_commodity, soc)
         """
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
-
-        index_set = pyomo.Set(initialize=range(self.config.n_control_window))
-
-        self.source_techs = []
-        self.dispatch_tech = []
-
-        # run each pyomo rule set up function for each technology
-        for connection in self.dispatch_connections:
-            # get connection definition
-            source_tech, intended_dispatch_tech = connection
-            # only add connections to intended dispatch tech
-            if any(intended_dispatch_tech in name for name in self.tech_group_name):
-                # names are specified differently if connecting within the tech group vs
-                # connecting from an external tech group. This facilitates OM connections
-                if source_tech == intended_dispatch_tech:
-                    dispatch_block_rule_function = discrete_inputs["dispatch_block_rule_function"]
-                    self.dispatch_tech.append(source_tech)
-                else:
-                    dispatch_block_rule_function = discrete_inputs[
-                        f"{'dispatch_block_rule_function'}_{source_tech}"
-                    ]
-                # create pyomo block and set attr
-                blocks = pyomo.Block(index_set, rule=dispatch_block_rule_function)
-                setattr(self.pyomo_model, source_tech, blocks)
-                self.source_techs.append(source_tech)
-            else:
-                continue
 
         # define dispatch solver
         def pyomo_dispatch_solver(
@@ -201,9 +158,9 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
 
             Iterates over the full simulation period in chunks of size
             `self.config.n_control_window`, (re)configures per-window dispatch
-            parameters, invokes a heuristic control strategy to set fixed
-            dispatch decisions, and then calls the provided performance_model
-            over each window to obtain storage output and SOC trajectories.
+            parameters, applies the chosen control strategy, and then calls the
+            provided performance_model over each window to obtain storage output and
+            SOC trajectories.
 
             Args:
                 performance_model (callable):
@@ -251,99 +208,14 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
             unused_commodity = np.zeros(self.n_timesteps)
             soc = np.zeros(self.n_timesteps)
 
-            # get the starting index for each control window
-            window_start_indices = list(range(0, self.n_timesteps, self.config.n_control_window))
+            # This is where the pyomo controller interface is defined in individual
+            #   pyomo controllers
 
-            control_strategy = self.options["tech_config"]["control_strategy"]["model"]
-
-            # TODO: implement optional kwargs for this method: maybe this will remove if statement here
-            if "Heuristic" in control_strategy:
-                # Initialize parameters for heuristic dispatch strategy
-                self.initialize_parameters(inputs)
-            elif "Optimized" in control_strategy:
-                # Initialize parameters for optimized dispatch strategy
-                self.initialize_parameters(
-                    inputs[f"{commodity_name}_in"], inputs[f"{commodity_name}_demand"]
-                )
-
-            else:
-                raise (
-                    NotImplementedError(
-                        f"Control strategy '{control_strategy}' was given, \
-                        but has not been implemented yet."
-                    )
-                )
-
-            # loop over all control windows, where t is the starting index of each window
-            for t in window_start_indices:
-                # get the inputs over the current control window
-                commodity_in = inputs[f"{self.config.commodity}_in"][
-                    t : t + self.config.n_control_window
-                ]
-                demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
-
-                if "Heuristic" in control_strategy:
-                    # Update time series parameters for the heuristic method
-                    self.update_time_series_parameters()
-                    # determine dispatch commands for the current control window
-                    # using the heuristic method
-                    self.set_fixed_dispatch(
-                        commodity_in,
-                        self.config.system_commodity_interface_limit,
-                        demand_in,
-                    )
-
-                elif "Optimized" in control_strategy:
-                    # Progress report
-                    if t % (self.n_timesteps // 4) < self.n_control_window:
-                        percentage = round((t / self.n_timesteps) * 100)
-                        print(f"{percentage}% done with optimal dispatch")
-                    # Update time series parameters for the optimization method
-                    self.update_time_series_parameters(
-                        commodity_in=commodity_in,
-                        commodity_demand=demand_in,
-                        updated_initial_soc=self.updated_initial_soc,
-                    )
-                    # Run dispatch optimization to minimize costs while meeting demand
-                    self.solve_dispatch_model(
-                        start_time=t,
-                        n_days=self.n_timesteps // 24,
-                    )
-
-                else:
-                    raise (
-                        NotImplementedError(
-                            f"Control strategy '{control_strategy}' was given, \
-                            but has not been implemented yet."
-                        )
-                    )
-
-                # run the performance/simulation model for the current control window
-                # using the dispatch commands
-                storage_commodity_out_control_window, soc_control_window = performance_model(
-                    self.storage_dispatch_commands,
-                    **performance_model_kwargs,
-                    sim_start_index=t,
-                )
-                # update SOC for next time window
-                self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
-
-                # get a list of all time indices belonging to the current control window
-                window_indices = list(range(t, t + self.config.n_control_window))
-
-                # loop over all time steps in the current control window
-                for j in window_indices:
-                    # save the output for the control window to the output for the full
-                    # simulation
-                    storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
-                    soc[j] = soc_control_window[j - t]
-                    total_commodity_out[j] = np.minimum(
-                        demand_in[j - t], storage_commodity_out[j] + commodity_in[j - t]
-                    )
-                    unmet_demand[j] = np.maximum(0, demand_in[j - t] - total_commodity_out[j])
-                    unused_commodity[j] = np.maximum(
-                        0, storage_commodity_out[j] + commodity_in[j - t] - demand_in[j - t]
-                    )
+            # The structure should be as follows:
+            # 1. initialize_parameters()
+            # 2. update_time_series_parameters()
+            # 3. solve dispatch model or set fixed dispatch
+            # 4. update outputs
 
             return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
 

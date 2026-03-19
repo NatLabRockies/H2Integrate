@@ -21,9 +21,9 @@ sites:
 technology_interconnections:
   - [solar, battery, electricity, cable]
                                                   # connect solar to battery
-  - [battery, grid_buy, [electricity_unmet_demand, electricity_demand]]
+  - [battery, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
                                                                                  # connect battery demand to grid buying
-  - [battery, grid_sell, [electricity_unused_commodity, electricity_in]]
+  - [battery, grid_sell, [unused_electricity_out, electricity_in]]
                                                                                   # connect battery surplus to grid selling
   - [solar, combiner, electricity, cable]
   - [grid_buy, combiner, electricity, cable]
