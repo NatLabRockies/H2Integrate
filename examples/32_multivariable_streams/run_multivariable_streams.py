@@ -9,11 +9,11 @@ Two gas producers with different properties feed into a combiner, which outputs
 a single combined stream to a consumer.
 
 The wellhead_gas_mixture stream includes:
-- gas_flow (kg/h): Total mass flow rate
+- mass_flow (kg/h): Total mass flow rate
 - hydrogen_mass_fraction: Mass fraction of hydrogen
 - oxygen_mass_fraction: Mass fraction of oxygen
-- gas_temperature (K): Temperature
-- gas_pressure (bar): Pressure
+- temperature (K): Temperature
+- pressure (bar): Pressure
 """
 
 import numpy as np
@@ -32,26 +32,26 @@ model.run()
 
 # Get outputs from gas producers
 print("\nGas Producer 1 Outputs:")
-flow1 = model.prob.get_val("gas_producer_1.gas_flow_out", units="kg/h")
-temp1 = model.prob.get_val("gas_producer_1.gas_temperature_out", units="K")
-pres1 = model.prob.get_val("gas_producer_1.gas_pressure_out", units="bar")
+flow1 = model.prob.get_val("gas_producer_1.mass_flow_out", units="kg/h")
+temp1 = model.prob.get_val("gas_producer_1.temperature_out", units="K")
+pres1 = model.prob.get_val("gas_producer_1.pressure_out", units="bar")
 print(f"  Flow: mean={flow1.mean():.2f} kg/h")
 print(f"  Temperature: mean={temp1.mean():.1f} K")
 print(f"  Pressure: mean={pres1.mean():.2f} bar")
 
 print("\nGas Producer 2 Outputs:")
-flow2 = model.prob.get_val("gas_producer_2.gas_flow_out", units="kg/h")
-temp2 = model.prob.get_val("gas_producer_2.gas_temperature_out", units="K")
-pres2 = model.prob.get_val("gas_producer_2.gas_pressure_out", units="bar")
+flow2 = model.prob.get_val("gas_producer_2.mass_flow_out", units="kg/h")
+temp2 = model.prob.get_val("gas_producer_2.temperature_out", units="K")
+pres2 = model.prob.get_val("gas_producer_2.pressure_out", units="bar")
 print(f"  Flow: mean={flow2.mean():.2f} kg/h")
 print(f"  Temperature: mean={temp2.mean():.1f} K")
 print(f"  Pressure: mean={pres2.mean():.2f} bar")
 
 # Get outputs from combiner
 print("\nGas Combiner Outputs (mass-weighted average):")
-flow_out = model.prob.get_val("gas_combiner.gas_flow_out", units="kg/h")
-temp_out = model.prob.get_val("gas_combiner.gas_temperature_out", units="K")
-pres_out = model.prob.get_val("gas_combiner.gas_pressure_out", units="bar")
+flow_out = model.prob.get_val("gas_combiner.mass_flow_out", units="kg/h")
+temp_out = model.prob.get_val("gas_combiner.temperature_out", units="K")
+pres_out = model.prob.get_val("gas_combiner.pressure_out", units="bar")
 h2_out = model.prob.get_val("gas_combiner.hydrogen_mass_fraction_out")
 print(f"  Total Flow: mean={flow_out.mean():.2f} kg/h (sum of inputs)")
 print(f"  Temperature: mean={temp_out.mean():.1f} K (weighted avg)")

@@ -8,7 +8,7 @@ This module contains:
 
 multivariable_streams = {
     "wellhead_gas_mixture": {
-        "gas_flow": {
+        "mass_flow": {
             "units": "kg/h",
             "desc": "Total mass flow rate of gas in the stream",
         },
@@ -20,11 +20,11 @@ multivariable_streams = {
             "units": "unitless",
             "desc": "Mass fraction of oxygen in the gas stream",
         },
-        "gas_temperature": {
+        "temperature": {
             "units": "K",
             "desc": "Temperature of the gas stream",
         },
-        "gas_pressure": {
+        "pressure": {
             "units": "bar",
             "desc": "Pressure of the gas stream",
         },
