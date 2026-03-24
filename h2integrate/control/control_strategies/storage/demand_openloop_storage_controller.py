@@ -1,24 +1,27 @@
 from copy import deepcopy
 
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gte_zero, range_val, range_val_or_none
+from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
+    StorageOpenLoopControlBase,
+    StorageOpenLoopControlBaseConfig,
+)
 
 
 @define(kw_only=True)
-class DemandOpenLoopStorageControllerConfig(BaseConfig):
+class DemandOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
     """
     Configuration class for the DemandOpenLoopStorageController.
 
     This class defines the parameters required to configure the `DemandOpenLoopStorageController`.
 
     Attributes:
-        commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
         commodity (str): Name of the commodity being controlled
-            (e.g., "hydrogen"). Converted to lowercase and stripped of whitespace.
+            (e.g., "hydrogen"). Stripped of whitespace.
+        commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
@@ -52,9 +55,6 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
     """
 
-    commodity_rate_units: str = field(converter=str.strip)
-    commodity: str = field(converter=(str.strip, str.lower))
-    demand_profile: int | float | list = field()
     max_capacity: float = field()
     max_soc_fraction: float = field(validator=range_val(0, 1))
     min_soc_fraction: float = field(validator=range_val(0, 1))
@@ -65,7 +65,6 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
     charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    commodity_amount_units: str = field(default=None)
 
     def __attrs_post_init__(self):
         """
@@ -76,22 +75,20 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
         it calculates `charge_efficiency` and `discharge_efficiency` as the square root
         of `round_trip_efficiency`.
         """
-        if self.round_trip_efficiency is not None:
-            if self.charge_efficiency is not None or self.discharge_efficiency is not None:
-                raise ValueError(
-                    "Provide either `round_trip_efficiency` or both `charge_efficiency` "
-                    "and `discharge_efficiency`, but not both."
-                )
+        super().__attrs_post_init__()
+
+        if (self.round_trip_efficiency is not None) and (
+            self.charge_efficiency is None and self.discharge_efficiency is None
+        ):
             # Calculate charge and discharge efficiencies from round-trip efficiency
             self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-        elif self.charge_efficiency is not None and self.discharge_efficiency is not None:
-            # Ensure both charge and discharge efficiencies are provided
-            pass
-        else:
+            self.round_trip_efficiency = None
+        if self.charge_efficiency is None or self.discharge_efficiency is None:
             raise ValueError(
-                "You must provide either `round_trip_efficiency` or both "
-                "`charge_efficiency` and `discharge_efficiency`."
+                "Exactly one of the following sets of parameters must be set: (a) "
+                "`round_trip_efficiency`, or (b) both `charge_efficiency` "
+                "and `discharge_efficiency`."
             )
 
         if self.charge_equals_discharge:
@@ -108,71 +105,17 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
 
             self.max_discharge_rate = self.max_charge_rate
 
-        if self.commodity_amount_units is None:
-            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
-
-class DemandOpenLoopStorageController(om.ExplicitComponent):
+class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
     """
     A controller that manages commodity flow based on demand and storage constraints.
 
-    The `DemandOpenLoopStorageController` computes the state of charge (SOC), output flow,
-    curtailment, and missed load for a commodity storage system. It uses a demand profile
-    and storage parameters to determine how much of the commodity to charge, discharge,
-    or curtail at each time step.
-
-    Note: the units of the outputs are the same as the commodity units, which is typically a rate
-    in H2Integrate (e.g. kg/h)
-
-    Attributes:
-        config (DemandOpenLoopStorageControllerConfig): Configuration object containing parameters
-            such as commodity name, units, time steps, storage capacity, charge/discharge rates,
-            efficiencies, and demand profile.
-
-    Inputs:
-        {commodity}_in (float): Input commodity flow timeseries (e.g., hydrogen production).
-            - Units: Defined in `commodity_rate_units` (e.g., "kg/h").
-
+    The `DemandOpenLoopStorageController` computes the dispatch commands for a commodity storage
+    system. It uses a demand profile and storage parameters to determine how much of the
+    commodity to charge, discharge, or curtail at each time step.
     """
 
-    def initialize(self):
-        """Declare component options.
-
-        Options:
-            driver_config (dict): Driver-level configuration parameters.
-            plant_config (dict): Plant-level configuration, including number of
-                simulation timesteps.
-            tech_config (dict): Technology-specific configuration, including
-                controller settings.
-
-        """
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
     def setup(self):
-        """
-        Set up inputs, outputs, and configuration for the open-loop storage controller.
-
-        This method initializes the controller configuration from the technology
-        configuration, establishes the number of simulation time steps, adds inputs
-        related to storage constraints (e.g., maximum charge rate and storage capacity),
-        and defines outputs such as the commodity state-of-charge (SOC) timeseries
-        and the estimated storage duration.
-
-        Inputs defined:
-            * ``max_charge_rate``: Maximum rate at which storage can charge/discharge.
-            * ``max_capacity``: Maximum total storage capacity.
-
-        Outputs defined:
-            * ``<commodity>_soc``: Timeseries of storage state of charge.
-            * ``storage_duration``: Estimated duration (hours) the storage can
-                discharge at its maximum rate.
-
-        Returns:
-            None
-        """
-
         self.config = DemandOpenLoopStorageControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             strict=False,
@@ -182,8 +125,7 @@ class DemandOpenLoopStorageController(om.ExplicitComponent):
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        commodity = self.config.commodity
-
+        # Design constraints of storage system
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
@@ -205,30 +147,6 @@ class DemandOpenLoopStorageController(om.ExplicitComponent):
                 units=self.config.commodity_rate_units,
                 desc="Storage discharge rate",
             )
-
-        self.add_input(
-            f"{commodity}_demand",
-            val=self.config.demand_profile,
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-            desc=f"Demand profile of {commodity}",
-        )
-
-        self.add_input(
-            f"{commodity}_in",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-            desc=f"Amount of {commodity} demand that has already been supplied",
-        )
-
-        self.add_output(
-            f"{commodity}_set_point",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-            desc=f"Dispatch command profile of {commodity}",
-        )
 
     def compute(self, inputs, outputs):
         """

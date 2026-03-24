@@ -1,12 +1,15 @@
 import numpy as np
-import openmdao.api as om
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
+    StorageOpenLoopControlBase,
+    StorageOpenLoopControlBaseConfig,
+)
 
 
 @define(kw_only=True)
-class SimpleStorageOpenLoopControllerConfig(BaseConfig):
+class SimpleStorageOpenLoopControllerConfig(StorageOpenLoopControlBaseConfig):
     """Configuration class for the SimpleStorageOpenLoopController
 
     Attributes:
@@ -21,12 +24,12 @@ class SimpleStorageOpenLoopControllerConfig(BaseConfig):
 
     """
 
-    commodity: str = field()
-    commodity_rate_units: str = field()
     set_demand_as_avg_commodity_in: bool = field()
     demand_profile: int | float | list = field(default=0.0)
 
     def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+
         if isinstance(self.demand_profile, list | np.ndarray):
             user_input_dmd = True if sum(self.demand_profile) > 0 else False
         else:
@@ -43,25 +46,15 @@ class SimpleStorageOpenLoopControllerConfig(BaseConfig):
             raise ValueError(msg)
 
 
-class SimpleStorageOpenLoopController(om.ExplicitComponent):
+class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
     """
-    A simple pass-through controller for open-loop systems.
+    A simple open-loop controller for storage systems.
 
     This controller directly sets a storage control set point as the difference between the
     demand and the available input commodity. It is useful for testing, as a placeholder for
     more complex storage controllers, and for maintaining consistency between controlled and
     uncontrolled frameworks.
     """
-
-    def initialize(self):
-        """
-        Declare options for the component. See "Attributes" section in class doc strings for
-        details.
-        """
-
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
 
     def setup(self):
         self.config = SimpleStorageOpenLoopControllerConfig.from_dict(
@@ -70,43 +63,14 @@ class SimpleStorageOpenLoopController(om.ExplicitComponent):
             strict=False,
         )
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
-        self.add_input(
-            f"{self.config.commodity}_in",
-            shape_by_conn=True,
-            units=self.config.commodity_rate_units,
-            desc=f"{self.config.commodity} input timeseries from production to storage",
-        )
-
-        self.add_input(
-            f"{self.config.commodity}_demand",
-            units=f"{self.config.commodity_rate_units}",
-            val=self.config.demand_profile,
-            shape=self.n_timesteps,
-            desc=f"{self.config.commodity} demand profile timeseries",
-        )
-
-        self.add_output(
-            f"{self.config.commodity}_set_point",
-            copy_shape=f"{self.config.commodity}_in",
-            units=self.config.commodity_rate_units,
-            desc=f"{self.config.commodity} output timeseries from plant after storage",
-        )
+        super().setup()
 
     def compute(self, inputs, outputs):
         """
-        Simple controller.
+        Simple controller that outputs `commodity_set_point`,
+        the dispatch set-points for each timestep in `commodity_rate_units`.
+        Negative values command charging, positive values command discharging.
 
-        Args:
-            inputs (dict): Dictionary of input values.
-                - {commodity}_in: Input commodity flow.
-                - {commodity}_demand: Commodity demand profile.
-                Only used if `set_demand_as_avg_commodity_in` is False.
-            outputs (dict): Dictionary of output values.
-                - {commodity}_set_point: Dispatch set-points for each timestep
-                in `commodity_rate_units`. Negative values command charging;
-                positive values command discharging.
         """
 
         if (
