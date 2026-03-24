@@ -2514,3 +2514,85 @@ def test_tidal_example(subtests, temp_copy_of_example):
     with subtests.test("LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(kW*h)")
         assert lcoe == pytest.approx(0.287, rel=1e-4)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("32_multivariable_streams", None)]
+)
+def test_multivariable_streams_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    # Create the model
+    model = H2IntegrateModel(example_folder / "32_multivariable_streams.yaml")
+
+    # Run the model
+    model.run()
+
+    # Gas Producer 1
+    with subtests.test("Producer 1 flow"):
+        flow1 = model.prob.get_val(
+            "gas_producer_1.wellhead_gas_mixture:mass_flow_out", units="kg/h"
+        )
+        assert flow1.mean() == pytest.approx(149.70, rel=1e-3)
+
+    with subtests.test("Producer 1 temperature"):
+        temp1 = model.prob.get_val("gas_producer_1.wellhead_gas_mixture:temperature_out", units="K")
+        assert temp1.mean() == pytest.approx(310.0, rel=1e-3)
+
+    with subtests.test("Producer 1 pressure"):
+        pres1 = model.prob.get_val("gas_producer_1.wellhead_gas_mixture:pressure_out", units="bar")
+        assert pres1.mean() == pytest.approx(12.02, rel=1e-3)
+
+    # Gas Producer 2
+    with subtests.test("Producer 2 flow"):
+        flow2 = model.prob.get_val(
+            "gas_producer_2.wellhead_gas_mixture:mass_flow_out", units="kg/h"
+        )
+        assert flow2.mean() == pytest.approx(99.68, rel=1e-3)
+
+    with subtests.test("Producer 2 temperature"):
+        temp2 = model.prob.get_val("gas_producer_2.wellhead_gas_mixture:temperature_out", units="K")
+        assert temp2.mean() == pytest.approx(350.0, rel=1e-3)
+
+    with subtests.test("Producer 2 pressure"):
+        pres2 = model.prob.get_val("gas_producer_2.wellhead_gas_mixture:pressure_out", units="bar")
+        assert pres2.mean() == pytest.approx(8.01, rel=1e-3)
+
+    # Gas Combiner
+    with subtests.test("Combiner total flow"):
+        flow_out = model.prob.get_val(
+            "gas_combiner.wellhead_gas_mixture:mass_flow_out", units="kg/h"
+        )
+        assert flow_out.mean() == pytest.approx(249.38, rel=1e-3)
+
+    with subtests.test("Combiner temperature"):
+        temp_out = model.prob.get_val(
+            "gas_combiner.wellhead_gas_mixture:temperature_out", units="K"
+        )
+        assert temp_out.mean() == pytest.approx(326.1, rel=1e-3)
+
+    with subtests.test("Combiner pressure"):
+        pres_out = model.prob.get_val("gas_combiner.wellhead_gas_mixture:pressure_out", units="bar")
+        assert pres_out.mean() == pytest.approx(10.40, rel=1e-3)
+
+    with subtests.test("Combiner H2 fraction"):
+        h2_out = model.prob.get_val("gas_combiner.wellhead_gas_mixture:hydrogen_mass_fraction_out")
+        assert h2_out.mean() == pytest.approx(0.800, rel=1e-3)
+
+    # Gas Consumer
+    with subtests.test("Consumer H2 mass flow"):
+        h2_mass_flow = model.prob.get_val("gas_consumer.hydrogen_out", units="kg/h")
+        assert h2_mass_flow.mean() == pytest.approx(199.55, rel=1e-3)
+
+    with subtests.test("Consumer total gas consumed"):
+        total_consumed = model.prob.get_val("gas_consumer.total_gas_consumed", units="kg")
+        assert total_consumed[0] == pytest.approx(2_184_570, rel=1e-3)
+
+    with subtests.test("Consumer avg temperature"):
+        avg_temp = model.prob.get_val("gas_consumer.avg_temperature", units="K")
+        assert avg_temp[0] == pytest.approx(326.1, rel=1e-3)
+
+    with subtests.test("Consumer avg pressure"):
+        avg_pres = model.prob.get_val("gas_consumer.avg_pressure", units="bar")
+        assert avg_pres[0] == pytest.approx(10.40, rel=1e-3)
