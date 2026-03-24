@@ -16,7 +16,10 @@ from h2integrate.core.model_baseclasses import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
-from h2integrate.core.commodity_stream_definitions import multivariable_streams
+from h2integrate.core.commodity_stream_definitions import (
+    add_multivariable_input,
+    add_multivariable_output,
+)
 
 
 @define(kw_only=True)
@@ -67,14 +70,7 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
         super().setup()
 
         # Add all wellhead_gas_mixture stream outputs
-        for var_name, var_props in multivariable_streams["wellhead_gas_mixture"].items():
-            self.add_output(
-                f"{var_name}_out",
-                val=0.0,
-                shape=self.n_timesteps,
-                units=var_props.get("units"),
-                desc=var_props.get("desc", ""),
-            )
+        add_multivariable_output(self, "wellhead_gas_mixture", self.n_timesteps)
 
     def compute(self, inputs, outputs):
         # Set random seed for reproducibility if specified
@@ -143,14 +139,7 @@ class DummyGasConsumerPerformance(PerformanceModelBaseClass):
         super().setup()
 
         # Add all wellhead_gas_mixture stream inputs
-        for var_name, var_props in multivariable_streams["wellhead_gas_mixture"].items():
-            self.add_input(
-                f"{var_name}_in",
-                val=0.0,
-                shape=self.n_timesteps,
-                units=var_props.get("units"),
-                desc=var_props.get("desc", ""),
-            )
+        add_multivariable_input(self, "wellhead_gas_mixture", self.n_timesteps)
 
         # Add some derived outputs
         self.add_output(
