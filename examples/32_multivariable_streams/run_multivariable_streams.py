@@ -69,11 +69,6 @@ print(f"  Total Gas Consumed: {total_consumed[0]:,.0f} kg")
 print(f"  Avg Temperature: {avg_temp[0]:.1f} K")
 print(f"  Avg Pressure: {avg_pressure[0]:.2f} bar")
 
-print("\n" + "=" * 60)
-print("SUCCESS: Gas stream combiner with multivariable streams worked!")
-print("=" * 60)
-
-
 # Time axis in hours
 n_timesteps = len(flow1)
 time_hours = np.arange(n_timesteps)
