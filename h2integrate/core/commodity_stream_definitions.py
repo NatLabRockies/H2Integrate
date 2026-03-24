@@ -39,7 +39,7 @@ def add_multivariable_output(component, stream_name: str, n_timesteps: int) -> N
     """Add all constituent variables of a multivariable stream as outputs.
 
     For each variable defined in ``multivariable_streams[stream_name]``, an
-    output named ``<var_name>_out`` is added to *component*.
+    output named ``<stream_name>:<var_name>_out`` is added to *component*.
 
     Args:
         component: An OpenMDAO component instance (must have ``add_output``).
@@ -51,7 +51,7 @@ def add_multivariable_output(component, stream_name: str, n_timesteps: int) -> N
     """
     for var_name, var_props in multivariable_streams[stream_name].items():
         component.add_output(
-            f"{var_name}_out",
+            f"{stream_name}:{var_name}_out",
             val=0.0,
             shape=n_timesteps,
             units=var_props.get("units"),
@@ -63,7 +63,7 @@ def add_multivariable_input(component, stream_name: str, n_timesteps: int) -> No
     """Add all constituent variables of a multivariable stream as inputs.
 
     For each variable defined in ``multivariable_streams[stream_name]``, an
-    input named ``<var_name>_in`` is added to *component*.
+    input named ``<stream_name>:<var_name>_in`` is added to *component*.
 
     Args:
         component: An OpenMDAO component instance (must have ``add_input``).
@@ -75,7 +75,7 @@ def add_multivariable_input(component, stream_name: str, n_timesteps: int) -> No
     """
     for var_name, var_props in multivariable_streams[stream_name].items():
         component.add_input(
-            f"{var_name}_in",
+            f"{stream_name}:{var_name}_in",
             val=0.0,
             shape=n_timesteps,
             units=var_props.get("units"),

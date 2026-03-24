@@ -53,12 +53,13 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         stream_def = multivariable_streams[self.config.stream_type]
+        stream_name = self.config.stream_type
 
         # Add inputs for each stream
         for i in range(1, self.config.in_streams + 1):
             for var_name, var_props in stream_def.items():
                 self.add_input(
-                    f"{var_name}_in{i}",
+                    f"{stream_name}:{var_name}_in{i}",
                     val=0.0,
                     shape=n_timesteps,
                     units=var_props.get("units"),
@@ -68,7 +69,7 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
         # Add outputs
         for var_name, var_props in stream_def.items():
             self.add_output(
-                f"{var_name}_out",
+                f"{stream_name}:{var_name}_out",
                 val=0.0,
                 shape=n_timesteps,
                 units=var_props.get("units"),
@@ -83,12 +84,13 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
     def compute(self, inputs, outputs):
         n_streams = self.config.in_streams
         stream_def = multivariable_streams[self.config.stream_type]
+        stream_name = self.config.stream_type
         flow_var = self._flow_var
 
         # Collect mass flows
-        mass_flows = [inputs[f"{flow_var}_in{i}"] for i in range(1, n_streams + 1)]
+        mass_flows = [inputs[f"{stream_name}:{flow_var}_in{i}"] for i in range(1, n_streams + 1)]
         total_mass_flow = sum(mass_flows)
-        outputs[f"{flow_var}_out"] = total_mass_flow
+        outputs[f"{stream_name}:{flow_var}_out"] = total_mass_flow
 
         # Mass-weighted average for other variables
         for var_name in stream_def.keys():
@@ -96,10 +98,11 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
                 continue
 
             weighted_sum = sum(
-                inputs[f"{var_name}_in{i}"] * mass_flows[i - 1] for i in range(1, n_streams + 1)
+                inputs[f"{stream_name}:{var_name}_in{i}"] * mass_flows[i - 1]
+                for i in range(1, n_streams + 1)
             )
 
             with np.errstate(divide="ignore", invalid="ignore"):
-                outputs[f"{var_name}_out"] = np.where(
+                outputs[f"{stream_name}:{var_name}_out"] = np.where(
                     total_mass_flow > 0, weighted_sum / total_mass_flow, 0.0
                 )

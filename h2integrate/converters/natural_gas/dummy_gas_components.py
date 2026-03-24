@@ -84,30 +84,36 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
         flow_noise = rng.uniform(
             -self.config.flow_variation, self.config.flow_variation, self.n_timesteps
         )
-        outputs["mass_flow_out"] = base_flow + flow_noise
+        outputs["wellhead_gas_mixture:mass_flow_out"] = base_flow + flow_noise
 
         # Hydrogen fraction: 0.7 to 0.9 (random)
-        outputs["hydrogen_mass_fraction_out"] = rng.uniform(0.7, 0.9, self.n_timesteps)
+        outputs["wellhead_gas_mixture:hydrogen_mass_fraction_out"] = rng.uniform(
+            0.7, 0.9, self.n_timesteps
+        )
 
         # Oxygen mass fraction: 0.0 to 0.05 (random)
-        outputs["oxygen_mass_fraction_out"] = rng.uniform(0.0, 0.05, self.n_timesteps)
+        outputs["wellhead_gas_mixture:oxygen_mass_fraction_out"] = rng.uniform(
+            0.0, 0.05, self.n_timesteps
+        )
 
         # Temperature varies randomly within ±temp_variation K
         temp_noise = rng.uniform(
             -self.config.temp_variation, self.config.temp_variation, self.n_timesteps
         )
-        outputs["temperature_out"] = base_temp + temp_noise
+        outputs["wellhead_gas_mixture:temperature_out"] = base_temp + temp_noise
 
         # Pressure varies randomly within ±pressure_variation bar
         pres_noise = rng.uniform(
             -self.config.pressure_variation, self.config.pressure_variation, self.n_timesteps
         )
-        outputs["pressure_out"] = base_pressure + pres_noise
+        outputs["wellhead_gas_mixture:pressure_out"] = base_pressure + pres_noise
 
         # Standardized outputs from PerformanceModelBaseClass
         rated_production = base_flow + self.config.flow_variation
-        outputs["gas_out"] = outputs["mass_flow_out"]
-        outputs["total_gas_produced"] = np.sum(outputs["mass_flow_out"]) * (self.dt / 3600)
+        outputs["gas_out"] = outputs["wellhead_gas_mixture:mass_flow_out"]
+        outputs["total_gas_produced"] = np.sum(outputs["wellhead_gas_mixture:mass_flow_out"]) * (
+            self.dt / 3600
+        )
         outputs["rated_gas_production"] = rated_production
         outputs["annual_gas_produced"] = (
             outputs["total_gas_produced"] / self.fraction_of_year_simulated
@@ -150,10 +156,10 @@ class DummyGasConsumerPerformance(PerformanceModelBaseClass):
 
     def compute(self, inputs, outputs):
         # Calculate derived quantities from the stream inputs
-        gas_flow = inputs["mass_flow_in"]
-        h2_fraction = inputs["hydrogen_mass_fraction_in"]
-        temperature = inputs["temperature_in"]
-        pressure = inputs["pressure_in"]
+        gas_flow = inputs["wellhead_gas_mixture:mass_flow_in"]
+        h2_fraction = inputs["wellhead_gas_mixture:hydrogen_mass_fraction_in"]
+        temperature = inputs["wellhead_gas_mixture:temperature_in"]
+        pressure = inputs["wellhead_gas_mixture:pressure_in"]
 
         # Hydrogen mass flow is total flow times hydrogen fraction
         hydrogen_mass_flow = gas_flow * h2_fraction
