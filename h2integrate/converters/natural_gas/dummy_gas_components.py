@@ -48,7 +48,7 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
     A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
 
     This component produces time-varying outputs for each constituent variable
-    of the wellhead_gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    of the wellhead_gas_mixture stream (gas_flow, hydrogen_mass_fraction, oxygen_mass_fraction,
     gas_temperature, gas_pressure).
 
     The outputs use random variations around base values.
@@ -91,10 +91,10 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
         outputs["gas_flow_out"] = base_flow + flow_noise
 
         # Hydrogen fraction: 0.7 to 0.9 (random)
-        outputs["hydrogen_fraction_out"] = rng.uniform(0.7, 0.9, self.n_timesteps)
+        outputs["hydrogen_mass_fraction_out"] = rng.uniform(0.7, 0.9, self.n_timesteps)
 
-        # Oxygen fraction: 0.0 to 0.05 (random)
-        outputs["oxygen_fraction_out"] = rng.uniform(0.0, 0.05, self.n_timesteps)
+        # Oxygen mass fraction: 0.0 to 0.05 (random)
+        outputs["oxygen_mass_fraction_out"] = rng.uniform(0.0, 0.05, self.n_timesteps)
 
         # Temperature varies randomly within ±temp_variation K
         temp_noise = rng.uniform(
@@ -126,7 +126,7 @@ class DummyGasConsumerPerformance(PerformanceModelBaseClass):
     A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
 
     This component demonstrates receiving all constituent variables of a
-    wellhead_gas_mixture stream (gas_flow, hydrogen_fraction, oxygen_fraction,
+    wellhead_gas_mixture stream (gas_flow, hydrogen_mass_fraction, oxygen_mass_fraction,
     gas_temperature, gas_pressure) and performing simple calculations.
 
     The component calculates some derived quantities from the input stream.
@@ -162,7 +162,7 @@ class DummyGasConsumerPerformance(PerformanceModelBaseClass):
     def compute(self, inputs, outputs):
         # Calculate derived quantities from the stream inputs
         gas_flow = inputs["gas_flow_in"]
-        h2_fraction = inputs["hydrogen_fraction_in"]
+        h2_fraction = inputs["hydrogen_mass_fraction_in"]
         temperature = inputs["gas_temperature_in"]
         pressure = inputs["gas_pressure_in"]
 

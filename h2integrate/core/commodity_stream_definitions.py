@@ -12,13 +12,13 @@ multivariable_streams = {
             "units": "kg/h",
             "desc": "Total mass flow rate of gas in the stream",
         },
-        "hydrogen_fraction": {
+        "hydrogen_mass_fraction": {
             "units": "unitless",
-            "desc": "Fraction of hydrogen in the gas stream",
+            "desc": "Mass fraction of hydrogen in the gas stream",
         },
-        "oxygen_fraction": {
+        "oxygen_mass_fraction": {
             "units": "unitless",
-            "desc": "Fraction of oxygen in the gas stream",
+            "desc": "Mass fraction of oxygen in the gas stream",
         },
         "gas_temperature": {
             "units": "K",

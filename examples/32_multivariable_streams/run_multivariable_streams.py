@@ -10,8 +10,8 @@ a single combined stream to a consumer.
 
 The wellhead_gas_mixture stream includes:
 - gas_flow (kg/h): Total mass flow rate
-- hydrogen_fraction: Fraction of hydrogen
-- oxygen_fraction: Fraction of oxygen
+- hydrogen_mass_fraction: Mass fraction of hydrogen
+- oxygen_mass_fraction: Mass fraction of oxygen
 - gas_temperature (K): Temperature
 - gas_pressure (bar): Pressure
 """
@@ -52,7 +52,7 @@ print("\nGas Combiner Outputs (mass-weighted average):")
 flow_out = model.prob.get_val("gas_combiner.gas_flow_out", units="kg/h")
 temp_out = model.prob.get_val("gas_combiner.gas_temperature_out", units="K")
 pres_out = model.prob.get_val("gas_combiner.gas_pressure_out", units="bar")
-h2_out = model.prob.get_val("gas_combiner.hydrogen_fraction_out")
+h2_out = model.prob.get_val("gas_combiner.hydrogen_mass_fraction_out")
 print(f"  Total Flow: mean={flow_out.mean():.2f} kg/h (sum of inputs)")
 print(f"  Temperature: mean={temp_out.mean():.1f} K (weighted avg)")
 print(f"  Pressure: mean={pres_out.mean():.2f} bar (weighted avg)")
