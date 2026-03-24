@@ -80,15 +80,15 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
             "cost_per_discharge",
             "commodity_met_value",
             "max_capacity",
-            "max_charge_fraction",
-            "min_charge_fraction",
+            "max_soc_fraction",
+            "min_soc_fraction",
             "charge_efficiency",
             "discharge_efficiency",
             "max_charge_rate",
         ]
 
         dispatch_inputs = {k: self.as_dict()[k] for k in dispatch_keys}
-        dispatch_inputs.update({"initial_soc_fraction": self.init_charge_fraction})
+        dispatch_inputs.update({"initial_soc_fraction": self.init_soc_fraction})
         return dispatch_inputs
 
 
@@ -125,7 +125,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         super().setup()
 
         self.n_control_window = self.config.n_control_window
-        self.updated_initial_soc = self.config.init_charge_fraction
+        self.updated_initial_soc = self.config.init_soc_fraction
 
         # Is this the best place to put this???
         self.commodity_info = {
@@ -202,15 +202,9 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     self.config.commodity.
 
             Returns:
-                tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-                    total_commodity_out :
-                        Net commodity supplied to demand each timestep (min(demand, storage + gen)).
+                tuple[np.ndarray, np.ndarray]:
                     storage_commodity_out :
                         Commodity supplied (positive) by the storage asset each timestep.
-                    unmet_demand :
-                        Positive shortfall = demand - total_out (0 if fully met).
-                    unused_commodity :
-                        Surplus generation + storage discharge not used to meet demand.
                     soc :
                         State of charge trajectory (percent of capacity).
 
@@ -223,10 +217,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             """
 
             # initialize outputs
-            unmet_demand = np.zeros(self.n_timesteps)
             storage_commodity_out = np.zeros(self.n_timesteps)
-            total_commodity_out = np.zeros(self.n_timesteps)
-            unused_commodity = np.zeros(self.n_timesteps)
             soc = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
@@ -278,15 +269,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     # simulation
                     storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
                     soc[j] = soc_control_window[j - t]
-                    total_commodity_out[j] = np.minimum(
-                        demand_in[j - t], storage_commodity_out[j] + commodity_in[j - t]
-                    )
-                    unmet_demand[j] = np.maximum(0, demand_in[j - t] - total_commodity_out[j])
-                    unused_commodity[j] = np.maximum(
-                        0, storage_commodity_out[j] + commodity_in[j - t] - demand_in[j - t]
-                    )
 
-            return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
+            return storage_commodity_out, soc
 
         return pyomo_dispatch_solver
 

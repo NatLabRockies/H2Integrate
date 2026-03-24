@@ -7,7 +7,7 @@ There are two different systematic approaches, or frameworks, in H2Integrate for
 The first approach, [open-loop control](#open-loop-control), assumes no feedback of any kind to the controller. The open-loop framework does not require a detailed technology performance model and can essentially act as the performance model. The open-loop framework establishes a control component that runs the control and passes out information about `<commodity>_unmet_demand`, `unused_<commodity>`, `<commodity>_out`, and `total_<commodity>_unmet_demand`.
 
 Supported controllers:
-- [`PassThroughOpenLoopController`](#pass-through-controller)
+- [`SimpleStorageOpenLoopController`](#pass-through-controller)
 - [`DemandOpenLoopStorageController`](#demand-open-loop-storage-controller)
 - [`DemandOpenLoopConverterController`](#demand-open-loop-converter-controller)
 - [`FlexibleDemandOpenLoopConverterController`](#flexible-demand-open-loop-converter-controller)

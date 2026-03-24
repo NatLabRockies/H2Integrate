@@ -6,8 +6,8 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 
 
 @define(kw_only=True)
-class PassThroughOpenLoopControllerConfig(BaseConfig):
-    """Configuration class for the PassThroughOpenLoopController
+class SimpleStorageOpenLoopControllerConfig(BaseConfig):
+    """Configuration class for the SimpleStorageOpenLoopController
 
     Attributes:
         commodity (str): name of commodity
@@ -43,7 +43,7 @@ class PassThroughOpenLoopControllerConfig(BaseConfig):
             raise ValueError(msg)
 
 
-class PassThroughOpenLoopController(om.ExplicitComponent):
+class SimpleStorageOpenLoopController(om.ExplicitComponent):
     """
     A simple pass-through controller for open-loop systems.
 
@@ -64,9 +64,10 @@ class PassThroughOpenLoopController(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = PassThroughOpenLoopControllerConfig.from_dict(
+        self.config = SimpleStorageOpenLoopControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             additional_cls_name=self.__class__.__name__,
+            strict=False,
         )
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

@@ -12,14 +12,16 @@ technologies:
       shared_parameters:
         max_charge_rate: 50000
         max_capacity: 200000
-        n_control_window: 24
         dt: 1.0
         n_timesteps: 24
-        init_charge_fraction: 0.5
-        max_charge_fraction: 0.9
-        min_charge_fraction: 0.1
+        init_soc_fraction: 0.5
+        max_soc_fraction: 0.9
+        min_soc_fraction: 0.1
       performance_parameters:
         chemistry: LFPGraphite
+        demand_profile: 0.0
       dispatch_rule_parameters:
         commodity_name: electricity
         commodity_storage_units: kW
+      control_parameters:
+        n_control_window: 24

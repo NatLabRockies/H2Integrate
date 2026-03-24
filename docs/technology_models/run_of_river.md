@@ -1,3 +1,4 @@
+(run_of_river_hydro)=
 # Run-of-river hydropower model
 
 The `RunOfRiverHydro` model simulates the generation of electricity from a river generation source, taking into account the flow rate and the efficiency of the turbine.

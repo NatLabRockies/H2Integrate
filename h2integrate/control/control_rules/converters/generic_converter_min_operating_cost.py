@@ -35,6 +35,14 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
         #   names and units in the Pyomo model
         self.commodity_name = commodity_info["commodity_name"]
         self.commodity_storage_units = commodity_info["commodity_storage_units"]
+        pyo.units.load_definitions_from_strings(["USD = [currency]"])
+
+        rate_units_pyo_str = "/".join(
+            f"pyo.units.{u}" for u in self.commodity_storage_units.split("/")
+        )
+        amount_units_pyo_str = f"({rate_units_pyo_str})*pyo.units.h"
+        self.rate_units_pyo = eval(rate_units_pyo_str)
+        self.cost_units_per_amount_pyo = eval(f"pyo.units.USD / ({amount_units_pyo_str})")
 
         # The Pyomo model that this class builds off of, where all of the variables, parameters,
         #   constraints, and ports will be added to.
@@ -95,12 +103,13 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
             pyomo_model (pyo.ConcreteModel): pyomo_model the variables should be added to.
 
         """
+
         tech_var = pyo.Var(
             doc=f"{self.commodity_name} production \
                     from {self.block_set_name} [{self.commodity_storage_units}]",
             domain=pyo.NonNegativeReals,
             bounds=(0, pyomo_model.available_production),
-            units=eval("pyo.units." + self.commodity_storage_units),
+            units=self.rate_units_pyo,
             initialize=0.0,
         )
 
@@ -136,6 +145,7 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
         ##################################
         # Parameters                     #
         ##################################
+
         pyomo_model.time_duration = pyo.Param(
             doc=f"{pyomo_model.name} time step [hour]",
             default=1.0,
@@ -148,14 +158,14 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
             default=0.0,
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval(f"pyo.units.USD / pyo.units.{self.commodity_storage_units}h"),
+            units=self.cost_units_per_amount_pyo,
         )
         pyomo_model.available_production = pyo.Param(
             doc=f"Available production for the generator [{self.commodity_storage_units}]",
             default=0.0,
             within=pyo.Reals,
             mutable=True,
-            units=eval(f"pyo.units.{self.commodity_storage_units}"),
+            units=self.rate_units_pyo,
         )
 
     def _create_constraints(self, pyomo_model: pyo.ConcreteModel):
@@ -233,7 +243,7 @@ class PyomoDispatchGenericConverterMinOperatingCosts:
             doc=f"{self.commodity_name} production \
                     from {tech_name} [{self.commodity_storage_units}]",
             domain=pyo.NonNegativeReals,
-            units=eval("pyo.units." + self.commodity_storage_units),
+            units=self.rate_units_pyo,
             initialize=0.0,
         )
 

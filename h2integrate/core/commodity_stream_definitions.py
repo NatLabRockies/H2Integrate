@@ -53,6 +53,7 @@ def is_electricity_producer(tech_name: str) -> bool:
         "wind",
         "solar",
         "pv",
+        "tidal",
         "river",
         "hopp",
         "natural_gas_plant",

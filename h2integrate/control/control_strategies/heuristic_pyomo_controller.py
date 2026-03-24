@@ -104,14 +104,9 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
             desc="Storage capacity",
         )
 
-        self.max_charge_fraction = [0.0] * self.config.n_control_window
+        self.max_soc_fraction = [0.0] * self.config.n_control_window
         self.max_discharge_fraction = [0.0] * self.config.n_control_window
         self._fixed_dispatch = [0.0] * self.config.n_control_window
-
-        if self.config.charge_efficiency is not None:
-            self.charge_efficiency = self.config.charge_efficiency
-        if self.config.discharge_efficiency is not None:
-            self.discharge_efficiency = self.config.discharge_efficiency
 
     def pyomo_setup(self, discrete_inputs):
         """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
@@ -182,15 +177,9 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
                     self.config.commodity.
 
             Returns:
-                tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-                    total_commodity_out :
-                        Net commodity supplied to demand each timestep (min(demand, storage + gen)).
+                tuple[np.ndarray, np.ndarray]:
                     storage_commodity_out :
                         Commodity supplied (positive) by the storage asset each timestep.
-                    unmet_demand :
-                        Positive shortfall = demand - total_out (0 if fully met).
-                    unused_commodity :
-                        Surplus generation + storage discharge not used to meet demand.
                     soc :
                         State of charge trajectory (percent of capacity).
 
@@ -203,10 +192,7 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
             """
 
             # initialize outputs
-            unmet_demand = np.zeros(self.n_timesteps)
             storage_commodity_out = np.zeros(self.n_timesteps)
-            total_commodity_out = np.zeros(self.n_timesteps)
-            unused_commodity = np.zeros(self.n_timesteps)
             soc = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
@@ -249,26 +235,24 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
                     # simulation
                     storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
                     soc[j] = soc_control_window[j - t]
-                    total_commodity_out[j] = np.minimum(
-                        demand_in[j - t], storage_commodity_out[j] + commodity_in[j - t]
-                    )
-                    unmet_demand[j] = np.maximum(0, demand_in[j - t] - total_commodity_out[j])
-                    unused_commodity[j] = np.maximum(
-                        0, storage_commodity_out[j] + commodity_in[j - t] - demand_in[j - t]
-                    )
 
-            return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
+            return storage_commodity_out, soc
 
         return pyomo_dispatch_solver
 
     def initialize_parameters(self, inputs):
         """Initializes parameters."""
 
+        if self.config.charge_efficiency is not None:
+            self.charge_efficiency = self.config.charge_efficiency
+        if self.config.discharge_efficiency is not None:
+            self.discharge_efficiency = self.config.discharge_efficiency
+
         self.minimum_storage = 0.0
         self.maximum_storage = inputs["storage_capacity"][0]
-        self.minimum_soc = self.config.min_charge_fraction
-        self.maximum_soc = self.config.max_charge_fraction
-        self.initial_soc = self.config.init_charge_fraction
+        self.minimum_soc = self.config.min_soc_fraction
+        self.maximum_soc = self.config.max_soc_fraction
+        self.initial_soc = self.config.init_soc_fraction
 
     def update_time_series_parameters(self, start_time: int = 0):
         """Updates time series parameters.
@@ -352,7 +336,7 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
 
         """
         for t in self.blocks.index_set():
-            self.max_charge_fraction[t] = self.enforce_power_fraction_simple_bounds(
+            self.max_soc_fraction[t] = self.enforce_power_fraction_simple_bounds(
                 (commodity_in[t]) / self.maximum_storage, self.minimum_soc, self.maximum_soc
             )
             self.max_discharge_fraction[t] = self.enforce_power_fraction_simple_bounds(
@@ -376,8 +360,8 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
                 if fd > self.max_discharge_fraction[t]:
                     fd = self.max_discharge_fraction[t]
             elif fd < 0.0:  # Charging
-                if -fd > self.max_charge_fraction[t]:
-                    fd = -self.max_charge_fraction[t]
+                if -fd > self.max_soc_fraction[t]:
+                    fd = -self.max_soc_fraction[t]
             self._fixed_dispatch[t] = fd
 
     @staticmethod
@@ -444,8 +428,8 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
                 if fd > self.max_discharge_fraction[t]:
                     fd = self.max_discharge_fraction[t]
             elif fd < 0.0:  # Charging
-                if -fd > self.max_charge_fraction[t]:
-                    fd = -self.max_charge_fraction[t]
+                if -fd > self.max_soc_fraction[t]:
+                    fd = -self.max_soc_fraction[t]
             self._fixed_dispatch[t] = fd
 
     def _fix_dispatch_model_variables(self):

@@ -10,6 +10,20 @@
 - Add tests for non-one valued charge, discharge, and round-trip efficiencies for the open-loop demand controller [PR 610](https://github.com/NatLabRockies/H2Integrate/pull/610)
 - Updated the `StorageAutoSizingModel` and `PassThroughOpenLoopController` so that `commodity_set_point` is used as the storage dispatch command [PR 608](https://github.com/NatLabRockies/H2Integrate/pull/608)
 - Updated the `SimpleGenericStorage` and `DemandOpenLoopStorageController` so that `commodity_set_point` is used as the storage dispatch command [PR 612](https://github.com/NatLabRockies/H2Integrate/pull/612)
+- Add PySAM marine models [PR 607](https://github.com/NatLabRockies/H2Integrate/pull/607)
+  - Add tidal resource model
+  - Add pysam tidal performance model
+  - Add pysam marine hydrokinetic cost model
+- Updated the `StoragePerformanceModel` and `PySAMBatteryPerformanceModel` to be compatible with the open-loop storage control strategies [PR 613](https://github.com/NatLabRockies/H2Integrate/pull/613)
+  - Removed `SimpleGenericStorage` and replaced usage with `StoragePerformanceModel`
+  - Renamed `PassThroughOpenLoopController` to `SimpleStorageOpenLoopController`
+  - Bugfix in pyomo control rules so that units such as `kg/h` can be used
+  - Bugfix in tests of pyomo control strategies with `StoragePerformanceModel` so that the pathname attribute is correct
+  - Added `demand_profile` as an input to `StoragePerformanceModel` and `PySAMBatteryPerformanceModel`
+  - Renamed `xx_charge_fraction` to `xx_soc_fraction`
+- Bugfix in `StoragePerformanceModel` and `PySAMBatteryPerformanceModel` for setting control inputs to account for cases with multiple storage technologies with different control strategy types [PR 615](https://github.com/NatLabRockies/H2Integrate/pull/615)
+- Bugfix input energy to OAE financial model [PR 617](https://github.com/NatLabRockies/H2Integrate/pull/617)
+  - Remove `MarineCarbonCapture` base classes
 
 ## 0.7.1 [March 13, 2026]
 

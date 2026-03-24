@@ -30,12 +30,12 @@ def tech_config():
 
 
 @pytest.mark.unit
-def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
-    doc_model = OAEPerformanceModel(
+def test_oae_outputs(driver_config, plant_config, tech_config, subtests):
+    oae_model = OAEPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
     )
     prob = om.Problem(model=om.Group())
-    prob.model.add_subsystem("comp", doc_model, promotes=["*"])
+    prob.model.add_subsystem("comp", oae_model, promotes=["*"])
     prob.setup()
 
     rng = np.random.default_rng(seed=42)
@@ -128,11 +128,11 @@ def test_doc_outputs(driver_config, plant_config, tech_config, subtests):
 
 @pytest.mark.regression
 def test_oae_standard_outputs(driver_config, plant_config, tech_config, subtests):
-    doc_model = OAEPerformanceModel(
+    oae_model = OAEPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
     )
     prob = om.Problem(model=om.Group())
-    prob.model.add_subsystem("comp", doc_model, promotes=["*"])
+    prob.model.add_subsystem("comp", oae_model, promotes=["*"])
     prob.setup()
 
     rng = np.random.default_rng(seed=42)
@@ -144,12 +144,6 @@ def test_oae_standard_outputs(driver_config, plant_config, tech_config, subtests
     # Run the model
     prob.run_model()
 
-    with subtests.test("co2 captured mtpy == annual co2 produced"):
-        assert (
-            pytest.approx(prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0], rel=1e-6)
-            == prob.get_val("comp.annual_co2_produced", units="t/yr")[0]
-        )
-
     annual_co2_from_cf_calc = (
         prob.get_val("comp.capacity_factor", units="unitless")
         * prob.get_val("comp.rated_co2_production", units="t/h")
@@ -159,7 +153,7 @@ def test_oae_standard_outputs(driver_config, plant_config, tech_config, subtests
     with subtests.test("CF calculated properly"):
         assert (
             pytest.approx(annual_co2_from_cf_calc[0], rel=1e-6)
-            == prob.get_val("comp.co2_capture_mtpy", units="t/yr")[0]
+            == prob.get_val("comp.annual_co2_produced", units="t/yr")[0]
         )
 
 
@@ -184,15 +178,15 @@ def test_performance_model(tech_config, plant_config, driver_config):
 
     # Get output values to determine expected values
     co2_out = prob.get_val("co2_out", units="kg/h")
-    co2_capture_mtpy = prob.get_val("co2_capture_mtpy", units="t/year")
-    plant_mCC_capacity_mtph = prob.get_val("plant_mCC_capacity_mtph", units="t/h")
+    co2_capture_mtpy = prob.get_val("annual_co2_produced", units="t/year")
+    plant_mCC_capacity_mtph = prob.get_val("rated_co2_production", units="t/h")
     alkaline_seawater_flow_rate = prob.get_val("alkaline_seawater_flow_rate", units="m**3/s")
     alkaline_seawater_pH = prob.get_val("alkaline_seawater_pH", units="unitless")
     excess_acid = prob.get_val("excess_acid", units="m**3")
 
     # Assert values (allowing for small numerical tolerance)
     assert_near_equal(np.mean(co2_out), 1108.394704250361, tolerance=1e-3)
-    assert_near_equal(co2_capture_mtpy, [9709.53760923], tolerance=1e-6)
+    assert_near_equal(co2_capture_mtpy[0], [9709.53760923], tolerance=1e-6)
     assert_near_equal(plant_mCC_capacity_mtph, [1.10854656], tolerance=1e-6)
     assert_near_equal(np.mean(alkaline_seawater_flow_rate), 3.2395561643835618, tolerance=1e-6)
     assert_near_equal(np.mean(alkaline_seawater_pH), 9.145157555568293, tolerance=1e-6)

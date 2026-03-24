@@ -28,7 +28,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     # Set up the OpenMDAO problem
     prob = om.Problem()
 
-    n_control_window = tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][
+    n_control_window = tech_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
         "n_control_window"
     ]
 
@@ -53,6 +53,14 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     prob.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        name="IVC4",
+        subsys=om.IndepVarComp(
+            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+        ),
         promotes=["*"],
     )
 
@@ -159,7 +167,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     with subtests.test("expected_battery_power"):
         np.testing.assert_allclose(
-            prob.get_val("battery_electricity", units="kW"),
+            prob.get_val("battery_electricity_out", units="kW"),
             expected_battery_power,
             rtol=1e-2,
         )
@@ -191,9 +199,10 @@ def test_battery_config(subtests):
         "max_capacity": batt_kw * 4,
         "max_charge_rate": batt_kw,
         "chemistry": "LFPGraphite",
-        "init_charge_fraction": 0.1,
-        "max_charge_fraction": 0.9,
-        "min_charge_fraction": 0.1,
+        "init_soc_fraction": 0.1,
+        "max_soc_fraction": 0.9,
+        "min_soc_fraction": 0.1,
+        "demand_profile": 0.0,
     }
 
     config = PySAMBatteryPerformanceModelConfig.from_dict(config_data)
@@ -204,19 +213,16 @@ def test_battery_config(subtests):
         assert config.max_capacity == batt_kw * 4
     with subtests.test("with minimal params minimum_SOC"):
         assert (
-            config.min_charge_fraction == 0.1
+            config.min_soc_fraction == 0.1
         )  # Decimal percent as compared to test_battery.py in HOPP 10%
     with subtests.test("with minimal params maximum_SOC"):
         assert (
-            config.max_charge_fraction == 0.9
+            config.max_soc_fraction == 0.9
         )  # Decimal percent as compared to test_battery.py in HOPP 90%
     with subtests.test("with minimal params initial_SOC"):
         assert (
-            config.init_charge_fraction == 0.1
+            config.init_soc_fraction == 0.1
         )  # Decimal percent as compared to test_battery.py in HOPP 10%
-
-    with subtests.test("with minimal params n_control_window"):
-        assert config.n_control_window == 24
 
     with subtests.test("with invalid capacity"):
         with pytest.raises(ValueError):
@@ -233,17 +239,17 @@ def test_battery_config(subtests):
         # SOC values must be between 0-100
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["min_charge_fraction"] = -1.0
+            data["min_soc_fraction"] = -1.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["max_charge_fraction"] = 120.0
+            data["max_soc_fraction"] = 120.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
         with pytest.raises(ValueError):
             data = deepcopy(config_data)
-            data["init_charge_fraction"] = 120.0
+            data["init_soc_fraction"] = 120.0
             PySAMBatteryPerformanceModelConfig.from_dict(data)
 
 
@@ -306,11 +312,11 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
                 "max_charge_rate": init_charge_rate,
                 "max_capacity": init_capacity,
                 "n_control_window": 48,
-                "init_charge_fraction": 0.1,
-                "max_charge_fraction": 1.0,
-                "min_charge_fraction": 0.1,
+                "init_soc_fraction": 0.1,
+                "max_soc_fraction": 1.0,
+                "min_soc_fraction": 0.1,
             },
-            "performance_parameters": {"chemistry": "LFPGraphite"},
+            "performance_parameters": {"chemistry": "LFPGraphite", "demand_profile": 0.0},
         }
     }
     # Set up the OpenMDAO problem
@@ -324,6 +330,14 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="MW"),
+        promotes=["*"],
+    )
+
+    prob_init.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+        ),
         promotes=["*"],
     )
 
@@ -379,6 +393,14 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="MW"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(
+            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+        ),
         promotes=["*"],
     )
 

@@ -26,6 +26,10 @@ class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
             variables are created.
 
         """
+        rate_units_pyo_str = "/".join(
+            f"pyo.units.{u}" for u in self.config.commodity_rate_units.split("/")
+        )
+
         setattr(
             pyomo_model,
             f"{tech_name}_{self.config.commodity}",
@@ -33,7 +37,7 @@ class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
                 doc=f"{self.config.commodity} generation \
                     from {tech_name} [{self.config.commodity_rate_units}]",
                 domain=pyo.NonNegativeReals,
-                units=eval("pyo.units." + self.config.commodity_rate_units),
+                units=eval(rate_units_pyo_str),
                 initialize=0.0,
             ),
         )

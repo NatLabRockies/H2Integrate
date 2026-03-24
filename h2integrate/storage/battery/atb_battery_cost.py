@@ -27,6 +27,8 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             per time step, e.g., "kW/time step").
         commodity_rate_units (str): Units of the electricity resource used to define the
             max_capacity and max_charge_rate. Must have a base of Watts ('W').
+        commodity_amount_units (str | None, optional): Units of the commodity as an amount
+            (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
     """
 
     energy_capex: float | int = field(validator=gte_zero)
@@ -35,6 +37,11 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
     max_capacity: float = field()
     max_charge_rate: float = field()
     commodity_rate_units: str = field(validator=contains(["W", "kW", "MW", "GW", "TW"]))
+    commodity_amount_units: str = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.commodity_amount_units is None:
+            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
 class ATBBatteryCostModel(CostModelBaseClass):
@@ -66,13 +73,13 @@ class ATBBatteryCostModel(CostModelBaseClass):
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
-            units=f"{self.config.commodity_rate_units}",
+            units=self.config.commodity_rate_units,
             desc="Battery charge/discharge rate",
         )
         self.add_input(
-            "max_capacity",
+            "storage_capacity",
             val=self.config.max_capacity,
-            units=f"{self.config.commodity_rate_units}*h",
+            units=self.config.commodity_amount_units,
             desc="Battery storage capacity",
         )
 
@@ -81,7 +88,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
 
         # convert the input capacity to units of kW*h
         max_capacity_kWh = units.convert_units(
-            inputs["max_capacity"], f"{self.config.commodity_rate_units}*h", "kW*h"
+            inputs["storage_capacity"], self.config.commodity_amount_units, "kW*h"
         )
 
         # convert the input charge rate to units of kW

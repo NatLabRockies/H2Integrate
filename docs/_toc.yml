@@ -26,7 +26,9 @@ parts:
   - caption: Technology Models
     chapters:
       - file: technology_models/feedstocks
+      - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river
+      - file: technology_models/tidal
       - file: technology_models/natural_gas
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
@@ -61,6 +63,7 @@ parts:
           - file: resource/himawari_v3_api
           - file: resource/meteosat_prime_meridian_v4_api
           - file: resource/openmeteo_solar_archive
+          - file: resource/tidal_resource
   - caption: Control
     chapters:
       - file: control/control_overview

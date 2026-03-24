@@ -7,9 +7,9 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.core.file_utils import load_yaml
-from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
-from h2integrate.control.control_strategies.storage.passthrough_openloop_controller import (
-    PassThroughOpenLoopController,
+from h2integrate.storage.storage_performance_model import StoragePerformanceModel
+from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
+    SimpleStorageOpenLoopController,
 )
 from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
     DemandOpenLoopStorageController,
@@ -65,7 +65,7 @@ def test_pass_through_controller(subtests):
 
     prob.model.add_subsystem(
         "pass_through_controller",
-        PassThroughOpenLoopController(
+        SimpleStorageOpenLoopController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -98,9 +98,9 @@ def test_storage_demand_controller(subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "max_capacity": 10.0,  # kg
-        "max_charge_fraction": 1.0,  # fraction (0-1)
-        "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 1.0,  # fraction (0-1)
+        "max_soc_fraction": 1.0,  # fraction (0-1)
+        "min_soc_fraction": 0.0,  # fraction (0-1)
+        "init_soc_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -129,7 +129,7 @@ def test_storage_demand_controller(subtests):
     )
     prob.model.add_subsystem(
         "storage",
-        SimpleGenericStorage(
+        StoragePerformanceModel(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -177,9 +177,9 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "max_capacity": 10.0,  # kg
-        "max_charge_fraction": 1.0,  # fraction (0-1)
-        "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 1.0,  # fraction (0-1)
+        "max_soc_fraction": 1.0,  # fraction (0-1)
+        "min_soc_fraction": 0.0,  # fraction (0-1)
+        "init_soc_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -193,9 +193,9 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "max_capacity": 10.0,  # kg
-        "max_charge_fraction": 1.0,  # fraction (0-1)
-        "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 1.0,  # fraction (0-1)
+        "max_soc_fraction": 1.0,  # fraction (0-1)
+        "min_soc_fraction": 0.0,  # fraction (0-1)
+        "init_soc_fraction": 1.0,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 0.5,  # kg/time step
         "charge_equals_discharge": False,
@@ -224,7 +224,7 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         )
         prob.model.add_subsystem(
             "storage",
-            SimpleGenericStorage(
+            StoragePerformanceModel(
                 plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
             ),
             promotes=["*"],
@@ -276,15 +276,17 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         "DemandOpenLoopStorageController"
     )
 
-    tech_config["technologies"]["h2_storage"]["performance_model"]["model"] = "SimpleGenericStorage"
+    tech_config["technologies"]["h2_storage"]["performance_model"]["model"] = (
+        "StoragePerformanceModel"
+    )
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "max_capacity": 10.0,  # kg
-        "max_charge_fraction": 1.0,  # fraction (0-1)
-        "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 0.75,  # fraction (0-1)
+        "max_soc_fraction": 1.0,  # fraction (0-1)
+        "min_soc_fraction": 0.0,  # fraction (0-1)
+        "init_soc_fraction": 0.75,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 1.0,  # kg/time step
         "charge_equals_discharge": False,
@@ -309,9 +311,9 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "max_capacity": 10.0,  # kg
-        "max_charge_fraction": 1.0,  # fraction (0-1)
-        "min_charge_fraction": 0.0,  # fraction (0-1)
-        "init_charge_fraction": 0.75,  # fraction (0-1)
+        "max_soc_fraction": 1.0,  # fraction (0-1)
+        "min_soc_fraction": 0.0,  # fraction (0-1)
+        "init_soc_fraction": 0.75,  # fraction (0-1)
         "max_charge_rate": 1.0,  # kg/time step
         "max_discharge_rate": 1.0,  # kg/time step
         "charge_equals_discharge": False,
@@ -353,7 +355,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         )
         prob.model.add_subsystem(
             "storage",
-            SimpleGenericStorage(
+            StoragePerformanceModel(
                 plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
             ),
             promotes=["*"],
@@ -414,7 +416,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
 @pytest.mark.regression
 def test_generic_storage_demand_controller(subtests):
     # Test is the same as the demand controller test test_demand_controller for the "h2_storage"
-    # performance model but with the "SimpleGenericStorage" performance model
+    # performance model but with the "StoragePerformanceModel" performance model
 
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -427,7 +429,7 @@ def test_generic_storage_demand_controller(subtests):
 
     tech_config["technologies"]["h2_storage"] = {
         "performance_model": {
-            "model": "SimpleGenericStorage",
+            "model": "StoragePerformanceModel",
         },
         "control_strategy": {
             "model": "DemandOpenLoopStorageController",
@@ -438,9 +440,9 @@ def test_generic_storage_demand_controller(subtests):
                 "commodity_rate_units": "kg/h",
                 "max_capacity": 10.0,  # kg
                 "max_charge_rate": 1.0,  # fraction (0-1)
-                "max_charge_fraction": 1.0,  # fraction (0-1)
-                "min_charge_fraction": 0.0,  # fraction (0-1)
-                "init_charge_fraction": 1.0,  # fraction (0-1)
+                "max_soc_fraction": 1.0,  # fraction (0-1)
+                "min_soc_fraction": 0.0,  # fraction (0-1)
+                "init_soc_fraction": 1.0,  # fraction (0-1)
                 "max_discharge_rate": 0.5,  # kg/time step
                 "charge_efficiency": 1.0,
                 "charge_equals_discharge": False,
@@ -471,7 +473,7 @@ def test_generic_storage_demand_controller(subtests):
 
     prob.model.add_subsystem(
         "storage",
-        SimpleGenericStorage(
+        StoragePerformanceModel(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -506,7 +508,7 @@ def test_generic_storage_demand_controller(subtests):
 @pytest.mark.regression
 def test_demand_converter_controller(subtests):
     # Test is the same as the demand controller test test_demand_controller for the "h2_storage"
-    # performance model but with the "SimpleGenericStorage" performance model
+    # performance model but with the "StoragePerformanceModel" performance model
 
     # Get the directory of the current script
     current_dir = Path(__file__).parent

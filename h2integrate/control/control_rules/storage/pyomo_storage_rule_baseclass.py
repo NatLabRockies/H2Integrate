@@ -14,8 +14,8 @@ from h2integrate.control.control_rules.pyomo_rule_baseclass import (
 class PyomoStorageRuleBaseConfig(PyomoRuleBaseConfig):
     max_capacity: float = field(validator=gt_zero)
 
-    min_charge_fraction: float = field(default=0.1, validator=range_val(0, 1))
-    max_charge_fraction: float = field(default=0.9, validator=range_val(0, 1))
+    min_soc_fraction: float = field(default=0.1, validator=range_val(0, 1))
+    max_soc_fraction: float = field(default=0.9, validator=range_val(0, 1))
 
     charge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
     discharge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
@@ -32,6 +32,10 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         )
         super().setup()
 
+        self.rate_units_pyo = eval(
+            "/".join(f"pyo.units.{u}" for u in self.config.commodity_rate_units.split("/"))
+        )
+
     def _create_parameters(self, pyomo_model: pyo.ConcreteModel, t):
         """Create storage-related parameters in the Pyomo model.
 
@@ -47,6 +51,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         ##################################
         # Storage Parameters             #
         ##################################
+
         pyomo_model.time_duration = pyo.Param(
             doc=pyomo_model.name + " time step [hour]",
             default=1.0,
@@ -62,7 +67,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             default=0.0,
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_rate_units),
+            units=self.rate_units_pyo,
         )
         pyomo_model.maximum_storage = pyo.Param(
             doc=pyomo_model.name
@@ -71,18 +76,18 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             + "]",
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_rate_units),
+            units=self.rate_units_pyo,
         )
         pyomo_model.minimum_soc = pyo.Param(
             doc=pyomo_model.name + " minimum state-of-charge [-]",
-            default=self.config.min_charge_fraction,
+            default=self.config.min_soc_fraction,
             within=pyo.PercentFraction,
             mutable=True,
             units=pyo.units.dimensionless,
         )
         pyomo_model.maximum_soc = pyo.Param(
             doc=pyomo_model.name + " maximum state-of-charge [-]",
-            default=self.config.max_charge_fraction,
+            default=self.config.max_soc_fraction,
             within=pyo.PercentFraction,
             mutable=True,
             units=pyo.units.dimensionless,
@@ -114,7 +119,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             default=self.config.max_capacity,
             within=pyo.NonNegativeReals,
             mutable=True,
-            units=eval("pyo.units." + self.config.commodity_rate_units),
+            units=self.rate_units_pyo,
         )
 
     def _create_variables(self, pyomo_model: pyo.ConcreteModel, t):
@@ -131,6 +136,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
         ##################################
         # Variables                      #
         ##################################
+
         pyomo_model.is_charging = pyo.Var(
             doc="1 if " + pyomo_model.name + " is charging; 0 Otherwise [-]",
             domain=pyo.Binary,
@@ -162,7 +168,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             + self.config.commodity_rate_units
             + "]",
             domain=pyo.NonNegativeReals,
-            units=eval("pyo.units." + self.config.commodity_rate_units),
+            units=self.rate_units_pyo,
         )
         pyomo_model.discharge_commodity = pyo.Var(
             doc=self.config.commodity
@@ -172,7 +178,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
             + self.config.commodity_rate_units
             + "]",
             domain=pyo.NonNegativeReals,
-            units=eval("pyo.units." + self.config.commodity_rate_units),
+            units=self.rate_units_pyo,
         )
 
     def _create_constraints(self, pyomo_model: pyo.ConcreteModel, t):

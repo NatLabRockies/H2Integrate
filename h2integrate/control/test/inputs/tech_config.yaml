@@ -3,7 +3,7 @@ description: This hybrid plant produces hydrogen
 technologies:
   h2_storage:
     control_strategy:
-      model: PassThroughOpenLoopController
+      model: SimpleStorageOpenLoopController
     performance_model:
       model: StorageAutoSizingModel
     cost_model:

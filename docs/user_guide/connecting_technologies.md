@@ -49,7 +49,7 @@ There are two connection formats:
 
 ##### Different shared parameter names
 ```yaml
-["source_tech", "destination_tech", ("source_parameter", "destination_parameter")]
+["source_tech", "destination_tech", ["source_parameter", "destination_parameter"]]
 ```
 
 - **source_tech**: Name of the technology providing the output
@@ -57,6 +57,9 @@ There are two connection formats:
 - **source_parameter**: The name of the parameter within ``"source_tech"``
 - **destination_parameter**: The name of the parameter within ``"destination_tech"``
 
+```{note}
+The `source_parameter` and `destination_parameter` should be input into the array as another array. If it's input as a tuple the model will raise an error.
+```
 
 ### Internal connection logic
 

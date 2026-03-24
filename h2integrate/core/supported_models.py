@@ -1,4 +1,5 @@
 from h2integrate.resource.river import RiverResource
+from h2integrate.resource.tidal import TidalResource
 from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 from h2integrate.transporters.pipe import PipePerformanceModel
 from h2integrate.transporters.cable import CablePerformanceModel
@@ -8,7 +9,6 @@ from h2integrate.finances.profast_npv import ProFastNPV
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
-from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
@@ -33,7 +33,6 @@ from h2integrate.converters.iron.iron_transport import (
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
-from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 from h2integrate.converters.hydrogen.h2_fuel_cell import (
     H2FuelCellCostModel,
     LinearH2FuelCellPerformanceModel,
@@ -58,10 +57,12 @@ from h2integrate.storage.hydrogen.h2_storage_cost import (
 from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.transporters.generic_transporter import GenericTransporterPerformanceModel
 from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
+from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopCostModel,
     AmmoniaSynLoopPerformanceModel,
 )
+from h2integrate.converters.water_power.tidal_pysam import PySAMTidalPerformanceModel
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
 from h2integrate.converters.water.desal.desalination import (
     ReverseOsmosisCostModel,
@@ -93,6 +94,7 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
     NaturalGasCostModel,
     NaturalGasPerformanceModel,
 )
+from h2integrate.converters.water_power.pysam_marine_cost import PySAMMarineCostModel
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
 from h2integrate.converters.hydrogen.steam_methane_reformer import (
@@ -155,8 +157,8 @@ from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models imp
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
 )
-from h2integrate.control.control_strategies.storage.passthrough_openloop_controller import (
-    PassThroughOpenLoopController,
+from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
+    SimpleStorageOpenLoopController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
@@ -177,6 +179,7 @@ from h2integrate.control.control_strategies.converters.demand_openloop_converter
 
 supported_models = {
     # Resources
+    "TidalResource": TidalResource,
     "RiverResource": RiverResource,
     "WTKNLRDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
@@ -198,6 +201,8 @@ supported_models = {
     "PYSAMSolarPlantPerformanceModel": PYSAMSolarPlantPerformanceModel,
     "ATBUtilityPVCostModel": ATBUtilityPVCostModel,
     "ATBResComPVCostModel": ATBResComPVCostModel,
+    "PySAMTidalPerformanceModel": PySAMTidalPerformanceModel,
+    "PySAMMarineCostModel": PySAMMarineCostModel,
     "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
     "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
     "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
@@ -272,9 +277,8 @@ supported_models = {
     "PipeStorageCostModel": PipeStorageCostModel,
     "ATBBatteryCostModel": ATBBatteryCostModel,
     "GenericStorageCostModel": GenericStorageCostModel,
-    "SimpleGenericStorage": SimpleGenericStorage,
     # Control
-    "PassThroughOpenLoopController": PassThroughOpenLoopController,
+    "SimpleStorageOpenLoopController": SimpleStorageOpenLoopController,
     "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
     "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
     "OptimizedDispatchController": OptimizedDispatchController,

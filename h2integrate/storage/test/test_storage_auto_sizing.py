@@ -3,8 +3,8 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
-from h2integrate.control.control_strategies.storage.passthrough_openloop_controller import (
-    PassThroughOpenLoopController,
+from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
+    SimpleStorageOpenLoopController,
 )
 
 
@@ -18,8 +18,8 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "set_demand_as_avg_commodity_in": True,
-        "min_charge_fraction": 0.0,
-        "max_charge_fraction": 1.0,
+        "min_soc_fraction": 0.0,
+        "max_soc_fraction": 1.0,
         "commodity_amount_units": "kg",
         "charge_efficiency": 1.0,
         "discharge_efficiency": 1.0,
@@ -197,8 +197,8 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "set_demand_as_avg_commodity_in": True,
-        "min_charge_fraction": 0.1,
-        "max_charge_fraction": 0.9,
+        "min_soc_fraction": 0.1,
+        "max_soc_fraction": 0.9,
         "commodity_amount_units": "kg",
         "charge_efficiency": 1.0,
         "discharge_efficiency": 1.0,
@@ -250,8 +250,8 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
         expected_usable_capacity = np.max(soc_kg_adj) - np.min(soc_kg_adj)
 
         expected_capacity = expected_usable_capacity / (
-            performance_model_config["max_charge_fraction"]
-            - performance_model_config["min_charge_fraction"]
+            performance_model_config["max_soc_fraction"]
+            - performance_model_config["min_soc_fraction"]
         )
         assert pytest.approx(capacity, rel=1e-6) == expected_capacity
 
@@ -265,13 +265,13 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
     with subtests.test("SOC >= min SOC fraction"):
         assert np.all(
             prob.get_val("storage.SOC", units="unitless")
-            >= performance_model_config["min_charge_fraction"]
+            >= performance_model_config["min_soc_fraction"]
         )
 
     with subtests.test("SOC <= max SOC fraction"):
         assert np.all(
             prob.get_val("storage.SOC", units="unitless")
-            <= performance_model_config["max_charge_fraction"]
+            <= performance_model_config["max_soc_fraction"]
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
@@ -296,8 +296,8 @@ def test_storage_autosizing_losses(plant_config, subtests):
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
         "set_demand_as_avg_commodity_in": True,
-        "min_charge_fraction": 0.0,
-        "max_charge_fraction": 1.0,
+        "min_soc_fraction": 0.0,
+        "max_soc_fraction": 1.0,
         "commodity_amount_units": "kg",
         "charge_efficiency": charge_eff,
         "discharge_efficiency": discharge_eff,
@@ -421,7 +421,7 @@ def test_storage_autosizing_losses(plant_config, subtests):
 @pytest.mark.parametrize("n_timesteps", [24])
 def test_storage_autosizing_with_passthrough_controller(plant_config, subtests):
     # Basic test to ensure that storage performance model
-    # works as-expected with the PassThroughOpenLoopController.
+    # works as-expected with the SimpleStorageOpenLoopController.
     # This test should have the same results as test_storage_autosizing_basic_performance_no_losses
 
     tech_config = {
@@ -431,8 +431,8 @@ def test_storage_autosizing_with_passthrough_controller(plant_config, subtests):
             "set_demand_as_avg_commodity_in": True,
         },
         "performance_parameters": {
-            "min_charge_fraction": 0.0,
-            "max_charge_fraction": 1.0,
+            "min_soc_fraction": 0.0,
+            "max_soc_fraction": 1.0,
             "commodity_amount_units": "kg",
             "charge_efficiency": 1.0,
             "discharge_efficiency": 1.0,
@@ -454,7 +454,7 @@ def test_storage_autosizing_with_passthrough_controller(plant_config, subtests):
 
     prob.model.add_subsystem(
         "controller",
-        PassThroughOpenLoopController(
+        SimpleStorageOpenLoopController(
             plant_config=plant_config,
             tech_config={"model_inputs": tech_config},
         ),

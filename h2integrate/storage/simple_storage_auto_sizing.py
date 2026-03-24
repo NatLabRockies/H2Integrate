@@ -13,8 +13,8 @@ class StorageSizingModelConfig(BaseConfig):
     Attributes:
         commodity (str): name of commodity
         commodity_rate_units (str): Units of the commodity (e.g., kW or kg/h).
-        min_charge_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
-        max_charge_fraction (float): Maximum allowable state of charge as a fraction (0 to 1).
+        min_soc_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
+        max_soc_fraction (float): Maximum allowable state of charge as a fraction (0 to 1).
         set_demand_as_avg_commodity_in (bool): If True, assume the demand is
             equal to the mean input commodity. If False, uses the demand input.
         demand_profile (int | float | list, optional): Demand values for each timestep, in
@@ -38,8 +38,8 @@ class StorageSizingModelConfig(BaseConfig):
     commodity: str = field(converter=(str.strip, str.lower))
     commodity_rate_units: str = field(converter=str.strip)
 
-    min_charge_fraction: float = field(validator=range_val(0, 1))
-    max_charge_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=range_val(0, 1))
+    max_soc_fraction: float = field(validator=range_val(0, 1))
 
     # TODO: add in logic for having different discharge rate
     # charge_equals_discharge: bool = field(default=True)
@@ -91,7 +91,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
     capacity calculated.
 
     Note: this storage performance model is intended to be used with the
-    `PassThroughOpenLoopController` controller and is not compatible with the
+    `SimpleStorageOpenLoopController` controller and is not compatible with the
     `DemandOpenLoopStorageController` controller.
 
     Inputs:
@@ -256,7 +256,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
             maximum SOC and minimum SOC from Steps 2 and 3.
         5) Calculate the rated storage capacity as the usable storage capacity
             (calculated in Step 4) divided by
-            `config.max_charge_fraction - config.min_charge_fraction`
+            `config.max_soc_fraction - config.min_soc_fraction`
 
         Part 2: Simulate the performance of that storage model. The steps of this are:
 
@@ -297,7 +297,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
 
         # 5. Calculate the storage capacity to account for SOC limits
         rated_storage_capacity = max_usable_storage_capacity / (
-            self.config.max_charge_fraction - self.config.min_charge_fraction
+            self.config.max_soc_fraction - self.config.min_soc_fraction
         )
 
         # Part 2: Simulate the storage performance based on the sizes calculated
@@ -305,7 +305,7 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
 
         # 1. Set the starting SOC (as a fraction) at the start of the simulation.
         self.current_soc = np.max(
-            [self.config.min_charge_fraction, commodity_storage_soc[0] / rated_storage_capacity]
+            [self.config.min_soc_fraction, commodity_storage_soc[0] / rated_storage_capacity]
         )
 
         # 2. Simulate the storage performance using the `simulate()`
@@ -460,8 +460,8 @@ class StorageAutoSizingModel(PerformanceModelBaseClass):
         # and redundant divisions inside the per-timestep loop.
         charge_eff = self.config.charge_efficiency
         discharge_eff = self.config.discharge_efficiency
-        soc_max = self.config.max_charge_fraction
-        soc_min = self.config.min_charge_fraction
+        soc_max = self.config.max_soc_fraction
+        soc_min = self.config.min_soc_fraction
 
         commands = np.asarray(storage_dispatch_commands, dtype=float)
         soc = float(self.current_soc)

@@ -26,13 +26,13 @@ class PyomoControllerBaseConfig(BaseConfig):
         max_capacity (float):
             Physical maximum stored commodity capacity (inventory, not a rate).
             Units correspond to the base commodity units (e.g., kg, MWh).
-        max_charge_fraction (float):
+        max_soc_fraction (float):
             Upper bound on state of charge expressed as a fraction in [0, 1].
             1.0 means the controller may fill to max_capacity.
-        min_charge_fraction (float):
+        min_soc_fraction (float):
             Lower bound on state of charge expressed as a fraction in [0, 1].
             0.0 allows full depletion; >0 reserves minimum inventory.
-        init_charge_fraction (float):
+        init_soc_fraction (float):
             Initial state of charge at simulation start as a fraction in [0, 1].
         n_control_window (int):
             Number of consecutive timesteps processed per control action
@@ -55,9 +55,9 @@ class PyomoControllerBaseConfig(BaseConfig):
     """
 
     max_capacity: float = field()
-    max_charge_fraction: float = field(validator=range_val(0, 1))
-    min_charge_fraction: float = field(validator=range_val(0, 1))
-    init_charge_fraction: float = field(validator=range_val(0, 1))
+    max_soc_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=range_val(0, 1))
+    init_soc_fraction: float = field(validator=range_val(0, 1))
     n_control_window: int = field()
     commodity: str = field()
     commodity_rate_units: str = field()
@@ -181,15 +181,9 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
                     self.config.commodity.
 
             Returns:
-                tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-                    total_commodity_out :
-                        Net commodity supplied to demand each timestep (min(demand, storage + gen)).
+                tuple[np.ndarray, np.ndarray]:
                     storage_commodity_out :
                         Commodity supplied (positive) by the storage asset each timestep.
-                    unmet_demand :
-                        Positive shortfall = demand - total_out (0 if fully met).
-                    unused_commodity :
-                        Surplus generation + storage discharge not used to meet demand.
                     soc :
                         State of charge trajectory (percent of capacity).
 
@@ -202,10 +196,7 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
             """
 
             # initialize outputs
-            unmet_demand = np.zeros(self.n_timesteps)
             storage_commodity_out = np.zeros(self.n_timesteps)
-            total_commodity_out = np.zeros(self.n_timesteps)
-            unused_commodity = np.zeros(self.n_timesteps)
             soc = np.zeros(self.n_timesteps)
 
             # This is where the pyomo controller interface is defined in individual
@@ -217,7 +208,7 @@ class PyomoControllerBaseClass(om.ExplicitComponent):
             # 3. solve dispatch model or set fixed dispatch
             # 4. update outputs
 
-            return total_commodity_out, storage_commodity_out, unmet_demand, unused_commodity, soc
+            return storage_commodity_out, soc
 
         return pyomo_dispatch_solver
 

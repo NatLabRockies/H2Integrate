@@ -46,9 +46,9 @@ technologies:
         commodity: electricity
         max_charge_rate: 100000
         max_capacity: 400000
-        init_charge_fraction: 0.5  # Initial SOC for the storage
-        max_charge_fraction: 0.9  # Maximum SOC allowable for the storage technology
-        min_charge_fraction: 0.1  # Minimum SOC allowable for the storage technology
+        init_soc_fraction: 0.5  # Initial SOC for the storage
+        max_soc_fraction: 0.9  # Maximum SOC allowable for the storage technology
+        min_soc_fraction: 0.1  # Minimum SOC allowable for the storage technology
         system_commodity_interface_limit: 1e12
         charge_efficiency: 0.95  # Charge efficiency of the storage technology
         discharge_efficiency: 0.95  # Discharge efficiency of the storage technology
@@ -57,6 +57,7 @@ technologies:
       performance_parameters:
         system_model_source: pysam
         chemistry: LFPGraphite
+        demand_profile: 100000  # 100 MW
       cost_parameters:
         cost_year: 2022
         energy_capex: 310  # $/kWh from 2024 ATB year 2025

@@ -24,11 +24,11 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
             demand or a list/array for time-varying demand.
         max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
             e.g., "kg" if `commodity_rate_units` is "kg/h").
-        max_charge_fraction (float): Maximum allowable state of charge (SOC) as a fraction
+        max_soc_fraction (float): Maximum allowable state of charge (SOC) as a fraction
             of `max_capacity`, between 0 and 1.
-        min_charge_fraction (float): Minimum allowable SOC as a fraction of `max_capacity`,
+        min_soc_fraction (float): Minimum allowable SOC as a fraction of `max_capacity`,
             between 0 and 1.
-        init_charge_fraction (float): Initial SOC as a fraction of `max_capacity`,
+        init_soc_fraction (float): Initial SOC as a fraction of `max_capacity`,
             between 0 and 1.
         max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
             per time step, e.g., "kg/time step"). This rate does not include the charge_efficiency.
@@ -56,9 +56,9 @@ class DemandOpenLoopStorageControllerConfig(BaseConfig):
     commodity: str = field(converter=(str.strip, str.lower))
     demand_profile: int | float | list = field()
     max_capacity: float = field()
-    max_charge_fraction: float = field(validator=range_val(0, 1))
-    min_charge_fraction: float = field(validator=range_val(0, 1))
-    init_charge_fraction: float = field(validator=range_val(0, 1))
+    max_soc_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=range_val(0, 1))
+    init_soc_fraction: float = field(validator=range_val(0, 1))
     max_charge_rate: float = field(validator=gte_zero)
     charge_equals_discharge: bool = field(default=True)
     max_discharge_rate: float | None = field(default=None)
@@ -290,16 +290,16 @@ class DemandOpenLoopStorageController(om.ExplicitComponent):
         else:
             max_discharge_rate = inputs["max_discharge_rate"].item()
 
-        soc_max = self.config.max_charge_fraction
-        soc_min = self.config.min_charge_fraction
-        init_charge_fraction = self.config.init_charge_fraction
+        soc_max = self.config.max_soc_fraction
+        soc_min = self.config.min_soc_fraction
+        init_soc_fraction = self.config.init_soc_fraction
 
         charge_eff = float(self.config.charge_efficiency)
         discharge_eff = float(self.config.discharge_efficiency)
 
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
-        soc = deepcopy(init_charge_fraction)
+        soc = deepcopy(init_soc_fraction)
 
         demand_profile = inputs[f"{commodity}_demand"]
 
