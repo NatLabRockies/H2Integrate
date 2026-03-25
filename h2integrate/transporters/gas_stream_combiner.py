@@ -18,17 +18,17 @@ class GasStreamCombinerConfig(BaseConfig):
     """Configuration for the gas stream combiner.
 
     Attributes:
-        stream_type: Type of multivariable stream (e.g., 'wellhead_gas')
+        commodity: Type of multivariable stream (e.g., 'wellhead_gas_mixture')
         in_streams: Number of inflow streams to combine
     """
 
-    stream_type: str = field(default="wellhead_gas")
+    commodity: str = field(default="wellhead_gas_mixture")
     in_streams: int = field(default=2)
 
     def __attrs_post_init__(self):
-        if self.stream_type not in multivariable_streams:
+        if self.commodity not in multivariable_streams:
             raise ValueError(
-                f"Unknown stream type '{self.stream_type}'. "
+                f"Unknown commodity '{self.commodity}'. "
                 f"Available: {list(multivariable_streams.keys())}"
             )
 
@@ -52,8 +52,8 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        stream_def = multivariable_streams[self.config.stream_type]
-        stream_name = self.config.stream_type
+        stream_def = multivariable_streams[self.config.commodity]
+        stream_name = self.config.commodity
 
         # Add inputs for each stream
         for i in range(1, self.config.in_streams + 1):
@@ -79,12 +79,12 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
         # Identify the flow variable for weighting
         self._flow_var = next((v for v in stream_def.keys() if "flow" in v.lower()), None)
         if self._flow_var is None:
-            raise ValueError(f"No flow variable found in '{self.config.stream_type}'")
+            raise ValueError(f"No flow variable found in '{self.config.commodity}'")
 
     def compute(self, inputs, outputs):
         n_streams = self.config.in_streams
-        stream_def = multivariable_streams[self.config.stream_type]
-        stream_name = self.config.stream_type
+        stream_def = multivariable_streams[self.config.commodity]
+        stream_name = self.config.commodity
         flow_var = self._flow_var
 
         # Collect mass flows

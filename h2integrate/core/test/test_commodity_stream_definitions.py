@@ -60,6 +60,10 @@ def test_add_multivariable_output(subtests):
             assert name.startswith(f"{stream_name}:")
             assert name.endswith("_out")
 
+    with subtests.test("all variables are unique"):
+        called_names = [c.args[0] for c in component.add_output.call_args_list]
+        assert len(called_names) == len(set(called_names))
+
 
 @pytest.mark.unit
 def test_add_multivariable_input(subtests):
@@ -92,6 +96,10 @@ def test_add_multivariable_input(subtests):
         for name in called_names:
             assert name.startswith(f"{stream_name}:")
             assert name.endswith("_in")
+
+    with subtests.test("all variables are unique"):
+        called_names = [c.args[0] for c in component.add_input.call_args_list]
+        assert len(called_names) == len(set(called_names))
 
 
 @pytest.mark.unit

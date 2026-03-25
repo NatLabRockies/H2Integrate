@@ -98,7 +98,7 @@ And automatically connects:
 ## Multivariable streams
 
 Standard connections in H2Integrate transport a single commodity between technologies (e.g., electricity in kW, hydrogen in kg/h).
-**Multivariable streams** extend this by bundling several related variables into a single named stream, so that one connection specification in `technology_interconnections` expands into connections for every constituent variable automatically.
+*Multivariable streams* extend this by bundling several related variables into a single named stream, so that one connection specification in `technology_interconnections` expands into connections for every constituent variable automatically.
 
 A typical use-case is a gas mixture where you need to transport the mass flow rate, composition fractions, temperature, and pressure together between a producer, a combiner, and a consumer.
 

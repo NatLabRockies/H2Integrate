@@ -1,3 +1,4 @@
+import os
 import shutil
 from copy import deepcopy
 from pathlib import Path
@@ -476,3 +477,27 @@ def test_system_order(subtests):
 
     with subtests.test("Test expected names are in the correct order"):
         assert names == expected_names
+
+
+@pytest.mark.unit
+def test_no_sites_entry(temp_dir):
+    """Verify that a model can set up and run without a ``sites`` entry in the plant config.
+
+    Uses Example 32 (multivariable streams), whose plant_config intentionally
+    omits the ``sites`` key.
+    """
+    example_folder = EXAMPLE_DIR / "32_multivariable_streams"
+    shutil.copytree(example_folder, temp_dir / "32_multivariable_streams", dirs_exist_ok=True)
+
+    os.chdir(temp_dir / "32_multivariable_streams")
+
+    model = H2IntegrateModel(
+        temp_dir / "32_multivariable_streams" / "32_multivariable_streams.yaml"
+    )
+    model.run()
+
+    # Smoke-check: combiner output flow should be the sum of the two producers
+    flow_out = model.prob.get_val("gas_combiner.wellhead_gas_mixture:mass_flow_out", units="kg/h")
+    assert flow_out.mean() > 0.0
+
+    os.chdir(Path(__file__).parent)
