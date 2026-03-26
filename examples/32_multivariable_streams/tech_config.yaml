@@ -6,9 +6,9 @@ description: >
 technologies:
   gas_producer_1:
     performance_model:
-      model: DummyGasProducerPerformance
+      model: SimpleGasProducerPerformance
     cost_model:
-      model: DummyGasProducerCost
+      model: SimpleGasProducerCost
     model_inputs:
       performance_parameters:
         base_flow_rate: 150.0  # kg/hr
@@ -24,9 +24,9 @@ technologies:
         cost_year: 2024
   gas_producer_2:
     performance_model:
-      model: DummyGasProducerPerformance
+      model: SimpleGasProducerPerformance
     cost_model:
-      model: DummyGasProducerCost
+      model: SimpleGasProducerCost
     model_inputs:
       performance_parameters:
         base_flow_rate: 100.0  # kg/hr - different flow rate
@@ -49,9 +49,9 @@ technologies:
         in_streams: 2
   gas_consumer:
     performance_model:
-      model: DummyGasConsumerPerformance
+      model: SimpleGasConsumerPerformance
     cost_model:
-      model: DummyGasConsumerCost
+      model: SimpleGasConsumerCost
     model_inputs:
       performance_parameters: {}
       cost_parameters:

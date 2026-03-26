@@ -954,6 +954,50 @@ class H2IntegrateModel:
 
         self.finance_subgroups = finance_subgroups
 
+    def _connect_multivariable_stream(
+        self, source_tech, dest_tech, stream_name, combiner_counts, splitter_counts
+    ):
+        """Connect a multivariable stream between source and destination technologies.
+
+        Handles combiner indexing (numbered inputs), splitter indexing (numbered outputs),
+        and direct connections. Updates combiner_counts/splitter_counts dicts in-place.
+
+        Args:
+            source_tech (str): Name of the source technology.
+            dest_tech (str): Name of the destination technology.
+            stream_name (str): Name of the multivariable stream (key in multivariable_streams).
+            combiner_counts (dict): Tracks the next input index per combiner technology.
+            splitter_counts (dict): Tracks the next output index per splitter technology.
+        """
+        if "combiner" in dest_tech:
+            if dest_tech not in combiner_counts:
+                combiner_counts[dest_tech] = 1
+            else:
+                combiner_counts[dest_tech] += 1
+            stream_index = combiner_counts[dest_tech]
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out",
+                    f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
+                )
+        elif "splitter" in source_tech:
+            if source_tech not in splitter_counts:
+                splitter_counts[source_tech] = 1
+            else:
+                splitter_counts[source_tech] += 1
+            stream_index = splitter_counts[source_tech]
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out{stream_index}",
+                    f"{dest_tech}.{stream_name}:{var_name}_in",
+                )
+        else:
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out",
+                    f"{dest_tech}.{stream_name}:{var_name}_in",
+                )
+
     def connect_technologies(self):
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
 
@@ -969,37 +1013,13 @@ class H2IntegrateModel:
                 # Check if this is a multivariable stream connection
                 # Format: [source, dest, stream_name, transport_type]
                 if transport_item in multivariable_streams:
-                    # Handle combiner connections with auto-counting
-                    if "combiner" in dest_tech:
-                        if dest_tech not in combiner_counts:
-                            combiner_counts[dest_tech] = 1
-                        else:
-                            combiner_counts[dest_tech] += 1
-                        stream_index = combiner_counts[dest_tech]
-                        for var_name in multivariable_streams[transport_item]:
-                            self.plant.connect(
-                                f"{source_tech}.{transport_item}:{var_name}_out",
-                                f"{dest_tech}.{transport_item}:{var_name}_in{stream_index}",
-                            )
-                    # Handle splitter connections with auto-counting
-                    elif "splitter" in source_tech:
-                        if source_tech not in splitter_counts:
-                            splitter_counts[source_tech] = 1
-                        else:
-                            splitter_counts[source_tech] += 1
-                        stream_index = splitter_counts[source_tech]
-                        for var_name in multivariable_streams[transport_item]:
-                            self.plant.connect(
-                                f"{source_tech}.{transport_item}:{var_name}_out{stream_index}",
-                                f"{dest_tech}.{transport_item}:{var_name}_in",
-                            )
-                    # Direct connection for non-combiner/splitter destinations
-                    else:
-                        for var_name in multivariable_streams[transport_item]:
-                            self.plant.connect(
-                                f"{source_tech}.{transport_item}:{var_name}_out",
-                                f"{dest_tech}.{transport_item}:{var_name}_in",
-                            )
+                    self._connect_multivariable_stream(
+                        source_tech,
+                        dest_tech,
+                        transport_item,
+                        combiner_counts,
+                        splitter_counts,
+                    )
                     continue  # Skip the rest of the 4-element handling
 
                 if transport_type in self.tech_names:
@@ -1106,12 +1126,13 @@ class H2IntegrateModel:
                     source_parameter, dest_parameter = connected_parameter
                     # Check if this is a multivariable stream connection
                     if source_parameter in multivariable_streams:
-                        # Expand the multivariable stream into individual connections
-                        for var_name in multivariable_streams[source_parameter]:
-                            self.plant.connect(
-                                f"{source_tech}.{source_parameter}:{var_name}_out",
-                                f"{dest_tech}.{source_parameter}:{var_name}_in",
-                            )
+                        self._connect_multivariable_stream(
+                            source_tech,
+                            dest_tech,
+                            source_parameter,
+                            combiner_counts,
+                            splitter_counts,
+                        )
                     else:
                         self.plant.connect(
                             f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
@@ -1119,12 +1140,13 @@ class H2IntegrateModel:
                 else:
                     # Check if the connected_parameter is a multivariable stream
                     if connected_parameter in multivariable_streams:
-                        # Expand the multivariable stream into individual connections
-                        for var_name in multivariable_streams[connected_parameter]:
-                            self.plant.connect(
-                                f"{source_tech}.{connected_parameter}:{var_name}_out",
-                                f"{dest_tech}.{connected_parameter}:{var_name}_in",
-                            )
+                        self._connect_multivariable_stream(
+                            source_tech,
+                            dest_tech,
+                            connected_parameter,
+                            combiner_counts,
+                            splitter_counts,
+                        )
                     else:
                         self.plant.connect(
                             f"{source_tech}.{connected_parameter}",

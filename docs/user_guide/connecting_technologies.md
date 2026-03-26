@@ -116,7 +116,7 @@ To add a new multivariable stream type, add another entry to the `multivariable_
 
 ### Variable naming convention
 
-Multivariable stream variables follow the naming convention `<stream_name>:<var_name>_out` for outputs and `<stream_name>:<var_name>_in` for inputs.
+Multivariable stream variables follow the naming convention `<stream_name>:<var_name>_in` for inputs and `<stream_name>:<var_name>_out` for outputs.
 The colon separates the stream name from the constituent variable name, making it clear which stream a variable belongs to.
 
 
@@ -143,7 +143,7 @@ class MyConsumer(PerformanceModelBaseClass):
         add_multivariable_input(self, "wellhead_gas_mixture", self.n_timesteps)
 ```
 
-These helper functions replace the need for manually iterating over the stream definition dictionary, reducing boilerplate and ensuring consistency when adding new stream types.
+These helper functions replace the need for manually iterating over the stream definition dictionary, reducing boilerplate code and ensuring consistency when adding new stream types.
 
 ### Connecting multivariable streams
 

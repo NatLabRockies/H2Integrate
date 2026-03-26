@@ -7,6 +7,6 @@ plant:
     dt: 3600
     timezone: -6
 technology_interconnections:
-  - [gas_producer_1, gas_combiner, wellhead_gas_mixture, pipe]
-  - [gas_producer_2, gas_combiner, wellhead_gas_mixture, pipe]
+  - [gas_producer_1, gas_combiner, wellhead_gas_mixture]
+  - [gas_producer_2, gas_combiner, wellhead_gas_mixture]
   - [gas_combiner, gas_consumer, wellhead_gas_mixture]

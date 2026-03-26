@@ -103,10 +103,10 @@ from h2integrate.converters.hydrogen.steam_methane_reformer import (
     SteamMethaneReformerPerformanceModel,
 )
 from h2integrate.converters.natural_gas.dummy_gas_components import (
-    DummyGasConsumerCost,
-    DummyGasProducerCost,
-    DummyGasConsumerPerformance,
-    DummyGasProducerPerformance,
+    SimpleGasConsumerCost,
+    SimpleGasProducerCost,
+    SimpleGasConsumerPerformance,
+    SimpleGasProducerPerformance,
 )
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import (
@@ -302,9 +302,9 @@ supported_models = {
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
     # Dummy components for multivariable stream demonstrations
-    "DummyGasProducerPerformance": DummyGasProducerPerformance,
-    "DummyGasProducerCost": DummyGasProducerCost,
-    "DummyGasConsumerPerformance": DummyGasConsumerPerformance,
-    "DummyGasConsumerCost": DummyGasConsumerCost,
+    "SimpleGasProducerPerformance": SimpleGasProducerPerformance,
+    "SimpleGasProducerCost": SimpleGasProducerCost,
+    "SimpleGasConsumerPerformance": SimpleGasConsumerPerformance,
+    "SimpleGasConsumerCost": SimpleGasConsumerCost,
     "GasStreamCombinerPerformanceModel": GasStreamCombinerPerformanceModel,
 }

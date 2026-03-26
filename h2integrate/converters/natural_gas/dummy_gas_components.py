@@ -1,5 +1,9 @@
 """
-Dummy components for demonstrating multivariable streams.
+Dummy components for demonstrating multivariable streams, nominally based
+on wellhead gas mixtures. These components are not meant to represent any real
+physical processes or technologies, but simply to provide a realistic example
+of producing and consuming a multivariable stream with multiple constituent
+variables.
 
 These components are used in example 32 to showcase the multivariable stream
 connection feature. They produce and consume wellhead_gas_mixture streams with
@@ -23,7 +27,7 @@ from h2integrate.core.commodity_stream_definitions import (
 
 
 @define(kw_only=True)
-class DummyGasProducerPerformanceConfig(BaseConfig):
+class SimpleGasProducerPerformanceConfig(BaseConfig):
     """
     Configuration class for dummy gas producer performance model.
 
@@ -46,7 +50,7 @@ class DummyGasProducerPerformanceConfig(BaseConfig):
     random_seed: int | None = field(default=None)
 
 
-class DummyGasProducerPerformance(PerformanceModelBaseClass):
+class SimpleGasProducerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
 
@@ -64,7 +68,7 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
         self.commodity_amount_units = "kg"
 
     def setup(self):
-        self.config = DummyGasProducerPerformanceConfig.from_dict(
+        self.config = SimpleGasProducerPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
         super().setup()
@@ -123,7 +127,7 @@ class DummyGasProducerPerformance(PerformanceModelBaseClass):
         )
 
 
-class DummyGasConsumerPerformance(PerformanceModelBaseClass):
+class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
 
@@ -185,7 +189,7 @@ class DummyGasConsumerPerformance(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class DummyGasProducerCostConfig(CostModelBaseConfig):
+class SimpleGasProducerCostConfig(CostModelBaseConfig):
     """
     Configuration class for dummy gas producer cost model.
 
@@ -198,13 +202,13 @@ class DummyGasProducerCostConfig(CostModelBaseConfig):
     opex: float = field(default=50_000.0, validator=gte_zero)
 
 
-class DummyGasProducerCost(CostModelBaseClass):
+class SimpleGasProducerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas producer.
     """
 
     def setup(self):
-        self.config = DummyGasProducerCostConfig.from_dict(
+        self.config = SimpleGasProducerCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
 
@@ -216,7 +220,7 @@ class DummyGasProducerCost(CostModelBaseClass):
 
 
 @define(kw_only=True)
-class DummyGasConsumerCostConfig(CostModelBaseConfig):
+class SimpleGasConsumerCostConfig(CostModelBaseConfig):
     """
     Configuration class for dummy gas consumer cost model.
 
@@ -229,13 +233,13 @@ class DummyGasConsumerCostConfig(CostModelBaseConfig):
     opex: float = field(default=100_000.0, validator=gte_zero)
 
 
-class DummyGasConsumerCost(CostModelBaseClass):
+class SimpleGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.
     """
 
     def setup(self):
-        self.config = DummyGasConsumerCostConfig.from_dict(
+        self.config = SimpleGasConsumerCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
         )
 
