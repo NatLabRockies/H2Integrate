@@ -1219,12 +1219,6 @@ class H2IntegrateModel:
                         f"{dispatching_tech_name}.dispatch_block_rule_function_{tech_name}",
                     )
 
-        if (pyxdsm is not None) and (len(technology_interconnections) > 0):
-            try:
-                create_xdsm_from_config(self.plant_config)
-            except FileNotFoundError as e:
-                print(f"Unable to create system XDSM diagram. Error: {e}")
-
     def create_driver_model(self):
         """
         Add the driver to the OpenMDAO model and add recorder.
@@ -1449,3 +1443,22 @@ class H2IntegrateModel:
             "explicit_outputs": _structured(explicit_meta),
             "implicit_outputs": _structured(implicit_meta),
         }
+
+    def create_xdsm(self):
+        """Generates an XDSM diagram for the plant configuration and saves it to a PDF file.
+
+        Reads technology interconnections from the plant configuration and delegates
+        diagram creation to :func:`create_xdsm_from_config`. If ``pyxdsm`` is not
+        installed or no interconnections are defined, this method does nothing. A
+        :class:`FileNotFoundError` is caught and reported without raising.
+
+        Raises:
+            None: All exceptions are caught internally; errors are printed to stdout.
+        """
+
+        technology_interconnections = self.plant_config.get("technology_interconnections", [])
+        if (pyxdsm is not None) and (len(technology_interconnections) > 0):
+            try:
+                create_xdsm_from_config(self.plant_config)
+            except FileNotFoundError as e:
+                print(f"Unable to create system XDSM diagram. Error: {e}")

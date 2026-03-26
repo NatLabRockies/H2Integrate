@@ -1,11 +1,13 @@
 import shutil
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import yaml
 import numpy as np
 import pytest
 
+import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
@@ -476,3 +478,84 @@ def test_system_order(subtests):
 
     with subtests.test("Test expected names are in the correct order"):
         assert names == expected_names
+
+
+@pytest.mark.unit
+def test_create_xdsm_calls_create_xdsm_from_config():
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with (
+        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
+        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
+    ):
+        model.create_xdsm()
+
+    mock_fn.assert_called_once_with(plant_config)
+
+
+@pytest.mark.unit
+def test_create_xdsm_skips_when_pyxdsm_none():
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with (
+        patch.object(h2i_model_module, "pyxdsm", None),
+        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
+    ):
+        model.create_xdsm()
+
+    mock_fn.assert_not_called()
+
+
+@pytest.mark.unit
+def test_create_xdsm_skips_when_no_interconnections():
+    plant_config = {"technology_interconnections": []}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with (
+        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
+        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
+    ):
+        model.create_xdsm()
+
+    mock_fn.assert_not_called()
+
+
+@pytest.mark.unit
+def test_create_xdsm_skips_when_interconnections_key_missing():
+    plant_config = {}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with (
+        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
+        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
+    ):
+        model.create_xdsm()
+
+    mock_fn.assert_not_called()
+
+
+@pytest.mark.unit
+def test_create_xdsm_catches_file_not_found_error(capsys):
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with (
+        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
+        patch.object(
+            h2i_model_module,
+            "create_xdsm_from_config",
+            side_effect=FileNotFoundError("latex not found"),
+        ),
+    ):
+        model.create_xdsm()
+
+    captured = capsys.readouterr()
+    assert "Unable to create system XDSM diagram" in captured.out
+    assert "latex not found" in captured.out
