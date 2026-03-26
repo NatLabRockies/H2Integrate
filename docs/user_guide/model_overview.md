@@ -92,6 +92,9 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (converter-models)=
 ## Converter models
+- generic models:
+    - cost models:
+        + `GenericConverterCostModel`
 - `wind`: wind turbine
     - performance models:
         + `'PYSAMWindPlantPerformanceModel'`

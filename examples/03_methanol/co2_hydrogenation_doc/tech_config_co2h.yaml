@@ -5,7 +5,7 @@ technologies:
     performance_model:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: ATBWindPlantCostModel
+      model: GenericConverterCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 24
@@ -39,8 +39,12 @@ technologies:
             row_phase_offset: 0.0
             layout_shape: square
       cost_parameters:
-        capex_per_kW: 1380.0
-        opex_per_kW_per_year: 29.0
+        commodity: electricity
+        commodity_rate_units: kW
+        commodity_amount_units: kW*h
+        unit_capex: 1380.0  # USD/kW
+        unit_opex: 29.0  # USD/kW/year
+        unit_varopex: 0.0  # USD/kWh
         cost_year: 2019
   electricity_splitter:
     performance_model:

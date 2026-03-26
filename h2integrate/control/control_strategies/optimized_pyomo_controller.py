@@ -286,6 +286,10 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         """
         # Where pyomo model communicates with the rest of the controller
         # self.hybrid_dispatch_model is the pyomo model, this is the thing in hybrid_rule
+        if "max_charge_rate" in inputs:
+            self.dispatch_inputs["max_charge_rate"] = inputs["max_charge_rate"][0]
+        if "storage_capacity" in inputs:
+            self.dispatch_inputs["max_capacity"] = inputs["storage_capacity"][0]
         self.hybrid_dispatch_model = self._create_dispatch_optimization_model()
         self.hybrid_dispatch_rule.create_min_operating_cost_expression()
         self.hybrid_dispatch_rule.create_arcs()
