@@ -1,7 +1,7 @@
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import yaml
 import numpy as np
@@ -481,81 +481,66 @@ def test_system_order(subtests):
 
 
 @pytest.mark.unit
-def test_create_xdsm_calls_create_xdsm_from_config():
+def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
     model = object.__new__(H2IntegrateModel)
     model.plant_config = plant_config
 
-    with (
-        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
-        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
-    ):
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
         model.create_xdsm()
 
-    mock_fn.assert_called_once_with(plant_config)
+    mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
 
 
 @pytest.mark.unit
-def test_create_xdsm_skips_when_pyxdsm_none():
+def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
     model = object.__new__(H2IntegrateModel)
     model.plant_config = plant_config
+    outfile = "my_custom_xdsm"
 
-    with (
-        patch.object(h2i_model_module, "pyxdsm", None),
-        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
-    ):
-        model.create_xdsm()
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        model.create_xdsm(outfile=outfile)
 
-    mock_fn.assert_not_called()
+    mock_fn.assert_called_once_with(plant_config, output_file=outfile)
 
 
 @pytest.mark.unit
-def test_create_xdsm_skips_when_no_interconnections():
+def test_create_xdsm_raises_when_no_interconnections():
     plant_config = {"technology_interconnections": []}
     model = object.__new__(H2IntegrateModel)
     model.plant_config = plant_config
 
-    with (
-        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
-        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
-    ):
-        model.create_xdsm()
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        with pytest.raises(ValueError, match="requires technology interconnections"):
+            model.create_xdsm()
 
     mock_fn.assert_not_called()
 
 
 @pytest.mark.unit
-def test_create_xdsm_skips_when_interconnections_key_missing():
+def test_create_xdsm_raises_when_interconnections_key_missing():
     plant_config = {}
     model = object.__new__(H2IntegrateModel)
     model.plant_config = plant_config
 
-    with (
-        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
-        patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn,
-    ):
-        model.create_xdsm()
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        with pytest.raises(ValueError, match="requires technology interconnections"):
+            model.create_xdsm()
 
     mock_fn.assert_not_called()
 
 
 @pytest.mark.unit
-def test_create_xdsm_catches_file_not_found_error(capsys):
+def test_create_xdsm_propagates_file_not_found_error():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
     model = object.__new__(H2IntegrateModel)
     model.plant_config = plant_config
 
-    with (
-        patch.object(h2i_model_module, "pyxdsm", MagicMock()),
-        patch.object(
-            h2i_model_module,
-            "create_xdsm_from_config",
-            side_effect=FileNotFoundError("latex not found"),
-        ),
+    with patch.object(
+        h2i_model_module,
+        "create_xdsm_from_config",
+        side_effect=FileNotFoundError("latex not found"),
     ):
-        model.create_xdsm()
-
-    captured = capsys.readouterr()
-    assert "Unable to create system XDSM diagram" in captured.out
-    assert "latex not found" in captured.out
+        with pytest.raises(FileNotFoundError, match="latex not found"):
+            model.create_xdsm()

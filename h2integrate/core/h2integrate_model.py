@@ -1444,21 +1444,28 @@ class H2IntegrateModel:
             "implicit_outputs": _structured(implicit_meta),
         }
 
-    def create_xdsm(self):
-        """Generates an XDSM diagram for the plant configuration and saves it to a PDF file.
+    def create_xdsm(self, outfile="connections_xdsm"):
+        """Create an XDSM diagram from the plant technology interconnections.
 
-        Reads technology interconnections from the plant configuration and delegates
-        diagram creation to :func:`create_xdsm_from_config`. If ``pyxdsm`` is not
-        installed or no interconnections are defined, this method does nothing. A
-        :class:`FileNotFoundError` is caught and reported without raising.
+        This method reads ``technology_interconnections`` from ``self.plant_config``
+        and delegates diagram generation to
+        :func:`h2integrate.core.utilities.create_xdsm_from_config`.
+
+        Args:
+            outfile (str, optional): Base filename for the generated XDSM output.
+                The default is ``"connections_xdsm"``.
 
         Raises:
-            None: All exceptions are caught internally; errors are printed to stdout.
+            ValueError: If ``technology_interconnections`` is empty or missing from
+                the plant configuration.
         """
 
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
-        if (pyxdsm is not None) and (len(technology_interconnections) > 0):
-            try:
-                create_xdsm_from_config(self.plant_config)
-            except FileNotFoundError as e:
-                print(f"Unable to create system XDSM diagram. Error: {e}")
+
+        if len(technology_interconnections) > 0:
+            create_xdsm_from_config(self.plant_config, output_file=outfile)
+        else:
+            raise ValueError(
+                "Generating an XDSM diagram requires technology interconnections, "
+                "but none were found."
+            )

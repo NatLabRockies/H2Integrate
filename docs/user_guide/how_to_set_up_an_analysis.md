@@ -121,6 +121,82 @@ The `resource_to_tech_connections` section defines how resources (like wind or s
 For more information on how to define and interpret technology interconnections, see the {ref}`connecting_technologies` page.
 ```
 
+## Visualizing the model structure
+There are two basic methods for visualizing the model structure of your H2Integrate system model. You can generate a simplified [XDSM diagram](https://mdolab.engin.umich.edu/wiki/xdsm-overview) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model. The XDSM diagram is primarily useful for publications and presentations. The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of you H2Integrate model are given below.
+
+### XDSM diagram (static and simplified)
+
+Use the built-in `create_xdsm()` method to generate a static system diagram from the
+`technology_interconnections` section of your plant config.
+
+```{code-cell} ipython3
+from h2integrate.core.h2integrate_model import H2IntegrateModel
+from pathlib import Path
+import os
+
+
+# Change to an example directory
+os.chdir("../../examples/08_wind_electrolyzer/")
+
+# Build the model from the top-level config file
+h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
+
+# Write XDSM output to connections_xdsm.pdf
+h2i_model.create_xdsm(outfile="connections_xdsm")
+
+# Confirm where the file was written
+xdsm_pdf = Path("connections_xdsm.pdf")
+```
+
+This creates a PDF named `connections_xdsm.pdf` in your current working directory.
+
+```{code-cell} ipython3
+:tags: [remove-input]
+from IPython.display import IFrame, display
+
+display(IFrame(src=str(xdsm_pdf), width="100%", height=500))
+```
+
+*Figure: XDSM diagram generated from the technology interconnections.*
+
+
+### N2 diagram (interactive and complete)
+
+Use OpenMDAO's `n2` utility to generate an interactive HTML diagram of the full model.
+
+```{code-cell} ipython3
+from h2integrate.core.h2integrate_model import H2IntegrateModel
+from pathlib import Path
+import openmdao.api as om
+import os
+
+
+# Change to an example directory
+os.chdir("../../examples/08_wind_electrolyzer/")
+
+# Build and set up the model
+h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
+h2i_model.setup()
+
+# Write interactive N2 HTML diagram
+om.n2(h2i_model.prob, outfile="h2i_n2.html")
+
+# Confirm output file and display it inline
+n2_html = Path("h2i_n2.html")
+```
+
+```{code-cell} ipython3
+:tags: [remove-input]
+from IPython.display import IFrame, display
+
+display(IFrame(src=str(n2_html), width="100%", height=500))
+```
+
+*Figure: OpenMDAO N2 diagram showing the full model structure and variable connections.*
+
+Open `h2i_n2.html` in a browser to explore model groups, components, and variable connections.
+
+
 ## Running the analysis
 
 Once you have the config files defined, you can run the analysis using a simple Python script that inputs the top-level config yaml.
