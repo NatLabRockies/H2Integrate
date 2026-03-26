@@ -131,7 +131,6 @@ Use the built-in `create_xdsm()` method to generate a static system diagram from
 
 ```{code-cell} ipython3
 from h2integrate.core.h2integrate_model import H2IntegrateModel
-from pathlib import Path
 import os
 
 
@@ -143,18 +142,28 @@ h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
 
 # Write XDSM output to connections_xdsm.pdf
 h2i_model.create_xdsm(outfile="connections_xdsm")
-
-# Confirm where the file was written
-xdsm_pdf = Path("connections_xdsm.pdf")
 ```
 
 This creates a PDF named `connections_xdsm.pdf` in your current working directory.
 
 ```{code-cell} ipython3
 :tags: [remove-input]
-from IPython.display import IFrame, display
+import base64
+from pathlib import Path
+from IPython.display import HTML, display
 
-display(IFrame(src=str(xdsm_pdf), width="100%", height=500))
+xdsm_pdf = "connections_xdsm.pdf"
+
+pdf_data = base64.b64encode(Path(xdsm_pdf).read_bytes()).decode("utf-8")
+display(
+    HTML(
+        f'<div style="width:100% !important; margin:0 !important; padding:0 !important; border:none !important; background:transparent !important;">'
+        f'<embed src="data:application/pdf;base64,{pdf_data}" '
+        'type="application/pdf" '
+        'style="display:block !important; width:100% !important; height:400px !important; border:none !important; outline:none !important; margin:0 !important; padding:0 !important; background:transparent !important; box-shadow:none !important;" />'
+        '</div>'
+    )
+)
 ```
 
 *Figure: XDSM diagram generated from the technology interconnections.*
@@ -166,7 +175,6 @@ Use OpenMDAO's `n2` utility to generate an interactive HTML diagram of the full 
 
 ```{code-cell} ipython3
 from h2integrate.core.h2integrate_model import H2IntegrateModel
-from pathlib import Path
 import openmdao.api as om
 import os
 
@@ -179,22 +187,37 @@ h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
 h2i_model.setup()
 
 # Write interactive N2 HTML diagram
-om.n2(h2i_model.prob, outfile="h2i_n2.html")
-
-# Confirm output file and display it inline
-n2_html = Path("h2i_n2.html")
+om.n2(
+    h2i_model.prob,
+    outfile="h2i_n2.html",
+    display_in_notebook=False,
+    show_browser=False,
+)
 ```
+
+Open `h2i_n2.html` in a browser to explore model groups, components, and variable connections.
 
 ```{code-cell} ipython3
 :tags: [remove-input]
-from IPython.display import IFrame, display
+import html
+from pathlib import Path
+from IPython.display import HTML, display
 
-display(IFrame(src=str(n2_html), width="100%", height=500))
+n2_html = "h2i_n2.html"
+n2_srcdoc = html.escape(Path(n2_html).read_text(encoding="utf-8"))
+display(
+    HTML(
+        f'<div style="width:100%; height:900px; overflow:auto; margin:0; padding:0; border:0;">'
+        f'<iframe srcdoc="{n2_srcdoc}" '
+        'style="display:block; width:200%; height:600px; border:0; margin:0; padding:0; background:transparent;" '
+        'loading="lazy"></iframe>'
+        '</div>'
+    )
+)
 ```
 
-*Figure: OpenMDAO N2 diagram showing the full model structure and variable connections.*
+*Figure: Interactive OpenMDAO N2 diagram showing the full model structure and variable connections.*
 
-Open `h2i_n2.html` in a browser to explore model groups, components, and variable connections.
 
 
 ## Running the analysis
