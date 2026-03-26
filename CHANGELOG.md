@@ -24,6 +24,7 @@
 - Bugfix in `StoragePerformanceModel` and `PySAMBatteryPerformanceModel` for setting control inputs to account for cases with multiple storage technologies with different control strategy types [PR 615](https://github.com/NatLabRockies/H2Integrate/pull/615)
 - Bugfix input energy to OAE financial model [PR 617](https://github.com/NatLabRockies/H2Integrate/pull/617)
   - Remove `MarineCarbonCapture` base classes
+- Added the notion of multivariable commodity streams, which allow users to connect multiple variables between technologies with a single connection specification. [PR 480](https://github.com/NatLabRockies/H2Integrate/pull/480)
 - Added base class (`StorageOpenLoopControlBase`) and base configuration class (`StorageOpenLoopControlBaseConfig`) for open-loop storage control strategies and updated the existing open-loop storage control strategies to inherit these [PR 619](https://github.com/NatLabRockies/H2Integrate/pull/619)
 - Added a generic cost model for converters [PR 622](https://github.com/NatLabRockies/H2Integrate/pull/622)
 - Updated the `StorageAutoSizingModel` model to be compatible with Pyomo control strategies [PR 621](https://github.com/NatLabRockies/H2Integrate/pull/621)

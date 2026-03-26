@@ -54,6 +54,7 @@ from h2integrate.storage.hydrogen.h2_storage_cost import (
     SaltCavernStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
+from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.transporters.generic_transporter import GenericTransporterPerformanceModel
 from h2integrate.converters.generic_converter_cost import GenericConverterCostModel
 from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
@@ -100,6 +101,12 @@ from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel,
 from h2integrate.converters.hydrogen.steam_methane_reformer import (
     SteamMethaneReformerCostModel,
     SteamMethaneReformerPerformanceModel,
+)
+from h2integrate.converters.natural_gas.dummy_gas_components import (
+    SimpleGasConsumerCost,
+    SimpleGasProducerCost,
+    SimpleGasConsumerPerformance,
+    SimpleGasProducerPerformance,
 )
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import (
@@ -294,35 +301,10 @@ supported_models = {
     "ProFastLCO": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
+    # Dummy components for multivariable stream demonstrations
+    "SimpleGasProducerPerformance": SimpleGasProducerPerformance,
+    "SimpleGasProducerCost": SimpleGasProducerCost,
+    "SimpleGasConsumerPerformance": SimpleGasConsumerPerformance,
+    "SimpleGasConsumerCost": SimpleGasConsumerCost,
+    "GasStreamCombinerPerformanceModel": GasStreamCombinerPerformanceModel,
 }
-
-
-def is_electricity_producer(tech_name: str) -> bool:
-    """Check if a technology is an electricity producer.
-
-    Args:
-        tech_name: The name of the technology to check.
-    Returns:
-        True if tech_name starts with any of the known electricity producing
-        tech prefixes (e.g., 'wind', 'solar', 'pv', 'grid_buy', etc.).
-    Note:
-        This uses prefix matching, so 'grid_buy_1' and 'grid_buy_2' would both
-        be considered electricity producers. Be careful when naming technologies
-        to avoid unintended matches (e.g., 'pv_battery' would be incorrectly
-        identified as an electricity producer).
-    """
-
-    # add any new electricity producing technologies to this list
-    electricity_producing_techs = [
-        "wind",
-        "solar",
-        "pv",
-        "tidal",
-        "river",
-        "hopp",
-        "natural_gas_plant",
-        "grid_buy",
-        "h2_fuel_cell",
-    ]
-
-    return any(tech_name.startswith(elem) for elem in electricity_producing_techs)
