@@ -165,9 +165,6 @@ This single line expands into five OpenMDAO connections:
 - `gas_producer.wellhead_gas_mixture:temperature_out` → `gas_consumer.wellhead_gas_mixture:temperature_in`
 - `gas_producer.wellhead_gas_mixture:pressure_out` → `gas_consumer.wellhead_gas_mixture:pressure_in`
 
-```{note}
-When a multivariable stream is specified in a 4-element connection, no transport component (cable, pipe, etc.) is created. The `transport_type` field is still required by the format but the connection is made directly between the source and destination technologies. Future work may include transporters made specifically for multivariable streams, but for now the transport_type field is ignored for these connections.
-```
 
 #### 3-element connections
 
@@ -188,8 +185,8 @@ The system auto-increments stream indices for combiners and splitters:
 
 ```yaml
 technology_interconnections: [
-  ["gas_producer_1", "gas_combiner", "wellhead_gas_mixture", "pipe"],
-  ["gas_producer_2", "gas_combiner", "wellhead_gas_mixture", "pipe"],
+  ["gas_producer_1", "gas_combiner", "wellhead_gas_mixture"],
+  ["gas_producer_2", "gas_combiner", "wellhead_gas_mixture"],
   ["gas_combiner", "gas_consumer", "wellhead_gas_mixture"],
 ]
 ```
