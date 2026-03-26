@@ -75,10 +75,12 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
 
+        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+
         self.add_input(
             f"{self.config.commodity}_in",
             val=0.0,
-            shape_by_conn=True,
+            shape=n_timesteps,
             units=self.config.commodity_rate_units,
         )
 
