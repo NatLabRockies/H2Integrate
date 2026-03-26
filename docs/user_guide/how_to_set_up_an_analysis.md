@@ -148,22 +148,32 @@ This creates a PDF named `connections_xdsm.pdf` in your current working director
 
 ```{code-cell} ipython3
 :tags: [remove-input]
-import base64
-from pathlib import Path
-from IPython.display import HTML, display
+import matplotlib.pyplot as plt
+import networkx as nx
 
-xdsm_pdf = "connections_xdsm.pdf"
+interconnections = h2i_model.plant_config.get("technology_interconnections", [])
+G = nx.DiGraph()
+edge_labels = {}
+for conn in interconnections:
+    src, dst = conn[0], conn[1]
+    data = conn[2]
+    label = f"{data[0]} as {data[1]}" if isinstance(data, (list, tuple)) else str(data)
+    if len(conn) == 4:
+        label += f" via {conn[3]}"
+    G.add_edge(src, dst)
+    edge_labels[(src, dst)] = label.replace("_", " ")
 
-pdf_data = base64.b64encode(Path(xdsm_pdf).read_bytes()).decode("utf-8")
-display(
-    HTML(
-        f'<div style="width:100% !important; margin:0 !important; padding:0 !important; border:none !important; background:transparent !important;">'
-        f'<embed src="data:application/pdf;base64,{pdf_data}" '
-        'type="application/pdf" '
-        'style="display:block !important; width:100% !important; height:400px !important; border:none !important; outline:none !important; margin:0 !important; padding:0 !important; background:transparent !important; box-shadow:none !important;" />'
-        '</div>'
-    )
-)
+pos = nx.spring_layout(G, seed=0, k=2)
+fig, ax = plt.subplots(figsize=(10, 5))
+nx.draw_networkx_nodes(G, pos, ax=ax, node_color="#90EE90", node_size=2500)
+nx.draw_networkx_labels(G, pos, ax=ax, font_size=9)
+nx.draw_networkx_edges(G, pos, ax=ax, arrows=True, arrowsize=20,
+                       connectionstyle="arc3,rad=0.1")
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax,
+                             font_size=8, bbox=dict(fc="white", ec="none"))
+ax.axis("off")
+plt.tight_layout()
+plt.show()
 ```
 
 *Figure: XDSM diagram generated from the technology interconnections.*
