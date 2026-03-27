@@ -129,7 +129,7 @@ There are two basic methods for visualizing the model structure of your H2Integr
 Use the built-in `create_xdsm()` method to generate a static system diagram from the
 `technology_interconnections` section of your plant config.
 
-```{code-cell} ipython3
+```python
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 import os
 
