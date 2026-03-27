@@ -1,16 +1,28 @@
+import numpy as np
 import pytest
 import openmdao.api as om
-from pytest import approx
+from pytest import approx, fixture
 
 from h2integrate.transporters.pipe import PipePerformanceModel
 
 
+@fixture
+def plant_config():
+    plant_dict = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"n_timesteps": 8760, "dt": 3600},
+        }
+    }
+    return plant_dict
+
+
 @pytest.mark.unit
-def test_pipe_with_hydrogen():
+def test_pipe_with_hydrogen(plant_config):
     """Test the pipe transport with hydrogen as transport_item."""
 
     # Create the pipe component with hydrogen as transport item
-    pipe = PipePerformanceModel(transport_item="hydrogen")
+    pipe = PipePerformanceModel(plant_config=plant_config, transport_item="hydrogen")
 
     # Create OpenMDAO problem and add the component
     prob = om.Problem()
@@ -18,12 +30,13 @@ def test_pipe_with_hydrogen():
 
     # Add independent variable component for input
     ivc = om.IndepVarComp()
-    ivc.add_output("hydrogen_in", val=10.0, units="kg/s")
+    hydrogen_profile = np.full(8760, 10.0)
+    ivc.add_output("hydrogen_in", val=hydrogen_profile, units="kg/s")
     prob.model.add_subsystem("ivc", ivc, promotes=["*"])
 
     # Setup and run the model
     prob.setup()
-    prob.set_val("hydrogen_in", 10.0, units="kg/s")
+    prob.set_val("hydrogen_in", val=hydrogen_profile, units="kg/s")
     prob.run_model()
 
     # Check that output equals input (pass-through pipe with no losses)
