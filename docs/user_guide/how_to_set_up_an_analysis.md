@@ -122,7 +122,10 @@ For more information on how to define and interpret technology interconnections,
 ```
 
 ## Visualizing the model structure
-There are two basic methods for visualizing the model structure of your H2Integrate system model. You can generate a simplified [XDSM diagram](https://mdolab.engin.umich.edu/wiki/xdsm-overview) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model. The XDSM diagram is primarily useful for publications and presentations. The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of your H2Integrate model are given below.
+There are two basic methods for visualizing the model structure of your H2Integrate system model.
+You can generate a simplified [XDSM diagram](https://openmdao.github.io/PracticalMDO/Notebooks/ModelConstruction/understanding_xdsm_diagrams.html) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model.
+The XDSM diagram is primarily useful for publications and presentations.
+The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of your H2Integrate model are given below.
 
 ### XDSM diagram (static and simplified)
 
