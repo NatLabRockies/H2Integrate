@@ -146,7 +146,7 @@ h2i_model.create_xdsm(outfile="connections_xdsm")
 
 This creates a PDF named `connections_xdsm.pdf` in your current working directory.
 
-```{figure} figures/example_08_xdsm.pdf
+```{figure} figures/example_08_xdsm.png
 :width: 70%
 :align: center
 ```
