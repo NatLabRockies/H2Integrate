@@ -14,6 +14,9 @@ top_level_fpath = Path(__file__).parent / "wind_plant_electrolyzer.yaml"
 # Create a GreenHEART model
 h2i_model = H2IntegrateModel(top_level_fpath)
 
+# Generate XDSM diagram
+h2i_model.create_xdsm()
+
 # Run the model
 h2i_model.run()
 

@@ -122,7 +122,7 @@ For more information on how to define and interpret technology interconnections,
 ```
 
 ## Visualizing the model structure
-There are two basic methods for visualizing the model structure of your H2Integrate system model. You can generate a simplified [XDSM diagram](https://mdolab.engin.umich.edu/wiki/xdsm-overview) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model. The XDSM diagram is primarily useful for publications and presentations. The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of you H2Integrate model are given below.
+There are two basic methods for visualizing the model structure of your H2Integrate system model. You can generate a simplified [XDSM diagram](https://mdolab.engin.umich.edu/wiki/xdsm-overview) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model. The XDSM diagram is primarily useful for publications and presentations. The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of your H2Integrate model are given below.
 
 ### XDSM diagram (static and simplified)
 
@@ -146,38 +146,11 @@ h2i_model.create_xdsm(outfile="connections_xdsm")
 
 This creates a PDF named `connections_xdsm.pdf` in your current working directory.
 
-```{code-cell} ipython3
-:tags: [remove-input]
-import matplotlib.pyplot as plt
-import networkx as nx
-
-interconnections = h2i_model.plant_config.get("technology_interconnections", [])
-G = nx.DiGraph()
-edge_labels = {}
-for conn in interconnections:
-    src, dst = conn[0], conn[1]
-    data = conn[2]
-    label = f"{data[0]} as {data[1]}" if isinstance(data, (list, tuple)) else str(data)
-    if len(conn) == 4:
-        label += f" via {conn[3]}"
-    G.add_edge(src, dst)
-    edge_labels[(src, dst)] = label.replace("_", " ")
-
-pos = nx.spring_layout(G, seed=0, k=2)
-fig, ax = plt.subplots(figsize=(10, 5))
-nx.draw_networkx_nodes(G, pos, ax=ax, node_color="#90EE90", node_size=2500)
-nx.draw_networkx_labels(G, pos, ax=ax, font_size=9)
-nx.draw_networkx_edges(G, pos, ax=ax, arrows=True, arrowsize=20,
-                       connectionstyle="arc3,rad=0.1")
-nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax,
-                             font_size=8, bbox=dict(fc="white", ec="none"))
-ax.axis("off")
-plt.tight_layout()
-plt.show()
+```{figure} figures/example_08_xdsm.pdf
+:width: 70%
+:align: center
 ```
-
 *Figure: XDSM diagram generated from the technology interconnections.*
-
 
 ### N2 diagram (interactive and complete)
 
@@ -217,7 +190,7 @@ n2_html = "h2i_n2.html"
 n2_srcdoc = html.escape(Path(n2_html).read_text(encoding="utf-8"))
 display(
     HTML(
-        f'<div style="width:100%; height:900px; overflow:auto; margin:0; padding:0; border:0;">'
+        f'<div style="width:100%; height:600px; overflow:auto; margin:0; padding:0; border:0;">'
         f'<iframe srcdoc="{n2_srcdoc}" '
         'style="display:block; width:200%; height:600px; border:0; margin:0; padding:0; background:transparent;" '
         'loading="lazy"></iframe>'
@@ -225,7 +198,6 @@ display(
     )
 )
 ```
-
 *Figure: Interactive OpenMDAO N2 diagram showing the full model structure and variable connections.*
 
 
