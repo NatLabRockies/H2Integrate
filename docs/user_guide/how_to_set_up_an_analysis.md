@@ -173,8 +173,8 @@ h2i_model.setup()
 om.n2(
     h2i_model.prob,
     outfile="h2i_n2.html",
-    display_in_notebook=False,
-    show_browser=False,
+    display_in_notebook=False, # set to True to display in-line in a notebook
+    show_browser=False, # set to True to open in a browser at run time
 )
 ```
 
