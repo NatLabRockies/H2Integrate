@@ -12,9 +12,10 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
      Attributes:
         commodity (str): Name of the commodity being stored (e.g., "hydrogen").
         commodity_rate_units (str): Rate units of the commodity (e.g., "kg/h" or "kW").
-        demand_profile (int | float | list): Demand values for each timestep, in
+        demand_profile (int | float | list | dict): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
-            demand or a list/array for time-varying demand.
+            demand or a list/array/dict for time-varying demand. If a dict is provided, it
+            it should have two keys: "time_date" and "demand".
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., kW*h or kg). If not provided, defaults to `commodity_rate_units*h`.
 
@@ -22,7 +23,7 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
 
     commodity: str = field()
     commodity_rate_units: str = field()
-    demand_profile: int | float | list = field()
+    demand_profile: int | float | list | dict = field()
     commodity_amount_units: str = field(default=None)
 
     def __attrs_post_init__(self):
@@ -48,9 +49,11 @@ class StorageOpenLoopControlBase(om.ExplicitComponent):
 
         commodity = self.config.commodity
 
+        demand_data = self.config.demand_profile
+
         self.add_input(
             f"{commodity}_demand",
-            val=self.config.demand_profile,
+            val=demand_data if not isinstance(demand_data, dict) else demand_data["demand"],
             shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
             desc=f"Demand profile of {commodity}",
