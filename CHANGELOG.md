@@ -29,6 +29,7 @@
 - Added a generic cost model for converters [PR 622](https://github.com/NatLabRockies/H2Integrate/pull/622)
 - Updated the `StorageAutoSizingModel` model to be compatible with Pyomo control strategies [PR 621](https://github.com/NatLabRockies/H2Integrate/pull/621)
 - Removed a few usages of `shape_by_conn` due to issues with OpenMDAO v3.43.0 release on some computers [PR 632](https://github.com/NatLabRockies/H2Integrate/pull/632)
+- Made generating an XDSM diagram from connections in a model optional and added documentation on model visualization. [PR 629](https://github.com/NatLabRockies/H2Integrate/pull/629)
 
 ## 0.7.1 [March 13, 2026]
 
