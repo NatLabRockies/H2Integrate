@@ -18,6 +18,21 @@ Let us take a PEM electrolyzer model as an example.
 Each electrolyzer model has shared methods and attributes that would be present in any valid model.
 These methods are defined at the `ElectrolyzerBaseClass` level, which inherits from `ConverterBaseClass`.
 Any implemented electrolyzer model should inherit from `ElectrolyzerBaseClass` to make use of its already built out structure and methods.
-This is shown below.
 
-![Class structure](fig_of_class_structure.png)
+## Interactive class hierarchy
+
+The diagram below shows **every class** in H2Integrate and how they inherit from one another.
+Classes are color-coded by category (converters, storage, resource, finance, etc.) and arrows point from parent to child.
+You can **zoom**, **pan**, **hover** for details, and **drag** nodes to rearrange the layout.
+
+To regenerate this visualization after code changes, run:
+
+```bash
+python docs/generate_class_hierarchy.py
+```
+
+```{raw} html
+<iframe src="class_hierarchy.html" width="100%" height="950px"
+        style="border:1px solid #ccc; border-radius:8px;"
+        allowfullscreen></iframe>
+```
