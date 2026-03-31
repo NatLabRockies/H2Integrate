@@ -16,9 +16,10 @@ from h2integrate.control.control_strategies.storage.openloop_storage_control_bas
 @define(kw_only=True)
 class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
     """
-    Configuration class for the DemandOpenLoopStorageController.
+    Configuration class for the PeakLoadManagementOpenLoopStorageController.
 
-    This class defines the parameters required to configure the `DemandOpenLoopStorageController`.
+    Defines all parameters required to configure the peak-load management storage controller,
+    including storage constraints, efficiency parameters, peak detection, and operation strategies.
 
     Attributes:
         commodity (str): Name of the commodity being controlled
@@ -87,10 +88,32 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     )
     max_supervisor_events: int | None = (field(default=None),)
     supervisor_event_period: int | str | None = field(default=None)
-    peak_range: dict = field(default={"start": time.min, "end": time.max})
-    advance_discharge_period: dict = field(default={"units": "H", "val": 2})
-    delay_charge_period: dict = field(default={"units": "H", "val": 4})
-    allow_charge_in_peak_range: bool = field(default=True)
+    max_supervisor_event_period: int | str | None = field(default=None)
+    peak_range: dict = field(
+        default={"start": time.min, "end": time.max},
+        metadata={
+            "description": "Daily time window for peak detection. "
+            "Dict with 'start' and 'end' as datetime.time objects."
+        },
+    )
+    advance_discharge_period: dict = field(
+        default={"units": "H", "val": 2},
+        metadata={
+            "description": "How long before a peak to start discharging. "
+            "Dict with 'units' (timedelta unit str) and 'val' (numeric)."
+        },
+    )
+    delay_charge_period: dict = field(
+        default={"units": "H", "val": 4},
+        metadata={
+            "description": "Minimum delay after discharge completes before charging resumes. "
+            "Dict with 'units' and 'val'."
+        },
+    )
+    allow_charge_in_peak_range: bool = field(
+        default=True,
+        metadata={"description": "If False, charging is suppressed during peak_range."},
+    )
 
     def __attrs_post_init__(self):
         """
@@ -134,14 +157,34 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
 
 class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
     """
-    A controller that manages commodity flow based on demand and storage constraints.
+    Peak-load management storage controller implementing an open-loop control strategy.
 
-    The `DemandOpenLoopStorageController` computes the dispatch commands for a commodity storage
-    system. It uses a demand profile and storage parameters to determine how much of the
-    commodity to charge, discharge, or curtail at each time step.
+    This controller manages commodity (e.g., hydrogen) storage to reduce detected demand peaks.
+    It detects peaks in the demand profile using configurable time
+    windows and event limits, then uses multi-stage state machine control to:
+
+    1. Discharge storage in advance of peaks (configurable lead time)
+    2. Charge storage during expected low-demand periods (using provided charging window bounds)
+    3. Enforce SOC, rate, and efficiency limits throughout
+
+    The controller uses an open-loop architecture where peak discharge/charge decisions are
+    pre-planned during setup() rather than dynamically optimized during compute().
     """
 
     def setup(self):
+        """Initialize controller configuration, storage inputs, and compute peak schedules.
+
+        During setup:
+        1. Loads and validates configuration from tech_config and plant_config options
+        2. Registers OpenMDAO inputs for storage parameters (capacity, charge rates, etc.)
+        3. Detects peaks in the demand profile (supervisor and secondary)
+        4. Merges peaks with supervisor prioritization if configured
+        5. Computes time-to-next-peak for each timestep
+        6. Identifies allowed charging windows based on peak_range configuration
+
+        Raises:
+            ValueError: If configuration is invalid or required keys are missing
+        """
         self.config = PeakLoadManagementOpenLoopStorageController.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             strict=False,
@@ -151,19 +194,19 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # Design constraints of storage system
+        # Register storage system design constraint inputs
         self.add_input(
             "max_charge_rate",
             val=self.config.max_charge_rate,
             units=self.config.commodity_rate_units,
-            desc="Storage charge/discharge rate",
+            desc="Maximum charging rate for the storage system",
         )
 
         self.add_input(
             "storage_capacity",
             val=self.config.max_capacity,
             units=self.config.commodity_amount_units,
-            desc="Maximum storage capacity",
+            desc="Total storage capacity (including unusable amounts)",
         )
 
         if not self.config.charge_equals_discharge:
@@ -171,16 +214,13 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 "max_discharge_rate",
                 val=self.config.max_discharge_rate,
                 units=self.config.commodity_rate_units,
-                desc="Storage discharge rate",
+                desc="Maximum discharging rate for the storage system",
             )
 
-        # n_timesteps is number of timesteps in a simulation
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
-        # dt is seconds per timestep
+        # Store simulation parameters for later use
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
 
-        # determine demand_profile_supervisor peaks
+        # Detect peaks in supervisor demand profile (if provided)
         if self.config.demand_profile_supervisor is not None:
             self.supervisor_peaks_df = self.get_peaks(
                 demand_profile=self.config.demand_profile_supervisor,
@@ -191,10 +231,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         else:
             self.supervisor_peaks_df = None
 
-        # determine demand_profile peaks using defaults of daily peaks inside peak_range
-        # for the full simulation but respecting the peak range specified in the config
+        # Detect daily peaks in secondary demand profile (always computed)
+        # Respects the configured peak_range time window for each day
         self.secondary_peaks_df = self.get_peaks(
-            demand_profile=self.condig.demand_profile,
+            demand_profile=self.config.demand_profile,
             peak_range=self.config.peak_range,
         )
 
@@ -243,14 +283,14 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             None
         """
 
-        # we need to discharge starting at advance_discharge_period before each peak
-        # we also need to only discharge the peak_range
-        # we also need to discharge until the SOC is at the min_soc
-        # discharge at the max discharge rate always except to reach min charge
-
-        # we need to charge soon after the battery reaches the min_charge, but not too soon
-        # we cannot charge during the peak range if allow_charge_during_peak is False
-        # charge at the max charge rate always except to reach max charge
+        # Dispatch strategy outline:
+        # - Discharge: Starting when time_to_peak <= advance_discharge_period
+        #   * Discharge at max rate (or less to reach targets)
+        #   * Stop discharging only when SOC reaches min_soc
+        # - Charge: When not discharging, SOC < max, and allow_charge window is active
+        #   * Start charging only after delay_charge_period since last discharge
+        #   * Charge at max rate (or less to reach target)
+        #   * Stop charging when SOC reaches max_soc
 
         commodity = self.config.commodity
         if np.all(inputs[f"{commodity}_demand"] == 0.0):
@@ -294,21 +334,22 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         soc_array = np.zeros(self.n_timesteps)
         set_point_array = np.zeros(self.n_timesteps)
 
-        # we need a bool to track if we are discharging or charging or neither
+        # State machine to track discharge/charge mode
         discharging = False
         charging = False
         advance_discharge_period = pd.Timedelta(self.config.advance_discharge_period)
         delay_charge_period = pd.Timedelta(self.config.delay_charge_period)
 
+        # Initialize: no discharge has occurred yet
         last_discharge = self.peaks_df["time_date"].iloc[0] - delay_charge_period
 
-        # Loop through each time step
-        for i, demand_t in enumerate(self.peaks_df["demand"].tolist()):
-            td = self.peaks_df["time_date"]
+        # Process each timestep using the pre-computed peak schedule
+        for i, _demand_t in enumerate(self.peaks_df["demand"].tolist()):
+            td = self.peaks_df["time_date"].iloc[i]
             time_to_peak = self.peaks_df["time_to_peak"].iloc[i]
 
             # Get the input flow at the current time step
-            input_flow = inputs[f"{commodity}_in"][i]
+            inputs[f"{commodity}_in"][i]
 
             # Calculate the available charge/discharge capacity
             available_charge = float((soc_max - soc) * max_capacity)
@@ -319,34 +360,31 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 discharging = True
 
             if not discharging and soc < soc_max:
-                if self.peaks_df["allow_discharge"].iloc[i]:
+                if self.peaks_df["allow_charge"].iloc[i]:
                     if (td - last_discharge) > delay_charge_period:
                         charging = True
 
             if discharging:
-                # Discharge storage to meet demand.
-                # `discharge_needed` is as seen by the storage
+                # DISCHARGE MODE: Supply commodity to meet peak demand
+                # Note: discharge_needed is internal (storage view), max_discharge_rate is external
                 discharge_needed = max_discharge_rate / discharge_eff
-                # `discharge` is as seen by the storage, but `max_discharge_rate` is as observed
-                # outside the storage
                 discharge = min(
                     discharge_needed, available_discharge, max_discharge_rate / discharge_eff
                 )
 
-                soc -= discharge / max_capacity  # soc is a ratio with value between 0 and 1
-                # output is as observed outside the storage, so we need to adjust `discharge` by
-                # applying `discharge_efficiency`.
+                soc -= discharge / max_capacity  # Deplete storage state of charge
+                # Output setpoint is the external (delivered) rate after efficiency loss
                 set_point_array[i] = discharge * discharge_eff
 
-                # get time discharge completion
+                # Mark discharge completion time for charging delay calculation
                 if soc <= soc_min:
                     last_discharge = td
 
             elif charging:
-                # Charge storage with unused input
-                # `unused_input` is as seen outside the storage
-                unused_input = input_flow - demand_t
-                unused_input = unused_input.item()
+                # CHARGE MODE: Store commodity by charging from assumed infinite source
+                # unused_input is external (delivered commodity not needed for demand)
+                # unused_input = input_flow - demand_t
+                # unused_input = unused_input.item()
                 # `charge` is as seen by the storage, but the things being compared should all be as
                 # seen outside the storage so we need to adjust `available_charge` outside the
                 # storage view and the final result back into the storage view.
@@ -376,18 +414,39 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         min_proximity=None,
         peak_range={"start": time.min, "end": time.max},
     ):
-        """Determines the peaks of the demand profile
+        """Detect demand peaks using configurable time windows and event limits.
+
+        Identifies peak demand periods from a demand profile, with control over:
+        - Daily time windows (e.g., peak detection only 12:00-17:00 each day)
+        - Event frequency (e.g., max 1 peak per week)
+        - Temporal spacing (e.g., minimum 24 hours between peaks)
 
         Args:
-            demand_profile (dict): with keys "time_date" and "demand"
-            max_events (_type_, optional): _description_. Defaults to None.
-            max_events_period (_type_, optional): _description_. Defaults to None.
-            min_proximity (dict | None, optional): Minimum spacing between peaks,
-                provided as {"units": <timedelta unit>, "val": <non-negative number>}.
-            peak_range (dict, optional): Daily time window used to determine
-                candidate peaks, with keys {"start", "end"} as `datetime.time`.
-                Defaults to include the full day. Start must come before end and both
-                must be in the same day.
+            demand_profile (dict): Timeseries data with keys:
+                - 'time_date': timestamps (list or DatetimeIndex convertible)
+                - 'demand': demand values (list or array)
+            n_max_events (int | None): Maximum number of peaks to keep globally or per period.
+                If None, returns all daily peaks. Defaults to None.
+            max_events_period (int | str | None): Grouping period for n_max_events limit.
+                - None: apply n_max_events limit globally (keep top-N peaks overall)
+                - int: group by timestep intervals (e.g., 288 for 24-hour periods)
+                - str: pandas period frequency (e.g., 'W' for week, 'M' for month)
+                Defaults to None.
+            min_proximity (dict | None): Minimum time gap between sequential peaks.
+                Dict with keys {'units': <pandas timedelta unit str>, 'val': <numeric>}.
+                Example: {'units': 'D', 'val': 1} enforces 1-day minimum gap.
+                Raises ValueError if violated. Defaults to None (no constraint).
+            peak_range (dict, optional): Daily time window for peak detection. Dict with keys:
+                - 'start': datetime.time object (inclusive)
+                - 'end': datetime.time object (inclusive)
+                Defaults to full day (time.min to time.max).
+
+        Returns:
+            pd.DataFrame: Input demand_profile with added 'is_peak' boolean column.
+                Each row is True if that timestep is a peak, False otherwise.
+
+        Raises:
+            ValueError: If configuration is invalid (bad period frequency, type mismatches, etc.)
         """
 
         # create dataframe from dictionary
@@ -395,46 +454,52 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         if "time_date" not in demand_df or "demand" not in demand_df:
             raise ValueError("demand_profile must include 'time_date' and 'demand' keys")
 
+        # Normalize timestamps and tag by day
         demand_df["time_date"] = pd.to_datetime(demand_df["time_date"])
         demand_df["period_day"] = demand_df["time_date"].dt.floor("D")
 
+        # Validate and apply time-of-day window
         if not isinstance(peak_range["start"], time) or not isinstance(peak_range["end"], time):
             raise ValueError("peak_range['start'] and peak_range['end'] must be datetime.time")
         time_of_day = demand_df["time_date"].dt.time
         if peak_range["start"] <= peak_range["end"]:
+            # Normal window: 12:00-17:00
             in_peak_range = (time_of_day >= peak_range["start"]) & (
                 time_of_day <= peak_range["end"]
             )
         else:
-            raise (ValueError("Peak range start must come before peak range end in the same day"))
+            raise ValueError("Peak range start must come before peak range end in the same day")
 
-        # flag daily peaks up to n_max_events per max_events_period unless None, then flag all
-        # daily peaks. When using max events, the highest n_max_events in the max_events_period
-        # should be used.
+        # Identify highest-demand timestep within each day's peak window
         demand_df["is_peak"] = False
         daily_peak_idx = demand_df.loc[in_peak_range].groupby("period_day")["demand"].idxmax()
         demand_df.loc[daily_peak_idx, "is_peak"] = True
 
+        # Optional: Limit number of peaks globally or per period
         if n_max_events is not None:
             if n_max_events < 0:
-                raise ValueError("n_max_events must be >= 0")
+                raise ValueError("n_max_events must be >= 0 or None")
 
             peak_candidates = demand_df.loc[demand_df["is_peak"]].copy()
             keep_idx = []
 
             if max_events_period is None:
+                # Global limit: keep the N largest peaks across all time
                 keep_idx = peak_candidates.nlargest(n_max_events, "demand").index.tolist()
             else:
+                # Period-based limit: keep top-N peaks within each period
                 if isinstance(max_events_period, int):
                     if max_events_period <= 0:
                         raise ValueError(
                             "max_events_period must be positive when provided as an int"
                         )
 
+                    # Group by timestep intervals (e.g., 288 timesteps = 1 day)
                     demand_df["period_id"] = np.arange(len(demand_df)) // max_events_period
                     peak_candidates["period_id"] = demand_df.loc[peak_candidates.index, "period_id"]
 
                 elif isinstance(max_events_period, str):
+                    # Group by pandas period frequency (W=week, M=month, etc.)
                     period_freq = max_events_period.strip()
                     try:
                         demand_df["period_id"] = demand_df["time_date"].dt.to_period(period_freq)
@@ -451,14 +516,17 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                         "frequency string"
                     )
 
+                # Within each period, retain only the top-N peaks by demand
                 for _, period_group in peak_candidates.groupby("period_id"):
                     keep_idx.extend(period_group.nlargest(n_max_events, "demand").index.tolist())
 
                 demand_df = demand_df.drop(columns=["period_id"])
 
+            # Reset "is_peak" flags and reapply only to surviving indices
             demand_df["is_peak"] = False
             demand_df.loc[keep_idx, "is_peak"] = True
 
+        # Optional: Validate minimum spacing between consecutive peaks
         if min_proximity is not None:
             if not isinstance(min_proximity, dict):
                 raise ValueError("min_proximity must be a dict with keys 'units' and 'val'")
@@ -472,8 +540,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             if not isinstance(val, int | float) or val < 0:
                 raise ValueError("min_proximity['val'] must be a non-negative number")
 
+            # Convert specification to timedelta
             min_delta = pd.to_timedelta(val, unit=units.strip())
             if min_delta > pd.Timedelta(0):
+                # Check consecutive peak spacing
                 selected_peaks = demand_df.loc[demand_df["is_peak"], ["time_date", "demand"]]
                 selected_peaks = selected_peaks.sort_values("time_date")
 
@@ -488,14 +558,34 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         return demand_df.drop(columns=["period_day"])
 
     def merge_peaks(supervisory_peaks_df, secondary_peaks_df):
-        # take exactly one peak per day with supervisor_peaks taking precedence if present
-        # the result should be a dictionary with time_date and "is_peak" bool
+        """Merge supervisor and secondary peak schedules with supervisor precedence.
+
+        Combines two peak schedules (primary and fallback) using day-level precedence:
+        - For each day, if the primary (supervisory) profile has any peaks on that day,
+          use all primary peaks for that day
+        - Otherwise, use the secondary peaks for that day
+
+        This allows critical demand (supervisor) to take scheduling precedence while
+        falling back to secondary peaks for days with no critical demand.
+
+        Args:
+            supervisory_peaks_df (pd.DataFrame | None): Primary peak schedule with columns
+                ['time_date', 'is_peak', 'demand', ...]. If None, secondary peaks are used.
+            secondary_peaks_df (pd.DataFrame): Secondary/fallback peak schedule with same columns.
+
+        Returns:
+            pd.DataFrame: Merged peak schedule. If supervisory is None, returns secondary unchanged.
+                Otherwise, returns secondary with 'is_peak' flags overridden on supervisor-peak
+                days.
+        """
         peaks_df = secondary_peaks_df.copy()
         if supervisory_peaks_df is not None:
+            # For each day in the data, check if supervisor has any peaks
             for day in secondary_peaks_df["time_date"].dt.floor("D").unique():
                 day_df = supervisory_peaks_df[
                     supervisory_peaks_df["time_date"].dt.floor("D") == day
                 ]
+                # If supervisor has peaks on the day, use supervisor's flags for all rows that day
                 if any(day_df["is_peak"]):
                     peaks_df["is_peak"][peaks_df["time_date"].dt.floor("D") == day] = day_df[
                         "is_peak"
@@ -504,10 +594,23 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         return peaks_df
 
     def get_time_to_peak(self):
-        self.peaks_df["time_to_peak"] = (
-            time.max
-        )  # TODO This may not be the best default. It will cause no charging at the end of the time series
+        """Compute time delta from each timestep to the next detected peak.
+
+        For each row in peaks_df, determines how long until the next peak (marked
+        as is_peak=True) will occur. This enables the discharge trigger: when
+        time_to_peak <= advance_discharge_period, discharge mode activates.
+
+        Timesteps after the final peak receive time.max as their time_to_peak value.
+        This default prevents charging at simulation end (since advance_discharge_period
+        will never be reached). TODO: Consider configurable end-of-horizon behavior.
+
+        Side effect: Modifies self.peaks_df by adding/updating 'time_to_peak' column
+        with pd.Timedelta values or time.max.
+        """
+        # Initialize with sentinel value for "no future peak"
+        self.peaks_df["time_to_peak"] = time.max
         for _i, idx in enumerate(self.peaks_df.index):
+            # Find next peak at or after current index
             next_peak_time = self.peaks_df.loc[
                 self.peaks_df["is_peak"] & (self.peaks_df.index >= idx), "time_date"
             ]
@@ -516,19 +619,29 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 self.peaks_df.loc[idx, "time_to_peak"] = (
                     next_peak_time - self.peaks_df.loc[idx, "time_date"]
                 )
-            else:
-                continue
 
     def get_allowed_discharge(self):
-        # we will also need to know if a point is in an allowed charging time
+        """Compute allowed charging time windows based on peak range configuration.
+
+        Determines for each timestep whether charging is permitted. If
+        allow_charge_in_peak_range=True, charging is allowed at all times.
+        Otherwise, charging is suppressed during the configured peak_range window
+        (e.g., 12:00-17:00 each day) to prioritize meeting peak demand from storage.
+
+        Side effect: Modifies self.peaks_df by adding/updating 'allow_charge' column
+        with boolean values (True=charging allowed, False=charging suppressed).
+        """
         if self.config.allow_charge_in_peak_range:
+            # Global allow: charging always permitted
             self.peaks_df["allow_charge"] = True
         else:
-            # only allow_charge when time step is not in peak range
+            # Selective allow: suppress charging during peak window only
             self.peaks_df["allow_charge"] = False
             for i in range(self.n_timesteps):
+                time_of_day = self.peaks_df["time_date"].iloc[i].time()
+                # Allow charging if outside peak window
                 if (
-                    self.peaks_df["time_date"].iloc[i].time() < self.config.peak_range["start"]
-                    or self.peaks_df["time_date"].iloc[i].time() >= self.config.peak_range["end"]
+                    time_of_day < self.config.peak_range["start"]
+                    or time_of_day >= self.config.peak_range["end"]
                 ):
                     self.peaks_df["allow_charge"].iloc[i] = True
