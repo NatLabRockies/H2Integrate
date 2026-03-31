@@ -5,7 +5,10 @@ from datetime import time
 import numpy as np
 import pandas as pd
 import pytest
+import openmdao.api as om
 
+from h2integrate.core.file_utils import load_yaml
+from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
     PeakLoadManagementOpenLoopStorageController,
 )
@@ -21,7 +24,7 @@ def test_get_peaks_daily_expected_peaks():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": pd.date_range("2025-01-01", periods=8, freq="6h"),
+        "date_time": pd.date_range("2025-01-01", periods=8, freq="6h"),
         "demand": [1.0, 9.0, 3.0, 2.0, 4.0, 5.0, 2.0, 8.0],
     }
 
@@ -31,7 +34,7 @@ def test_get_peaks_daily_expected_peaks():
     ]
 
     peaks = controller.get_peaks(demand_profile)
-    actual_peak_times = peaks.loc[peaks["is_peak"], "time_date"].tolist()
+    actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     assert actual_peak_times == expected_peak_times
 
@@ -41,14 +44,14 @@ def test_get_peaks_with_global_event_limit_expected_peak():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": pd.date_range("2025-01-01", periods=8, freq="6h"),
+        "date_time": pd.date_range("2025-01-01", periods=8, freq="6h"),
         "demand": [1.0, 9.0, 3.0, 2.0, 4.0, 5.0, 2.0, 8.0],
     }
 
     expected_peak_times = [pd.Timestamp("2025-01-01 06:00:00")]
 
     peaks = controller.get_peaks(demand_profile, n_max_events=1, max_events_period=None)
-    actual_peak_times = peaks.loc[peaks["is_peak"], "time_date"].tolist()
+    actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     assert actual_peak_times == expected_peak_times
 
@@ -58,7 +61,7 @@ def test_get_peaks_with_month_period_expected_peaks():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": [
+        "date_time": [
             pd.Timestamp("2025-01-01 00:00:00"),
             pd.Timestamp("2025-01-01 12:00:00"),
             pd.Timestamp("2025-01-02 00:00:00"),
@@ -86,7 +89,7 @@ def test_get_peaks_with_month_period_expected_peaks():
     ]
 
     peaks = controller.get_peaks(demand_profile, n_max_events=1, max_events_period="M")
-    actual_peak_times = peaks.loc[peaks["is_peak"], "time_date"].tolist()
+    actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     assert actual_peak_times == expected_peak_times
 
@@ -99,14 +102,14 @@ def test_get_peaks_with_month_period_from_csv_expected_peaks():
     expected_peaks_df = pd.read_csv(data_dir / "lmp_peaks_month_1.csv")
 
     demand_profile = {
-        "time_date": demand_profile_df["time_mountain"].to_list(),
+        "date_time": demand_profile_df["time_mountain"].to_list(),
         "demand": demand_profile_df["energy"].to_list(),
     }
 
     expected_peak_times = pd.to_datetime(expected_peaks_df["time_mountain"]).to_list()
 
     peaks = controller.get_peaks(demand_profile, n_max_events=10, max_events_period="M")
-    actual_peak_times = pd.to_datetime(peaks.loc[peaks["is_peak"], "time_date"]).tolist()
+    actual_peak_times = pd.to_datetime(peaks.loc[peaks["is_peak"], "date_time"]).tolist()
 
     assert actual_peak_times == expected_peak_times
 
@@ -116,7 +119,7 @@ def test_get_peaks_invalid_period_string_raises():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": pd.date_range("2025-01-01", periods=4, freq="6h"),
+        "date_time": pd.date_range("2025-01-01", periods=4, freq="6h"),
         "demand": [1.0, 2.0, 3.0, 4.0],
     }
 
@@ -129,7 +132,7 @@ def test_get_peaks_respects_peak_range_12pm_to_5pm():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": [
+        "date_time": [
             pd.Timestamp("2025-01-01 09:00:00"),
             pd.Timestamp("2025-01-01 14:00:00"),
             pd.Timestamp("2025-01-01 18:00:00"),
@@ -155,7 +158,7 @@ def test_get_peaks_respects_peak_range_12pm_to_5pm():
         demand_profile,
         peak_range={"start": time(12, 0), "end": time(17, 0)},
     )
-    actual_peak_times = peaks.loc[peaks["is_peak"], "time_date"].tolist()
+    actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     expected_peak_times = [
         pd.Timestamp("2025-01-01 14:00:00"),
@@ -170,7 +173,7 @@ def test_get_peaks_invalid_min_proximity_raises():
     controller = _controller_without_setup()
 
     demand_profile = {
-        "time_date": pd.date_range("2025-01-01", periods=10, freq="6h"),
+        "date_time": pd.date_range("2025-01-01", periods=10, freq="6h"),
         "demand": [1.0, 2.0, 4.0, 3.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0],
     }
 
@@ -187,7 +190,7 @@ def test_get_peaks_invalid_min_proximity_raises():
 def test_merge_peaks_without_supervisor_returns_secondary_flags(subtests):
     secondary_peaks_df = pd.DataFrame(
         {
-            "time_date": pd.to_datetime(
+            "date_time": pd.to_datetime(
                 [
                     "2025-01-01 14:00:00",
                     "2025-01-01 18:00:00",
@@ -210,7 +213,7 @@ def test_merge_peaks_without_supervisor_returns_secondary_flags(subtests):
 def test_merge_peaks_supervisor_takes_precedence_on_same_day(subtests):
     secondary_peaks_df = pd.DataFrame(
         {
-            "time_date": pd.to_datetime(
+            "date_time": pd.to_datetime(
                 [
                     "2025-01-01 14:00:00",
                     "2025-01-01 18:00:00",
@@ -224,7 +227,7 @@ def test_merge_peaks_supervisor_takes_precedence_on_same_day(subtests):
     )
     supervisory_peaks_df = pd.DataFrame(
         {
-            "time_date": pd.to_datetime(
+            "date_time": pd.to_datetime(
                 [
                     "2025-01-01 14:00:00",
                     "2025-01-01 18:00:00",
@@ -269,7 +272,7 @@ def test_get_time_to_peak_single_peak(subtests):
     )
     controller.peaks_df = pd.DataFrame(
         {
-            "time_date": times,
+            "date_time": times,
             "is_peak": [False, False, True, False],
             "demand": [1.0, 2.0, 5.0, 3.0],
         }
@@ -301,7 +304,7 @@ def test_get_time_to_peak_multiple_peaks(subtests):
     )
     controller.peaks_df = pd.DataFrame(
         {
-            "time_date": times,
+            "date_time": times,
             "is_peak": [False, True, False, True, False],
             "demand": [1.0, 8.0, 2.0, 7.0, 1.0],
         }
@@ -340,7 +343,7 @@ def test_get_allowed_discharge_always_true_when_charge_allowed_in_peak_range():
     )
     controller.peaks_df = pd.DataFrame(
         {
-            "time_date": pd.to_datetime(
+            "date_time": pd.to_datetime(
                 [
                     "2025-01-01 09:00:00",
                     "2025-01-01 14:00:00",  # inside peak range
@@ -367,7 +370,7 @@ def test_get_allowed_discharge_blocks_charge_inside_peak_range(subtests):
     )
     controller.peaks_df = pd.DataFrame(
         {
-            "time_date": pd.to_datetime(
+            "date_time": pd.to_datetime(
                 [
                     "2025-01-01 09:00:00",  # before range  → allow
                     "2025-01-01 14:00:00",  # inside range  → block
@@ -391,3 +394,236 @@ def test_get_allowed_discharge_blocks_charge_inside_peak_range(subtests):
         assert controller.peaks_df["allow_charge"].iloc[2] is np.False_
     with subtests.test("after range allows charge"):
         assert controller.peaks_df["allow_charge"].iloc[3] is np.True_
+
+
+@pytest.mark.regression
+def test_plm_controller_basic_discharge_before_peak(subtests):
+    """Test PLM controller discharges before detected peak and charges after."""
+    current_dir = Path(__file__).parent
+
+    # Load base tech config
+    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
+    tech_config = load_yaml(tech_config_path)
+
+    # Configure PLM-specific parameters
+    tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
+        "commodity": "hydrogen",
+        "commodity_rate_units": "kg/h",
+        "max_capacity": 100.0,  # kg
+        "max_soc_fraction": 1.0,
+        "min_soc_fraction": 0.1,
+        "init_soc_fraction": 0.9,
+        "max_charge_rate": 20.0,  # kg/time step
+        "max_discharge_rate": 30.0,  # kg/time step
+        "charge_equals_discharge": False,
+        "charge_efficiency": 0.95,
+        "discharge_efficiency": 0.95,
+        "demand_profile": [10.0] * 10 + [50.0] * 4 + [10.0] * 10,  # Peak at hours 10-14
+        "peak_range": {"start": time(10, 0), "end": time(14, 0)},
+        "advance_discharge_period": {"units": "h", "val": 2},
+        "delay_charge_period": {"units": "h", "val": 1},
+        "allow_charge_in_peak_range": False,
+    }
+
+    tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
+        "PeakLoadManagementOpenLoopStorageController"
+    )
+
+    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 24, "dt": 3600}}}
+
+    # Set up OpenMDAO problem
+    prob = om.Problem()
+
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=[30.0] * 24),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "plm_controller",
+        PeakLoadManagementOpenLoopStorageController(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+    prob.run_model()
+
+    set_point = prob.get_val("hydrogen_set_point", units="kg/h")
+    soc = prob.get_val("SOC", units="unitless")
+
+    with subtests.test("Discharge occurs before peak (hours 8-9)"):
+        # Hours 8-9 are 2 hours before peak at hour 10
+        # We expect discharge (positive set_point)
+        assert set_point[8] > 0 and set_point[9] > 0
+
+    with subtests.test("Peak triggers discharge (hours 10-13)"):
+        # High demand period should be reduced by discharge
+        assert all(set_point[10:13] >= 0)
+
+    with subtests.test("SOC decreases during discharge phase"):
+        # SOC should drop after discharge begins
+        assert soc[8] < soc[7]
+
+    with subtests.test("SOC recovers during charging phase"):
+        # After peak, SOC should increase due to charging
+        assert any(soc[15:] > soc[14])
+
+
+@pytest.mark.regression
+def test_plm_controller_respects_soc_bounds(subtests):
+    """Test PLM controller respects min/max SOC constraints."""
+    current_dir = Path(__file__).parent
+    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
+    tech_config = load_yaml(tech_config_path)
+
+    tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
+        "commodity": "hydrogen",
+        "commodity_rate_units": "kg/h",
+        "max_capacity": 50.0,
+        "max_soc_fraction": 0.95,
+        "min_soc_fraction": 0.15,
+        "init_soc_fraction": 0.5,
+        "max_charge_rate": 15.0,
+        "max_discharge_rate": 15.0,
+        "charge_equals_discharge": True,
+        "charge_efficiency": 0.9,
+        "discharge_efficiency": 0.9,
+        "demand_profile": [5.0] * 12,
+        "peak_range": {"start": time(6, 0), "end": time(9, 0)},
+        "advance_discharge_period": {"units": "h", "val": 1},
+        "delay_charge_period": {"units": "h", "val": 1},
+        "allow_charge_in_peak_range": True,
+    }
+
+    tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
+        "PeakLoadManagementOpenLoopStorageController"
+    )
+
+    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 12, "dt": 3600}}}
+
+    prob = om.Problem()
+
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=[20.0] * 12),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "plm_controller",
+        PeakLoadManagementOpenLoopStorageController(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+    prob.run_model()
+
+    soc = prob.get_val("SOC", units="unitless")
+    min_soc = 0.15
+    max_soc = 0.95
+
+    with subtests.test("SOC never exceeds maximum"):
+        assert np.all(soc <= max_soc + 1e-6)
+
+    with subtests.test("SOC never falls below minimum"):
+        assert np.all(soc >= min_soc - 1e-6)
+
+
+@pytest.mark.regression
+def test_plm_controller_blocking_charge_in_peak_range(subtests):
+    """Test PLM controller blocks charging during peak window when configured."""
+    current_dir = Path(__file__).parent
+    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
+    tech_config = load_yaml(tech_config_path)
+
+    peak_window_start = time(10, 0)
+    peak_window_end = time(14, 0)
+
+    tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
+        "commodity": "hydrogen",
+        "commodity_rate_units": "kg/h",
+        "max_capacity": 80.0,
+        "max_soc_fraction": 1.0,
+        "min_soc_fraction": 0.05,
+        "init_soc_fraction": 0.3,
+        "max_charge_rate": 15.0,
+        "max_discharge_rate": 25.0,
+        "charge_equals_discharge": False,
+        "charge_efficiency": 0.92,
+        "discharge_efficiency": 0.92,
+        "demand_profile": [5.0] * 24,
+        "peak_range": {"start": peak_window_start, "end": peak_window_end},
+        "advance_discharge_period": {"units": "h", "val": 3},
+        "delay_charge_period": {"units": "h", "val": 1},
+        "allow_charge_in_peak_range": False,  # Block charging in peak window
+    }
+
+    tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
+        "PeakLoadManagementOpenLoopStorageController"
+    )
+
+    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 24, "dt": 3600}}}
+
+    prob = om.Problem()
+
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=[40.0] * 24),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "plm_controller",
+        PeakLoadManagementOpenLoopStorageController(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+    prob.run_model()
+
+    set_point = prob.get_val("hydrogen_set_point", units="kg/h")
+    soc = prob.get_val("SOC", units="unitless")
+
+    with subtests.test("Controller instantiates and runs without error"):
+        assert len(set_point) == 24
+        assert len(soc) == 24
+
+    with subtests.test("Initial discharge phase occurs before peak window"):
+        # Hours 7-9 are before the peak window (10-14)
+        # Some discharge should occur
+        assert any(set_point[7:10] > 1.0)
+
+    with subtests.test("SOC is lower after peak window than before"):
+        # After discharge and attempted peak meeting, SOC should be lower
+        assert soc[14] < soc[6]
