@@ -28,7 +28,7 @@ from pyvis.network import Network
 # Root of the h2integrate package
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_ROOT = REPO_ROOT / "h2integrate"
-OUTPUT_HTML = REPO_ROOT / "docs" / "developer_guide" / "class_hierarchy.html"
+OUTPUT_HTML = REPO_ROOT / "docs" / "_static" / "class_hierarchy.html"
 
 # Directories / path fragments that indicate test code (case-insensitive check)
 TEST_INDICATORS = {"test", "tests", "conftest", "test_"}

@@ -32,7 +32,7 @@ python docs/generate_class_hierarchy.py
 ```
 
 ```{raw} html
-<iframe src="class_hierarchy.html" width="100%" height="950px"
+<iframe src="../_static/class_hierarchy.html" width="100%" height="950px"
         style="border:1px solid #ccc; border-radius:8px;"
         allowfullscreen></iframe>
 ```
