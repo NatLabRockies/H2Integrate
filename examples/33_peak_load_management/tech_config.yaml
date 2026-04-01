@@ -1,0 +1,54 @@
+name: technology_config
+description: This plant charges a battery from the grid to reduce peak demand
+technologies:
+  battery:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: ATBBatteryCostModel
+    control_strategy:
+      model: PeakLoadManagementOpenLoopStorageController
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 2500.0  # kW/time step, 1, 2.5, or 5 MW
+        max_capacity: 10000.0  # kWh, 80 MWh
+        max_soc_fraction: 0.9  # percent as decimal
+        min_soc_fraction: 0.1  # percent as decimal
+        init_soc_fraction: 0.9  # percent as decimal
+        demand_profile: !include demand_profile_secondary.yaml
+        charge_efficiency: 1.0  # percent as decimal
+        discharge_efficiency: 1.0  # percent as decimal
+      control_parameters:
+        max_discharge_rate: 2500.0  # kW/time step
+        charge_equals_discharge: true
+        demand_profile_supervisor: !include demand_profile_supervisor.yaml
+        dispatch_priority_demand_profile: demand_profile_supervisor
+        max_supervisor_events: 2
+        max_supervisor_event_period: w
+        peak_range:
+          start: 17:00:00
+          end: 12:00:00
+        advance_discharge_period:
+          units: h
+          val: 2
+        delay_charge_period:
+          units: h
+          val: 4
+        allow_charge_in_peak_range: false
+      cost_parameters:
+        cost_year: 2024
+        energy_capex: 408 # $/kWh  # conservative case for 2024 ATB utility scale batteries
+        power_capex: 379 # $/kW  # conservative case for 2024 ATB utility scale batteries
+        opex_fraction: 0.025  # 2.5% percent of capex as per 2024 ATB for utility scale batteries
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      performance_parameters:
+        interconnection_size: 100000
+      cost_parameters:
+        cost_year: 2024

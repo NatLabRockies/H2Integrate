@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 from pathlib import Path
-from datetime import time
 
 import numpy as np
 import pandas as pd
@@ -12,6 +11,9 @@ from h2integrate.storage.storage_performance_model import StoragePerformanceMode
 from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
     PeakLoadManagementOpenLoopStorageController,
 )
+
+
+# from datetime import time
 
 
 def _controller_without_setup():
@@ -156,7 +158,7 @@ def test_get_peaks_respects_peak_range_12pm_to_5pm():
 
     peaks = controller.get_peaks(
         demand_profile,
-        peak_range={"start": time(12, 0), "end": time(17, 0)},
+        peak_range={"start": "12:00:00", "end": "17:00:00"},
     )
     actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
@@ -166,6 +168,22 @@ def test_get_peaks_respects_peak_range_12pm_to_5pm():
     ]
 
     assert actual_peak_times == expected_peak_times
+
+
+@pytest.mark.unit
+def test_get_peaks_rejects_non_string_peak_range_values():
+    controller = _controller_without_setup()
+
+    demand_profile = {
+        "date_time": pd.date_range("2025-01-01", periods=4, freq="6h"),
+        "demand": [1.0, 9.0, 3.0, 2.0],
+    }
+
+    with pytest.raises(ValueError, match="HH:MM:SS string"):
+        controller.get_peaks(
+            demand_profile,
+            peak_range={"start": pd.Timestamp("2025-01-01 12:00:00").time(), "end": "17:00:00"},
+        )
 
 
 @pytest.mark.unit
@@ -339,7 +357,7 @@ def test_get_allowed_discharge_always_true_when_charge_allowed_in_peak_range():
     """When allow_charge_in_peak_range=True every row should allow charging."""
     controller = _make_controller_with_config(
         allow_charge_in_peak_range=True,
-        peak_range={"start": time(12, 0), "end": time(17, 0)},
+        peak_range={"start": "12:00:00", "end": "17:00:00"},
     )
     controller.peaks_df = pd.DataFrame(
         {
@@ -366,7 +384,7 @@ def test_get_allowed_discharge_blocks_charge_inside_peak_range(subtests):
     """When allow_charge_in_peak_range=False, rows inside the window get allow_charge=False."""
     controller = _make_controller_with_config(
         allow_charge_in_peak_range=False,
-        peak_range={"start": time(12, 0), "end": time(17, 0)},
+        peak_range={"start": "12:00:00", "end": "17:00:00"},
     )
     controller.peaks_df = pd.DataFrame(
         {
@@ -419,7 +437,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
         "charge_efficiency": 0.95,
         "discharge_efficiency": 0.95,
         "demand_profile": [10.0] * 10 + [50.0] * 4 + [10.0] * 10,  # Peak at hours 10-14
-        "peak_range": {"start": time(10, 0), "end": time(14, 0)},
+        "peak_range": {"start": "10:00:00", "end": "14:00:00"},
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,
@@ -500,7 +518,7 @@ def test_plm_controller_respects_soc_bounds(subtests):
         "charge_efficiency": 0.9,
         "discharge_efficiency": 0.9,
         "demand_profile": [5.0] * 12,
-        "peak_range": {"start": time(6, 0), "end": time(9, 0)},
+        "peak_range": {"start": "06:00:00", "end": "09:00:00"},
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,
@@ -557,8 +575,8 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests):
     tech_config_path = current_dir / "inputs" / "tech_config.yaml"
     tech_config = load_yaml(tech_config_path)
 
-    peak_window_start = time(10, 0)
-    peak_window_end = time(14, 0)
+    peak_window_start = "10:00:00"
+    peak_window_end = "14:00:00"
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
         "commodity": "hydrogen",

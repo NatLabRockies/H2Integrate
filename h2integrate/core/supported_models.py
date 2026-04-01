@@ -285,7 +285,7 @@ supported_models = {
     # Control
     "SimpleStorageOpenLoopController": SimpleStorageOpenLoopController,
     "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
-    "PeakLoadManagementOpenLoopStorageControllerConfig": PeakLoadManagementOpenLoopStorageController,  # noqa: E501
+    "PeakLoadManagementOpenLoopStorageController": PeakLoadManagementOpenLoopStorageController,
     "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
     "OptimizedDispatchController": OptimizedDispatchController,
     "DemandOpenLoopConverterController": DemandOpenLoopConverterController,
