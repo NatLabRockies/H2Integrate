@@ -37,67 +37,61 @@ TEST_INDICATORS = {"test", "tests", "conftest", "test_"}
 # are excluded from the visualization entirely.
 EXTERNAL_BASES_TO_KEEP: set[str] = set()
 
-# Category detection rules: (directory substring -> category label)
-# Order matters — first match wins.
+# Category detection rules: (directory substring -> (broad_category, subcategory))
+# Order matters -- first match wins.
+# Broad categories control COLOR; subcategories control SHAPE.
 CATEGORY_RULES = [
-    ("core", "Core / Base"),
-    ("converters/hydrogen", "Converter - Hydrogen"),
-    ("converters/ammonia", "Converter - Ammonia"),
-    ("converters/iron", "Converter - Iron"),
-    ("converters/steel", "Converter - Steel"),
-    ("converters/methanol", "Converter - Methanol"),
-    ("converters/wind", "Converter - Wind"),
-    ("converters/solar", "Converter - Solar"),
-    ("converters/nuclear", "Converter - Nuclear"),
-    ("converters/grid", "Converter - Grid"),
-    ("converters/water_power", "Converter - Water Power"),
-    ("converters/water", "Converter - Water"),
-    ("converters/natural_gas", "Converter - Natural Gas"),
-    ("converters/nitrogen", "Converter - Nitrogen"),
-    ("converters/co2", "Converter - CO2"),
-    ("converters/hopp", "Converter - HOPP"),
-    ("converters", "Converter - Other"),
-    ("storage", "Storage"),
-    ("resource", "Resource"),
-    ("finances", "Finance"),
-    ("transporters", "Transporter"),
-    ("control", "Control"),
-    ("simulation", "Simulation"),
-    ("tools", "Tools / Utilities"),
-    ("postprocess", "Post-processing"),
-    ("preprocess", "Pre-processing"),
+    ("core", ("Core / Base", "Core")),
+    # --- Electricity producers (blue family) ---
+    ("converters/wind", ("Electricity", "Wind")),
+    ("converters/solar", ("Electricity", "Solar")),
+    ("converters/nuclear", ("Electricity", "Nuclear")),
+    ("converters/grid", ("Electricity", "Grid")),
+    ("converters/water_power", ("Electricity", "Water Power")),
+    ("converters/natural_gas", ("Electricity", "Natural Gas")),
+    ("converters/hopp", ("Electricity", "HOPP")),
+    # --- Chemical commodities (green family) ---
+    ("converters/hydrogen", ("Chemical", "Hydrogen")),
+    ("converters/ammonia", ("Chemical", "Ammonia")),
+    ("converters/methanol", ("Chemical", "Methanol")),
+    ("converters/co2", ("Chemical", "CO2")),
+    ("converters/nitrogen", ("Chemical", "Nitrogen")),
+    ("converters/water", ("Chemical", "Water")),
+    # --- Metals (brown/orange family) ---
+    ("converters/iron", ("Metal", "Iron")),
+    ("converters/steel", ("Metal", "Steel")),
+    # --- Catch-all converter ---
+    ("converters", ("Converter - Other", "Other")),
+    # --- Non-converter categories ---
+    ("storage", ("Storage", "Storage")),
+    ("resource", ("Resource", "Resource")),
+    ("finances", ("Finance", "Finance")),
+    ("transporters", ("Transporter", "Transporter")),
+    ("control", ("Control", "Control")),
+    ("simulation", ("Simulation", "Simulation")),
+    ("tools", ("Tools / Utilities", "Tools")),
+    ("postprocess", ("Post-processing", "Post-processing")),
+    ("preprocess", ("Pre-processing", "Pre-processing")),
 ]
 
-# Color palette for categories (soft, accessible colors)
+# Color palette -- one distinct color per BROAD category
 CATEGORY_COLORS = {
     "Core / Base": "#6C8EBF",  # Steel blue
-    "Converter - Hydrogen": "#82B366",  # Green
-    "Converter - Ammonia": "#B3D987",  # Light green
-    "Converter - Iron": "#D4A373",  # Tan / brown
-    "Converter - Steel": "#C9A96E",  # Gold-brown
-    "Converter - Methanol": "#E6B8A2",  # Salmon
-    "Converter - Wind": "#97C2D9",  # Sky blue
-    "Converter - Solar": "#FFD966",  # Sunny yellow
-    "Converter - Nuclear": "#D5A6BD",  # Mauve
-    "Converter - Grid": "#A4C2A5",  # Sage green
-    "Converter - Water Power": "#7EB6D9",  # Ocean blue
-    "Converter - Water": "#89CFF0",  # Baby blue
-    "Converter - Natural Gas": "#E8C07A",  # Warm gold
-    "Converter - Nitrogen": "#B5B5E6",  # Lavender
-    "Converter - CO2": "#C4C4C4",  # Gray
-    "Converter - HOPP": "#AAD4AA",  # Mint
-    "Converter - Other": "#B8D4A8",  # Light sage
-    "Storage": "#D79B00",  # Amber / orange
+    "Electricity": "#4A90D9",  # Bold blue
+    "Chemical": "#66BB6A",  # Green
+    "Metal": "#D4873A",  # Burnt orange / brown
+    "Converter - Other": "#A0A0A0",  # Gray
+    "Storage": "#F5A623",  # Amber
     "Resource": "#9673A6",  # Purple
     "Finance": "#DA70D6",  # Orchid
-    "Transporter": "#FF8C69",  # Salmon-orange
-    "Control": "#6FA8DC",  # Cornflower blue
+    "Transporter": "#E86850",  # Coral-red
+    "Control": "#5DADE2",  # Sky blue
     "Simulation": "#76A5AF",  # Teal
     "Tools / Utilities": "#999999",  # Gray
     "Post-processing": "#AAAAAA",  # Light gray
     "Pre-processing": "#BBBBBB",  # Lighter gray
-    "External": "#E0E0E0",  # Very light gray
 }
+
 
 # ---------------------------------------------------------------------------
 # AST helpers
@@ -116,7 +110,7 @@ def _is_test_path(filepath: Path) -> bool:
     return False
 
 
-def _relative_module_path(filepath: Path) -> str:
+def _rel_mod_path(filepath: Path) -> str:
     """Return the filepath relative to the repo root using forward slashes."""
     try:
         return str(filepath.relative_to(PACKAGE_ROOT)).replace("\\", "/")
@@ -124,13 +118,13 @@ def _relative_module_path(filepath: Path) -> str:
         return str(filepath).replace("\\", "/")
 
 
-def _classify(filepath: Path) -> str:
-    """Determine the category for a class based on its file path."""
-    rel = _relative_module_path(filepath)
-    for pattern, category in CATEGORY_RULES:
+def _classify(filepath: Path) -> tuple[str, str]:
+    """Determine the (broad_category, subcategory) for a class based on its file path."""
+    rel = _rel_mod_path(filepath)
+    for pattern, cat_tuple in CATEGORY_RULES:
         if pattern in rel:
-            return category
-    return "Other"
+            return cat_tuple
+    return ("Other", "Other")
 
 
 def _resolve_base_name(base_node: ast.expr) -> str | None:
@@ -185,12 +179,14 @@ def scan_classes(package_root: Path):
                     bname = _resolve_base_name(b)
                     if bname:
                         bases.append(bname)
+                category, subcategory = _classify(filepath)
                 raw.append(
                     {
                         "name": node.name,
                         "bases": bases,
                         "file": filepath,
-                        "category": _classify(filepath),
+                        "category": category,
+                        "subcategory": subcategory,
                     }
                 )
 
@@ -203,7 +199,7 @@ def scan_classes(package_root: Path):
         name = r["name"]
         if name_counts[name] > 1:
             # Prefix with the relative module path to disambiguate
-            module = _relative_module_path(r["file"]).replace("/", ".").removesuffix(".py")
+            module = _rel_mod_path(r["file"]).replace("/", ".").removesuffix(".py")
             key = f"{module}.{name}"
         else:
             key = name
@@ -211,6 +207,7 @@ def scan_classes(package_root: Path):
             "bases": r["bases"],
             "file": r["file"],
             "category": r["category"],
+            "subcategory": r["subcategory"],
         }
 
     return classes
@@ -272,11 +269,13 @@ def build_graph(classes: dict) -> nx.DiGraph:
         short_name = key.rsplit(".", 1)[-1] if "." in key else key
         if _is_excluded(short_name):
             continue
+        subcat = info.get("subcategory", "")
         G.add_node(
             key,
             label=short_name,
             category=info["category"],
-            title=f"{short_name}\n{_relative_module_path(info['file'])}",
+            subcategory=subcat,
+            title=f"{short_name}\n{_rel_mod_path(info['file'])}\n[{info['category']}/ {subcat}]",
         )
 
     # Add edges (parent -> child) — only between H2I classes already in the graph
@@ -383,6 +382,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
         data = G.nodes[node_id]
         label = data.get("label", node_id)
         category = data.get("category", "Other")
+        data.get("subcategory", "")
         color = CATEGORY_COLORS.get(category, "#CCCCCC")
         tooltip = data.get("title", label)
         out_deg = G.out_degree(node_id)
@@ -430,7 +430,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
 
     # Build a legend as an HTML overlay
     legend_items = []
-    # Collect only categories actually used
+    # Collect only broad categories actually used
     used_cats = sorted({G.nodes[n].get("category", "Other") for n in G.nodes})
     for cat in used_cats:
         c = CATEGORY_COLORS.get(cat, "#CCCCCC")
@@ -439,6 +439,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
             f"background:{c};border:1px solid #555;border-radius:3px;"
             f'margin-right:5px;vertical-align:middle;"></span>{cat}'
         )
+
     legend_html = "<br>".join(legend_items)
 
     # Save raw HTML first, then inject the legend.
