@@ -368,7 +368,7 @@ def test_heuristic_load_following_battery_dispatch(
     with subtests.test("Check battery_electricity"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.battery_electricity_out", units="kW")[0:24]
+            == prob.get_val("battery.storage_electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check SOC"):
@@ -424,7 +424,7 @@ def test_heuristic_load_following_battery_dispatch(
     with subtests.test("Check battery_electricity for min SOC"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.battery_electricity_out", units="kW")[:5]
+            == prob.get_val("battery.storage_electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for min SOC"):
@@ -488,7 +488,7 @@ def test_heuristic_load_following_battery_dispatch(
     with subtests.test("Check battery_electricity for max SOC"):
         assert (
             pytest.approx(expected_battery_electricity, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.battery_electricity_out", units="kW")[:5]
+            == prob.get_val("battery.storage_electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for max SOC"):
@@ -747,7 +747,7 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
     with subtests.test("Check battery_electricity"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.battery_electricity_out", units="kW")[0:24]
+            == prob.get_val("battery.storage_electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check SOC"):

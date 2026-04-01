@@ -22,6 +22,8 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
+        include_leap_day (bool, optional): If False, remove data from leap day if the
+            resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
         verify_download (bool, optional): Whether to verify the API download from the url.
             If an `openmeteo_requests.Client.OpenMeteoRequestsError` error is thrown,
             try setting to True. Defaults to False.
@@ -37,6 +39,7 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     """
 
     resource_year: int = field(converter=int, validator=range_val(1940, datetime.now().year - 1))
+    include_leap_day: bool = field(default=False)
     dataset_desc: str = "openmeteo_archive"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [60])
@@ -279,7 +282,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         data["Minute"] = time.minute
 
         data = data[data["Year"] == self.config.resource_year]
-        # TODO: throw error if data isn't proper length
+
+        data = data.reset_index(drop=True)
+
+        data = self.process_leap_day(data)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units
@@ -325,7 +331,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
 
             if "is_day" in c:
                 data_rename_mapper.update({c: "is_day"})
-                data_units.update({"is_day": "percent"})
+                data_units.update({"is_day": "unitless"})
 
             if "surface" in c:
                 new_c += "_0m"

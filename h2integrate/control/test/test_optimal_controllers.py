@@ -227,16 +227,16 @@ def test_min_operating_cost_load_following_battery_dispatch(
 
     # Test that discharge is always positive
     with subtests.test("Discharge is always positive"):
-        assert np.all(prob.get_val("battery.battery_electricity_discharge") >= 0)
+        assert np.all(prob.get_val("battery.storage_electricity_discharge") >= 0)
     with subtests.test("Charge is always negative"):
-        assert np.all(prob.get_val("battery.battery_electricity_charge") <= 0)
+        assert np.all(prob.get_val("battery.storage_electricity_charge") <= 0)
     # Set rtol lower b/c the values are in kW
     with subtests.test("Charge + Discharge == battery_electricity_out"):
-        charge_plus_discharge = prob.get_val("battery.battery_electricity_charge") + prob.get_val(
-            "battery.battery_electricity_discharge"
+        charge_plus_discharge = prob.get_val("battery.storage_electricity_charge") + prob.get_val(
+            "battery.storage_electricity_discharge"
         )
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("battery_electricity_out"), rtol=1e-2
+            charge_plus_discharge, prob.get_val("storage_electricity_out"), rtol=1e-2
         )
     with subtests.test("Initial SOC is correct"):
         assert pytest.approx(prob.model.get_val("battery.SOC")[0], rel=1e-2) == 50
@@ -255,25 +255,25 @@ def test_min_operating_cost_load_following_battery_dispatch(
 
     with subtests.test("SOC increases when charging"):
         assert np.all(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[indx_soc_increase] <= 0
+            prob.get_val("battery.storage_electricity_charge", units="kW")[indx_soc_increase] <= 0
         )
         assert np.all(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[indx_soc_decrease] == 0
+            prob.get_val("battery.storage_electricity_charge", units="kW")[indx_soc_decrease] == 0
         )
         assert np.all(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[indx_soc_same] == 0
+            prob.get_val("battery.storage_electricity_charge", units="kW")[indx_soc_same] == 0
         )
 
     with subtests.test("SOC decreases when discharging"):
         assert np.all(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[indx_soc_decrease] > 0
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[indx_soc_decrease] > 0
         )
         assert np.all(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[indx_soc_increase]
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[indx_soc_increase]
             == 0
         )
         assert np.all(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[indx_soc_same] == 0
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[indx_soc_same] == 0
         )
 
     with subtests.test("Max SOC <= Max storage percent"):
@@ -284,28 +284,28 @@ def test_min_operating_cost_load_following_battery_dispatch(
 
     with subtests.test("Charge never exceeds charge rate"):
         assert (
-            prob.get_val("battery.battery_electricity_charge", units="kW").min() >= -1 * charge_rate
+            prob.get_val("battery.storage_electricity_charge", units="kW").min() >= -1 * charge_rate
         )
 
     with subtests.test("Discharge never exceeds discharge rate"):
         assert (
-            prob.get_val("battery.battery_electricity_discharge", units="kW").max()
+            prob.get_val("battery.storage_electricity_discharge", units="kW").max()
             <= discharge_rate
         )
 
     with subtests.test("Discharge never exceeds demand"):
         assert np.all(
-            prob.get_val("battery.battery_electricity_discharge", units="kW").max() <= demand_in
+            prob.get_val("battery.storage_electricity_discharge", units="kW").max() <= demand_in
         )
 
     with subtests.test("Sometimes discharges"):
         assert any(
-            k > 1e-3 for k in prob.get_val("battery.battery_electricity_discharge", units="kW")
+            k > 1e-3 for k in prob.get_val("battery.storage_electricity_discharge", units="kW")
         )
 
     with subtests.test("Sometimes charges"):
         assert any(
-            k < -1e-3 for k in prob.get_val("battery.battery_electricity_charge", units="kW")
+            k < -1e-3 for k in prob.get_val("battery.storage_electricity_charge", units="kW")
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
@@ -315,7 +315,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
     with subtests.test("Expected discharge from hour 10-30"):
         expected_discharge = np.concat([np.zeros(8), np.ones(8) * 5000, np.zeros(4)])
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[0:20],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[0:20],
             expected_discharge,
             rtol=1e-2,
         )
@@ -323,7 +323,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
     with subtests.test("Expected charge hour 0-24"):
         expected_charge = -1 * np.concat([np.zeros(16), np.ones(8) * 4000])
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[0:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[0:24],
             expected_charge,
             rtol=1e-2,
         )

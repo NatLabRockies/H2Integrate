@@ -305,13 +305,13 @@ def test_battery_openloop(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )
@@ -381,13 +381,13 @@ def test_battery_pyo(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )
@@ -508,13 +508,13 @@ def test_both_pyomo_controllers(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )
@@ -586,13 +586,13 @@ def test_both_openloop_controllers(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )
@@ -668,13 +668,13 @@ def test_h2s_pyomo_battery_openloop(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )
@@ -765,13 +765,13 @@ def test_battery_pyomo_h2s_openloop(subtests, plant_config):
 
     with subtests.test("Battery: Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
             bat_expected_charge,
             rtol=1e-6,
         )
     with subtests.test("Battery: Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW")[:24],
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
             bat_expected_discharge,
             rtol=1e-6,
         )

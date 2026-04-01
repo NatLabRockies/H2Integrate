@@ -263,7 +263,7 @@ def test_pysam_battery_with_demand_openloop(plant_config, storage_perf_params, s
     )
     with subtests.test("Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW"),
+            prob.get_val("battery.storage_electricity_discharge", units="kW"),
             expected_discharge,
             rtol=1e-6,
         )
@@ -298,7 +298,7 @@ def test_pysam_battery_with_demand_openloop(plant_config, storage_perf_params, s
     )
     with subtests.test("Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW"),
+            prob.get_val("battery.storage_electricity_charge", units="kW"),
             expected_charge,
             rtol=1e-6,
         )
@@ -380,7 +380,7 @@ def test_pysam_battery_with_simple_openloop(plant_config, storage_perf_params, s
     )
     with subtests.test("Expected discharge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_discharge", units="kW"),
+            prob.get_val("battery.storage_electricity_discharge", units="kW"),
             expected_discharge,
             rtol=1e-6,
         )
@@ -415,7 +415,7 @@ def test_pysam_battery_with_simple_openloop(plant_config, storage_perf_params, s
     )
     with subtests.test("Expected charge"):
         np.testing.assert_allclose(
-            prob.get_val("battery.battery_electricity_charge", units="kW"),
+            prob.get_val("battery.storage_electricity_charge", units="kW"),
             expected_charge,
             rtol=1e-6,
         )
