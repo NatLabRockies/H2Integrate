@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import attrs
 import numpy as np
+import pandas as pd
 from attrs import Attribute, define
 
 
@@ -191,3 +192,17 @@ def attr_filter(inst: Attribute, value: Any) -> bool:
         if value.size == 0:
             return False
     return True
+
+
+def build_time_series_from_plant_config(plant_config):
+    """Build simulation timestamps from plant_config simulation settings."""
+    simulation_cfg = plant_config["plant"]["simulation"]
+    n_timesteps = int(simulation_cfg["n_timesteps"])
+    dt_seconds = int(simulation_cfg["dt"])
+
+    # Optional start_time in config; default to a fixed reference timestamp.
+    start_time = simulation_cfg.get("start_time", "2000-01-01 00:00:00")
+    start_timestamp = pd.to_datetime(start_time)
+    freq = pd.to_timedelta(dt_seconds, unit="s")
+
+    return pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq)

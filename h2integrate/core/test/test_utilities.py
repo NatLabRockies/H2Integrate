@@ -4,11 +4,12 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pandas as pd
 import pytest
 from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
 from h2integrate.core.inputs.validation import load_tech_yaml
@@ -547,3 +548,53 @@ def test_yaml_no_duplicate_keys(subtests):
         sample = load_yaml(inputs / fn)
         traverse_dict(sample)
         load_tech_yaml(inputs / fn)
+
+
+@pytest.mark.unit
+def test_build_time_series_from_plant_config_default_start_time():
+    plant_config = {
+        "plant": {
+            "simulation": {
+                "n_timesteps": 4,
+                "dt": 3600,
+            }
+        }
+    }
+
+    ts = build_time_series_from_plant_config(plant_config)
+
+    expected = pd.to_datetime(
+        [
+            "2000-01-01 00:00:00",
+            "2000-01-01 01:00:00",
+            "2000-01-01 02:00:00",
+            "2000-01-01 03:00:00",
+        ]
+    )
+    pd.testing.assert_index_equal(ts, pd.DatetimeIndex(expected))
+
+
+@pytest.mark.unit
+def test_build_time_series_from_plant_config_with_start_time():
+    plant_config = {
+        "plant": {
+            "simulation": {
+                "n_timesteps": 5,
+                "dt": 1800,
+                "start_time": "2025-01-01 06:30:00",
+            }
+        }
+    }
+
+    ts = build_time_series_from_plant_config(plant_config)
+
+    expected = pd.to_datetime(
+        [
+            "2025-01-01 06:30:00",
+            "2025-01-01 07:00:00",
+            "2025-01-01 07:30:00",
+            "2025-01-01 08:00:00",
+            "2025-01-01 08:30:00",
+        ]
+    )
+    pd.testing.assert_index_equal(ts, pd.DatetimeIndex(expected))

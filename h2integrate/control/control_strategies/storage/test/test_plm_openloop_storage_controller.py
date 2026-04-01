@@ -543,10 +543,6 @@ def test_plm_controller_respects_soc_bounds(subtests):
     min_soc = 0.15
     max_soc = 0.95
 
-    import pdb
-
-    pdb.set_trace()
-
     with subtests.test("SOC never exceeds maximum"):
         assert np.all(soc <= max_soc + 1e-6)
 

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from attrs import field, define
 
-from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
 from h2integrate.core.validators import contains, gte_zero, range_val, range_val_or_none
 from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
     StorageOpenLoopControlBase,
@@ -88,7 +88,6 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
         validator=contains(["demand_profile", "demand_profile_supervisor"]),
     )
     max_supervisor_events: int | None = (field(default=None),)
-    supervisor_event_period: int | str | None = field(default=None)
     max_supervisor_event_period: int | str | None = field(default=None)
     peak_range: dict = field(
         default={"start": time.min, "end": time.max},
@@ -219,7 +218,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         # Store simulation parameters for later use
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        self.time_index = self._build_time_index()
+        self.time_index = build_time_series_from_plant_config(self.options["plant_config"])
 
         # Build timestamped demand dictionaries from simulation timeline.
         secondary_demand_profile = self._build_demand_profile_dict(self.config.demand_profile)
@@ -253,19 +252,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         self.get_time_to_peak()
 
         self.get_allowed_discharge()
-
-    def _build_time_index(self):
-        """Build a simulation time index from plant configuration.
-
-        Uses `start_time` from simulation config when provided, otherwise defaults to
-        `2000-01-01 00:00:00`. The resulting index has `n_timesteps` entries and
-        spacing of `dt` seconds.
-        """
-        simulation_config = self.options["plant_config"]["plant"]["simulation"]
-        start_time = simulation_config.get("start_time", "2000-01-01 00:00:00")
-        start_timestamp = pd.to_datetime(start_time)
-        freq = pd.to_timedelta(int(self.dt), unit="s")
-        return pd.date_range(start=start_timestamp, periods=self.n_timesteps, freq=freq)
 
     def _build_demand_profile_dict(self, demand_profile):
         """Convert scalar/list demand input into a timestamped demand dictionary."""
