@@ -21,7 +21,7 @@ Any implemented electrolyzer model should inherit from `ElectrolyzerBaseClass` t
 
 ## Interactive class hierarchy
 
-The diagram below shows **every class** in H2Integrate and how they inherit from one another.
+The diagram below shows **every model class** in H2Integrate and how they inherit from one another.
 Classes are color-coded by category (converters, storage, resource, finance, etc.) and arrows point from parent to child.
 You can **zoom**, **pan**, **hover** for details, and **drag** nodes to rearrange the layout.
 
