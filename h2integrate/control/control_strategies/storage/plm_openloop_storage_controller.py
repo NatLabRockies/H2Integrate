@@ -190,9 +190,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         )
         super().setup()
 
-        import pdb
-
-        pdb.set_trace()
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Register storage system design constraint inputs
@@ -241,9 +238,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         # Detect daily peaks in secondary demand profile (always computed)
         # Respects the configured peak_range time window for each day
-        import pdb
-
-        pdb.set_trace()
         self.secondary_peaks_df = self.get_peaks(
             demand_profile=secondary_demand_profile,
             peak_range=self.config.peak_range,
