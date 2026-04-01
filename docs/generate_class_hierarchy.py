@@ -76,16 +76,16 @@ CATEGORY_RULES = [
 
 # Color palette -- one distinct color per BROAD category
 CATEGORY_COLORS = {
-    "Core / Base": "#6C8EBF",  # Steel blue
+    "Core / Base": "#1B3A5C",  # Dark navy
     "Electricity": "#4A90D9",  # Bold blue
     "Chemical": "#66BB6A",  # Green
-    "Metal": "#D4873A",  # Burnt orange / brown
+    "Metal": "#8B5E3C",  # Dark brown
     "Converter - Other": "#A0A0A0",  # Gray
-    "Storage": "#F5A623",  # Amber
+    "Storage": "#FFD54F",  # Golden yellow
     "Resource": "#9673A6",  # Purple
     "Finance": "#DA70D6",  # Orchid
     "Transporter": "#E86850",  # Coral-red
-    "Control": "#5DADE2",  # Sky blue
+    "Control": "#00ACC1",  # Cyan
     "Simulation": "#76A5AF",  # Teal
     "Tools / Utilities": "#999999",  # Gray
     "Post-processing": "#AAAAAA",  # Light gray
