@@ -221,7 +221,7 @@ def test_merge_peaks_without_supervisor_returns_secondary_flags(subtests):
         }
     )
 
-    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(None, secondary_peaks_df)
+    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(secondary_peaks_df, None)
 
     with subtests.test("peak flags unchanged"):
         assert merged["is_peak"].tolist() == secondary_peaks_df["is_peak"].tolist()
@@ -441,6 +441,9 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,
+        "demand_profile_supervisor": None,
+        "dispatch_priority_demand_profile": "demand_profile",
+        "min_peak_proximity": {"units": "h", "val": 4},
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
@@ -522,6 +525,9 @@ def test_plm_controller_respects_soc_bounds(subtests):
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,
+        "demand_profile_supervisor": None,
+        "dispatch_priority_demand_profile": "demand_profile",
+        "min_peak_proximity": {"units": "h", "val": 4},
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
@@ -591,10 +597,13 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests):
         "charge_efficiency": 0.92,
         "discharge_efficiency": 0.92,
         "demand_profile": [5.0] * 24,
+        "demand_profile_supervisor": None,
         "peak_range": {"start": peak_window_start, "end": peak_window_end},
         "advance_discharge_period": {"units": "h", "val": 3},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,  # Block charging in peak window
+        "dispatch_priority_demand_profile": "demand_profile",
+        "min_peak_proximity": {"units": "h", "val": 4},
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (

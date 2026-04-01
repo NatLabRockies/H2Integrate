@@ -81,29 +81,25 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    demand_profile_supervisor: int | float | list | None = field(default=None)
+    demand_profile_supervisor: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
-        default="demand_profile_supervisor",
         validator=contains(["demand_profile", "demand_profile_supervisor"]),
     )
     max_supervisor_events: int | None = (field(default=None),)
     max_supervisor_event_period: int | str | None = field(default=None)
     peak_range: dict = field(
-        default={"start": "00:00:00", "end": "23:59:59"},
         metadata={
             "description": "Daily time window for peak detection. "
             "Dict with 'start' and 'end' as HH:MM:SS strings."
         },
     )
     advance_discharge_period: dict = field(
-        default={"units": "H", "val": 2},
         metadata={
             "description": "How long before a peak to start discharging. "
             "Dict with 'units' (timedelta unit str) and 'val' (numeric)."
         },
     )
     delay_charge_period: dict = field(
-        default={"units": "H", "val": 4},
         metadata={
             "description": "Minimum delay after discharge completes before charging resumes. "
             "Dict with 'units' and 'val'."
@@ -112,6 +108,13 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     allow_charge_in_peak_range: bool = field(
         default=True,
         metadata={"description": "If False, charging is suppressed during peak_range."},
+    )
+    min_peak_proximity: dict = field(
+        metadata={
+            "description": "Minimum time allowed between peak events. An error is raised if "
+            "peak events do not respect the given time separation."
+            "Dict with 'units' and 'val'."
+        },
     )
 
     def __attrs_post_init__(self):
@@ -190,6 +193,17 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         )
         super().setup()
 
+        if (
+            self.config.demand_profile_supervisor is None
+            and self.config.dispatch_priority_demand_profile == "demand_profile_supervisor"
+        ):
+            raise (
+                ValueError(
+                    "If demand_profile_supervisor is None, then dispatch_priority_demand_profile"
+                    "must be demand_profile"
+                )
+            )
+
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Register storage system design constraint inputs
@@ -231,7 +245,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 demand_profile=supervisor_demand_profile,
                 n_max_events=self.config.max_supervisor_events,
                 max_events_period=self.config.max_supervisor_event_period,
-                min_proximity={"units": "H", "val": 4},
+                min_proximity=self.config.min_peak_proximity,
             )
         else:
             self.supervisor_peaks_df = None
@@ -626,7 +640,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         Args:
             supervisory_peaks_df (pd.DataFrame | None): Primary peak schedule with columns
-                ['date_time', 'is_peak', 'demand', ...]. If None, secondary peaks are used.
+                ['date_time', 'is_peak', 'demand', ...].
             secondary_peaks_df (pd.DataFrame): Secondary/fallback peak schedule with same columns.
 
         Returns:
@@ -634,8 +648,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 Otherwise, returns secondary with 'is_peak' flags overridden on supervisor-peak
                 days.
         """
-        peaks_df = secondary_peaks_df.copy()
-        if supervisory_peaks_df is not None:
+        if secondary_peaks_df is None:
+            peaks_df = supervisory_peaks_df.copy()
+        else:
+            peaks_df = secondary_peaks_df.copy()
             # For each day in the data, check if supervisor has any peaks
             for day in secondary_peaks_df["date_time"].dt.floor("D").unique():
                 day_df = supervisory_peaks_df[
