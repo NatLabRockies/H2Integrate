@@ -32,18 +32,7 @@ python docs/generate_class_hierarchy.py
 ```
 
 ```{raw} html
-<style>
-  /* Extend the iframe to the right edge of the viewport
-     without overlapping the left sidebar / TOC. */
-  .class-hierarchy-wrap {
-    width: calc(100vw - var(--pst-sidebar-width, 260px));
-    max-width: calc(100vw - 260px);
-    position: relative;
-    padding: 0 20px 0 0;
-    box-sizing: border-box;
-  }
-</style>
-<div class="class-hierarchy-wrap">
+<div style="width:100%; box-sizing:border-box;">
   <iframe src="../_static/class_hierarchy.html" width="100%" height="950px"
           style="border:1px solid #ccc; border-radius:8px;"
           allowfullscreen></iframe>
