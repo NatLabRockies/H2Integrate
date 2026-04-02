@@ -20,7 +20,7 @@ model = H2IntegrateModel("33_peak_load_management.yaml")
 
 model.setup()
 
-# model.run()
+model.run()
 
 plant_config = load_yaml("plant_config.yaml")
 supervisor_demand = np.asarray(

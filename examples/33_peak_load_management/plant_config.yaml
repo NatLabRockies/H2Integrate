@@ -8,4 +8,4 @@ plant:
     timezone: -6
     start_time: 2025/07/01 00:00:00
 technology_interconnections:
-  - [battery, grid, electricity]
+  - [battery, grid_buy, [electricity_out, electricity_in]]
