@@ -49,7 +49,7 @@ There are two connection formats:
 
 ##### Different shared parameter names
 ```yaml
-["source_tech", "destination_tech", ("source_parameter", "destination_parameter")]
+["source_tech", "destination_tech", ["source_parameter", "destination_parameter"]]
 ```
 
 - **source_tech**: Name of the technology providing the output
@@ -57,6 +57,9 @@ There are two connection formats:
 - **source_parameter**: The name of the parameter within ``"source_tech"``
 - **destination_parameter**: The name of the parameter within ``"destination_tech"``
 
+```{note}
+The `source_parameter` and `destination_parameter` should be input into the array as another array. If it's input as a tuple the model will raise an error.
+```
 
 ### Internal connection logic
 
@@ -91,6 +94,109 @@ And automatically connects:
 - `wind_farm_to_electricity_splitter_cable.electricity_out` → `electricity_splitter.electricity_in`
 - `electricity_splitter.electricity_out1` → `electricity_splitter_to_electrolyzer_cable.electricity_in`
 - `electricity_splitter.electricity_out2` → `electricity_splitter_to_doc_cable.electricity_in`
+
+## Multivariable streams
+
+Standard connections in H2Integrate transport a single commodity between technologies (e.g., electricity in kW, hydrogen in kg/h).
+*Multivariable streams* extend this by bundling several related variables into a single named stream, so that one connection specification in `technology_interconnections` expands into connections for every constituent variable automatically.
+
+A typical use-case is a gas mixture where you need to transport the mass flow rate, composition fractions, temperature, and pressure together between a producer, a combiner, and a consumer.
+
+### Defining a multivariable stream
+
+Multivariable streams are defined in `commodity_stream_definitions.py`. Each stream has a name and a dictionary of constituent variables with their units and descriptions:
+
+```{literalinclude} ../../h2integrate/core/commodity_stream_definitions.py
+:language: python
+:lines: 11-35
+:caption: Built-in stream definition from commodity_stream_definitions.py
+```
+
+To add a new multivariable stream type, add another entry to the `multivariable_streams` dictionary with the stream name as the key and the constituent variables as the value.
+
+### Variable naming convention
+
+Multivariable stream variables follow the naming convention `<stream_name>:<var_name>_in` for inputs and `<stream_name>:<var_name>_out` for outputs.
+The colon separates the stream name from the constituent variable name, making it clear which stream a variable belongs to.
+
+
+### Using multivariable streams in components
+
+Two helper functions are provided to register all constituent variables of a multivariable stream on an OpenMDAO component:
+
+```python
+from h2integrate.core.commodity_stream_definitions import (
+    add_multivariable_output,
+    add_multivariable_input,
+)
+
+class MyProducer(PerformanceModelBaseClass):
+    def setup(self):
+        super().setup()
+        # Adds all wellhead_gas_mixture variables as outputs
+        add_multivariable_output(self, "wellhead_gas_mixture", self.n_timesteps)
+
+class MyConsumer(PerformanceModelBaseClass):
+    def setup(self):
+        super().setup()
+        # Adds all wellhead_gas_mixture variables as inputs
+        add_multivariable_input(self, "wellhead_gas_mixture", self.n_timesteps)
+```
+
+These helper functions replace the need for manually iterating over the stream definition dictionary, reducing boilerplate code and ensuring consistency when adding new stream types.
+
+### Connecting multivariable streams
+
+Multivariable streams are connected using the same `technology_interconnections` syntax as standard connections.
+When H2Integrate encounters a stream name that matches a key in `multivariable_streams`, it automatically expands the connection into individual connections for each constituent variable.
+
+#### 4-element connections
+
+```yaml
+technology_interconnections: [
+  ["gas_producer", "gas_consumer", "wellhead_gas_mixture", "pipe"],
+]
+```
+
+This single line expands into five OpenMDAO connections:
+- `gas_producer.wellhead_gas_mixture:mass_flow_out` → `gas_consumer.wellhead_gas_mixture:mass_flow_in`
+- `gas_producer.wellhead_gas_mixture:hydrogen_mass_fraction_out` → `gas_consumer.wellhead_gas_mixture:hydrogen_mass_fraction_in`
+- `gas_producer.wellhead_gas_mixture:oxygen_mass_fraction_out` → `gas_consumer.wellhead_gas_mixture:oxygen_mass_fraction_in`
+- `gas_producer.wellhead_gas_mixture:temperature_out` → `gas_consumer.wellhead_gas_mixture:temperature_in`
+- `gas_producer.wellhead_gas_mixture:pressure_out` → `gas_consumer.wellhead_gas_mixture:pressure_in`
+
+
+#### 3-element connections
+
+Three-element connections also support multivariable streams:
+
+```yaml
+technology_interconnections: [
+  ["gas_producer", "gas_consumer", "wellhead_gas_mixture"],
+]
+```
+
+This expands into the same set of individual connections as the 4-element version above.
+
+#### Combiner and splitter connections
+
+Multivariable streams work with combiners and splitters using the same naming conventions as standard commodity connections.
+The system auto-increments stream indices for combiners and splitters:
+
+```yaml
+technology_interconnections: [
+  ["gas_producer_1", "gas_combiner", "wellhead_gas_mixture"],
+  ["gas_producer_2", "gas_combiner", "wellhead_gas_mixture"],
+  ["gas_combiner", "gas_consumer", "wellhead_gas_mixture"],
+]
+```
+
+For the combiner inputs, variables are indexed as `wellhead_gas_mixture:<var_name>_in1`, `wellhead_gas_mixture:<var_name>_in2`, etc.
+For the splitter outputs, variables are indexed as `wellhead_gas_mixture:<var_name>_out1`, `wellhead_gas_mixture:<var_name>_out2`, etc.
+
+### Example
+
+See [Example 32](https://github.com/NatLabRockies/H2Integrate/tree/main/examples/32_multivariable_streams) for a complete working example that demonstrates two gas producers with different properties feeding into a gas stream combiner, which then feeds a consumer.
 
 ## Generic combiner
 

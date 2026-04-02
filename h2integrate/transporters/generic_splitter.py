@@ -75,10 +75,12 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
 
+        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+
         self.add_input(
             f"{self.config.commodity}_in",
             val=0.0,
-            shape_by_conn=True,
+            shape=n_timesteps,
             units=self.config.commodity_rate_units,
         )
 
@@ -94,7 +96,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             self.add_input(
                 "prescribed_commodity_to_priority_tech",
                 val=self.config.prescribed_commodity_to_priority_tech,
-                copy_shape=f"{self.config.commodity}_in",
+                shape=n_timesteps,
                 units=self.config.commodity_rate_units,
                 desc="Prescribed amount of commodity to send to the priority technology",
             )
@@ -102,14 +104,14 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         self.add_output(
             f"{self.config.commodity}_out1",
             val=0.0,
-            copy_shape=f"{self.config.commodity}_in",
+            shape=n_timesteps,
             units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the first technology",
         )
         self.add_output(
             f"{self.config.commodity}_out2",
             val=0.0,
-            copy_shape=f"{self.config.commodity}_in",
+            shape=n_timesteps,
             units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the second technology",
         )

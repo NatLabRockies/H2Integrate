@@ -1,0 +1,171 @@
+name: technology_config
+description: This hybrid plant produces iron
+technologies:
+  mine_electricity_feedstock:  # electricity feedstock for iron ore
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
+      performance_parameters:
+        rated_capacity: 30.  # MW, need 27.913 MW per timestep for iron ore
+      cost_parameters:
+        cost_year: 2022
+        price: 0.  # Electricity costs are already priced in to current mine model
+        annual_cost: 0.
+        start_up_cost: 0.
+  mine_crude_ore_feedstock:  # iron ore feedstock
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: crude_ore
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 2000.  # need 828.50385048 t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.  # USD/t
+        annual_cost: 0.
+        start_up_cost: 0.
+  crude_ore_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: crude_ore
+        commodity_rate_units: t/h
+  iron_mine:
+    performance_model:
+      model: MartinIronMinePerformanceComponent
+    cost_model:
+      model: MartinIronMineCostComponent
+    model_inputs:
+      shared_parameters:
+        mine: Northshore
+        taconite_pellet_type: drg
+        max_ore_production_rate_tonnes_per_hr: 221.2592636
+  iron_ore_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: iron_ore
+        commodity_rate_units: kg/h
+  processed_ore_feedstock:  # iron ore feedstock
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: iron_ore
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 250.  # need 828.50385048 t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0
+        annual_cost: 0.
+        start_up_cost: 0.
+  iron_transport:
+    performance_model:
+      model: IronTransportPerformanceComponent
+    cost_model:
+      model: IronTransportCostComponent
+    model_inputs:
+      performance_parameters:
+        find_closest_ship_site: false
+        shipment_site: Chicago
+      cost_parameters:
+        transport_year: 2022
+        cost_year: 2022
+  natural_gas_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
+      performance_parameters:
+        rated_capacity: 1270.  # need 1268.934 MMBtu/h
+      cost_parameters:
+        cost_year: 2022
+        price: 4.0  # USD 4.0/MMBtu
+        annual_cost: 0.
+        start_up_cost: 0.
+  water_feedstock:  # for iron reduction
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: water
+        commodity_rate_units: galUS  # galUS/h
+      performance_parameters:
+        rated_capacity: 40000.  # need 38710.49649 galUS/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0016700004398318847  # cost is USD 0.441167535/t, converted to USD/gal
+        annual_cost: 0.
+        start_up_cost: 0.
+  hydrogen_feedstock:  # for h2 dri iron reduction
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+      performance_parameters:
+        rated_capacity: 1000000  # oversized
+      cost_parameters:
+        cost_year: 2022
+        price: 0.  # USD/kg set from the CSV
+        annual_cost: 0.
+        start_up_cost: 0.
+  dri_grid_feedstock:  # electricity feedstock for iron dri
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
+      performance_parameters:
+        rated_capacity: 270000000.  # Oversized to ensure it doesn't constrain the process, need 27.913 MW per timestep for iron ore
+      cost_parameters:
+        cost_year: 2022
+        price: 0.  # USD/MWh set from CSV
+        annual_cost: 0.
+        start_up_cost: 0.
+  iron_plant:
+    performance_model:
+      model: HydrogenIronReductionPlantPerformanceComponent
+    cost_model:
+      model: HydrogenIronReductionPlantCostComponent
+    model_inputs:
+      shared_parameters:
+        pig_iron_production_rate_tonnes_per_hr: 161.8829908675799  # equivalent to 1418095 t/yr
+      performance_parameters:
+        water_density: 1000  # kg/m3
+      cost_parameters:
+        skilled_labor_cost: 40.85  # 2022 USD/hr
+        unskilled_labor_cost: 30.0  # 2022 USD/hr
+  pig_iron_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: pig_iron
+        commodity_rate_units: kg/h

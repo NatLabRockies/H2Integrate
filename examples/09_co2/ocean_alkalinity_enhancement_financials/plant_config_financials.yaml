@@ -18,6 +18,7 @@ plant:
 technology_interconnections:
   - [wind, oae, electricity, cable]
   - [finance_subgroup_electricity, oae, LCOE]
+  - [wind, oae, [annual_electricity_produced, annual_input_electricity]]
   # etc
 resource_to_tech_connections:
   # connect the wind resource to the wind technology

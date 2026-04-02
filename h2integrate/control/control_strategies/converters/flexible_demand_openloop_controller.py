@@ -2,14 +2,14 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.validators import gte_zero, range_val
-from h2integrate.control.control_strategies.demand_openloop_controller import (
-    DemandOpenLoopControlBase,
-    DemandOpenLoopControlBaseConfig,
+from h2integrate.control.control_strategies.converters.openloop_controller_base import (
+    ConverterOpenLoopControlBase,
+    ConverterOpenLoopControlBaseConfig,
 )
 
 
 @define(kw_only=True)
-class FlexibleDemandOpenLoopConverterControllerConfig(DemandOpenLoopControlBaseConfig):
+class FlexibleDemandOpenLoopConverterControllerConfig(ConverterOpenLoopControlBaseConfig):
     """Configuration for defining a flexible demand open-loop controller.
 
     Extends :class:`DemandOpenLoopControlBaseConfig` with additional parameters
@@ -42,7 +42,7 @@ class FlexibleDemandOpenLoopConverterControllerConfig(DemandOpenLoopControlBaseC
     min_utilization: float = field(validator=range_val(0, 1.0))
 
 
-class FlexibleDemandOpenLoopConverterController(DemandOpenLoopControlBase):
+class FlexibleDemandOpenLoopConverterController(ConverterOpenLoopControlBase):
     """Open-loop controller for flexible demand with ramping and utilization constraints.
 
     This controller extends the base demand controller by allowing the effective

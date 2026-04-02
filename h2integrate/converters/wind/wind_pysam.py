@@ -247,7 +247,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         if self.config.create_model_from == "default":
             self.system_model = Windpower.default(self.config.config_name)
         elif self.config.create_model_from == "new":
-            self.system_model = Windpower.new(self.config.config_name)
+            self.system_model = Windpower.new()
 
         design_dict = self.config.create_input_dict()
         if bool(self.config.pysam_options):

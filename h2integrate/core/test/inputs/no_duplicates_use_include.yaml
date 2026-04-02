@@ -87,9 +87,9 @@ technologies:
         max_charge_rate: 375740.4 #kW
         max_capacity: 375745.2 #kWh
         n_control_window: 24
-        init_charge_fraction: 0.9
-        max_charge_fraction: 1.0
-        min_charge_fraction: 0.2
+        init_soc_fraction: 0.9
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.2
         system_commodity_interface_limit: 1e12
       performance_parameters:
         system_model_source: "pysam"
@@ -126,7 +126,7 @@ technologies:
     performance_model:
       model: "StorageAutoSizingModel"
     control_strategy:
-      model: "PassThroughOpenLoopController"
+      model: "SimpleStorageOpenLoopController"
     cost_model:
       model: "LinedRockCavernStorageCostModel"
     model_inputs:

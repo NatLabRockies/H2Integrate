@@ -22,7 +22,7 @@ technology_interconnections:
                                                   # connect solar to battery
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
                                                                   # connect NG feedstock to NG plant
-  - [battery, natural_gas_plant, [electricity_unmet_demand, electricity_demand]]
+  - [battery, natural_gas_plant, [unmet_electricity_demand_out, electricity_demand]]
                                                                                          # connect electricity demand to NG feedstock
     # connect natural gas and battery to combiner
   - [solar, fin_combiner, electricity, cable]

@@ -51,7 +51,7 @@ technologies:
           replacement_cost_percent: 0.15  # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: SimpleGenericStorage
+      model: StoragePerformanceModel
     cost_model:
       model: LinedRockCavernStorageCostModel
     control_strategy:
@@ -62,10 +62,9 @@ technologies:
         commodity_rate_units: kg/h
         max_charge_rate: 12446.00729773  # kg/time step
         max_capacity: 2987042.0  # kg
-      control_parameters:
-        max_charge_fraction: 1.0  # fraction (0-1)
-        min_charge_fraction: 0.1  # fraction (0-1)
-        init_charge_fraction: 0.25  # fraction (0-1)
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.25  # fraction (0-1)
         max_discharge_rate: 12446.00729773  # kg/time step
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)

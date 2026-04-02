@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pyomo.environ as pyomo
 from attrs import field, define
 from pyomo.util.check_units import assert_units_consistent
@@ -79,15 +80,15 @@ class OptimizedDispatchControllerConfig(PyomoControllerBaseConfig):
             "cost_per_discharge",
             "commodity_met_value",
             "max_capacity",
-            "max_charge_fraction",
-            "min_charge_fraction",
+            "max_soc_fraction",
+            "min_soc_fraction",
             "charge_efficiency",
             "discharge_efficiency",
             "max_charge_rate",
         ]
 
         dispatch_inputs = {k: self.as_dict()[k] for k in dispatch_keys}
-        dispatch_inputs.update({"initial_soc_fraction": self.init_charge_fraction})
+        dispatch_inputs.update({"initial_soc_fraction": self.init_soc_fraction})
         return dispatch_inputs
 
 
@@ -124,7 +125,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         super().setup()
 
         self.n_control_window = self.config.n_control_window
-        self.updated_initial_soc = self.config.init_charge_fraction
+        self.updated_initial_soc = self.config.init_soc_fraction
 
         # Is this the best place to put this???
         self.commodity_info = {
@@ -137,16 +138,158 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
         self.dispatch_inputs = self.config.make_dispatch_inputs()
 
-    def initialize_parameters(self, commodity_in, commodity_demand):
+    def pyomo_setup(self, discrete_inputs):
+        """Create the Pyomo model, extract dispatch technology names, and return dispatch solver.
+
+        Returns:
+            callable: Function(performance_model, performance_model_kwargs, inputs, commodity)
+                executing rolling-window optimization to determine dispatch and returning:
+                (total_out, storage_out, unmet_demand, unused_commodity, soc)
+        """
+        # initialize the pyomo model
+        self.pyomo_model = pyomo.ConcreteModel()
+
+        pyomo.Set(initialize=range(self.config.n_control_window))
+
+        self.source_techs = []
+        self.dispatch_tech = []
+
+        for connection in self.dispatch_connections:
+            # get connection definition
+            source_tech, intended_dispatch_tech = connection
+            # only add connections to intended dispatch tech
+            if any(intended_dispatch_tech in name for name in self.tech_group_name):
+                # record source and dispatch techs
+                if source_tech == intended_dispatch_tech:
+                    self.dispatch_tech.append(source_tech)
+                self.source_techs.append(source_tech)
+            else:
+                continue
+
+        # define dispatch solver
+        def pyomo_dispatch_solver(
+            performance_model: callable,
+            performance_model_kwargs,
+            inputs,
+            pyomo_model=self.pyomo_model,
+            commodity_name: str = self.config.commodity,
+        ):
+            """
+            Execute rolling-window dispatch for the controlled technology.
+
+            Iterates over the full simulation period in chunks of size
+            `self.config.n_control_window`, (re)configures per-window dispatch
+            parameters, solves the Pyomo optimization model to determine
+            dispatch decisions, and then calls the provided performance_model
+            over each window to obtain storage output and SOC trajectories.
+
+            Args:
+                performance_model (callable):
+                    Function implementing the technology performance over a control
+                    window. Signature must accept (storage_dispatch_commands,
+                    **performance_model_kwargs, sim_start_index=<int>)
+                    and return (storage_out_window, soc_window) arrays of length
+                    n_control_window.
+                performance_model_kwargs (dict):
+                    Extra keyword arguments forwarded unchanged to performance_model
+                    at window (e.g., efficiencies, timestep size).
+                inputs (dict):
+                    Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
+                        f"{commodity}_in"          : available generated commodity profile.
+                        f"{commodity}_demand"   : demanded commodity output profile.
+                commodity (str, optional):
+                    Base commodity name (e.g. "electricity", "hydrogen"). Default:
+                    self.config.commodity.
+
+            Returns:
+                tuple[np.ndarray, np.ndarray]:
+                    storage_commodity_out :
+                        Commodity supplied (positive) by the storage asset each timestep.
+                    soc :
+                        State of charge trajectory (percent of capacity).
+
+            Raises:
+                NotImplementedError:
+                    If the configured control strategy is not implemented.
+
+            Notes:
+                1. Arrays returned have length self.n_timesteps (full simulation period).
+            """
+
+            # initialize outputs
+            storage_commodity_out = np.zeros(self.n_timesteps)
+            soc = np.zeros(self.n_timesteps)
+
+            # get the starting index for each control window
+            window_start_indices = list(range(0, self.n_timesteps, self.config.n_control_window))
+
+            # Initialize parameters for optimized dispatch strategy
+            self.initialize_parameters(inputs)
+
+            # loop over all control windows, where t is the starting index of each window
+            for t in window_start_indices:
+                # get the inputs over the current control window
+                commodity_in = inputs[f"{self.config.commodity}_in"][
+                    t : t + self.config.n_control_window
+                ]
+                demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
+
+                # Progress report
+                if t % (self.n_timesteps // 4) < self.n_control_window:
+                    percentage = round((t / self.n_timesteps) * 100)
+                    print(f"{percentage}% done with optimal dispatch")
+                # Update time series parameters for the optimization method
+                self.update_time_series_parameters(
+                    commodity_in=commodity_in,
+                    commodity_demand=demand_in,
+                    updated_initial_soc=self.updated_initial_soc,
+                )
+                # Run dispatch optimization to minimize costs while meeting demand
+                self.solve_dispatch_model(
+                    start_time=t,
+                    n_days=self.n_timesteps // 24,
+                )
+
+                # run the performance/simulation model for the current control window
+                # using the dispatch commands
+                storage_commodity_out_control_window, soc_control_window = performance_model(
+                    self.storage_dispatch_commands,
+                    **performance_model_kwargs,
+                    sim_start_index=t,
+                )
+                # update SOC for next time window
+                self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
+
+                # get a list of all time indices belonging to the current control window
+                window_indices = list(range(t, t + self.config.n_control_window))
+
+                # loop over all time steps in the current control window
+                for j in window_indices:
+                    # save the output for the control window to the output for the full
+                    # simulation
+                    storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
+                    soc[j] = soc_control_window[j - t]
+
+            return storage_commodity_out, soc
+
+        return pyomo_dispatch_solver
+
+    def initialize_parameters(self, inputs):
         """Initialize parameters for optimization model
 
         Args:
-            commodity_in (list): List of generated commodity in for this time slice.
-            commodity_demand (list): The demanded commodity for this time slice.
+            inputs (dict):
+                Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
+                    f"{commodity}_in"       : Available generated commodity profile.
+                    f"{commodity}_demand"   : Demanded commodity output profile.
 
         """
         # Where pyomo model communicates with the rest of the controller
         # self.hybrid_dispatch_model is the pyomo model, this is the thing in hybrid_rule
+        if "max_charge_rate" in inputs:
+            self.dispatch_inputs["max_charge_rate"] = inputs["max_charge_rate"][0]
+        if "storage_capacity" in inputs:
+            self.dispatch_inputs["max_capacity"] = inputs["storage_capacity"][0]
         self.hybrid_dispatch_model = self._create_dispatch_optimization_model()
         self.hybrid_dispatch_rule.create_min_operating_cost_expression()
         self.hybrid_dispatch_rule.create_arcs()
@@ -159,9 +302,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
         # hybrid_dispatch_rule is the thing where you can access variables and hybrid_rule \
         #  functions from
-        self.hybrid_dispatch_rule.initialize_parameters(
-            commodity_in, commodity_demand, self.dispatch_inputs
-        )
+        self.hybrid_dispatch_rule.initialize_parameters(inputs, self.dispatch_inputs)
 
     def update_time_series_parameters(
         self, commodity_in=None, commodity_demand=None, updated_initial_soc=None

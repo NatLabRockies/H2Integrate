@@ -127,7 +127,7 @@ pip install h2integrate
 
     1. If on a Unix machine, uncomment line 8 in `environment.yml` to install Cbc. Windows
       users will need to manually install from <https://github.com/coin-or/Cbc>.
-    2. If you plan to use Ard, please uncomment line 9 in `environment.yml` to ensure WISDEM (an Ard
+    2. If you plan to use Ard, you may need to uncomment line 9 in `environment.yml` to ensure WISDEM (an Ard
       dependency) is installed from conda to avoid installation issues with some systems.
 
     ```bash

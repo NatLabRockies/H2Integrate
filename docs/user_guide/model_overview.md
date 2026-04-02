@@ -92,6 +92,9 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (converter-models)=
 ## Converter models
+- generic models:
+    - cost models:
+        + `GenericConverterCostModel`
 - `wind`: wind turbine
     - performance models:
         + `'PYSAMWindPlantPerformanceModel'`
@@ -250,8 +253,6 @@ Below summarizes the available performance, cost, and financial models for each 
 (storage-models)=
 ## Storage Models
 - `h2_storage`: hydrogen storage
-    - performance models:
-        + `'SimpleGenericStorage'`
     - cost models:
         + `'LinedRockCavernStorageCostModel'`
         + `'SaltCavernStorageCostModel'`
@@ -259,7 +260,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'PipeStorageCostModel'`
 - `generic_storage`: any resource storage
     - performance models:
-        + `'SimpleGenericStorage'`
+        + `'StoragePerformanceModel'`
         + `'StorageAutoSizingModel'`
     - cost models:
         + `'GenericStorageCostModel'`
@@ -279,8 +280,8 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (control-models)=
 ## Control Models
-- `'PassThroughOpenLoopController'`: open-loop control; directly passes the input resource flow to the output without any modifications
 - Storage Controllers:
+    - `'SimpleStorageOpenLoopController'`: open-loop control; manages resource flow based on demand and input commodity
     - `'DemandOpenLoopStorageController'`: open-loop control; manages resource flow based on demand and storage constraints
     - `'HeuristicLoadFollowingController'`: open-loop control that works on a time window basis to set dispatch commands; uses Pyomo
 - Converter Controllers:

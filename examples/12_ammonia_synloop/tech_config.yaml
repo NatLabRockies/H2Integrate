@@ -82,13 +82,14 @@ technologies:
         max_charge_rate: 96.0  # kW
         max_capacity: 96.0  # kWh
         n_control_window: 24
-        init_charge_fraction: 0.9
-        max_charge_fraction: 1.0
-        min_charge_fraction: 0.2
+        init_soc_fraction: 0.9
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.2
         system_commodity_interface_limit: 1e12
       performance_parameters:
         system_model_source: pysam
         chemistry: LFPGraphite
+        demand_profile: 640000  # 640 MW
       cost_parameters:
         cost_year: 2019
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
@@ -119,13 +120,20 @@ technologies:
     performance_model:
       model: StorageAutoSizingModel
     control_strategy:
-      model: PassThroughOpenLoopController
+      model: SimpleStorageOpenLoopController
     cost_model:
       model: SaltCavernStorageCostModel
     model_inputs:
       shared_parameters:
         commodity: hydrogen
         commodity_rate_units: kg/h
+        set_demand_as_avg_commodity_in: true
+      performance_parameters:
+        min_soc_fraction: 0.0
+        max_soc_fraction: 1.0
+        charge_efficiency: 1.0
+        discharge_efficiency: 1.0
+        commodity_amount_units: kg
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities

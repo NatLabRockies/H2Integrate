@@ -42,14 +42,6 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
-        if set_up_ard_model is None:
-            msg = (
-                "Please install `ard-nrel` or `h2integrate[ard]` to use the"
-                " `WindArdPerformanceCompatibilityComponent` Ard-based model."
-                " It is highly recommended to run `conda install wisdem` first. See H2I's"
-                "installation instructions for further details."
-            )
-            raise ModuleNotFoundError(msg)
 
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(
@@ -149,6 +141,14 @@ class ArdWindPlantModel(om.Group):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
+
+        if set_up_ard_model is None:
+            msg = (
+                "Please install `ard-nrel` or `h2integrate[ard]` to use the"
+                " `ArdWindPlantModel`. See H2I's installation instructions "
+                "for further details."
+            )
+            raise ModuleNotFoundError(msg)
 
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(

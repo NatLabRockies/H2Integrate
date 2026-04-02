@@ -31,7 +31,7 @@ technologies:
         cost_year: 2024
   battery:
     performance_model:
-      model: SimpleGenericStorage
+      model: StoragePerformanceModel
     cost_model:
       model: ATBBatteryCostModel
     control_strategy:
@@ -42,10 +42,9 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 25000.0  # kW/time step, 25 MW
         max_capacity: 200000.0  # kWh, 200 MWh
-      control_parameters:
-        max_charge_fraction: 1.0  # fraction (0-1)
-        min_charge_fraction: 0.1  # fraction (0-1)
-        init_charge_fraction: 0.1  # fraction (0-1)
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.1  # fraction (0-1)
         max_discharge_rate: 25000.0  # kW/time step
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)

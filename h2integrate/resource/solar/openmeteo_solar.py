@@ -21,6 +21,8 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
+        include_leap_day (bool, optional): If False, remove data from leap day if the
+            resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
         resource_data (dict | object, optional): Dictionary of user-input resource data.
             Defaults to an empty dictionary.
         resource_dir (str | Path, optional): Folder to save resource files to or
@@ -42,6 +44,7 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
     """
 
     resource_year: int = field(converter=int, validator=range_val(1940, datetime.now().year - 1))
+    include_leap_day: bool = field(default=False)
     dataset_desc: str = "openmeteo_archive_solar"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
@@ -286,7 +289,10 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         data["Minute"] = time.minute
 
         data = data[data["Year"] == self.config.resource_year]
-        # TODO: throw error if data isn't proper length
+
+        data = data.reset_index(drop=True)
+
+        data = self.process_leap_day(data)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units

@@ -72,4 +72,4 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
-required: [name, description, sites]
+required: [name, description]

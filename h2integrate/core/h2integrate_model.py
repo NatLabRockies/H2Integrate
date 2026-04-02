@@ -9,10 +9,14 @@ from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
-from h2integrate.core.supported_models import supported_models, is_electricity_producer
+from h2integrate.core.supported_models import supported_models
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+from h2integrate.core.commodity_stream_definitions import (
+    multivariable_streams,
+    is_electricity_producer,
+)
 from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
     PyomoControllerBaseClass,
 )
@@ -346,6 +350,9 @@ class H2IntegrateModel:
         and resources models (if provided in the configuration) for that site.
         """
         # Loop through each site defined in the plant config
+        # If no sites defined in plant_config, nothing to do
+        if "sites" not in self.plant_config or not self.plant_config["sites"]:
+            return
         for site_name, site_info in self.plant_config["sites"].items():
             # Reorganize the plant config to be formatted as expected by the
             # resource models
@@ -947,6 +954,50 @@ class H2IntegrateModel:
 
         self.finance_subgroups = finance_subgroups
 
+    def _connect_multivariable_stream(
+        self, source_tech, dest_tech, stream_name, combiner_counts, splitter_counts
+    ):
+        """Connect a multivariable stream between source and destination technologies.
+
+        Handles combiner indexing (numbered inputs), splitter indexing (numbered outputs),
+        and direct connections. Updates combiner_counts/splitter_counts dicts in-place.
+
+        Args:
+            source_tech (str): Name of the source technology.
+            dest_tech (str): Name of the destination technology.
+            stream_name (str): Name of the multivariable stream (key in multivariable_streams).
+            combiner_counts (dict): Tracks the next input index per combiner technology.
+            splitter_counts (dict): Tracks the next output index per splitter technology.
+        """
+        if "combiner" in dest_tech:
+            if dest_tech not in combiner_counts:
+                combiner_counts[dest_tech] = 1
+            else:
+                combiner_counts[dest_tech] += 1
+            stream_index = combiner_counts[dest_tech]
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out",
+                    f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
+                )
+        elif "splitter" in source_tech:
+            if source_tech not in splitter_counts:
+                splitter_counts[source_tech] = 1
+            else:
+                splitter_counts[source_tech] += 1
+            stream_index = splitter_counts[source_tech]
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out{stream_index}",
+                    f"{dest_tech}.{stream_name}:{var_name}_in",
+                )
+        else:
+            for var_name in multivariable_streams[stream_name]:
+                self.plant.connect(
+                    f"{source_tech}.{stream_name}:{var_name}_out",
+                    f"{dest_tech}.{stream_name}:{var_name}_in",
+                )
+
     def connect_technologies(self):
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
 
@@ -958,6 +1009,18 @@ class H2IntegrateModel:
         for connection in technology_interconnections:
             if len(connection) == 4:
                 source_tech, dest_tech, transport_item, transport_type = connection
+
+                # Check if this is a multivariable stream connection
+                # Format: [source, dest, stream_name, transport_type]
+                if transport_item in multivariable_streams:
+                    self._connect_multivariable_stream(
+                        source_tech,
+                        dest_tech,
+                        transport_item,
+                        combiner_counts,
+                        splitter_counts,
+                    )
+                    continue  # Skip the rest of the 4-element handling
 
                 if transport_type in self.tech_names:
                     # if the transport type is already a technology, skip creating a new component
@@ -989,7 +1052,7 @@ class H2IntegrateModel:
                     pass
                 else:
                     connection_component = self.supported_models[transport_type](
-                        transport_item=transport_item
+                        transport_item=transport_item, plant_config=self.plant_config
                     )
 
                     # Add the connection component to the model
@@ -1061,13 +1124,34 @@ class H2IntegrateModel:
                 source_tech, dest_tech, connected_parameter = connection
                 if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
-                    self.plant.connect(
-                        f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
-                    )
+                    # Check if this is a multivariable stream connection
+                    if source_parameter in multivariable_streams:
+                        self._connect_multivariable_stream(
+                            source_tech,
+                            dest_tech,
+                            source_parameter,
+                            combiner_counts,
+                            splitter_counts,
+                        )
+                    else:
+                        self.plant.connect(
+                            f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
+                        )
                 else:
-                    self.plant.connect(
-                        f"{source_tech}.{connected_parameter}", f"{dest_tech}.{connected_parameter}"
-                    )
+                    # Check if the connected_parameter is a multivariable stream
+                    if connected_parameter in multivariable_streams:
+                        self._connect_multivariable_stream(
+                            source_tech,
+                            dest_tech,
+                            connected_parameter,
+                            combiner_counts,
+                            splitter_counts,
+                        )
+                    else:
+                        self.plant.connect(
+                            f"{source_tech}.{connected_parameter}",
+                            f"{dest_tech}.{connected_parameter}",
+                        )
 
             else:
                 err_msg = f"Invalid connection: {connection}"
@@ -1081,49 +1165,49 @@ class H2IntegrateModel:
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}-{resource_key}"] = resource_params
 
-        resource_source_connections = [c[0] for c in resource_to_tech_connections]
-        # Check if there is a missing resource to tech connection or missing resource model
-        if len(resource_models) != len(resource_source_connections):
-            if len(resource_models) > len(resource_source_connections):
-                # more resource models than resources connected to technologies
-                non_connected_resource = [
-                    k for k in resource_models if k not in resource_source_connections
-                ]
-                # check if theres a resource model that isn't connected to a technology
-                if len(non_connected_resource) > 0:
-                    msg = (
-                        "Some resources are not connected to a technology. Resource models "
-                        f"{non_connected_resource} are not included in "
-                        "`resource_to_tech_connections`. Please connect these resources "
-                        "to their technologies under `resource_to_tech_connections` in "
-                        "the plant config file."
-                    )
-                    raise ValueError(msg)
-            if len(resource_source_connections) > len(resource_models):
-                # more resources connected than resource models
-                missing_resource = [
-                    k for k in resource_source_connections if k not in resource_models
-                ]
-                # check if theres a resource model that isn't connected to a technology
-                if len(missing_resource) > 0:
-                    msg = (
-                        "Missing resource(s) are not defined but are connected to a technology. "
-                        f"Missing resource(s) are {missing_resource}. "
-                        "Please check ``resource_to_tech_connections`` in the plant config file "
-                        "or add the missing resources"
-                        " to plant_config['site']['resources']."
-                    )
-                    raise ValueError(msg)
+            resource_source_connections = [c[0] for c in resource_to_tech_connections]
+            # Check if there is a missing resource to tech connection or missing resource model
+            if len(resource_models) != len(resource_source_connections):
+                if len(resource_models) > len(resource_source_connections):
+                    # more resource models than resources connected to technologies
+                    non_connected_resource = [
+                        k for k in resource_models if k not in resource_source_connections
+                    ]
+                    # check if theres a resource model that isn't connected to a technology
+                    if len(non_connected_resource) > 0:
+                        msg = (
+                            "Some resources are not connected to a technology. Resource models "
+                            f"{non_connected_resource} are not included in "
+                            "`resource_to_tech_connections`. Please connect these resources "
+                            "to their technologies under `resource_to_tech_connections` in "
+                            "the plant config file."
+                        )
+                        raise ValueError(msg)
+                if len(resource_source_connections) > len(resource_models):
+                    # more resources connected than resource models
+                    missing_resource = [
+                        k for k in resource_source_connections if k not in resource_models
+                    ]
+                    # check if theres a resource model that isn't connected to a technology
+                    if len(missing_resource) > 0:
+                        msg = (
+                            "Missing resource(s) are not defined but are connected to a"
+                            f" technology. Missing resource(s) are {missing_resource}. "
+                            "Please check ``resource_to_tech_connections`` in the plant"
+                            " config file or add the missing resources"
+                            " to plant_config['site']['resources']."
+                        )
+                        raise ValueError(msg)
 
-        for connection in resource_to_tech_connections:
-            if len(connection) != 3:
-                err_msg = f"Invalid resource to tech connection: {connection}"
-                raise ValueError(err_msg)
+            for connection in resource_to_tech_connections:
+                if len(connection) != 3:
+                    err_msg = f"Invalid resource to tech connection: {connection}"
+                    raise ValueError(err_msg)
 
-            resource_name, tech_name, variable = connection
+                resource_name, tech_name, variable = connection
 
-            # Connect the resource output to the technology input
-            self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
+                # Connect the resource output to the technology input
+                self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
@@ -1208,17 +1292,16 @@ class H2IntegrateModel:
             if tech_name == dispatching_tech_name:
                 continue
             else:
-                # Connect the dispatch rules output to the dispatching_tech_name input
-                self.model.connect(
-                    f"{tech_name}.dispatch_block_rule_function",
-                    f"{dispatching_tech_name}.dispatch_block_rule_function_{tech_name}",
+                # Only connect dispatch rules if they are defined in the tech_config
+                tech_dispatch_rule = self.technology_config.get(tech_name, {}).get(
+                    "dispatch_rule_set", False
                 )
-
-        if (pyxdsm is not None) and (len(technology_interconnections) > 0):
-            try:
-                create_xdsm_from_config(self.plant_config)
-            except FileNotFoundError as e:
-                print(f"Unable to create system XDSM diagram. Error: {e}")
+                if tech_dispatch_rule:
+                    # Connect the dispatch rules output to the dispatching_tech_name input
+                    self.model.connect(
+                        f"{tech_name}.dispatch_block_rule_function",
+                        f"{dispatching_tech_name}.dispatch_block_rule_function_{tech_name}",
+                    )
 
     def create_driver_model(self):
         """
@@ -1444,3 +1527,29 @@ class H2IntegrateModel:
             "explicit_outputs": _structured(explicit_meta),
             "implicit_outputs": _structured(implicit_meta),
         }
+
+    def create_xdsm(self, outfile="connections_xdsm"):
+        """Create an XDSM diagram from the plant technology interconnections.
+
+        This method reads ``technology_interconnections`` from ``self.plant_config``
+        and delegates diagram generation to
+        :func:`h2integrate.core.utilities.create_xdsm_from_config`.
+
+        Args:
+            outfile (str, optional): Base filename for the generated XDSM output.
+                The default is ``"connections_xdsm"``.
+
+        Raises:
+            ValueError: If ``technology_interconnections`` is empty or missing from
+                the plant configuration.
+        """
+
+        technology_interconnections = self.plant_config.get("technology_interconnections", [])
+
+        if len(technology_interconnections) > 0:
+            create_xdsm_from_config(self.plant_config, output_file=outfile)
+        else:
+            raise ValueError(
+                "Generating an XDSM diagram requires technology interconnections, "
+                "but none were found."
+            )
