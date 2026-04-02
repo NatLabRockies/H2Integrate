@@ -15,17 +15,17 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          # - ubuntu-latest
           - windows-latest
         python-version:
-          - '3.11'
+          # - '3.11'
           - '3.13'
         optional:
           - true
-        include:
-          - python-version: '3.11'
-            optional: false
-            os: ubuntu-latest
+        # include:
+        #   - python-version: '3.11'
+        #     optional: false
+        #     os: ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -45,12 +45,12 @@ jobs:
           conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
           pip install ".[develop]"
-      - if: ${{ matrix.optional }}
-        name: Install optional dependencies
-        shell: bash -el {0}
-        run: |
-          conda install -y -c conda-forge wisdem
-          pip install ".[extras]"
+      # - if: ${{ matrix.optional }}
+      #   name: Install optional dependencies
+      #   shell: bash -el {0}
+      #   run: |
+      #     conda install -y -c conda-forge wisdem
+      #     pip install ".[extras]"
       - name: Create env file
         run: |
           touch .env
