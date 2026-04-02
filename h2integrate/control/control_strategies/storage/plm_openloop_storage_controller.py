@@ -1,5 +1,5 @@
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -155,6 +155,12 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
 
             self.max_discharge_rate = self.max_charge_rate
 
+        # make sure peak_range is in correct format because yaml
+        # automatically converts it to seconds
+        for key, value in self.peak_range.items():
+            if not isinstance(value, str):
+                self.peak_range[key] = str(timedelta(seconds=value))
+
 
 class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
     """
@@ -234,12 +240,16 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         self.time_index = build_time_series_from_plant_config(self.options["plant_config"])
 
         # Build timestamped demand dictionaries from simulation timeline.
-        secondary_demand_profile = self._build_demand_profile_dict(self.config.demand_profile)
+        secondary_demand_profile = self._build_demand_profile_dict(
+            self.config.demand_profile,
+            self.time_index,
+        )
 
         # Detect peaks in supervisor demand profile (if provided)
         if self.config.demand_profile_supervisor is not None:
             supervisor_demand_profile = self._build_demand_profile_dict(
-                self.config.demand_profile_supervisor
+                self.config.demand_profile_supervisor,
+                self.time_index,
             )
             self.supervisor_peaks_df = self.get_peaks(
                 demand_profile=supervisor_demand_profile,
@@ -266,21 +276,23 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         self.get_allowed_discharge()
 
-    def _build_demand_profile_dict(self, demand_profile):
+    @staticmethod
+    def _build_demand_profile_dict(demand_profile, time_series):
         """Convert scalar/list demand input into a timestamped demand dictionary."""
+        n_timesteps = len(time_series)
         if np.isscalar(demand_profile):
-            demand_values = np.full(self.n_timesteps, float(demand_profile), dtype=float)
+            demand_values = np.full(n_timesteps, float(demand_profile), dtype=float)
         else:
             demand_values = np.asarray(demand_profile, dtype=float)
 
-        if len(demand_values) != self.n_timesteps:
+        if len(demand_values) != n_timesteps:
             raise ValueError(
                 "demand_profile length must equal n_timesteps "
-                f"({len(demand_values)} != {self.n_timesteps})"
+                f"({len(demand_values)} != {n_timesteps})"
             )
 
         return {
-            "date_time": self.time_index,
+            "date_time": time_series,
             "demand": demand_values,
         }
 
@@ -296,14 +308,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
 
         parsed = {}
-        for key in ["start", "end"]:
-            value = peak_range[key]
+        for key, value in peak_range.items():
             if not isinstance(value, str):
                 raise ValueError(f"peak_range['{key}'] must be an HH:MM:SS string")
-            try:
-                parsed[key] = datetime.strptime(value, "%H:%M:%S").time()
-            except ValueError as exc:
-                raise ValueError(f"peak_range['{key}'] must be an HH:MM:SS string") from exc
+            parsed[key] = datetime.strptime(value, "%H:%M:%S").time()
 
         return parsed
 
@@ -659,7 +667,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 ]
                 # If supervisor has peaks on the day, use supervisor's flags for all rows that day
                 if any(day_df["is_peak"]):
-                    peaks_df["is_peak"][peaks_df["date_time"].dt.floor("D") == day] = day_df[
+                    peaks_df.loc[peaks_df["date_time"].dt.floor("D") == day, "is_peak"] = day_df[
                         "is_peak"
                     ]
 
@@ -714,4 +722,4 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 time_of_day = self.peaks_df["date_time"].iloc[i].time()
                 # Allow charging if outside peak window
                 if time_of_day < peak_range["start"] or time_of_day >= peak_range["end"]:
-                    self.peaks_df["allow_charge"].iloc[i] = True
+                    self.peaks_df.loc[i, "allow_charge"] = True

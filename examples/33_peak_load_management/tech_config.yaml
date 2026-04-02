@@ -17,19 +17,19 @@ technologies:
         max_soc_fraction: 0.9  # percent as decimal
         min_soc_fraction: 0.1  # percent as decimal
         init_soc_fraction: 0.9  # percent as decimal
-        demand_profile: !include demand_profile_secondary.yaml
+        demand_profile: !include demand_profiles/demand_profile_secondary.yaml
         charge_efficiency: 1.0  # percent as decimal
         discharge_efficiency: 1.0  # percent as decimal
       control_parameters:
         max_discharge_rate: 2500.0  # kW/time step
         charge_equals_discharge: true
-        demand_profile_supervisor: !include demand_profile_supervisor.yaml
+        demand_profile_supervisor: !include demand_profiles/demand_profile_supervisor.yaml
         dispatch_priority_demand_profile: demand_profile_supervisor
         max_supervisor_events: 2
-        max_supervisor_event_period: w
+        max_supervisor_event_period: W
         peak_range:
-          start: 17:00:00
-          end: 12:00:00
+          start: 12:00:00
+          end: 17:00:00
         advance_discharge_period:
           units: h
           val: 2
@@ -37,6 +37,9 @@ technologies:
           units: h
           val: 4
         allow_charge_in_peak_range: false
+        min_peak_proximity:
+          units: h
+          val: 4
       cost_parameters:
         cost_year: 2024
         energy_capex: 408 # $/kWh  # conservative case for 2024 ATB utility scale batteries
@@ -52,3 +55,8 @@ technologies:
         interconnection_size: 100000
       cost_parameters:
         cost_year: 2024
+        fixed_interconnection_cost: 0.0
+        interconnection_capex_per_kw: 0.0
+        interconnection_opex_per_kw: 0.0
+        interconnection_size: 0.0
+        electricity_buy_price: 0.09

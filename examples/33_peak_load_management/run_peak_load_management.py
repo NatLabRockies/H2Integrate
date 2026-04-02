@@ -23,8 +23,12 @@ model.setup()
 # model.run()
 
 plant_config = load_yaml("plant_config.yaml")
-supervisor_demand = np.asarray(load_yaml("demand_profile_supervisor.yaml"), dtype=float)
-secondary_demand = np.asarray(load_yaml("demand_profile_secondary.yaml"), dtype=float)
+supervisor_demand = np.asarray(
+    load_yaml("demand_profiles/demand_profile_supervisor.yaml"), dtype=float
+)
+secondary_demand = np.asarray(
+    load_yaml("demand_profiles/demand_profile_secondary.yaml"), dtype=float
+)
 
 time_series = build_time_series_from_plant_config(plant_config)
 
