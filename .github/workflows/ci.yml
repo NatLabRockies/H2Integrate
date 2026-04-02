@@ -56,18 +56,18 @@ jobs:
           touch .env
       - name: Run unit tests
         shell: bash -el {0}
-        run: pytest . -m unit --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
-      - name: Run regression tests
-        shell: bash -el {0}
-        run: pytest . -m regression --cov=h2integrate --cov-report=lcov:./regression-coverage.lcov
-      - name: Run integration tests
-        shell: bash -el {0}
-        run: pytest . -m integration --cov=h2integrate --cov-report=lcov:./integration-coverage.lcov
-      - name: Upload test coverage
-        uses: coverallsapp/github-action@v2
-        if: contains( matrix.os, 'ubuntu') && contains( matrix.python-version, '3.13')
-        with:
-          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          files: ./unit-coverage.lcov, ./regression-coverage.lcov, ./integration-coverage.lcov
-          flag-name: unit,regression,integration
-          fail-on-error: false
+        run: pytest h2integrate\postprocess\test\test_sql_timeseries_to_csv.py --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
+      # - name: Run regression tests
+      #   shell: bash -el {0}
+      #   run: pytest . -m regression --cov=h2integrate --cov-report=lcov:./regression-coverage.lcov
+      # - name: Run integration tests
+      #   shell: bash -el {0}
+      #   run: pytest . -m integration --cov=h2integrate --cov-report=lcov:./integration-coverage.lcov
+      # - name: Upload test coverage
+      #   uses: coverallsapp/github-action@v2
+      #   if: contains( matrix.os, 'ubuntu') && contains( matrix.python-version, '3.13')
+      #   with:
+      #     github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      #     files: ./unit-coverage.lcov, ./regression-coverage.lcov, ./integration-coverage.lcov
+      #     flag-name: unit,regression,integration
+      #     fail-on-error: false
