@@ -2,6 +2,7 @@
 Pytest configuration file.
 """
 
+import gc
 import os
 import shutil
 from pathlib import Path
@@ -74,6 +75,7 @@ def temp_dir(tmp_path_factory):
     """Temp directory for YAML outputs."""
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
+    gc.collect()
     shutil.rmtree(str(temp_dir))
 
 
@@ -82,6 +84,7 @@ def temp_dir_module(tmp_path_factory):
     """Temp directory for YAML outputs."""
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
+    gc.collect()
     shutil.rmtree(str(temp_dir))
 
 
