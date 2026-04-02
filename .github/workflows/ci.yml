@@ -56,7 +56,7 @@ jobs:
           touch .env
       - name: Run unit tests
         shell: bash -el {0}
-        run: pytest h2integrate\postprocess\test\test_sql_timeseries_to_csv.py --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
+        run: pytest h2integrate/postprocess/test/test_sql_timeseries_to_csv.py  # . -m unit --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
       # - name: Run regression tests
       #   shell: bash -el {0}
       #   run: pytest . -m regression --cov=h2integrate --cov-report=lcov:./regression-coverage.lcov
