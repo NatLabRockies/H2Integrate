@@ -36,14 +36,37 @@ time_series = build_time_series_from_plant_config(plant_config)
 n_plot = min(len(time_series), len(supervisor_demand), len(secondary_demand))
 time_plot = time_series[:n_plot]
 
-fig, ax = plt.subplots(2, 1, sharex=True)
+fig, ax = plt.subplots(4, 1, sharex=True)
 
-ax[0].plot(time_plot, supervisor_demand[:n_plot], label="Supervisory demand (MW)")
-ax[0].plot(time_plot, secondary_demand[:n_plot], label="Secondary demand (MW)")
-ax[0].set_ylabel("Demand (MW)")
+ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Supervisory demand (MW)")
+ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Secondary demand (MW)")
+ax[0].set_ylabel("Power (MW)")
 ax[0].legend(loc="upper right")
 
-ax[1].tick_params(axis="x", labelrotation=90)
+ax[1].plot(time_plot, model.prob.get_val("battery.SOC", units="percent"))
+ax[1].set(ylabel="SOC")
 
+ax[2].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[2].plot(
+    time_plot,
+    model.prob.get_val("battery.electricity_out", units="MW"),
+    label="Battery charge/discharge",
+)
+ax[2].set(ylabel="Power (MW)")
+ax[2].legend()
+
+ax[3].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[3].plot(
+    time_plot,
+    model.prob.get_val("battery.unmet_electricity_demand_out", units="MW"),
+    label="New demand profile",
+)
+ax[3].set(ylabel="Power (MW)")
+ax[3].legend()
+
+
+ax[3].tick_params(axis="x", labelrotation=90)
+
+# import pdb; pdb.set_trace()
 plt.tight_layout()
 plt.show()
