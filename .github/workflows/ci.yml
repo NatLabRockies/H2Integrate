@@ -15,17 +15,17 @@ jobs:
     strategy:
       matrix:
         os:
-          # - ubuntu-latest
+          - ubuntu-latest
           - windows-latest
         python-version:
-          # - '3.11'
+          - '3.11'
           - '3.13'
         optional:
           - true
-        # include:
-        #   - python-version: '3.11'
-        #     optional: false
-        #     os: ubuntu-latest
+        include:
+          - python-version: '3.11'
+            optional: false
+            os: ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -45,29 +45,29 @@ jobs:
           conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
           pip install ".[develop]"
-      # - if: ${{ matrix.optional }}
-      #   name: Install optional dependencies
-      #   shell: bash -el {0}
-      #   run: |
-      #     conda install -y -c conda-forge wisdem
-      #     pip install ".[extras]"
+      - if: ${{ matrix.optional }}
+        name: Install optional dependencies
+        shell: bash -el {0}
+        run: |
+          conda install -y -c conda-forge wisdem
+          pip install ".[extras]"
       - name: Create env file
         run: |
           touch .env
       - name: Run unit tests
         shell: bash -el {0}
-        run: pytest h2integrate/postprocess/test/test_sql_timeseries_to_csv.py  # . -m unit --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
-      # - name: Run regression tests
-      #   shell: bash -el {0}
-      #   run: pytest . -m regression --cov=h2integrate --cov-report=lcov:./regression-coverage.lcov
-      # - name: Run integration tests
-      #   shell: bash -el {0}
-      #   run: pytest . -m integration --cov=h2integrate --cov-report=lcov:./integration-coverage.lcov
-      # - name: Upload test coverage
-      #   uses: coverallsapp/github-action@v2
-      #   if: contains( matrix.os, 'ubuntu') && contains( matrix.python-version, '3.13')
-      #   with:
-      #     github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      #     files: ./unit-coverage.lcov, ./regression-coverage.lcov, ./integration-coverage.lcov
-      #     flag-name: unit,regression,integration
-      #     fail-on-error: false
+        run: pytest . -m unit --cov=h2integrate --cov-report=lcov:./unit-coverage.lcov
+      - name: Run regression tests
+        shell: bash -el {0}
+        run: pytest . -m regression --cov=h2integrate --cov-report=lcov:./regression-coverage.lcov
+      - name: Run integration tests
+        shell: bash -el {0}
+        run: pytest . -m integration --cov=h2integrate --cov-report=lcov:./integration-coverage.lcov
+      - name: Upload test coverage
+        uses: coverallsapp/github-action@v2
+        if: contains( matrix.os, 'ubuntu') && contains( matrix.python-version, '3.13')
+        with:
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          files: ./unit-coverage.lcov, ./regression-coverage.lcov, ./integration-coverage.lcov
+          flag-name: unit,regression,integration
+          fail-on-error: false
