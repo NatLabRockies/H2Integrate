@@ -210,8 +210,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 )
             )
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         # Register storage system design constraint inputs
         self.add_input(
             "max_charge_rate",
