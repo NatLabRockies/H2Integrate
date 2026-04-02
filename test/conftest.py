@@ -4,6 +4,7 @@ Pytest configuration file.
 
 import gc
 import os
+import time
 import shutil
 from pathlib import Path
 
@@ -76,6 +77,7 @@ def temp_dir(tmp_path_factory):
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
     gc.collect()
+    time.sleep(2)
     shutil.rmtree(str(temp_dir))
 
 
