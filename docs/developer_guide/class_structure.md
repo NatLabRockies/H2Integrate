@@ -33,13 +33,13 @@ python docs/generate_class_hierarchy.py
 
 ```{raw} html
 <style>
-  /* Break the iframe out of Sphinx's narrow content column */
+  /* Extend the iframe to the right edge of the viewport
+     without overlapping the left sidebar / TOC. */
   .class-hierarchy-wrap {
-    width: 100vw;
+    width: calc(100vw - var(--pst-sidebar-width, 260px));
+    max-width: calc(100vw - 260px);
     position: relative;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0 20px;
+    padding: 0 20px 0 0;
     box-sizing: border-box;
   }
 </style>
