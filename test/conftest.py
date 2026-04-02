@@ -3,7 +3,6 @@ Pytest configuration file.
 """
 
 import os
-import time
 import shutil
 from pathlib import Path
 
@@ -75,8 +74,6 @@ def temp_dir(tmp_path_factory):
     """Temp directory for YAML outputs."""
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
-    time.sleep(2)
-    shutil.rmtree(str(temp_dir))
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +81,6 @@ def temp_dir_module(tmp_path_factory):
     """Temp directory for YAML outputs."""
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
-    shutil.rmtree(str(temp_dir))
 
 
 @pytest.fixture(scope="function")
