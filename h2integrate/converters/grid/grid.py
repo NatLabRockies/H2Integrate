@@ -45,6 +45,9 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         electricity_out (array): Power flowing out of the grid (buying) (kW).
     """
 
+    _time_step_min = 300
+    _time_step_max = 3600
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -178,6 +181,9 @@ class GridCostModel(CostModelBaseClass):
     this model assumes that each timestep represents 1 hour.
     """
 
+    _time_step_min = 300
+    _time_step_max = 3600
+
     def setup(self):
         self.config = GridCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
@@ -277,13 +283,13 @@ class GridCostModel(CostModelBaseClass):
             electricity_out = inputs["electricity_out"]
             buy_price = inputs["electricity_buy_price"]
             # Buying costs money (positive VarOpEx)
-            varopex += np.sum(electricity_out * buy_price)
+            varopex += np.sum((self.dt / 3600) * electricity_out * buy_price)
 
         # Add selling revenue if sell price is configured
         # electricity_sold represents power flowing INTO grid (selling)
         if self.config.electricity_sell_price is not None:
             sell_price = inputs["electricity_sell_price"]
             # Selling generates revenue (negative VarOpEx)
-            varopex -= np.sum(inputs["electricity_sold"] * sell_price)
+            varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
 
         outputs["VarOpEx"] = varopex

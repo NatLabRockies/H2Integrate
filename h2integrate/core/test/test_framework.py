@@ -182,9 +182,65 @@ def test_unsupported_simulation_parameters(temp_dir):
     with pytest.raises(ValueError, match="greater than 1-year"):
         load_plant_yaml(plant_config_data_ntimesteps)
 
-    # check that error is thrown when loading config with invalid time interval
-    with pytest.raises(ValueError, match="with a time step that"):
-        load_plant_yaml(plant_config_data_dt)
+
+@pytest.mark.unit
+def test_check_time_step_with_model_bounds_allows_supported_dt():
+    class DummyModel:
+        _time_step_min = 900
+        _time_step_max = 3600
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
+
+    model._check_time_step("DummyModel", DummyModel)
+
+
+@pytest.mark.unit
+def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
+    class DummyModel:
+        _time_step_min = 900
+        _time_step_max = 3600
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 7200}}}
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Performance model DummyModel is compatible with time steps between "
+            r"900 and 3600 but a time step of 7200 \(s\) was specified"
+        ),
+    ):
+        model._check_time_step("DummyModel", DummyModel)
+
+
+@pytest.mark.unit
+def test_check_time_step_without_bounds_requires_one_hour_dt():
+    class DummyModelNoBounds:
+        pass
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Performance model DummyModelNoBounds does not currently support simulations "
+            r"with a time step that is less than or greater than 1-hour"
+        ),
+    ):
+        model._check_time_step("DummyModelNoBounds", DummyModelNoBounds)
+
+
+@pytest.mark.unit
+def test_check_time_step_without_bounds_allows_one_hour_dt():
+    class DummyModelNoBounds:
+        pass
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 3600}}}
+
+    model._check_time_step("DummyModelNoBounds", DummyModelNoBounds)
 
 
 @pytest.mark.unit
