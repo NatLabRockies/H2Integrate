@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -5,6 +7,106 @@ from pytest import fixture
 
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import GOESAggregatedSolarAPI
+
+
+@pytest.mark.unit
+class TestCalcTiltAngle:
+    """Unit tests for PYSAMSolarPlantPerformanceModel.calc_tilt_angle
+    with various latitudes including southern hemisphere (negative) values.
+    """
+
+    def _make_model(self, tilt_angle_func, tilt=None, create_model_from="default"):
+        """Create a lightweight mock of PYSAMSolarPlantPerformanceModel
+        with the minimum attributes needed by calc_tilt_angle."""
+        model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
+        model.design_config = MagicMock()
+        model.design_config.tilt_angle_func = tilt_angle_func
+        model.design_config.tilt = tilt
+        model.design_config.create_model_from = create_model_from
+        model.design_config.pysam_options = {}
+        model.system_model = MagicMock()
+        model.system_model.value.return_value = 20.0  # default tilt from PySAM model
+        return model
+
+    # --- tilt_angle_func = "lat" ---
+    @pytest.mark.parametrize(
+        "latitude, expected_tilt",
+        [
+            (30.0, 30.0),
+            (-30.0, 30.0),
+            (0.0, 0.0),
+            (45.0, 45.0),
+            (-45.0, 45.0),
+            (90.0, 90.0),
+            (-90.0, 90.0),
+        ],
+    )
+    def test_lat_mode(self, latitude, expected_tilt):
+        model = self._make_model(tilt_angle_func="lat")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, latitude)
+        assert result == pytest.approx(expected_tilt)
+
+    # --- tilt_angle_func = "lat-func" ---
+    @pytest.mark.parametrize(
+        "latitude, expected_tilt",
+        [
+            # |lat| <= 25: tilt = 0.87 * |lat|
+            (10.0, 10.0 * 0.87),
+            (-10.0, 10.0 * 0.87),
+            (25.0, 25.0 * 0.87),
+            (-25.0, 25.0 * 0.87),
+            (0.0, 0.0),
+            # 25 < |lat| <= 50: tilt = 0.76 * |lat| + 3.1
+            (30.0, 30.0 * 0.76 + 3.1),
+            (-30.0, 30.0 * 0.76 + 3.1),
+            (50.0, 50.0 * 0.76 + 3.1),
+            (-50.0, 50.0 * 0.76 + 3.1),
+            # |lat| > 50: tilt = |lat|
+            (60.0, 60.0),
+            (-60.0, 60.0),
+            (80.0, 80.0),
+            (-80.0, 80.0),
+        ],
+    )
+    def test_lat_func_mode(self, latitude, expected_tilt):
+        model = self._make_model(tilt_angle_func="lat-func")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, latitude)
+        assert result == pytest.approx(expected_tilt)
+
+    def test_lat_func_symmetric(self):
+        """Verify that positive and negative latitudes produce identical tilt angles."""
+        model = self._make_model(tilt_angle_func="lat-func")
+        for lat in [5, 15, 25, 30, 40, 50, 55, 70, 85]:
+            pos = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, lat)
+            neg = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -lat)
+            assert pos == pytest.approx(neg), f"Mismatch at latitude {lat}: {pos} != {neg}"
+
+    # --- tilt_angle_func = "none" ---
+    def test_none_mode_default_with_user_tilt(self):
+        model = self._make_model(tilt_angle_func="none", tilt=15.0, create_model_from="default")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
+        assert result == pytest.approx(15.0)
+
+    def test_none_mode_default_without_user_tilt(self):
+        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="default")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
+        assert result == pytest.approx(20.0)  # from system_model.value("tilt")
+
+    def test_none_mode_new_with_user_tilt(self):
+        model = self._make_model(tilt_angle_func="none", tilt=10.0, create_model_from="new")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
+        assert result == pytest.approx(10.0)
+
+    def test_none_mode_new_without_user_tilt(self):
+        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="new")
+        model.design_config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
+        assert result == pytest.approx(22.0)
+
+    def test_none_mode_new_no_tilt_anywhere(self):
+        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="new")
+        result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
+        assert result == pytest.approx(0)  # default fallback
 
 
 @fixture
