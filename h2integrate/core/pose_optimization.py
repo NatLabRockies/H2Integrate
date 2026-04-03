@@ -503,7 +503,6 @@ class PoseOptimization:
                 raise ValueError(msg)
 
             # Create recorder
-            recorder_path.unlink(missing_ok=True)
             recorder = om.SqliteRecorder(recorder_path)
 
             if recorder_attachment == "model":

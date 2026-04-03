@@ -1332,6 +1332,7 @@ class H2IntegrateModel:
             self.prob.setup()
             self.setup_has_been_called = True
 
+        self.recorder_path.unlink(missing_ok=True)
         self.prob.run_driver()
 
     def post_process(self, print_results=True, summarize_sql=False, show_plots=False):
