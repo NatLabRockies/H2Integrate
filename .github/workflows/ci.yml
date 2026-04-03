@@ -20,8 +20,8 @@ jobs:
         python-version:
           # - '3.11'
           - '3.13'
-        optional:
-          - true
+        # optional:
+        #   - true
         # include:
         #   - python-version: '3.11'
         #     optional: false
