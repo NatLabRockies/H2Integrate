@@ -32,6 +32,7 @@
 - Made generating an XDSM diagram from connections in a model optional and added documentation on model visualization. [PR 629](https://github.com/NatLabRockies/H2Integrate/pull/629)
 - Added a storage performance baseclass model `StoragePerformanceBase` and updated the other storage performance models to inherit it [PR 624](https://github.com/NatLabRockies/H2Integrate/pull/624)
 - Modified the calc tilt angle function for pysam solar to support latitudes in the southern hemisphere [PR 646](https://github.com/NatLabRockies/H2Integrate/pull/646)
+- Added oxygen production metrics and as outputs to `ECOElectrolyzerPerformanceModel` [PR 642](https://github.com/NatLabRockies/H2Integrate/pull/642)
 
 ## 0.7.1 [March 13, 2026]
 

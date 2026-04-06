@@ -13,6 +13,8 @@ def clean_up_final_outputs(h2_tot, h2_ts):
             "Cluster Rated H2 Production [kg/yr]",
             "Stack Rated H2 Production [kg/hr]",
             "Stack Rated Power Consumed [kWh]",
+            "Cluster Rated O2 Production [kg/hr]",
+            "Cluster Rated O2 Production [kg/yr]",
         ]
     )
     h2_ts.sum(axis=1)
@@ -21,6 +23,7 @@ def clean_up_final_outputs(h2_tot, h2_ts):
         "Power Consumed [kWh]",
         "hydrogen production no start-up time",
         "hydrogen_hourly_production",
+        "oxygen_hourly_production",
         "water_hourly_usage_kg",
     ]
 
@@ -89,6 +92,7 @@ def run_h2_PEM(
     # time-series info (unchanged)
     energy_input_to_electrolyzer = h2_ts.loc["Input Power [kWh]"].sum()
     hydrogen_hourly_production = h2_ts.loc["hydrogen_hourly_production"].sum()
+    oxygen_hourly_production = h2_ts.loc["oxygen_hourly_production"].sum()
     hourly_system_electrical_usage = h2_ts.loc["Power Consumed [kWh]"].sum()
     water_hourly_usage = h2_ts.loc["water_hourly_usage_kg"].sum()
     avg_eff_perc = eta_h2_hhv * hydrogen_hourly_production / hourly_system_electrical_usage
@@ -102,6 +106,7 @@ def run_h2_PEM(
 
     # Beginning of Life (BOL) Rated Specs (attributes/system design)
     max_h2_pr_hr = h2_tot.loc["Cluster Rated H2 Production [kg/hr]"].sum()
+    max_o2_pr_hr = h2_tot.loc["Cluster Rated O2 Production [kg/hr]"].sum()
     max_pwr_pr_hr = h2_tot.loc["Cluster Rated Power Consumed [kWh]"].sum()
     rated_kWh_pr_kg = h2_tot.loc["Stack Rated Efficiency [kWh/kg]"].mean()
     elec_rated_h2_capacity_kgpy = h2_tot.loc["Cluster Rated H2 Production [kg/yr]"].sum()
@@ -110,6 +115,7 @@ def run_h2_PEM(
     atrribute_desc = [
         "Efficiency [kWh/kg]",
         "H2 Production [kg/hr]",
+        "O2 Production [kg/hr]",
         "Power Consumed [kWh]",
         "Annual H2 Production [kg/year]",
         "Gal H2O per kg-H2",
@@ -118,6 +124,7 @@ def run_h2_PEM(
     attributes = [
         rated_kWh_pr_kg,
         max_h2_pr_hr,
+        max_o2_pr_hr,
         max_pwr_pr_hr,
         elec_rated_h2_capacity_kgpy,
         gal_h20_pr_kg_h2,
@@ -188,6 +195,7 @@ def run_h2_PEM(
     H2_Results.update(dict(zip(life_desc, life_vals)))
     H2_Results.update({"Performance Schedules": pd.DataFrame(annual_avg_performance)})
     H2_Results.update({"Hydrogen Hourly Production [kg/hr]": hydrogen_hourly_production})
+    H2_Results.update({"Oxygen Hourly Production [kg/hr]": oxygen_hourly_production})
     H2_Results.update({"Water Hourly Consumption [kg/hr]": water_hourly_usage})
 
     if not debug_mode:
