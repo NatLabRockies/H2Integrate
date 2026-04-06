@@ -38,6 +38,8 @@
   similar to the ard tests. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Updates the testing infrastructure to use function-scoped fixtures unless there is a specific need for sharing
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+- Modified the calc tilt angle function for pysam solar to support latitudes in the southern hemisphere [PR 646](https://github.com/NatLabRockies/H2Integrate/pull/646)
+- Added oxygen production metrics and as outputs to `ECOElectrolyzerPerformanceModel` [PR 642](https://github.com/NatLabRockies/H2Integrate/pull/642)
 
 ## 0.7.1 [March 13, 2026]
 
