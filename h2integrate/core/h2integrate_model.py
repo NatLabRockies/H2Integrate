@@ -1241,6 +1241,10 @@ class H2IntegrateModel:
                     "PipePerformanceModel",
                 }
 
+                no_replacement_schedule_models = {
+                    "IronTransportPerformanceComponent",
+                }
+
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
                     # Skip technologies whose models doesn't add costs
@@ -1263,7 +1267,7 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                     )
 
-                    if is_system_finance_model:
+                    if is_system_finance_model and perf_model not in no_replacement_schedule_models:
                         # connect replacement schedule to system-level finance models
                         self.plant.connect(
                             f"{tech_name}.replacement_schedule",
