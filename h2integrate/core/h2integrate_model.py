@@ -1232,12 +1232,20 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.capacity_factor",
                     )
 
+                # Model classes that do not contribute costs to the finance stackup
+                no_cost_models = {
+                    "GenericSplitterPerformanceModel",
+                    "GenericCombinerPerformanceModel",
+                    "GasStreamCombinerPerformanceModel",
+                    "CablePerformanceModel",
+                    "PipePerformanceModel",
+                }
+
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
-                    # For now, assume splitters and combiners do not add any costs
-                    if "splitter" in tech_name or "combiner" in tech_name:
-                        continue
-                    if tech_name == "cable" or tech_name == "pipe":
+                    # Skip technologies whose models doesn't add costs
+                    perf_model = tech_configs[tech_name].get("performance_model").get("model")
+                    if perf_model in no_cost_models:
                         continue
 
                     self.plant.connect(
@@ -1255,7 +1263,7 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                     )
 
-                    if is_system_finance_model and "transport" not in tech_name:
+                    if is_system_finance_model:
                         # connect replacement schedule to system-level finance models
                         self.plant.connect(
                             f"{tech_name}.replacement_schedule",
