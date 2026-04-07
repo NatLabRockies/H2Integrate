@@ -140,7 +140,7 @@ class ReverseOsmosisCostModel(DesalinationCostBaseClass):
         super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """Cost reference: Table 3 of https://www.nrel.gov/docs/fy16osti/66073.pdf.
+        """Cost reference: Table 3 of https://www.nlr.gov/docs/fy16osti/66073.pdf.
         CapEx includes 2.55% financing factor, numbers based on INL report
         https://doi.org/10.2172/1236837 (in Table 10) which came from this report
         https://www-pub.iaea.org/MTCD/Publications/PDF/te_1561_web.pdf

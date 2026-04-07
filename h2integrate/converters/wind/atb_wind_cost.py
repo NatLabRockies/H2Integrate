@@ -10,10 +10,10 @@ class ATBWindPlantCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBWindCostModel.
     Recommended to use with wind models (Land-Based, Offshore and Distributed
     More information on ATB methodology and representative wind technologies can
-    be found `here <https://atb.nrel.gov/electricity/2024/technologies>`_
+    be found `here <https://atb.nlr.gov/electricity/2024/technologies>`_
     Reference cost values can be found on the `Land-Based Wind`,
     `Fixed-Bottom Offshore Wind`, `Floating Offshore Wind` or `Distributed Wind`
-    sheet of the `NREL ATB workbook <https://atb.nrel.gov/electricity/2024/data>`_.
+    sheet of the `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
 
     Attributes:
         capex_per_kW (float|int): capital cost of wind system in $/kW

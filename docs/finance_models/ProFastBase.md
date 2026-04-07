@@ -1,10 +1,10 @@
 (profastmodel:profastmodel)=
 # ProFAST Financial Model
-The Production Financial Analysis Scenario Tool or (ProFAST)[https://www.nrel.gov/hydrogen/profast-access] is a financial modeling tool developed at the NREL based on General Accepted Accounting Principles (GAAP) methodology. The model provides a quick and convenient way to conduct in-depth financial analysis for production system and services.
+The Production Financial Analysis Scenario Tool or (ProFAST)[https://www.nlr.gov/hydrogen/profast-access] is a financial modeling tool developed at the NLR based on General Accepted Accounting Principles (GAAP) methodology. The model provides a quick and convenient way to conduct in-depth financial analysis for production system and services.
 
 Currently there are two ProFAST models that can be used:
-- [``ProFastLCO``](profastcomp:profastcompmodel): A price-taker model that calculates levelized cost of commodity (or breakeven price) using [ProFAST](https://github.com/NREL/ProFAST).
-- [``ProFastNPV``](profastnpv:profastnpvmodel): A price-setter model that calculates the net present value of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
+- [``ProFastLCO``](profastcomp:profastcompmodel): A price-taker model that calculates levelized cost of commodity (or breakeven price) using [ProFAST](https://github.com/NatLabRockies/ProFAST).
+- [``ProFastNPV``](profastnpv:profastnpvmodel): A price-setter model that calculates the net present value of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
 
 (profast:overview)=
 ## Finance parameters overview

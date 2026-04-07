@@ -24,7 +24,7 @@ latex:
     targetname: book.tex
 # Information about where the book exists on the web
 repository:
-  url: https://github.com/NREL/H2Integrate
+  url: https://github.com/NatLabRockies/H2Integrate
   path_to_book: docs
   branch: main
 # Add GitHub buttons to your book

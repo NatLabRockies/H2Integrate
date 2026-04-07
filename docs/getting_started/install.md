@@ -12,7 +12,7 @@ pip install h2integrate
 
 If you want to develop new models or contribute to H2Integrate, you can install it from source.
 
-### NREL Resource Data
+### NLR Resource Data
 
 1. The functions which download resource data require an NLR API key. Obtain a key from:
 
@@ -29,12 +29,12 @@ If you want to develop new models or contribute to H2Integrate, you can install 
     NLR_API_EMAIL=your.name@email.com
     ```
 
-### NREL-Provided Conda Environment Specification (recommended)
+### NLR-Provided Conda Environment Specification (recommended)
 
 1. Using Git, navigate to a local target directory and clone repository:
 
     ```bash
-    git clone https://github.com/NREL/H2Integrate.git
+    git clone https://github.com/NatLabRockies/H2Integrate.git
     ```
 
 2. Navigate to `H2Integrate`
@@ -90,7 +90,7 @@ pip install -e ".[all]"
 1. Using Git, navigate to a local target directory and clone repository:
 
     ```bash
-    git clone https://github.com/NREL/H2Integrate.git
+    git clone https://github.com/NatLabRockies/H2Integrate.git
     ```
 
 2. Navigate to `H2Integrate`
