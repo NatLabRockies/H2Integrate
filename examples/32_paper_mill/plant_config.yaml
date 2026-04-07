@@ -4,23 +4,10 @@ sites:
   site:
     latitude: 47.5233
     longitude: -92.5366
-    resources:
-      wind_resource:
-        resource_model: WTKNLRDeveloperAPIWindResource
-        resource_parameters:
-          resource_year: 2013
-      solar_resource:
-        resource_model: GOESAggregatedSolarAPI
-        resource_parameters:
-          resource_year: 2013
-          resource_filename: 47.5_-93.0_psmv3_60_2013.csv
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
-technology_interconnections:
-  - [paper]
-  # etc
 plant:
   plant_life: 40
   simulation:
@@ -52,8 +39,9 @@ finance_parameters:
   finance_subgroups:
     paper:
       commodity: paper
-      finance_groups: [paper]
-      technologies: [paper]
+      commodity_stream: paper_mill
+      finance_groups: [profast_model]
+      technologies: [paper_mill]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.0  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022

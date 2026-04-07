@@ -5,9 +5,9 @@ technologies:
     performance_model:
       model: PaperMillPerformanceModel
     cost_model:
-      model: PaperMillCostAndFinancialModel
+      model: PaperMillCostModel
     finance_model:
-      model: PaperMillCostAndFinancialModel
+      model: PaperMillCostModel
     model_inputs:
       shared_parameters:
         capacity_factor: 0.9
@@ -28,7 +28,6 @@ technologies:
         electricity_consumption: 0.65
         water_disposal_unitcost: 0.00755
         water_disposal_rate: 0
-        maintenance_materials_unitcost: 7.72
         # Financial assumptions
         financial_assumptions:
           total income tax rate: 0.308
