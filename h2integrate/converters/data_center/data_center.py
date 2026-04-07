@@ -43,7 +43,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=n_timesteps,
             units=self.commodity_rate_units,
-            desc=f"Data center compute load demand profile",
+            desc="Data center compute load demand profile",
         )
 
         self.add_input(
@@ -68,6 +68,14 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
             shape=n_timesteps,
             units="galUS/h",
             desc="Water consumed by the plant",
+        )
+
+        self.add_output(
+            "unmet_electricity_demand",
+            val=0.0,
+            shape=n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Unmet electricity demand for data center",
         )
 
     def compute(self, inputs, outputs):
@@ -108,6 +116,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
 
         outputs["unmet_electricity_demand"] = total_electricity_demand - electricity_used
         outputs["water_consumed"] = water_used
+        outputs["compute_load_out"] = compute_load_demand
 
 
 @define(kw_only=True)
@@ -174,7 +183,7 @@ class DataCenterCostModel(CostModelBaseClass):
         """
         Compute capital and operating costs for the data center.
         """
-        plant_capacity_kw = inputs["system_capacity"]
+        system_capacity_mw = inputs["system_capacity"]
         compute_load_out = inputs["compute_load_out"]  # MW hourly profile
         capex_per_mw = inputs["capex_per_mw"]
         fixed_opex_per_mw_per_year = inputs["fixed_opex_per_mw_per_year"]
@@ -187,10 +196,10 @@ class DataCenterCostModel(CostModelBaseClass):
         delivered_compute_load_MWh = delivered_compute_load_MWdt * dt / 3600
 
         # Calculate capital expenditure
-        capex = capex_per_mw * plant_capacity_kw
+        capex = capex_per_mw * system_capacity_mw
 
         # Calculate fixed operating expenses over project life
-        fixed_om = fixed_opex_per_mw_per_year * plant_capacity_kw
+        fixed_om = fixed_opex_per_mw_per_year * system_capacity_mw
 
         # Calculate variable operating expenses over project life
         variable_om = variable_opex_per_mwh * delivered_compute_load_MWh
