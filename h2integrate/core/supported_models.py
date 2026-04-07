@@ -308,3 +308,25 @@ supported_models = {
     "SimpleGasConsumerCost": SimpleGasConsumerCost,
     "GasStreamCombinerPerformanceModel": GasStreamCombinerPerformanceModel,
 }
+
+
+# This next section is to demarcate specific models that belong to certain categories that are
+# relevant for processing in the model stackup. Right now, these designations are
+# used in `h2integrate_model.py`.
+
+
+# Model classes that do not contribute costs to the finance stackup because they are essentially
+# internal-only models that aren't categorized as a specific technology (e.g. a generic combiner
+# or splitter, or a model that is only used for performance modeling within another model and
+# doesn't have an independent cost model).
+no_cost_models = {
+    "GenericSplitterPerformanceModel",
+    "GenericCombinerPerformanceModel",
+    "GasStreamCombinerPerformanceModel",
+    "CablePerformanceModel",
+    "PipePerformanceModel",
+}
+
+no_replacement_schedule_models = {
+    "IronTransportPerformanceComponent",
+}

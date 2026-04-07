@@ -129,3 +129,62 @@ def test_electrolyzer_outputs(tech_config, plant_config, subtests):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
     with subtests.test("replacement_schedule value"):
         assert np.any(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
+
+
+@pytest.mark.regression
+def test_electrolyzer_results(tech_config, plant_config, subtests):
+    prob = om.Problem()
+    comp = ECOElectrolyzerPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    power_profile = np.full(8760, 32.0)
+    prob.set_val("comp.electricity_in", power_profile, units="MW")
+
+    prob.run_model()
+
+    with subtests.test("Total hydrogen produced"):
+        assert (
+            pytest.approx(5297814.89908964, rel=1e-6)
+            == prob.get_val("comp.hydrogen_out", units="kg/h").sum()
+        )
+
+    with subtests.test("Total oxygen produced"):
+        assert (
+            pytest.approx(42045916.90741967, rel=1e-6)
+            == prob.get_val("comp.oxygen_out", units="kg/h").sum()
+        )
+
+    with subtests.test("Year 0 capacity factor"):
+        assert (
+            pytest.approx(77.10460139, rel=1e-6)
+            == prob.get_val("comp.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Rated H2 production"):
+        assert pytest.approx(784.3544735823235, rel=1e-6) == prob.get_val(
+            "comp.rated_hydrogen_production", units="kg/h"
+        )
+
+    with subtests.test("Rated O2 production"):
+        assert pytest.approx(6225.00099576, rel=1e-6) == prob.get_val(
+            "comp.rated_oxygen_production", units="kg/h"
+        )
+
+    with subtests.test("H2: CF*Rated = Annual"):
+        np.testing.assert_allclose(
+            prob.get_val("comp.rated_hydrogen_production", units="kg/h")
+            * prob.get_val("comp.capacity_factor", units="unitless")
+            * 8760,
+            prob.get_val("comp.annual_hydrogen_produced", units="kg/yr"),
+            rtol=1e-6,
+        )
+    with subtests.test("O2: CF*Rated = Annual"):
+        np.testing.assert_allclose(
+            prob.get_val("comp.rated_oxygen_production", units="kg/h")
+            * prob.get_val("comp.capacity_factor", units="unitless")
+            * 8760,
+            prob.get_val("comp.annual_oxygen_produced", units="kg/yr"),
+            rtol=1e-6,
+        )
