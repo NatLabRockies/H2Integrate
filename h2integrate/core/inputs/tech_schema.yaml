@@ -52,5 +52,5 @@ properties:
             type: object
             description: Financial model details (optional)
             additionalProperties: true
-        required: []
+        required: [performance_model]
 required: [name, description, technologies]

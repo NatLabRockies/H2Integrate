@@ -59,3 +59,7 @@ finance_parameters:
       commodity: hydrogen
       commodity_stream: h2_storage  # use only dispatched hydrogen from h2_storage controller in finance calc
       technologies: [wind, electrolyzer, h2_storage]
+    oxygen:
+      commodity: oxygen
+      commodity_stream: electrolyzer
+      technologies: [wind, electrolyzer]

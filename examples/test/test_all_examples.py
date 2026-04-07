@@ -827,6 +827,14 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
             )
             == 7.564000289456695
         )
+    with subtests.test("Check LCOO"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_oxygen.LCOO", units="USD/kg")[0],
+                rel=1e-5,
+            )
+            == 0.666523050
+        )
 
 
 @pytest.mark.integration
