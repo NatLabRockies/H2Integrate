@@ -9,7 +9,11 @@ from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
-from h2integrate.core.supported_models import supported_models
+from h2integrate.core.supported_models import (
+    no_cost_models,
+    supported_models,
+    no_replacement_schedule_models,
+)
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
@@ -1231,19 +1235,6 @@ class H2IntegrateModel:
                         f"{commodity_stream}.capacity_factor",
                         f"finance_subgroup_{group_id}.capacity_factor",
                     )
-
-                # Model classes that do not contribute costs to the finance stackup
-                no_cost_models = {
-                    "GenericSplitterPerformanceModel",
-                    "GenericCombinerPerformanceModel",
-                    "GasStreamCombinerPerformanceModel",
-                    "CablePerformanceModel",
-                    "PipePerformanceModel",
-                }
-
-                no_replacement_schedule_models = {
-                    "IronTransportPerformanceComponent",
-                }
 
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
