@@ -175,6 +175,10 @@ from h2integrate.control.control_rules.converters.generic_converter_min_operatin
 from h2integrate.control.control_strategies.converters.flexible_demand_openloop_controller import (
     FlexibleDemandOpenLoopConverterController,
 )
+from h2integrate.converters.paper_mill import (
+    PaperMillCostAndFinancialModel,
+    PaperMillPerformanceModel
+)
 
 
 supported_models = {
@@ -259,6 +263,9 @@ supported_models = {
     "QuinnNuclearPerformanceModel": QuinnNuclearPerformanceModel,
     "QuinnNuclearCostModel": QuinnNuclearCostModel,
     "NaturalGasCostModel": NaturalGasCostModel,
+    "PaperMillPerformanceModel": PaperMillPerformanceModel,
+    "PaperMillCostAndFinancialModel": PaperMillCostAndFinancialModel,
+    
     # Transport
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,

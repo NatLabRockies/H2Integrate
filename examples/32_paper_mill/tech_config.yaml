@@ -1,0 +1,38 @@
+name: technology_config
+description: This plant produces paper 
+technologies:
+  paper_mill:
+    performance_model:
+      model: PaperMillPerformanceModel
+    cost_model:
+      model: PaperMillCostAndFinancialModel
+    finance_model:
+      model: PaperMillCostAndFinancialModel
+    model_inputs:
+      shared_parameters:
+        capacity_factor: 0.9
+        plant_capacity_mtpy: 300000
+      cost_parameters:
+        operational_year: 2030
+        installation_time: 24  # months
+        inflation_rate: 0.0  # 0 for nominal analysis
+        # Feedstock parameters (flattened)
+        wood_unitcost: 11.04
+        wood_transport_cost: 0.0
+        electricity_cost: 54
+        chemicals_unitcost: 15150
+        raw_water_unitcost: 0.00575
+        raw_water_consumption: 10750
+        wood_consumption: 2.5
+        chemicals_consumption: 164
+        electricity_consumption: 0.65
+        water_disposal_unitcost: 0.00755
+        water_disposal_rate: 0
+        maintenance_materials_unitcost: 7.72
+        # Financial assumptions
+        financial_assumptions:
+          total income tax rate: 0.308
+          capital gains tax rate: 0.15
+          leverage after tax nominal discount rate: 0.10893
+          debt equity ratio of initial financing: 0.65
+          debt interest rate: 0.06
