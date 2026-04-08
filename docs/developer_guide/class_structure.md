@@ -22,7 +22,13 @@ Any implemented electrolyzer model should inherit from `ElectrolyzerBaseClass` t
 ## Interactive class hierarchy
 
 The diagram below shows **every model class** in H2Integrate and how they inherit from one another.
-Classes are color-coded by category (converters, storage, resource, finance, etc.) and arrows point from parent to child.
+The visual encoding uses three dimensions:
+
+- **Color** represents the application group (electricity, chemical, metal, etc.)
+- **Shape** represents the model category (converter, storage, transporter, etc.)
+- **Border thickness** indicates inheritance depth (thicker borders = higher-level parent classes)
+
+Arrows point from parent to child.
 You can **zoom**, **pan**, **hover** for details, and **drag** nodes to rearrange the layout.
 
 To regenerate this visualization after code changes, run:

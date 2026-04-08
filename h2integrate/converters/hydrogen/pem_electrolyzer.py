@@ -90,6 +90,11 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             units="MW",
             desc="Size of the electrolyzer in MW",
         )
+
+        self.add_output("oxygen_out", val=0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("rated_oxygen_production", val=0, shape=1, units="kg/h")
+        self.add_output("annual_oxygen_produced", val=0, shape=self.plant_life, units="kg/yr")
+
         self.add_input("cluster_size", val=-1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
         # TODO: add feedstock inputs and consumption outputs
@@ -188,8 +193,13 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "Capacity Factor [-]"
         ].values
         outputs["annual_hydrogen_produced"] = H2_Results["Life: Annual H2 production [kg/year]"]
-
         # TODO: replace above line w below
         # outputs["annual_hydrogen_produced"] = H2_Results["Performance Schedules"][
         #     "Annual H2 Production [kg/year]"
         # ].values
+
+        outputs["oxygen_out"] = H2_Results["Oxygen Hourly Production [kg/hr]"]
+        outputs["rated_oxygen_production"] = H2_Results["Rated BOL: O2 Production [kg/hr]"]
+        outputs["annual_oxygen_produced"] = H2_Results["Performance Schedules"][
+            "Annual O2 Production [kg/year]"
+        ]

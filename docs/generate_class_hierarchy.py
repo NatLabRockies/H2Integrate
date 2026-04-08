@@ -3,31 +3,37 @@ Generate an interactive class hierarchy visualization for H2Integrate.
 
 This script scans the h2integrate package to discover all classes and their
 inheritance relationships, then produces an interactive HTML visualization
-(zoomable and scrollable) suitable for embedding in the Jupyter Book docs.
+(zoomable/scrollable) suitable for embedding in the Jupyter Book docs.
+
+Visual encoding:
+  - **Shape**  → model category (converter, storage, transporter, etc.)
+  - **Color**  → product / application group (electricity, chemical, metal, etc.)
+  - **Border width** → inheritance depth (thicker = higher-level parent)
 
 Usage:
-    python generate_class_hierarchy.py
+    python docs/generate_class_hierarchy.py
 
 Outputs:
-    docs/developer_guide/class_hierarchy.html  — interactive graph
+    docs/_static/class_hierarchy.html  — interactive graph
 """
 
 import os
 import re
 import ast
+import math
 from pathlib import Path
 
 import networkx as nx
 from pyvis.network import Network
+
+from h2integrate import ROOT_DIR
 
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-# Root of the h2integrate package
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PACKAGE_ROOT = REPO_ROOT / "h2integrate"
+REPO_ROOT = ROOT_DIR.parent
 OUTPUT_HTML = REPO_ROOT / "docs" / "_static" / "class_hierarchy.html"
 
 # Directories / path fragments that indicate test code (case-insensitive check)
@@ -37,60 +43,105 @@ TEST_INDICATORS = {"test", "tests", "conftest", "test_"}
 # are excluded from the visualization entirely.
 EXTERNAL_BASES_TO_KEEP: set[str] = set()
 
-# Category detection rules: (directory substring -> (broad_category, subcategory))
+# ---------------------------------------------------------------------------
+# Category detection rules: (directory substring -> (model_category, product))
 # Order matters -- first match wins.
-# Broad categories control COLOR; subcategories control SHAPE.
+#   model_category  → controls node SHAPE
+#   product         → controls node COLOR (via color group mapping below)
+# ---------------------------------------------------------------------------
 CATEGORY_RULES = [
-    ("core", ("Core / Base", "Core")),
-    # --- Electricity producers (blue family) ---
-    ("converters/wind", ("Electricity", "Wind")),
-    ("converters/solar", ("Electricity", "Solar")),
-    ("converters/nuclear", ("Electricity", "Nuclear")),
-    ("converters/grid", ("Electricity", "Grid")),
-    ("converters/water_power", ("Electricity", "Water Power")),
-    ("converters/natural_gas", ("Electricity", "Natural Gas")),
-    ("converters/hopp", ("Electricity", "HOPP")),
-    # --- Chemical commodities (green family) ---
-    ("converters/hydrogen", ("Chemical", "Hydrogen")),
-    ("converters/ammonia", ("Chemical", "Ammonia")),
-    ("converters/methanol", ("Chemical", "Methanol")),
-    ("converters/co2", ("Chemical", "CO2")),
-    ("converters/nitrogen", ("Chemical", "Nitrogen")),
-    ("converters/water", ("Chemical", "Water")),
-    # --- Metals (brown/orange family) ---
-    ("converters/iron", ("Metal", "Iron")),
-    ("converters/steel", ("Metal", "Steel")),
+    ("core", ("Core", "General")),
+    # --- Electricity-producing converters ---
+    ("converters/wind", ("Converter", "Wind")),
+    ("converters/solar", ("Converter", "Solar")),
+    ("converters/nuclear", ("Converter", "Nuclear")),
+    ("converters/grid", ("Converter", "Grid")),
+    ("converters/water_power", ("Converter", "Water Power")),
+    ("converters/natural_gas", ("Converter", "Natural Gas")),
+    ("converters/hopp", ("Converter", "HOPP")),
+    # --- Chemical converters ---
+    ("converters/hydrogen", ("Converter", "Hydrogen")),
+    ("converters/ammonia", ("Converter", "Ammonia")),
+    ("converters/methanol", ("Converter", "Methanol")),
+    ("converters/co2", ("Converter", "CO2")),
+    ("converters/nitrogen", ("Converter", "Nitrogen")),
+    ("converters/water", ("Converter", "Water")),
+    # --- Metal converters ---
+    ("converters/iron", ("Converter", "Iron")),
+    ("converters/steel", ("Converter", "Steel")),
     # --- Catch-all converter ---
-    ("converters", ("Converter - Other", "Other")),
+    ("converters", ("Converter", "Other")),
     # --- Non-converter categories ---
-    ("storage", ("Storage", "Storage")),
-    ("resource", ("Resource", "Resource")),
-    ("finances", ("Finance", "Finance")),
-    ("transporters", ("Transporter", "Transporter")),
-    ("control", ("Control", "Control")),
-    ("simulation", ("Simulation", "Simulation")),
-    ("tools", ("Tools / Utilities", "Tools")),
-    ("postprocess", ("Post-processing", "Post-processing")),
-    ("preprocess", ("Pre-processing", "Pre-processing")),
+    ("storage", ("Storage", "General")),
+    ("resource", ("Resource", "General")),
+    ("finances", ("Finance", "General")),
+    ("transporters", ("Transporter", "General")),
+    ("control", ("Control", "General")),
+    ("simulation", ("Simulation", "General")),
+    ("tools", ("Tools", "General")),
+    ("postprocess", ("Post-processing", "General")),
+    ("preprocess", ("Pre-processing", "General")),
 ]
 
-# Color palette -- one distinct color per BROAD category
-CATEGORY_COLORS = {
-    "Core / Base": "#1B3A5C",  # Dark navy
-    "Electricity": "#4A90D9",  # Bold blue
-    "Chemical": "#66BB6A",  # Green
-    "Metal": "#8B5E3C",  # Dark brown
-    "Converter - Other": "#A0A0A0",  # Gray
-    "Storage": "#FFD54F",  # Golden yellow
-    "Resource": "#9673A6",  # Purple
-    "Finance": "#DA70D6",  # Orchid
-    "Transporter": "#E86850",  # Coral-red
-    "Control": "#00ACC1",  # Cyan
-    "Simulation": "#76A5AF",  # Teal
-    "Tools / Utilities": "#999999",  # Gray
-    "Post-processing": "#AAAAAA",  # Light gray
-    "Pre-processing": "#BBBBBB",  # Lighter gray
+# ---------------------------------------------------------------------------
+# Shape by model category
+# ---------------------------------------------------------------------------
+CATEGORY_SHAPES_PYVIS = {
+    "Core": "ellipse",
+    "Converter": "dot",
+    "Storage": "diamond",
+    "Resource": "triangle",
+    "Finance": "star",
+    "Transporter": "square",
+    "Control": "hexagon",
+    "Simulation": "triangleDown",
+    "Tools": "box",
+    "Post-processing": "box",
+    "Pre-processing": "box",
 }
+
+# ---------------------------------------------------------------------------
+# Color by broad application group
+# Products are mapped to a broad group, each group gets one color.
+# ---------------------------------------------------------------------------
+PRODUCT_TO_GROUP = {
+    "General": "Core / General",
+    "Wind": "Renewables",
+    "Solar": "Renewables",
+    "Water Power": "Renewables",
+    "HOPP": "Renewables",
+    "Nuclear": "Other Elec. Generators",
+    "Grid": "Other Elec. Generators",
+    "Natural Gas": "Other Elec. Generators",
+    "Hydrogen": "Hydrogen",
+    "Ammonia": "Chemical",
+    "Methanol": "Chemical",
+    "CO2": "Chemical",
+    "Nitrogen": "Chemical",
+    "Water": "Chemical",
+    "Iron": "Metal",
+    "Steel": "Metal",
+    "Other": "Other",
+}
+
+GROUP_COLORS = {
+    "Core / General": "#555555",
+    "Renewables": "#4A90D9",
+    "Other Elec. Generators": "#1B3A5C",
+    "Hydrogen": "#2E7D32",
+    "Chemical": "#66BB6A",
+    "Metal": "#D84315",
+    "Control": "#00ACC1",
+    "Other": "#F5C542",
+}
+
+# Patterns used to detect control-related classes by name.
+# If a class name matches any of these, its color group is overridden to "Control".
+CONTROL_NAME_PATTERNS = re.compile(r"control|pyomo|openloop|open_loop", re.IGNORECASE)
+
+# Border width range for inheritance depth
+MAX_BORDER_WIDTH = 5
+MIN_BORDER_WIDTH = 1
 
 
 # ---------------------------------------------------------------------------
@@ -113,13 +164,13 @@ def _is_test_path(filepath: Path) -> bool:
 def _rel_mod_path(filepath: Path) -> str:
     """Return the filepath relative to the repo root using forward slashes."""
     try:
-        return str(filepath.relative_to(PACKAGE_ROOT)).replace("\\", "/")
+        return str(filepath.relative_to(ROOT_DIR)).replace("\\", "/")
     except ValueError:
         return str(filepath).replace("\\", "/")
 
 
 def _classify(filepath: Path) -> tuple[str, str]:
-    """Determine the (broad_category, subcategory) for a class based on its file path."""
+    """Determine the (model_category, product) for a class based on its file path."""
     rel = _rel_mod_path(filepath)
     for pattern, cat_tuple in CATEGORY_RULES:
         if pattern in rel:
@@ -185,8 +236,8 @@ def scan_classes(package_root: Path):
                         "name": node.name,
                         "bases": bases,
                         "file": filepath,
-                        "category": category,
-                        "subcategory": subcategory,
+                        "model_category": category,
+                        "product": subcategory,
                     }
                 )
 
@@ -206,8 +257,8 @@ def scan_classes(package_root: Path):
         classes[key] = {
             "bases": r["bases"],
             "file": r["file"],
-            "category": r["category"],
-            "subcategory": r["subcategory"],
+            "model_category": r["model_category"],
+            "product": r["product"],
         }
 
     return classes
@@ -269,13 +320,14 @@ def build_graph(classes: dict) -> nx.DiGraph:
         short_name = key.rsplit(".", 1)[-1] if "." in key else key
         if _is_excluded(short_name):
             continue
-        subcat = info.get("subcategory", "")
+        model_cat = info.get("model_category", "Other")
+        product = info.get("product", "General")
         G.add_node(
             key,
             label=short_name,
-            category=info["category"],
-            subcategory=subcat,
-            title=f"{short_name}\n{_rel_mod_path(info['file'])}\n[{info['category']}/ {subcat}]",
+            model_category=model_cat,
+            product=product,
+            title=f"{short_name}\n{_rel_mod_path(info['file'])}\n[{model_cat} / {product}]",
         )
 
     # Add edges (parent -> child) — only between H2I classes already in the graph
@@ -299,7 +351,42 @@ def build_graph(classes: dict) -> nx.DiGraph:
 
 
 # ---------------------------------------------------------------------------
-# Visualization
+# Inheritance depth computation
+# ---------------------------------------------------------------------------
+
+
+def _compute_depths(G: nx.DiGraph) -> dict[str, int]:
+    """Compute inheritance depth for each node (0 = root, increases for children)."""
+    depths: dict[str, int] = {}
+    roots = [n for n in G if G.in_degree(n) == 0]
+    for root in roots:
+        queue = [(root, 0)]
+        visited = {root}
+        while queue:
+            node, d = queue.pop(0)
+            depths[node] = max(depths.get(node, 0), d)
+            for child in G.successors(node):
+                if child not in visited:
+                    visited.add(child)
+                    queue.append((child, d + 1))
+    for n in G.nodes:
+        if n not in depths:
+            depths[n] = 0
+    return depths
+
+
+def _border_width(depth: int, max_depth: int) -> float:
+    """Compute border width: thicker for roots, thinner for deeply inherited."""
+    if max_depth == 0:
+        return MAX_BORDER_WIDTH
+    return max(
+        MIN_BORDER_WIDTH,
+        MAX_BORDER_WIDTH - depth * (MAX_BORDER_WIDTH - MIN_BORDER_WIDTH) / max_depth,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Visualization — interactive HTML
 # ---------------------------------------------------------------------------
 
 
@@ -310,15 +397,13 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
         width="100%",
         directed=True,
         notebook=False,
-        cdn_resources="in_line",  # self-contained HTML
+        cdn_resources="in_line",
         bgcolor="#FFFFFF",
         font_color="#333333",
         select_menu=False,
         filter_menu=False,
     )
 
-    # Physics: force-directed layout for an organic "word cloud" / blob feel.
-    # Categories naturally cluster because they share common parents.
     net.set_options("""
     {
       "physics": {
@@ -334,11 +419,11 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
         "solver": "forceAtlas2Based",
         "stabilization": {
           "enabled": true,
-          "iterations": 800,
+          "iterations": 1500,
           "updateInterval": 25
         },
         "maxVelocity": 50,
-        "minVelocity": 0.75
+        "minVelocity": 0.01
       },
       "layout": {
         "improvedLayout": true,
@@ -361,49 +446,47 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
     }
     """)
 
-    # Determine node sizes based on out-degree (more children = larger)
-    max_degree = max((G.out_degree(n) for n in G.nodes), default=1) or 1
+    depths = _compute_depths(G)
+    max_depth = max(depths.values(), default=0)
 
-    # --- Assign initial (x, y) positions so same-category nodes start near
-    #     each other.  The physics engine will refine from here, but the
-    #     cluster seeds keep like-colored groups together.
-    import math
-
-    used_categories = sorted({G.nodes[n].get("category", "Other") for n in G.nodes})
+    # Cluster seeds by model_category
+    used_categories = sorted({G.nodes[n].get("model_category", "Other") for n in G.nodes})
     cat_to_index = {cat: i for i, cat in enumerate(used_categories)}
     n_cats = len(used_categories)
-    CLUSTER_RADIUS = 600  # distance of cluster centres from origin
-    INTRA_SCATTER = 180  # jitter within a cluster
-
-    # Count how many nodes each category has so far (for spiral placement)
+    CLUSTER_RADIUS = 600
+    INTRA_SCATTER = 180
     _cat_counter: dict[str, int] = {c: 0 for c in used_categories}
+
+    # Determine node sizes based on out-degree
+    max_degree = max((G.out_degree(n) for n in G.nodes), default=1) or 1
 
     for node_id in G.nodes:
         data = G.nodes[node_id]
         label = data.get("label", node_id)
-        category = data.get("category", "Other")
-        data.get("subcategory", "")
-        color = CATEGORY_COLORS.get(category, "#CCCCCC")
+        model_cat = data.get("model_category", "Other")
+        product = data.get("product", "General")
         tooltip = data.get("title", label)
-        out_deg = G.out_degree(node_id)
 
-        # Scale node size: base 18, up to 45 for the most-connected nodes
+        # Override color group to "Control" for control-related classes
+        if CONTROL_NAME_PATTERNS.search(label):
+            color_group = "Control"
+        else:
+            color_group = PRODUCT_TO_GROUP.get(product, "Other")
+        color = GROUP_COLORS.get(color_group, "#BDBDBD")
+        shape = CATEGORY_SHAPES_PYVIS.get(model_cat, "dot")
+        bw = _border_width(depths.get(node_id, 0), max_depth)
+        out_deg = G.out_degree(node_id)
         size = 18 + 27 * (out_deg / max_degree)
 
-        # Slightly bolder border for base/core classes
-        border_width = 3 if category == "Core / Base" else 1
-
-        shape = "dot"
-
         # Compute initial position: cluster centre + spiral offset
-        idx = cat_to_index.get(category, 0)
-        angle_base = 2 * math.pi * idx / n_cats
+        idx = cat_to_index.get(model_cat, 0)
+        angle_base = 2 * math.pi * idx / max(n_cats, 1)
         cx = CLUSTER_RADIUS * math.cos(angle_base)
         cy = CLUSTER_RADIUS * math.sin(angle_base)
-        seq = _cat_counter[category]
-        _cat_counter[category] += 1
+        seq = _cat_counter[model_cat]
+        _cat_counter[model_cat] += 1
         spiral_angle = seq * 0.8
-        spiral_r = INTRA_SCATTER * (0.3 + 0.7 * (seq / max(1, _cat_counter[category])))
+        spiral_r = INTRA_SCATTER * (0.3 + 0.7 * (seq / max(1, _cat_counter[model_cat])))
         x = cx + spiral_r * math.cos(spiral_angle)
         y = cy + spiral_r * math.sin(spiral_angle)
 
@@ -418,7 +501,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
                 "hover": {"background": "#FFD700", "border": "#FF8C00"},
             },
             size=size,
-            borderWidth=border_width,
+            borderWidth=bw,
             shape=shape,
             font={"size": 14, "face": "Arial"},
             x=x,
@@ -428,26 +511,54 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
     for u, v in G.edges:
         net.add_edge(u, v)
 
-    # Build a legend as an HTML overlay
-    legend_items = []
-    # Collect only broad categories actually used
-    used_cats = sorted({G.nodes[n].get("category", "Other") for n in G.nodes})
-    for cat in used_cats:
-        c = CATEGORY_COLORS.get(cat, "#CCCCCC")
-        legend_items.append(
+    # --- Build legend HTML ---
+    # Color groups: collect the actual group used for each node
+    used_groups = set()
+    for n in G.nodes:
+        label_n = G.nodes[n].get("label", n)
+        product_n = G.nodes[n].get("product", "General")
+        if CONTROL_NAME_PATTERNS.search(label_n):
+            used_groups.add("Control")
+        else:
+            used_groups.add(PRODUCT_TO_GROUP.get(product_n, "Other"))
+    used_groups = sorted(used_groups)
+    color_items = []
+    for group in used_groups:
+        c = GROUP_COLORS.get(group, "#BDBDBD")
+        color_items.append(
             f'<span style="display:inline-block;width:14px;height:14px;'
             f"background:{c};border:1px solid #555;border-radius:3px;"
-            f'margin-right:5px;vertical-align:middle;"></span>{cat}'
+            f'margin-right:5px;vertical-align:middle;"></span>{group}'
         )
+    color_legend = "<br>".join(color_items)
 
-    legend_html = "<br>".join(legend_items)
+    # Model category shapes
+    shape_labels = {
+        "ellipse": "&#9711;",  # circle-like for Core
+        "dot": "&#9679;",  # filled circle for Converter
+        "diamond": "&#9670;",  # diamond for Storage
+        "triangle": "&#9650;",  # triangle for Resource
+        "star": "&#9733;",  # star for Finance
+        "square": "&#9632;",  # square for Transporter
+        "hexagon": "&#11042;",  # hexagon for Control
+        "triangleDown": "&#9660;",  # down-triangle for Simulation
+        "box": "&#9632;",  # square for Tools
+    }
+    used_cats = sorted({G.nodes[n].get("model_category", "Other") for n in G.nodes})
+    shape_items = []
+    for cat in used_cats:
+        shape = CATEGORY_SHAPES_PYVIS.get(cat, "dot")
+        symbol = shape_labels.get(shape, "&#9679;")
+        shape_items.append(
+            f'<span style="margin-right:5px;font-size:16px;vertical-align:middle;">'
+            f"{symbol}</span>{cat}"
+        )
+    shape_legend = "<br>".join(shape_items)
 
-    # Save raw HTML first, then inject the legend.
-    # Use generate_html() + manual write to ensure UTF-8 encoding on Windows.
+    # Save and inject legend
     net.generate_html()
     raw_html = net.html
     output_path.write_text(raw_html, encoding="utf-8")
-
     html = output_path.read_text(encoding="utf-8")
 
     legend_div = f"""
@@ -460,17 +571,21 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         z-index: 9999; line-height: 1.8;
     ">
-        <strong style="font-size:14px;">Category Legend</strong><br>
-        {legend_html}
+        <strong style="font-size:14px;">Color = Application Group</strong><br>
+        {color_legend}
+        <br><br>
+        <strong style="font-size:14px;">Shape = Model Category</strong><br>
+        {shape_legend}
         <br><br>
         <span style="font-size:11px;color:#888;">
-            Arrows: parent -> child<br>
-            Scroll to zoom | Drag to pan | Click to select
+            Border width = inheritance depth<br>
+            (thicker = higher-level parent)<br><br>
+            Arrows: parent &rarr; child<br>
+            Scroll to zoom | Drag to pan
         </span>
     </div>
     """
 
-    # Also add a title banner
     title_div = """
     <div style="
         position: fixed; top: 10px; left: 10px;
@@ -482,13 +597,37 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
     ">
         <strong style="font-size:18px;">H2Integrate Class Hierarchy</strong><br>
         <span style="font-size:12px;color:#666;">
-            Interactive visualization — zoom, pan, hover for details
+            Interactive visualization &mdash; zoom, pan, hover for details
         </span>
     </div>
     """
 
-    # Inject before closing </body>
-    html = html.replace("</body>", f"{legend_div}\n{title_div}\n</body>")
+    # Inject a script to disable physics after stabilization so the
+    # diagram is still unless the user drags a node.
+    stabilize_script = """
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // vis.js stores the network on the container; poll until ready
+        var check = setInterval(function() {
+            if (typeof network !== "undefined" && network !== null) {
+                clearInterval(check);
+                network.once("stabilized", function() {
+                    network.setOptions({ physics: { enabled: false } });
+                });
+                // Re-enable physics while dragging so connections stay sensible
+                network.on("dragStart", function() {
+                    network.setOptions({ physics: { enabled: true } });
+                });
+                network.on("dragEnd", function() {
+                    network.setOptions({ physics: { enabled: false } });
+                });
+            }
+        }, 200);
+    });
+    </script>
+    """
+
+    html = html.replace("</body>", f"{legend_div}\n{title_div}\n{stabilize_script}\n</body>")
     output_path.write_text(html, encoding="utf-8")
 
 
@@ -498,8 +637,8 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
 
 
 def main():
-    print(f"Scanning classes in {PACKAGE_ROOT} ...")
-    classes = scan_classes(PACKAGE_ROOT)
+    print(f"Scanning classes in {ROOT_DIR} ...")
+    classes = scan_classes(ROOT_DIR)
     print(f"  Found {len(classes)} classes (excluding test files)")
 
     print("Building inheritance graph ...")
@@ -518,14 +657,14 @@ def main():
     OUTPUT_HTML.parent.mkdir(parents=True, exist_ok=True)
     build_interactive_html(G, OUTPUT_HTML)
 
-    print("Done! Open the HTML file in a browser to explore the class hierarchy.")
+    print("Done!")
 
     # Print summary by category
     cats: dict[str, int] = {}
     for n in G.nodes:
-        cat = G.nodes[n].get("category", "Other")
+        cat = G.nodes[n].get("model_category", "Other")
         cats[cat] = cats.get(cat, 0) + 1
-    print("\nClasses by category (in graph):")
+    print("\nClasses by model category (in graph):")
     for cat in sorted(cats, key=cats.get, reverse=True):
         print(f"  {cat}: {cats[cat]}")
 
