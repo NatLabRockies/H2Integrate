@@ -353,7 +353,7 @@ def _make_controller_with_config(allow_charge_in_peak_range, peak_range):
 
 
 @pytest.mark.unit
-def test_get_allowed_discharge_always_true_when_charge_allowed_in_peak_range():
+def test_get_allowed_charge_always_true_when_charge_allowed_in_peak_range():
     """When allow_charge_in_peak_range=True every row should allow charging."""
     controller = _make_controller_with_config(
         allow_charge_in_peak_range=True,
@@ -374,13 +374,13 @@ def test_get_allowed_discharge_always_true_when_charge_allowed_in_peak_range():
     )
     controller.n_timesteps = 3
 
-    controller.get_allowed_discharge()
+    controller.get_allowed_charge()
 
     assert controller.peaks_df["allow_charge"].tolist() == [True, True, True]
 
 
 @pytest.mark.unit
-def test_get_allowed_discharge_blocks_charge_inside_peak_range(subtests):
+def test_get_allowed_charge_blocks_charge_inside_peak_range(subtests):
     """When allow_charge_in_peak_range=False, rows inside the window get allow_charge=False."""
     controller = _make_controller_with_config(
         allow_charge_in_peak_range=False,
@@ -402,7 +402,7 @@ def test_get_allowed_discharge_blocks_charge_inside_peak_range(subtests):
     )
     controller.n_timesteps = 4
 
-    controller.get_allowed_discharge()
+    controller.get_allowed_charge()
 
     with subtests.test("before range allows charge"):
         assert controller.peaks_df["allow_charge"].iloc[0] is np.True_

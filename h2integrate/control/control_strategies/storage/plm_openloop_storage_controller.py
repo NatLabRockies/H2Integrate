@@ -335,7 +335,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
         self.get_time_to_peak()
 
-        self.get_allowed_discharge()
+        self.get_allowed_charge()
 
     @staticmethod
     def _build_demand_profile_dict(demand_profile, time_series):
@@ -763,7 +763,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                     next_peak_time - self.peaks_df.loc[idx, "date_time"]
                 )
 
-    def get_allowed_discharge(self):
+    def get_allowed_charge(self):
         """Compute allowed charging time windows based on peak range configuration.
 
         Determines for each timestep whether charging is permitted. If
