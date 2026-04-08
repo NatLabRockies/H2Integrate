@@ -57,18 +57,18 @@ technologies:
                             rated_power: 5000000.0  # W
                             num_blades: 3
                             rated_thrust_N: 823484.4216152605 # from NREL 5MW definition
-                            gust_velocity_m_per_s: 70.0 # from https://github.com/WISDEM/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
+                            gust_velocity_m_per_s: 70.0 # from https://github.com/NLRWindSystems/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
                             blade_surface_area: 69.7974979
                             tower_mass: 620.4407337521
                             nacelle_mass: 101.98582836439
                             hub_mass: 8.38407517646
                             blade_mass: 14.56341339641
                             foundation_height: 0.0
-                            commissioning_cost_kW: 44.0 # from https://github.com/WISDEM/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
-                            decommissioning_cost_kW: 58.0 # from https://github.com/WISDEM/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
+                            commissioning_cost_kW: 44.0 # from https://github.com/NLRWindSystems/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
+                            decommissioning_cost_kW: 58.0 # from https://github.com/NLRWindSystems/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
                             trench_len_to_substation_km: 50.0
                             distance_to_interconnect_mi: 4.97096954
-                            interconnect_voltage_kV: 130.0 # from https://github.com/WISDEM/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
+                            interconnect_voltage_kV: 130.0 # from https://github.com/NLRWindSystems/WISDEM/blob/master/examples/02_reference_turbines/nrel5mw.yaml
                             tcc_per_kW: 1300.00  # (USD/kW)
                             opex_per_kW: 44.00  # (USD/kWh)
                     analysis_options:
