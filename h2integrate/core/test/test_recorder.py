@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from h2integrate.core.h2integrate_model import H2IntegrateModel
@@ -97,6 +99,7 @@ def test_output_new_recorder_filename_second_run(temp_copy_of_example_module_sco
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("05_wind_h2_opt", None)])
+@pytest.mark.xfail(sys.platform == "win32", reason="OpenMDAO incorrectly ends SQL processes")
 def test_output_new_recorder_overwrite_first_run(temp_copy_of_example_module_scope, subtests):
     # initialize H2I using non-optimization config
     example_folder = temp_copy_of_example_module_scope
