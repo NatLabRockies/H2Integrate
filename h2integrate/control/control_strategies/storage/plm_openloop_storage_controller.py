@@ -719,7 +719,9 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 Otherwise, returns peaks_2 with 'is_peak' flags overridden on peak_1 peak
                 days.
         """
-        if peaks_2 is None:
+        if peaks_1 is None:
+            raise (ValueError("Input, peaks_1, must contain a dataframe, but None was given."))
+        elif peaks_2 is None:
             peaks_df = peaks_1.copy()
         else:
             peaks_df = peaks_2.copy()
