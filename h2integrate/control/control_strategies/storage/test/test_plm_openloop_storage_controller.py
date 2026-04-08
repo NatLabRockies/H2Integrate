@@ -436,7 +436,9 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
         "charge_equals_discharge": False,
         "charge_efficiency": 0.95,
         "discharge_efficiency": 0.95,
-        "demand_profile": [10.0] * 10 + [50.0] * 4 + [10.0] * 10,  # Peak at hours 10-14
+        "demand_profile": np.concatenate(
+            (np.full(10, 10.0), np.full(4, 50.0), np.full(10, 10.0))
+        ),  # Peak at hours 10-14
         "peak_range": {"start": "10:00:00", "end": "14:00:00"},
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
@@ -450,7 +452,17 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 24, "dt": 3600}}}
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 24,
+                "dt": 3600,
+                "timezone": 0,
+                "start_time": "01/01/2000 00:00:00",
+            },
+        }
+    }
 
     # Set up OpenMDAO problem
     prob = om.Problem()
@@ -534,13 +546,23 @@ def test_plm_controller_respects_soc_bounds(subtests):
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 12, "dt": 3600}}}
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 12,
+                "dt": 3600,
+                "timezone": 0,
+                "start_time": "01/01/2000 00:00:00",
+            },
+        }
+    }
 
     prob = om.Problem()
 
     prob.model.add_subsystem(
         name="IVC",
-        subsys=om.IndepVarComp(name="hydrogen_in", val=[20.0] * 12),
+        subsys=om.IndepVarComp(name="hydrogen_in", val=20, shape=12),
         promotes=["*"],
     )
 
@@ -596,7 +618,7 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests):
         "charge_equals_discharge": False,
         "charge_efficiency": 0.92,
         "discharge_efficiency": 0.92,
-        "demand_profile": [5.0] * 24,
+        "demand_profile": np.full(24, 5.0),
         "demand_profile_supervisor": None,
         "peak_range": {"start": peak_window_start, "end": peak_window_end},
         "advance_discharge_period": {"units": "h", "val": 3},
@@ -610,7 +632,17 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests):
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 24, "dt": 3600}}}
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 24,
+                "dt": 3600,
+                "timezone": 0,
+                "start_time": "01/01/2000 00:00:00",
+            },
+        }
+    }
 
     prob = om.Problem()
 

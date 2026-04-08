@@ -18,8 +18,8 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     """
     Configuration class for the PeakLoadManagementOpenLoopStorageController.
 
-    Defines all parameters required to configure the peak-load management storage controller,
-    including storage constraints, efficiency parameters, peak detection, and operation strategies.
+    Defines the storage limits, efficiencies, and peak-selection rules used to
+    pre-compute an open-loop discharge and recharge schedule.
 
     Attributes:
         commodity (str): Name of the commodity being controlled
@@ -37,12 +37,12 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
         init_soc_fraction (float): Initial SOC as a fraction of `max_capacity`,
             between 0 and 1.
         max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time step, e.g., "kg/time step"). This rate does not include the charge_efficiency.
+            per time, e.g., "kg/h"). This rate does not include the charge_efficiency.
         charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
             max_charge_rate. If False, specify the max_discharge_rate as a value different than
             the max_charge_rate. Defaults to True.
         max_discharge_rate (float | None, optional): Maximum rate at which the commodity can be
-            discharged (in units per time step, e.g., "kg/time step"). This rate does not include
+            discharged (in units per time, e.g., "kg/h"). This rate does not include
             the discharge_efficiency. Only required if `charge_equals_discharge` is False.
         charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
             as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
@@ -55,19 +55,38 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
             81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
             provided.
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
-            (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
+            (e.g., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
         demand_profile_supervisor (int | float | list | None, optional): Demand values for
             additional connected system for each timestep, in the same units as
             `commodity_rate_units`. May be a scalar for constant demand or a list/array for
             time-varying demand.
         dispatch_priority_demand_profile (str | None, optional): which demand profile takes
             precedence for dispatch decisions.
-        max_supervisor_event_period: (int | None, optional): Duration, in time steps, of the period
-            in which the max_supervisor_events must occur. Defaults to the length of the simulation,
-            or in other words self.n_timesteps
         max_supervisor_events: (int | None, optional): The maximum number of discharge events
-            allowed for the supervisor in the period specified in max_supervisor_event_period,
+            allowed for the priority profile in the period specified in max_supervisor_event_period,
             or across all time steps if max_supervisor_event_period is None.
+        max_supervisor_event_period: (int | None, optional): Duration, in time steps, of the period
+            in which the max_supervisor_events must occur or a str indicating the time period (e.g.
+            W for week, M for month). Defaults to the length of the simulation.
+        peak_range (dict): Daily time window restricting which timesteps are considered as peak
+            candidates in the secondary demand profile. Keys ``start`` and ``end`` must be
+            ``HH:MM:SS`` strings (e.g. ``{'start': '12:00:00', 'end': '17:00:00'}``). Only
+            the highest-demand timestep within this window is marked as a candidate peak for
+            each day.
+        advance_discharge_period (dict): Lead time before a detected peak at which discharge
+            mode activates. Dict with keys ``units`` (pandas timedelta unit string, e.g. ``'h'``)
+            and ``val`` (numeric). For example ``{'units': 'h', 'val': 2}`` begins discharge two
+            hours before the identified peak.
+        delay_charge_period (dict): Minimum time to wait after the battery reaches minimum SOC
+            before recharging is permitted. Dict with keys ``units`` and ``val``, using the same
+            format as ``advance_discharge_period``.
+        allow_charge_in_peak_range (bool, optional): If ``True``, charging is never suppressed.
+            If ``False``, charging is blocked for timesteps that fall inside ``peak_range`` to
+            prevent charging whilst peak demand is expected. Defaults to ``True``.
+        min_peak_proximity (dict): Minimum required time separation between consecutive retained
+            peak events. A ``ValueError`` is raised during setup if selected peaks violate this
+            constraint. Dict with keys ``units`` and ``val``, using the same format as
+            ``advance_discharge_period``.
 
     """
 
@@ -155,11 +174,48 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
 
             self.max_discharge_rate = self.max_charge_rate
 
-        # make sure peak_range is in correct format because yaml
-        # automatically converts it to seconds
+        # Validate and normalize dict parameters
+        # peak_range: must have 'start' and 'end' keys as HH:MM:SS strings.
+        # YAML automatically converts HH:MM:SS to an integer number of seconds,
+        # so non-string values are converted back here.
+        for _key in ("start", "end"):
+            if _key not in self.peak_range:
+                raise ValueError(
+                    f"peak_range is missing required key '{_key}'. "
+                    "Expected dict with 'start' and 'end' as HH:MM:SS strings."
+                )
         for key, value in self.peak_range.items():
             if not isinstance(value, str):
                 self.peak_range[key] = str(timedelta(seconds=value))
+
+        # advance_discharge_period / delay_charge_period / min_peak_proximity:
+        # must each be a dict with 'units' (str) and 'val' (int or float).
+        for _param_name, _param_val in (
+            ("advance_discharge_period", self.advance_discharge_period),
+            ("delay_charge_period", self.delay_charge_period),
+            ("min_peak_proximity", self.min_peak_proximity),
+        ):
+            if not isinstance(_param_val, dict):
+                raise ValueError(
+                    f"'{_param_name}' must be a dict with keys 'units' and 'val', "
+                    f"got {type(_param_val).__name__}."
+                )
+            for _key in ("units", "val"):
+                if _key not in _param_val:
+                    raise ValueError(
+                        f"'{_param_name}' is missing required key '{_key}'. "
+                        "Expected dict with 'units' (str) and 'val' (int or float)."
+                    )
+            if not isinstance(_param_val["units"], str) or not _param_val["units"].strip():
+                raise ValueError(
+                    f"'{_param_name}[\"units\"]' must be a non-empty string, "
+                    f"got {_param_val['units']!r}."
+                )
+            if not isinstance(_param_val["val"], int | float):
+                raise ValueError(
+                    f"'{_param_name}[\"val\"]' must be a numeric value (int or float), "
+                    f"got {type(_param_val['val']).__name__}."
+                )
 
 
 class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
