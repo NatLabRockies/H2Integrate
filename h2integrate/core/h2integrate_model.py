@@ -1342,6 +1342,7 @@ class H2IntegrateModel:
             self.prob.setup()
 
             # OpenMDAO will skip this step if it encounters an issue leading to silent failures
+            # TODO: remove this step when OpenMDAO implements cursor closure
             if self.recorder_path is not None:
                 self.recorder_path.unlink(missing_ok=True)
 
