@@ -104,7 +104,7 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     dispatch_priority_demand_profile: str = field(
         validator=contains(["demand_profile", "demand_profile_supervisor"]),
     )
-    max_supervisor_events: int | None = (field(default=None),)
+    max_supervisor_events: int | None = field(default=None)
     max_supervisor_event_period: int | str | None = field(default=None)
     peak_range: dict = field(
         metadata={
@@ -290,8 +290,15 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             )
 
         # Store simulation parameters for later use
-        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.time_index = build_time_series_from_plant_config(self.options["plant_config"])
+
+        if len(self.time_index) != self.n_timesteps:
+            raise (
+                ValueError(
+                    f"Time series is of length {len(self.time_index)}, "
+                    f"but self.n_timesteps is {self.n_timesteps}."
+                )
+            )
 
         # Build timestamped demand dictionaries from simulation timeline.
         secondary_demand_profile = self._build_demand_profile_dict(
@@ -691,37 +698,35 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         return demand_df.drop(columns=["period_day"])
 
     @staticmethod
-    def merge_peaks(supervisory_peaks_df, secondary_peaks_df):
-        """Merge supervisor and secondary peak schedules with supervisor precedence.
+    def merge_peaks(peaks_1, peaks_2):
+        """Merge peaks_1 and peak_2 schedules with peak_1 precedence.
 
         Combines two peak schedules (primary and fallback) using day-level precedence:
-        - For each day, if the primary (supervisory) profile has any peaks on that day,
-          use all primary peaks for that day
-        - Otherwise, use the secondary peaks for that day
+        - For each day, if the peaks_1 profile has any peaks on that day,
+          use all peaks_1 peaks for that day
+        - Otherwise, use the peaks_2 peaks for that day
 
-        This allows critical demand (supervisor) to take scheduling precedence while
-        falling back to secondary peaks for days with no critical demand.
+        This allows overriding peaks (peaks_1) to take scheduling precedence while
+        falling back to peaks_2 peaks for days with no overriding peaks.
 
         Args:
-            supervisory_peaks_df (pd.DataFrame | None): Primary peak schedule with columns
+            peaks_1 (pd.DataFrame | None): primary peak schedule with columns
                 ['date_time', 'is_peak', 'demand', ...].
-            secondary_peaks_df (pd.DataFrame): Secondary/fallback peak schedule with same columns.
+            peaks_2 (pd.DataFrame): fallback peak schedule with same columns.
 
         Returns:
-            pd.DataFrame: Merged peak schedule. If supervisory is None, returns secondary unchanged.
-                Otherwise, returns secondary with 'is_peak' flags overridden on supervisor-peak
+            pd.DataFrame: Merged peak schedule. If peaks_2 is None, returns peaks_1 unchanged.
+                Otherwise, returns peaks_2 with 'is_peak' flags overridden on peak_1 peak
                 days.
         """
-        if secondary_peaks_df is None:
-            peaks_df = supervisory_peaks_df.copy()
+        if peaks_2 is None:
+            peaks_df = peaks_1.copy()
         else:
-            peaks_df = secondary_peaks_df.copy()
+            peaks_df = peaks_2.copy()
             # For each day in the data, check if supervisor has any peaks
-            for day in secondary_peaks_df["date_time"].dt.floor("D").unique():
-                day_df = supervisory_peaks_df[
-                    supervisory_peaks_df["date_time"].dt.floor("D") == day
-                ]
-                # If supervisor has peaks on the day, use supervisor's flags for all rows that day
+            for day in peaks_2["date_time"].dt.floor("D").unique():
+                day_df = peaks_1[peaks_1["date_time"].dt.floor("D") == day]
+                # If peaks_1 has peaks on the day, use peaks_1's flags for all rows that day
                 if any(day_df["is_peak"]):
                     peaks_df.loc[peaks_df["date_time"].dt.floor("D") == day, "is_peak"] = day_df[
                         "is_peak"
