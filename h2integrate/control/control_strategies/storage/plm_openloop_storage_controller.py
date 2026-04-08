@@ -381,6 +381,17 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         to constraints). SOC is updated at each time step, ensuring it remains within
         allowable bounds.
 
+        Dispatch strategy outline:
+        - Discharge:
+          * Starting when time_to_peak <= advance_discharge_period
+          * Discharge at max rate (or less to reach targets)
+          * Stop discharging only when SOC reaches min_soc
+        - Charge:
+          * When not discharging, SOC < max, and allow_charge window is active
+          * Start charging only after delay_charge_period since last discharge
+          * Charge at max rate (or less to reach target)
+          * Stop charging when SOC reaches max_soc
+
         Expected input keys:
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
             * ``<commodity>_demand``: Timeseries demand profile.
@@ -404,15 +415,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         Returns:
             None
         """
-
-        # Dispatch strategy outline:
-        # - Discharge: Starting when time_to_peak <= advance_discharge_period
-        #   * Discharge at max rate (or less to reach targets)
-        #   * Stop discharging only when SOC reaches min_soc
-        # - Charge: When not discharging, SOC < max, and allow_charge window is active
-        #   * Start charging only after delay_charge_period since last discharge
-        #   * Charge at max rate (or less to reach target)
-        #   * Stop charging when SOC reaches max_soc
 
         commodity = self.config.commodity
         if np.all(inputs[f"{commodity}_demand"] == 0.0):
