@@ -34,14 +34,14 @@ time_series = build_time_series_from_plant_config(model.plant_config)
 n_plot = 24 * 7
 time_plot = time_series[:n_plot]
 
-fig, ax = plt.subplots(4, 1, sharex=True)
+fig, ax = plt.subplots(4, 1, sharex=True, figsize=(10, 5))
 ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Overriding demand (MW)")
 ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
-ax[0].set_ylabel("Power (MW)")
-ax[0].legend(loc="upper right")
+ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
+ax[0].legend(frameon=False, ncol=2)
 
 ax[1].plot(time_plot, model.prob.get_val("battery.SOC", units="percent")[:n_plot])
-ax[1].set(ylabel="SOC")
+ax[1].set(ylabel="SOC", ylim=[0, 100])
 
 ax[2].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[2].plot(
@@ -49,8 +49,8 @@ ax[2].plot(
     model.prob.get_val("battery.electricity_out", units="MW")[:n_plot],
     label="Battery charge/discharge",
 )
-ax[2].set(ylabel="Power (MW)")
-ax[2].legend()
+ax[2].set(ylabel="Power (MW)", ylim=[-2, 2])
+ax[2].legend(frameon=False, ncol=2)
 
 ax[3].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[3].plot(
@@ -58,9 +58,14 @@ ax[3].plot(
     model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")[:n_plot],
     label="New demand profile",
 )
-ax[3].set(ylabel="Power (MW)")
-ax[3].legend()
+ax[3].set(ylabel="Power (MW)", ylim=[-2, 2])
+ax[3].legend(frameon=False, ncol=2)
 ax[3].tick_params(axis="x", labelrotation=90)
 
+for axis in ax:
+    axis.minorticks_on()
+    axis.grid(True, which="major", alpha=0.45, linewidth=0.8)
+    axis.grid(True, which="minor", alpha=0.2, linewidth=0.5)
+
 plt.tight_layout()
-plt.show()
+plt.savefig("example_peak_load_dispatch.pdf", transparent=True)
