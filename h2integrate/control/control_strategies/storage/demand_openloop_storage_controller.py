@@ -158,21 +158,8 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
             None
         """
         commodity = self.config.commodity
-        if np.all(inputs[f"{commodity}_demand"] == 0.0):
-            msg = "Demand profile is zero, check that demand profile is input"
-            raise UserWarning(msg)
-        if inputs["max_charge_rate"][0] < 0:
-            msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{inputs['max_charge_rate']}"
-            )
-            raise UserWarning(msg)
-        if inputs["storage_capacity"][0] < 0:
-            msg = (
-                f"storage_capacity cannot be less than zero and has value of "
-                f"{inputs['storage_capacity']}"
-            )
-            raise UserWarning(msg)
+
+        self.common_checks_needed_in_compute(inputs)
 
         max_capacity = inputs["storage_capacity"].item()
         max_charge_rate = inputs["max_charge_rate"].item()
