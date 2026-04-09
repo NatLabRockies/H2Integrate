@@ -22,12 +22,6 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     pre-compute an open-loop discharge and recharge schedule.
 
     Attributes:
-        commodity (str): Name of the commodity being controlled
-            (e.g., "hydrogen"). Stripped of whitespace.
-        commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
-        demand_profile (int | float | list): Demand values for each timestep, in
-            the same units as `commodity_rate_units`. May be a scalar for constant
-            demand or a list/array for time-varying demand.
         max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
             e.g., "kg" if `commodity_rate_units` is "kg/h").
         max_soc_fraction (float): Maximum allowable state of charge (SOC) as a fraction
@@ -54,8 +48,6 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
             discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
             81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
             provided.
-        commodity_amount_units (str | None, optional): Units of the commodity as an amount
-            (e.g., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
         demand_profile_supervisor (int | float | list | None, optional): Demand values for
             additional connected system for each timestep, in the same units as
             `commodity_rate_units`. May be a scalar for constant demand or a list/array for
@@ -358,7 +350,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         }
 
     @staticmethod
-    def _normalize_peak_range(peak_range):
+    def _parse_peak_range(peak_range):
         """Validate and parse peak_range values from HH:MM:SS strings.
 
         Returns a dict with datetime.time objects.
@@ -496,19 +488,18 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             # start discharging when we approach a peak and have some charge
             if time_to_peak <= advance_discharge_period and soc > soc_min:
                 discharging = True
+                charging = False
 
             if not discharging and soc < soc_max:
                 if self.peaks_df["allow_charge"].iloc[i]:
                     if (td - last_discharge) > delay_charge_period:
                         charging = True
+                        discharging = False
 
             if discharging:
                 # DISCHARGE MODE: Supply commodity to meet peak demand
                 # Note: discharge_needed is internal (storage view), max_discharge_rate is external
-                discharge_needed = max_discharge_rate / discharge_eff
-                discharge = min(
-                    discharge_needed, available_discharge, max_discharge_rate / discharge_eff
-                )
+                discharge = min(available_discharge, max_discharge_rate / discharge_eff)
 
                 soc -= discharge / max_capacity  # Deplete storage state of charge
                 # Output setpoint is the external (delivered) rate after efficiency loss
@@ -590,7 +581,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         if not isinstance(demand_profile, dict):
             raise ValueError("demand_profile must be a dict with 'date_time' and 'demand' keys")
 
-        peak_range = PeakLoadManagementOpenLoopStorageController._normalize_peak_range(peak_range)
+        peak_range = PeakLoadManagementOpenLoopStorageController._parse_peak_range(peak_range)
 
         demand_df = pd.DataFrame(demand_profile)
         if "date_time" not in demand_df or "demand" not in demand_df:
@@ -778,7 +769,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             # Global allow: charging always permitted
             self.peaks_df["allow_charge"] = True
         else:
-            peak_range = self._normalize_peak_range(self.config.peak_range)
+            peak_range = self._parse_peak_range(self.config.peak_range)
             # Selective allow: suppress charging during peak window only
             self.peaks_df["allow_charge"] = False
             for i in range(self.n_timesteps):
