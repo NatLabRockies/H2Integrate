@@ -2,8 +2,8 @@
 
 ## 0.7.2 [April 9, 2026]
 
-- Bumps the minimum WOMBAT version to fix Pandas compatibility with the Pandas 2.3.x and 3.x release cycle and fix
-  downstream failures caused by the incompatibility.
+- Bumps the minimum WOMBAT version to v.0.13.3, which fixes Pandas compatibility with the Pandas 2.3.x and 3.x release
+  cycle and fix downstream failures caused by the incompatibility. [PR 663](https://github.com/NatLabRockies/H2Integrate/pull/663)
 
 ## 0.7.1 [March 13, 2026]
 
