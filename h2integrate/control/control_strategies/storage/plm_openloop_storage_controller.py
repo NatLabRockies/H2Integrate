@@ -129,42 +129,9 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     )
 
     def __attrs_post_init__(self):
-        """
-        Post-initialization logic to validate and calculate efficiencies.
-
-        Ensures that either `charge_efficiency` and `discharge_efficiency` are provided,
-        or `round_trip_efficiency` is provided. If `round_trip_efficiency` is provided,
-        it calculates `charge_efficiency` and `discharge_efficiency` as the square root
-        of `round_trip_efficiency`.
-        """
         super().__attrs_post_init__()
-        if (self.round_trip_efficiency is not None) and (
-            self.charge_efficiency is None and self.discharge_efficiency is None
-        ):
-            # Calculate charge and discharge efficiencies from round-trip efficiency
-            self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.round_trip_efficiency = None
-        if self.charge_efficiency is None or self.discharge_efficiency is None:
-            raise ValueError(
-                "Exactly one of the following sets of parameters must be set: (a) "
-                "`round_trip_efficiency`, or (b) both `charge_efficiency` "
-                "and `discharge_efficiency`."
-            )
 
-        if self.charge_equals_discharge:
-            if (
-                self.max_discharge_rate is not None
-                and self.max_discharge_rate != self.max_charge_rate
-            ):
-                msg = (
-                    "Max discharge rate does not equal max charge rate but charge_equals_discharge "
-                    f"is True. Discharge rate is {self.max_discharge_rate} and charge rate "
-                    f"is {self.max_charge_rate}."
-                )
-                raise ValueError(msg)
-
-            self.max_discharge_rate = self.max_charge_rate
+        self.common_post_init_operations()
 
         # Validate and normalize dict parameters
         # peak_range: must have 'start' and 'end' keys as HH:MM:SS strings.
@@ -379,12 +346,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             * ``<commodity>_set_point``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
-        Control logic includes:
-            * Enforcing SOC limits (min, max, and initial conditions).
-            * Applying charge and discharge efficiencies.
-            * Observing charge/discharge rate limits.
-            * Tracking energy shortfalls and excesses at each time step.
-
         Raises:
             UserWarning: If the demand profile is entirely zero.
             UserWarning: If ``max_charge_rate`` or ``max_capacity`` is negative.
@@ -472,8 +433,8 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         last_discharge = self.peaks_df["date_time"].iloc[0] - delay_charge_period
 
         # Process each timestep using the pre-computed peak schedule
-        for i, _demand_t in enumerate(self.peaks_df["demand"].tolist()):
-            td = self.peaks_df["date_time"].iloc[i]
+        for i in range(self.n_timesteps):
+            time_stamp = self.peaks_df["date_time"].iloc[i]
             time_to_peak = self.peaks_df["time_to_peak"].iloc[i]
 
             # Get the input flow at the current time step
@@ -490,13 +451,14 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
             if not discharging and soc < soc_max:
                 if self.peaks_df["allow_charge"].iloc[i]:
-                    if (td - last_discharge) > delay_charge_period:
+                    if (time_stamp - last_discharge) > delay_charge_period:
                         charging = True
                         discharging = False
 
             if discharging:
                 # DISCHARGE MODE: Supply commodity to meet peak demand
-                # Note: discharge_needed is internal (storage view), max_discharge_rate is external
+                # Note: available_discharge is internal (storage view),
+                # max_discharge_rate is external
                 discharge = min(available_discharge, max_discharge_rate / discharge_eff)
 
                 soc -= discharge / max_capacity  # Deplete storage state of charge
@@ -505,13 +467,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
 
                 # Mark discharge completion time for charging delay calculation
                 if soc <= soc_min:
-                    last_discharge = td
+                    last_discharge = time_stamp
 
             elif charging:
                 # CHARGE MODE: Store commodity by charging from assumed infinite source
-                # unused_input is external (delivered commodity not needed for demand)
-                # unused_input = input_flow - demand_t
-                # unused_input = unused_input.item()
                 # `charge` is as seen by the storage, but the things being compared should all be as
                 # seen outside the storage so we need to adjust `available_charge` outside the
                 # storage view and the final result back into the storage view.
