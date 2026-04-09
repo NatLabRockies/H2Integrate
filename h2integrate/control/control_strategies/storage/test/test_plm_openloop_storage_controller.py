@@ -205,8 +205,8 @@ def test_get_peaks_invalid_min_proximity_raises():
 
 
 @pytest.mark.unit
-def test_merge_peaks_without_supervisor_returns_secondary_flags(subtests):
-    secondary_peaks_df = pd.DataFrame(
+def test_merge_peaks_with_single_demand_profile_returns_correct_peaks_flags(subtests):
+    peaks_1_df = pd.DataFrame(
         {
             "date_time": pd.to_datetime(
                 [
@@ -221,15 +221,15 @@ def test_merge_peaks_without_supervisor_returns_secondary_flags(subtests):
         }
     )
 
-    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(secondary_peaks_df, None)
+    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(peaks_1_df, None)
 
     with subtests.test("peak flags unchanged"):
-        assert merged["is_peak"].tolist() == secondary_peaks_df["is_peak"].tolist()
+        assert merged["is_peak"].tolist() == peaks_1_df["is_peak"].tolist()
 
 
 @pytest.mark.unit
-def test_merge_peaks_supervisor_takes_precedence_on_same_day(subtests):
-    secondary_peaks_df = pd.DataFrame(
+def test_merge_peaks_profile2_takes_precedence_on_same_day(subtests):
+    peaks_1_df = pd.DataFrame(
         {
             "date_time": pd.to_datetime(
                 [
@@ -243,7 +243,7 @@ def test_merge_peaks_supervisor_takes_precedence_on_same_day(subtests):
             "demand": [1.0, 5.0, 1.0, 6.0],
         }
     )
-    supervisory_peaks_df = pd.DataFrame(
+    peaks_2_df = pd.DataFrame(
         {
             "date_time": pd.to_datetime(
                 [
@@ -259,19 +259,17 @@ def test_merge_peaks_supervisor_takes_precedence_on_same_day(subtests):
     )
 
     merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(
-        supervisory_peaks_df,
-        secondary_peaks_df,
+        peaks_2_df,
+        peaks_1_df,
     )
 
-    with subtests.test("day1 follows supervisor flags"):
-        np.testing.assert_array_equal(
-            merged["is_peak"].iloc[0:2], supervisory_peaks_df["is_peak"].iloc[0:2]
-        )
+    with subtests.test("day1 follows peaks_2 flags"):
+        np.testing.assert_array_equal(merged["is_peak"].iloc[0:2], peaks_2_df["is_peak"].iloc[0:2])
 
-    with subtests.test("day2 follows secondary flags"):
+    with subtests.test("day2 follows peaks_1 flags"):
         np.testing.assert_array_equal(
             merged["is_peak"].iloc[2:4],
-            secondary_peaks_df["is_peak"].iloc[2:4],
+            peaks_1_df["is_peak"].iloc[2:4],
         )
 
 
@@ -443,7 +441,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,
-        "demand_profile_supervisor": None,
+        "demand_profile_2": None,
         "dispatch_priority_demand_profile": "demand_profile",
         "min_peak_proximity": {"units": "h", "val": 4},
     }
@@ -537,7 +535,7 @@ def test_plm_controller_respects_soc_bounds(subtests):
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,
-        "demand_profile_supervisor": None,
+        "demand_profile_2": None,
         "dispatch_priority_demand_profile": "demand_profile",
         "min_peak_proximity": {"units": "h", "val": 4},
     }
@@ -619,7 +617,7 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests):
         "charge_efficiency": 0.92,
         "discharge_efficiency": 0.92,
         "demand_profile": np.full(24, 5.0),
-        "demand_profile_supervisor": None,
+        "demand_profile_2": None,
         "peak_range": {"start": peak_window_start, "end": peak_window_end},
         "advance_discharge_period": {"units": "h", "val": 3},
         "delay_charge_period": {"units": "h", "val": 1},

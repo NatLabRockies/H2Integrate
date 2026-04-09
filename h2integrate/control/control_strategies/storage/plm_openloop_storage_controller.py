@@ -48,20 +48,20 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
             discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
             81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
             provided.
-        demand_profile_supervisor (int | float | list | None, optional): Demand values for
+        demand_profile_2 (int | float | list | None, optional): Demand values for
             additional connected system for each timestep, in the same units as
             `commodity_rate_units`. May be a scalar for constant demand or a list/array for
             time-varying demand.
         dispatch_priority_demand_profile (str | None, optional): which demand profile takes
-            precedence for dispatch decisions.
-        max_supervisor_events: (int | None, optional): The maximum number of discharge events
-            allowed for the priority profile in the period specified in max_supervisor_event_period,
-            or across all time steps if max_supervisor_event_period is None.
-        max_supervisor_event_period: (int | None, optional): Duration, in time steps, of the period
-            in which the max_supervisor_events must occur or a str indicating the time period (e.g.
+            precedence for dispatch decisions. One of ["demand_profile", "demand_profile_2"].
+        n_override_events: (int | None, optional): The maximum number of discharge events
+            allowed for the priority profile in the period specified in override_events_period,
+            or across all time steps if override_events_period is None.
+        override_events_period: (int | None, optional): Duration, in time steps, of the period
+            in which the n_override_events must occur or a str indicating the time period (e.g.
             W for week, M for month). Defaults to the length of the simulation.
         peak_range (dict): Daily time window restricting which timesteps are considered as peak
-            candidates in the secondary demand profile. Keys ``start`` and ``end`` must be
+            candidates in the primary demand profile. Keys ``start`` and ``end`` must be
             ``HH:MM:SS`` strings (e.g. ``{'start': '12:00:00', 'end': '17:00:00'}``). Only
             the highest-demand timestep within this window is marked as a candidate peak for
             each day.
@@ -92,12 +92,12 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    demand_profile_supervisor: int | float | list | None = field()
+    demand_profile_2: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
-        validator=contains(["demand_profile", "demand_profile_supervisor"]),
+        validator=contains(["demand_profile", "demand_profile_2"]),
     )
-    max_supervisor_events: int | None = field(default=None)
-    max_supervisor_event_period: int | str | None = field(default=None)
+    n_override_events: int | None = field(default=None)
+    override_events_period: int | str | None = field(default=None)
     peak_range: dict = field(
         metadata={
             "description": "Daily time window for peak detection. "
@@ -232,8 +232,8 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         During setup:
         1. Loads and validates configuration from tech_config and plant_config options
         2. Registers OpenMDAO inputs for storage parameters (capacity, charge rates, etc.)
-        3. Detects peaks in the demand profile (supervisor and secondary)
-        4. Merges peaks with supervisor prioritization if configured
+        3. Detects peaks in the demand profile (demand_profile and demand_profile_2)
+        4. Merges peaks with demand_profile_2 prioritization if configured
         5. Computes time-to-next-peak for each timestep
         6. Identifies allowed charging windows based on peak_range configuration
 
@@ -248,12 +248,12 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         super().setup()
 
         if (
-            self.config.demand_profile_supervisor is None
-            and self.config.dispatch_priority_demand_profile == "demand_profile_supervisor"
+            self.config.demand_profile_2 is None
+            and self.config.dispatch_priority_demand_profile == "demand_profile_2"
         ):
             raise (
                 ValueError(
-                    "If demand_profile_supervisor is None, then dispatch_priority_demand_profile"
+                    "If demand_profile_2 is None, then dispatch_priority_demand_profile"
                     "must be demand_profile"
                 )
             )
@@ -292,42 +292,20 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 )
             )
 
-        # Build timestamped demand dictionaries from simulation timeline.
-        secondary_demand_profile = self._build_demand_profile_dict(
-            self.config.demand_profile,
-            self.time_index,
-        )
-
-        # Detect peaks in supervisor demand profile (if provided)
-        if self.config.demand_profile_supervisor is not None:
-            supervisor_demand_profile = self._build_demand_profile_dict(
-                self.config.demand_profile_supervisor,
+        # Detect peaks in demand profile 2 (if provided)
+        if self.config.demand_profile_2 is not None:
+            demand_profile_2 = self._build_demand_profile_dict(
+                self.config.demand_profile_2,
                 self.time_index,
             )
-            self.supervisor_peaks_df = self.get_peaks(
-                demand_profile=supervisor_demand_profile,
-                n_max_events=self.config.max_supervisor_events,
-                max_events_period=self.config.max_supervisor_event_period,
+            self.peaks_2_df = self.get_peaks(
+                demand_profile=demand_profile_2,
+                n_max_events=self.config.max_events,
+                max_events_period=self.config.override_events_period,
                 min_proximity=self.config.min_peak_proximity,
             )
         else:
-            self.supervisor_peaks_df = None
-
-        # Detect daily peaks in secondary demand profile (always computed)
-        # Respects the configured peak_range time window for each day
-        self.secondary_peaks_df = self.get_peaks(
-            demand_profile=secondary_demand_profile,
-            peak_range=self.config.peak_range,
-        )
-
-        if self.config.dispatch_priority_demand_profile == "demand_profile_supervisor":
-            self.peaks_df = self.merge_peaks(self.supervisor_peaks_df, self.secondary_peaks_df)
-        else:
-            self.peaks_df = self.merge_peaks(self.secondary_peaks_df, self.supervisor_peaks_df)
-
-        self.get_time_to_peak()
-
-        self.get_allowed_charge()
+            self.peaks_2_df = None
 
     @staticmethod
     def _build_demand_profile_dict(demand_profile, time_series):
@@ -447,11 +425,31 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         charge_eff = float(self.config.charge_efficiency)
         discharge_eff = float(self.config.discharge_efficiency)
 
+        # Build timestamped demand dictionaries from simulation timeline.
+        demand_profile = self._build_demand_profile_dict(
+            inputs[f"{self.config.commodity}_demand"],
+            self.time_index,
+        )
+
+        # Detect daily peaks in demand profile (always computed)
+        # Respects the configured peak_range time window for each day
+        self.peaks_1_df = self.get_peaks(
+            demand_profile=demand_profile,
+            peak_range=self.config.peak_range,
+        )
+
+        if self.config.dispatch_priority_demand_profile == "demand_profile_2":
+            self.peaks_df = self.merge_peaks(self.peaks_2_df, self.peaks_1_df)
+        else:
+            self.peaks_df = self.merge_peaks(self.peaks_1_df, self.peaks_2_df)
+
+        self.get_time_to_peak()
+
+        self.get_allowed_charge()
+
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
         soc = deepcopy(init_soc_fraction)
-
-        # demand_profile = inputs[f"{commodity}_demand"]
 
         # initialize outputs
         soc_array = np.zeros(self.n_timesteps)
@@ -716,9 +714,9 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             peaks_df = peaks_1.copy()
         else:
             peaks_df = peaks_2.copy()
-            # For each day in the data, check if supervisor has any peaks
             for day in peaks_2["date_time"].dt.floor("D").unique():
                 day_df = peaks_1[peaks_1["date_time"].dt.floor("D") == day]
+                # For each day in the data, check if peaks_1 has any peaks
                 # If peaks_1 has peaks on the day, use peaks_1's flags for all rows that day
                 if any(day_df["is_peak"]):
                     peaks_df.loc[peaks_df["date_time"].dt.floor("D") == day, "is_peak"] = day_df[
