@@ -33,6 +33,7 @@
 - Added a storage performance baseclass model `StoragePerformanceBase` and updated the other storage performance models to inherit it [PR 624](https://github.com/NatLabRockies/H2Integrate/pull/624)
 - Modified the calc tilt angle function for pysam solar to support latitudes in the southern hemisphere [PR 646](https://github.com/NatLabRockies/H2Integrate/pull/646)
 - Added oxygen production metrics and as outputs to `ECOElectrolyzerPerformanceModel` [PR 642](https://github.com/NatLabRockies/H2Integrate/pull/642)
+- Bugfix to allow for one resource to be connected to multiple technologies [PR 655](https://github.com/NatLabRockies/H2Integrate/pull/655)
 - Removed the last of the logic that was based on technology names rather than model classes [PR 654](https://github.com/NatLabRockies/H2Integrate/pull/654)
 - Bumps the `coin-or-cbc` dependency to at least 2.10.12 to enable easy Windows compatibility. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Uses the optional installation parameter `extras` to combine all analysis extras, and remove them
@@ -43,6 +44,11 @@
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+
+## 0.7.2 [April 9, 2026]
+
+- Bumps the minimum WOMBAT version to v.0.13.3, which fixes Pandas compatibility with the Pandas 2.3.x and 3.x release
+  cycle and fix downstream failures caused by the incompatibility. [PR 663](https://github.com/NatLabRockies/H2Integrate/pull/663)
 
 ## 0.7.1 [March 13, 2026]
 

@@ -59,7 +59,7 @@ dependencies = [
   "floris",
   "hopp>=3.3.0",
   "turbine-models>=0.2.1",
-  "wombat>=0.13.2",
+  "wombat>=0.13.3",
 ]
 keywords = [
     "python3",

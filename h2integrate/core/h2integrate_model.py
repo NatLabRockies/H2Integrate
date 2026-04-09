@@ -1174,7 +1174,7 @@ class H2IntegrateModel:
             resource_models = {}
             for site_grp, site_grp_inputs in self.plant_config["sites"].items():
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
-                    resource_models[f"{site_grp}-{resource_key}"] = resource_params
+                    resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
             resource_source_connections = [c[0] for c in resource_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
