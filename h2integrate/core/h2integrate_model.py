@@ -617,9 +617,9 @@ class H2IntegrateModel:
 
         elif dt != 3600:
             msg = (
-                f"Performance model {model_name} does not currently support simulations with a "
-                "time step that is less than or greater than 1-hour. Please ensure that "
-                "plant_config['plant']['simulation']['dt'] is set to 3600."
+                f"Performance model '{model_name}' only supports a 1-hour time step (dt=3600), "
+                f"but dt={dt} was specified. Please set "
+                "plant_config['plant']['simulation']['dt'] to 3600."
             )
             raise ValueError(msg)
 

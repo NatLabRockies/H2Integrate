@@ -225,8 +225,8 @@ def test_check_time_step_without_bounds_requires_one_hour_dt():
     with pytest.raises(
         ValueError,
         match=(
-            r"Performance model DummyModelNoBounds does not currently support simulations "
-            r"with a time step that is less than or greater than 1-hour"
+            r"Performance model 'DummyModelNoBounds' only supports a 1-hour time step "
+            r"\(dt=3600\), but dt=1800 was specified"
         ),
     ):
         model._check_time_step("DummyModelNoBounds", DummyModelNoBounds)
