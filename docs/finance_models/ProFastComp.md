@@ -1,7 +1,7 @@
 
 (profastcomp:profastcompmodel)=
 # ProFastComp
-The `ProFastLCO` finance model calculates levelized cost of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
+The `ProFastLCO` finance model calculates levelized cost of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
 
 The inputs, outputs, and naming convention for the `ProFastLCO` model are outlined in this doc page.
 

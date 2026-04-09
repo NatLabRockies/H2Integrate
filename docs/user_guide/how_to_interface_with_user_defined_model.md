@@ -29,11 +29,11 @@ To demonstrate this capability, we include a minimal example of a custom technol
 - A `PaperMillCost` model that estimates capital and operational expenditures.
 - A `PaperMillFinance` technology finance model that computes the levelized cost of paper production (LCOP).
 
-Refer to the [Paper Mill Model Example](https://github.com/NREL/H2Integrate/tree/develop/examples/06_custom_tech/) for a complete walkthrough.
+Refer to the [Paper Mill Model Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/06_custom_tech/) for a complete walkthrough.
 
 ### Custom General Finance Model Example: simple LCO finance model
 
-To demonstrate this capability, we include an example of a custom general finance model: a **simple LCO (levelized cost of) calculation** found in [Example 08: Wind Electrolyzer Example](https://github.com/NREL/H2Integrate/tree/develop/examples/08_wind_electrolyzer/). This example includes:
+To demonstrate this capability, we include an example of a custom general finance model: a **simple LCO (levelized cost of) calculation** found in [Example 08: Wind Electrolyzer Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/08_wind_electrolyzer/). This example includes:
 - A `SimpleLCOFinanceConfig`: configuration class that is populated with inputs specific to that finance model.
 - A `SimpleLCOFinance` general finance model that computes the levelized cost of a commodity
 

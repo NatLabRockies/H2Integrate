@@ -1,4 +1,5 @@
 import importlib.util
+from enum import IntEnum
 
 import numpy as np
 import networkx as nx
@@ -32,6 +33,13 @@ except ImportError:
     pyxdsm = None
 
 
+class State(IntEnum):
+    INITIALIZED = 0
+    SETUP = 1
+    RUN = 2
+    POST_PROCESS = 3
+
+
 class H2IntegrateModel:
     def __init__(self, config_input):
         # read in config file; it's a yaml dict that looks like this:
@@ -47,9 +55,6 @@ class H2IntegrateModel:
         create_om_reports = self.driver_config.get("general", {}).get("create_om_reports", True)
         self.prob = om.Problem(reports=create_om_reports)
         self.model = self.prob.model
-
-        # track if setup has been called via boolean
-        self.setup_has_been_called = False
 
         # initialize recorder_path attribute
         self.recorder_path = None
@@ -78,6 +83,8 @@ class H2IntegrateModel:
         # create driver model
         # might be an analysis or optimization
         self.create_driver_model()
+
+        self.state = State.INITIALIZED
 
     def _load_component_config(self, config_key, config_value, config_path, validator_func):
         """Helper method to load and validate a component configuration.
@@ -1325,17 +1332,22 @@ class H2IntegrateModel:
         """
         Extremely light wrapper to setup the OpenMDAO problem and track setup status.
         """
-        self.setup_has_been_called = True
         self.prob.setup()
+        self.state = State.SETUP
 
     def run(self):
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
-        if not self.setup_has_been_called:
+        if self.state < State.RUN:
             self.prob.setup()
-            self.setup_has_been_called = True
+
+            # OpenMDAO will skip this step if it encounters an issue leading to silent failures
+            # TODO: remove this step when OpenMDAO implements cursor closure
+            if self.recorder_path is not None:
+                self.recorder_path.unlink(missing_ok=True)
 
         self.prob.run_driver()
+        self.state = State.RUN
 
     def post_process(self, print_results=True, summarize_sql=False, show_plots=False):
         """Post-process the results of the OpenMDAO model.
@@ -1352,6 +1364,8 @@ class H2IntegrateModel:
             show_plots (bool): If True, run post-processing plots for any
                 performance models that support them. Defaults to False.
         """
+        if self.state < State.RUN:
+            raise RuntimeError("`run` not called, so `post_process` cannot be called.")
         if print_results:
             # Use custom summary printer instead of OpenMDAO's built-in printing so we can
             # suppress internal value printing and display only mean values.
@@ -1365,6 +1379,7 @@ class H2IntegrateModel:
                 model.post_process(show_plots=show_plots)
                 if show_plots:
                     plt.show()
+        self.state = State.POST_PROCESS
 
     @staticmethod
     def print_results(model, includes=None, excludes=None, show_units=True):

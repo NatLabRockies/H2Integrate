@@ -41,7 +41,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
             - Reference Model 6: Oscillating Water Column
 
         Additional MHK cost model information can be found
-        through the [System Advisor Model](https://sam.nrel.gov/)
+        through the [System Advisor Model](https://sam.nlr.gov/)
     """
 
     device_rating_kw: float = field(validator=gt_zero)
@@ -147,7 +147,7 @@ class PySAMMarineCostModel(CostModelBaseClass):
         input as well as the Department of Energy
         [Reference Model Project](https://energy.sandia.gov/programs/renewable-energy/water-power/projects/reference-model-project-rmp/).
         Additional MHK cost model information can be found
-        through the [System Advisor Model](https://sam.nrel.gov/).
+        through the [System Advisor Model](https://sam.nlr.gov/).
 
     Note:
         The supported reference models in this cost model are:

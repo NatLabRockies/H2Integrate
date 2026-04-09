@@ -27,8 +27,8 @@ Users should also be familiar with the [Google style](https://www.sphinx-doc.org
 H2Integrate itself is a framework that relies on a number of other tools and libraries to function.
 Users should be familiar with the following tools and libraries to use H2Integrate effectively:
 
-- [HOPP](https://github.com/NREL/HOPP): Used for simulating technologies that produce electricity for other components in H2Integrate
-- [PySAM](https://github.com/NREL/pysam): Provides access to the System Advisor Model (SAM) for performance and financial modeling; underlying tool used for modeling certain generation technologies
+- [HOPP](https://github.com/NatLabRockies/HOPP): Used for simulating technologies that produce electricity for other components in H2Integrate
+- [PySAM](https://github.com/NatLabRockies/pysam): Provides access to the System Advisor Model (SAM) for performance and financial modeling; underlying tool used for modeling certain generation technologies
 - [OpenMDAO](https://openmdao.org/): A framework for multidisciplinary optimization, analysis, and design; used for data-passing, model organization, and optimization
 - [Pyomo](http://www.pyomo.org/): A Python-based, open-source optimization modeling language; only useful to understand if you are modifying the dispatch algorithms
 - [Pandas](https://pandas.pydata.org/): A data manipulation and analysis library used for handling and analyzing data structures; useful for post-processing results

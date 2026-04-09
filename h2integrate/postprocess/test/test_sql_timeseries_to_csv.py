@@ -1,27 +1,27 @@
-import os
 from pathlib import Path
 
 import numpy as np
 import pytest
 from pytest import fixture
 
-from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_yaml, load_tech_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 @fixture
-def configuration(temp_dir):
-    config = load_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "02_texas_ammonia.yaml")
+def configuration(temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    config = load_yaml(example_folder / "02_texas_ammonia.yaml")
 
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "driver_config.yaml")
-    driver_config["general"]["folder_output"] = str(temp_dir)
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    output_folder = example_folder / driver_config["general"]["folder_output"]
+    driver_config["general"]["folder_output"] = str(output_folder)
     config["driver_config"] = driver_config
 
-    tech_config = load_tech_yaml(EXAMPLE_DIR / "02_texas_ammonia" / "tech_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
     tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
-        str(temp_dir)
+        str(output_folder)
     )
     config["technology_config"] = tech_config
     return config
@@ -30,11 +30,13 @@ def configuration(temp_dir):
 @fixture
 def run_example_02_sql_fpath(configuration):
     # check if case file exists, if so, return the filepath
-    sql_fpath = EXAMPLE_DIR / "02_texas_ammonia" / "outputs" / "cases.sql"
+    output_folder = (
+        Path(configuration["driver_config"]["general"]["folder_output"]).resolve().parent
+    )
+    sql_fpath = output_folder / "cases.sql"
     if sql_fpath.exists():
         return sql_fpath
     else:
-        os.chdir(EXAMPLE_DIR / "02_texas_ammonia")
         # Create a H2Integrate model
         h2i = H2IntegrateModel(configuration)
 
@@ -50,6 +52,7 @@ def run_example_02_sql_fpath(configuration):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath):
     expected_csv_fpath = (
         Path(configuration["driver_config"]["general"]["folder_output"]) / "cases_Case-1.csv"
@@ -67,6 +70,7 @@ def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath)
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
     vars_to_save = [
         "electrolyzer.hydrogen_out",
@@ -91,6 +95,7 @@ def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
     vars_units_to_save = {
         "ammonia.hydrogen_in": "kg/h",
@@ -116,6 +121,7 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_alternative_column_names(subtests, run_example_02_sql_fpath):
     vars_to_save = {
         "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},

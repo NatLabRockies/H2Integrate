@@ -30,7 +30,7 @@ from h2integrate.core.supported_models import supported_models
     ]
 )
 # fmt: on
-def test_nrel_solar_resource_file_downloads(
+def test_nlr_solar_resource_file_downloads(
     subtests,
     plant_simulation,
     site_config,

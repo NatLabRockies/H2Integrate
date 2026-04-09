@@ -4,7 +4,11 @@ import pytest
 
 from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
 
-from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
+from test.conftest import (  # noqa: F401
+    temp_dir,
+    temp_copy_of_example,
+    pytest_collection_modifyitems,
+)
 
 
 # docs fencepost start: DO NOT REMOVE

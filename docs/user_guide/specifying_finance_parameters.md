@@ -76,7 +76,7 @@ finance_subgroup_default.<finance_model_output>
 ```
 
 Examples:
-- [Example 7](https://github.com/NREL/H2Integrate/blob/develop/examples/07_run_of_river_plant/plant_config.yaml)
+- [Example 7](https://github.com/NatLabRockies/H2Integrate/blob/develop/examples/07_run_of_river_plant/plant_config.yaml)
 
 
 (finparams:singlemodelsubgroups)=
@@ -106,9 +106,9 @@ finance_subgroup_<subgroup_name>.<finance_model_output>
 ```
 
 Examples:
-- [Example 02](https://github.com/NREL/H2Integrate/tree/develop/examples/02_texas_ammonia/plant_config.yaml)
-- [Example 03 - CO2H](https://github.com/NREL/H2Integrate/tree/develop/examples/03_methanol/co2_hydrogenation/plant_config_co2h.yaml)
-- [Example 09 - DOC](https://github.com/NREL/H2Integrate/tree/develop/examples/09_co2/direct_ocean_capture/plant_config.yaml)
+- [Example 02](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/02_texas_ammonia/plant_config.yaml)
+- [Example 03 - CO2H](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/03_methanol/co2_hydrogenation/plant_config_co2h.yaml)
+- [Example 09 - DOC](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/09_co2/direct_ocean_capture/plant_config.yaml)
   <!-- - [Example 05](/examples/)
   - 11, 12, 13, 14, 15, 17 -->
 
@@ -151,7 +151,7 @@ finance_subgroup_subgroup_b.NPV_hydrogen_delivered_group_b
 ```
 
 Examples:
-- [Example 10](https://github.com/NREL/H2Integrate/blob/develop/examples/10_electrolyzer_om/plant_config.yaml)
+- [Example 10](https://github.com/NatLabRockies/H2Integrate/blob/develop/examples/10_electrolyzer_om/plant_config.yaml)
 
 #### Key Behaviors
 - If `finance_parameters` is missing --> no finance model is created.
