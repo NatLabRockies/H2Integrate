@@ -6,7 +6,7 @@ import pandas as pd
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import contains, gte_zero, range_val, range_val_or_none
+from h2integrate.core.validators import contains
 from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
     StorageOpenLoopControlBase,
     StorageOpenLoopControlBaseConfig,
@@ -22,32 +22,6 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     pre-compute an open-loop discharge and recharge schedule.
 
     Attributes:
-        max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
-            e.g., "kg" if `commodity_rate_units` is "kg/h").
-        max_soc_fraction (float): Maximum allowable state of charge (SOC) as a fraction
-            of `max_capacity`, between 0 and 1.
-        min_soc_fraction (float): Minimum allowable SOC as a fraction of `max_capacity`,
-            between 0 and 1.
-        init_soc_fraction (float): Initial SOC as a fraction of `max_capacity`,
-            between 0 and 1.
-        max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time, e.g., "kg/h"). This rate does not include the charge_efficiency.
-        charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
-            max_charge_rate. If False, specify the max_discharge_rate as a value different than
-            the max_charge_rate. Defaults to True.
-        max_discharge_rate (float | None, optional): Maximum rate at which the commodity can be
-            discharged (in units per time, e.g., "kg/h"). This rate does not include
-            the discharge_efficiency. Only required if `charge_equals_discharge` is False.
-        charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
-            as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        discharge_efficiency (float | None, optional): Efficiency of discharging the storage,
-            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        round_trip_efficiency (float | None, optional): Combined efficiency of charging and
-            discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
-            81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
-            provided.
         demand_profile_2 (int | float | list | None, optional): Demand values for
             additional connected system for each timestep, in the same units as
             `commodity_rate_units`. May be a scalar for constant demand or a list/array for
@@ -82,16 +56,8 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
 
     """
 
-    max_capacity: float = field()
-    max_soc_fraction: float = field(validator=range_val(0, 1))
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    init_soc_fraction: float = field(validator=range_val(0, 1))
-    max_charge_rate: float = field(validator=gte_zero)
-    charge_equals_discharge: bool = field(default=True)
-    max_discharge_rate: float | None = field(default=None)
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    require_storage_parameters = True
+
     demand_profile_2: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
         validator=contains(["demand_profile", "demand_profile_2"]),

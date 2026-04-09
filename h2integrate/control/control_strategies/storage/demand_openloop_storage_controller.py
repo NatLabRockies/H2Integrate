@@ -1,10 +1,9 @@
 from copy import deepcopy
 
 import numpy as np
-from attrs import field, define
+from attrs import define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gte_zero, range_val, range_val_or_none
 from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
     StorageOpenLoopControlBase,
     StorageOpenLoopControlBaseConfig,
@@ -18,53 +17,9 @@ class DemandOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
 
     This class defines the parameters required to configure the `DemandOpenLoopStorageController`.
 
-    Attributes:
-        commodity (str): Name of the commodity being controlled
-            (e.g., "hydrogen"). Stripped of whitespace.
-        commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
-        demand_profile (int | float | list): Demand values for each timestep, in
-            the same units as `commodity_rate_units`. May be a scalar for constant
-            demand or a list/array for time-varying demand.
-        max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
-            e.g., "kg" if `commodity_rate_units` is "kg/h").
-        max_soc_fraction (float): Maximum allowable state of charge (SOC) as a fraction
-            of `max_capacity`, between 0 and 1.
-        min_soc_fraction (float): Minimum allowable SOC as a fraction of `max_capacity`,
-            between 0 and 1.
-        init_soc_fraction (float): Initial SOC as a fraction of `max_capacity`,
-            between 0 and 1.
-        max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time step, e.g., "kg/time step"). This rate does not include the charge_efficiency.
-        charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
-            max_charge_rate. If False, specify the max_discharge_rate as a value different than
-            the max_charge_rate. Defaults to True.
-        max_discharge_rate (float | None, optional): Maximum rate at which the commodity can be
-            discharged (in units per time step, e.g., "kg/time step"). This rate does not include
-            the discharge_efficiency. Only required if `charge_equals_discharge` is False.
-        charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
-            as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        discharge_efficiency (float | None, optional): Efficiency of discharging the storage,
-            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        round_trip_efficiency (float | None, optional): Combined efficiency of charging and
-            discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
-            81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
-            provided.
-        commodity_amount_units (str | None, optional): Units of the commodity as an amount
-            (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
     """
 
-    max_capacity: float = field()
-    max_soc_fraction: float = field(validator=range_val(0, 1))
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    init_soc_fraction: float = field(validator=range_val(0, 1))
-    max_charge_rate: float = field(validator=gte_zero)
-    charge_equals_discharge: bool = field(default=True)
-    max_discharge_rate: float | None = field(default=None)
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    require_storage_parameters = True
 
     def __attrs_post_init__(self):
         """
