@@ -17,16 +17,16 @@ technologies:
         max_soc_fraction: 0.9  # percent as decimal
         min_soc_fraction: 0.1  # percent as decimal
         init_soc_fraction: 0.9  # percent as decimal
-        demand_profile: !include demand_profiles/demand_profile_secondary.yaml
+        demand_profile: !include demand_profiles/demand_profile.yaml
         charge_efficiency: 1.0  # percent as decimal
         discharge_efficiency: 1.0  # percent as decimal
       control_parameters:
         max_discharge_rate: 2500.0  # kW/time step; defaults to battery power limit when matched to max_charge_rate
         charge_equals_discharge: true  # enforce symmetric charge and discharge power limits
-        demand_profile_supervisor: !include demand_profiles/demand_profile_supervisor.yaml  # demand used to define when the supervisor commands battery dispatch. This may represent an upstream load.
-        dispatch_priority_demand_profile: demand_profile_supervisor  # demand profile the controller prioritizes when deciding dispatch
-        max_supervisor_events: 2  # maximum number of peak events from the priority demand profile that the controller will respond to within each event period
-        max_supervisor_event_period: W  # pandas-style period code for resetting event counts; W means per week, M means month, etc
+        demand_profile_2: !include demand_profiles/demand_profile_2.yaml  # demand used to define when the supervisor commands battery dispatch. This may represent an upstream load.
+        dispatch_priority_demand_profile: demand_profile_2  # demand profile the controller prioritizes when deciding dispatch
+        n_override_events: 2  # maximum number of peak events from the priority demand profile that the controller will respond to within each event period
+        override_events_period: W  # pandas-style period code for resetting event counts; W means per week, M means month, etc
         peak_range:
           start: 12:00:00  # start of the preferred daily peak-shaving window
           end: 17:00:00  # end of the preferred daily peak-shaving window
@@ -35,7 +35,7 @@ technologies:
           val: 2  # begin discharging this far ahead of the detected peak
         delay_charge_period:
           units: h  # time units applied to the charge-delay offset
-          val: s  # wait this long after the peak window before recharging
+          val: 4  # wait this long after the peak window before recharging
         allow_charge_in_peak_range: false  # if false, charging is blocked during the peak window
         min_peak_proximity:
           units: h  # time units used for the minimum distance-to-peak threshold

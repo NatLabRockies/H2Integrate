@@ -52,7 +52,7 @@ def test_get_peaks_with_global_event_limit_expected_peak():
 
     expected_peak_times = [pd.Timestamp("2025-01-01 06:00:00")]
 
-    peaks = controller.get_peaks(demand_profile, n_max_events=1, max_events_period=None)
+    peaks = controller.get_peaks(demand_profile, n_override_events=1, override_events_period=None)
     actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     assert actual_peak_times == expected_peak_times
@@ -90,7 +90,7 @@ def test_get_peaks_with_month_period_expected_peaks():
         pd.Timestamp("2025-02-01 12:00:00"),
     ]
 
-    peaks = controller.get_peaks(demand_profile, n_max_events=1, max_events_period="M")
+    peaks = controller.get_peaks(demand_profile, n_override_events=1, override_events_period="M")
     actual_peak_times = peaks.loc[peaks["is_peak"], "date_time"].tolist()
 
     assert actual_peak_times == expected_peak_times
@@ -110,7 +110,7 @@ def test_get_peaks_with_month_period_from_csv_expected_peaks():
 
     expected_peak_times = pd.to_datetime(expected_peaks_df["time_mountain"]).to_list()
 
-    peaks = controller.get_peaks(demand_profile, n_max_events=10, max_events_period="M")
+    peaks = controller.get_peaks(demand_profile, n_override_events=10, override_events_period="M")
     actual_peak_times = pd.to_datetime(peaks.loc[peaks["is_peak"], "date_time"]).tolist()
 
     assert actual_peak_times == expected_peak_times
@@ -125,8 +125,10 @@ def test_get_peaks_invalid_period_string_raises():
         "demand": [1.0, 2.0, 3.0, 4.0],
     }
 
-    with pytest.raises(ValueError, match="Invalid max_events_period string"):
-        controller.get_peaks(demand_profile, n_max_events=1, max_events_period="not_a_period")
+    with pytest.raises(ValueError, match="Invalid override_events_period string"):
+        controller.get_peaks(
+            demand_profile, n_override_events=1, override_events_period="not_a_period"
+        )
 
 
 @pytest.mark.unit
@@ -198,8 +200,8 @@ def test_get_peaks_invalid_min_proximity_raises():
     with pytest.raises(ValueError, match="Selected peaks violate min_proximity."):
         controller.get_peaks(
             demand_profile,
-            n_max_events=2,
-            max_events_period="W",
+            n_override_events=2,
+            override_events_period="W",
             min_proximity={"units": "D", "val": 1},
         )
 

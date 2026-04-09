@@ -300,8 +300,8 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             )
             self.peaks_2_df = self.get_peaks(
                 demand_profile=demand_profile_2,
-                n_max_events=self.config.max_events,
-                max_events_period=self.config.override_events_period,
+                n_override_events=self.config.n_override_events,
+                override_events_period=self.config.override_events_period,
                 min_proximity=self.config.min_peak_proximity,
             )
         else:
@@ -536,8 +536,8 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
     @staticmethod
     def get_peaks(
         demand_profile: dict,
-        n_max_events=None,
-        max_events_period=None,
+        n_override_events=None,
+        override_events_period=None,
         min_proximity=None,
         peak_range={"start": "00:00:00", "end": "23:59:59"},
     ):
@@ -552,10 +552,10 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             demand_profile (dict): Timeseries data with keys:
                 - 'date_time': timestamps (list or DatetimeIndex convertible)
                 - 'demand': demand values (list or array)
-            n_max_events (int | None): Maximum number of peaks to keep globally or per period.
+            n_override_events (int | None): Maximum number of peaks to keep globally or per period.
                 If None, returns all daily peaks. Defaults to None.
-            max_events_period (int | str | None): Grouping period for n_max_events limit.
-                - None: apply n_max_events limit globally (keep top-N peaks overall)
+            override_events_period (int | str | None): Grouping period for n_override_events limit.
+                - None: apply n_override_events limit globally (keep top-N peaks overall)
                 - int: group by timestep intervals (e.g., 288 for 24-hour periods)
                 - str: pandas period frequency (e.g., 'W' for week, 'M' for month)
                 Defaults to None.
@@ -605,49 +605,51 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         demand_df.loc[daily_peak_idx, "is_peak"] = True
 
         # Optional: Limit number of peaks globally or per period
-        if n_max_events is not None:
-            if n_max_events < 0:
-                raise ValueError("n_max_events must be >= 0 or None")
+        if n_override_events is not None:
+            if n_override_events < 0:
+                raise ValueError("n_override_events must be >= 0 or None")
 
             peak_candidates = demand_df.loc[demand_df["is_peak"]].copy()
             keep_idx = []
 
-            if max_events_period is None:
+            if override_events_period is None:
                 # Global limit: keep the N largest peaks across all time
-                keep_idx = peak_candidates.nlargest(n_max_events, "demand").index.tolist()
+                keep_idx = peak_candidates.nlargest(n_override_events, "demand").index.tolist()
             else:
                 # Period-based limit: keep top-N peaks within each period
-                if isinstance(max_events_period, int):
-                    if max_events_period <= 0:
+                if isinstance(override_events_period, int):
+                    if override_events_period <= 0:
                         raise ValueError(
-                            "max_events_period must be positive when provided as an int"
+                            "override_events_period must be positive when provided as an int"
                         )
 
                     # Group by timestep intervals (e.g., 288 timesteps = 1 day)
-                    demand_df["period_id"] = np.arange(len(demand_df)) // max_events_period
+                    demand_df["period_id"] = np.arange(len(demand_df)) // override_events_period
                     peak_candidates["period_id"] = demand_df.loc[peak_candidates.index, "period_id"]
 
-                elif isinstance(max_events_period, str):
+                elif isinstance(override_events_period, str):
                     # Group by pandas period frequency (W=week, M=month, etc.)
-                    period_freq = max_events_period.strip()
+                    period_freq = override_events_period.strip()
                     try:
                         demand_df["period_id"] = demand_df["date_time"].dt.to_period(period_freq)
                     except ValueError as exc:
                         raise ValueError(
-                            "Invalid max_events_period string. Use a pandas period frequency "
+                            "Invalid override_events_period string. Use a pandas period frequency "
                             "(for example 'Y', 'Q', 'M', 'W', 'D', 'H')."
                         ) from exc
 
                     peak_candidates["period_id"] = demand_df.loc[peak_candidates.index, "period_id"]
                 else:
                     raise ValueError(
-                        "max_events_period must be None, a positive integer, or a pandas period "
-                        "frequency string"
+                        "override_events_period must be None, a positive integer, or a pandas "
+                        "period frequency string"
                     )
 
                 # Within each period, retain only the top-N peaks by demand
                 for _, period_group in peak_candidates.groupby("period_id"):
-                    keep_idx.extend(period_group.nlargest(n_max_events, "demand").index.tolist())
+                    keep_idx.extend(
+                        period_group.nlargest(n_override_events, "demand").index.tolist()
+                    )
 
                 demand_df = demand_df.drop(columns=["period_id"])
 

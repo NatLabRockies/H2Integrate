@@ -23,7 +23,7 @@ model.run()
 
 supervisor_demand = np.array(
     model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
-        "demand_profile_supervisor"
+        "demand_profile_2"
     ]
 )
 secondary_demand = model.prob.get_val("battery.electricity_demand")
@@ -34,8 +34,8 @@ n_plot = 24 * 7
 time_plot = time_series[:n_plot]
 
 fig, ax = plt.subplots(4, 1, sharex=True)
-ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Supervisory demand (MW)")
-ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Secondary demand (MW)")
+ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Overriding demand (MW)")
+ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[0].set_ylabel("Power (MW)")
 ax[0].legend(loc="upper right")
 
