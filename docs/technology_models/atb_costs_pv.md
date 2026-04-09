@@ -1,12 +1,12 @@
 # Solar-PV Cost Models based on ATB-Formatted Cost Data
 
-NREL's [Annual Technology Baseline (ATB)](https://atb.nrel.gov) is commonly referenced for technology costs such as overnight capital cost, fixed operations and maintenance costs, and capital expenditures. Two solar-PV cost models are available in H2I that are intended to be easily used with cost values pulled from [NREL's ATB Excel workbook](https://atb.nrel.gov/electricity/2024/data).
+NLR's [Annual Technology Baseline (ATB)](https://atb.nlr.gov) is commonly referenced for technology costs such as overnight capital cost, fixed operations and maintenance costs, and capital expenditures. Two solar-PV cost models are available in H2I that are intended to be easily used with cost values pulled from [NLR's ATB Excel workbook](https://atb.nlr.gov/electricity/2024/data).
 
 ```{note}
 The Annual Technology Baseline (ATB) is updated annually. While we do our best to update our documentation regularly, be sure that you're using the most recent version of the ATB in case our links are pointing to an older version.
 ```
 
-As mentioned on the [Utility-Scale PV ATB page](https://atb.nrel.gov/electricity/2024/utility-scale_pv), the costs for utility-scale PV have been published in `$/kW-AC` since 2020. The costs for [Commercial PV](https://atb.nrel.gov/electricity/2024/commercial_pv) and [Residential PV](https://atb.nrel.gov/electricity/2024/residential_pv) are published in `$/kW-DC`. The only difference between the two cost models in H2I are whether costs are input in `$/kW-AC` or `$/kW-DC`.
+As mentioned on the [Utility-Scale PV ATB page](https://atb.nlr.gov/electricity/2024/utility-scale_pv), the costs for utility-scale PV have been published in `$/kW-AC` since 2020. The costs for [Commercial PV](https://atb.nlr.gov/electricity/2024/commercial_pv) and [Residential PV](https://atb.nlr.gov/electricity/2024/residential_pv) are published in `$/kW-DC`. The only difference between the two cost models in H2I are whether costs are input in `$/kW-AC` or `$/kW-DC`.
 
 - The `"ATBUtilityPVCostModel"` model has costs input in `$/kW-AC` to match the ATB and the outputted capacity in kW-AC from the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#utility-scale-pv-cost-model).
 - The `"ATBResComPVCostModel"` model has costs input in `$/kW-DC` and the PV capacity is input in kW-DC from the **shared input parameter** of the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the second section below](#commercial-and-residential-pv-cost-model).

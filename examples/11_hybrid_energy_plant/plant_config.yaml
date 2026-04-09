@@ -17,7 +17,7 @@ finance_parameters:
         inflation_rate: 0.025  # 0 for nominal analysis
         discount_rate: 0.089  # nominal return
         debt_equity_ratio: 2.1746031746031744  # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.015  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        property_tax_and_insurance: 0.015  # percent of CAPEX estimated based on https://www.nlr.gov/docs/fy25osti/91775.pdf
         total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
         capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.045

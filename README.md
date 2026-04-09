@@ -1,7 +1,7 @@
 # H2Integrate: Holistic Hybrids Optimization and Design Tool
 
 [![PyPI version](https://badge.fury.io/py/H2Integrate.svg)](https://badge.fury.io/py/H2Integrate)
-![CI Tests](https://github.com/NREL/H2Integrate/actions/workflows/ci.yml/badge.svg)
+![CI Tests](https://github.com/NatLabRockies/H2Integrate/actions/workflows/ci.yml/badge.svg)
 [![image](https://img.shields.io/pypi/pyversions/H2Integrate.svg)](https://pypi.python.org/pypi/H2Integrate)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![DOI:10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903149.svg)](https://zenodo.org/records/17903149)
@@ -113,7 +113,7 @@ pip install h2integrate
 1. Using Git, navigate to a local target directory and clone repository:
 
     ```bash
-    git clone https://github.com/NREL/H2Integrate.git
+    git clone https://github.com/NatLabRockies/H2Integrate.git
     ```
 
 2. Navigate to `H2Integrate`
@@ -156,7 +156,7 @@ pip install -e ".[all]"
 1. Using Git, navigate to a local target directory and clone repository:
 
     ```bash
-    git clone https://github.com/NREL/H2Integrate.git
+    git clone https://github.com/NatLabRockies/H2Integrate.git
     ```
 
 2. Navigate to `H2Integrate`
