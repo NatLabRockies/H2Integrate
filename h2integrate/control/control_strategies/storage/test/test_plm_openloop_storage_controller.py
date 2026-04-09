@@ -46,6 +46,23 @@ def tech_config_base():
     return tech_config_dict
 
 
+@fixture
+def plant_config_base():
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 24,
+                "dt": 3600,
+                "timezone": 0,
+                "start_time": "01/01/2000 00:00:00",
+            },
+        }
+    }
+
+    return plant_config
+
+
 def _controller_without_setup():
     """Create a controller instance for testing pure helper methods."""
     return object.__new__(PeakLoadManagementOpenLoopStorageController)
@@ -445,7 +462,7 @@ def test_get_allowed_charge_blocks_charge_inside_peak_range(subtests):
 
 
 @pytest.mark.regression
-def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base):
+def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base, plant_config_base):
     """Test PLM controller discharges before detected peak and charges after."""
 
     # Load base tech config
@@ -480,17 +497,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base):
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 24,
-                "dt": 3600,
-                "timezone": 0,
-                "start_time": "01/01/2000 00:00:00",
-            },
-        }
-    }
+    plant_config = plant_config_base
 
     # Set up OpenMDAO problem
     prob = om.Problem()
@@ -542,7 +549,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base):
 
 
 @pytest.mark.regression
-def test_plm_controller_respects_soc_bounds(subtests, tech_config_base):
+def test_plm_controller_respects_soc_bounds(subtests, tech_config_base, plant_config_base):
     """Test PLM controller respects min/max SOC constraints."""
     tech_config = tech_config_base
 
@@ -572,17 +579,8 @@ def test_plm_controller_respects_soc_bounds(subtests, tech_config_base):
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 12,
-                "dt": 3600,
-                "timezone": 0,
-                "start_time": "01/01/2000 00:00:00",
-            },
-        }
-    }
+    plant_config = plant_config_base
+    plant_config["plant"]["simulation"]["n_timesteps"] = 12
 
     prob = om.Problem()
 
@@ -623,7 +621,9 @@ def test_plm_controller_respects_soc_bounds(subtests, tech_config_base):
 
 
 @pytest.mark.regression
-def test_plm_controller_blocking_charge_in_peak_range(subtests, tech_config_base):
+def test_plm_controller_blocking_charge_in_peak_range(
+    subtests, tech_config_base, plant_config_base
+):
     """Test PLM controller blocks charging during peak window when configured."""
     tech_config = tech_config_base
 
@@ -656,17 +656,7 @@ def test_plm_controller_blocking_charge_in_peak_range(subtests, tech_config_base
         "PeakLoadManagementOpenLoopStorageController"
     )
 
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 24,
-                "dt": 3600,
-                "timezone": 0,
-                "start_time": "01/01/2000 00:00:00",
-            },
-        }
-    }
+    plant_config = plant_config_base
 
     prob = om.Problem()
 
