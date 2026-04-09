@@ -574,7 +574,5 @@ def test_build_time_series_from_plant_config():
             "2025-01-01 08:30:00+00:00",
         ]
     ).to_pydatetime()
-    import pdb
 
-    pdb.set_trace()
     assert (ts == expected).all()

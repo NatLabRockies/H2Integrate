@@ -35,8 +35,8 @@ n_plot = 24 * 7
 time_plot = time_series[:n_plot]
 
 fig, ax = plt.subplots(4, 1, sharex=True, figsize=(10, 5))
-ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Overriding demand (MW)")
 ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Overriding demand (MW)")
 ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[0].legend(frameon=False, ncol=2)
 
