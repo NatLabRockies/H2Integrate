@@ -27,6 +27,17 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
     demand_profile: int | float | list | dict = field()
     commodity_amount_units: str = field(default=None)
 
+    # max_capacity: float = field()
+    # max_soc_fraction: float = field(validator=range_val(0, 1))
+    # min_soc_fraction: float = field(validator=range_val(0, 1))
+    # init_soc_fraction: float = field(validator=range_val(0, 1))
+    # max_charge_rate: float = field(validator=gte_zero)
+    # charge_equals_discharge: bool = field(default=True)
+    # max_discharge_rate: float | None = field(default=None)
+    # charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    # discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    # round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+
     def __attrs_post_init__(self):
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"

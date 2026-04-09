@@ -5,15 +5,45 @@ import numpy as np
 import pandas as pd
 import pytest
 import openmdao.api as om
+from pytest import fixture
 
-from h2integrate.core.file_utils import load_yaml
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
     PeakLoadManagementOpenLoopStorageController,
 )
 
 
-# from datetime import time
+@fixture
+def tech_config_base():
+    """Base technology configuration fixture for storage controller tests."""
+    tech_config_dict = {
+        "name": "technology_config",
+        "description": "This hybrid plant produces hydrogen",
+        "technologies": {
+            "h2_storage": {
+                "control_strategy": {
+                    "model": "SimpleStorageOpenLoopController",
+                },
+                "performance_model": {
+                    "model": "StorageAutoSizingModel",
+                },
+                "cost_model": {
+                    "model": "LinedRockCavernStorageCostModel",
+                },
+                "model_inputs": {
+                    "shared_parameters": {
+                        "commodity": "hydrogen",
+                        "commodity_rate_units": "kg/h",
+                    },
+                    "cost_parameters": {
+                        "sizing_mode": "auto",
+                    },
+                },
+            },
+        },
+    }
+
+    return tech_config_dict
 
 
 def _controller_without_setup():
@@ -415,13 +445,11 @@ def test_get_allowed_charge_blocks_charge_inside_peak_range(subtests):
 
 
 @pytest.mark.regression
-def test_plm_controller_basic_discharge_before_peak(subtests):
+def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base):
     """Test PLM controller discharges before detected peak and charges after."""
-    current_dir = Path(__file__).parent
 
     # Load base tech config
-    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
-    tech_config = load_yaml(tech_config_path)
+    tech_config = tech_config_base
 
     # Configure PLM-specific parameters
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
@@ -514,11 +542,9 @@ def test_plm_controller_basic_discharge_before_peak(subtests):
 
 
 @pytest.mark.regression
-def test_plm_controller_respects_soc_bounds(subtests):
+def test_plm_controller_respects_soc_bounds(subtests, tech_config_base):
     """Test PLM controller respects min/max SOC constraints."""
-    current_dir = Path(__file__).parent
-    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
-    tech_config = load_yaml(tech_config_path)
+    tech_config = tech_config_base
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
         "commodity": "hydrogen",
@@ -597,11 +623,9 @@ def test_plm_controller_respects_soc_bounds(subtests):
 
 
 @pytest.mark.regression
-def test_plm_controller_blocking_charge_in_peak_range(subtests):
+def test_plm_controller_blocking_charge_in_peak_range(subtests, tech_config_base):
     """Test PLM controller blocks charging during peak window when configured."""
-    current_dir = Path(__file__).parent
-    tech_config_path = current_dir / "inputs" / "tech_config.yaml"
-    tech_config = load_yaml(tech_config_path)
+    tech_config = tech_config_base
 
     peak_window_start = "10:00:00"
     peak_window_end = "14:00:00"
