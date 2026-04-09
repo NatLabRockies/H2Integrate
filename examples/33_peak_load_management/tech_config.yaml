@@ -12,8 +12,8 @@ technologies:
       shared_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        max_charge_rate: 2500.0  # kW/time step, 1, 2.5, or 5 MW
-        max_capacity: 10000.0  # kWh, 10 MWh
+        max_charge_rate: 500.0  # kW
+        max_capacity: 2000.0  # kWh, 1 MWh
         max_soc_fraction: 0.9  # percent as decimal
         min_soc_fraction: 0.1  # percent as decimal
         init_soc_fraction: 0.9  # percent as decimal
@@ -21,7 +21,7 @@ technologies:
         charge_efficiency: 1.0  # percent as decimal
         discharge_efficiency: 1.0  # percent as decimal
       control_parameters:
-        max_discharge_rate: 2500.0  # kW/time step; defaults to battery power limit when matched to max_charge_rate
+        max_discharge_rate: 500.0  # kW/time step; defaults to battery power limit when matched to max_charge_rate
         charge_equals_discharge: true  # enforce symmetric charge and discharge power limits
         demand_profile_2: !include demand_profiles/demand_profile_2.yaml  # demand used to define when the supervisor commands battery dispatch. This may represent an upstream load.
         dispatch_priority_demand_profile: demand_profile_2  # demand profile the controller prioritizes when deciding dispatch

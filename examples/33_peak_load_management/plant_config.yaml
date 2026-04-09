@@ -3,7 +3,7 @@ description: Demonstrates multivariable streams with a gas combiner
 plant:
   plant_life: 30
   simulation:
-    n_timesteps: 168
+    n_timesteps: 8760
     dt: 3600
     timezone: -6
     start_time: 2025/07/01 00:00:00
