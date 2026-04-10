@@ -1,0 +1,76 @@
+name: plant_config
+description: This plant is located in Minnesota
+sites:
+  site:
+    latitude: 46.7867
+    longitude: -92.1005
+    # resources:
+    #   solar_resource:
+    #     resource_model: GOESAggregatedSolarAPI
+    #     resource_parameters:
+    #       resource_year: 2013
+    #       resource_dir: ../11_hybrid_energy_plant/tech_inputs/weather/solar
+    #       resource_filename: 30.6617_-101.7096_psmv3_60_2013.csv
+# array of arrays containing left-to-right technology
+# interconnections; can support bidirectional connections
+# with the reverse definition.
+# in this example the natural gas combined cycle plant is behind-the-meter
+# and not connected to additional technologies.
+# hence the empty array.
+technology_interconnections:
+  - [data_center, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
+  - [water_feedstock, data_center, water, pipe]
+  # - [solar, battery, electricity, cable]
+  #                                                 # connect solar to battery
+  # - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+  #                                                                 # connect NG feedstock to NG plant
+  # - [battery, natural_gas_plant, [unmet_electricity_demand_out, electricity_demand]]
+  #                                                                                        # connect electricity demand to NG feedstock
+    # connect natural gas and battery to combiner
+  # - [solar, fin_combiner, electricity, cable]
+  # - [natural_gas_plant, fin_combiner, electricity, cable]
+# resource_to_tech_connections:
+#   # connect the wind resource to the wind technology
+#   - [site.solar_resource, solar, solar_resource_data]
+plant:
+  plant_life: 15
+  simulation:
+    n_timesteps: 8760
+finance_parameters:
+  finance_groups:
+    profast_model:
+      finance_model: ProFastLCO
+      model_inputs:
+        params:
+          analysis_start_year: 2032
+          installation_time: 36
+          inflation_rate: 0.0
+          discount_rate: 0.09
+          debt_equity_ratio: 0.93
+          property_tax_and_insurance: 0.03
+          total_income_tax_rate: 0.21
+          capital_gains_tax_rate: 0.15
+          sales_tax_rate: 0.0
+          debt_interest_rate: 0.07
+          debt_type: Revolving debt
+          loan_period_if_used: 0
+          cash_onhand_months: 1
+          admin_expense: 0.00
+        capital_items:
+          depr_type: MACRS
+          depr_period: 5
+          refurb: [0.]
+  cost_adjustment_parameters:
+    cost_year_adjustment_inflation: 0.025
+    target_dollar_year: 2026
+  finance_subgroups:
+    compute_load:
+      commodity: compute_load
+      commodity_stream: data_center
+      finance_groups: [profast_model]
+      technologies: [data_center, grid_buy, water_feedstock]
+    # water:
+    #   commodity: water
+    #   commmodity_stream: water_feedstock
+    #   finance_groups: [profast_model]
+    #   technologies: [data_center, water_feedstock]
