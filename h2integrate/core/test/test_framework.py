@@ -186,8 +186,7 @@ def test_unsupported_simulation_parameters(temp_dir):
 @pytest.mark.unit
 def test_check_time_step_with_model_bounds_allows_supported_dt():
     class DummyModel:
-        _time_step_min = 900
-        _time_step_max = 3600
+        _time_step_bounds = (900, 3600)
 
     model = object.__new__(H2IntegrateModel)
     model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
@@ -198,8 +197,7 @@ def test_check_time_step_with_model_bounds_allows_supported_dt():
 @pytest.mark.unit
 def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
     class DummyModel:
-        _time_step_min = 900
-        _time_step_max = 3600
+        _time_step_bounds = (900, 3600)  # (min, max) time step lengths compatible with this model
 
     model = object.__new__(H2IntegrateModel)
     model.plant_config = {"plant": {"simulation": {"dt": 7200}}}

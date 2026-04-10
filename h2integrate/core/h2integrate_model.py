@@ -613,12 +613,14 @@ class H2IntegrateModel:
     def _check_time_step(self, model_name, model_object):
         dt = int(self.plant_config["plant"]["simulation"]["dt"])
 
-        if hasattr(model_object, "_time_step_min") or hasattr(model_object, "_time_step_max"):
-            if dt < model_object._time_step_min or dt > model_object._time_step_max:
+        if hasattr(model_object, "_time_step_bounds"):
+            min_ts = model_object._time_step_bounds[0]
+            max_ts = model_object._time_step_bounds[1]
+            if dt < min_ts or dt > max_ts:
                 msg = (
                     f"Performance model {model_name} is compatible with time steps "
-                    f"between {model_object._time_step_min} and {model_object._time_step_max} "
-                    f"but a time step of {dt} (s) was specified"
+                    f"between {min_ts} (s) and {max_ts} (s), but a time step of {dt} (s) "
+                    "was specified"
                 )
                 raise ValueError(msg)
 
