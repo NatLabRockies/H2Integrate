@@ -20,13 +20,14 @@ class DataCenterPerformanceConfig(BaseConfig):
         compute_electrical_efficiency (float): Efficiency of converting electricity to
             compute load (0 < efficiency <= 1).
         cooling_load_ratio (float): Ratio of cooling load to compute load.
-        water_use_per_mwh (float): Water usage per compute load in galUS/MWh.
+        water_use_gal_per_mwh (float): Water usage per compute load in galUS/MWh.
     """
 
     system_capacity_mw: float = field(validator=gt_zero)
     compute_electrical_efficiency: float = field(validator=gt_zero)
     cooling_load_ratio: float = field(validator=gte_zero)
-    water_use_per_mwh: float = field(validator=gte_zero)
+    water_use_gal_per_mwh: float = field(validator=gte_zero)
+    demand_profile: int | float | list = field()
 
 
 class DataCenterPerformanceModel(PerformanceModelBaseClass):
@@ -43,7 +44,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
         compute_electrical_efficiency (float): Efficiency of converting electricity to
             compute load (0 < efficiency <= 1).
         cooling_load_ratio (float): Ratio of cooling load to compute load.
-        water_use_per_mwh (float): Water usage per MWh of compute load.
+        water_use_gal_per_mwh (float): Water usage per MWh of compute load.
         electricity_in (float array): Electricity input profile in MW/h.
         compute_load_demand (float array): Compute load demand profile in MW.
         water_in (float array): Water input profile in galUS/h.
@@ -60,19 +61,27 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
         self.commodity_amount_units = "MW*h"
 
     def setup(self):
-        super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = DataCenterPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        super().setup()
 
         self.add_input(
             f"{self.commodity}_demand",
-            val=0.0,
+            val=self.config.demand_profile,
             shape=n_timesteps,
             units=self.commodity_rate_units,
             desc="Data center compute load demand profile",
+        )
+
+        # Add rated capacity as an input with config value as default
+        self.add_input(
+            "system_capacity",
+            val=self.config.system_capacity_mw,
+            units="MW",
+            desc="Data center rated capacity in MW",
         )
 
         self.add_input(
@@ -100,14 +109,14 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            "unmet_electricity_demand",
+            "unmet_electricity_demand_out",
             val=0.0,
             shape=n_timesteps,
             units=self.commodity_rate_units,
             desc="Unmet electricity demand for data center",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
         """
         Compute the performance of the data center.
         
@@ -121,14 +130,14 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
             outputs: OpenMDAO outputs object for compute_load_out, water_consumed,
                 and unmet_electricity_demand.
         """
-        system_capacity = self.config.system_capacity_mw  # plant capacity in MW
+        # system_capacity = self.config.system_capacity_mw  # plant capacity in MW
         # max water consumption in galUS/h
-        max_water_consumption = system_capacity * self.config.water_use_per_mwh
+        max_water_consumption = inputs["system_capacity"] * self.config.water_use_gal_per_mwh
 
         # Compute load demand, saturated at maximum rated system capacity
         compute_load_demand = np.where(
-            inputs["compute_load_demand"] > system_capacity,
-            system_capacity,
+            inputs["compute_load_demand"] > inputs["system_capacity"],
+            inputs["system_capacity"],
             inputs["compute_load_demand"],
         )
 
@@ -146,7 +155,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
         # Determine the amount of electricity used as the min of total demand and available input
         electricity_used = np.minimum.reduce([total_electricity_demand, inputs["electricity_in"]])
 
-        water_demand = electrical_compute_load_demand * self.config.water_use_per_mwh
+        water_demand = electrical_compute_load_demand * self.config.water_use_gal_per_mwh
 
         # available feedstock, saturated at maximum system feedstock consumption
         water_available = np.where(
@@ -157,9 +166,17 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
 
         water_consumed = np.minimum.reduce([water_demand, water_available])
 
-        outputs["unmet_electricity_demand"] = total_electricity_demand - electricity_used
+        max_production = inputs["system_capacity"] * len(compute_load_demand) * (self.dt / 3600)
+
+        outputs["unmet_electricity_demand_out"] = total_electricity_demand - electricity_used
         outputs["water_consumed"] = water_consumed
         outputs["compute_load_out"] = compute_load_demand
+        outputs["total_compute_load_produced"] = np.sum(compute_load_demand) * (self.dt / 3600)
+        outputs["capacity_factor"] = outputs["total_compute_load_produced"].sum() / max_production
+        outputs["annual_compute_load_produced"] = outputs["total_compute_load_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["rated_compute_load_production"] = inputs["system_capacity"]
 
 
 @define(kw_only=True)
@@ -204,11 +221,11 @@ class DataCenterCostModel(CostModelBaseClass):
         self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        super().setup()
         self.config = DataCenterCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
+        super().setup()
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.add_input(
@@ -243,11 +260,11 @@ class DataCenterCostModel(CostModelBaseClass):
             desc="Variable operating expenses per unit generation",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
         """
         Compute capital and operating costs for the data center.
         """
-        system_capacity_mw = inputs["system_capacity_mw"]
+        system_capacity_mw = self.config.system_capacity_mw
         compute_load_out = inputs["compute_load_out"]  # MW hourly profile
         capex_per_mw = inputs["capex_per_mw"]
         fixed_opex_per_mw_per_year = inputs["fixed_opex_per_mw_per_year"]
