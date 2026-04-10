@@ -147,7 +147,6 @@ def load_plant_yaml(finput):
             "plant_config['plant']['simulation']['n_timesteps'] is set to 8760."
         )
         raise ValueError(msg)
-
     if int(plant_config["plant"]["simulation"]["dt"]) != 3600:
         msg = (
             "H2Integrate does not currently support simulations with a time step that is "
