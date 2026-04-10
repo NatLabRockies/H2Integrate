@@ -4,9 +4,11 @@ Pytest configuration file.
 
 import os
 import shutil
+from pathlib import Path
 
 import pytest
 
+from h2integrate import EXAMPLE_DIR
 from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
 
 
@@ -67,9 +69,39 @@ def pytest_collection_modifyitems(config, items):
         raise pytest.UsageError(msg)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def temp_dir(tmp_path_factory):
     """Temp directory for YAML outputs."""
     temp_dir = tmp_path_factory.mktemp("temp_dir")
     yield temp_dir
-    shutil.rmtree(str(temp_dir))
+
+
+@pytest.fixture(scope="module")
+def temp_dir_module(tmp_path_factory):
+    """Temp directory for YAML outputs."""
+    temp_dir = tmp_path_factory.mktemp("temp_dir")
+    yield temp_dir
+
+
+@pytest.fixture(scope="function")
+def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
+    original = EXAMPLE_DIR / example_folder
+    shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
+    if resource_example_folder is not None:
+        secondary = EXAMPLE_DIR / resource_example_folder
+        shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
+    os.chdir(temp_dir / example_folder)
+    yield temp_dir / example_folder
+    os.chdir(Path(__file__).parent)
+
+
+@pytest.fixture(scope="function")
+def temp_copy_of_example_module_scope(temp_dir_module, example_folder, resource_example_folder):
+    original = EXAMPLE_DIR / example_folder
+    shutil.copytree(original, temp_dir_module / example_folder, dirs_exist_ok=True)
+    if resource_example_folder is not None:
+        secondary = EXAMPLE_DIR / resource_example_folder
+        shutil.copytree(secondary, temp_dir_module / resource_example_folder, dirs_exist_ok=True)
+    os.chdir(temp_dir_module / example_folder)
+    yield temp_dir_module / example_folder
+    os.chdir(Path(__file__).parent)

@@ -45,7 +45,7 @@ Using OpenMDAO for this gives quite a few benefits:
 - internal units handling and conversion
 - built-in nonlinear solvers to resolve model coupling
 - built-in optimization and parameter sweep drivers
-- multiple existing NREL tools use OpenMDAO, including [WISDEM](https://github.com/WISDEM/WISDEM/) and [WEIS](https://github.com/WISDEM/WEIS), so we can draw from institutional knowledge
+- multiple existing NLR tools use OpenMDAO, including [WISDEM](https://github.com/NLRWindSystems/WISDEM/) and [WEIS](https://github.com/NLRWindSystems/WEIS), so we can draw from institutional knowledge
 - set up with gradient-based optimization in mind, which is not currently a focus for H2Integrate but this positions the tool well for potential future additions
 - parallelization done using MPI, which is also not currently a focus but useful for the future
 
@@ -60,7 +60,7 @@ Additionally, we can code H2Integrate in a way to minimize some of the potential
 
 ## Where does HOPP come into play?
 
-[HOPP](https://github.com/NREL/HOPP) is a well-structured and useful tool that analyzes hybrid plants producing electricity.
+[HOPP](https://github.com/NatLabRockies/HOPP) is a well-structured and useful tool that analyzes hybrid plants producing electricity.
 H2Integrate historically calls HOPP to obtain the plant's outputted electricity, which is then used downstream to feed into electrolyzers, steel, and other components.
 The current setup of H2Integrate largely works in the same way.
 

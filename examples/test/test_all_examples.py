@@ -1,5 +1,4 @@
 import os
-import shutil
 import importlib
 from pathlib import Path
 
@@ -8,24 +7,12 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR
+from h2integrate import ROOT_DIR
 from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 ROOT = Path(__file__).parents[1]
-
-
-@pytest.fixture(scope="function")
-def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
-    original = EXAMPLE_DIR / example_folder
-    shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
-    if resource_example_folder is not None:
-        secondary = EXAMPLE_DIR / resource_example_folder
-        shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
-    os.chdir(temp_dir / example_folder)
-    yield temp_dir / example_folder
-    os.chdir(Path(__file__).parent)
 
 
 # docs fencepost start: DO NOT REMOVE
@@ -1943,6 +1930,7 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_mapping", None)]
 )
+@pytest.mark.skipif(importlib.util.find_spec("geopandas") is None, reason="`gis` not installed")
 def test_iron_mapping_example(subtests, temp_copy_of_example):
     import geopandas as gpd
     import matplotlib

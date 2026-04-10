@@ -1,1 +1,5 @@
-from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
+from test.conftest import (  # noqa: F401
+    temp_dir,
+    temp_copy_of_example,
+    pytest_collection_modifyitems,
+)

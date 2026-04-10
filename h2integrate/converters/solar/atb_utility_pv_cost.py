@@ -10,9 +10,9 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBUtilityPVCostModel with costs based on AC capacity.
     Recommended to use with utility-scale PV models. More information on
     ATB methodology and representative utility-scale PV technologies can be found
-    `here <https://atb.nrel.gov/electricity/2024/utility-scale_pv>`_
+    `here <https://atb.nlr.gov/electricity/2024/utility-scale_pv>`_
     Reference cost values can be found on the `Solar - Utility PV` sheet of the
-    `NREL ATB workbook <https://atb.nrel.gov/electricity/2024/data>`_.
+    `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
 
     Attributes:
         capex_per_kWac (float|int): capital cost of solar-PV system in $/kW-AC

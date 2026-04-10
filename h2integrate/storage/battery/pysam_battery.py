@@ -72,7 +72,7 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component wrapping the PySAM Battery Performance model.
 
-    This class integrates the NREL PySAM ``BatteryStateful`` model into
+    This class integrates the NLR PySAM ``BatteryStateful`` model into
     an OpenMDAO component. It provides inputs and outputs for battery
     capacity, charge/discharge power, state of charge, and unmet or unused
     demand.
