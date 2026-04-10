@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero
+from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -99,9 +99,9 @@ class QuinnNuclearCostModelConfig(CostModelBaseConfig):
     """
 
     system_capacity_kw: float = field(validator=gt_zero)
-    capex_per_kw: float = field(validator=gt_zero)
-    fixed_opex_per_kw_year: float = field(validator=gt_zero)
-    variable_opex_per_mwh: float = field(validator=gt_zero)
+    capex_per_kw: float = field(validator=gte_zero)
+    fixed_opex_per_kw_year: float = field(validator=gte_zero)
+    variable_opex_per_mwh: float = field(validator=gte_zero)
     reference_capacity_kw: float | None = field(default=None)
     capex_scaling_exponent: float = field(default=1.0, validator=gt_zero)
 

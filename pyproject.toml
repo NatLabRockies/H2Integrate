@@ -28,8 +28,8 @@ authors = [
   {name = "Jennifer King"},
 ]
 maintainers = [
-  {name = "John Jasa", email = "john.jasa@nrel.gov"},
-  {name = "Christopher Bay", email = "christopher.bay@nrel.gov"},
+  {name = "John Jasa", email = "john.jasa@nlr.gov"},
+  {name = "Christopher Bay", email = "christopher.bay@nlr.gov"},
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
 description = "Holistic Hybrids Optimization and Design Tool"
@@ -59,7 +59,7 @@ dependencies = [
   "floris",
   "hopp>=3.3.0",
   "turbine-models>=0.2.1",
-  "wombat>=0.13.2",
+  "wombat>=0.13.3",
 ]
 keywords = [
     "python3",
@@ -86,10 +86,10 @@ classifiers = [  # https://pypi.org/classifiers/
 ]
 
 [project.urls]
-source = "https://github.com/NREL/H2Integrate"
+source = "https://github.com/NatLabRockies/H2Integrate"
 documentation = "https://h2integrate.readthedocs.io/"
-issues = "https://github.com/NREL/H2Integrate/issues"
-changelog = "https://github.com/NREL/H2Integrate/blob/main/CHANGELOG.md"
+issues = "https://github.com/NatLabRockies/H2Integrate/issues"
+changelog = "https://github.com/NatLabRockies/H2Integrate/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 develop = [
@@ -100,7 +100,6 @@ develop = [
     "pytest-cov",
     "ruff",
     "sphinxcontrib-napoleon",
-    "h2integrate[gis,ard]",
     "yamlfix"
 ]
 examples = [
@@ -112,7 +111,8 @@ gis = [
   "contextily"
 ]
 ard = ["ard-nrel"]
-all = ["h2integrate[develop,examples]"]
+extras = ["h2integrate[gis,ard]"]
+all = ["h2integrate[develop,extras,examples]"]
 
 [tool.setuptools]
 include-package-data = true

@@ -134,11 +134,11 @@ failing test cases.
 
 
 <!--
-__ For NREL use __
+__ For NLR use __
 Release checklist:
 - [ ] Update the version in h2integrate/__init__.py
 - [ ] Verify docs builds correctly
-- [ ] Create a tag on the main branch in the NREL/H2Integrate repository and push
+- [ ] Create a tag on the main branch in the NatLabRockies/H2Integrate repository and push
 - [ ] Ensure the Test PyPI build is successful
 - [ ] Create a release on the main branch
 -->

@@ -143,7 +143,7 @@ def find_file(filename: str | Path, root_folder: str | Path | None = None):
             f"the root directory {root_folder}."
         )
     raise ValueError(
-        f"Cannot find unique file: found {len(files_cwd)} files relative to cwd, "
+        f"Cannot find unique file for {filename}: found {len(files_cwd)} files relative to cwd, "
         f"{len(files_h2i)} files relative to H2Integrate root directory, "
         f"{len(files)} files relative to the root folder."
     )

@@ -447,7 +447,7 @@ class ProFastBase(om.ExplicitComponent):
 
     Reference:
         ProFAST Documentation:
-        https://www.nrel.gov/hydrogen/profast-access
+        https://www.nlr.gov/hydrogen/profast-access
 
 
     Attributes:

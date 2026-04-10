@@ -43,7 +43,7 @@ The modeling approach in this performance model is informed by:
 The modeling approach in this cost model is based on:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 - NETL Quality Guidelines: <https://doi.org/10.2172/1567736>
-- Drill cost curves are based on an adapted [GETEM model](https://sam.nrel.gov/geothermal.html)
+- Drill cost curves are based on an adapted [GETEM model](https://sam.nlr.gov/geothermal.html)
 
 ## Hydrogen Surface Processing Models
 

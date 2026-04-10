@@ -1,53 +1,92 @@
 name: Testing
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
     - cron: 0 0 * * MON
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
-        optional: [false]
+        os:
+          - ubuntu-latest
+          # - windows-latest  # Temporarily disabled
+        python-version:
+          - '3.11'
+          - '3.13'
+        test-type:
+          - unit
+          - regression
+          - integration
+        optional:
+          - true
         include:
           - python-version: '3.11'
-            optional: true
+            optional: false
+            os: ubuntu-latest
+            test-type: unit
+          - python-version: '3.11'
+            optional: false
+            os: ubuntu-latest
+            test-type: regression
+          - python-version: '3.11'
+            optional: false
+            os: ubuntu-latest
+            test-type: integration
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: conda-incubator/setup-miniconda@v3
         with:
+          miniconda-version: latest
+          auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+          auto-activate: true
+          activate-environment: h2integrate
+      - name: Install base dependencies
+        shell: bash -el {0}
         env:
           SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: true
         run: |
-          sudo apt-get update && sudo apt-get install -y libglpk-dev glpk-utils coinor-cbc
+          conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
-          if [ "${{ matrix.optional }}" = "true" ]; then
-            pip install ".[develop]"
-          else
-            pip install ".[develop]"
-          fi
+          pip install ".[develop]"
+      - if: ${{ matrix.optional }}
+        name: Install optional dependencies
+        shell: bash -el {0}
+        run: |
+          conda install -y -c conda-forge wisdem
+          pip install ".[extras]"
       - name: Create env file
         run: |
           touch .env
-      - name: Run unit tests
-        run: |
-          pytest . -m unit --cov=h2integrate --cov-report=xml:unit-coverage.xml
-      - name: Run regression tests
-        run: |
-          pytest . -m regression --cov=h2integrate --cov-report=xml:regression-coverage.xml
-      - name: Run integration tests
-        run: |
-          pytest . -m integration --cov=h2integrate --cov-report=xml:integration-coverage.xml
-      - name: Upload unit coverage to
-        uses: codecov/codecov-action@v5
+      - name: Run ${{ matrix.test-type }} tests
+        shell: bash -el {0}
+        run: pytest . -m ${{ matrix.test-type }} --cov=h2integrate --cov-report=lcov:./${{ matrix.test-type }}-coverage.lcov
+      - name: Upload test coverage
+        uses: coverallsapp/github-action@v2
+        if: contains(matrix.os, 'ubuntu') && contains(matrix.python-version, '3.13')
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: unit-coverage.xml, regression-coverage.xml, integration-coverage.xml
-          flags: unit,regression,integration
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          files: ./${{ matrix.test-type }}-coverage.lcov
+          flag-name: ${{ matrix.test-type }}
+          parallel: true
+          fail-on-error: false
+  coverage-finish:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          parallel-finished: true
+          fail-on-error: false
