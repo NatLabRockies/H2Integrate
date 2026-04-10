@@ -46,6 +46,7 @@
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Modified CI setup so Windows is temporarily disabled and also so unit, regression, and integration tests are run in separate jobs to speed up testing and provide more information on test failures. [PR 668](https://github.com/NatLabRockies/H2Integrate/pull/668)
+- Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653)
 
 ## 0.7.2 [April 9, 2026]
 
