@@ -206,7 +206,7 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
         ValueError,
         match=(
             r"Performance model DummyModel is compatible with time steps between "
-            r"900 and 3600 but a time step of 7200 \(s\) was specified"
+            r"900 \(s\) and 3600 \(s\), but a time step of 7200 \(s\) was specified"
         ),
     ):
         model._check_time_step("DummyModel", DummyModel)
