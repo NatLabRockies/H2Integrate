@@ -1342,9 +1342,10 @@ class H2IntegrateModel:
     def run(self):
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
-        if self.state < State.RUN:
+        if self.state < State.SETUP:
             self.prob.setup()
 
+        if self.state < State.RUN:
             # OpenMDAO will skip this step if it encounters an issue leading to silent failures
             # TODO: remove this step when OpenMDAO implements cursor closure
             if self.recorder_path is not None:
