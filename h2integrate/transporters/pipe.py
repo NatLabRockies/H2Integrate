@@ -32,7 +32,7 @@ class PipePerformanceModel(om.ExplicitComponent):
         if transport_item == "natural_gas":
             units = "MMBtu/h"
         elif transport_item == "water":
-            units = "galUS"
+            units = "galUS/h"
         elif transport_item == "co2":
             units = "kg/h"
         else:
