@@ -36,6 +36,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     different grid connection points (for example, one for buying upstream and
     another for selling downstream).
 
+    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+
     Inputs
         interconnection_size (float): Maximum power capacity for grid connection (kW).
         electricity_in (array): Power flowing into the grid (selling) (kW).
@@ -176,8 +178,8 @@ class GridCostModel(CostModelBaseClass):
     - Revenue from electricity sales (sell mode)
     - Support for time-varying electricity prices
 
-    Note: Although the electricity units are in kW and the prices are in USD/kWh,
-    this model assumes that each timestep represents 1 hour.
+    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+
     """
 
     _time_step_bounds = (300, 3600)  # (min, max) time step lengths compatible with this model
