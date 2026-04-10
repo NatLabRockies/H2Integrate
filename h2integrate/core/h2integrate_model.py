@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
+from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.supported_models import (
@@ -533,7 +534,7 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
-                    om_model_object = tech_group.add_subsystem(tech_name, comp, promotes=["*"])
+                    om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
@@ -1362,6 +1363,9 @@ class H2IntegrateModel:
         """
         self.prob.setup()
         self.state = State.SETUP
+
+        for tech, tech_info in self.technology_config["technologies"].items():
+            check_inputs(self.prob, tech, tech_info, self.tech_config_path)
 
     def run(self):
         # do model setup based on the driver config

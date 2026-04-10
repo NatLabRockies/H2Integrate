@@ -35,6 +35,7 @@
 - Added oxygen production metrics and as outputs to `ECOElectrolyzerPerformanceModel` [PR 642](https://github.com/NatLabRockies/H2Integrate/pull/642)
 - Bugfix to allow for one resource to be connected to multiple technologies [PR 655](https://github.com/NatLabRockies/H2Integrate/pull/655)
 - Removed the last of the logic that was based on technology names rather than model classes [PR 654](https://github.com/NatLabRockies/H2Integrate/pull/654)
+- Add input checking for extraneous or mis-categorized input parameters for technologies that have a defined control strategy or dispatch rule set [PR 647](https://github.com/NatLabRockies/H2Integrate/pull/647)
 - Bumps the `coin-or-cbc` dependency to at least 2.10.12 to enable easy Windows compatibility. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Uses the optional installation parameter `extras` to combine all analysis extras, and remove them
   from the `develop` options. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)

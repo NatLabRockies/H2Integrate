@@ -332,7 +332,7 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
 
         self.config = ElectricArcFurnaceCostBaseConfig.from_dict(
             config_dict,
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 

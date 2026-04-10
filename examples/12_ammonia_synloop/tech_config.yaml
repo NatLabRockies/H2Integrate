@@ -60,10 +60,7 @@ technologies:
     dispatch_rule_set:
       model: PyomoDispatchGenericConverter
     model_inputs:
-      performance_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
-      dispatch_rule_parameters:
+      shared_parameters:
         commodity: electricity
         commodity_rate_units: kW
   battery:
@@ -81,13 +78,10 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 96.0  # kW
         max_capacity: 96.0  # kWh
-        n_control_window: 24
         init_soc_fraction: 0.9
         max_soc_fraction: 1.0
         min_soc_fraction: 0.2
-        system_commodity_interface_limit: 1e12
       performance_parameters:
-        system_model_source: pysam
         chemistry: LFPGraphite
         demand_profile: 640000  # 640 MW
       cost_parameters:
@@ -95,6 +89,9 @@ technologies:
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
+      control_parameters:
+        n_control_window: 24
+        system_commodity_interface_limit: 1e12
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
@@ -127,13 +124,13 @@ technologies:
       shared_parameters:
         commodity: hydrogen
         commodity_rate_units: kg/h
+        commodity_amount_units: kg
         set_demand_as_avg_commodity_in: true
       performance_parameters:
         min_soc_fraction: 0.0
         max_soc_fraction: 1.0
         charge_efficiency: 1.0
         discharge_efficiency: 1.0
-        commodity_amount_units: kg
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities

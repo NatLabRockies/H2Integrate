@@ -327,7 +327,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
 
         self.config = IronReductionCostBaseConfig.from_dict(
             config_dict,
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 

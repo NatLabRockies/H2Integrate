@@ -37,7 +37,7 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
     def setup(self):
         self.config = HOPPComponentModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 
