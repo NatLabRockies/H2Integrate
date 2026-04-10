@@ -151,6 +151,10 @@ from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
 from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
     StimulatedGeoH2PerformanceModel,
 )
+from h2integrate.converters.data_center.data_center import (
+    DataCenterCostModel,
+    DataCenterPerformanceModel,
+)
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
 )
@@ -259,6 +263,8 @@ supported_models = {
     "QuinnNuclearPerformanceModel": QuinnNuclearPerformanceModel,
     "QuinnNuclearCostModel": QuinnNuclearCostModel,
     "NaturalGasCostModel": NaturalGasCostModel,
+    "DataCenterPerformanceModel": DataCenterPerformanceModel,
+    "DataCenterCostModel": DataCenterCostModel,
     # Transport
     "cable": CablePerformanceModel,
     "pipe": PipePerformanceModel,
