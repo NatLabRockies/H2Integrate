@@ -44,6 +44,7 @@
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+- Adds `PeakLoadManagementOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
 
 ## 0.7.2 [April 9, 2026]
 
