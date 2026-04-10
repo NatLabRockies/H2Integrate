@@ -18,15 +18,15 @@ The `commodity_type` and `description` are used in the finance model naming conv
 (finance:supportedmodels)=
 ## Currently supported general finance models
 
-- [``ProFastLCO``](profastcomp:profastcompmodel): calculates levelized cost of commodity using [ProFAST](https://github.com/NREL/ProFAST).
-- [``ProFastNPV``](profastnpv:profastnpvmodel): calculates the net present value of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
+- [``ProFastLCO``](profastcomp:profastcompmodel): calculates levelized cost of commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
+- [``ProFastNPV``](profastnpv:profastnpvmodel): calculates the net present value of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
 - [``NumpyFinancialNPV``](numpyfinancialnpvfinance:numpyfinancialnpvmodel): calculates the net present value of a commodity using the [NumPy Financial npv](https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv) method.
 
 ## Custom finance models
 
 A general finance model can be defined similarly to a custom technology model. A custom finance model should be defined in the plant configuration file within the `finance_groups` section under `finance_parameters`.
 
-Below shows an example, similar to the [Wind Electrolyzer Example](https://github.com/NREL/H2Integrate/tree/develop/examples/08_wind_electrolyzer/) of how to define a custom finance model within the `plant_config.yaml` file:
+Below shows an example, similar to the [Wind Electrolyzer Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/08_wind_electrolyzer/) of how to define a custom finance model within the `plant_config.yaml` file:
 ```yaml
 finance_parameters:
   finance_groups:

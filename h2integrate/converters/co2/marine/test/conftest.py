@@ -2,7 +2,11 @@ import importlib
 
 import pytest
 
-from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
+from test.conftest import (  # noqa: F401
+    temp_dir,
+    temp_copy_of_example,
+    pytest_collection_modifyitems,
+)
 
 
 has_mcm = importlib.util.find_spec("mcm") is not None
@@ -23,7 +27,7 @@ def plant_config():
 
 
 # docs fencepost start: DO NOT REMOVE
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def driver_config(temp_dir):  # noqa: F811
     driver_config = {
         "general": {

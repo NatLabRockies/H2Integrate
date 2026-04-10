@@ -54,16 +54,16 @@ $$
 
 - `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the PV model is initialized using `Pvwattsv8.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the PV model is initialized using `Pvwattsv8.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
 - `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"PVWattsSingleOwner"`. The available options and their default parameters are listed below:
-    - [PVWattsCommercial](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommercial.json)
-    - [PVWattsCommunitySolar](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommunitySolar.json)
-    - [PVWattsHostDeveloper](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsHostDeveloper.json)
-    - [PVWattsMerchantPlant](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsMerchantPlant.json)
-    - [PVWattsNone](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsNone.json)
-    - [PVWattsResidential](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsResidential.json)
-    - [PVWattsSaleLeaseback](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSaleLeaseback.json)
-    - [PVWattsSingleOwner](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSingleOwner.json)
-    - [PVWattsThirdParty](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsThirdParty.json)
-    - [PVWattsAllEquityPartnershipFlip](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsAllEquityPartnershipFlip.json)
+    - [PVWattsCommercial](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommercial.json)
+    - [PVWattsCommunitySolar](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommunitySolar.json)
+    - [PVWattsHostDeveloper](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsHostDeveloper.json)
+    - [PVWattsMerchantPlant](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsMerchantPlant.json)
+    - [PVWattsNone](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsNone.json)
+    - [PVWattsResidential](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsResidential.json)
+    - [PVWattsSaleLeaseback](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSaleLeaseback.json)
+    - [PVWattsSingleOwner](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSingleOwner.json)
+    - [PVWattsThirdParty](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsThirdParty.json)
+    - [PVWattsAllEquityPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsAllEquityPartnershipFlip.json)
 - `pysam_options` (dict): The top-level keys correspond to the Groups available in the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html). The next level is the individual attributes a user could set and a full list is available through the PySAM documentation of Pvwattsv8 module. The Groups that users may want to specify specific options for are the:
     - [SystemDesign](#systemdesign-group)
     - [SolarResource](#solarresource-group)

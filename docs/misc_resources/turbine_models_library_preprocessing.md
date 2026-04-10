@@ -13,9 +13,9 @@ kernelspec:
 
 # Turbine Models Library Pre-Processing Tools
 
-The [turbine-models package](https://github.com/NREL/turbine-models/tree/main) hosts wind turbine data for a variety of wind turbines and has tools that can streamline the process to run new turbines with the [PySAM Windpower model](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) or [FLORIS](https://github.com/NREL/floris/tree/main).
+The [turbine-models package](https://github.com/NatLabRockies/turbine-models/tree/main) hosts wind turbine data for a variety of wind turbines and has tools that can streamline the process to run new turbines with the [PySAM Windpower model](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) or [FLORIS](https://github.com/NatLabRockies/floris/tree/main).
 
-The full list of turbine models available in the turbine-models library can be found [here](https://github.com/NREL/turbine-models/blob/main/turbine_models/supported_turbines.py)
+The full list of turbine models available in the turbine-models library can be found [here](https://github.com/NatLabRockies/turbine-models/blob/main/turbine_models/supported_turbines.py)
 
 H2Integrate has preprocessing tools that leverage the functionality available in the turbine-models library. The function `export_turbine_to_pysam_format()` will save turbine model specifications formatted for the PySAM Windpower model. The PySAM Windpower model is wrapped in H2I and can be utilized with the "pysam_wind_plant_performance" model. Example usage of the `export_turbine_to_pysam_format()` function is demonstrated in the following section using Example 8.
 

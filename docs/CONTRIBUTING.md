@@ -3,9 +3,9 @@
 We welcome contributions in the form of bug reports, bug fixes, improvements to the documentation,
 ideas for enhancements (or the enhancements themselves!).
 
-You can find a [list of current issues](https://github.com/NREL/H2Integrate/issues) in the project's
+You can find a [list of current issues](https://github.com/NatLabRockies/H2Integrate/issues) in the project's
 GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submitting a
-[pull request](https://github.com/NREL/H2Integrate/pulls).
+[pull request](https://github.com/NatLabRockies/H2Integrate/pulls).
 
 ## Bug Reports
 
@@ -21,7 +21,7 @@ GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submi
 * Docstrings are required and should follow the
   [Google style](https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html).
 * When you start working on a pull request, start by creating a new branch pointing at the latest
-  commit on [main](https://github.com/NREL/H2Integrate).
+  commit on [main](https://github.com/NatLabRockies/H2Integrate).
 * Code formatting is enforced using pre-commit hooks and is required for any code pushed up to the repository. The pre-commit package is included in the developer install of the repository. The pre-commit hooks can be installed by running
 ```bash
 pre-commit install
@@ -31,7 +31,7 @@ in the repository directory. This will automatically run the pre-commit formatti
 git commit -am "<Your commit message here>"
 ```
 which will re-add the reformatted files to the commit.
-* The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NREL/H2Integrate/blob/main/LICENSE).
+* The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NatLabRockies/H2Integrate/blob/main/LICENSE).
 
 ## Documentation
 
@@ -89,7 +89,7 @@ pytest tests/h2integrate/test_hybrid.py::test_h2integrate_system
 ```
 
 When you push to your fork, or open a PR, your tests will be run against the
-[Continuous Integration (CI)](https://github.com/NREL/HOPP/actions) suite. This will start a build
+[Continuous Integration (CI)](https://github.com/NatLabRockies/HOPP/actions) suite. This will start a build
 that runs all tests on your branch against multiple Python versions, and will also test
 documentation builds.
 
@@ -142,7 +142,7 @@ met the following steps should be taken to create a new release
     ```
 
 6. Check that the
-   [Test PyPI GitHub Action](https://github.com/NREL/H2Integrate/actions/workflows/publish_to_test_pypi.yml)
+   [Test PyPI GitHub Action](https://github.com/NatLabRockies/H2Integrate/actions/workflows/publish_to_test_pypi.yml)
    has run successfully.
    1. If the action failed, identify and fix the issue, then
    2. delete the local and remote tag using the following (replace "v0.1" in all instances just like
@@ -155,7 +155,7 @@ met the following steps should be taken to create a new release
 
    3. Start back at step 1.
 7. When the Test PyPI Action has successfully run,
-   [create a new release](https://github.com/NREL/H2Integrate/releases/new) using the tag created in
+   [create a new release](https://github.com/NatLabRockies/H2Integrate/releases/new) using the tag created in
    step 5.
 
 ### Patches
@@ -167,4 +167,4 @@ below:
 1. All CI tests pass and the patch version has been bumped according to the
    [semantic versioning guidelines](https://semver.org/).
 2. Follow steps 4 through 7 above.
-3. Merge the NREL main branch back into the develop branch and push the changes.
+3. Merge the NLR main branch back into the develop branch and push the changes.
