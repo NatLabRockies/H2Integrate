@@ -205,7 +205,7 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
     with pytest.raises(
         ValueError,
         match=(
-            r"Performance model DummyModel is compatible with time steps between "
+            r"Model DummyModel is compatible with time steps between "
             r"900 \(s\) and 3600 \(s\), but a time step of 7200 \(s\) was specified"
         ),
     ):
@@ -223,7 +223,7 @@ def test_check_time_step_without_bounds_requires_one_hour_dt():
     with pytest.raises(
         ValueError,
         match=(
-            r"Performance model 'DummyModelNoBounds' only supports a 1-hour time step "
+            r"Model 'DummyModelNoBounds' only supports a 1-hour time step "
             r"\(dt=3600\), but dt=1800 was specified"
         ),
     ):
