@@ -34,6 +34,7 @@ class TestBasicH2Costs:
                         "plant_life": self.useful_life,
                         "simulation": {
                             "n_timesteps": self.n_timesteps,
+                            "dt": 3600,
                         },
                     },
                 },
