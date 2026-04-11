@@ -70,7 +70,9 @@ Depending on the models used and the size of the system, H2Integrate can simulat
 Additionally, H2Integrate tracks the flow of electricity, molecules (e.g., hydrogen, ammonia, methanol), and other products (e.g., steel) between different technologies in the energy system.
 
 ```{note}
- Some models are now able to operate with non-hourly time steps. Appropriate time step bounds are included as class attributes when non-hourly time steps are permitted. Check individual model docs and definitions for time step bounds for individual models. All models in a given simulation must be compatible with the specified time step.
+Some models are now able to operate with non-hourly time steps.
+Appropriate time step bounds are included as class attributes when non-hourly time steps are permitted.
+Check individual model docs and definitions for time step bounds for individual models. All models in a given simulation must be compatible with the specified time step.
 ```
 
 For each technology there are 4 different types of models: control, performance, cost, and finance. These model categories allow for modular pieces to be brought in or re-used throughout H2Integrate, as well as ease of development and organization. Note that the only required models for a technology are performance and cost, while control and finance are optional. The figure below shows these four categories and some of the technologies included in H2Integrate. For a full list of models available, please see [Model Overview](user_guide/model_overview.md).

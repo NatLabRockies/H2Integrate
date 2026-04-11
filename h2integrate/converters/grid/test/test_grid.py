@@ -306,26 +306,32 @@ def test_non_hourly_dt_demand_profile(subtests, plant_config, n_timesteps):
 
     prob.run_model()
 
+    interconnection_size = tech_config["model_inputs"]["shared_parameters"]["interconnection_size"]
+    dt_seconds = plant_config["plant"]["simulation"]["dt"]
+    expected = np.clip(demand, 0, interconnection_size)
+    expected_total = expected.sum() * dt_seconds / 3600.0
+    fraction_of_year = n_timesteps * dt_seconds / 31536000.0
+    expected_annual_value = expected_total / fraction_of_year
+
     with subtests.test(f"annual_{commodity}_produced length"):
         electricity_out = prob.get_val("grid.electricity_out", units="kW")
-        # Values above 100000 should be clipped
-        expected = np.clip(demand, 0, 100000)
         np.testing.assert_array_almost_equal(electricity_out, expected)
 
     with subtests.test("cf"):
         cf = prob.get_val("grid.capacity_factor", units="unitless")
-        expected = np.full(30, 0.55)
-        np.testing.assert_array_almost_equal(cf, expected)
+        expected_capacity_factor = expected.mean() / interconnection_size
+        assert cf == pytest.approx(expected_capacity_factor)
 
     with subtests.test("total production"):
         total_energy = prob.get_val(f"grid.total_{commodity}_produced", units="kW*h")
-        expected = 45833.33  # (demand.sum()-10000)*(300/3600) to adjust to non-hourly
-        assert total_energy == pytest.approx(expected)
+        np.testing.assert_allclose(np.atleast_1d(total_energy), [expected_total])
 
     with subtests.test("annual production"):
         annual_energy = prob.get_val(f"grid.annual_{commodity}_produced", units="kW*h/year")
-        expected = 481799999.99999994  # total_energy*(min/year)/(min in simulation)
-        assert annual_energy == pytest.approx(expected)
+        np.testing.assert_allclose(
+            np.atleast_1d(annual_energy),
+            np.full(np.atleast_1d(annual_energy).shape, expected_annual_value),
+        )
 
 
 @pytest.mark.integration
