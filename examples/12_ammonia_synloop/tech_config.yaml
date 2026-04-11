@@ -149,7 +149,7 @@ technologies:
         rated_capacity: 50.0  # metric tonnes of N2/hour
       cost_parameters:
         cost_year: 2022
-        price: 0.0
+        price: 5.0
         annual_cost: 0.
         start_up_cost: 0.0
   electricity_feedstock:

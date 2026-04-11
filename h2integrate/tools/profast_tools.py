@@ -134,11 +134,16 @@ def make_price_breakdown(price_breakdown, pf_config):
             total_price_capex += cash_outflow_prices.loc[
                 cash_outflow_prices["Name"] == item, "NPV"
             ].tolist()[0]
-        for item in capital_items:
-            capex_fraction[item] = (
-                cash_outflow_prices.loc[cash_outflow_prices["Name"] == item, "NPV"].tolist()[0]
-                / total_price_capex
-            )
+        if total_price_capex != 0:
+            for item in capital_items:
+                capex_fraction[item] = (
+                    cash_outflow_prices.loc[cash_outflow_prices["Name"] == item, "NPV"].tolist()[0]
+                    / total_price_capex
+                )
+        else:
+            for item in capital_items:
+                capex_fraction[item] = 0
+
     cap_expense = (
         price_breakdown.loc[price_breakdown["Name"] == "Repayment of debt", "NPV"].tolist()[0]
         + price_breakdown.loc[price_breakdown["Name"] == "Interest expense", "NPV"].tolist()[0]

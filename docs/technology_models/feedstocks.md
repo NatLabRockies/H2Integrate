@@ -1,6 +1,6 @@
 # Feedstock Models
 
-Feedstock models in H2Integrate represent any resource input that is consumed by technologies in your plant, such as natural gas, water, electricity from the grid, or any other material input.
+Feedstock models in H2Integrate represent any resource input that is consumed by technologies in your plant that comes from outside your designed system boundary (and not generated internally), such as natural gas, water, electricity from the grid, or any other material input.
 The feedstock modeling approach provides a flexible way to track resource consumption and calculate associated costs for any type of input material or energy source.
 Please see the example `16_natural_gas` in the `examples` directory for a complete setup using natural gas as a feedstock.
 
@@ -19,6 +19,7 @@ Each feedstock type requires two model components:
    - Calculates consumption costs based on actual usage
    - Takes `{commodity}_consumed` as input
    - Located after all consuming technologies in the chain
+   - Calculates the capacity factor of the consumed feedstock
 
 ### Technology Interconnections
 
@@ -56,8 +57,8 @@ ng_feedstock:
             commodity_amount_units: "MMBtu" # optional, if not specified defaults to `commodity_rate_units*h`
             cost_year: 2023
             price: 4.2 # cost in USD/commodity_amount_units
-            annual_cost: 0.
-            start_up_cost: 100000.
+            annual_cost: 0. #cost in USD/year
+            start_up_cost: 100000. #cost in USD
 ```
 
 ### Performance Model Parameters
@@ -81,3 +82,11 @@ ng_feedstock:
 ```{tip}
 The `price` parameter is flexible - you can specify constant pricing with a single value or time-varying pricing with an array of values matching the number of simulation timesteps.
 ```
+
+### Consumed Feedstock Outputs
+The feedstock model outputs cost and performance information about the consumed feedstock. The most notable outputs are:
+- `VarOpEx`: cost of the feedstock consumed (in `USD/yr`)
+- `total_{commodity}_consumed`: total feedstock consumed over simulation (in `commodity_amount_units`)
+- `annual_{commodity}_consumed`: annual feedstock consumed (in `commodity_amount_units/yr`)
+- `rated_{commodity}_production`: this is equal to the the `rated_capacity` of the feedstock model (in `commodity_rate_units`)
+- `capacity_factor`: ratio of the feedstock consumed to the maximum feedstock available

@@ -46,6 +46,7 @@
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+- Added standardized outputs to feedstock model [PR 523](https://github.com/NatLabRockies/H2Integrate/pull/523)
 - Reclassified open-loop converter control strategies as demand components and updated output naming convention to align with output naming convention in storage performance models [PR 631](https://github.com/NatLabRockies/H2Integrate/pull/631).
   - The `FlexibleDemandOpenLoopConverterController` has been renamed to `FlexibleDemandComponent`
   - The `DemandOpenLoopConverterController` has been renamed to `GenericDemandComponent`
