@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Usage question
-    url: https://github.com/NREL/H2Integrate/discussions
-    about: Have any questions about using H2Integrate? Post in Discussions to engage with the NREL team and H2Integrate community.
+    url: https://github.com/NatLabRockies/H2Integrate/discussions
+    about: Have any questions about using H2Integrate? Post in Discussions to engage with the NLR team and H2Integrate community.

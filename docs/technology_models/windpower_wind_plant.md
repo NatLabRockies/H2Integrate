@@ -50,14 +50,14 @@ technologies:
 - `turbine_rating_kw` (required): rated power of individual wind turbine in kW
 - `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the wind model is initialized using `Windpower.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the wind model is initialized using `Windpower.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
 - `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"WindPowerSingleOwner"`. The available options and their default parameters are listed below:
-    - [WindPowerAllEquityPartnershipFlip](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerAllEquityPartnershipFlip.json)
-    - [WindPowerCommercial](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerCommercial.json)
-    - [WindPowerLeveragedPartnershipFlip](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerLeveragedPartnershipFlip.json)
-    - [WindPowerMerchantPlant](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerMerchantPlant.json)
-    - [WindPowerNone](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerNone.json)
-    - [WindPowerResidential](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerResidential.json)
-    - [WindPowerSaleLeaseback](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSaleLeaseback.json)
-    - [WindPowerSingleOwner](https://github.com/NREL/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSingleOwner.json)
+    - [WindPowerAllEquityPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerAllEquityPartnershipFlip.json)
+    - [WindPowerCommercial](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerCommercial.json)
+    - [WindPowerLeveragedPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerLeveragedPartnershipFlip.json)
+    - [WindPowerMerchantPlant](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerMerchantPlant.json)
+    - [WindPowerNone](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerNone.json)
+    - [WindPowerResidential](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerResidential.json)
+    - [WindPowerSaleLeaseback](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSaleLeaseback.json)
+    - [WindPowerSingleOwner](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSingleOwner.json)
 - `run_recalculate_power_curve` (optional): Flag whether to recalculate the wind turbine
         power curve. defaults to True.
 

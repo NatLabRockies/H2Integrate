@@ -61,9 +61,9 @@ technologies:
       performance_parameters:
         system_model_source: "pysam"
         chemistry: "LFPGraphite"
+        demand_profile: 50.0
       cost_parameters:
         cost_year: 2022
-        commodity_units: "kW"
         energy_capex: 246 # $/kWh from 2024 ATB year 2025
         power_capex: 317 # $/kW from 2024 ATB year 2025
         opex_fraction: 0.02536510376633359

@@ -1,5 +1,5 @@
 """
-Code adapted from NREL's WISDEM tool.
+Code adapted from NLR's WISDEM tool.
 """
 
 from pathlib import Path

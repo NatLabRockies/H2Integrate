@@ -9,8 +9,7 @@ The first approach, [open-loop control](#open-loop-control), assumes no feedback
 Supported controllers:
 - [`SimpleStorageOpenLoopController`](#pass-through-controller)
 - [`DemandOpenLoopStorageController`](#demand-open-loop-storage-controller)
-- [`DemandOpenLoopConverterController`](#demand-open-loop-converter-controller)
-- [`FlexibleDemandOpenLoopConverterController`](#flexible-demand-open-loop-converter-controller)
+
 
 
 (pyomo-control-framework)=

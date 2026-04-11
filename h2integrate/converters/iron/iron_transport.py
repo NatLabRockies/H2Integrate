@@ -37,7 +37,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
     def setup(self):
         self.config = IronTransportPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
         self.add_output("land_transport_distance", val=0.0, units="km")

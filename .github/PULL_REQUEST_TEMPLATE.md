@@ -78,33 +78,33 @@ IMPORTANT NOTES
     "A complete thought. [PR XYZ]((https://github.com/NatLabRockies/H2Integrate/pull/XYZ)", where
     `XYZ` should be replaced with the actual number.
 
-## Section 3: Related Issues
+## Section 4: Related Issues
 <!--If this PR relates to an existing GitHub issue, please link the issue and indicate whether this PR would fully or partially resolve that issue. Please also link any issues that were created due to this PR-->
 
 
-## Section 4: Impacted Areas of the Software
+## Section 5: Impacted Areas of the Software
 <!--
 Replace the below example with any added or modified files, and briefly describe what has been changed or added, and why. Can exclude CHANGELOG.md, doc pages and supported_models.py.
 -->
-### Section 4.1: New Files
+### Section 5.1: New Files
 - `path/to/file.extension`
   - `method1`: What and why something was changed in one sentence or less.
 
-### Section 4.2: Modified Files
+### Section 5.2: Modified Files
 - `path/to/file.extension`
   - `method1`: What and why something was changed in one sentence or less.
 
-## Section 5: Additional Supporting Information
+## Section 6: Additional Supporting Information
 <!--Add any other context about the problem here.-->
 
 
-## Section 6: Test Results, if applicable
+## Section 7: Test Results, if applicable
 <!--
 Add the results from unit tests and regression tests here along with justification for any
 failing test cases.
 -->
 
-## Section 7 (Optional): New Model Checklist
+## Section 8 (Optional): New Model Checklist
 <!-- Complete this section only if you checked "New Model" above -->
 - [ ] **Model Structure**:
   - [ ] Follows established naming conventions outlined in `docs/developer_guide/coding_guidelines.md`
@@ -128,17 +128,18 @@ failing test cases.
   - [ ] Model added to the main models list in `docs/user_guide/model_overview.md`
     - [ ] Model documentation page added to the appropriate `docs/` section
     - [ ] `<model_name>.md` is added to the `_toc.yml`
+  - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`
 
 
 
 
 
 <!--
-__ For NREL use __
+__ For NLR use __
 Release checklist:
 - [ ] Update the version in h2integrate/__init__.py
 - [ ] Verify docs builds correctly
-- [ ] Create a tag on the main branch in the NREL/H2Integrate repository and push
+- [ ] Create a tag on the main branch in the NatLabRockies/H2Integrate repository and push
 - [ ] Ensure the Test PyPI build is successful
 - [ ] Create a release on the main branch
 -->

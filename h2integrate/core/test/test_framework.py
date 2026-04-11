@@ -325,6 +325,33 @@ def test_resource_connection_error_missing_resource(temp_dir):
 
 
 @pytest.mark.unit
+def test_no_resource_connection_error_resource_to_multiple_techs(temp_dir):
+    # Path to the original plant_config.yaml and high-level yaml in the example directory
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "plant_config.yaml")
+    # Add a second wind technology
+    wind_tech = tech_config["technologies"]["wind"]
+    tech_config["technologies"].update({"wind_plant2": wind_tech})
+    resource_to_tech_connections = [
+        ["site.wind_resource", "wind", "wind_resource_data"],
+        ["site.wind_resource", "wind_plant2", "wind_resource_data"],
+    ]
+    plant_config["resource_to_tech_connections"] = resource_to_tech_connections
+    input_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i_model = H2IntegrateModel(input_config)
+    h2i_model.setup()
+    # Need to call final_setup to trigger the potential error related to the resource connections
+    h2i_model.prob.final_setup()
+    assert True
+
+
+@pytest.mark.unit
 def test_reports_turned_off(temp_dir):
     # Path to the original config files in the example directory
     orig_plant_config = EXAMPLE_DIR / "07_run_of_river_plant" / "plant_config.yaml"

@@ -11,10 +11,10 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
     """Configuration class for the ATBBatteryCostModel with costs based on storage
     capacity and charge rate. More information on ATB methodology and representative
     battery technologies can be found
-    `here <https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage>`_
+    `here <https://atb.nlr.gov/electricity/2024/utility-scale_battery_storage>`_
     Reference cost values can be found on the `Utility-Scale Battery Storage`,
     `Commercial Battery Storage`, and `Residential Battery Storage` sheets of the
-    `NREL ATB workbook <https://atb.nrel.gov/electricity/2024/data>`_.
+    `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
 
     Attributes:
         energy_capex (float|int): battery energy capital cost in $/kWh

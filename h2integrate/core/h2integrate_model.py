@@ -1,4 +1,5 @@
 import importlib.util
+from enum import IntEnum
 
 import numpy as np
 import networkx as nx
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
+from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.supported_models import (
@@ -32,6 +34,13 @@ except ImportError:
     pyxdsm = None
 
 
+class State(IntEnum):
+    INITIALIZED = 0
+    SETUP = 1
+    RUN = 2
+    POST_PROCESS = 3
+
+
 class H2IntegrateModel:
     def __init__(self, config_input):
         # read in config file; it's a yaml dict that looks like this:
@@ -47,9 +56,6 @@ class H2IntegrateModel:
         create_om_reports = self.driver_config.get("general", {}).get("create_om_reports", True)
         self.prob = om.Problem(reports=create_om_reports)
         self.model = self.prob.model
-
-        # track if setup has been called via boolean
-        self.setup_has_been_called = False
 
         # initialize recorder_path attribute
         self.recorder_path = None
@@ -78,6 +84,8 @@ class H2IntegrateModel:
         # create driver model
         # might be an analysis or optimization
         self.create_driver_model()
+
+        self.state = State.INITIALIZED
 
     def _load_component_config(self, config_key, config_value, config_path, validator_func):
         """Helper method to load and validate a component configuration.
@@ -525,7 +533,7 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
-                    om_model_object = tech_group.add_subsystem(tech_name, comp, promotes=["*"])
+                    om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
@@ -1167,7 +1175,7 @@ class H2IntegrateModel:
             resource_models = {}
             for site_grp, site_grp_inputs in self.plant_config["sites"].items():
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
-                    resource_models[f"{site_grp}-{resource_key}"] = resource_params
+                    resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
             resource_source_connections = [c[0] for c in resource_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
@@ -1325,17 +1333,26 @@ class H2IntegrateModel:
         """
         Extremely light wrapper to setup the OpenMDAO problem and track setup status.
         """
-        self.setup_has_been_called = True
         self.prob.setup()
+        self.state = State.SETUP
+
+        for tech, tech_info in self.technology_config["technologies"].items():
+            check_inputs(self.prob, tech, tech_info, self.tech_config_path)
 
     def run(self):
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
-        if not self.setup_has_been_called:
+        if self.state < State.SETUP:
             self.prob.setup()
-            self.setup_has_been_called = True
+
+        if self.state < State.RUN:
+            # OpenMDAO will skip this step if it encounters an issue leading to silent failures
+            # TODO: remove this step when OpenMDAO implements cursor closure
+            if self.recorder_path is not None:
+                self.recorder_path.unlink(missing_ok=True)
 
         self.prob.run_driver()
+        self.state = State.RUN
 
     def post_process(self, print_results=True, summarize_sql=False, show_plots=False):
         """Post-process the results of the OpenMDAO model.
@@ -1352,6 +1369,8 @@ class H2IntegrateModel:
             show_plots (bool): If True, run post-processing plots for any
                 performance models that support them. Defaults to False.
         """
+        if self.state < State.RUN:
+            raise RuntimeError("`run` not called, so `post_process` cannot be called.")
         if print_results:
             # Use custom summary printer instead of OpenMDAO's built-in printing so we can
             # suppress internal value printing and display only mean values.
@@ -1365,6 +1384,7 @@ class H2IntegrateModel:
                 model.post_process(show_plots=show_plots)
                 if show_plots:
                     plt.show()
+        self.state = State.POST_PROCESS
 
     @staticmethod
     def print_results(model, includes=None, excludes=None, show_units=True):

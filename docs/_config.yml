@@ -24,7 +24,7 @@ latex:
     targetname: book.tex
 # Information about where the book exists on the web
 repository:
-  url: https://github.com/NREL/H2Integrate
+  url: https://github.com/NatLabRockies/H2Integrate
   path_to_book: docs
   branch: main
 # Add GitHub buttons to your book
@@ -39,33 +39,6 @@ sphinx:
     - sphinx.ext.autosummary
     - sphinx.ext.napoleon
   config:
-    # html_theme: sphinx_book_theme
-    # html_theme_options:
-    #   use_issues_button: true
-    #   use_repository_button: true
-    #   use_edit_page_button: true
-    #   show_toc_level: 2
-    #   repository_url: https://github.com/NREL/WAVES
-    #   repository_branch: main
-    #   icon_links: [
-    #     {
-    #         name: GitHub,
-    #         url: https://github.com/NREL/WAVES,
-    #         icon: fa-brands fa-github,
-    #     },
-    #     {
-    #         name: PyPI version,
-    #         url: https://pypi.org/project/WAVES/,
-    #         icon: "https://img.shields.io/pypi/v/WAVES?link=https%3A%2F%2Fpypi.org%2Fproject%2FWAVES%2F",
-    #         type: url,
-    #     },
-    #     {
-    #         name: Binder,
-    #         url: "https://mybinder.org/v2/gh/NREL/WAVES/main?filepath=examples",
-    #         icon: "https://mybinder.org/badge_logo.svg",
-    #         type: url,
-    #     },
-    #   ]
     language: python
     autosummary_generate: true
     autodoc_default_options:
@@ -82,6 +55,8 @@ sphinx:
       # class-doc-from
       # no-value
     autodoc_typehints: description
+    html_static_path:
+      - _static
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
     nb_merge_streams: true

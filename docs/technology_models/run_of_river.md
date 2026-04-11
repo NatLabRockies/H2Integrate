@@ -75,4 +75,4 @@ Also within the `tech_config` yaml, you can set the performance and cost paramet
 
 For additional information regarding hydropower technology and performance see
 [New Stream-reach Development: A Comprehensive Assessment of Hydropower Energy Potential in the United States](https://info.ornl.gov/sites/publications/Files/Pub46481.pdf) and
-for relevant performance and cost assumptions see the [Annual Technology Baseline - Hydropower](https://atb.nrel.gov/electricity/2024/hydropower).
+for relevant performance and cost assumptions see the [Annual Technology Baseline - Hydropower](https://atb.nlr.gov/electricity/2024/hydropower).

@@ -1,15 +1,21 @@
 import numpy as np
 import pandas as pd
 import pytest
-import geopandas as gpd
 from shapely.geometry import Polygon
 
-from h2integrate.postprocess.mapping import (
-    auto_colorbar_limits,
-    validate_gdfs_are_same_crs,
-    auto_detect_lat_long_columns,
-    calculate_geodataframe_total_bounds,
-)
+
+gis_extras = True
+try:
+    import geopandas as gpd
+
+    from h2integrate.postprocess.mapping import (
+        auto_colorbar_limits,
+        validate_gdfs_are_same_crs,
+        auto_detect_lat_long_columns,
+        calculate_geodataframe_total_bounds,
+    )
+except ModuleNotFoundError:
+    gis_extras = False
 
 
 # Define geometries to be used in testing of GeoDataFrames
@@ -32,6 +38,7 @@ smaller_square_coords = Polygon(
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(not gis_extras, reason="`gis` dependencies not installed")
 def test_calculate_geodataframe_total_bounds(subtests):
     with subtests.test("Check invalid argument type"):
         expected_msg = "Must provide at least one GeoDataFrame."
@@ -98,6 +105,7 @@ def test_calculate_geodataframe_total_bounds(subtests):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(not gis_extras, reason="`gis` dependencies not installed")
 def test_auto_detect_lat_long_columns(subtests):
     test_good_results_df1 = pd.DataFrame(columns=["index", "latitude", "longitude"])
     test_good_results_df2 = pd.DataFrame(columns=["index", "lat", "long"])
@@ -163,6 +171,7 @@ def test_auto_detect_lat_long_columns(subtests):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(not gis_extras, reason="`gis` dependencies not installed")
 def test_validate_gdfs_are_same_crs(subtests):
     gdf_1 = gpd.GeoDataFrame(
         data={"index": [0], "test1": ["larger_square"], "test2": [larger_square_coords]},
@@ -211,6 +220,7 @@ def test_validate_gdfs_are_same_crs(subtests):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(not gis_extras, reason="`gis` dependencies not installed")
 def test_auto_colorbar_limits(subtests):
     with subtests.test("Test good value input types"):
         vmin, vmax = auto_colorbar_limits(values=pd.Series([0.62, 0.75, 0.93]))
