@@ -21,6 +21,8 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
     Computes annual steel production based on plant capacity and capacity factor.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         super().setup()
         self.config = SteelPerformanceModelConfig.from_dict(
@@ -83,6 +85,8 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
     An OpenMDAO component for calculating the costs associated with steel production.
     Includes CapEx, OpEx, and byproduct credits.
     """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
 
     def setup(self):
         self.config = SteelCostAndFinancialModelConfig.from_dict(

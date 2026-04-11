@@ -120,6 +120,8 @@ class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
     It takes tidal parameters as input and outputs power generation data.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"

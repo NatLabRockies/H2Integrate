@@ -70,6 +70,8 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
 
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         """Initialize the heuristic load-following controller."""
         self.config = HeuristicLoadFollowingControllerConfig.from_dict(

@@ -38,6 +38,8 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     - HHV_hydrogen is the higher heating value of hydrogen (approximately 142 MJ/kg)
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -143,6 +145,8 @@ class H2FuelCellCostModel(CostModelBaseClass):
     The model calculates capital and fixed operating costs based on system capacity and
     specified cost parameters.
     """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
 
     def setup(self):
         self.config = H2FuelCellCostConfig.from_dict(

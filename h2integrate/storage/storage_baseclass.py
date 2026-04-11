@@ -45,6 +45,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
           dispatch decisions using solver inputs.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
 
