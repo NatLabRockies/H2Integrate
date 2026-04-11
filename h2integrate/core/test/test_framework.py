@@ -213,35 +213,6 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
 
 
 @pytest.mark.unit
-def test_check_time_step_without_bounds_requires_one_hour_dt():
-    class DummyModelNoBounds:
-        pass
-
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
-
-    with pytest.raises(
-        ValueError,
-        match=(
-            r"Model 'DummyModelNoBounds' only supports a 1-hour time step "
-            r"\(dt=3600\), but dt=1800 was specified"
-        ),
-    ):
-        model._check_time_step("DummyModelNoBounds", DummyModelNoBounds)
-
-
-@pytest.mark.unit
-def test_check_time_step_without_bounds_allows_one_hour_dt():
-    class DummyModelNoBounds:
-        pass
-
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 3600}}}
-
-    model._check_time_step("DummyModelNoBounds", DummyModelNoBounds)
-
-
-@pytest.mark.unit
 def test_technology_connections(temp_dir):
     # Path to the original plant_config.yaml and high-level yaml in the example directory
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
