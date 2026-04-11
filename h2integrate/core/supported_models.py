@@ -6,8 +6,10 @@ from h2integrate.transporters.cable import CablePerformanceModel
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
+from h2integrate.demand.generic_demand import GenericDemandComponent
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
+from h2integrate.demand.flexible_demand import FlexibleDemandComponent
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
@@ -170,12 +172,6 @@ from h2integrate.control.control_rules.converters.generic_converter_min_operatin
 from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
     DemandOpenLoopStorageController,
 )
-from h2integrate.control.control_strategies.converters.flexible_demand_openloop_controller import (
-    FlexibleDemandOpenLoopConverterController,
-)
-from h2integrate.control.control_strategies.converters.demand_openloop_converter_controller import (
-    DemandOpenLoopConverterController,
-)
 
 
 supported_models = {
@@ -284,8 +280,8 @@ supported_models = {
     "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
     "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
     "OptimizedDispatchController": OptimizedDispatchController,
-    "DemandOpenLoopConverterController": DemandOpenLoopConverterController,
-    "FlexibleDemandOpenLoopConverterController": FlexibleDemandOpenLoopConverterController,
+    "GenericDemandComponent": GenericDemandComponent,
+    "FlexibleDemandComponent": FlexibleDemandComponent,
     # Dispatch
     "PyomoDispatchGenericConverter": PyomoDispatchGenericConverter,
     "PyomoRuleStorageBaseclass": PyomoRuleStorageBaseclass,

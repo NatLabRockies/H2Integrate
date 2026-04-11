@@ -1,18 +1,16 @@
 import numpy as np
 from attrs import field, define
 
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gte_zero, range_val
-from h2integrate.control.control_strategies.converters.openloop_controller_base import (
-    ConverterOpenLoopControlBase,
-    ConverterOpenLoopControlBaseConfig,
-)
+from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
 
 
 @define(kw_only=True)
-class FlexibleDemandOpenLoopConverterControllerConfig(ConverterOpenLoopControlBaseConfig):
-    """Configuration for defining a flexible demand open-loop controller.
+class FlexibleDemandComponentConfig(DemandComponentBaseConfig):
+    """Configuration for defining a flexible demand component.
 
-    Extends :class:`DemandOpenLoopControlBaseConfig` with additional parameters
+    Extends :class:`DemandComponentBaseConfig` with additional parameters
     required for dynamically adjusting demand based on turndown, ramping, and
     minimum utilization constraints. These parameters are expressed as fractions
     of ``maximum_demand`` and must lie within ``(0, 1)``.
@@ -42,37 +40,35 @@ class FlexibleDemandOpenLoopConverterControllerConfig(ConverterOpenLoopControlBa
     min_utilization: float = field(validator=range_val(0, 1.0))
 
 
-class FlexibleDemandOpenLoopConverterController(ConverterOpenLoopControlBase):
-    """Open-loop controller for flexible demand with ramping and utilization constraints.
+class FlexibleDemandComponent(DemandComponentBase):
+    """Demand component for flexible demand with ramping and utilization constraints.
 
-    This controller extends the base demand controller by allowing the effective
+    This component extends the base demand component by allowing the effective
     demand to vary dynamically based on turndown constraints, ramp-rate limits,
     and minimum-utilization requirements. A flexible demand profile is generated
     and used to compute unmet demand, unused commodity, and delivered output.
     """
 
     def setup(self):
-        """Set up component inputs and outputs for flexible demand control.
+        """Set up component inputs and outputs for flexible demand.
 
         Adds inputs for turndown ratio, ramp up/down rates, and minimum
         utilization, all expressed as fractions of maximum demand. Adds the
         flexible demand output profile, which will be populated in ``compute``.
         """
-        self.config = FlexibleDemandOpenLoopConverterControllerConfig.from_dict(
-            self.options["tech_config"]["model_inputs"]["control_parameters"],
+        self.config = FlexibleDemandComponentConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
 
-        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        commodity = self.config.commodity
-
         self.add_input(
-            f"rated_{commodity}_demand",
+            f"rated_{self.commodity}_demand",
             val=self.config.demand_profile,
-            shape=(n_timesteps),
-            units=self.config.commodity_rate_units,
-            desc=f"Rated demand of {commodity}",
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Rated demand of {self.commodity}",
         )
 
         self.add_input(
@@ -104,11 +100,11 @@ class FlexibleDemandOpenLoopConverterController(ConverterOpenLoopControlBase):
         )
 
         self.add_output(
-            f"{commodity}_flexible_demand_profile",
+            f"{self.commodity}_flexible_demand_profile",
             val=0.0,
-            shape=(n_timesteps),
+            shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
-            desc=f"Flexible demand profile of {commodity}",
+            desc=f"Flexible demand profile of {self.commodity}",
         )
 
     def adjust_demand_for_ramping(self, pre_demand_met_clipped, demand_bounds, ramp_rate_bounds):
@@ -250,7 +246,7 @@ class FlexibleDemandOpenLoopConverterController(ConverterOpenLoopControlBase):
         """Compute unmet demand, unused commodity, and output under flexible demand.
 
         If ``min_utilization == 1.0``, the behavior matches the regular open-loop
-        controller with no flexible demand adjustments.
+        component with no flexible demand adjustments.
 
         Otherwise:
             * Construct a flexible demand profile.
@@ -263,40 +259,33 @@ class FlexibleDemandOpenLoopConverterController(ConverterOpenLoopControlBase):
             outputs (dict-like): Mapping where computed outputs are written.
 
         """
-        commodity = self.config.commodity
-        remaining_demand = inputs[f"{commodity}_demand"] - inputs[f"{commodity}_in"]
 
         if self.config.min_utilization == 1.0:
+            outputs[f"{self.commodity}_flexible_demand_profile"] = inputs[
+                f"{self.commodity}_demand"
+            ]
+
             # Calculate missed load and curtailed production
-            outputs[f"{commodity}_unmet_demand"] = np.where(
-                remaining_demand > 0, remaining_demand, 0
+            outputs = self.calculate_outputs(
+                inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
             )
-            outputs[f"{commodity}_unused_commodity"] = np.where(
-                remaining_demand < 0, -1 * remaining_demand, 0
-            )
+
         else:
+            remaining_demand = inputs[f"{self.commodity}_demand"] - inputs[f"{self.commodity}_in"]
+
             # when remaining demand is less than 0, that means input exceeds demand
             # multiply by -1 to make it positive
             curtailed = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
 
             # subtract out the excess input commodity
-            inflexible_out = inputs[f"{commodity}_in"] - curtailed
+            inflexible_out = inputs[f"{self.commodity}_in"] - curtailed
 
             flexible_demand_profile = self.make_flexible_demand(
-                inputs[f"{commodity}_demand"], inflexible_out, inputs
+                inputs[f"{self.commodity}_demand"], inflexible_out, inputs
             )
 
-            outputs[f"{commodity}_flexible_demand_profile"] = flexible_demand_profile
-            flexible_remaining_demand = flexible_demand_profile - inputs[f"{commodity}_in"]
+            outputs[f"{self.commodity}_flexible_demand_profile"] = flexible_demand_profile
 
-            outputs[f"{commodity}_unmet_demand"] = np.where(
-                flexible_remaining_demand > 0, flexible_remaining_demand, 0
+            outputs = self.calculate_outputs(
+                inputs[f"{self.commodity}_in"], flexible_demand_profile, outputs
             )
-            outputs[f"{commodity}_unused_commodity"] = np.where(
-                flexible_remaining_demand < 0, -1 * flexible_remaining_demand, 0
-            )
-
-        # Calculate actual output based on demand met and curtailment
-        outputs[f"{commodity}_set_point"] = (
-            inputs[f"{commodity}_in"] - outputs[f"{commodity}_unused_commodity"]
-        )

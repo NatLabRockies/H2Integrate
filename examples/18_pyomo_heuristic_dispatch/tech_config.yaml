@@ -53,7 +53,7 @@ technologies:
         min_soc_fraction: 0.1
       performance_parameters:
         chemistry: LFPGraphite
-        demand_profile: 50000  # 50 MW
+        demand_profile: 40000  # 40 MW
       cost_parameters:
         cost_year: 2022
         energy_capex: 310  # $/kWh from 2024 ATB year 2025

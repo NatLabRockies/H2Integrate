@@ -31,6 +31,7 @@
 - Removed a few usages of `shape_by_conn` due to issues with OpenMDAO v3.43.0 release on some computers [PR 632](https://github.com/NatLabRockies/H2Integrate/pull/632)
 - Made generating an XDSM diagram from connections in a model optional and added documentation on model visualization. [PR 629](https://github.com/NatLabRockies/H2Integrate/pull/629)
 - Added a storage performance baseclass model `StoragePerformanceBase` and updated the other storage performance models to inherit it [PR 624](https://github.com/NatLabRockies/H2Integrate/pull/624)
+- Added an automated script to crawl through the codebase and generate a visualization of the class hierarchy in H2Integrate. [PR 643](https://github.com/NatLabRockies/H2Integrate/pull/643)
 - Modified the calc tilt angle function for pysam solar to support latitudes in the southern hemisphere [PR 646](https://github.com/NatLabRockies/H2Integrate/pull/646)
 - Added oxygen production metrics and as outputs to `ECOElectrolyzerPerformanceModel` [PR 642](https://github.com/NatLabRockies/H2Integrate/pull/642)
 - Bugfix to allow for one resource to be connected to multiple technologies [PR 655](https://github.com/NatLabRockies/H2Integrate/pull/655)
@@ -45,6 +46,9 @@
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+- Reclassified open-loop converter control strategies as demand components and updated output naming convention to align with output naming convention in storage performance models [PR 631](https://github.com/NatLabRockies/H2Integrate/pull/631).
+  - The `FlexibleDemandOpenLoopConverterController` has been renamed to `FlexibleDemandComponent`
+  - The `DemandOpenLoopConverterController` has been renamed to `GenericDemandComponent`
 - Modified CI setup so Windows is temporarily disabled and also so unit, regression, and integration tests are run in separate jobs to speed up testing and provide more information on test failures. [PR 668](https://github.com/NatLabRockies/H2Integrate/pull/668)
 - Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653)
 

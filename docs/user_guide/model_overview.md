@@ -67,6 +67,7 @@ Below summarizes the available performance, cost, and financial models for each 
   - [Storage Models](#storage-models)
   - [Basic Operations](#basic-operations)
   - [Control Models](#control-models)
+  - [DemandModels](#demand-models)
 
 (resource-models)=
 ## Resource models
@@ -284,8 +285,10 @@ Below summarizes the available performance, cost, and financial models for each 
     - `'SimpleStorageOpenLoopController'`: open-loop control; manages resource flow based on demand and input commodity
     - `'DemandOpenLoopStorageController'`: open-loop control; manages resource flow based on demand and storage constraints
     - `'HeuristicLoadFollowingController'`: open-loop control that works on a time window basis to set dispatch commands; uses Pyomo
-- Converter Controllers:
-    - `'DemandOpenLoopConverterController'`: open-loop control; manages resource flow based on demand constraints
-    - `'FlexibleDemandOpenLoopConverterController'`: open-loop control; manages resource flow based on demand and flexibility constraints
 - Optimized Dispatch:
     - `'OptimizedDispatchController'`: optimization-based dispatch using Pyomo
+
+(demand-models)=
+## Demand Models
+- `'GenericDemandComponent'`: manages resource flow based on demand constraints
+- `'FlexibleDemandComponent'`: manages resource flow based on demand and flexibility constraints

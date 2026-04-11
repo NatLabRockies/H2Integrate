@@ -91,10 +91,10 @@ technologies:
         variable_opex_per_mwh: 0.0  # $/MWh
         cost_year: 2023
   electrical_load_demand:
-    control_strategy:
-      model: DemandOpenLoopConverterController
+    performance_model:
+      model: GenericDemandComponent
     model_inputs:
-      control_parameters:
+      performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
         demand_profile: 100000  # 100 MW
