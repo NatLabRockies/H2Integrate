@@ -104,7 +104,10 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     outputs power generation data.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])

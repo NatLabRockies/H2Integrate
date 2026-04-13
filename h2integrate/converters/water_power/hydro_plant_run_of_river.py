@@ -36,7 +36,10 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
     Computes annual electricity production based on water flow rate and turbine efficiency.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -109,7 +112,10 @@ class RunOfRiverHydroCostModel(CostModelBaseClass):
     Just a placeholder for now, but can be extended with more detailed cost models.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = RunOfRiverHydroCostConfig.from_dict(

@@ -119,7 +119,10 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
 class StoragePerformanceModel(StoragePerformanceBase):
     """OpenMDAO component for a storage component."""
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = StoragePerformanceModelConfig.from_dict(

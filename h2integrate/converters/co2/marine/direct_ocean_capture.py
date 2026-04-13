@@ -76,7 +76,10 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
     An OpenMDAO component for modeling the performance of a Direct Ocean Capture (DOC) plant.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -155,7 +158,10 @@ class DOCCostModel(CostModelBaseClass):
     direct ocean capture (DOC) system.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()

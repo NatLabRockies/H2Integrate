@@ -499,6 +499,7 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
+                self._check_time_step(perf_model, comp)
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
                 tech_group = self.plant.add_subsystem(tech_name, om.Group())
@@ -534,6 +535,7 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
+                    self._check_time_step(perf_model, comp)
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
@@ -590,6 +592,7 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
+                self._check_time_step(tech_name, comp)
                 self.plant.add_subsystem(tech_name, comp)
 
     def _process_model(self, model_type, individual_tech_config, tech_group):
@@ -1093,6 +1096,7 @@ class H2IntegrateModel:
                     )
 
                     # Add the connection component to the model
+                    self._check_time_step(transport_type, connection_component)
                     self.plant.add_subsystem(connection_name, connection_component)
 
                     # Reorder the subsystems so transporters comes after their source technology
