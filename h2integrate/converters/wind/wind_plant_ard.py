@@ -37,6 +37,8 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     H2Integrate.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
