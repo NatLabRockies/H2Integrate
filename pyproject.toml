@@ -95,7 +95,9 @@ changelog = "https://github.com/NatLabRockies/H2Integrate/blob/main/CHANGELOG.md
 develop = [
     "isort",
     "jupyter-book<2",
+    "networkx",
     "pre-commit",
+    "pyvis",
     "pytest>=9",
     "pytest-cov",
     "ruff",

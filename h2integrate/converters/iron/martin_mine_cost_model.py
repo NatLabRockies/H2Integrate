@@ -39,6 +39,8 @@ class MartinIronMineCostConfig(BaseConfig):
 
 
 class MartinIronMineCostComponent(CostModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         # merge inputs from performance parameters and cost parameters
         config_dict = merge_shared_inputs(

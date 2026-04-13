@@ -151,6 +151,9 @@ class CostModelBaseClass(om.ExplicitComponent):
             "cost_year", val=self.config.cost_year, desc="Dollar year for costs"
         )
 
+        # dt is seconds per timestep
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Computation for the OM component.

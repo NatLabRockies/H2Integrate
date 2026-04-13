@@ -2,6 +2,8 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class DesalinationPerformanceBaseClass(PerformanceModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "water"
@@ -25,6 +27,8 @@ class DesalinationPerformanceBaseClass(PerformanceModelBaseClass):
 
 
 class DesalinationCostBaseClass(CostModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         super().setup()
         # Inputs for cost model configuration

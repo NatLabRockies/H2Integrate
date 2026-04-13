@@ -140,20 +140,18 @@ def load_tech_yaml(finput):
 def load_plant_yaml(finput):
     plant_config = _validate(finput, fschema_plant)
 
-    if int(plant_config["plant"]["simulation"]["n_timesteps"]) != 8760:
+    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+    dt = plant_config["plant"]["simulation"]["dt"]
+
+    if int(n_timesteps * dt) != 31536000:  # seconds in simulation must be seconds/year
         msg = (
             "H2Integrate does not currently support simulations that are less than or "
             "greater than 1-year. Please ensure that "
-            "plant_config['plant']['simulation']['n_timesteps'] is set to 8760."
+            "plant_config['plant']['simulation']['n_timesteps'] times "
+            "plant_config['plant']['simulation']['dt'] equals 31536000 (s)."
         )
         raise ValueError(msg)
-    if int(plant_config["plant"]["simulation"]["dt"]) != 3600:
-        msg = (
-            "H2Integrate does not currently support simulations with a time step that is "
-            "less than or greater than 1-hour. Please ensure that "
-            "plant_config['plant']['simulation']['dt'] is set to 3600."
-        )
-        raise ValueError(msg)
+
     return plant_config
 
 

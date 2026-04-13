@@ -42,14 +42,14 @@ ax[1].plot(
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.electricity_unused_commodity", units="MW")[start_hour:end_hour],
+    model.prob.get_val("battery.unused_electricity_out", units="MW")[start_hour:end_hour],
     linestyle=":",
     label="Unused Electricity commodity (MW)",
     linewidth=2,
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.electricity_unmet_demand", units="MW")[start_hour:end_hour],
+    model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")[start_hour:end_hour],
     linestyle=":",
     label="Electricity Unmet Demand (MW)",
     linewidth=2,

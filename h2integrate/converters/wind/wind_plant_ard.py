@@ -37,6 +37,8 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     H2Integrate.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -90,6 +92,8 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
     We could almost use the CostModelBaseClass directly, but its setup method
     requires a self.config attribute to be defined, so we create this minimal subclass.
     """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
 
     def setup(self):
         self.config = CostModelBaseConfig.from_dict(

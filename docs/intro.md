@@ -64,10 +64,16 @@ H2Integrate was previously known as GreenHEART. The name was updated to H2Integr
 
 ## How does H2Integrate work?
 
-H2Integrate models energy systems on a yearly basis using hourly timesteps (i.e., 8760 operational data points across a year).
+H2Integrate typically models energy systems on a yearly basis using hourly timesteps (i.e., 8760 operational data points across a year).
 Results from these simulations are then processed across the project's lifecycle to provide insights into the system's performance, costs, and financial viability.
 Depending on the models used and the size of the system, H2Integrate can simulate systems ranging from the kW to GW scale in seconds on a personal computer.
 Additionally, H2Integrate tracks the flow of electricity, molecules (e.g., hydrogen, ammonia, methanol), and other products (e.g., steel) between different technologies in the energy system.
+
+```{note}
+Some models are now able to operate with non-hourly time steps.
+Appropriate time step bounds are included as class attributes when non-hourly time steps are permitted.
+Check individual model docs and definitions for time step bounds for individual models. All models in a given simulation must be compatible with the specified time step.
+```
 
 For each technology there are 4 different types of models: control, performance, cost, and finance. These model categories allow for modular pieces to be brought in or re-used throughout H2Integrate, as well as ease of development and organization. Note that the only required models for a technology are performance and cost, while control and finance are optional. The figure below shows these four categories and some of the technologies included in H2Integrate. For a full list of models available, please see [Model Overview](user_guide/model_overview.md).
 ![A representation of a single technology model in H2Integrate](tech-model.png)

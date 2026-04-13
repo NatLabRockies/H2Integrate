@@ -375,6 +375,13 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             )
             == 1.1018637096646757
         )
+    with subtests.test("Check LCON"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_n2.LCON", units="USD/t")[0], rel=1e-6
+            )
+            == 5.03140888
+        )
 
 
 @pytest.mark.integration
@@ -1057,6 +1064,10 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
         ng_consumed = model.prob.get_val("ng_feedstock.natural_gas_consumed", units="MMBtu/h")
         expected_opex = 4.2 * ng_consumed.sum()  # price = 4.2 $/MMBtu
         assert pytest.approx(ng_opex, rel=1e-6) == expected_opex
+
+    with subtests.test("Check feedstock capacity factor"):
+        ng_cf = model.prob.get_val("ng_feedstock.capacity_factor", units="unitless").mean()
+        assert pytest.approx(ng_cf, rel=1e-6) == 0.5676562763739097
 
 
 @pytest.mark.integration

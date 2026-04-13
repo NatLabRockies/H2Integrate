@@ -2,6 +2,8 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class SteelPerformanceBaseClass(PerformanceModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "steel"
@@ -26,6 +28,8 @@ class SteelPerformanceBaseClass(PerformanceModelBaseClass):
 
 
 class SteelCostBaseClass(CostModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         # Inputs for cost model configuration
         super().setup()

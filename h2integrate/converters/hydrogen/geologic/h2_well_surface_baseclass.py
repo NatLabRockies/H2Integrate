@@ -66,6 +66,8 @@ class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
             The wellhead gas flow in kg/hour used for sizing the system - passed to the cost model.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "hydrogen"
@@ -146,6 +148,8 @@ class GeoH2SurfaceCostBaseClass(CostModelBaseClass):
         Variable_OpEx (float):
             Variable OPEX per kilogram of hydrogen produced, in USD/year.
     """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
 
     def setup(self):
         super().setup()

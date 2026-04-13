@@ -9,9 +9,7 @@ The first approach, [open-loop control](#open-loop-control), assumes no feedback
 Supported controllers:
 - [`SimpleStorageOpenLoopController`](#pass-through-controller)
 - [`DemandOpenLoopStorageController`](#demand-open-loop-storage-controller)
-- [`DemandOpenLoopConverterController`](#demand-open-loop-converter-controller)
-- [`FlexibleDemandOpenLoopConverterController`](#flexible-demand-open-loop-converter-controller)
-= [`PeakLoadManagementOpenLoopStorageController`](#peak-load-management-open-loop-storage-controller)
+- [`PeakLoadManagementOpenLoopStorageController`](#peak-load-management-open-loop-storage-controller)
 
 (pyomo-control-framework)=
 ## Pyomo control framework

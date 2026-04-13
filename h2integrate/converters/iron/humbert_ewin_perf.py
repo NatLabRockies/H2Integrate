@@ -75,6 +75,8 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
 
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         self.commodity = "sponge_iron"
         self.commodity_rate_units = "kg/h"

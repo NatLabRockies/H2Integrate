@@ -4,6 +4,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
+from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 @fixture
@@ -279,6 +280,138 @@ def test_varying_demand_profile(plant_config, n_timesteps):
     # Values above 100000 should be clipped
     expected = np.clip(demand, 0, 100000)
     np.testing.assert_array_almost_equal(electricity_out, expected)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [10])
+def test_non_hourly_dt_demand_profile(subtests, plant_config, n_timesteps):
+    """Test with time-varying demand profile."""
+    plant_config["plant"]["simulation"]["dt"] = 300
+
+    prob = om.Problem()
+    commodity = "electricity"
+
+    tech_config = {"model_inputs": {"shared_parameters": {"interconnection_size": 100000.0}}}
+
+    prob.model.add_subsystem(
+        "grid",
+        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
+    )
+
+    prob.setup()
+
+    # Create varying demand profile
+    demand = np.array([10000, 20000, 30000, 50000, 70000, 90000, 110000, 80000, 60000, 40000])
+    prob.set_val("grid.electricity_demand", demand, units="kW")
+
+    prob.run_model()
+
+    interconnection_size = tech_config["model_inputs"]["shared_parameters"]["interconnection_size"]
+    dt_seconds = plant_config["plant"]["simulation"]["dt"]
+    expected = np.clip(demand, 0, interconnection_size)
+    expected_total = expected.sum() * dt_seconds / 3600.0
+    fraction_of_year = n_timesteps * dt_seconds / 31536000.0
+    expected_annual_value = expected_total / fraction_of_year
+
+    with subtests.test(f"annual_{commodity}_produced length"):
+        electricity_out = prob.get_val("grid.electricity_out", units="kW")
+        np.testing.assert_array_almost_equal(electricity_out, expected)
+
+    with subtests.test("cf"):
+        cf = prob.get_val("grid.capacity_factor", units="unitless")
+        expected_capacity_factor = expected.mean() / interconnection_size
+        assert cf == pytest.approx(expected_capacity_factor)
+
+    with subtests.test("total production"):
+        total_energy = prob.get_val(f"grid.total_{commodity}_produced", units="kW*h")
+        np.testing.assert_allclose(np.atleast_1d(total_energy), [expected_total])
+
+    with subtests.test("annual production"):
+        annual_energy = prob.get_val(f"grid.annual_{commodity}_produced", units="kW*h/year")
+        np.testing.assert_allclose(
+            np.atleast_1d(annual_energy),
+            np.full(np.atleast_1d(annual_energy).shape, expected_annual_value),
+        )
+
+
+@pytest.mark.integration
+def test_grid_integration_dt_1800(subtests, tmp_path):
+    """Integration test: run an H2IntegrateModel with only grid technology at dt=1800 s."""
+    n_timesteps = 8760 * 2
+    dt_seconds = 1800
+    interconnection_size = 100000.0
+    demand_kw = 40000.0
+
+    driver_config = {
+        "name": "driver_config",
+        "description": "Integration test driver config",
+        "general": {
+            "folder_output": str(tmp_path / "output"),
+            "create_om_reports": False,
+        },
+    }
+
+    tech_config = {
+        "name": "technology_config",
+        "description": "Grid-only integration test",
+        "technologies": {
+            "grid": {
+                "performance_model": {"model": "GridPerformanceModel"},
+                "model_inputs": {
+                    "shared_parameters": {
+                        "interconnection_size": interconnection_size,
+                    }
+                },
+            }
+        },
+    }
+
+    plant_config = {
+        "name": "plant_config",
+        "description": "Grid-only integration test plant",
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": n_timesteps,
+                "dt": dt_seconds,
+            },
+        },
+    }
+
+    h2i = H2IntegrateModel(
+        {
+            "name": "h2i_grid_integration_test",
+            "system_summary": "Grid-only integration model",
+            "driver_config": driver_config,
+            "technology_config": tech_config,
+            "plant_config": plant_config,
+        }
+    )
+    h2i.setup()
+
+    demand = np.full(n_timesteps, demand_kw)
+    h2i.prob.set_val("grid.electricity_demand", demand, units="kW")
+    h2i.prob.run_model()
+
+    expected_out = np.full(n_timesteps, demand_kw)
+    expected_total = expected_out.sum() * (dt_seconds / 3600)
+    expected_annual = expected_total * (365 * 24 * 3600) / (n_timesteps * dt_seconds)
+
+    with subtests.test("electricity_out equals demand when below interconnection limit"):
+        electricity_out = h2i.prob.get_val("grid.electricity_out", units="kW")
+        np.testing.assert_array_almost_equal(electricity_out, expected_out)
+
+    with subtests.test("capacity factor reflects 40 percent loading"):
+        capacity_factor = h2i.prob.get_val("grid.capacity_factor", units="unitless")
+        np.testing.assert_array_almost_equal(capacity_factor, np.full_like(capacity_factor, 0.4))
+
+    with subtests.test("total electricity produced scales with 1800 second timestep"):
+        total_energy = h2i.prob.get_val("grid.total_electricity_produced", units="kW*h")
+        assert total_energy == pytest.approx(expected_total)
+
+    with subtests.test("annual electricity produced scales from simulated fraction of year"):
+        annual_energy = h2i.prob.get_val("grid.annual_electricity_produced", units="kW*h/year")
+        assert annual_energy == pytest.approx(expected_annual)
 
 
 @pytest.mark.unit

@@ -67,9 +67,10 @@ technologies:
         rated_capacity: 750.  # MMBtu/h
       cost_parameters:
         cost_year: 2023
-        price: 4.2
-        annual_cost: 0.
-        start_up_cost: 100000.
+        commodity_amount_units: MMBtu
+        price: 4.2  # USD/commodity_amount_units
+        annual_cost: 0.  # USD
+        start_up_cost: 100000.  # USD
   natural_gas_plant:
     performance_model:
       model: NaturalGasPerformanceModel

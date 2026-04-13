@@ -38,6 +38,7 @@ class TestSingliticoCostModel:
                         "plant_life": 30,
                         "simulation": {
                             "n_timesteps": 8760,
+                            "dt": 3600,
                         },
                     },
                 },

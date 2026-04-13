@@ -55,6 +55,8 @@ sphinx:
       # class-doc-from
       # no-value
     autodoc_typehints: description
+    html_static_path:
+      - _static
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
     nb_merge_streams: true

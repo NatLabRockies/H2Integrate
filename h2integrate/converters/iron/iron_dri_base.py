@@ -30,6 +30,8 @@ class IronReductionPerformanceBaseConfig(BaseConfig):
 
 
 class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "pig_iron"
@@ -295,6 +297,8 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
@@ -327,7 +331,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
 
         self.config = IronReductionCostBaseConfig.from_dict(
             config_dict,
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 

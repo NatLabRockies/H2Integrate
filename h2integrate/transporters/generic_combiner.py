@@ -38,6 +38,8 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
     the output commodity profile is the element-wise sum of all input profiles.
     """
 
+    _time_step_bounds = (1, 1e9)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

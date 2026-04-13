@@ -74,5 +74,8 @@ finance_parameters:
         - battery
         - electrolyzer
         - h2_storage
-        - n2_feedstock
         - ammonia
+    n2:
+      commodity: nitrogen
+      commodity_stream: n2_feedstock
+      technologies: [n2_feedstock]

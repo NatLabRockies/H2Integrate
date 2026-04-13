@@ -100,6 +100,8 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         """Initialize the optimized dispatch controller."""
         self.config = OptimizedDispatchControllerConfig.from_dict(
