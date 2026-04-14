@@ -49,7 +49,10 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         - methanol_out: methanol produced in kg/h
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -163,7 +166,10 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
         co2_cost: annual cost of CO2 (USD/year)
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

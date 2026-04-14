@@ -47,7 +47,10 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         electricity_out (array): Power flowing out of the grid (buying) (kW).
     """
 
-    _time_step_bounds = (300, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        300,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -182,7 +185,10 @@ class GridCostModel(CostModelBaseClass):
 
     """
 
-    _time_step_bounds = (300, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        300,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = GridCostModelConfig.from_dict(

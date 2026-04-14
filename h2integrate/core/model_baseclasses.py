@@ -32,7 +32,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # dt is seconds per timestep
-        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
         # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
@@ -152,7 +152,7 @@ class CostModelBaseClass(om.ExplicitComponent):
         )
 
         # dt is seconds per timestep
-        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """

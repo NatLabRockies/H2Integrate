@@ -14,7 +14,10 @@ class HydrogenEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
         coeff_df (pd.DataFrame): cost coefficient dataframe
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_eaf"
@@ -31,7 +34,10 @@ class NaturalGasEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
         coeff_df (pd.DataFrame): cost coefficient dataframe
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "ng_eaf"
@@ -48,7 +54,10 @@ class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanc
         coeff_df (pd.DataFrame): performance coefficient dataframe
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_eaf"
@@ -73,7 +82,10 @@ class NaturalGasEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerforma
         coeff_df (pd.DataFrame): performance coefficient dataframe
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.feedstocks_to_units = {

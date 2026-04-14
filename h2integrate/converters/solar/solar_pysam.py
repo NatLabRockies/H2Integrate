@@ -142,7 +142,10 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     It takes solar parameters as input and outputs power generation data.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         super().setup()

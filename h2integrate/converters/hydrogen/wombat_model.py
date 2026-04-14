@@ -35,7 +35,10 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
     lost due to operations and maintenance (O&M), and electrolyzer availability.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         super().setup()

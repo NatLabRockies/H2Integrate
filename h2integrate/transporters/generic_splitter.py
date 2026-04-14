@@ -63,7 +63,10 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     losses or other considerations from system components.
     """
 
-    _time_step_bounds = (1, 1e9)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        1,
+        1e9,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})

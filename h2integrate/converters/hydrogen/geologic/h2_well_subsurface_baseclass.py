@@ -86,7 +86,10 @@ class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
             The total hydrogen produced over the plant lifetime, in kilograms per year.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -171,7 +174,10 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
             Variable OPEX per kilogram of wellhead gas produced, in USD/kg.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         super().setup()

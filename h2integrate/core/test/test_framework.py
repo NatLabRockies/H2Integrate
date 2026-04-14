@@ -197,7 +197,10 @@ def test_check_time_step_with_model_bounds_allows_supported_dt():
 @pytest.mark.unit
 def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
     class DummyModel:
-        _time_step_bounds = (900, 3600)  # (min, max) time step lengths compatible with this model
+        _time_step_bounds = (
+            900,
+            3600,
+        )  # (min, max) time step lengths (in seconds) compatible with this model
 
     model = object.__new__(H2IntegrateModel)
     model.plant_config = {"plant": {"simulation": {"dt": 7200}}}

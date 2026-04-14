@@ -21,7 +21,10 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
     Computes annual steel production based on plant capacity and capacity factor.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         super().setup()
@@ -86,7 +89,10 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
     Includes CapEx, OpEx, and byproduct credits.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = SteelCostAndFinancialModelConfig.from_dict(

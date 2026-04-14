@@ -15,7 +15,10 @@ class HydrogenIronReductionPlantCostComponent(IronReductionPlantBaseCostComponen
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_dri"
@@ -33,7 +36,10 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "ng_dri"
@@ -51,7 +57,10 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_dri"
@@ -76,7 +85,10 @@ class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePer
         steel_to_iron_ratio (float): steel/pig iron ratio
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.feedstocks_to_units = {

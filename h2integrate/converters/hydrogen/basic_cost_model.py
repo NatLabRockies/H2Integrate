@@ -35,7 +35,10 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
     An OpenMDAO component that computes the cost of a PEM electrolyzer.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = BasicElectrolyzerCostModelConfig.from_dict(
