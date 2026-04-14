@@ -42,7 +42,10 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         - electricity_out: hourly electricity production (kW*h/h)
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
@@ -147,7 +150,10 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
         cost_year: dollar year for output costs
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = SMRCostConfig.from_dict(

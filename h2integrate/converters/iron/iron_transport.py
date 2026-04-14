@@ -29,7 +29,10 @@ class IronTransportPerformanceConfig(BaseConfig):
 
 
 class IronTransportPerformanceComponent(om.ExplicitComponent):
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
@@ -165,7 +168,10 @@ class IronTransportCostConfig(BaseConfig):
 
 
 class IronTransportCostComponent(CostModelBaseClass):
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
