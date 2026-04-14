@@ -33,6 +33,7 @@ model = H2IntegrateModel("33_peak_load_management.yaml")
 
 model.setup()
 model.run()
+model.post_process()
 
 # plot the results for the first week
 supervisor_demand = np.array(
@@ -41,7 +42,8 @@ supervisor_demand = np.array(
     ]
 )
 
-secondary_demand = model.prob.get_val("battery.electricity_demand")
+secondary_demand = model.prob.get_val("battery.electricity_demand", units="kW")
+grid_output = model.prob.get_val("grid_buy.electricity_out", units="MW")
 
 time_series = build_time_series_from_plant_config(model.plant_config)
 
@@ -76,8 +78,10 @@ ax[3].plot(
     model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")[:n_plot],
     label="New demand profile",
 )
+ax[3].plot(time_plot, grid_output[:n_plot], label="Grid purchase (MW)", linestyle=":")
+
 ax[3].set(ylabel="Power (MW)", ylim=[-2, 2])
-ax[3].legend(handles=[*ax[3].get_legend_handles_labels()[0]], frameon=False, ncol=2)
+ax[3].legend(handles=[*ax[3].get_legend_handles_labels()[0]], frameon=False, ncol=3)
 ax[3].tick_params(axis="x", labelrotation=90)
 
 days = pd.to_datetime(np.unique(pd.DatetimeIndex(time_plot).normalize()))

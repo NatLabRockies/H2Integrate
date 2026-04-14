@@ -1,3 +1,4 @@
+import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -444,6 +445,21 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 charging = False
 
         outputs[f"{commodity}_set_point"] = set_point_array
+
+        # insert warning message if for any time step the magnitude of
+        # any negative entry in set_point_array is greater than inputs[f"{commodity}_in"]
+        charging_requested = -np.minimum(set_point_array, 0.0)
+        available_input = np.asarray(inputs[f"{commodity}_in"])
+        exceeds_available_input = charging_requested > available_input
+
+        if np.any(exceeds_available_input):
+            first_idx = int(np.where(exceeds_available_input)[0][0])
+            msg = (
+                f"At timestep index {first_idx}, requested charging rate "
+                f"({charging_requested[first_idx]}) exceeds available {commodity} input "
+                f"({available_input[first_idx]})."
+            )
+            warnings.warn(msg, UserWarning)
 
     @staticmethod
     def get_peaks(

@@ -662,7 +662,7 @@ def test_plm_controller_blocking_charge_in_peak_range(
 
     prob.model.add_subsystem(
         name="IVC",
-        subsys=om.IndepVarComp(name="hydrogen_in", val=[40.0] * 24),
+        subsys=om.IndepVarComp(name="hydrogen_in", val=40.0, shape=24),
         promotes=["*"],
     )
 
@@ -700,3 +700,61 @@ def test_plm_controller_blocking_charge_in_peak_range(
     with subtests.test("SOC is lower after peak window than before"):
         # After discharge and attempted peak meeting, SOC should be lower
         assert soc[14] < soc[6]
+
+
+@pytest.mark.regression
+def test_plm_controller_warns_when_requested_charge_exceeds_input(
+    tech_config_base, plant_config_base
+):
+    """Warn when controller asks to charge faster than available commodity input."""
+    tech_config = tech_config_base
+
+    tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
+        "commodity": "hydrogen",
+        "commodity_rate_units": "kg/h",
+        "max_capacity": 100.0,
+        "max_soc_fraction": 1.0,
+        "min_soc_fraction": 0.1,
+        "init_soc_fraction": 0.2,
+        "max_charge_rate": 25.0,
+        "max_discharge_rate": 25.0,
+        "charge_equals_discharge": False,
+        "charge_efficiency": 0.95,
+        "discharge_efficiency": 0.95,
+        "demand_profile": np.full(24, 1.0),
+        "demand_profile_2": None,
+        "peak_range": {"start": "23:00:00", "end": "23:59:59"},
+        "advance_discharge_period": {"units": "h", "val": 1},
+        "delay_charge_period": {"units": "h", "val": 1},
+        "allow_charge_in_peak_range": True,
+        "dispatch_priority_demand_profile": "demand_profile",
+        "min_peak_proximity": {"units": "h", "val": 4},
+    }
+
+    tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
+        "PeakLoadManagementOpenLoopStorageController"
+    )
+
+    plant_config = plant_config_base
+
+    prob = om.Problem()
+
+    # Keep available input intentionally low so requested charging exceeds it.
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=np.full(24, 1.0), units="kg/h"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "plm_controller",
+        PeakLoadManagementOpenLoopStorageController(
+            plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+
+    with pytest.warns(UserWarning, match="At timestep index 1, requested charging rate"):
+        prob.run_model()
