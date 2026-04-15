@@ -455,7 +455,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         if np.any(exceeds_available_input):
             first_idx = int(np.where(exceeds_available_input)[0][0])
             msg = (
-                f"At timestep index {first_idx}, requested charging rate "
+                f"WARNING: At time step index {first_idx}, requested charging rate "
                 f"({charging_requested[first_idx]}) exceeds available {commodity} input "
                 f"({available_input[first_idx]})."
             )

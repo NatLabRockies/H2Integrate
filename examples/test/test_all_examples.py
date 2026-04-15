@@ -2812,17 +2812,19 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         elec_out = model.prob.get_val("battery.electricity_out", units="kW")
         assert elec_out.sum() == pytest.approx(60.0, rel=1e-3)
 
-    with subtests.test("Battery unmet demand sum"):
-        unmet = model.prob.get_val("battery.unmet_electricity_demand_out", units="kW")
+    with subtests.test("Unmet demand sum"):
+        unmet = model.prob.get_val(
+            "electrical_load_demand.unmet_electricity_demand_out", units="kW"
+        )
         assert unmet.sum() == pytest.approx(1947378.0, rel=1e-3)
 
     with subtests.test("Battery CapEx"):
         capex = model.prob.get_val("battery.CapEx", units="USD")
         assert capex[0] == pytest.approx(603300.0, rel=1e-3)
 
-    with subtests.test("Battery unmet demand sum equals purchased electricity"):
+    with subtests.test("Unmet demand sum equals purchased electricity"):
         battery_unmet_demand = model.prob.get_val(
-            "battery.unmet_electricity_demand_out", units="kW"
+            "electrical_load_demand.unmet_electricity_demand_out", units="kW"
         )
         grid_purchase = model.prob.get_val("grid_buy.electricity_out", units="kW")
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)

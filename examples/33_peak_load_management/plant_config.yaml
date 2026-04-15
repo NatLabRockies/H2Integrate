@@ -9,4 +9,5 @@ plant:
     start_time: 2025/07/01 00:00:00
 technology_interconnections:
   # - [battery, grid_buy, [storage_electricity_charge, electricity_out]]
-  - [battery, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
+  - [battery, electrical_load_demand, [electricity_out, electricity_in]]
+  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_demand]]

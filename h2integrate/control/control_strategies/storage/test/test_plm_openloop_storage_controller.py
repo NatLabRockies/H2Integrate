@@ -756,5 +756,5 @@ def test_plm_controller_warns_when_requested_charge_exceeds_input(
 
     prob.setup()
 
-    with pytest.warns(UserWarning, match="At timestep index 1, requested charging rate"):
+    with pytest.warns(UserWarning, match="WARNING: At time step index 1, requested charging rate"):
         prob.run_model()

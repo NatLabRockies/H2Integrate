@@ -75,7 +75,7 @@ ax[2].legend(handles=[*ax[2].get_legend_handles_labels()[0]], frameon=False, nco
 ax[3].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[3].plot(
     time_plot,
-    model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")[:n_plot],
+    model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="MW")[:n_plot],
     label="New demand profile",
 )
 ax[3].plot(time_plot, grid_output[:n_plot], label="Grid purchase (MW)", linestyle=":")

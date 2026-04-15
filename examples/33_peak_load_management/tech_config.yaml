@@ -17,11 +17,11 @@ technologies:
         max_soc_fraction: 0.9  # percent as decimal
         min_soc_fraction: 0.1  # percent as decimal
         init_soc_fraction: 0.9  # percent as decimal
-        demand_profile: !include demand_profiles/demand_profile.yaml
         charge_efficiency: 1.0  # percent as decimal
         discharge_efficiency: 1.0  # percent as decimal
         charge_equals_discharge: true  # enforce symmetric charge and discharge power limits
         max_discharge_rate: 300.0  # kW/time step; defaults to battery power limit when matched to max_charge_rate
+        demand_profile: !include demand_profiles/demand_profile.yaml
       control_parameters:
         demand_profile_2: !include demand_profiles/demand_profile_2.yaml  # demand used to define when the supervisor commands battery dispatch. This may represent an upstream load.
         dispatch_priority_demand_profile: demand_profile_2  # demand profile the controller prioritizes when deciding dispatch
@@ -45,6 +45,14 @@ technologies:
         energy_capex: 408 # $/kWh  # conservative case for 2024 ATB utility scale batteries
         power_capex: 379 # $/kW  # conservative case for 2024 ATB utility scale batteries
         opex_fraction: 0.025  # 2.5% percent of capex as per 2024 ATB for utility scale batteries
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: !include demand_profiles/demand_profile.yaml
   grid_buy:
     performance_model:
       model: GridPerformanceModel
