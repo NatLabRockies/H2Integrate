@@ -236,7 +236,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
             "battery.storage_electricity_discharge"
         )
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_electricity_out"), rtol=1e-2
+            charge_plus_discharge, prob.get_val("electricity_out"), rtol=1e-2
         )
     with subtests.test("Initial SOC is correct"):
         assert pytest.approx(prob.model.get_val("battery.SOC")[0], rel=1e-2) == 50
@@ -379,7 +379,7 @@ def test_optimal_control_with_generic_storage(
             "h2_storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("h2_storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -456,8 +456,8 @@ def test_optimal_control_with_generic_storage(
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     with subtests.test("Expected discharge from hour 10-30"):
         expected_discharge = np.concat(

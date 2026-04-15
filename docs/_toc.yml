@@ -36,20 +36,22 @@ parts:
       - file: technology_models/atb_costs_pv.md
       - file: technology_models/atb_costs_wind.md
       - file: technology_models/co2.md
-      - file: technology_models/simple_generic_storage.md
       - file: technology_models/methanol.md
       - file: technology_models/ammonia.md
-      - file: technology_models/pysam_battery.md
       - file: technology_models/wind_plant_ard.md
       - file: technology_models/geologic_hydrogen.md
       - file: technology_models/grid
-      - file: technology_models/hydrogen_storage.md
       - file: technology_models/h2_fuel_cell.md
       - file: technology_models/h2_smr.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
+      - file: technology_models/storage_models_index.md
+        sections:
+          - file: technology_models/simple_generic_storage.md
+          - file: technology_models/pysam_battery.md
+          - file: technology_models/hydrogen_storage.md
   - caption: Resource Models
     chapters:
       - file: resource/resource_index
@@ -72,6 +74,7 @@ parts:
   - caption: Demand
     chapters:
       - file: demand/demand_components
+      - file: demand/demand_demo
   - caption: Finance Models
     chapters:
       - file: finance_models/financial_analyses

@@ -17,7 +17,11 @@ technology_interconnections:
   - [hopp, combiner, electricity, cable]
   - [wind, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
-  - [battery, doc, electricity, cable]
+  # combine the battery output with the wind and hopp generation
+  - [battery, elec_combiner, electricity, cable]
+  - [combiner, elec_combiner, electricity, cable]
+  # connect the electricity supply to the doc
+  - [elec_combiner, doc, electricity, cable]
   # etc
 tech_to_dispatch_connections:
   - [combiner, battery]
