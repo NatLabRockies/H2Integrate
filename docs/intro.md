@@ -65,6 +65,60 @@ Like REopt, SAM also does not model loads or end-uses but accepts timeseries dat
 
 H2Integrate goes into more component-level details than those tools, especially in terms of nonlinear physics-based modeling and design.
 
+## Publications
+
+For more context about H2Integrate and analyses performed using the tool, see the publications below.
+PDFs are available in the linked titles.
+
+```{note}
+H2Integrate was previously known as GreenHEART, and some publications may refer to it by that name.
+```
+
+### Techno-economic analysis of low-carbon hydrogen production pathways for decarbonizing steel and ammonia production
+
+This study evaluates multiple low-carbon hydrogen production pathways and their integration
+into steel and ammonia supply chains across the United States. Using H2Integrate, the authors
+assess the cost competitiveness of renewable-powered electrolysis, grid-connected electrolysis,
+and other hydrogen production routes under varying policy and technology cost scenarios,
+providing insights into the conditions needed for cost-competitive decarbonization of heavy industry.
+
+Reznicek, E.P., et al. "[Techno-economic analysis of low-carbon hydrogen production pathways for decarbonizing steel and ammonia production.](https://www.cell.com/cell-reports-sustainability/pdfExtended/S2949-7906(25)00034-5)" Cell Reports Sustainability. Vol. 2. No. 4. Elsevier, 2025.
+
+### Nationwide techno-economic analysis of clean hydrogen production powered by a hybrid renewable energy plant for over 50,000 locations in the United States
+
+The levelized cost of hydrogen is calculated for varying technology costs, and tax credits to
+explore cost sensitivities independent of plant design, performance, and site selection. Our
+findings suggest that strategies for cost reduction include selecting sites with abundant wind
+resources, complementary wind and solar resources, and optimizing the sizing of wind and solar
+assets to maximize the hybrid plant capacity factor.
+
+Grant, E., et al. "[Hybrid power plant design for low-carbon hydrogen in the United States.](https://iopscience.iop.org/article/10.1088/1742-6596/2767/8/082019/pdf)" Journal of Physics: Conference Series. Vol. 2767. No. 8. IOP Publishing, 2024.
+
+### Exploring the role of producing low-carbon hydrogen using water electrolysis powered by offshore wind in facilitating the United States' transition to a net-zero emissions economy by 2050
+
+Conducting a regional techno-economic analysis at four U.S. coastal sites, the study evaluates two
+energy transmission configurations and examines associated costs for the years 2025, 2030, and 2035.
+The results highlight that locations using fixed-bottom technology may achieve cost-competitive
+water electrolysis hydrogen production by 2030 through leveraging geologic hydrogen storage and
+federal policy incentives.
+
+Brunik, K., et al. "[Potential for large-scale deployment of offshore wind-to-hydrogen systems in the United States.](https://iopscience.iop.org/article/10.1088/1742-6596/2767/6/062017/pdf)" Journal of Physics: Conference Series. Vol. 2767. No. 6. IOP Publishing, 2024.
+
+### Examining how tightly-coupled gigawatt-scale wind- and solar-sourced H2 depends on the ability to store and deliver otherwise-curtailed H2 during times of shortages
+
+Modeling results suggest that the levelized cost of storage is highly spatially heterogeneous, with
+minor impact on the cost of H2 in the Midwest, and potentially significant impact in areas with
+emerging H2 economies such as Central California and the Southeast. While TOL/MCH may be the
+cheapest aboveground bulk storage solution evaluated, upfront capital costs, modest energy
+efficiency, reliance on critical materials, and greenhouse gas emissions from heating remain
+concerns.
+
+Breunig, Hanna, et al. "[Hydrogen Storage Materials Could Meet Requirements for GW-Scale Seasonal Storage and Green Steel.](https://assets-eu.researchsquare.com/files/rs-4326648/v1_covered_338a5071-b74b-4ecd-9d2a-859e8d988b5c.pdf?c=1716199726)" (2024).
+
+### DOE Hydrogen Program review presentation of H2Integrate
+
+King, J. and Hammond, S. "[Integrated Modeling, TEA, and Reference Design for Renewable Hydrogen to Green Steel and Ammonia - GreenHEART](https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review24/sdi001_king_2024_o.pdf?sfvrsn=a800ca84_3)" (2024).
+
 ## Software Citation
 
 If you use this software in your work, please cite using the following BibTeX:
