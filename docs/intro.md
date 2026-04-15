@@ -4,57 +4,19 @@
 ![CI Tests](https://github.com/NatLabRockies/H2Integrate/actions/workflows/ci.yml/badge.svg)
 [![image](https://img.shields.io/pypi/pyversions/h2integrate.svg)](https://pypi.python.org/pypi/h2integrate)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![DOI:10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903149.svg)](https://zenodo.org/records/17903149)
+[![DOI 10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903150.svg)](https://zenodo.org/records/17903150)
 
-H2Integrate is an open-source Python package for modeling and designing hybrid energy systems producing electricity, hydrogen, ammonia, steel, and other products.
+H2Integrate (H2I) is an open-source Python package for hybrid energy systems engineering design and technoeconomic analysis.
+It models and optimizes hybrid energy plants that produce electricity, hydrogen, ammonia, steel, and other products, using high-resolution location-specific resource data to perform optimization and scenario analysis.
 
 Browse the example workflows in the GitHub repository: https://github.com/NatLabRockies/H2Integrate/tree/main/examples
-
-```{note}
-H2Integrate is under active development and may be missing features that existed in previous versions. H2Integrate v0.2.0 is the last version that uses the prior framework.
-```
-
-If you use this software in your work, please cite using the following BibTeX:
-
-```bibtex
-@software{brunik_2025_17903150,
-  author = {Brunik, Kaitlin and
-    Grant, Elenya and
-    Thomas, Jared and
-    Starke, Genevieve M and
-    Martin, Jonathan and
-    Ramos, Dakota and
-    Koleva, Mariya and
-    Reznicek, Evan and
-    Hammond, Rob and
-    Stanislawski, Brooke and
-    Kiefer, Charlie and
-    Irmas, Cameron and
-    Vijayshankar, Sanjana and
-    Riccobono, Nicholas and
-    Frontin, Cory and
-    Clark, Caitlyn and
-    Barker, Aaron and
-    Gupta, Abhineet and
-    Kee, Benjamin (Jamie) and
-    King, Jennifer and
-    Jasa, John and
-    Bay, Christopher},
-  title = {H2Integrate: Holistic Hybrids Optimization and Design Tool},
-  month = dec,
-  year = 2025,
-  publisher = {Zenodo},
-  version = {0.4.0},
-  doi = {10.5281/zenodo.17903150},
-  url = {https://doi.org/10.5281/zenodo.17903150},
-}
-```
 
 ## What is H2Integrate?
 
 H2Integrate is designed to be flexible and extensible, allowing users to create their own components and models for various energy systems.
-The tool currently includes renewable energy generation (wind, solar, wave, tidal), battery storage, hydrogen, ammonia, methanol, and steel technologies.
-Other elements such as desalination systems, pipelines, compressors, and storage systems can also be included as developed by users.
+The tool currently includes renewable energy generation (land-based wind, offshore wind, solar PV, wave, tidal), conventional generation (natural gas combined cycle, combustion turbines, grid electricity), hydrogen production (PEM electrolysis, NG-SMR), energy storage (Li-ion batteries, long-duration energy storage, pumped storage hydropower), fuel cells, and industrial processes (ammonia synthesis, iron ore reduction, steel production, methanol, and more).
+Other elements such as desalination systems, pipelines, compressors, and additional storage systems can also be included as developed by users.
+H2Integrate is continually expanding to serve additional hybrid applications, including behind-the-meter data center hybrid design solutions, nuclear generation (small modular reactors), and hydrogen SOEC electrolysis.
 Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [HOPP](https://github.com/NatLabRockies/HOPP), [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
 The H2Integrate tool is built on top of [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/), which provides a powerful and flexible environment for modeling and optimization.
 
@@ -102,6 +64,44 @@ H2Integrate models the processes themselves and does not require the user to pro
 Like REopt, SAM also does not model loads or end-uses but accepts timeseries data of the loads for design purposes.
 
 H2Integrate goes into more component-level details than those tools, especially in terms of nonlinear physics-based modeling and design.
+
+## Software Citation
+
+If you use this software in your work, please cite using the following BibTeX:
+
+```bibtex
+@software{brunik_2025_17903150,
+  author = {Brunik, Kaitlin and
+    Grant, Elenya and
+    Thomas, Jared and
+    Starke, Genevieve M and
+    Martin, Jonathan and
+    Ramos, Dakota and
+    Koleva, Mariya and
+    Reznicek, Evan and
+    Hammond, Rob and
+    Stanislawski, Brooke and
+    Kiefer, Charlie and
+    Irmas, Cameron and
+    Vijayshankar, Sanjana and
+    Riccobono, Nicholas and
+    Frontin, Cory and
+    Clark, Caitlyn and
+    Barker, Aaron and
+    Gupta, Abhineet and
+    Kee, Benjamin (Jamie) and
+    King, Jennifer and
+    Jasa, John and
+    Bay, Christopher},
+  title = {H2Integrate: Holistic Hybrids Optimization and Design Tool},
+  month = dec,
+  year = 2025,
+  publisher = {Zenodo},
+  version = {0.4.0},
+  doi = {10.5281/zenodo.17903150},
+  url = {https://doi.org/10.5281/zenodo.17903150},
+}
+```
 
 ```{tableofcontents}
 ```
