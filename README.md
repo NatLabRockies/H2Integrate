@@ -7,7 +7,7 @@
 [![DOI 10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903150.svg)](https://zenodo.org/records/17903150)
 
 H2Integrate (H2I) is an open-source Python package for hybrid energy systems engineering design and technoeconomic analysis.
-It models hybrid energy plants that produce electricity, hydrogen, ammonia, steel, and other products to perform optimization and scenario analysis.
+It models hybrid systems, especially hybrid energy plants that produce electricity, hydrogen, ammonia, steel, and other products, to perform optimization and scenario analysis.
 
 ## Installation
 
@@ -33,7 +33,7 @@ H2Integrate is both a **hybrid systems engineering design tool** and a **technoe
 H2I includes models for a broad set of energy generation, conversion, and storage technologies.
 This is a non-exhaustive list, and the library of available technologies is actively expanding:
 
-- **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), grid
+- **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), nuclear, grid
 - **Hydrogen production**: PEM electrolysis, NG-SMR
 - **Energy storage**: Li-ion batteries, long-duration energy storage (LDES), pumped storage hydropower (PSH)
 - **Fuel cells**: H2 PEM fuel cells
@@ -42,7 +42,7 @@ This is a non-exhaustive list, and the library of available technologies is acti
 ## Getting Started
 
 See the [Getting Started guide](https://h2integrate.readthedocs.io/en/latest/intro.html) for an introduction to H2Integrate.
-The [Examples folder](./examples/) contain Jupyter notebooks and sample YAML files for common usage scenarios.
+The [Examples folder](./examples/) contain Jupyter notebooks, Python scripts, and sample YAML files for common usage scenarios.
 
 ## Publications
 
