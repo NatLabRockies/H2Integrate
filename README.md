@@ -30,7 +30,8 @@ H2Integrate is both a **hybrid systems engineering design tool** and a **technoe
 
 ### Available Technologies
 
-H2I includes models for a broad set of energy generation, conversion, and storage technologies:
+H2I includes models for a broad set of energy generation, conversion, and storage technologies.
+This is a non-exhaustive list, and the library of available technologies is actively expanding:
 
 - **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), grid
 - **Hydrogen production**: PEM electrolysis, NG-SMR
