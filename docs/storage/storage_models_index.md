@@ -1,7 +1,10 @@
 # Storage Models
-Storage technologies input and output the 'Storage Commodity' (`commodity`) at different times. These technologies can be filled or charged, then unfilled or discharged at some later time. These models are usually constrained by two key model parameters: storage capacity and charge/discharge rate.
+
+Storage technologies input and output the 'Storage Commodity' (`commodity`) as a time series. These technologies can be both filled or charged and unfilled or discharged, resulting in a commodity stream that can be positive and negative.These models are usually constrained by two key model parameters: storage capacity and charge/discharge rate.
 
 ## Storage Performance Models
+
+H2I currently supports the following storage performance models:
 - [`StoragePerformanceModel`](#simple-generic-storage-performance)
 - [`PySAMBatteryPerformanceModel`](#pysam-battery-performance)
 - `StorageAutoSizingModel`
@@ -38,7 +41,7 @@ The aggregated or summarized performance outputs are (single values):
 
 The results that are output per-year of the `plant_life` are:
 - `annual_commodity_produced`: each value is the `total_commodity_produced` scaled to a 1-year (8760 hours) simulation. This value may be negative if the storage charges more than discharges.
-- `capacity_factor`: the storage capacity factor calculated as capacity factors are calculated in converter technologies, a ratio of the sum of *`total_commodity_produced`* to the discharge rate (or `rated_commodity_production`). This value may be negative if the storage charges more than discharges.
+- `capacity_factor`: the storage capacity factor which is calculated in the same way that capacity factors are calculated in converter technologies, which is a ratio of the sum of *`total_commodity_produced`* to the discharge rate (or `rated_commodity_production`). This value may be negative if the storage charges more than discharges.
     $
     CF = \frac{\sum_{t=0}^{n_{\text{timesteps}}}(\text{commodity_out}_t*dt)}{\text{\text{discharge}\_\text{rate}*n_{\text{timesteps}}*dt}
     $
