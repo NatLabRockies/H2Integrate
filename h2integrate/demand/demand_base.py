@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
@@ -92,6 +93,22 @@ class DemandComponentBase(PerformanceModelBaseClass):
             desc=f"Excess production of {self.commodity}",
         )
 
+        self.add_output(
+            f"total_unmet_{self.commodity}_demand",
+            val=0.0,
+            shape=1,
+            units=self.commodity_amount_units,
+            desc=f"Total remaining demand of {self.commodity}",
+        )
+
+        self.add_output(
+            f"total_unused_{self.commodity}",
+            val=0.0,
+            shape=1,
+            units=self.commodity_amount_units,
+            desc=f"Total excess production of {self.commodity}",
+        )
+
     def compute():
         """This method must be implemented by subclasses to define the
         demand component.
@@ -125,16 +142,25 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         remaining_demand = commodity_demand - commodity_in
 
-        # Calculate missed load and curtailed production
-        outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-            remaining_demand > 0, remaining_demand, 0
-        )
-        outputs[f"unused_{self.commodity}_out"] = np.where(
-            remaining_demand < 0, -1 * remaining_demand, 0
-        )
+        # WORKAROUND: if all demand is met, dont change the output
+        # profiles that are likely used for feedback
+        fb_tol = 1e-10
+        unmet_demand_out = np.where(remaining_demand > 0, remaining_demand, 0)
+        unused_commodity = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
+
+        # If not all demand is met, recalculate outputs
+        if unmet_demand_out.sum() < fb_tol:
+            # Calculate missed load and curtailed production
+            outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
+                remaining_demand > 0, remaining_demand, 0
+            )
+            outputs[f"unused_{self.commodity}_out"] = np.where(
+                remaining_demand < 0, -1 * remaining_demand, 0
+            )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
+        # outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
+        outputs[f"{self.commodity}_out"] = commodity_in - unused_commodity
 
         outputs[f"rated_{self.commodity}_production"] = commodity_demand.mean()
 
@@ -148,4 +174,15 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         outputs["capacity_factor"] = outputs[f"{self.commodity}_out"].sum() / commodity_demand.sum()
 
+        # convert from rate units to amount units of rate_units*h
+        total_unmet_demand = unmet_demand_out.sum() * self.dt / 3600
+        total_unused_commodity = unused_commodity.sum() * self.dt / 3600
+
+        # convert from rate_units*h to commodity_rate_units
+        outputs[f"total_unmet_{self.commodity}_demand"] = convert_units(
+            total_unmet_demand, f"({self.commodity_rate_units})*h", self.commodity_amount_units
+        )
+        outputs[f"total_unused_{self.commodity}"] = convert_units(
+            total_unused_commodity, f"({self.commodity_rate_units})*h", self.commodity_amount_units
+        )
         return outputs
