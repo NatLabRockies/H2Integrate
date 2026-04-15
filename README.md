@@ -23,11 +23,10 @@ For installing from source, development setup, and additional installation optio
 
 H2Integrate is both a **hybrid systems engineering design tool** and a **technoeconomic analysis (TEA) tool**. It significantly expands beyond generalized tools by offering:
 
-- **Detailed equipment-level configurations** with a wide range of subsystem variation options
+- **Detailed equipment-level modeling** with a wide range of subsystem variation options
 - **High-resolution, location-specific resource data** for site-dependent performance modeling
-- **Cost inputs settable by the user** based on the Annual Technology Baseline (ATB) for both current and future scenarios
+- **Cost inputs settable by the user** with examples based on the Annual Technology Baseline (ATB)
 - **Optimization and scenario analysis** to explore design trade-offs across hybrid plant configurations
-- **Coverage of all energy types**: electricity, fuels, and heat
 
 ### Available Technologies
 
@@ -87,6 +86,8 @@ Breunig, Hanna, et al. "[Hydrogen Storage Materials Could Meet Requirements for 
 King, J. and Hammond, S. "[Integrated Modeling, TEA, and Reference Design for Renewable Hydrogen to Green Steel and Ammonia - GreenHEART](https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review24/sdi001_king_2024_o.pdf?sfvrsn=a800ca84_3)" (2024).
 
 ## Software Citation
+
+If you use H2I or any of its components in your work, please cite this in your publications using the following BibTeX:
 
 ```bibtex
 @software{brunik_2025_17903150,
