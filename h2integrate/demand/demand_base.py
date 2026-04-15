@@ -43,6 +43,8 @@ class DemandComponentBase(PerformanceModelBaseClass):
     demand component behavior.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         """Define inputs and outputs for demand component.
 

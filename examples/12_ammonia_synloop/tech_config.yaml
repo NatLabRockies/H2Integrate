@@ -92,6 +92,13 @@ technologies:
       control_parameters:
         n_control_window: 24
         system_commodity_interface_limit: 1e12
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
@@ -136,6 +143,21 @@ technologies:
         # we set the sizing mode to 'auto' rather than defining the capacities
         # in the input file
         sizing_mode: auto  # set as "auto" so storage capacity doesnt have to be defined
+  h2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+  h2_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+        demand_profile: 9306.754158  # 50 kg/h
   n2_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

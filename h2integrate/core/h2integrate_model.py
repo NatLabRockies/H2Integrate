@@ -795,7 +795,12 @@ class H2IntegrateModel:
                         f"technologies: {list(self.technology_config['technologies'].keys())}"
                     )
             if commodity_stream is not None:
-                if "combiner" not in commodity_stream and commodity_stream not in tech_names:
+                commodity_stream_has_cost = (
+                    self.technology_config["technologies"]
+                    .get(commodity_stream, {})
+                    .get("cost_model", False)
+                )
+                if commodity_stream_has_cost and commodity_stream not in tech_names:
                     raise UserWarning(
                         f"The technology specific for the commodity_stream '{commodity_stream}' "
                         f"is not included in subgroup '{subgroup_name}' technologies list."

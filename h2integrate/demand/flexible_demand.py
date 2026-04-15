@@ -49,6 +49,8 @@ class FlexibleDemandComponent(DemandComponentBase):
     and used to compute unmet demand, unused commodity, and delivered output.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def setup(self):
         """Set up component inputs and outputs for flexible demand.
 

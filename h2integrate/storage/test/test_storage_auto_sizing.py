@@ -85,12 +85,12 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
 
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
 
     # Check that never charging and discharging at the same time
@@ -143,20 +143,23 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     # Check that demand is fully met, this is because this test starts off with charging the storage
     # enough. In cases where the storage is not charged enough at the start, the demand may not
     # fully be met
     with subtests.test("Demand is fully met"):
+        combined_out = commodity_in + prob.get_val("hydrogen_out", units="kg/h")
+        combined_commodity_to_demand = np.clip(combined_out, a_min=0, a_max=commodity_demand)
         np.testing.assert_allclose(
-            prob.get_val("hydrogen_out", units="kg/h"), commodity_demand, rtol=1e-6, atol=1e-10
+            combined_commodity_to_demand, commodity_demand, rtol=1e-6, atol=1e-10
         )
 
     with subtests.test("Unmet demand"):
+        unmet_demand = commodity_demand - combined_commodity_to_demand
         np.testing.assert_allclose(
-            prob.get_val("unmet_hydrogen_demand_out", units="kg/h"),
+            unmet_demand,
             np.zeros(len(commodity_demand)),
             rtol=1e-6,
             atol=1e-10,
@@ -185,9 +188,9 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
         )
 
     with subtests.test("Total unused commodity"):
-        assert (
-            pytest.approx(prob.get_val("unused_hydrogen_out", units="kg/h").sum(), rel=1e-6) == 5.0
-        )
+        combined_out = prob.get_val("hydrogen_out", units="kg/h") + commodity_in
+        unused_commodity_out = combined_out - commodity_demand
+        assert pytest.approx(unused_commodity_out.sum(), rel=1e-6) == 5.0
 
 
 @pytest.mark.regression
@@ -275,15 +278,19 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     # Check that demand is fully met, this is because this test starts off with charging the storage
     # enough. In cases where the storage is not charged enough at the start, the demand may not
     # fully be met
     with subtests.test("Demand is fully met"):
+        combined_out = commodity_in + prob.get_val("hydrogen_out", units="kg/h")
         np.testing.assert_allclose(
-            prob.get_val("hydrogen_out", units="kg/h"), commodity_demand, rtol=1e-6, atol=1e-10
+            np.clip(combined_out, a_min=0, a_max=commodity_demand),
+            commodity_demand,
+            rtol=1e-6,
+            atol=1e-10,
         )
 
 

@@ -18,13 +18,18 @@ sites:
 # and not connected to additional technologies.
 # hence the empty array.
 technology_interconnections:
+  # connect solar to battery
   - [solar, battery, electricity, cable]
-                                                  # connect solar to battery
+  # combine the battery output with the solar generation
+  - [battery, elec_combiner, electricity, cable]
+  - [solar, elec_combiner, electricity, cable]
+  # subtract the combined generation from the demand profile
+  - [elec_combiner, electrical_load_demand, electricity, cable]
+  # connect the remaining electricity demand to the NG plant
+  - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_demand]]
+  # connect NG feedstock to NG plant
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
-                                                                  # connect NG feedstock to NG plant
-  - [battery, natural_gas_plant, [unmet_electricity_demand_out, electricity_demand]]
-                                                                                         # connect electricity demand to NG feedstock
-    # connect natural gas and battery to combiner
+  # connect natural gas and solar to finance combiner
   - [solar, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]
 resource_to_tech_connections:

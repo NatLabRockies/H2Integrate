@@ -68,3 +68,18 @@ technologies:
         time_weighting_factor: 0.995  # This parameter discounts each subsequent time step incrementally in the future in the horizon window by this amount
         n_control_window: 24  # in timesteps (currently hours), The length of time that the control is applied to in the rolling window optimization
         system_commodity_interface_limit: 1e12
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW

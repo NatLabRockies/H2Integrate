@@ -73,14 +73,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Input timeseries
         self.add_input(
-            f"{commodity}_demand",
-            val=self.config.demand_profile,
-            shape=n_timesteps,
-            units=commodity_rate_units,
-            desc=f"{commodity} demand profile",
-        )
-
-        self.add_input(
             f"{commodity}_in",
             val=0,
             shape=n_timesteps,
@@ -152,27 +144,11 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            f"storage_{commodity}_out",
+            "standard_capacity_factor",
             val=0.0,
-            shape=n_timesteps,
-            units=commodity_rate_units,
-            desc=f"{commodity} input and output from storage",
-        )
-
-        self.add_output(
-            f"unmet_{commodity}_demand_out",
-            val=0.0,
-            shape=n_timesteps,
-            units=commodity_rate_units,
-            desc=f"Unmet {commodity} demand",
-        )
-
-        self.add_output(
-            f"unused_{commodity}_out",
-            val=0.0,
-            shape=n_timesteps,
-            units=commodity_rate_units,
-            desc="Unused generated commodity",
+            shape=self.plant_life,
+            units="unitless",
+            desc=f"Capacity factor of {commodity} discharged from storage",
         )
 
         # create a variable to determine whether we are using feedback control
@@ -187,7 +163,15 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 "tech_to_dispatch_connections"
             ]:
                 if any(intended_dispatch_tech in name for name in self.tech_group_name):
+                    self.add_input(
+                        f"{commodity}_demand",
+                        val=self.config.demand_profile,
+                        shape=n_timesteps,
+                        units=commodity_rate_units,
+                        desc=f"{commodity} demand profile",
+                    )
                     self.add_discrete_input("pyomo_dispatch_solver", val=lambda: None)
+                    # the controller gets demand from the storage model
                     # set the using feedback control variable to True
                     using_feedback_control = True
                     break
@@ -199,6 +183,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 shape=n_timesteps,
                 units=commodity_rate_units,
             )
+
+        self.using_feedback_control = using_feedback_control
         # convert from seconds to hours
         self.dt_hr = int(self.options["plant_config"]["plant"]["simulation"]["dt"]) / (
             3600
@@ -290,21 +276,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # and negative when the storage is charged
         storage_commodity_out = np.array(storage_commodity_out)
 
-        # calculate combined commodity out from inflow source and storage
-        # (note: storage_commodity_out is negative when charging)
-        combined_commodity_out = inputs[f"{self.commodity}_in"] + storage_commodity_out
-
-        # find the total commodity out to meet demand
-        total_commodity_out = np.minimum(inputs[f"{self.commodity}_demand"], combined_commodity_out)
-
-        # determine how much of the inflow commodity was unused
-        unused_commodity = np.maximum(
-            0, combined_commodity_out - inputs[f"{self.commodity}_demand"]
-        )
-
-        # determine how much demand was not met
-        unmet_demand = np.maximum(0, inputs[f"{self.commodity}_demand"] - combined_commodity_out)
-
         # Storage design outputs
         if discharge_rate > 0:
             outputs["storage_duration"] = storage_capacity / discharge_rate
@@ -319,24 +290,25 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             storage_commodity_out > 0, storage_commodity_out, 0
         )
         outputs["SOC"] = soc
-        outputs[f"storage_{self.commodity}_out"] = storage_commodity_out
-
-        # System-level outputs calculated in storage
-        outputs[f"unmet_{self.commodity}_demand_out"] = unmet_demand
-        outputs[f"unused_{self.commodity}_out"] = unused_commodity
-        outputs[f"{self.commodity}_out"] = total_commodity_out
+        outputs[f"{self.commodity}_out"] = storage_commodity_out
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        outputs[f"total_{self.commodity}_produced"] = np.sum(total_commodity_out)
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
 
         if outputs[f"rated_{self.commodity}_production"] <= 0:
             outputs["capacity_factor"] = 0.0
+            outputs["standard_capacity_factor"] = 0.0
         else:
             outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+            )
+            # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
+            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum()
+            outputs["standard_capacity_factor"] = total_commodity_discharged / (
                 outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
             )
         return outputs

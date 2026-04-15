@@ -234,9 +234,9 @@ def test_technology_connections(temp_dir):
 
     new_connection = (["finance_subgroup_electricity", "steel", ("LCOE", "electricity_cost")],)
     new_tech_interconnections = (
-        plant_config_data["technology_interconnections"][0:4]
+        plant_config_data["technology_interconnections"][0:9]
         + list(new_connection)
-        + [plant_config_data["technology_interconnections"][4]]
+        + [plant_config_data["technology_interconnections"][9]]
     )
     plant_config_data["technology_interconnections"] = new_tech_interconnections
 
@@ -515,12 +515,18 @@ def test_system_order(subtests):
         "solar",
         "solar_to_combiner_cable",
         "combiner",
+        "combiner_to_elec_combiner_cable",
         "combiner_to_battery_cable",
         "battery",
-        "battery_to_electrolyzer_cable",
+        "battery_to_elec_combiner_cable",
+        "elec_combiner",
+        "elec_combiner_to_electrolyzer_cable",
         "electrolyzer",
+        "electrolyzer_to_h2_combiner_pipe",
         "electrolyzer_to_h2_storage_pipe",
         "h2_storage",
+        "h2_storage_to_h2_combiner_pipe",
+        "h2_combiner",
         "steel",
         "finance_subgroup_electricity",
         "finance_subgroup_hydrogen",
@@ -528,7 +534,6 @@ def test_system_order(subtests):
     ]
 
     names = [sys.name for sys in h2i.model.plant.system_iter(include_self=False, recurse=False)]
-
     with subtests.test("Test expected names are all present"):
         assert sorted(names) == sorted(expected_names)
 

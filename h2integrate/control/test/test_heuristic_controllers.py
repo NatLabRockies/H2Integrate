@@ -165,6 +165,16 @@ def tech_config_autosizing():
     return tech_config
 
 
+def calculate_combined_outputs(storage_charge_discharge, commodity_in, commodity_demand):
+    combined_commodity_in = commodity_in + storage_charge_discharge
+    remaining_demand = commodity_demand - combined_commodity_in
+    unmet_demand = np.where(remaining_demand > 0, remaining_demand, 0)
+    unused_commodity = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
+    combined_out_for_demand = combined_commodity_in - unused_commodity
+
+    return unmet_demand, unused_commodity, combined_out_for_demand
+
+
 @pytest.mark.regression
 def test_heuristic_load_following_battery_dispatch(
     plant_config_battery, tech_config_battery, subtests
@@ -359,32 +369,27 @@ def test_heuristic_load_following_battery_dispatch(
         ]
     )
 
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("battery.electricity_out", units="kW"), electricity_in, demand_in
+    )
+
     with subtests.test("Check electricity_out"):
-        assert (
-            pytest.approx(expected_electricity_out)
-            == prob.get_val("battery.electricity_out", units="kW")[0:24]
-        )
+        assert pytest.approx(expected_electricity_out) == combined_out_for_demand[0:24]
 
     with subtests.test("Check battery_electricity"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.storage_electricity_out", units="kW")[0:24]
+            == prob.get_val("battery.electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check SOC"):
         assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC", units="percent")[0:24]
 
     with subtests.test("Check unmet_demand"):
-        assert (
-            pytest.approx(expected_unmet_demand_out, abs=1e-4)
-            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[0:24]
-        )
+        assert pytest.approx(expected_unmet_demand_out, abs=1e-4) == unmet_demand[0:24]
 
     with subtests.test("Check unused_electricity_out"):
-        assert (
-            pytest.approx(expected_unused_commodity_out)
-            == prob.get_val("battery.unused_electricity_out", units="kW")[0:24]
-        )
+        assert pytest.approx(expected_unused_commodity_out) == unused_commodity[0:24]
 
     # Test the case where the battery is discharged to its lower SOC limit
     electricity_in = np.zeros(8760)
@@ -415,32 +420,27 @@ def test_heuristic_load_following_battery_dispatch(
     )
     expected_unused_commodity_out = np.zeros(5)
 
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("battery.electricity_out", units="kW"), electricity_in, demand_in
+    )
+
     with subtests.test("Check electricity_out for min SOC"):
-        assert (
-            pytest.approx(expected_electricity_out)
-            == prob.get_val("battery.electricity_out", units="kW")[:5]
-        )
+        assert pytest.approx(expected_electricity_out) == combined_out_for_demand[:5]
 
     with subtests.test("Check battery_electricity for min SOC"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.storage_electricity_out", units="kW")[:5]
+            == prob.get_val("battery.electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for min SOC"):
         assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC", units="percent")[:5]
 
     with subtests.test("Check unmet_demand for min SOC"):
-        assert (
-            pytest.approx(expected_unmet_demand_out, abs=1e-6)
-            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[:5]
-        )
+        assert pytest.approx(expected_unmet_demand_out, abs=1e-6) == unmet_demand[:5]
 
     with subtests.test("Check unused_commodity_out for min SOC"):
-        assert (
-            pytest.approx(expected_unused_commodity_out)
-            == prob.get_val("battery.unused_electricity_out", units="kW")[:5]
-        )
+        assert pytest.approx(expected_unused_commodity_out) == unused_commodity[:5]
 
     # Test the case where the battery is charged to its upper SOC limit
     electricity_in = np.ones(8760) * 30000.0
@@ -479,16 +479,21 @@ def test_heuristic_load_following_battery_dispatch(
 
     abs_tol = 1e-6
     rel_tol = 1e-1
+
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("battery.electricity_out", units="kW"), electricity_in, demand_in
+    )
+
     with subtests.test("Check electricity_out for max SOC"):
         assert (
             pytest.approx(expected_electricity_out, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.electricity_out", units="kW")[:5]
+            == combined_out_for_demand[:5]
         )
 
     with subtests.test("Check battery_electricity for max SOC"):
         assert (
             pytest.approx(expected_battery_electricity, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.storage_electricity_out", units="kW")[:5]
+            == prob.get_val("battery.electricity_out", units="kW")[:5]
         )
 
     with subtests.test("Check SOC for max SOC"):
@@ -498,15 +503,12 @@ def test_heuristic_load_following_battery_dispatch(
         )
 
     with subtests.test("Check unmet_demand for max SOC"):
-        assert (
-            pytest.approx(expected_unmet_demand_out, abs=abs_tol)
-            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[:5]
-        )
+        assert pytest.approx(expected_unmet_demand_out, abs=abs_tol) == unmet_demand[:5]
 
     with subtests.test("Check unused_commodity_out for max SOC"):
         assert (
             pytest.approx(expected_unused_commodity_out, abs=abs_tol, rel=rel_tol)
-            == prob.get_val("battery.unused_electricity_out", units="kW")[:5]
+            == unused_commodity[:5]
         )
 
 
@@ -730,6 +732,10 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
         ]
     )
 
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("battery.electricity_out", units="kW"), electricity_in, demand_in
+    )
+
     with subtests.test("Battery output capacity"):
         assert (
             pytest.approx(
@@ -740,30 +746,24 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
 
     with subtests.test("Check electricity_out"):
         assert (
-            pytest.approx(expected_electricity_out)
-            == prob.get_val("battery.electricity_out", units="kW")[0:24]
+            pytest.approx(expected_electricity_out)  # TODO: update
+            == combined_out_for_demand[0:24]
         )
 
     with subtests.test("Check battery_electricity"):
         assert (
             pytest.approx(expected_battery_electricity)
-            == prob.get_val("battery.storage_electricity_out", units="kW")[0:24]
+            == prob.get_val("battery.electricity_out", units="kW")[0:24]
         )
 
     with subtests.test("Check SOC"):
         assert pytest.approx(expected_SOC) == prob.get_val("battery.SOC", units="percent")[0:24]
 
     with subtests.test("Check unmet_demand"):
-        assert (
-            pytest.approx(expected_unmet_demand_out, abs=1e-4)
-            == prob.get_val("battery.unmet_electricity_demand_out", units="kW")[0:24]
-        )
+        assert pytest.approx(expected_unmet_demand_out, abs=1e-4) == unmet_demand[0:24]
 
     with subtests.test("Check unused_electricity_out"):
-        assert (
-            pytest.approx(expected_unused_commodity_out)
-            == prob.get_val("battery.unused_electricity_out", units="kW")[0:24]
-        )
+        assert pytest.approx(expected_unused_commodity_out) == unused_commodity[0:24]
 
 
 @pytest.mark.regression
@@ -820,12 +820,12 @@ def test_heuristic_load_following_dispatch_with_generic_storage(
         assert np.all(prob.get_val("h2_storage.storage_hydrogen_discharge", units="kg/h") >= 0)
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("h2_storage.storage_hydrogen_charge", units="kg/h") <= 0)
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "h2_storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("h2_storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -892,8 +892,8 @@ def test_heuristic_load_following_dispatch_with_generic_storage(
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     with subtests.test("Expected discharge from hour 10-30"):
         expected_discharge = np.concat(
