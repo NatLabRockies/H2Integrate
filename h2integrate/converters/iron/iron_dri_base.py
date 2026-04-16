@@ -19,13 +19,13 @@ class IronReductionPerformanceBaseConfig(BaseConfig):
     """Configuration baseclass for IronReductionPlantBasePerformanceComponent.
 
     Attributes:
-        pig_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant
-            in units of metric tonnes of pig iron produced per hour.
+        sponge_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant
+            in units of metric tonnes of sponge iron produced per hour.
         water_density (float): water density in kg/m3 to use to calculate water volume
             from mass. Defaults to 1000.0
     """
 
-    pig_iron_production_rate_tonnes_per_hr: float = field()
+    sponge_iron_production_rate_tonnes_per_hr: float = field()
     water_density: float = field(default=1000)  # kg/m3
 
 
@@ -37,7 +37,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
     def initialize(self):
         super().initialize()
-        self.commodity = "pig_iron"
+        self.commodity = "sponge_iron"
         self.commodity_rate_units = "t/h"
         self.commodity_amount_units = "t"
 
@@ -53,9 +53,9 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
         self.add_input(
             "system_capacity",
-            val=self.config.pig_iron_production_rate_tonnes_per_hr,
+            val=self.config.sponge_iron_production_rate_tonnes_per_hr,
             units="t/h",
-            desc="Rated pig iron production capacity",
+            desc="Rated sponge iron production capacity",
         )
 
         # Add feedstock inputs and outputs, default to 0 --> set using feedstock component
@@ -75,10 +75,10 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 desc=f"{feedstock} consumed for iron reduction",
             )
 
-        # Default the pig iron demand input as the rated capacity
+        # Default the sponge iron demand input as the rated capacity
         self.add_input(
-            "pig_iron_demand",
-            val=self.config.pig_iron_production_rate_tonnes_per_hr,
+            "sponge_iron_demand",
+            val=self.config.sponge_iron_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units="t/h",
             desc="Pig iron demand for iron plant",
@@ -91,7 +91,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
     def format_coeff_df(self, coeff_df):
         """Update the coefficient dataframe such that feedstock values are converted to units of
-        feedstock unit / unit pig iron, e.g., 'galUS/t'. Also convert values to standard units
+        feedstock unit / unit sponge iron, e.g., 'galUS/t'. Also convert values to standard units
         and that units are compatible with OpenMDAO Units. Filter the dataframe to include
         only the data necessary for the specified type of reduction.
 
@@ -134,12 +134,12 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
                 i_update = coeff_df[coeff_df["Unit"] == old_unit].index
 
-                # convert from feedstock per unit steel to feedstock per unit pig iron
+                # convert from feedstock per unit steel to feedstock per unit sponge iron
                 coeff_df.loc[i_update, "Value"] = (
                     coeff_df.loc[i_update, "Value"] * steel_to_iron_ratio
                 )
 
-                # update the "Type" to specify that units were changed to be per unit pig iron
+                # update the "Type" to specify that units were changed to be per unit sponge iron
                 coeff_df.loc[i_update, "Type"] = f"{coeff_df.loc[i_update, 'Type'].values[0]}/iron"
 
                 is_capacity_type = all(
@@ -199,7 +199,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
         # get the feedstocks from
         feedstocks = self.coeff_df[self.coeff_df["Type"] == "feed/iron"].copy()
 
-        # get the feedstock usage rates in units/t pig iron
+        # get the feedstock usage rates in units/t sponge iron
         feedstocks_usage_rates = {
             "natural_gas": feedstocks[feedstocks["Name"] == "Natural Gas"][
                 "Value"
@@ -224,20 +224,20 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 feedstocks["Name"] == "Reformer Catalyst"
             ]["Value"].sum()
 
-        # pig iron demand, saturated at maximum rated system capacity
-        pig_iron_demand = np.where(
-            inputs["pig_iron_demand"] > inputs["system_capacity"],
+        # sponge iron demand, saturated at maximum rated system capacity
+        sponge_iron_demand = np.where(
+            inputs["sponge_iron_demand"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["pig_iron_demand"],
+            inputs["sponge_iron_demand"],
         )
 
-        # initialize an array of how much pig iron could be produced
+        # initialize an array of how much sponge iron could be produced
         # from the available feedstocks and the demand
-        pig_iron_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["pig_iron_demand"]))
+        sponge_iron_from_feedstocks = np.zeros(
+            (len(feedstocks_usage_rates) + 1, len(inputs["sponge_iron_demand"]))
         )
-        # first entry is the pig iron demand
-        pig_iron_from_feedstocks[0] = pig_iron_demand
+        # first entry is the sponge iron demand
+        sponge_iron_from_feedstocks[0] = sponge_iron_demand
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity
@@ -249,24 +249,24 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 inputs[f"{feedstock_type}_in"],
             )
             # how much output can be produced from each of the feedstocks
-            pig_iron_from_feedstocks[ii] = feedstock_available / consumption_rate
+            sponge_iron_from_feedstocks[ii] = feedstock_available / consumption_rate
             ii += 1
 
         # output is minimum between available feedstocks and output demand
-        pig_iron_production = np.minimum.reduce(pig_iron_from_feedstocks)
-        outputs["pig_iron_out"] = pig_iron_production
-        outputs["total_pig_iron_produced"] = np.sum(pig_iron_production)
-        outputs["capacity_factor"] = outputs["total_pig_iron_produced"] / (
+        sponge_iron_production = np.minimum.reduce(sponge_iron_from_feedstocks)
+        outputs["sponge_iron_out"] = sponge_iron_production
+        outputs["total_sponge_iron_produced"] = np.sum(sponge_iron_production)
+        outputs["capacity_factor"] = outputs["total_sponge_iron_produced"] / (
             inputs["system_capacity"] * self.n_timesteps
         )
-        outputs["rated_pig_iron_production"] = inputs["system_capacity"]
-        outputs["annual_pig_iron_produced"] = outputs["total_pig_iron_produced"] * (
+        outputs["rated_sponge_iron_production"] = inputs["system_capacity"]
+        outputs["annual_sponge_iron_produced"] = outputs["total_sponge_iron_produced"] * (
             1 / self.fraction_of_year_simulated
         )
 
-        # feedstock consumption based on actual pig iron produced
+        # feedstock consumption based on actual sponge iron produced
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
-            outputs[f"{feedstock_type}_consumed"] = pig_iron_production * consumption_rate
+            outputs[f"{feedstock_type}_consumed"] = sponge_iron_production * consumption_rate
 
 
 @define
@@ -274,8 +274,8 @@ class IronReductionCostBaseConfig(CostModelBaseConfig):
     """Configuration baseclass for IronReductionPlantBaseCostComponent.
 
     Attributes:
-        pig_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant
-            in units of metric tonnes of pig iron produced per hour.
+        sponge_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant
+            in units of metric tonnes of sponge iron produced per hour.
         cost_year (int): This model uses 2022 as the base year for the cost model.
             The cost year is updated based on `target_dollar_year` in the plant
             config to adjust costs based on CPI/CEPCI within this model. This value
@@ -284,7 +284,7 @@ class IronReductionCostBaseConfig(CostModelBaseConfig):
         unskilled_labor_cost (float): Unskilled labor cost in 2022 USD/hr
     """
 
-    pig_iron_production_rate_tonnes_per_hr: float = field()
+    sponge_iron_production_rate_tonnes_per_hr: float = field()
     cost_year: int = field(converter=int)
     skilled_labor_cost: float = field(validator=gte_zero)
     unskilled_labor_cost: float = field(validator=gte_zero)
@@ -297,7 +297,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
     Attributes:
         config (IronReductionCostBaseConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
-        steel_to_iron_ratio (float): steel/pig iron ratio
+        steel_to_iron_ratio (float): steel/sponge iron ratio
     """
 
     _time_step_bounds = (
@@ -345,12 +345,12 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
 
         self.add_input(
             "system_capacity",
-            val=self.config.pig_iron_production_rate_tonnes_per_hr,
+            val=self.config.sponge_iron_production_rate_tonnes_per_hr,
             units="t/h",
             desc="Pig ore production capacity",
         )
         self.add_input(
-            "pig_iron_out",
+            "sponge_iron_out",
             val=0.0,
             shape=n_timesteps,
             units="t/h",
@@ -480,7 +480,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
         varom = self.coeff_df[self.coeff_df["Type"] == "variable opex"][
             "Value"
         ].sum()  # units are USD/mtpy steel
-        tot_varopex = varom * self.steel_to_iron_ratio * inputs["pig_iron_out"].sum()
+        tot_varopex = varom * self.steel_to_iron_ratio * inputs["sponge_iron_out"].sum()
 
         # Adjust costs to target dollar year
         tot_capex_adjusted = inflate_cepci(total_capex_usd, dollar_year, self.config.cost_year)

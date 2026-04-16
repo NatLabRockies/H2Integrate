@@ -16,7 +16,7 @@ def ng_dri_base_config():
     tech_config = {
         "model_inputs": {
             "shared_parameters": {
-                "pig_iron_production_rate_tonnes_per_hr": 1418095 / 8760,  # t/h
+                "sponge_iron_production_rate_tonnes_per_hr": 1418095 / 8760,  # t/h
             },
             "cost_parameters": {
                 "skilled_labor_cost": 40.85,  # 2022 USD/hr
@@ -63,7 +63,7 @@ def ng_feedstock_availability_costs():
 def h2_feedstock_availability_costs():
     feedstocks_dict = {
         "electricity": {
-            # (1418095/8760)t-pig_iron/h * 98.17925 kWh/t-pig_iron = 15893.55104 kW
+            # (1418095/8760)t-sponge_iron/h * 98.17925 kWh/t-sponge_iron = 15893.55104 kW
             "rated_capacity": 16000,  # need 15893.55104 kW
             "units": "kW",
             "price": 0.05802,  # USD/kW TODO: update
@@ -113,7 +113,7 @@ def test_ng_dri_performance_outputs(
             units=feedstock_info["units"],
         )
     prob.run_model()
-    commodity = "pig_iron"
+    commodity = "sponge_iron"
     commodity_rate_units = "kg/h"
     commodity_amount_units = "kg"
     plant_life = int(plant_config["plant"]["plant_life"])
@@ -195,7 +195,7 @@ def test_ng_dri_performance_outputs(
 def test_ng_dri_performance(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
-    expected_pig_iron_annual_production_tpd = 3885.1917808219177  # t/d
+    expected_sponge_iron_annual_production_tpd = 3885.1917808219177  # t/d
 
     prob = om.Problem()
 
@@ -215,11 +215,11 @@ def test_ng_dri_performance(
         )
     prob.run_model()
 
-    annual_pig_iron = np.sum(prob.get_val("perf.pig_iron_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.sponge_iron_out", units="t/h"))
     with subtests.test("Annual Pig Iron"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3)
-            == expected_pig_iron_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_sponge_iron_annual_production_tpd
         )
 
 
@@ -227,11 +227,11 @@ def test_ng_dri_performance(
 def test_ng_dri_performance_limited_feedstock(
     plant_config, ng_dri_base_config, ng_feedstock_availability_costs, subtests
 ):
-    expected_pig_iron_annual_production_tpd = 3885.1917808219177 / 2  # t/d
+    expected_sponge_iron_annual_production_tpd = 3885.1917808219177 / 2  # t/d
     # make iron ore feedstock half of whats needed
     water_usage_rate_gal_pr_tonne = 200.60957937294563
     water_half_availability_gal_pr_hr = (
-        water_usage_rate_gal_pr_tonne * expected_pig_iron_annual_production_tpd / 24
+        water_usage_rate_gal_pr_tonne * expected_sponge_iron_annual_production_tpd / 24
     )
     ng_feedstock_availability_costs["water"].update(
         {"rated_capacity": water_half_availability_gal_pr_hr}
@@ -255,11 +255,11 @@ def test_ng_dri_performance_limited_feedstock(
         )
     prob.run_model()
 
-    annual_pig_iron = np.sum(prob.get_val("perf.pig_iron_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.sponge_iron_out", units="t/h"))
     with subtests.test("Annual Pig Iron"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3)
-            == expected_pig_iron_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_sponge_iron_annual_production_tpd
         )
 
 
@@ -269,7 +269,7 @@ def test_ng_dri_performance_cost(
 ):
     expected_capex = 403808062.6981323
     expected_fixed_om = 60103761.59958463
-    expected_pig_iron_annual_production_tpd = 3885.1917808219177  # t/d
+    expected_sponge_iron_annual_production_tpd = 3885.1917808219177  # t/d
 
     prob = om.Problem()
 
@@ -301,11 +301,11 @@ def test_ng_dri_performance_cost(
     # IronPlantCostComponent: maintenance_materials is included in Fixed OpEx
     # NaturalGasIronReductionPlantCostComponent: maintenance_materials is the variable O&M
 
-    annual_pig_iron = np.sum(prob.get_val("perf.pig_iron_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.sponge_iron_out", units="t/h"))
     with subtests.test("Annual Pig Iron"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3)
-            == expected_pig_iron_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_sponge_iron_annual_production_tpd
         )
     with subtests.test("CapEx"):
         # expected difference of 0.044534%
@@ -325,7 +325,7 @@ def test_ng_dri_performance_cost(
 def test_h2_dri_performance(
     plant_config, ng_dri_base_config, h2_feedstock_availability_costs, subtests
 ):
-    expected_pig_iron_annual_production_tpd = 3885.1917808219177  # t/d
+    expected_sponge_iron_annual_production_tpd = 3885.1917808219177  # t/d
 
     prob = om.Problem()
 
@@ -345,11 +345,11 @@ def test_h2_dri_performance(
         )
     prob.run_model()
 
-    annual_pig_iron = np.sum(prob.get_val("perf.pig_iron_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.sponge_iron_out", units="t/h"))
     with subtests.test("Annual Pig Iron"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3)
-            == expected_pig_iron_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_sponge_iron_annual_production_tpd
         )
 
 
@@ -360,7 +360,7 @@ def test_h2_dri_performance_cost(
     expected_capex = 246546589.2914324
     expected_fixed_om = 53360873.348792635
 
-    expected_pig_iron_annual_production_tpd = 3885.1917808219177  # t/d
+    expected_sponge_iron_annual_production_tpd = 3885.1917808219177  # t/d
 
     prob = om.Problem()
 
@@ -388,11 +388,11 @@ def test_h2_dri_performance_cost(
 
     prob.run_model()
 
-    annual_pig_iron = np.sum(prob.get_val("perf.pig_iron_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.sponge_iron_out", units="t/h"))
     with subtests.test("Annual Pig Iron"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3)
-            == expected_pig_iron_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_sponge_iron_annual_production_tpd
         )
     with subtests.test("CapEx"):
         # expected difference of 0.044534%

@@ -34,10 +34,10 @@ design_variables:
       lower: 0
       upper: 10
 objective:
-  name: finance_subgroup_pig_iron.LCOP
+  name: finance_subgroup_sponge_iron.LCOS
 recorder:
   file: cases.sql
   overwrite_recorder: true
   flag: true
-  includes: [site.latitude, site.longitude, finance_subgroup_pig_iron.LCOP]
+  includes: [site.latitude, site.longitude, finance_subgroup_sponge_iron.LCOS]
   excludes: ['*']
