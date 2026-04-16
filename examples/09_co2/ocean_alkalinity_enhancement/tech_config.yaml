@@ -39,7 +39,7 @@ technologies:
     dispatch_rule_set:
       model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: HeuristicLoadFollowingController
+      model: HeuristicLoadFollowingStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:

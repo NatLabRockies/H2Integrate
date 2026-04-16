@@ -2,7 +2,7 @@
 
 ## Install H2Integrate via PyPI
 
-If you just want to use H2Integrate and aren't developing new models, you can install it from PyPI using pip:
+If you just want to use H2Integrate and aren't developing new models, you should install it from PyPI using pip:
 
 ```bash
 pip install h2integrate

@@ -6,11 +6,11 @@ from pytest import fixture
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
-from h2integrate.control.control_strategies.heuristic_pyomo_controller import (
-    HeuristicLoadFollowingController,
-)
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
+)
+from h2integrate.control.control_strategies.storage.heuristic_pyomo_controller import (
+    HeuristicLoadFollowingStorageController,
 )
 
 
@@ -39,7 +39,7 @@ def tech_config_battery():
         "technologies": {
             "battery": {
                 "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
-                "control_strategy": {"model": "HeuristicLoadFollowingController"},
+                "control_strategy": {"model": "HeuristicLoadFollowingStorageController"},
                 "performance_model": {"model": "PySAMBatteryPerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -97,7 +97,7 @@ def tech_config_generic():
         "technologies": {
             "h2_storage": {
                 "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
-                "control_strategy": {"model": "HeuristicLoadFollowingController"},
+                "control_strategy": {"model": "HeuristicLoadFollowingStorageController"},
                 "performance_model": {"model": "StoragePerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -134,7 +134,7 @@ def tech_config_autosizing():
         "technologies": {
             "h2_storage": {
                 "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
-                "control_strategy": {"model": "HeuristicLoadFollowingController"},
+                "control_strategy": {"model": "HeuristicLoadFollowingStorageController"},
                 "performance_model": {"model": "StorageAutoSizingModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -204,7 +204,7 @@ def test_heuristic_load_following_battery_dispatch(
 
     prob.model.add_subsystem(
         "battery_heuristic_load_following_controller",
-        HeuristicLoadFollowingController(
+        HeuristicLoadFollowingStorageController(
             plant_config=plant_config_battery,
             tech_config=tech_config_battery["technologies"]["battery"],
         ),
@@ -563,7 +563,7 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
 
     prob.model.add_subsystem(
         "battery_heuristic_load_following_controller",
-        HeuristicLoadFollowingController(
+        HeuristicLoadFollowingStorageController(
             plant_config=plant_config_battery,
             tech_config=tech_config_battery["technologies"]["battery"],
         ),
@@ -787,7 +787,7 @@ def test_heuristic_load_following_dispatch_with_generic_storage(
 
     prob.model.add_subsystem(
         "h2_storage_heuristic_load_following_controller",
-        HeuristicLoadFollowingController(
+        HeuristicLoadFollowingStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_generic["technologies"]["h2_storage"],
         ),
@@ -935,7 +935,7 @@ def test_heuristic_dispatch_with_autosizing_storage_demand_less_than_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        HeuristicLoadFollowingController(
+        HeuristicLoadFollowingStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),
@@ -1021,7 +1021,7 @@ def test_heuristic_dispatch_with_autosizing_storage_demand_is_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        HeuristicLoadFollowingController(
+        HeuristicLoadFollowingStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),

@@ -6,8 +6,8 @@ from pytest import fixture
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
-from h2integrate.control.control_strategies.optimized_pyomo_controller import (
-    OptimizedDispatchController,
+from h2integrate.control.control_strategies.storage.optimized_pyomo_controller import (
+    OptimizedDispatchStorageController,
 )
 
 
@@ -34,7 +34,7 @@ def tech_config_battery():
     tech_config = {
         "technologies": {
             "battery": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "PySAMBatteryPerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -95,7 +95,7 @@ def tech_config_generic():
     tech_config = {
         "technologies": {
             "h2_storage": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "StoragePerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -136,7 +136,7 @@ def tech_config_autosizing():
     tech_config = {
         "technologies": {
             "h2_storage": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "StorageAutoSizingModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -197,7 +197,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
 
     prob.model.add_subsystem(
         "battery_optimized_load_following_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_battery,
             tech_config=tech_config_battery["technologies"]["battery"],
         ),
@@ -341,7 +341,7 @@ def test_optimal_control_with_generic_storage(
 
     prob.model.add_subsystem(
         "h2_storage_optimized_load_following_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_generic["technologies"]["h2_storage"],
         ),
@@ -489,7 +489,7 @@ def test_optimal_dispatch_with_autosizing_storage_demand_less_than_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),
@@ -566,7 +566,7 @@ def test_optimal_dispatch_with_autosizing_storage_demand_is_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),

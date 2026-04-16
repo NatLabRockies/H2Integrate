@@ -47,11 +47,13 @@ parts:
       - file: technology_models/iron_mine.md
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
-      - file: technology_models/storage_models_index.md
+  - caption: Storage Models
+    chapters:
+      - file: storage/storage_models_index.md
         sections:
-          - file: technology_models/simple_generic_storage.md
-          - file: technology_models/pysam_battery.md
-          - file: technology_models/hydrogen_storage.md
+          - file: storage/simple_generic_storage.md
+          - file: storage/pysam_battery.md
+          - file: storage/hydrogen_storage.md
   - caption: Resource Models
     chapters:
       - file: resource/resource_index

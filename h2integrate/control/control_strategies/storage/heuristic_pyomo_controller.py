@@ -6,9 +6,9 @@ from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import range_val_or_none
-from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
-    PyomoControllerBaseClass,
-    PyomoControllerBaseConfig,
+from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+    PyomoStorageControllerBaseClass,
+    PyomoStorageControllerBaseConfig,
 )
 
 
@@ -17,8 +17,8 @@ if TYPE_CHECKING:  # to avoid circular imports
 
 
 @define(kw_only=True)
-class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
-    """Configuration class for the HeuristicLoadFollowingController.
+class HeuristicLoadFollowingStorageControllerConfig(PyomoStorageControllerBaseConfig):
+    """Configuration class for the HeuristicLoadFollowingStorageController.
 
     Attributes:
         charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
@@ -61,7 +61,7 @@ class HeuristicLoadFollowingControllerConfig(PyomoControllerBaseConfig):
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
 
 
-class HeuristicLoadFollowingController(PyomoControllerBaseClass):
+class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
     """Operates storage based on heuristic rules to meet the demand profile based on
         available commodity from generation profiles and demand profile.
 
@@ -77,7 +77,7 @@ class HeuristicLoadFollowingController(PyomoControllerBaseClass):
 
     def setup(self):
         """Initialize the heuristic load-following controller."""
-        self.config = HeuristicLoadFollowingControllerConfig.from_dict(
+        self.config = HeuristicLoadFollowingStorageControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             additional_cls_name=self.__class__.__name__,
             strict=False,
