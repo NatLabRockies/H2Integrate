@@ -19,6 +19,11 @@ from h2integrate.core.supported_models import (
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.pose_optimization import PoseOptimization
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+from h2integrate.control.system_level_control import (
+    add_system_level_controller,
+    prepare_system_level_control,
+    connect_system_level_controller,
+)
 from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
@@ -69,10 +74,18 @@ class H2IntegrateModel:
         # it will need plant_config but not driver or tech config
         self.create_plant_model()
 
+        # prepare system-level control (if configured)
+        # validates the system_level_control config section
+        prepare_system_level_control(self.technology_config, self.plant_config)
+
         # create technology models
         # these are OpenMDAO groups that contain all the components for each technology
         # they will need tech_config but not driver or plant config
         self.create_technology_models()
+
+        # add system-level controller (if configured)
+        # this adds a standalone controller component to the plant group
+        add_system_level_controller(self.plant, self.plant_config, self.technology_config)
 
         self.create_finance_model()
 
@@ -80,6 +93,9 @@ class H2IntegrateModel:
         # technologies are connected within the `technology_interconnections` section of the
         # plant config
         self.connect_technologies()
+
+        # connect system-level controller I/O to technology I/O
+        connect_system_level_controller(self.model, self.plant_config)
 
         # create driver model
         # might be an analysis or optimization

@@ -1,0 +1,7 @@
+name: H2Integrate_config
+system_summary: >
+  System-level control example: Wind + Battery + Grid meeting a 100 MW
+  electrical demand. Demonstrates the system_level_control config section.
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

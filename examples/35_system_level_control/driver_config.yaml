@@ -1,0 +1,4 @@
+name: driver_config
+description: Runs a simple system-level control example with wind, battery, and grid
+general:
+  folder_output: system_level_control_run
