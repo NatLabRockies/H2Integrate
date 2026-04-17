@@ -22,7 +22,7 @@ class ShellTubeHXCostModelConfig(CostModelBaseConfig):
 
 
 class ShellTubeHXCostModel(CostModelBaseClass):
-    """_summary_
+    """
     This is a very simple placeholder cost model:
 
     - Reference: 240,000 USD for a 1 MW HX with U ~ 1000 W/m²-K

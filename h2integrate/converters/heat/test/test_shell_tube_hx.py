@@ -1,5 +1,6 @@
 import openmdao.api as om
 from pytest import approx, fixture
+import pytest
 
 from h2integrate.converters.heat.shell_tube_hx import ShellTubeHXPerformanceModel
 
@@ -27,7 +28,7 @@ def shell_tube_hx_config():
     }
     return tech_config
 
-
+@pytest.mark.unit
 class TestShellTubeHXPerformanceModel:
     def _create_problem(self, config):
         prob = om.Problem()
@@ -71,17 +72,18 @@ class TestShellTubeHXPerformanceModel:
         expected_epsilon = 0.5421484468743297
         expected_pump_power_kW = 0.28157427036731625
 
-        assert Q_total_kW == approx(expected_Q_total_kW, rel=1e-2)
-        assert U_global_W_m2K == approx(expected_U_global_W_m2K, rel=1e-2)
-        assert C_r == approx(expected_C_r, rel=1e-5)
-        assert Ex_dest_dot_kW == approx(expected_Ex_dest_dot_kW, rel=1e-5)
-        assert NTU == approx(expected_NTU, rel=1e-5)
-        assert Q_total_kW == approx(expected_Q_total_kW, rel=1e-5)
-        assert S_gen_dot_W_per_K == approx(expected_S_gen_dot_W_per_K, rel=1e-5)
-        assert Tc_out_C == approx(expected_Tc_out_C, rel=1e-5)
-        assert Th_out_C == approx(expected_Th_out_C, rel=1e-5)
-        assert U_global_W_m2K == approx(expected_U_global_W_m2K, rel=1e-5)
-        assert dp_cold_Pa == approx(expected_dp_cold_Pa, rel=1e-5)
-        assert dp_hot_Pa == approx(expected_dp_hot_Pa, rel=1e-5)
-        assert epsilon == approx(expected_epsilon, rel=1e-5)
-        assert pump_power_kW == approx(expected_pump_power_kW, rel=1e-5)
+        rel = 1e-5
+        assert Q_total_kW == approx(expected_Q_total_kW, rel=rel)
+        assert U_global_W_m2K == approx(expected_U_global_W_m2K, rel=rel)
+        assert C_r == approx(expected_C_r, rel=rel)
+        assert Ex_dest_dot_kW == approx(expected_Ex_dest_dot_kW, rel=rel)
+        assert NTU == approx(expected_NTU, rel=rel)
+        assert Q_total_kW == approx(expected_Q_total_kW, rel=rel)
+        assert S_gen_dot_W_per_K == approx(expected_S_gen_dot_W_per_K, rel=rel)
+        assert Tc_out_C == approx(expected_Tc_out_C, rel=rel)
+        assert Th_out_C == approx(expected_Th_out_C, rel=rel)
+        assert U_global_W_m2K == approx(expected_U_global_W_m2K, rel=rel)
+        assert dp_cold_Pa == approx(expected_dp_cold_Pa, rel=rel)
+        assert dp_hot_Pa == approx(expected_dp_hot_Pa, rel=rel)
+        assert epsilon == approx(expected_epsilon, rel=rel)
+        assert pump_power_kW == approx(expected_pump_power_kW, rel=rel)

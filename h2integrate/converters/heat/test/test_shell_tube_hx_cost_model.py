@@ -1,5 +1,6 @@
 import openmdao.api as om
 from pytest import approx, fixture
+import pytest
 
 from h2integrate.converters.heat.shell_tube_hx_cost_model import ShellTubeHXCostModel
 
@@ -23,6 +24,7 @@ def shell_tube_hx_cost_model_config():
     return tech_config, plant_config
 
 
+@pytest.mark.unit
 class TestShellTubeHXCostModel:
     def _create_problem(self, config):
         prob = om.Problem()
@@ -52,5 +54,6 @@ class TestShellTubeHXCostModel:
         expected_CapEx_USD = 240000.0 * (5.0e6 / 1.0e6) ** 0.8
         expected_OpEx_USD_per_year = 0.04 * expected_CapEx_USD
 
-        assert CapEx_USD == approx(expected_CapEx_USD, rel=1e-5)
-        assert OpEx_USD_per_year == approx(expected_OpEx_USD_per_year, rel=1e-5)
+        rel = 1e-5
+        assert CapEx_USD == approx(expected_CapEx_USD, rel=rel)
+        assert OpEx_USD_per_year == approx(expected_OpEx_USD_per_year, rel=rel)
