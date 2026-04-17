@@ -56,6 +56,11 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -84,7 +89,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "heat_rate_mmbtu_per_mwh",
             val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/MW/h",
+            units="MMBtu/(MW*h)",
             desc="Plant heat rate in MMBtu/MWh",
         )
 
@@ -245,6 +250,11 @@ class NaturalGasCostModel(CostModelBaseClass):
         OpEx (float): Total operating expenditure in USD/year
         cost_year (int): Dollar year for the costs
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = NaturalGasCostModelConfig.from_dict(

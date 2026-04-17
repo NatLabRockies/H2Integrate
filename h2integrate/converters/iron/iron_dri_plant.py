@@ -12,8 +12,13 @@ class HydrogenIronReductionPlantCostComponent(IronReductionPlantBaseCostComponen
         product (str): 'h2_dri'
         config (HydrogenIronReductionCostConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
-        steel_to_iron_ratio (float): steel/pig iron ratio
+        steel_to_iron_ratio (float): steel/sponge iron ratio
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_dri"
@@ -28,8 +33,13 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
         product (str): 'ng_dri'
         config (NaturalGasIronReductionCostConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
-        steel_to_iron_ratio (float): steel/pig iron ratio
+        steel_to_iron_ratio (float): steel/sponge iron ratio
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "ng_dri"
@@ -44,8 +54,13 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
         product (str): 'h2_dri'
         config (HydrogenIronReductionPerformanceConfig): configuration class
         coeff_df (pd.DataFrame): performance coefficient dataframe
-        steel_to_iron_ratio (float): steel/pig iron ratio
+        steel_to_iron_ratio (float): steel/sponge iron ratio
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.product = "h2_dri"
@@ -67,8 +82,13 @@ class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePer
         product (str): 'ng_dri'
         config (NaturalGasIronReductionPerformanceConfig): configuration class
         coeff_df (pd.DataFrame): performance coefficient dataframe
-        steel_to_iron_ratio (float): steel/pig iron ratio
+        steel_to_iron_ratio (float): steel/sponge iron ratio
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.feedstocks_to_units = {

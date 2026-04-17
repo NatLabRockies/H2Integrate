@@ -37,6 +37,8 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     H2Integrate.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -91,6 +93,11 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
     requires a self.config attribute to be defined, so we create this minimal subclass.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = CostModelBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
@@ -136,6 +143,11 @@ class ArdWindPlantModel(om.Group):
         cost_year: Cost year from cost component.
         VarOpEx: Variable operating expenditure (currently placeholder).
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)

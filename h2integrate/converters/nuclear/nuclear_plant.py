@@ -33,6 +33,11 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     https://doi.org/10.1016/j.apenergy.2023.120669
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -123,6 +128,11 @@ class QuinnNuclearCostModel(CostModelBaseClass):
     Applied Energy 120669.
     https://doi.org/10.1016/j.apenergy.2023.120669
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = QuinnNuclearCostModelConfig.from_dict(

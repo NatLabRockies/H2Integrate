@@ -1,3 +1,4 @@
+(pysam-battery-performance)=
 # PySAM Battery Model
 
 The PySAM battery model in H2Integrate is a wrapper that integrates the NLR PySAM `BatteryStateful` model into

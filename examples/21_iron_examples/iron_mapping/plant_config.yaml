@@ -59,8 +59,8 @@ finance_parameters:
         - iron_mine
         - mine_electricity_feedstock
         - mine_crude_ore_feedstock
-    pig_iron:
-      commodity: pig_iron
+    sponge_iron:
+      commodity: sponge_iron
       commodity_stream: iron_plant
       technologies:
         - processed_ore_feedstock

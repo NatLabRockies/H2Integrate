@@ -83,7 +83,7 @@ class DemandOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
             # Calculate charge and discharge efficiencies from round-trip efficiency
             self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.round_trip_efficiency = None
+
         if self.charge_efficiency is None or self.discharge_efficiency is None:
             raise ValueError(
                 "Exactly one of the following sets of parameters must be set: (a) "
@@ -114,6 +114,11 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
     system. It uses a demand profile and storage parameters to determine how much of the
     commodity to charge, discharge, or curtail at each time step.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = DemandOpenLoopStorageControllerConfig.from_dict(

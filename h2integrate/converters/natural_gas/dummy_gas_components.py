@@ -61,6 +61,11 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
     The outputs use random variations around base values.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "gas"
@@ -139,6 +144,11 @@ class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     The primary commodity output is hydrogen (extracted from the gas stream).
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "hydrogen"
@@ -207,6 +217,11 @@ class SimpleGasProducerCost(CostModelBaseClass):
     Simple cost model for the dummy gas producer.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = SimpleGasProducerCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
@@ -237,6 +252,11 @@ class SimpleGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = SimpleGasConsumerCostConfig.from_dict(

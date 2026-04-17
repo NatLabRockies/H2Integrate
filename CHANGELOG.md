@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
+- Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
+
+## 0.8 [April 15, 2026]
+- Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)
 - Update energy conversion ratio in H2 SMR model [PR 606](https://github.com/NatLabRockies/H2Integrate/pull/606)
 - Update iron models and examples [PR 601](https://github.com/NatLabRockies/H2Integrate/pull/601)
   - Remove outdated iron files
@@ -46,10 +51,13 @@
   data between functions in a module. [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
 - Adds `H2IntegrateModel.state` as an `IntEnum` to handle setup and run status checks.
   [PR 590](https://github.com/NatLabRockies/H2Integrate/pull/590)
+- Added standardized outputs to feedstock model [PR 523](https://github.com/NatLabRockies/H2Integrate/pull/523)
 - Reclassified open-loop converter control strategies as demand components and updated output naming convention to align with output naming convention in storage performance models [PR 631](https://github.com/NatLabRockies/H2Integrate/pull/631).
   - The `FlexibleDemandOpenLoopConverterController` has been renamed to `FlexibleDemandComponent`
   - The `DemandOpenLoopConverterController` has been renamed to `GenericDemandComponent`
 - Modified CI setup so Windows is temporarily disabled and also so unit, regression, and integration tests are run in separate jobs to speed up testing and provide more information on test failures. [PR 668](https://github.com/NatLabRockies/H2Integrate/pull/668)
+- Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653) and [PR 671](https://github.com/NatLabRockies/H2Integrate/pull/671)
+- Remove demand-related outputs from storage performance models and replace usage with demand components [PR 666](https://github.com/NatLabRockies/H2Integrate/pull/666)
 
 ## 0.7.2 [April 9, 2026]
 

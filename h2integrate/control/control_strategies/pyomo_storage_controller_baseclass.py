@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # to avoid circular imports
 
 
 @define(kw_only=True)
-class PyomoControllerBaseConfig(BaseConfig):
+class PyomoStorageControllerBaseConfig(BaseConfig):
     """
     Configuration data container for Pyomo-based storage / dispatch controllers.
 
@@ -74,7 +74,12 @@ class PyomoControllerBaseConfig(BaseConfig):
             ] * self.n_control_window
 
 
-class PyomoControllerBaseClass(om.ExplicitComponent):
+class PyomoStorageControllerBaseClass(om.ExplicitComponent):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         """
         Declare options for the component. See "Attributes" section in class doc strings for

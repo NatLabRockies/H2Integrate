@@ -69,6 +69,11 @@ class OAEPerformanceConfig(BaseConfig):
 class OAEPerformanceModel(PerformanceModelBaseClass):
     """OpenMDAO component for modeling Ocean Alkalinity Enhancement (OAE) performance."""
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "co2"
@@ -255,6 +260,11 @@ class OAECostModel(CostModelBaseClass):
     ocean alkalinity enhancement (OAE) system.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
 
@@ -346,6 +356,11 @@ class OAECostAndFinancialModel(CostModelBaseClass):
         - NPV
         - Carbon Credit Value
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()

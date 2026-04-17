@@ -9,6 +9,11 @@ from h2integrate.control.control_rules.pyomo_rule_baseclass import (
 
 
 class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = PyomoRuleBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),

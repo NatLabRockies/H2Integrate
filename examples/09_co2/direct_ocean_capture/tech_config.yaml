@@ -59,7 +59,7 @@ technologies:
     dispatch_rule_set:
       model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: HeuristicLoadFollowingController
+      model: HeuristicLoadFollowingStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:
@@ -84,6 +84,13 @@ technologies:
       control_parameters:
         n_control_window: 24
         system_commodity_interface_limit: 1e12
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
   doc:
     performance_model:
       model: DOCPerformanceModel

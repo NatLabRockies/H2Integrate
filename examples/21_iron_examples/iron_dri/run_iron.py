@@ -3,11 +3,11 @@
 In this example, iron ore pellets are produced at different iron mine locations in NE Minnesota.
 These mines send processed ore pellets to a separate iron DRI plant located outside Chicago.
 Four different cases are generated for four different iron mine setups in the `test_inputs.csv`.
-The first two cases generate standard blast furnace gradepellets at two different mine locations.
+The first two cases generate standard blast furnace grade pellets at two different mine locations.
 The second two cases generate DR grade pellets at the same location, with the output capacity
 varied to show how the capacity of the mine does not affect the levelized cost of iron_ore pellets
-(LCOI), nor does it affect the final cost of the pig_iron produced by DRI (LCOP) or the cost of the
-steel produced by the EAF (LCOS).
+(LCOI), nor does it affect the final cost of the sponge_iron produced by DRI (LCOS) or the cost
+of the steel produced by the EAF (LCOS).
 
 """
 
@@ -78,22 +78,26 @@ for casename in casenames:
         )
     )
     lcois_iron.append(
-        float(model.model.get_val("finance_subgroup_pig_iron.price_pig_iron", units="USD/kg")[0])
+        float(
+            model.model.get_val("finance_subgroup_sponge_iron.price_sponge_iron", units="USD/kg")[0]
+        )
     )
     capexes_iron.append(
-        float(model.model.get_val("finance_subgroup_pig_iron.total_capex_adjusted", units="USD")[0])
+        float(
+            model.model.get_val("finance_subgroup_sponge_iron.total_capex_adjusted", units="USD")[0]
+        )
     )
     fopexes_iron.append(
         float(
-            model.model.get_val("finance_subgroup_pig_iron.total_opex_adjusted", units="USD/year")[
-                0
-            ]
+            model.model.get_val(
+                "finance_subgroup_sponge_iron.total_opex_adjusted", units="USD/year"
+            )[0]
         )
     )
     vopexes_iron.append(
         float(
             model.model.get_val(
-                "finance_subgroup_pig_iron.total_varopex_adjusted", units="USD/year"
+                "finance_subgroup_sponge_iron.total_varopex_adjusted", units="USD/year"
             )[0]
         )
     )

@@ -67,7 +67,7 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
             # Calculate charge and discharge efficiencies from round-trip efficiency
             self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.round_trip_efficiency = None
+
         if self.charge_efficiency is None or self.discharge_efficiency is None:
             raise ValueError(
                 "Exactly one of the following sets of parameters must be set: (a) "
@@ -78,6 +78,20 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
         # Set the default commodity_amount_units as the commodity_rate_units*h
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
+
+        # Check if the user provided a non-zero demand profile
+        user_input_dmd = True if np.sum(self.demand_profile) > 0 else False
+
+        # Check that the demand profile is zero if set_demand_as_avg_commodity_in is True
+        if self.set_demand_as_avg_commodity_in and user_input_dmd:
+            # If using the average commodity in as the demand,
+            # warn users if they input the demand profile
+            msg = (
+                "A non-zero demand profile was provided but set_demand_as_avg_commodity_in is True."
+                " The provided demand profile will not be used, the demand profile will be "
+                f"calculated as the mean of ``{self.commodity}_in``. "
+            )
+            raise ValueError(msg)
 
 
 class StorageAutoSizingModel(StoragePerformanceBase):
@@ -90,6 +104,11 @@ class StorageAutoSizingModel(StoragePerformanceBase):
     Then simulates performance of a basic storage component using the charge rate and
     capacity calculated.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = StorageSizingModelConfig.from_dict(
@@ -125,6 +144,18 @@ class StorageAutoSizingModel(StoragePerformanceBase):
             shape=1,
             units=self.commodity_rate_units,
         )
+
+        # Check if we need to have an input for demand
+        # If using the actual demand profile and using
+        # open-loop control, add demand as an input
+        if not self.config.set_demand_as_avg_commodity_in and not self.using_feedback_control:
+            self.add_input(
+                f"{self.commodity}_demand",
+                val=self.config.demand_profile,
+                shape=self.n_timesteps,
+                units=self.commodity_rate_units,
+                desc=f"{self.commodity} demand profile",
+            )
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """
@@ -165,7 +196,7 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         # Part 0: get demand profile based on user input parameters
         # 1. Calculate the demand profile
         if self.config.set_demand_as_avg_commodity_in:
-            if inputs[f"{self.commodity}_demand"].sum() > 0:
+            if dict(inputs.items()).get(f"{self.commodity}_demand", np.array([0])).sum() > 0:
                 msg = (
                     "A non-zero demand profile was input when set_demand_as_avg_commodity_in is "
                     "True. When set_demand_as_avg_commodity_in is True, the input demand profile "
@@ -173,10 +204,9 @@ class StorageAutoSizingModel(StoragePerformanceBase):
                     "set set_demand_as_avg_commodity_in as False."
                 )
                 raise ValueError(msg)
-            else:
-                commodity_demand = np.mean(inputs[f"{self.commodity}_in"]) * np.ones(
-                    self.n_timesteps
-                )
+
+            commodity_demand = np.mean(inputs[f"{self.commodity}_in"]) * np.ones(self.n_timesteps)
+
         else:
             commodity_demand = inputs[f"{self.commodity}_demand"]
 

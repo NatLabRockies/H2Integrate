@@ -38,6 +38,11 @@ class StorageOpenLoopControlBase(om.ExplicitComponent):
     dispatch command profile.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

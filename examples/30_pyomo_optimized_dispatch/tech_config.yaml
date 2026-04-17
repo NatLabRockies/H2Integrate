@@ -36,7 +36,7 @@ technologies:
         commodity_rate_units: kW
   battery:
     control_strategy:
-      model: OptimizedDispatchController
+      model: OptimizedDispatchStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:
@@ -70,18 +70,18 @@ technologies:
         system_commodity_interface_limit: 207500  # rating of the wind farm
         allow_commodity_buying: true
         commodity_buy_price: 0.4
-
-  # grid_buy:
-  #   performance_model:
-  #     model: GridPerformanceModel
-  #   cost_model:
-  #     model: GridCostModel
-  #   model_inputs:
-  #     shared_parameters:
-  #       interconnection_size: 207500  # kW
-  #     cost_parameters:
-  #       cost_year: 2022
-  #       electricity_buy_price: 0.0  # $/kWh - only buying, no selling
-  #       interconnection_capex_per_kw: 0.0  # $/kW capital cost
-  #       interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
-  #       fixed_interconnection_cost: 0.0  # $ one-time fixed cost
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW

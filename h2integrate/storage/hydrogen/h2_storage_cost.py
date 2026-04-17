@@ -74,6 +74,11 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
 
 
 class HydrogenStorageBaseCostModel(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
 
@@ -150,6 +155,11 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
             hydrogen_storage.md in the docs
         [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Calculate installed capital and O&M costs for lined rock cavern hydrogen storage.
@@ -275,6 +285,11 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
             hydrogen_storage.md in the docs
         [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Calculate installed capital and O&M costs for salt cavern hydrogen storage.
@@ -405,6 +420,11 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
             hydrogen_storage.md in the docs
         [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Calculate installed capital and O&M costs for underground pipe hydrogen storage.

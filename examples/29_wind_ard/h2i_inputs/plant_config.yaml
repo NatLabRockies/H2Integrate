@@ -16,9 +16,13 @@ plant:
   plant_life: 30
 technology_interconnections:
   - [wind, combiner, electricity, cable]
-                                                # source_tech, dest_tech, transport_item, transport_type = connection
   - [solar, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
+  # combine the electricity from wind, solar, and the battery
+  - [combiner, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable]
+  # subtract electricity production from electricity demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
   # etc
 resource_to_tech_connections:
   # The wind resource is handled strictly by Ard in this example,
@@ -53,7 +57,7 @@ finance_parameters:
   finance_subgroups:
     dispatched_electricity:
       commodity: electricity
-      commodity_stream: battery
+      commodity_stream: electrical_load_demand
       technologies: [wind, solar, battery]
     produced_electricity:
       commodity: electricity

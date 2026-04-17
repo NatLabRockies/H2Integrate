@@ -32,6 +32,11 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
     Takes plantcapacitykgph input and outputs fresh water and electricity required.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         super().setup()
         self.config = ReverseOsmosisPerformanceModelConfig.from_dict(
@@ -131,6 +136,11 @@ class ReverseOsmosisCostModel(DesalinationCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a reverse osmosis desalination system.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = ReverseOsmosisCostModelConfig.from_dict(

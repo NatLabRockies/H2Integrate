@@ -23,7 +23,7 @@ technology_interconnections:
   - [eaf_grid_feedstock, steel_plant, electricity, cable]
   - [eaf_water_feedstock, steel_plant, water, pipe]
   - [eaf_natural_gas_feedstock, steel_plant, natural_gas, pipe]
-  - [iron_plant, steel_plant, pig_iron, pig_iron_transport]
+  - [iron_plant, steel_plant, sponge_iron, sponge_iron_transport]
 plant:
   plant_life: 30
   simulation:
@@ -64,8 +64,8 @@ finance_parameters:
         - iron_mine
         - mine_electricity_feedstock
         - mine_crude_ore_feedstock
-    pig_iron:
-      commodity: pig_iron
+    sponge_iron:
+      commodity: sponge_iron
       commodity_stream: iron_plant
       technologies:
         - processed_ore_feedstock

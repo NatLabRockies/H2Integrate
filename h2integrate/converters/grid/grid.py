@@ -36,6 +36,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     different grid connection points (for example, one for buying upstream and
     another for selling downstream).
 
+    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+
     Inputs
         interconnection_size (float): Maximum power capacity for grid connection (kW).
         electricity_in (array): Power flowing into the grid (selling) (kW).
@@ -44,6 +46,11 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
     """
+
+    _time_step_bounds = (
+        300,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -174,9 +181,14 @@ class GridCostModel(CostModelBaseClass):
     - Revenue from electricity sales (sell mode)
     - Support for time-varying electricity prices
 
-    Note: Although the electricity units are in kW and the prices are in USD/kWh,
-    this model assumes that each timestep represents 1 hour.
+    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+
     """
+
+    _time_step_bounds = (
+        300,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = GridCostModelConfig.from_dict(
@@ -277,13 +289,13 @@ class GridCostModel(CostModelBaseClass):
             electricity_out = inputs["electricity_out"]
             buy_price = inputs["electricity_buy_price"]
             # Buying costs money (positive VarOpEx)
-            varopex += np.sum(electricity_out * buy_price)
+            varopex += np.sum((self.dt / 3600) * electricity_out * buy_price)
 
         # Add selling revenue if sell price is configured
         # electricity_sold represents power flowing INTO grid (selling)
         if self.config.electricity_sell_price is not None:
             sell_price = inputs["electricity_sell_price"]
             # Selling generates revenue (negative VarOpEx)
-            varopex -= np.sum(inputs["electricity_sold"] * sell_price)
+            varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
 
         outputs["VarOpEx"] = varopex

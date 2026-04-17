@@ -76,6 +76,11 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
             Hourly steam production profile (8760 hours), in kW thermal.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = AspenGeoH2SurfacePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -243,6 +248,11 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
     Outputs:
         All inherited from GeoH2SurfaceCostBaseClass
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = AspenGeoH2SurfaceCostConfig.from_dict(

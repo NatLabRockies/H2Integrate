@@ -29,6 +29,11 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
 
 
 class ATBResComPVCostModel(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = ATBResComPVCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),

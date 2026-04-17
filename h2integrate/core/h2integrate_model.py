@@ -23,8 +23,8 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
-from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
-    PyomoControllerBaseClass,
+from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+    PyomoStorageControllerBaseClass,
 )
 
 
@@ -208,7 +208,7 @@ class H2IntegrateModel:
                 controller_model_name = vals["control_strategy"]["model"]
                 controller_cls = supported_models.get(controller_model_name)
                 if controller_cls is not None and issubclass(
-                    controller_cls, PyomoControllerBaseClass
+                    controller_cls, PyomoStorageControllerBaseClass
                 ):
                     model_inputs = self.technology_config["technologies"][name]["model_inputs"]
                     if (
@@ -499,6 +499,7 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
+                self._check_time_step(perf_model, comp)
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
                 tech_group = self.plant.add_subsystem(tech_name, om.Group())
@@ -508,6 +509,7 @@ class H2IntegrateModel:
                 # and in combined_performance_and_cost_models
                 perf_model = individual_tech_config.get("performance_model", {}).get("model")
                 cost_model = individual_tech_config.get("cost_model", {}).get("model")
+
                 individual_tech_config.get("finance_model", {}).get("model")
                 if (
                     perf_model
@@ -533,6 +535,7 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
+                    self._check_time_step(perf_model, comp)
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
@@ -582,18 +585,23 @@ class H2IntegrateModel:
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             cost_model = individual_tech_config.get("cost_model", {}).get("model")
+
             if cost_model == "FeedstockCostModel":
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
+                self._check_time_step(tech_name, comp)
                 self.plant.add_subsystem(tech_name, comp)
 
     def _process_model(self, model_type, individual_tech_config, tech_group):
         # Generalized function to process model definitions
         model_name = individual_tech_config[model_type]["model"]
         model_object = self.supported_models[model_name]
+
+        self._check_time_step(model_name, model_object)
+
         om_model_object = tech_group.add_subsystem(
             model_name,
             model_object(
@@ -603,7 +611,22 @@ class H2IntegrateModel:
             ),
             promotes=["*"],
         )
+
         return om_model_object
+
+    def _check_time_step(self, model_name, model_object):
+        dt = int(self.plant_config["plant"]["simulation"]["dt"])
+
+        min_ts = model_object._time_step_bounds[0]
+        max_ts = model_object._time_step_bounds[1]
+        if dt < min_ts or dt > max_ts:
+            msg = (
+                f"Model {model_name} is compatible with time steps "
+                f"between {min_ts} (s) and {max_ts} (s), but a time step of {dt} (s) "
+                "was specified. Please set plant_config['plant']['simulation']['dt'] to a"
+                f" value within the range [{min_ts}, {max_ts}]."
+            )
+            raise ValueError(msg)
 
     def create_finance_model(self):
         """
@@ -772,7 +795,12 @@ class H2IntegrateModel:
                         f"technologies: {list(self.technology_config['technologies'].keys())}"
                     )
             if commodity_stream is not None:
-                if "combiner" not in commodity_stream and commodity_stream not in tech_names:
+                commodity_stream_has_cost = (
+                    self.technology_config["technologies"]
+                    .get(commodity_stream, {})
+                    .get("cost_model", False)
+                )
+                if commodity_stream_has_cost and commodity_stream not in tech_names:
                     raise UserWarning(
                         f"The technology specific for the commodity_stream '{commodity_stream}' "
                         f"is not included in subgroup '{subgroup_name}' technologies list."
@@ -1053,6 +1081,11 @@ class H2IntegrateModel:
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
                     )
+                    # Connect the feedstock performance model output to the cost model input
+                    self.plant.connect(
+                        f"{source_tech}_source.{transport_item}_out",
+                        f"{source_tech}.{transport_item}_out",
+                    )
 
                 if perf_model_name == "FeedstockPerformanceModel":
                     source_tech = f"{source_tech}_source"
@@ -1068,6 +1101,7 @@ class H2IntegrateModel:
                     )
 
                     # Add the connection component to the model
+                    self._check_time_step(transport_type, connection_component)
                     self.plant.add_subsystem(connection_name, connection_component)
 
                     # Reorder the subsystems so transporters comes after their source technology

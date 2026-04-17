@@ -67,3 +67,7 @@ The **revenue** of selling electricity to the grid is represented as a variable 
 ```{note}
 If you're using a price-maker financial model (e.g., calculating the LCOE) and selling all of the electricity to the grid, then the `electricity_sell_price` should most likely be set to 0. since you want to know the breakeven price of selling that electricity.
 ```
+
+```{note}
+The grid components are currently compatible with 5-minute (300-second) to 1-hour (3600-second) time steps.
+```

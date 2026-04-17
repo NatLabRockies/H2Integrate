@@ -6,6 +6,11 @@ class CablePerformanceModel(om.ExplicitComponent):
     Pass-through cable with no losses.
     """
 
+    _time_step_bounds = (
+        1,
+        1e9,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("transport_item", values=["electricity"])
         self.options.declare("plant_config", types=dict)

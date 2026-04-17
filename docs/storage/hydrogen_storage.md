@@ -1,3 +1,4 @@
+(h2-storage-cost)=
 # Bulk Hydrogen Storage Cost Model
 
 ## Storage Types

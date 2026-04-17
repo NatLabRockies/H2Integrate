@@ -16,6 +16,16 @@ from h2integrate.control.control_strategies.storage.demand_openloop_storage_cont
 )
 
 
+def calculate_combined_outputs(storage_charge_discharge, commodity_in, commodity_demand):
+    combined_commodity_in = commodity_in + storage_charge_discharge
+    remaining_demand = commodity_demand - combined_commodity_in
+    unmet_demand = np.where(remaining_demand > 0, remaining_demand, 0)
+    unused_commodity = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
+    combined_out_for_demand = combined_commodity_in - unused_commodity
+
+    return unmet_demand, unused_commodity, combined_out_for_demand
+
+
 @fixture
 def variable_h2_production_profile():
     end_use_rated_demand = 10.0  # kg/h
@@ -53,7 +63,7 @@ def test_pass_through_controller(subtests):
 
     prob.model.add_subsystem(
         name="IVC",
-        subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10)),
+        subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10), units="kg/h"),
         promotes=["*"],
     )
 
@@ -88,6 +98,9 @@ def test_storage_demand_controller(subtests):
     # Load the technology configuration
     tech_config = load_yaml(tech_config_path)
 
+    commodity_in = np.arange(10)
+    commodity_demand = np.full(10, 1.0)
+
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
         "commodity": "hydrogen",
         "commodity_rate_units": "kg/h",
@@ -100,7 +113,7 @@ def test_storage_demand_controller(subtests):
         "charge_equals_discharge": False,
         "charge_efficiency": 1.0,
         "discharge_efficiency": 1.0,
-        "demand_profile": [1.0] * 10,  # Example: 10 time steps with 10 kg/time step demand
+        "demand_profile": commodity_demand,  # Example: 10 time steps with 10 kg/time step demand
     }
 
     plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 10, "dt": 3600}}}
@@ -110,7 +123,7 @@ def test_storage_demand_controller(subtests):
 
     prob.model.add_subsystem(
         name="IVC",
-        subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10)),
+        subsys=om.IndepVarComp(name="hydrogen_in", val=commodity_in, units="kg/h"),
         promotes=["*"],
     )
 
@@ -133,16 +146,17 @@ def test_storage_demand_controller(subtests):
 
     prob.run_model()
 
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("hydrogen_out", units="kg/h"), commodity_in, commodity_demand
+    )
     # Run the test
     with subtests.test("Check output"):
-        assert prob.get_val("hydrogen_out", units="kg/h") == pytest.approx(
+        assert combined_out_for_demand == pytest.approx(
             [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         )
 
     with subtests.test("Check curtailment"):
-        assert prob.get_val("unused_hydrogen_out", units="kg/h") == pytest.approx(
-            [0.0, 0.0, 0.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
-        )
+        assert unused_commodity == pytest.approx([0.0, 0.0, 0.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
 
     with subtests.test("Check soc"):
         assert prob.get_val("SOC", units="unitless") == pytest.approx(
@@ -150,9 +164,7 @@ def test_storage_demand_controller(subtests):
         )
 
     with subtests.test("Check missed load"):
-        assert prob.get_val("unmet_hydrogen_demand_out", units="kg/h") == pytest.approx(
-            [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        )
+        assert unmet_demand == pytest.approx([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
 
 @pytest.mark.unit
@@ -205,7 +217,11 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
 
         prob.model.add_subsystem(
             name="IVC",
-            subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10)),
+            subsys=om.IndepVarComp(
+                name="hydrogen_in",
+                val=np.arange(10),
+                units="kg/h",
+            ),
             promotes=["*"],
         )
 
@@ -234,15 +250,26 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
     prob_rte = set_up_and_run_problem(tech_config_rte)
 
     # Run the test
-    with subtests.test("Check output"):
-        assert prob_rte.get_val("hydrogen_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("hydrogen_out", units="kg/h")
+    unmet_demand_rte, unused_commodity_rte, combined_out_for_demand_rte = (
+        calculate_combined_outputs(
+            prob_rte.get_val("hydrogen_out", units="kg/h"),
+            prob_rte.get_val("hydrogen_in", units="kg/h"),
+            prob_rte.get_val("hydrogen_demand", units="kg/h"),
         )
+    )
+    unmet_demand_ioe, unused_commodity_ioe, combined_out_for_demand_ioe = (
+        calculate_combined_outputs(
+            prob_ioe.get_val("hydrogen_out", units="kg/h"),
+            prob_ioe.get_val("hydrogen_in", units="kg/h"),
+            prob_ioe.get_val("hydrogen_demand", units="kg/h"),
+        )
+    )
+
+    with subtests.test("Check output"):
+        assert combined_out_for_demand_rte == pytest.approx(combined_out_for_demand_ioe)
 
     with subtests.test("Check curtailment"):
-        assert prob_rte.get_val("unused_hydrogen_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("unused_hydrogen_out", units="kg/h")
-        )
+        assert unused_commodity_rte == pytest.approx(unused_commodity_ioe)
 
     with subtests.test("Check soc"):
         assert prob_rte.get_val("SOC", units="unitless") == pytest.approx(
@@ -250,9 +277,7 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         )
 
     with subtests.test("Check missed load"):
-        assert prob_rte.get_val("unmet_hydrogen_demand_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("unmet_hydrogen_demand_out", units="kg/h")
-        )
+        assert unmet_demand_rte == pytest.approx(unmet_demand_ioe)
 
 
 @pytest.mark.unit
@@ -335,7 +360,9 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         prob.model.add_subsystem(
             name="IVC",
             subsys=om.IndepVarComp(
-                name="hydrogen_in", val=[2.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                name="hydrogen_in",
+                val=[2.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                units="kg/h",
             ),
             promotes=["*"],
         )
@@ -365,15 +392,26 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
     prob_rte = set_up_and_run_problem(tech_config_rte)
 
     # Run the comparison tests between charge/discharge and round trip efficiencies
-    with subtests.test("Check output match"):
-        assert prob_rte.get_val("hydrogen_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("hydrogen_out", units="kg/h")
+    unmet_demand_rte, unused_commodity_rte, combined_out_for_demand_rte = (
+        calculate_combined_outputs(
+            prob_rte.get_val("hydrogen_out", units="kg/h"),
+            prob_rte.get_val("hydrogen_in", units="kg/h"),
+            prob_rte.get_val("hydrogen_demand", units="kg/h"),
         )
+    )
+    unmet_demand_ioe, unused_commodity_ioe, combined_out_for_demand_ioe = (
+        calculate_combined_outputs(
+            prob_ioe.get_val("hydrogen_out", units="kg/h"),
+            prob_ioe.get_val("hydrogen_in", units="kg/h"),
+            prob_ioe.get_val("hydrogen_demand", units="kg/h"),
+        )
+    )
+
+    with subtests.test("Check output match"):
+        assert combined_out_for_demand_rte == pytest.approx(combined_out_for_demand_ioe)
 
     with subtests.test("Check curtailment match"):
-        assert prob_rte.get_val("unused_hydrogen_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("unused_hydrogen_out", units="kg/h")
-        )
+        assert unused_commodity_rte == pytest.approx(unused_commodity_ioe)
 
     with subtests.test("Check soc match"):
         assert prob_rte.get_val("SOC", units="unitless") == pytest.approx(
@@ -381,18 +419,16 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         )
 
     with subtests.test("Check missed load match"):
-        assert prob_rte.get_val("unmet_hydrogen_demand_out", units="kg/h") == pytest.approx(
-            prob_ioe.get_val("unmet_hydrogen_demand_out", units="kg/h")
-        )
+        assert unmet_demand_rte == pytest.approx(unmet_demand_ioe)
 
     # Run the absolute value tests for charge/discharge and round trip efficiencies
     with subtests.test("Check output value"):
-        assert prob_rte.get_val("hydrogen_out", units="kg/h") == pytest.approx(
+        assert combined_out_for_demand_rte == pytest.approx(
             np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         )
 
     with subtests.test("Check curtailment value"):
-        assert prob_rte.get_val("unused_hydrogen_out", units="kg/h") == pytest.approx(
+        assert unused_commodity_rte == pytest.approx(
             np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         )
 
@@ -402,7 +438,7 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         )
 
     with subtests.test("Check missed load value"):
-        assert prob_rte.get_val("unmet_hydrogen_demand_out", units="kg/h") == pytest.approx(
+        assert unmet_demand_rte == pytest.approx(
             np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         )
 
@@ -453,7 +489,7 @@ def test_generic_storage_demand_controller(subtests):
 
     prob.model.add_subsystem(
         name="IVC",
-        subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10)),
+        subsys=om.IndepVarComp(name="hydrogen_in", val=np.arange(10), units="kg/h"),
         promotes=["*"],
     )
 
@@ -477,16 +513,20 @@ def test_generic_storage_demand_controller(subtests):
 
     prob.run_model()
 
+    unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
+        prob.get_val("hydrogen_out", units="kg/h"),
+        prob.get_val("hydrogen_in", units="kg/h"),
+        prob.get_val("hydrogen_demand", units="kg/h"),
+    )
+
     # # Run the test
     with subtests.test("Check output"):
-        assert prob.get_val("hydrogen_out", units="kg/h") == pytest.approx(
+        assert combined_out_for_demand == pytest.approx(
             [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         )
 
     with subtests.test("Check curtailment"):
-        assert prob.get_val("unused_hydrogen_out", units="kg/h") == pytest.approx(
-            [0.0, 0.0, 0.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
-        )
+        assert unused_commodity == pytest.approx([0.0, 0.0, 0.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
 
     with subtests.test("Check soc"):
         assert prob.get_val("SOC", units="unitless") == pytest.approx(
@@ -494,6 +534,4 @@ def test_generic_storage_demand_controller(subtests):
         )
 
     with subtests.test("Check missed load"):
-        assert prob.get_val("unmet_hydrogen_demand_out", units="kg/h") == pytest.approx(
-            [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        )
+        assert unmet_demand == pytest.approx([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
