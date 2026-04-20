@@ -217,45 +217,6 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         else:
             self.peaks_2_df = None
 
-    @staticmethod
-    def _build_demand_profile_dict(demand_profile, time_series):
-        """Convert scalar/list demand input into a timestamped demand dictionary."""
-        n_timesteps = len(time_series)
-        if np.isscalar(demand_profile):
-            demand_values = np.full(n_timesteps, float(demand_profile), dtype=float)
-        else:
-            demand_values = np.asarray(demand_profile, dtype=float)
-
-        if len(demand_values) != n_timesteps:
-            raise ValueError(
-                "demand_profile length must equal n_timesteps "
-                f"({len(demand_values)} != {n_timesteps})"
-            )
-
-        return {
-            "date_time": time_series,
-            "demand": demand_values,
-        }
-
-    @staticmethod
-    def _parse_peak_range(peak_range):
-        """Validate and parse peak_range values from HH:MM:SS strings.
-
-        Returns a dict with datetime.time objects.
-        """
-        if not isinstance(peak_range, dict):
-            raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
-        if "start" not in peak_range or "end" not in peak_range:
-            raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
-
-        parsed = {}
-        for key, value in peak_range.items():
-            if not isinstance(value, str):
-                raise ValueError(f"peak_range['{key}'] must be an HH:MM:SS string")
-            parsed[key] = datetime.strptime(value, "%H:%M:%S").time()
-
-        return parsed
-
     def compute(self, inputs, outputs):
         """
         Compute storage state of charge (SOC), delivered output, curtailment, and unmet
@@ -436,6 +397,45 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
                 f"({available_input[first_idx]})."
             )
             warnings.warn(msg, UserWarning)
+
+    @staticmethod
+    def _build_demand_profile_dict(demand_profile, time_series):
+        """Convert scalar/list demand input into a timestamped demand dictionary."""
+        n_timesteps = len(time_series)
+        if np.isscalar(demand_profile):
+            demand_values = np.full(n_timesteps, float(demand_profile), dtype=float)
+        else:
+            demand_values = np.asarray(demand_profile, dtype=float)
+
+        if len(demand_values) != n_timesteps:
+            raise ValueError(
+                "demand_profile length must equal n_timesteps "
+                f"({len(demand_values)} != {n_timesteps})"
+            )
+
+        return {
+            "date_time": time_series,
+            "demand": demand_values,
+        }
+
+    @staticmethod
+    def _parse_peak_range(peak_range):
+        """Validate and parse peak_range values from HH:MM:SS strings.
+
+        Returns a dict with datetime.time objects.
+        """
+        if not isinstance(peak_range, dict):
+            raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
+        if "start" not in peak_range or "end" not in peak_range:
+            raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
+
+        parsed = {}
+        for key, value in peak_range.items():
+            if not isinstance(value, str):
+                raise ValueError(f"peak_range['{key}'] must be an HH:MM:SS string")
+            parsed[key] = datetime.strptime(value, "%H:%M:%S").time()
+
+        return parsed
 
     @staticmethod
     def get_peaks(
