@@ -41,7 +41,7 @@ The controller supports two demand profiles:
 - **`demand_profile`** — the local or sub-system demand. Peaks within a configurable daily time window (`peak_range`) are identified as candidate discharge targets.
 - **`demand_profile_2`** — an optional upstream or supervisory demand. When provided, an operator can override the local peak schedule up to a configurable number of events per period (e.g., three times per week). Peaks are determined as the highest n peaks in each period.
 
-The `dispatch_priority_demand_profile` parameter selects which profile acts as the override schedule. On days where the priority profile flags a peak, the controller follows that schedule; on all other days it falls back to the other profile.
+The `dispatch_priority_demand_profile` parameter selects which profile acts as the override schedule. On days where the priority profile flags a peak (up to n override instances in the given time period), the controller follows that schedule; on all other days it falls back to the other profile.
 
 **Dispatch logic (state machine)**
 
