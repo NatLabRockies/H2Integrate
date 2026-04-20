@@ -45,7 +45,7 @@ The `dispatch_priority_demand_profile` parameter selects which profile acts as t
 2. **Charge** — resumes after `delay_charge_period` has elapsed since the end of discharge, subject to the `allow_charge_in_peak_range` flag which can block recharging during the peak windows.
 3. **Idle** — all other timesteps; set-point is zero.
 
-An example output for the first week of a one-year simulation is shown below. Orange shading marks the 12:00–19:00 daily peak window. The top panel shows both demand profiles; the second panel shows battery state of charge; the third shows battery charge/discharge power; the fourth shows the resulting net demand.
+An example output for the first week of a one-year simulation is shown below. Orange shading marks the 12:00–19:00 daily peak window. The top panel shows both demand profiles; the second panel shows battery state of charge; the third shows battery charge/discharge power; the fourth shows the resulting net demand. Periods where `demand_profile_2` takes precedence are marked with vertical dashed lines (three occurrences in the week shown).
 
 ![](./figures/example_peak_load_dispatch.png)
 
