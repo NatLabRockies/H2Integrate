@@ -7,7 +7,7 @@ import pandas as pd
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import contains
+from h2integrate.core.validators import contains, has_required_keys
 from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
     StorageOpenLoopControlBase,
     StorageOpenLoopControlBaseConfig,
@@ -19,8 +19,8 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     """
     Configuration class for the PeakLoadManagementOpenLoopStorageController.
 
-    Defines the storage limits, efficiencies, and peak-selection rules used to
-    pre-compute an open-loop discharge and recharge schedule.
+    Defines peak-selection and dispatch-priority rules used to pre-compute
+    an open-loop discharge and recharge schedule.
 
     Attributes:
         demand_profile_2 (int | float | list | None, optional): Demand values for
@@ -65,35 +65,11 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
     )
     n_override_events: int | None = field(default=None)
     override_events_period: int | str | None = field(default=None)
-    peak_range: dict = field(
-        metadata={
-            "description": "Daily time window for peak detection. "
-            "Dict with 'start' and 'end' as HH:MM:SS strings."
-        },
-    )
-    advance_discharge_period: dict = field(
-        metadata={
-            "description": "How long before a peak to start discharging. "
-            "Dict with 'units' (timedelta unit str) and 'val' (numeric)."
-        },
-    )
-    delay_charge_period: dict = field(
-        metadata={
-            "description": "Minimum delay after discharge completes before charging resumes. "
-            "Dict with 'units' and 'val'."
-        },
-    )
-    allow_charge_in_peak_range: bool = field(
-        default=True,
-        metadata={"description": "If False, charging is suppressed during peak_range."},
-    )
-    min_peak_proximity: dict = field(
-        metadata={
-            "description": "Minimum time allowed between peak events. An error is raised if "
-            "peak events do not respect the given time separation."
-            "Dict with 'units' and 'val'."
-        },
-    )
+    peak_range: dict = field(validator=has_required_keys(["start", "end"]))
+    advance_discharge_period: dict = field(validator=has_required_keys(["units", "val"]))
+    delay_charge_period: dict = field(validator=has_required_keys(["units", "val"]))
+    allow_charge_in_peak_range: bool = field(default=True)
+    min_peak_proximity: dict = field(validator=has_required_keys(["units", "val"]))
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()

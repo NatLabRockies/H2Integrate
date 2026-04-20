@@ -25,18 +25,12 @@ def tech_config_base():
                     "model": "SimpleStorageOpenLoopController",
                 },
                 "performance_model": {
-                    "model": "StorageAutoSizingModel",
-                },
-                "cost_model": {
-                    "model": "LinedRockCavernStorageCostModel",
+                    "model": "StoragePerformanceModel",
                 },
                 "model_inputs": {
                     "shared_parameters": {
                         "commodity": "hydrogen",
                         "commodity_rate_units": "kg/h",
-                    },
-                    "cost_parameters": {
-                        "sizing_mode": "auto",
                     },
                 },
             },
