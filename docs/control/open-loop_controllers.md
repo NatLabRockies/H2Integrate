@@ -30,7 +30,7 @@ For examples of how to use the `DemandOpenLoopStorageController` open-loop contr
 
 (peak-load-management-open-loop-storage-controller)=
 ### Peak Load Management Open-Loop Storage Controller
-The `PeakLoadManagementOpenLoopStorageController` computes and executes a peak-shaving dispatch schedule assuming perfect forecasting. It is designed for reducing peak loads, not meeting a specific demand, using either one or two loads for determining peaks.
+The `PeakLoadManagementOpenLoopStorageController` computes and executes a peak-shaving dispatch schedule assuming perfect forecasting. It is designed for reducing peak loads, not meeting a specific demand, using either one or two loads for determining peaks. The algorithm only supports daily cycles, but could be adjusted to accommodate alternate cycle rates.
 
 The controller supports two demand profiles:
 
