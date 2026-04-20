@@ -825,7 +825,14 @@ class H2IntegrateModel:
                     elec_tech_names = [
                         tech for tech in tech_configs if is_electricity_producer(tech)
                     ]
-                    if len(elec_tech_names) != 1:
+                    if len(elec_tech_names) < 1:
+                        msg = (
+                            "Commodity 'electricity' was specified, but no electricity "
+                            "producing techs were found."
+                        )
+                        raise ValueError(msg)
+
+                    elif len(elec_tech_names) > 1:
                         msg = (
                             f"Multiple electricity producing technologies found in finance subgroup"
                             f" '{subgroup_name}'. Please specify the commodity_stream for the "
