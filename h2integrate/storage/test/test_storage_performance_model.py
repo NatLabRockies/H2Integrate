@@ -1023,3 +1023,35 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
             pytest.approx(2.5, rel=1e-6)
             == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
         )
+
+
+@pytest.mark.unit
+def test_round_trip_efficiency_preserved_in_config(subtests):
+    """Test that round_trip_efficiency is preserved in the config's as_dict() output.
+
+    This is a regression test for a bug where round_trip_efficiency was set to None
+    after computing charge/discharge efficiencies in __attrs_post_init__. This caused
+    check_inputs() to raise an AttributeError because round_trip_efficiency appeared
+    in the user input but was missing from the config's as_dict() output.
+    """
+    from h2integrate.storage.storage_performance_model import StoragePerformanceModelConfig
+
+    round_trip_eff = 0.81
+
+    with subtests.test("StoragePerformanceModelConfig preserves round_trip_efficiency"):
+        config = StoragePerformanceModelConfig(
+            commodity="hydrogen",
+            commodity_rate_units="kg/h",
+            max_capacity=40,
+            max_charge_rate=10,
+            min_soc_fraction=0.1,
+            max_soc_fraction=1.0,
+            init_soc_fraction=0.5,
+            demand_profile=0.0,
+            round_trip_efficiency=round_trip_eff,
+        )
+        config_dict = config.as_dict()
+        assert "round_trip_efficiency" in config_dict
+        assert config_dict["round_trip_efficiency"] == round_trip_eff
+        assert config_dict["charge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
+        assert config_dict["discharge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
