@@ -144,21 +144,15 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         remaining_demand = commodity_demand - commodity_in
 
-        # WORKAROUND: if all demand is met, dont change the output
+        # If all demand is met, don't change the output
         # profiles that are likely used for feedback
         fb_tol = 1e-10
         unmet_demand_out = np.where(remaining_demand > 0, remaining_demand, 0)
         unused_commodity = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
 
-        # If not all demand is met, recalculate outputs
         if unmet_demand_out.sum() < fb_tol:
-            # Calculate missed load and curtailed production
-            outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-                remaining_demand > 0, remaining_demand, 0
-            )
-            outputs[f"unused_{self.commodity}_out"] = np.where(
-                remaining_demand < 0, -1 * remaining_demand, 0
-            )
+            outputs[f"unmet_{self.commodity}_demand_out"] = unmet_demand_out
+            outputs[f"unused_{self.commodity}_out"] = unused_commodity
 
         # Calculate actual output based on demand met and curtailment
         # outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
