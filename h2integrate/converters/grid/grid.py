@@ -121,8 +121,6 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
     def compute(self, inputs, outputs):
         interconnection_size = inputs["interconnection_size"]
-        print("------------")
-        print(f"Electricity demand: {inputs['electricity_demand'][:40]}")
 
         # Selling: electricity flows into grid, limited by interconnection size
         electricity_sold = np.clip(inputs["electricity_in"], 0, interconnection_size)
@@ -149,9 +147,6 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
-        print("------------")
-        print(f"Electricity demand: {inputs['electricity_demand'][:40]}")
-        print(f"Electricity bought: {electricity_bought[:40]}")
 
 
 @define(kw_only=True)

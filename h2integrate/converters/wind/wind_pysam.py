@@ -478,9 +478,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
-        print("------------")
-        print(f"Electricity output: {outputs['electricity_out'][:40]}")
-
     def post_process(self, show_plots=False):
         def plot_turbine_points(
             ax: plt.Axes = None,

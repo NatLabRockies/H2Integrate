@@ -63,7 +63,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         self.add_input(
             f"{self.commodity}_demand",
-            val=137.0,  # self.config.demand_profile,
+            val=self.config.demand_profile,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc=f"Demand profile of {self.commodity}",
@@ -142,37 +142,25 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         remaining_demand = commodity_demand - commodity_in
 
+        # WORKAROUND: if all demand is met, dont change the output
+        # profiles that are likely used for feedback
+        fb_tol = 1e-10
         unmet_demand_out = np.where(remaining_demand > 0, remaining_demand, 0)
         unused_commodity = np.where(remaining_demand < 0, -1 * remaining_demand, 0)
 
-        print("------------")
-        print(f"Commodity demand: {commodity_demand[:40]}")
-        print(f"Commodity supplied: {commodity_in[:40]}")
-        print(f"Remaining demand: {remaining_demand[:40]}")
-        print(f"Unmet demand: {unmet_demand_out[:40]}")
-        print(f"Unused commodity: {unused_commodity[:40]}")
-
-        # # If not all demand is met, recalculate outputs
-        # if unmet_demand_out.sum() < fb_tol:
-        #     # Calculate missed load and curtailed production
-        #     outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-        #         remaining_demand > 0, remaining_demand, 0
-        #     )
-        #     outputs[f"unused_{self.commodity}_out"] = np.where(
-        #         remaining_demand < 0, -1 * remaining_demand, 0
-        #     )
-
-        # Calculate missed load and curtailed production
-        outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-            remaining_demand > 0, remaining_demand, 0
-        )
-        outputs[f"unused_{self.commodity}_out"] = np.where(
-            remaining_demand < 0, -1 * remaining_demand, 0
-        )
+        # If not all demand is met, recalculate outputs
+        if unmet_demand_out.sum() < fb_tol:
+            # Calculate missed load and curtailed production
+            outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
+                remaining_demand > 0, remaining_demand, 0
+            )
+            outputs[f"unused_{self.commodity}_out"] = np.where(
+                remaining_demand < 0, -1 * remaining_demand, 0
+            )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
-        # outputs[f"{self.commodity}_out"] = commodity_in - unused_commodity
+        # outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
+        outputs[f"{self.commodity}_out"] = commodity_in - unused_commodity
 
         outputs[f"rated_{self.commodity}_production"] = commodity_demand.mean()
 
