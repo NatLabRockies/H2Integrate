@@ -17,6 +17,11 @@ plant:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [wind, battery, electricity, cable]
+  # combine the electricity from wind and the battery
+  - [wind, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable]
+  # subtract electricity production from electricity demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
   # etc
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
@@ -88,7 +93,7 @@ finance_parameters:
       technologies: [wind]
     battery:
       commodity: electricity
-      commodity_stream: battery  # use electricity from battery in finance calc
+      commodity_stream: electrical_load_demand  # use electricity from battery in finance calc
       commodity_desc: battery_included
       finance_groups: [profast]
       technologies: [wind, battery]

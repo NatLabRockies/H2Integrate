@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
+- Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
+- Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
+
+## 0.8 [April 15, 2026]
+- Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)
 - Update energy conversion ratio in H2 SMR model [PR 606](https://github.com/NatLabRockies/H2Integrate/pull/606)
 - Update iron models and examples [PR 601](https://github.com/NatLabRockies/H2Integrate/pull/601)
   - Remove outdated iron files
@@ -52,6 +58,7 @@
   - The `DemandOpenLoopConverterController` has been renamed to `GenericDemandComponent`
 - Modified CI setup so Windows is temporarily disabled and also so unit, regression, and integration tests are run in separate jobs to speed up testing and provide more information on test failures. [PR 668](https://github.com/NatLabRockies/H2Integrate/pull/668)
 - Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653) and [PR 671](https://github.com/NatLabRockies/H2Integrate/pull/671)
+- Remove demand-related outputs from storage performance models and replace usage with demand components [PR 666](https://github.com/NatLabRockies/H2Integrate/pull/666)
 
 ## 0.7.2 [April 9, 2026]
 

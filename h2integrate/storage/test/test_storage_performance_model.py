@@ -91,12 +91,12 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
 
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -165,8 +165,8 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     with subtests.test("Expected discharge"):
         expected_discharge = np.concat([np.zeros(18), np.ones(6)])
@@ -182,6 +182,18 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
             prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
             expected_charge,
             rtol=1e-6,
+        )
+
+    with subtests.test("Expected capacity factor"):
+        assert (
+            pytest.approx(-12.5, rel=1e-6)
+            == prob.get_val("storage.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Expected standard capacity factor"):
+        assert (
+            pytest.approx(2.5, rel=1e-6)
+            == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
         )
 
 
@@ -274,17 +286,17 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
 
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         init_soc_expected = (
             performance_model_config["init_soc_fraction"]
-            - prob.get_val("storage_hydrogen_out", units="kg/h")[0] / capacity
+            - prob.get_val("hydrogen_out", units="kg/h")[0] / capacity
         )
         assert (
             pytest.approx(prob.model.get_val("storage.SOC", units="unitless")[0], rel=1e-6)
@@ -352,8 +364,8 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     with subtests.test("Expected discharge"):
         expected_discharge = np.concat(
@@ -374,6 +386,26 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
             prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
             expected_charge,
             rtol=1e-6,
+        )
+
+    with subtests.test("Total charge = total discharge"):
+        assert (
+            pytest.approx(
+                -1 * prob.get_val("storage.storage_hydrogen_charge", units="kg/h").sum(), rel=1e-6
+            )
+            == prob.get_val("storage.storage_hydrogen_discharge", units="kg/h").sum()
+        )
+
+    with subtests.test("Expected capacity factor"):
+        assert (
+            pytest.approx(0.0, rel=1e-6)
+            == prob.get_val("storage.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Expected standard capacity factor"):
+        assert (
+            pytest.approx(15.416666, rel=1e-6)
+            == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
         )
 
 
@@ -537,6 +569,18 @@ def test_generic_storage_with_simple_control_zero_size(plant_config, subtests):
             == performance_model_config["init_soc_fraction"]
         )
 
+    with subtests.test("Expected capacity factor"):
+        assert (
+            pytest.approx(0.0, rel=1e-6)
+            == prob.get_val("storage.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Expected standard capacity factor"):
+        assert (
+            pytest.approx(0.0, rel=1e-6)
+            == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
+        )
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
@@ -627,17 +671,17 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
 
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         init_soc_expected = (
             performance_model_config["init_soc_fraction"]
-            - (prob.get_val("storage_hydrogen_out", units="kg/h")[0] * charge_eff) / capacity
+            - (prob.get_val("hydrogen_out", units="kg/h")[0] * charge_eff) / capacity
         )
 
         assert (
@@ -707,11 +751,10 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
         assert (
-            np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max()
-            <= capacity * discharge_eff
+            np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity * discharge_eff
         )
         assert (
-            np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min()
+            np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min()
             >= -1 * capacity / charge_eff
         )
 
@@ -762,6 +805,18 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
             prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
             expected_charge,
             rtol=1e-6,
+        )
+
+    with subtests.test("Expected capacity factor"):
+        assert (
+            pytest.approx(-3.16666666, rel=1e-6)
+            == prob.get_val("storage.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Expected standard capacity factor"):
+        assert (
+            pytest.approx(4.750, rel=1e-6)
+            == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
         )
 
 
@@ -851,12 +906,12 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
     with subtests.test("Charge is always negative"):
         assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
 
-    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+    with subtests.test("Charge + Discharge == hydrogen_out"):
         charge_plus_discharge = prob.get_val(
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -927,11 +982,10 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
         assert (
-            np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max()
-            <= capacity * discharge_eff
+            np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity * discharge_eff
         )
         assert (
-            np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min()
+            np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min()
             >= -1 * capacity / charge_eff
         )
 
@@ -957,3 +1011,47 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
             expected_charge,
             rtol=1e-6,
         )
+
+    with subtests.test("Expected capacity factor"):
+        assert (
+            pytest.approx(-17.5, rel=1e-6)
+            == prob.get_val("storage.capacity_factor", units="percent")[0]
+        )
+
+    with subtests.test("Expected standard capacity factor"):
+        assert (
+            pytest.approx(2.5, rel=1e-6)
+            == prob.get_val("storage.standard_capacity_factor", units="percent")[0]
+        )
+
+
+@pytest.mark.unit
+def test_round_trip_efficiency_preserved_in_config(subtests):
+    """Test that round_trip_efficiency is preserved in the config's as_dict() output.
+
+    This is a regression test for a bug where round_trip_efficiency was set to None
+    after computing charge/discharge efficiencies in __attrs_post_init__. This caused
+    check_inputs() to raise an AttributeError because round_trip_efficiency appeared
+    in the user input but was missing from the config's as_dict() output.
+    """
+    from h2integrate.storage.storage_performance_model import StoragePerformanceModelConfig
+
+    round_trip_eff = 0.81
+
+    with subtests.test("StoragePerformanceModelConfig preserves round_trip_efficiency"):
+        config = StoragePerformanceModelConfig(
+            commodity="hydrogen",
+            commodity_rate_units="kg/h",
+            max_capacity=40,
+            max_charge_rate=10,
+            min_soc_fraction=0.1,
+            max_soc_fraction=1.0,
+            init_soc_fraction=0.5,
+            demand_profile=0.0,
+            round_trip_efficiency=round_trip_eff,
+        )
+        config_dict = config.as_dict()
+        assert "round_trip_efficiency" in config_dict
+        assert config_dict["round_trip_efficiency"] == round_trip_eff
+        assert config_dict["charge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
+        assert config_dict["discharge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))

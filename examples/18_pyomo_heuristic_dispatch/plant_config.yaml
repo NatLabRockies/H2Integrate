@@ -17,6 +17,11 @@ plant:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [wind, battery, electricity, cable]
+  # combine the electricity from wind and the battery
+  - [wind, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable]
+  # subtract electricity production from electricity demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
 # array of arrays containing left-to-right technology, technology doing the dispatching
 # in this case, battery is connected to battery because there are controls rules for
 # the battery and battery is controlling the dispatching
@@ -59,5 +64,5 @@ finance_parameters:
       technologies: [wind, battery]
     dispatched_electricity:
       commodity: electricity
-      commodity_stream: battery  # use only dispatched electricity from battery in finance calc
+      commodity_stream: electrical_load_demand  # use only dispatched electricity from battery in finance calc
       technologies: [wind, battery]

@@ -140,12 +140,6 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
-from h2integrate.control.control_strategies.heuristic_pyomo_controller import (
-    HeuristicLoadFollowingController,
-)
-from h2integrate.control.control_strategies.optimized_pyomo_controller import (
-    OptimizedDispatchController,
-)
 from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
     AspenGeoH2SurfaceCostModel,
     AspenGeoH2SurfacePerformanceModel,
@@ -159,6 +153,12 @@ from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass impo
 from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models import (
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
+)
+from h2integrate.control.control_strategies.storage.heuristic_pyomo_controller import (
+    HeuristicLoadFollowingStorageController,
+)
+from h2integrate.control.control_strategies.storage.optimized_pyomo_controller import (
+    OptimizedDispatchStorageController,
 )
 from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
     SimpleStorageOpenLoopController,
@@ -278,8 +278,8 @@ supported_models = {
     # Control
     "SimpleStorageOpenLoopController": SimpleStorageOpenLoopController,
     "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
-    "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
-    "OptimizedDispatchController": OptimizedDispatchController,
+    "HeuristicLoadFollowingStorageController": HeuristicLoadFollowingStorageController,
+    "OptimizedDispatchStorageController": OptimizedDispatchStorageController,
     "GenericDemandComponent": GenericDemandComponent,
     "FlexibleDemandComponent": FlexibleDemandComponent,
     # Dispatch

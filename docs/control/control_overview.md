@@ -19,4 +19,4 @@ The second systematic control approach, [pyomo control](#pyomo-control), allows 
 In the pyomo control framework in H2Integrate, each technology can have control rules associated with them that are in turn passed to the pyomo control component, which is owned by the storage technology. The pyomo control component combines the technology rules into a single pyomo model, which is then passed to the storage technology performance model inside a callable dispatch function. The dispatch function also accepts a simulation method from the performance model and iterates between the pyomo model for dispatch commands and the performance simulation function to simulated performance with the specified commands. The dispatch function runs in specified time windows for dispatch and performance until the whole simulation time has been run.
 
 Supported controllers:
-- [`HeuristicLoadFollowingController`](#heuristic-load-following-controller)
+- [`HeuristicLoadFollowingStorageController`](#heuristic-load-following-controller)

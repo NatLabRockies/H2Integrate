@@ -102,6 +102,13 @@ technologies:
         capacity_capex: 383  # $/kg - based on https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review22/st235_houchins_2022_p-pdf.pdf?Status=Master
         charge_capex: .000001  # $/kg/h
         opex_fraction: .000001  # percent of capex
+  h2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
   doc:
     performance_model:
       model: DOCPerformanceModel
@@ -156,6 +163,13 @@ technologies:
         capacity_capex: 5  # $/kg - based on https://www.maritime.dot.gov/sites/marad.dot.gov/files/2024-11/LCE%20MARAD%20CCS%20TEA%20Final%20Report%20-%2031%20May%202024%20%283%29.pdf
         charge_capex: .000001  # $/kg/h
         opex_fraction: .000001  # percent of capex
+  co2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: co2
+        commodity_rate_units: kg/h
   methanol:
     performance_model:
       model: CO2HMethanolPlantPerformanceModel

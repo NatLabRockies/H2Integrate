@@ -15,9 +15,18 @@ technology_interconnections:
   - [electricity_splitter, doc, electricity, cable]
   - [electricity_splitter, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
-  - [h2_storage, methanol, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # connect the h2 supply to the methanol system
+  - [h2_combiner, methanol, hydrogen, pipe]
+  # connect the doc to co2 storage
   - [doc, co2_storage, co2, pipe]
-  - [co2_storage, methanol, co2, pipe]
+  # combine the co2 from the doc and the co2_storage
+  - [doc, co2_combiner, co2, pipe]
+  - [co2_storage, co2_combiner, co2, pipe]
+  # connect the co2 supply to the methanol system
+  - [co2_combiner, methanol, co2, pipe]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]

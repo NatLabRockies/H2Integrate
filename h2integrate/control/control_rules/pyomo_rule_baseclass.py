@@ -56,7 +56,7 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
 
         This method sets up all model elements (parameters, variables, constraints,
         and ports) associated with a technology block within the dispatch model.
-        It is typically called in the setup_pyomo() method of the PyomoControllerBaseClass.
+        It is typically called in the setup_pyomo() method of the PyomoStorageControllerBaseClass.
 
         Args:
             pyomo_model (pyo.ConcreteModel): The Pyomo model to which the technology

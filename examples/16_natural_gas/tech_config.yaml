@@ -54,6 +54,21 @@ technologies:
         energy_capex: 300  # $/kWh
         power_capex: 100  # $/kW
         opex_fraction: 0.05  # percent of capex
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # kW, 100 MW
   ng_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

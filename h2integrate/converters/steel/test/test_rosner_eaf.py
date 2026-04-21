@@ -65,7 +65,7 @@ def ng_feedstock_availability_costs():
             "units": "galUS",
             "price": 1670.0,  # cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
-        "pig_iron": {
+        "sponge_iron": {
             "rated_capacity": 162,  # need 161.88297569673742 t/h
             "units": "t/h",
             "price": 27.5409 * 1e3,  # USD/t TODO UPDATE
@@ -103,7 +103,7 @@ def h2_feedstock_availability_costs():
             "units": "galUS",
             "price": 1670.0,  # TODO: update cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
-        "pig_iron": {
+        "sponge_iron": {
             "rated_capacity": 162,  # need 161.88297569673742 t/h
             "units": "t/h",
             "price": 27.5409 * 1e3,  # USD/t TODO: update
@@ -235,10 +235,11 @@ def test_ng_eaf_performance(
         )
     prob.run_model()
 
-    annual_pig_iron = np.sum(prob.get_val("perf.steel_out", units="t/h"))
+    annual_sponge_iron = np.sum(prob.get_val("perf.steel_out", units="t/h"))
     with subtests.test("Annual Steel"):
         assert (
-            pytest.approx(annual_pig_iron / 365, rel=1e-3) == expected_steel_annual_production_tpd
+            pytest.approx(annual_sponge_iron / 365, rel=1e-3)
+            == expected_steel_annual_production_tpd
         )
 
 

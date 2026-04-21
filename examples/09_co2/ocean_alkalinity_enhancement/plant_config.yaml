@@ -15,7 +15,11 @@ sites:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [wind, battery, electricity, cable]
-  - [battery, oae, electricity, cable]
+  # combine the battery output with the wind generation
+  - [wind, combiner, electricity, cable]
+  - [battery, combiner, electricity, cable]
+  # connect the electricity supply to the oae
+  - [combiner, oae, electricity, cable]
   # etc
 tech_to_dispatch_connections:
   - [wind, battery]

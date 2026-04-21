@@ -1,13 +1,32 @@
-# Demand components
-
-- [`GenericDemandComponent`](#generic-demand-component)
-- [`FlexibleDemandComponent`](#flexible-demand-component)
+# Demand Components
 
 Demand components define rule-based logic for meeting commodity demand profiles without using dynamic system feedback. These components operate independently at each timestep.
 
 This page documents two core demand types:
-1. Generic Demand Component — meets a fixed demand profile.
-2. Flexible Demand Component — adjusts demand up or down within flexible bounds.
+1. [`GenericDemandComponent`](#generic-demand-component) — meets a fixed demand profile.
+2. [`FlexibleDemandComponent`](#flexible-demand-component) — adjusts demand up or down within flexible bounds.
+
+
+(demand-component-inputs-and-outputs)=
+## Demand component inputs and outputs
+The inputs to the demand components are the `{commodity}_demand` profile and the `{commodity}_in` profile. The `{commodity}_in` profile is the initial commodity used to satisfy the demand. Suppose the `{commodity}_in` (pink) and `{commodity}_demand` (green) profiles look like whats shown below:
+
+![](./figures/demand_inputs.png)
+
+The demand components then compute the following output profiles:
+- `unmet_{commodity}_demand_out`: Unmet demand (non-zero when supply < demand, otherwise 0.)
+- `unused_{commodity}_out`: Unused commodity (non-zero when supply > demand, otherwise 0.)
+
+![](./figures/demand_calcs.png)
+
+- `commodity_out`: Delivered output (commodity supplied to demand sink)
+
+![](./figures/demand_commodity_out.png)
+
+The demand components also compute the following outputs:
+- `capacity_factor`: the ratio of the demand that's been met to the full demand
+- `rated_commodity_production`: the maximum value of the demand profile
+
 
 (generic-demand-component)=
 ### Generic Demand Component

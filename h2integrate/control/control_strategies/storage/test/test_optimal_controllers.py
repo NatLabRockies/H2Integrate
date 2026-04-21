@@ -6,8 +6,8 @@ from pytest import fixture
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
-from h2integrate.control.control_strategies.optimized_pyomo_controller import (
-    OptimizedDispatchController,
+from h2integrate.control.control_strategies.storage.optimized_pyomo_controller import (
+    OptimizedDispatchStorageController,
 )
 
 
@@ -34,7 +34,7 @@ def tech_config_battery():
     tech_config = {
         "technologies": {
             "battery": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "PySAMBatteryPerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -95,7 +95,7 @@ def tech_config_generic():
     tech_config = {
         "technologies": {
             "h2_storage": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "StoragePerformanceModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -136,7 +136,7 @@ def tech_config_autosizing():
     tech_config = {
         "technologies": {
             "h2_storage": {
-                "control_strategy": {"model": "OptimizedDispatchController"},
+                "control_strategy": {"model": "OptimizedDispatchStorageController"},
                 "performance_model": {"model": "StorageAutoSizingModel"},
                 "model_inputs": {
                     "shared_parameters": {
@@ -197,7 +197,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
 
     prob.model.add_subsystem(
         "battery_optimized_load_following_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_battery,
             tech_config=tech_config_battery["technologies"]["battery"],
         ),
@@ -236,7 +236,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
             "battery.storage_electricity_discharge"
         )
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_electricity_out"), rtol=1e-2
+            charge_plus_discharge, prob.get_val("electricity_out"), rtol=1e-2
         )
     with subtests.test("Initial SOC is correct"):
         assert pytest.approx(prob.model.get_val("battery.SOC")[0], rel=1e-2) == 50
@@ -341,7 +341,7 @@ def test_optimal_control_with_generic_storage(
 
     prob.model.add_subsystem(
         "h2_storage_optimized_load_following_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_generic["technologies"]["h2_storage"],
         ),
@@ -379,7 +379,7 @@ def test_optimal_control_with_generic_storage(
             "h2_storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("h2_storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -456,8 +456,8 @@ def test_optimal_control_with_generic_storage(
         )
 
     with subtests.test("Cumulative charge/discharge does not exceed storage capacity"):
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).max() <= capacity
-        assert np.cumsum(prob.get_val("storage_hydrogen_out", units="kg/h")).min() >= -1 * capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).max() <= capacity
+        assert np.cumsum(prob.get_val("hydrogen_out", units="kg/h")).min() >= -1 * capacity
 
     with subtests.test("Expected discharge from hour 10-30"):
         expected_discharge = np.concat(
@@ -489,7 +489,7 @@ def test_optimal_dispatch_with_autosizing_storage_demand_less_than_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),
@@ -566,7 +566,7 @@ def test_optimal_dispatch_with_autosizing_storage_demand_is_avg_in(
 
     prob.model.add_subsystem(
         "h2_storage_controller",
-        OptimizedDispatchController(
+        OptimizedDispatchStorageController(
             plant_config=plant_config_h2_storage,
             tech_config=tech_config_autosizing["technologies"]["h2_storage"],
         ),

@@ -23,8 +23,8 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
-from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
-    PyomoControllerBaseClass,
+from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+    PyomoStorageControllerBaseClass,
 )
 
 
@@ -208,7 +208,7 @@ class H2IntegrateModel:
                 controller_model_name = vals["control_strategy"]["model"]
                 controller_cls = supported_models.get(controller_model_name)
                 if controller_cls is not None and issubclass(
-                    controller_cls, PyomoControllerBaseClass
+                    controller_cls, PyomoStorageControllerBaseClass
                 ):
                     model_inputs = self.technology_config["technologies"][name]["model_inputs"]
                     if (
@@ -795,7 +795,12 @@ class H2IntegrateModel:
                         f"technologies: {list(self.technology_config['technologies'].keys())}"
                     )
             if commodity_stream is not None:
-                if "combiner" not in commodity_stream and commodity_stream not in tech_names:
+                commodity_stream_has_cost = (
+                    self.technology_config["technologies"]
+                    .get(commodity_stream, {})
+                    .get("cost_model", False)
+                )
+                if commodity_stream_has_cost and commodity_stream not in tech_names:
                     raise UserWarning(
                         f"The technology specific for the commodity_stream '{commodity_stream}' "
                         f"is not included in subgroup '{subgroup_name}' technologies list."
@@ -820,7 +825,14 @@ class H2IntegrateModel:
                     elec_tech_names = [
                         tech for tech in tech_configs if is_electricity_producer(tech)
                     ]
-                    if len(elec_tech_names) != 1:
+                    if len(elec_tech_names) < 1:
+                        msg = (
+                            "Commodity 'electricity' was specified, but no electricity "
+                            "producing techs were found."
+                        )
+                        raise ValueError(msg)
+
+                    elif len(elec_tech_names) > 1:
                         msg = (
                             f"Multiple electricity producing technologies found in finance subgroup"
                             f" '{subgroup_name}'. Please specify the commodity_stream for the "

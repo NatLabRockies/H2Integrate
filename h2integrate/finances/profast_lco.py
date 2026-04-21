@@ -115,7 +115,6 @@ class ProFastLCO(ProFastBase):
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
             if isinstance(val, np.ndarray | list | tuple):  # only for IRR
-                # if len(val)>0:
                 val = val[-1]
             outputs[f"{output_var}_{self.output_txt}"] = val
 
