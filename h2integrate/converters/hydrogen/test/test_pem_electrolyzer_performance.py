@@ -191,9 +191,9 @@ def test_electrolyzer_results(tech_config, plant_config, subtests):
 
     # 10 kg water consumed per kg of H2 produced
     with subtests.test("Water consumption"):
-        total_water_consumed = prob.get_val("comp.water_consumed", units="kg/h").sum()
+        total_water_consumed_kg = prob.get_val("comp.water_consumed", units="galUS/h").sum() / 3.79
         total_h2_produced = prob.get_val("comp.hydrogen_out", units="kg/h").sum()
-        assert pytest.approx(10.0, rel=1e-6) == total_water_consumed / total_h2_produced
+        assert pytest.approx(10.0, rel=1e-6) == total_water_consumed_kg / total_h2_produced
 
     with subtests.test("Electricity consumption"):
         total_electricity_consumed = prob.get_val("comp.electricity_consumed", units="kW").sum()
