@@ -60,7 +60,7 @@ def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath)
     res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
-        assert len(res.columns.to_list()) == 49
+        assert len(res.columns.to_list()) == 51
 
     with subtests.test("Check number of rows"):
         assert len(res) == 8760
