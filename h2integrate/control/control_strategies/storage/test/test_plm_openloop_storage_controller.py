@@ -9,7 +9,7 @@ from pytest import fixture
 
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
-    PeakLoadManagementOpenLoopStorageController,
+    PeakLoadManagementHeuristicOpenLoopStorageController,
 )
 
 
@@ -59,7 +59,7 @@ def plant_config_base():
 
 def _controller_without_setup():
     """Create a controller instance for testing pure helper methods."""
-    return object.__new__(PeakLoadManagementOpenLoopStorageController)
+    return object.__new__(PeakLoadManagementHeuristicOpenLoopStorageController)
 
 
 @pytest.mark.unit
@@ -264,7 +264,7 @@ def test_merge_peaks_with_single_demand_profile_returns_correct_peaks_flags(subt
         }
     )
 
-    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(peaks_1_df, None)
+    merged = PeakLoadManagementHeuristicOpenLoopStorageController.merge_peaks(peaks_1_df, None)
 
     with subtests.test("peak flags unchanged"):
         assert merged["is_peak"].tolist() == peaks_1_df["is_peak"].tolist()
@@ -301,7 +301,7 @@ def test_merge_peaks_profile2_takes_precedence_on_same_day(subtests):
         }
     )
 
-    merged = PeakLoadManagementOpenLoopStorageController.merge_peaks(
+    merged = PeakLoadManagementHeuristicOpenLoopStorageController.merge_peaks(
         peaks_2_df,
         peaks_1_df,
     )
@@ -482,13 +482,13 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base, 
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,
-        "demand_profile_2": None,
+        "demand_profile_upstream": None,
         "dispatch_priority_demand_profile": "demand_profile",
         "min_peak_proximity": {"units": "h", "val": 4},
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "PeakLoadManagementOpenLoopStorageController"
+        "PeakLoadManagementHeuristicOpenLoopStorageController"
     )
 
     plant_config = plant_config_base
@@ -504,7 +504,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base, 
 
     prob.model.add_subsystem(
         "plm_controller",
-        PeakLoadManagementOpenLoopStorageController(
+        PeakLoadManagementHeuristicOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -564,13 +564,13 @@ def test_plm_controller_respects_soc_bounds(subtests, tech_config_base, plant_co
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,
-        "demand_profile_2": None,
+        "demand_profile_upstream": None,
         "dispatch_priority_demand_profile": "demand_profile",
         "min_peak_proximity": {"units": "h", "val": 4},
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "PeakLoadManagementOpenLoopStorageController"
+        "PeakLoadManagementHeuristicOpenLoopStorageController"
     )
 
     plant_config = plant_config_base
@@ -586,7 +586,7 @@ def test_plm_controller_respects_soc_bounds(subtests, tech_config_base, plant_co
 
     prob.model.add_subsystem(
         "plm_controller",
-        PeakLoadManagementOpenLoopStorageController(
+        PeakLoadManagementHeuristicOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -637,7 +637,7 @@ def test_plm_controller_blocking_charge_in_peak_range(
         "charge_efficiency": 0.92,
         "discharge_efficiency": 0.92,
         "demand_profile": np.full(24, 5.0),
-        "demand_profile_2": None,
+        "demand_profile_upstream": None,
         "peak_range": {"start": peak_window_start, "end": peak_window_end},
         "advance_discharge_period": {"units": "h", "val": 3},
         "delay_charge_period": {"units": "h", "val": 1},
@@ -647,7 +647,7 @@ def test_plm_controller_blocking_charge_in_peak_range(
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "PeakLoadManagementOpenLoopStorageController"
+        "PeakLoadManagementHeuristicOpenLoopStorageController"
     )
 
     plant_config = plant_config_base
@@ -662,7 +662,7 @@ def test_plm_controller_blocking_charge_in_peak_range(
 
     prob.model.add_subsystem(
         "plm_controller",
-        PeakLoadManagementOpenLoopStorageController(
+        PeakLoadManagementHeuristicOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],
@@ -716,7 +716,7 @@ def test_plm_controller_warns_when_requested_charge_exceeds_input(
         "charge_efficiency": 0.95,
         "discharge_efficiency": 0.95,
         "demand_profile": np.full(24, 1.0),
-        "demand_profile_2": None,
+        "demand_profile_upstream": None,
         "peak_range": {"start": "23:00:00", "end": "23:59:59"},
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
@@ -726,7 +726,7 @@ def test_plm_controller_warns_when_requested_charge_exceeds_input(
     }
 
     tech_config["technologies"]["h2_storage"]["control_strategy"]["model"] = (
-        "PeakLoadManagementOpenLoopStorageController"
+        "PeakLoadManagementHeuristicOpenLoopStorageController"
     )
 
     plant_config = plant_config_base
@@ -742,7 +742,7 @@ def test_plm_controller_warns_when_requested_charge_exceeds_input(
 
     prob.model.add_subsystem(
         "plm_controller",
-        PeakLoadManagementOpenLoopStorageController(
+        PeakLoadManagementHeuristicOpenLoopStorageController(
             plant_config=plant_config, tech_config=tech_config["technologies"]["h2_storage"]
         ),
         promotes=["*"],

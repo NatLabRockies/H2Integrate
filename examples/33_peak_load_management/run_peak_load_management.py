@@ -6,7 +6,7 @@ This example demonstrates:
 2. Battery charging without an input stream, assuming purchase from the grid
 
 In this example, two load profiles are provided. It is assumed that demand_profile is a
-subset of demand_profile_2, where demand_profile_2 may represent the total demand of a
+subset of demand_profile_upstream, where demand_profile_upstream may represent the total demand of a
 larger/upstream system. In this case, the upstream system reserves the right to choose
 when to dispatch the battery up to three times per week. The remaining days the sub-system
 may choose when and how to dispatch the battery. The subsystem has certain expected peak
@@ -17,7 +17,7 @@ peaks. Perfect a priori demand knowledge is assumed. The battery is only allowed
 once per day and is further restricted to not charge during the expected peak windows defined
 by the sub-system operator.
 
-The output figure indicates peaks from demand_profile_2 that were selected to override the
+The output figure indicates peaks from demand_profile_upstream that were selected to override the
 peaks in demand_profile to demonstrate how the peak selection impacts dispatch.
 
 """
@@ -41,7 +41,7 @@ model.post_process()
 # plot the results for the first week
 supervisor_demand = np.array(
     model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
-        "demand_profile_2"
+        "demand_profile_upstream"
     ]
 )
 

@@ -15,20 +15,20 @@ from h2integrate.control.control_strategies.storage.openloop_storage_control_bas
 
 
 @define(kw_only=True)
-class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
+class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
     """
-    Configuration class for the PeakLoadManagementOpenLoopStorageController.
+    Configuration class for the PeakLoadManagementHeuristicOpenLoopStorageController.
 
     Defines peak-selection and dispatch-priority rules used to pre-compute
     an open-loop discharge and recharge schedule.
 
     Attributes:
-        demand_profile_2 (int | float | list | None, optional): Demand values for
+        demand_profile_upstream (int | float | list | None, optional): Demand values for
             additional connected system for each timestep, in the same units as
             `commodity_rate_units`. May be a scalar for constant demand or a list/array for
             time-varying demand.
         dispatch_priority_demand_profile (str | None, optional): which demand profile takes
-            precedence for dispatch decisions. One of ["demand_profile", "demand_profile_2"].
+            precedence for dispatch decisions. One of ["demand_profile", "demand_profile_upstream"].
         n_override_events: (int | None, optional): The maximum number of discharge events
             allowed for the priority profile in the period specified in override_events_period,
             or across all time steps if override_events_period is None.
@@ -59,9 +59,9 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
 
     require_storage_parameters = True
 
-    demand_profile_2: int | float | list | None = field()
+    demand_profile_upstream: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
-        validator=contains(["demand_profile", "demand_profile_2"]),
+        validator=contains(["demand_profile", "demand_profile_upstream"]),
     )
     n_override_events: int | None = field(default=None)
     override_events_period: int | str | None = field(default=None)
@@ -120,7 +120,7 @@ class PeakLoadManagementOpenLoopStorageControllerConfig(StorageOpenLoopControlBa
                 )
 
 
-class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
+class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopControlBase):
     """
     Peak-load management storage controller implementing an open-loop control strategy.
 
@@ -142,15 +142,15 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         During setup:
         1. Loads and validates configuration from tech_config and plant_config options
         2. Registers OpenMDAO inputs for storage parameters (capacity, charge rates, etc.)
-        3. Detects peaks in the demand profile (demand_profile and demand_profile_2)
-        4. Merges peaks with demand_profile_2 prioritization if configured
+        3. Detects peaks in the demand profile (demand_profile and demand_profile_upstream)
+        4. Merges peaks with demand_profile_upstream prioritization if configured
         5. Computes time-to-next-peak for each timestep
         6. Identifies allowed charging windows based on peak_range configuration
 
         Raises:
             ValueError: If configuration is invalid or required keys are missing
         """
-        self.config = PeakLoadManagementOpenLoopStorageControllerConfig.from_dict(
+        self.config = PeakLoadManagementHeuristicOpenLoopStorageControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -158,12 +158,12 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         super().setup()
 
         if (
-            self.config.demand_profile_2 is None
-            and self.config.dispatch_priority_demand_profile == "demand_profile_2"
+            self.config.demand_profile_upstream is None
+            and self.config.dispatch_priority_demand_profile == "demand_profile_upstream"
         ):
             raise (
                 ValueError(
-                    "If demand_profile_2 is None, then dispatch_priority_demand_profile"
+                    "If demand_profile_upstream is None, then dispatch_priority_demand_profile"
                     "must be demand_profile"
                 )
             )
@@ -203,13 +203,13 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             )
 
         # Detect peaks in demand profile 2 (if provided)
-        if self.config.demand_profile_2 is not None:
-            demand_profile_2 = self._build_demand_profile_dict(
-                self.config.demand_profile_2,
+        if self.config.demand_profile_upstream is not None:
+            demand_profile_upstream = self._build_demand_profile_dict(
+                self.config.demand_profile_upstream,
                 self.time_index,
             )
             self.peaks_2_df = self.get_peaks(
-                demand_profile=demand_profile_2,
+                demand_profile=demand_profile_upstream,
                 n_override_events=self.config.n_override_events,
                 override_events_period=self.config.override_events_period,
                 min_proximity=self.config.min_peak_proximity,
@@ -290,7 +290,7 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
             peak_range=self.config.peak_range,
         )
 
-        if self.config.dispatch_priority_demand_profile == "demand_profile_2":
+        if self.config.dispatch_priority_demand_profile == "demand_profile_upstream":
             self.peaks_df = self.merge_peaks(self.peaks_2_df, self.peaks_1_df)
         else:
             self.peaks_df = self.merge_peaks(self.peaks_1_df, self.peaks_2_df)
@@ -483,7 +483,9 @@ class PeakLoadManagementOpenLoopStorageController(StorageOpenLoopControlBase):
         if not isinstance(demand_profile, dict):
             raise ValueError("demand_profile must be a dict with 'date_time' and 'demand' keys")
 
-        peak_range = PeakLoadManagementOpenLoopStorageController._parse_peak_range(peak_range)
+        peak_range = PeakLoadManagementHeuristicOpenLoopStorageController._parse_peak_range(
+            peak_range
+        )
 
         demand_df = pd.DataFrame(demand_profile)
         if "date_time" not in demand_df or "demand" not in demand_df:
