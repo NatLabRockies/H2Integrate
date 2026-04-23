@@ -65,6 +65,11 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     Air Separation Unit.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "nitrogen"
@@ -278,6 +283,11 @@ class SimpleASUCostConfig(CostModelBaseConfig):
 
 
 class SimpleASUCostModel(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)

@@ -1,30 +1,24 @@
 from h2integrate.resource.river import RiverResource
+from h2integrate.resource.tidal import TidalResource
 from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 from h2integrate.transporters.pipe import PipePerformanceModel
 from h2integrate.transporters.cable import CablePerformanceModel
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
+from h2integrate.demand.generic_demand import GenericDemandComponent
 from h2integrate.converters.steel.steel import SteelPerformanceModel, SteelCostAndFinancialModel
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
-from h2integrate.converters.iron.iron_mine import (
-    IronMineCostComponent,
-    IronMinePerformanceComponent,
-)
-from h2integrate.converters.iron.iron_plant import (
-    IronPlantCostComponent,
-    IronPlantPerformanceComponent,
-)
+from h2integrate.demand.flexible_demand import FlexibleDemandComponent
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
-from h2integrate.storage.generic_storage_pyo import StoragePerformanceModel
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.converters.hopp.hopp_wrapper import HOPPComponent
-from h2integrate.converters.iron.iron_wrapper import IronComponent
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 from h2integrate.finances.numpy_financial_npv import NumpyFinancialNPV
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
 from h2integrate.storage.generic_storage_cost import GenericStorageCostModel
 from h2integrate.storage.hydrogen.mch_storage import MCHTOLStorageCostModel
+from h2integrate.converters.steel.cmu_eaf_cost import CMUElectricArcFurnaceCostModel
 from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
@@ -42,7 +36,6 @@ from h2integrate.converters.iron.iron_transport import (
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
-from h2integrate.storage.simple_generic_storage import SimpleGenericStorage
 from h2integrate.converters.hydrogen.h2_fuel_cell import (
     H2FuelCellCostModel,
     LinearH2FuelCellPerformanceModel,
@@ -62,14 +55,19 @@ from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
 from h2integrate.storage.hydrogen.h2_storage_cost import (
     PipeStorageCostModel,
     SaltCavernStorageCostModel,
+    CompressedGasStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
+from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.transporters.generic_transporter import GenericTransporterPerformanceModel
+from h2integrate.converters.generic_converter_cost import GenericConverterCostModel
 from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
+from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopCostModel,
     AmmoniaSynLoopPerformanceModel,
 )
+from h2integrate.converters.water_power.tidal_pysam import PySAMTidalPerformanceModel
 from h2integrate.storage.simple_storage_auto_sizing import StorageAutoSizingModel
 from h2integrate.converters.water.desal.desalination import (
     ReverseOsmosisCostModel,
@@ -101,14 +99,31 @@ from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
     NaturalGasCostModel,
     NaturalGasPerformanceModel,
 )
+from h2integrate.converters.water_power.pysam_marine_cost import PySAMMarineCostModel
 from h2integrate.converters.hydrogen.singlitico_cost_model import SingliticoCostModel
 from h2integrate.converters.co2.marine.direct_ocean_capture import DOCCostModel, DOCPerformanceModel
+from h2integrate.converters.hydrogen.steam_methane_reformer import (
+    SteamMethaneReformerCostModel,
+    SteamMethaneReformerPerformanceModel,
+)
+from h2integrate.converters.natural_gas.dummy_gas_components import (
+    SimpleGasConsumerCost,
+    SimpleGasProducerCost,
+    SimpleGasConsumerPerformance,
+    SimpleGasProducerPerformance,
+)
 from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
 from h2integrate.resource.solar.nlr_developer_goes_api_models import (
     GOESTMYSolarAPI,
     GOESConusSolarAPI,
     GOESFullDiscSolarAPI,
     GOESAggregatedSolarAPI,
+)
+from h2integrate.converters.steel.cmu_electric_arc_furnace_dri import (
+    CMUElectricArcFurnaceDRIPerformanceComponent,
+)
+from h2integrate.converters.steel.cmu_electric_arc_furnace_scrap import (
+    CMUElectricArcFurnaceScrapOnlyPerformanceComponent,
 )
 from h2integrate.converters.water_power.hydro_plant_run_of_river import (
     RunOfRiverHydroCostModel,
@@ -133,12 +148,6 @@ from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
 from h2integrate.converters.hydrogen.custom_electrolyzer_cost_model import (
     CustomElectrolyzerCostModel,
 )
-from h2integrate.control.control_strategies.heuristic_pyomo_controller import (
-    HeuristicLoadFollowingController,
-)
-from h2integrate.control.control_strategies.optimized_pyomo_controller import (
-    OptimizedDispatchController,
-)
 from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
     AspenGeoH2SurfaceCostModel,
     AspenGeoH2SurfacePerformanceModel,
@@ -149,18 +158,21 @@ from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import 
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
 )
-from h2integrate.control.control_strategies.passthrough_openloop_controller import (
-    PassThroughOpenLoopController,
-)
 from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models import (
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
 )
-from h2integrate.control.control_strategies.storage.demand_openloop_controller import (
-    DemandOpenLoopStorageController,
+from h2integrate.control.control_strategies.storage.heuristic_pyomo_controller import (
+    HeuristicLoadFollowingStorageController,
 )
-from h2integrate.control.control_strategies.converters.demand_openloop_controller import (
-    DemandOpenLoopConverterController,
+from h2integrate.control.control_strategies.storage.optimized_pyomo_controller import (
+    OptimizedDispatchStorageController,
+)
+from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
+    SimpleStorageOpenLoopController,
+)
+from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
+    PeakLoadManagementHeuristicOpenLoopStorageController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
@@ -168,13 +180,14 @@ from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_
 from h2integrate.control.control_rules.converters.generic_converter_min_operating_cost import (
     PyomoDispatchGenericConverterMinOperatingCosts,
 )
-from h2integrate.control.control_strategies.converters.flexible_demand_openloop_controller import (
-    FlexibleDemandOpenLoopConverterController,
+from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
+    DemandOpenLoopStorageController,
 )
 
 
 supported_models = {
     # Resources
+    "TidalResource": TidalResource,
     "RiverResource": RiverResource,
     "WTKNLRDeveloperAPIWindResource": WTKNLRDeveloperAPIWindResource,
     "OpenMeteoHistoricalWindResource": OpenMeteoHistoricalWindResource,
@@ -189,6 +202,7 @@ supported_models = {
     "Himawari8SolarAPI": Himawari8SolarAPI,
     "HimawariTMYSolarAPI": HimawariTMYSolarAPI,
     # Converters
+    "GenericConverterCostModel": GenericConverterCostModel,
     "ATBWindPlantCostModel": ATBWindPlantCostModel,
     "PYSAMWindPlantPerformanceModel": PYSAMWindPlantPerformanceModel,
     "FlorisWindPlantPerformanceModel": FlorisWindPlantPerformanceModel,
@@ -196,6 +210,8 @@ supported_models = {
     "PYSAMSolarPlantPerformanceModel": PYSAMSolarPlantPerformanceModel,
     "ATBUtilityPVCostModel": ATBUtilityPVCostModel,
     "ATBResComPVCostModel": ATBResComPVCostModel,
+    "PySAMTidalPerformanceModel": PySAMTidalPerformanceModel,
+    "PySAMMarineCostModel": PySAMMarineCostModel,
     "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
     "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
     "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
@@ -205,14 +221,11 @@ supported_models = {
     "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
     "LinearH2FuelCellPerformanceModel": LinearH2FuelCellPerformanceModel,
     "H2FuelCellCostModel": H2FuelCellCostModel,
+    "SteamMethaneReformerPerformanceModel": SteamMethaneReformerPerformanceModel,
+    "SteamMethaneReformerCostModel": SteamMethaneReformerCostModel,
     "SimpleASUCostModel": SimpleASUCostModel,
     "SimpleASUPerformanceModel": SimpleASUPerformanceModel,
     "HOPPComponent": HOPPComponent,
-    "IronComponent": IronComponent,
-    "IronMinePerformanceComponent": IronMinePerformanceComponent,
-    "IronMineCostComponent": IronMineCostComponent,
-    "IronPlantPerformanceComponent": IronPlantPerformanceComponent,
-    "IronPlantCostComponent": IronPlantCostComponent,
     "MartinIronMinePerformanceComponent": MartinIronMinePerformanceComponent,  # standalone model
     "MartinIronMineCostComponent": MartinIronMineCostComponent,  # standalone model
     "NaturalGasIronReductionPlantPerformanceComponent": NaturalGasIronReductionPlantPerformanceComponent,  # noqa: E501
@@ -225,6 +238,11 @@ supported_models = {
     "NaturalGasEAFPlantCostComponent": NaturalGasEAFPlantCostComponent,  # standalone model
     "HydrogenEAFPlantPerformanceComponent": HydrogenEAFPlantPerformanceComponent,
     "HydrogenEAFPlantCostComponent": HydrogenEAFPlantCostComponent,  # standalone model
+    "CMUElectricArcFurnaceScrapOnlyPerformanceComponent": (
+        CMUElectricArcFurnaceScrapOnlyPerformanceComponent
+    ),
+    "CMUElectricArcFurnaceDRIPerformanceComponent": CMUElectricArcFurnaceDRIPerformanceComponent,
+    "CMUElectricArcFurnaceCostModel": CMUElectricArcFurnaceCostModel,
     "ReverseOsmosisPerformanceModel": ReverseOsmosisPerformanceModel,
     "ReverseOsmosisCostModel": ReverseOsmosisCostModel,
     "SimpleAmmoniaPerformanceModel": SimpleAmmoniaPerformanceModel,
@@ -268,19 +286,22 @@ supported_models = {
     "StoragePerformanceModel": StoragePerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
     "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
+    "CompressedGasStorageCostModel": CompressedGasStorageCostModel,
     "SaltCavernStorageCostModel": SaltCavernStorageCostModel,
     "MCHTOLStorageCostModel": MCHTOLStorageCostModel,
     "PipeStorageCostModel": PipeStorageCostModel,
     "ATBBatteryCostModel": ATBBatteryCostModel,
     "GenericStorageCostModel": GenericStorageCostModel,
-    "SimpleGenericStorage": SimpleGenericStorage,
     # Control
-    "PassThroughOpenLoopController": PassThroughOpenLoopController,
+    "SimpleStorageOpenLoopController": SimpleStorageOpenLoopController,
     "DemandOpenLoopStorageController": DemandOpenLoopStorageController,
-    "HeuristicLoadFollowingController": HeuristicLoadFollowingController,
-    "OptimizedDispatchController": OptimizedDispatchController,
-    "DemandOpenLoopConverterController": DemandOpenLoopConverterController,
-    "FlexibleDemandOpenLoopConverterController": FlexibleDemandOpenLoopConverterController,
+    "PeakLoadManagementHeuristicOpenLoopStorageController": (
+        PeakLoadManagementHeuristicOpenLoopStorageController
+    ),
+    "HeuristicLoadFollowingStorageController": HeuristicLoadFollowingStorageController,
+    "OptimizedDispatchStorageController": OptimizedDispatchStorageController,
+    "GenericDemandComponent": GenericDemandComponent,
+    "FlexibleDemandComponent": FlexibleDemandComponent,
     # Dispatch
     "PyomoDispatchGenericConverter": PyomoDispatchGenericConverter,
     "PyomoRuleStorageBaseclass": PyomoRuleStorageBaseclass,
@@ -296,34 +317,32 @@ supported_models = {
     "ProFastLCO": ProFastLCO,
     "ProFastNPV": ProFastNPV,
     "NumpyFinancialNPV": NumpyFinancialNPV,
+    # Dummy components for multivariable stream demonstrations
+    "SimpleGasProducerPerformance": SimpleGasProducerPerformance,
+    "SimpleGasProducerCost": SimpleGasProducerCost,
+    "SimpleGasConsumerPerformance": SimpleGasConsumerPerformance,
+    "SimpleGasConsumerCost": SimpleGasConsumerCost,
+    "GasStreamCombinerPerformanceModel": GasStreamCombinerPerformanceModel,
 }
 
 
-def is_electricity_producer(tech_name: str) -> bool:
-    """Check if a technology is an electricity producer.
+# This next section is to demarcate specific models that belong to certain categories that are
+# relevant for processing in the model stackup. Right now, these designations are
+# used in `h2integrate_model.py`.
 
-    Args:
-        tech_name: The name of the technology to check.
-    Returns:
-        True if tech_name starts with any of the known electricity producing
-        tech prefixes (e.g., 'wind', 'solar', 'pv', 'grid_buy', etc.).
-    Note:
-        This uses prefix matching, so 'grid_buy_1' and 'grid_buy_2' would both
-        be considered electricity producers. Be careful when naming technologies
-        to avoid unintended matches (e.g., 'pv_battery' would be incorrectly
-        identified as an electricity producer).
-    """
 
-    # add any new electricity producing technologies to this list
-    electricity_producing_techs = [
-        "wind",
-        "solar",
-        "pv",
-        "river",
-        "hopp",
-        "natural_gas_plant",
-        "grid_buy",
-        "h2_fuel_cell",
-    ]
+# Model classes that do not contribute costs to the finance stackup because they are essentially
+# internal-only models that aren't categorized as a specific technology (e.g. a generic combiner
+# or splitter, or a model that is only used for performance modeling within another model and
+# doesn't have an independent cost model).
+no_cost_models = {
+    "GenericSplitterPerformanceModel",
+    "GenericCombinerPerformanceModel",
+    "GasStreamCombinerPerformanceModel",
+    "CablePerformanceModel",
+    "PipePerformanceModel",
+}
 
-    return any(tech_name.startswith(elem) for elem in electricity_producing_techs)
+no_replacement_schedule_models = {
+    "IronTransportPerformanceComponent",
+}

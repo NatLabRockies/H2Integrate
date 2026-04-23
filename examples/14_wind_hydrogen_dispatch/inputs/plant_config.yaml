@@ -16,6 +16,11 @@ sites:
 technology_interconnections:
   - [wind, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # subtract hydrogen production from hydrogen demand
+  - [h2_combiner, h2_load_demand, hydrogen, pipe]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
@@ -31,7 +36,7 @@ finance_parameters:
         inflation_rate: 0.0  # 0 for nominal analysis
         discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind
         debt_equity_ratio: 2.62  # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
+        property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nlr.gov/docs/fy25osti/91775.pdf https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
         total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
         capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.07375  # total state and local sales tax in St. Louis County https://taxmaps.state.mn.us/salestax/
@@ -57,5 +62,9 @@ finance_parameters:
       technologies: [wind, electrolyzer, h2_storage]
     dispatched_hydrogen:
       commodity: hydrogen
-      commodity_stream: h2_storage  # use only dispatched hydrogen from h2_storage controller in finance calc
+      commodity_stream: h2_load_demand  # use only dispatched hydrogen from h2_storage controller in finance calc
       technologies: [wind, electrolyzer, h2_storage]
+    oxygen:
+      commodity: oxygen
+      commodity_stream: electrolyzer
+      technologies: [wind, electrolyzer]

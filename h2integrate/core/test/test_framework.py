@@ -1,10 +1,14 @@
+import os
 import shutil
+from copy import deepcopy
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 import numpy as np
 import pytest
 
+import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
@@ -72,8 +76,6 @@ def test_custom_model_name_clash(temp_dir, subtests):
             "model": "new_electrolyzer_cost",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
-
-        from copy import deepcopy
 
         tech_config_data["technologies"]["electrolyzer2"] = deepcopy(
             tech_config_data["technologies"]["electrolyzer"]
@@ -180,9 +182,37 @@ def test_unsupported_simulation_parameters(temp_dir):
     with pytest.raises(ValueError, match="greater than 1-year"):
         load_plant_yaml(plant_config_data_ntimesteps)
 
-    # check that error is thrown when loading config with invalid time interval
-    with pytest.raises(ValueError, match="with a time step that"):
-        load_plant_yaml(plant_config_data_dt)
+
+@pytest.mark.unit
+def test_check_time_step_with_model_bounds_allows_supported_dt():
+    class DummyModel:
+        _time_step_bounds = (900, 3600)
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
+
+    model._check_time_step("DummyModel", DummyModel)
+
+
+@pytest.mark.unit
+def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
+    class DummyModel:
+        _time_step_bounds = (
+            900,
+            3600,
+        )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {"plant": {"simulation": {"dt": 7200}}}
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Model DummyModel is compatible with time steps between "
+            r"900 \(s\) and 3600 \(s\), but a time step of 7200 \(s\) was specified"
+        ),
+    ):
+        model._check_time_step("DummyModel", DummyModel)
 
 
 @pytest.mark.unit
@@ -204,9 +234,9 @@ def test_technology_connections(temp_dir):
 
     new_connection = (["finance_subgroup_electricity", "steel", ("LCOE", "electricity_cost")],)
     new_tech_interconnections = (
-        plant_config_data["technology_interconnections"][0:4]
+        plant_config_data["technology_interconnections"][0:9]
         + list(new_connection)
-        + [plant_config_data["technology_interconnections"][4]]
+        + [plant_config_data["technology_interconnections"][9]]
     )
     plant_config_data["technology_interconnections"] = new_tech_interconnections
 
@@ -323,6 +353,33 @@ def test_resource_connection_error_missing_resource(temp_dir):
 
 
 @pytest.mark.unit
+def test_no_resource_connection_error_resource_to_multiple_techs(temp_dir):
+    # Path to the original plant_config.yaml and high-level yaml in the example directory
+
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "08_wind_electrolyzer" / "plant_config.yaml")
+    # Add a second wind technology
+    wind_tech = tech_config["technologies"]["wind"]
+    tech_config["technologies"].update({"wind_plant2": wind_tech})
+    resource_to_tech_connections = [
+        ["site.wind_resource", "wind", "wind_resource_data"],
+        ["site.wind_resource", "wind_plant2", "wind_resource_data"],
+    ]
+    plant_config["resource_to_tech_connections"] = resource_to_tech_connections
+    input_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i_model = H2IntegrateModel(input_config)
+    h2i_model.setup()
+    # Need to call final_setup to trigger the potential error related to the resource connections
+    h2i_model.prob.final_setup()
+    assert True
+
+
+@pytest.mark.unit
 def test_reports_turned_off(temp_dir):
     # Path to the original config files in the example directory
     orig_plant_config = EXAMPLE_DIR / "07_run_of_river_plant" / "plant_config.yaml"
@@ -433,3 +490,208 @@ def test_invalid_finance_group_combination(subtests):
             h2i = H2IntegrateModel(h2i_config)
             h2i.setup()
             assert expected_msg == str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_finance_subgroup_electricity_without_electricity_producer_raises(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+
+    # Force default commodity_stream selection path and ensure no electricity producers are present.
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
+        "commodity_stream", None
+    )
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
+        "electrolyzer",
+        "h2_storage",
+    ]
+
+    h2i_config = {
+        "name": "H2I",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    expected_msg = (
+        "Commodity 'electricity' was specified, but no electricity producing techs were found."
+    )
+
+    with subtests.test("Raises when subgroup has no electricity-producing technologies"):
+        with pytest.raises(ValueError, match=expected_msg):
+            H2IntegrateModel(h2i_config)
+
+
+@pytest.mark.unit
+def test_finance_subgroup_electricity_with_multiple_producers_raises(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+
+    # Force default commodity_stream selection path with multiple producers in one subgroup.
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
+        "commodity_stream", None
+    )
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
+        "wind",
+        "solar",
+        "battery",
+    ]
+
+    h2i_config = {
+        "name": "H2I",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    expected_msg = (
+        "Multiple electricity producing technologies found in finance subgroup 'electricity'. "
+        "Please specify the commodity_stream for the finance subgroup electricity."
+    )
+
+    with subtests.test("Raises when subgroup has multiple electricity-producing technologies"):
+        with pytest.raises(ValueError, match=expected_msg):
+            H2IntegrateModel(h2i_config)
+
+
+@pytest.mark.unit
+def test_system_order(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+
+    h2i_config = {
+        "name": "H2I",
+        "system_summary": "",
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    h2i = H2IntegrateModel(h2i_config)
+    h2i.setup()
+
+    expected_names = [
+        "wind",
+        "wind_to_combiner_cable",
+        "solar",
+        "solar_to_combiner_cable",
+        "combiner",
+        "combiner_to_elec_combiner_cable",
+        "combiner_to_battery_cable",
+        "battery",
+        "battery_to_elec_combiner_cable",
+        "elec_combiner",
+        "elec_combiner_to_electrolyzer_cable",
+        "electrolyzer",
+        "electrolyzer_to_h2_combiner_pipe",
+        "electrolyzer_to_h2_storage_pipe",
+        "h2_storage",
+        "h2_storage_to_h2_combiner_pipe",
+        "h2_combiner",
+        "steel",
+        "finance_subgroup_electricity",
+        "finance_subgroup_hydrogen",
+        "finance_subgroup_steel",
+    ]
+
+    names = [sys.name for sys in h2i.model.plant.system_iter(include_self=False, recurse=False)]
+    with subtests.test("Test expected names are all present"):
+        assert sorted(names) == sorted(expected_names)
+
+    with subtests.test("Test expected names are in the correct order"):
+        assert names == expected_names
+
+
+@pytest.mark.unit
+def test_no_sites_entry(temp_dir):
+    """Verify that a model can set up and run without a ``sites`` entry in the plant config.
+
+    Uses Example 32 (multivariable streams), whose plant_config intentionally
+    omits the ``sites`` key.
+    """
+    example_folder = EXAMPLE_DIR / "32_multivariable_streams"
+    shutil.copytree(example_folder, temp_dir / "32_multivariable_streams", dirs_exist_ok=True)
+
+    os.chdir(temp_dir / "32_multivariable_streams")
+
+    model = H2IntegrateModel(
+        temp_dir / "32_multivariable_streams" / "32_multivariable_streams.yaml"
+    )
+    model.run()
+
+    # Smoke-check: combiner output flow should be the sum of the two producers
+    flow_out = model.prob.get_val("gas_combiner.wellhead_gas_mixture:mass_flow_out", units="kg/h")
+    assert flow_out.mean() > 0.0
+
+    os.chdir(Path(__file__).parent)
+
+
+@pytest.mark.unit
+def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        model.create_xdsm()
+
+    mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
+
+
+@pytest.mark.unit
+def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+    outfile = "my_custom_xdsm"
+
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        model.create_xdsm(outfile=outfile)
+
+    mock_fn.assert_called_once_with(plant_config, output_file=outfile)
+
+
+@pytest.mark.unit
+def test_create_xdsm_raises_when_no_interconnections():
+    plant_config = {"technology_interconnections": []}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        with pytest.raises(ValueError, match="requires technology interconnections"):
+            model.create_xdsm()
+
+    mock_fn.assert_not_called()
+
+
+@pytest.mark.unit
+def test_create_xdsm_raises_when_interconnections_key_missing():
+    plant_config = {}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+        with pytest.raises(ValueError, match="requires technology interconnections"):
+            model.create_xdsm()
+
+    mock_fn.assert_not_called()
+
+
+@pytest.mark.unit
+def test_create_xdsm_propagates_file_not_found_error():
+    plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+
+    with patch.object(
+        h2i_model_module,
+        "create_xdsm_from_config",
+        side_effect=FileNotFoundError("latex not found"),
+    ):
+        with pytest.raises(FileNotFoundError, match="latex not found"):
+            model.create_xdsm()

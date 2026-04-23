@@ -5,7 +5,9 @@ build:
   tools:
     python: '3.11'
   jobs:
-    pre_build: [jupyter-book config sphinx docs/]
+    pre_build:
+      - python docs/generate_class_hierarchy.py
+      - jupyter-book config sphinx docs/
 python:
   install:
     - method: pip

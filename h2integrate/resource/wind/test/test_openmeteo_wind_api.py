@@ -127,3 +127,63 @@ def test_wind_resource_h2i_download(
         assert wind_data["start_time"] == f"{resource_year}/01/01 00:00:00 (-0600)"
     with subtests.test("Time step"):
         assert wind_data["dt"] == plant_simulation["simulation"]["dt"]
+
+
+
+# fmt: off
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,resource_year,model_name,timezone,elevation",
+    [("OpenMeteoHistoricalWindResource", "wind", -28.454864, 114.551749, 2024, "openmeteo_archive", 8, 71.0)],  # noqa: E501
+    ids=["Non-UTC Leap Year"],
+)
+# fmt: on
+def test_wind_resource_h2i_download_leap_year(
+    plant_simulation,
+    site_config,
+    subtests,
+    model,
+    lat,
+    lon,
+    resource_year,
+    model_name,
+    timezone,
+    elevation,
+):
+    plant_config = {
+        "site": site_config,
+        "plant": plant_simulation,
+    }
+
+    prob = om.Problem()
+    comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    prob.run_model()
+    wind_data = prob.get_val("resource.wind_resource_data")
+
+    expected_fn = f"{lat}_{lon}_{resource_year}_{model_name}_60min_local_tz.csv"
+    with subtests.test("filepath for data was found where expected"):
+        assert Path(wind_data["filepath"]).exists()
+        assert Path(wind_data["filepath"]).name == expected_fn
+
+    with subtests.test("Data timezone"):
+        assert pytest.approx(wind_data["data_tz"], rel=1e-6) == timezone
+    with subtests.test("Site Elevation"):
+        assert pytest.approx(wind_data["elevation"], rel=1e-6) == elevation
+
+    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str)]
+    for k in data_keys:
+        with subtests.test(f"{k} resource data is 8760"):
+            assert len(wind_data[k]) == 8760
+
+    with subtests.test("theres 14 timeseries data keys"):
+        assert len(data_keys) == 14
+    with subtests.test("Start time"):
+        assert wind_data["start_time"] == f"{resource_year}/01/01 00:00:00 (+0800)"
+    with subtests.test("Time step"):
+        assert wind_data["dt"] == plant_simulation["simulation"]["dt"]

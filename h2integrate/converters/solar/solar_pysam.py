@@ -142,12 +142,17 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     It takes solar parameters as input and outputs power generation data.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         super().setup()
 
         self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
         self.add_input(
@@ -206,20 +211,24 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                     # Return user-specified tilt
                     return self.design_config.tilt
 
+        # Use absolute value of latitude for tilt calculations
+        # to support southern hemisphere (negative) latitudes
+        abs_latitude = abs(latitude)
+
         # If tilt angle function is 'lat', use the latitude as the tilt
         if self.design_config.tilt_angle_func == "lat":
-            return latitude
+            return abs_latitude
 
         # If tilt angle function is 'lat-func', use empirical formulas based on latitude
         if self.design_config.tilt_angle_func == "lat-func":
-            if latitude <= 25:
+            if abs_latitude <= 25:
                 # For latitudes <= 25, use 0.87 * latitude
-                return latitude * 0.87
-            if 25 < latitude <= 50:
+                return abs_latitude * 0.87
+            if 25 < abs_latitude <= 50:
                 # For latitudes between 25 and 50, use 0.76 * latitude + 3.1
-                return (latitude * 0.76) + 3.1
+                return (abs_latitude * 0.76) + 3.1
             # For latitudes > 50, use latitude directly
-            return latitude
+            return abs_latitude
 
     def format_resource_data(self, solar_resource_data):
         """Format solar resource data into the format required for the

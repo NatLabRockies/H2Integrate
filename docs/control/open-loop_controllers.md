@@ -2,15 +2,16 @@
 # Open-Loop Controllers
 
 ## Open-Loop Storage Controllers
-The open-loop storage controllers can be attached as the control strategy in the `tech_config` for various storage converters (e.g., battery or hydrogen storage). There are two controller types for storage:
-1. Pass-through Controller - passes the commodity flow to the output without any modification
-2. Demand Open-Loop Storage Controller - uses simple logic to attempt to meet demand using the storage technology.
+The open-loop storage controllers can be attached as the control strategy in the `tech_config` for various storage components (e.g., battery or hydrogen storage). There are three controller types for storage:
+1. [Simple Open-Loop Storage Controller](#pass-through-controller) — passes the commodity flow to the output with only minimal or no modifications.
+2. [Demand Open-Loop Storage Controller](#demand-open-loop-storage-controller) — uses simple logic to attempt to meet demand using the storage technology.
+3. [Peak Load Management Open-Loop Storage Controller](#peak-load-management-open-loop-storage-controller) — computes a peak-shaving dispatch schedule to reduce demand peaks, supporting one or two demand profiles with configurable event limits and time windows.
 
 (pass-through-controller)=
-### Pass-Through Controller
-The `PassThroughOpenLoopController` simply directly passes the input commodity flow to the output without any modifications. It is useful for testing, as a placeholder for more complex controllers, and for maintaining consistency between controlled and uncontrolled frameworks as this 'controller' does not alter the system output in any way.
+### Simple Open-Loop Storage Controller
+The `SimpleStorageOpenLoopController` passes the input commodity flow to the output, possibly with minor adjustments to meet demand. It is useful for testing and as a placeholder for more complex controllers.
 
-For examples of how to use the `PassThroughOpenLoopController` open-loop control framework, see the following:
+For examples of how to use the `SimpleStorageOpenLoopController` open-loop control framework, see the following:
 - `examples/01_onshore_steel_mn`
 - `examples/02_texas_ammonia`
 - `examples/12_ammonia_synloop`
@@ -27,92 +28,32 @@ For examples of how to use the `DemandOpenLoopStorageController` open-loop contr
 - `examples/14_wind_hydrogen_dispatch/`
 - `examples/19_simple_dispatch/`
 
-## Open-Loop Converter Controllers
+(peak-load-management-open-loop-storage-controller)=
+### Peak Load Management Open-Loop Storage Controller
+The `PeakLoadManagementHeuristicOpenLoopStorageController` computes and executes a peak-shaving dispatch schedule assuming perfect forecasting. It is designed for reducing peak loads, not meeting a specific demand, using either one or two loads for determining peaks.
 
-Open-loop converter controllers define rule-based logic for meeting commodity demand profiles without using dynamic system feedback. These controllers operate independently at each timestep.
-
-This page documents two core controller types:
-1. Demand Open-Loop Converter Controller — meets a fixed demand profile.
-2. Flexible Demand Open-Loop Converter Controller — adjusts demand up or down within flexible bounds.
-
-(demand-open-loop-converter-controller)=
-### Demand Open-Loop Converter Controller
-The `DemandOpenLoopConverterController` allocates commodity input to meet a defined demand profile. It does not contain energy storage logic, only **instantaneous** matching of supply and demand.
-
-The controller computes each value per timestep:
-- Unmet demand (non-zero when supply < demand, otherwise 0.)
-- Unused commodity (non-zero when supply > demand, otherwise 0.)
-- Delivered output (commodity supplied to demand sink)
-
-This provides a simple baseline for understanding supply–demand balance before adding complex controls.
-
-#### Configuration
-The controller is defined within the `tech_config` and requires these inputs.
-
-| Field             | Type           | Description                           |
-| ----------------- | -------------- | ------------------------------------- |
-| `commodity_name`  | `str`          | Commodity name (e.g., `"hydrogen"`).  |
-| `commodity_units` | `str`          | Units (e.g., `"kg/h"`).               |
-| `demand_profile`  | scalar or list | Timeseries demand or constant demand. |
-
-```yaml
-control_strategy:
-    model: DemandOpenLoopConverterController
-model_inputs:
-  control_parameters:
-    commodity_name: hydrogen
-    commodity_units: kg/h
-    demand_profile: [10, 10, 12, 15, 14]
+```{note}
+The algorithm currently only supports daily cycles, but could be adjusted to accommodate alternate cycle rates.
 ```
-For an example of how to use the `DemandOpenLoopConverterController` open-loop control framework, see the following:
-- `examples/23_solar_wind_ng_demand`
 
-(flexible-demand-open-loop-converter-controller)=
-### Flexible Demand Open-Loop Converter Controller
-The `FlexibleDemandOpenLoopConverterController` extends the fixed-demand controller by allowing the actual demand to flex up or down within defined bounds. This is useful for demand-side management scenarios where:
-- Processes can defer demand (e.g., flexible industrial loads)
-- The system requires demand elasticity without dynamic optimization
+The controller supports two demand profiles:
 
-The controller computes:
-- Flexible demand (clamped within allowable ranges)
-- Unmet flexible demand
-- Unused commodity
-- Delivered output
+- **`demand_profile`** — the local or sub-system demand. Peaks within a configurable daily time window (`peak_range`) are identified as candidate discharge targets.
+- **`demand_profile_upstream`** — an optional upstream or supervisory demand. When provided, an operator can override the local peak schedule up to a configurable number of events per period (e.g., three times per week). Peaks are determined as the highest n peaks in each period.
 
-Everything remains open-loop no storage, no intertemporal coupling.
+The `dispatch_priority_demand_profile` parameter selects which profile acts as the override schedule. On days where the priority profile flags a peak (up to n override instances in the given time period), the controller follows that schedule; on all other days it falls back to the other profile.
 
-For an example of how to use the `FlexibleDemandOpenLoopConverterController` open-loop control framework, see the following:
-- `examples/23_solar_wind_ng_demand`
+**Dispatch logic (state machine)**
 
-The flexible demand component takes an input commodity production profile, the maximum demand profile, and various constraints (listed below), and creates a "flexible demand profile" that follows the original input commodity production profile while satisfying varying constraint.
-Please see the figure below for an example of how the flexible demand profile can vary from the original demand profile based on the input commodity production profile and the ramp rates.
-The axes are unlabeled to allow for generalization to any commodity and unit type.
+1. **Discharge** — begins `advance_discharge_period` before the next scheduled peak and runs until `min_soc_fraction` is reached.
+2. **Charge** — resumes after `delay_charge_period` has elapsed since the end of discharge, subject to the `allow_charge_in_peak_range` flag which can block recharging during the peak windows.
+3. **Idle** — all other timesteps; set-point is zero.
 
-| ![Flexible Demand Example](figures/flex_demand_fig.png) |
-|-|
+An example output for the first week of a one-year simulation is shown below. Orange shading marks the 12:00–19:00 daily peak window. The top panel shows both demand profiles; the second panel shows battery state of charge; the third shows battery charge/discharge power; the fourth shows the resulting net demand. Periods where `demand_profile_upstream` takes precedence are marked with vertical dashed lines (three occurrences in the week shown). Note that where `demand_profile_upstream` does not override, the peaks in `demand_profile` are reduced.
 
+![](./figures/example_peak_load_dispatch.png)
 
-#### Configuration
-The flexible demand controller is defined within the `tech_config` with the following parameters:
+For an example of how to use the `PeakLoadManagementHeuristicOpenLoopStorageController`, see:
+- `examples/33_peak_load_management/`
 
-| Field               | Type           | Description                                  |
-| ------------------- | -------------- | -------------------------------------------- |
-| `commodity_name`          | `str`          | Commodity name.                              |
-| `commodity_units`         | `str`          | Units for all values.                        |
-| `demand_profile`          | scalar or list | Default (nominal) demand profile.            |
-| `turndown_ratio`          | float          | Minimum fraction of baseline demand allowed. |
-| `ramp_down_rate_fraction` | float          | Maximum ramp-down rate per timestep expressed as a fraction of baseline demand. |
-| `ramp_up_rate_fraction` | float          | Maximum ramp-up rate per timestep expressed as a fraction of baseline demand. |
-| `min_utilization` | float          | Minimum total fraction of baseline demand that must be met over the entire simulation. |
-
-```yaml
-model_inputs:
-  control_parameters:
-    commodity_name: hydrogen
-    commodity_units: kg/h
-    demand_profile: [10, 12, 10, 8]
-    turndown_ratio: 0.1
-    ramp_down_rate_fraction: 0.5
-    ramp_up_rate_fraction: 0.5
-    min_utilization: 0
-```
+For API details, see the [`PeakLoadManagementHeuristicOpenLoopStorageController` API documentation](../_autosummary/h2integrate.control.control_strategies.storage.plm_openloop_storage_controller).

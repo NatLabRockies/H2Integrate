@@ -60,17 +60,14 @@ technologies:
     dispatch_rule_set:
       model: PyomoDispatchGenericConverter
     model_inputs:
-      performance_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
-      dispatch_rule_parameters:
+      shared_parameters:
         commodity: electricity
         commodity_rate_units: kW
   battery:
     dispatch_rule_set:
       model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: HeuristicLoadFollowingController
+      model: HeuristicLoadFollowingStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:
@@ -81,19 +78,27 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 96.0  # kW
         max_capacity: 96.0  # kWh
-        n_control_window: 24
-        init_charge_fraction: 0.9
-        max_charge_fraction: 1.0
-        min_charge_fraction: 0.2
-        system_commodity_interface_limit: 1e12
+        init_soc_fraction: 0.9
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.2
       performance_parameters:
-        system_model_source: pysam
         chemistry: LFPGraphite
+        demand_profile: 640000  # 640 MW
       cost_parameters:
         cost_year: 2019
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.025
+      control_parameters:
+        system_commodity_interface_limit: 1e12
+        n_control_window: 24
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
@@ -119,18 +124,32 @@ technologies:
     performance_model:
       model: StorageAutoSizingModel
     control_strategy:
-      model: PassThroughOpenLoopController
+      model: SimpleStorageOpenLoopController
     cost_model:
       model: SaltCavernStorageCostModel
     model_inputs:
       shared_parameters:
         commodity: hydrogen
         commodity_rate_units: kg/h
+        commodity_amount_units: kg
+        set_demand_as_avg_commodity_in: true
+      performance_parameters:
+        min_soc_fraction: 0.0
+        max_soc_fraction: 1.0
+        charge_efficiency: 1.0
+        discharge_efficiency: 1.0
       cost_parameters:
         # since the storage is being auto-sized by the performance model,
         # we set the sizing mode to 'auto' rather than defining the capacities
         # in the input file
         sizing_mode: auto  # set as "auto" so storage capacity doesnt have to be defined
+  h2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
   ammonia:
     performance_model:
       model: SimpleAmmoniaPerformanceModel

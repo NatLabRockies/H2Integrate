@@ -13,15 +13,15 @@ The Pyomo control framework currently supports both a simple heuristic method an
 (heuristic-load-following-controller)=
 ## Heuristic Load Following Controller
 
-The simple heuristic method is specified by setting the storage control to `HeuristicLoadFollowingController`. When using the Pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `PyomoDispatchGenericConverter` for generating technologies, and `PyomoRuleStorageBaseclass` for storage technologies. More complex rule sets may be developed as needed.
+The simple heuristic method is specified by setting the storage control to `HeuristicLoadFollowingStorageController`. When using the Pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `PyomoDispatchGenericConverter` for generating technologies, and `PyomoRuleStorageBaseclass` for storage technologies. More complex rule sets may be developed as needed.
 
-For an example of how to use the heuristic Pyomo control framework with the `HeuristicLoadFollowingController`, see
+For an example of how to use the heuristic Pyomo control framework with the `HeuristicLoadFollowingStorageController`, see
 - `examples/18_pyomo_heuristic_wind_battery_dispatch`
 
 
 (optimized-load-following-controller)=
 ## Optimized Load Following Controller
-The optimized dispatch method is specified by setting the storage control to  `OptimizedDispatchController`. The same `dispatch_rule_set` for each technology connected to the storage technology is followed as in the heuristic case, where each technology must also have a `dispatch_rule_set` defined in the `tech_config`. The optimized dispatch currently uses the same dispatch rules as the heuristic dispatch. This method maximizes the load met while minimizing the cost of the system (operating cost) over each specified time window.
+The optimized dispatch method is specified by setting the storage control to  `OptimizedDispatchStorageController`. Unlike the heuristic method, the optimized dispatch method does not use `dispatch_rule_set` as an input in the `tech_config`. The `OptimizedDispatchStorageController` method maximizes the load met while minimizing the cost of the system (operating cost) over each specified time window.
 
 The optimized dispatch using Pyomo is implemented differently than the heuristic dispatch in order to be able to properly aggregate the individual Pyomo technology models into a cohesive Pyomo plant model for the optimization solver. Practically, this means that the Pyomo elements of the dispatch (including the individual technology models and the plant model) are not exposed to the main H2I code flow, and do not appear in the N2 diagram. The figure below shows a flow diagram of how the dispatch is implemented. The green blocks below represent what is represented in the N2 diagram of the system. The dispatch routine is currently self-contained within the storage technology of the system, though it includes solving an aggregated plant model in the optimization
 
@@ -40,7 +40,7 @@ We have exposed the optimization cost (weighting) values to the user in this imp
 - The cost values are defined in units of "$/kW".
 ```
 
-For an example of how to use the optimized Pyomo control framework with the `OptimizedDispatchController`, see
+For an example of how to use the optimized Pyomo control framework with the `OptimizedDispatchStorageController`, see
 - `examples/27_pyomo_optimized_dispatch`
 
 

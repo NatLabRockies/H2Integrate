@@ -1,0 +1,4 @@
+name: driver_config
+description: This analysis runs a tidal power plant
+general:
+  folder_output: outputs

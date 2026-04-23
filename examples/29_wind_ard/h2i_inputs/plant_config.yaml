@@ -16,9 +16,13 @@ plant:
   plant_life: 30
 technology_interconnections:
   - [wind, combiner, electricity, cable]
-                                                # source_tech, dest_tech, transport_item, transport_type = connection
   - [solar, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
+  # combine the electricity from wind, solar, and the battery
+  - [combiner, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable]
+  # subtract electricity production from electricity demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
   # etc
 resource_to_tech_connections:
   # The wind resource is handled strictly by Ard in this example,
@@ -34,7 +38,7 @@ finance_parameters:
         inflation_rate: 0.0  # 0 for real analysis
         discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind
         debt_equity_ratio: 2.62  # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf  https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
+        property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nlr.gov/docs/fy25osti/91775.pdf  https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
         total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
         capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.07375  # total state and local sales tax in St. Louis County https://taxmaps.state.mn.us/salestax/
@@ -53,7 +57,7 @@ finance_parameters:
   finance_subgroups:
     dispatched_electricity:
       commodity: electricity
-      commodity_stream: battery
+      commodity_stream: electrical_load_demand
       technologies: [wind, solar, battery]
     produced_electricity:
       commodity: electricity

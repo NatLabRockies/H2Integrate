@@ -67,6 +67,7 @@ Below summarizes the available performance, cost, and financial models for each 
   - [Storage Models](#storage-models)
   - [Basic Operations](#basic-operations)
   - [Control Models](#control-models)
+  - [DemandModels](#demand-models)
 
 (resource-models)=
 ## Resource models
@@ -92,6 +93,9 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (converter-models)=
 ## Converter models
+- generic models:
+    - cost models:
+        + `GenericConverterCostModel`
 - `wind`: wind turbine
     - performance models:
         + `'PYSAMWindPlantPerformanceModel'`
@@ -144,6 +148,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'SteelPerformanceModel'`
         + `'NaturalGasEAFPlantPerformanceComponent'`
         + `'HydrogenEAFPlantPerformanceComponent'`
+        + `'CMUElectricArcFurnaceScrapOnlyPerformanceComponent'`
+        + `'CMUElectricArcFurnaceDRIPerformanceComponent'`
+        + `'CMUElectricArcFurnaceCostModel'`
     - combined cost and financial models:
         + `'SteelCostAndFinancialModel'`
     - cost models:
@@ -250,8 +257,6 @@ Below summarizes the available performance, cost, and financial models for each 
 (storage-models)=
 ## Storage Models
 - `h2_storage`: hydrogen storage
-    - performance models:
-        + `'SimpleGenericStorage'`
     - cost models:
         + `'LinedRockCavernStorageCostModel'`
         + `'SaltCavernStorageCostModel'`
@@ -259,7 +264,7 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'PipeStorageCostModel'`
 - `generic_storage`: any resource storage
     - performance models:
-        + `'SimpleGenericStorage'`
+        + `'StoragePerformanceModel'`
         + `'StorageAutoSizingModel'`
     - cost models:
         + `'GenericStorageCostModel'`
@@ -279,12 +284,15 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (control-models)=
 ## Control Models
-- `'PassThroughOpenLoopController'`: open-loop control; directly passes the input resource flow to the output without any modifications
 - Storage Controllers:
+    - `'SimpleStorageOpenLoopController'`: open-loop control; manages resource flow based on demand and input commodity
     - `'DemandOpenLoopStorageController'`: open-loop control; manages resource flow based on demand and storage constraints
-    - `'HeuristicLoadFollowingController'`: open-loop control that works on a time window basis to set dispatch commands; uses Pyomo
-- Converter Controllers:
-    - `'DemandOpenLoopConverterController'`: open-loop control; manages resource flow based on demand constraints
-    - `'FlexibleDemandOpenLoopConverterController'`: open-loop control; manages resource flow based on demand and flexibility constraints
+    - `'HeuristicLoadFollowingStorageController'`: open-loop control that works on a time window basis to set dispatch commands; uses Pyomo
+    - `'PeakLoadManagementHeuristicOpenLoopStorageController'`: open-loop control that reduces peaks rather than trying to meet a load
 - Optimized Dispatch:
-    - `'OptimizedDispatchController'`: optimization-based dispatch using Pyomo
+    - `'OptimizedDispatchStorageController'`: optimization-based dispatch using Pyomo
+
+(demand-models)=
+## Demand Models
+- `'GenericDemandComponent'`: manages resource flow based on demand constraints
+- `'FlexibleDemandComponent'`: manages resource flow based on demand and flexibility constraints

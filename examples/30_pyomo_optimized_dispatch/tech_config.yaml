@@ -6,8 +6,6 @@ technologies:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
       model: ATBWindPlantCostModel
-    dispatch_rule_set:
-      model: PyomoDispatchGenericConverter
     resource:
       type: pysam_wind
       wind_speed: 9.
@@ -37,39 +35,51 @@ technologies:
         commodity: electricity
         commodity_rate_units: kW
   battery:
-    dispatch_rule_set:
-      model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: OptimizedDispatchController
+      model: OptimizedDispatchStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:
       model: ATBBatteryCostModel
     model_inputs:
       shared_parameters:
-        commodity: electricity
         max_charge_rate: 100000
         max_capacity: 400000
-        init_charge_fraction: 0.5  # Initial SOC for the storage
-        max_charge_fraction: 0.9  # Maximum SOC allowable for the storage technology
-        min_charge_fraction: 0.1  # Minimum SOC allowable for the storage technology
-        system_commodity_interface_limit: 1e12
-        charge_efficiency: 0.95  # Charge efficiency of the storage technology
-        discharge_efficiency: 0.95  # Discharge efficiency of the storage technology
+        init_soc_fraction: 0.5  # Initial SOC for the storage
+        max_soc_fraction: 0.9  # Maximum SOC allowable for the storage technology
+        min_soc_fraction: 0.1  # Minimum SOC allowable for the storage technology
         commodity_rate_units: kW
-        # rated_demand: 100000  # in kW
       performance_parameters:
-        system_model_source: pysam
         chemistry: LFPGraphite
+        demand_profile: 100000  # 100 MW
       cost_parameters:
         cost_year: 2022
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25  # 0.25% of capex per year from 2024 ATB
       control_parameters:
+        commodity: electricity
+        charge_efficiency: 0.95  # Charge efficiency of the storage technology
+        discharge_efficiency: 0.95  # Discharge efficiency of the storage technology
         cost_per_charge: 0.03  # in $/kW, cost to charge the storage (note that charging is incentivized)
         cost_per_discharge: 0.05  # in $/kW, cost to discharge the storage
         commodity_met_value: 0.1  # in $/kW, penalty for not meeting the desired load demand
         cost_per_production: 0.0  # in $/kW, cost to use the incoming produced commodity (i.e. electricity from wind)
         time_weighting_factor: 0.995  # This parameter discounts each subsequent time step incrementally in the future in the horizon window by this amount
         n_control_window: 24  # in timesteps (currently hours), The length of time that the control is applied to in the rolling window optimization
+        system_commodity_interface_limit: 1e12
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW

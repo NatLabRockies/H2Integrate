@@ -37,19 +37,13 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     H2Integrate.
     """
 
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
-        if set_up_ard_model is None:
-            msg = (
-                "Please install `ard-nrel` or `h2integrate[ard]` to use the"
-                " `WindArdPerformanceCompatibilityComponent` Ard-based model."
-                " It is highly recommended to run `conda install wisdem` first. See H2I's"
-                "installation instructions for further details."
-            )
-            raise ModuleNotFoundError(msg)
 
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(
@@ -99,6 +93,11 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
     requires a self.config attribute to be defined, so we create this minimal subclass.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = CostModelBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
@@ -145,10 +144,23 @@ class ArdWindPlantModel(om.Group):
         VarOpEx: Variable operating expenditure (currently placeholder).
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
+
+        if set_up_ard_model is None:
+            msg = (
+                "Please install `ard-nrel` or `h2integrate[ard]` to use the"
+                " `ArdWindPlantModel`. See H2I's installation instructions "
+                "for further details."
+            )
+            raise ModuleNotFoundError(msg)
 
     def setup(self):
         self.config = WindPlantArdModelConfig.from_dict(

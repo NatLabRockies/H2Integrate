@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import attrs
 import numpy as np
+import pandas as pd
 from attrs import Attribute, define
 
 
@@ -191,3 +192,75 @@ def attr_filter(inst: Attribute, value: Any) -> bool:
         if value.size == 0:
             return False
     return True
+
+
+def build_time_series_from_plant_config(plant_config):
+    """Build simulation timestamps from the simulation settings in a plant config.
+
+    Extracts ``n_timesteps``, ``dt``, ``timezone``, and ``start_time`` from
+    ``plant_config["plant"]["simulation"]`` and delegates to
+    :func:`build_time_series`.
+
+    Args:
+        plant_config (dict): Plant-level configuration dictionary. Must contain
+            a ``plant.simulation`` sub-dict with the following keys:
+
+            - ``n_timesteps`` (int): Number of simulation timesteps.
+            - ``dt`` (int): Timestep size in seconds.
+            - ``timezone`` (int): UTC offset in integer hours (e.g., ``-6`` for
+              UTC-6).
+            - ``start_time`` (str): Start timestamp parseable by
+              :class:`pandas.Timestamp`.
+
+    Returns:
+        numpy.ndarray: Array of :class:`datetime.datetime` objects of length
+        ``n_timesteps``, equally spaced by ``dt`` seconds, starting at
+        ``start_time`` in the specified timezone.
+    """
+    simulation_cfg = plant_config["plant"]["simulation"]
+    n_timesteps = int(simulation_cfg["n_timesteps"])
+    dt_seconds = int(simulation_cfg["dt"])
+    tz = int(simulation_cfg["timezone"])
+    start_time = simulation_cfg["start_time"]
+
+    return build_time_series(
+        start_time=start_time, dt_seconds=dt_seconds, n_timesteps=n_timesteps, time_zone=tz
+    )
+
+
+def build_time_series(
+    start_time: str,
+    dt_seconds: int,
+    n_timesteps: int,
+    time_zone: int,
+    start_year: int | None = None,
+):
+    """Build an array of evenly spaced timezone-aware datetime objects.
+
+    Constructs a :class:`pandas.DatetimeIndex` of length ``n_timesteps``
+    beginning at ``start_time`` with a fixed frequency of ``dt_seconds``
+    seconds, then converts it to a NumPy array of :class:`datetime.datetime`
+    objects via :meth:`pandas.DatetimeIndex.to_pydatetime`.
+
+    Args:
+        start_time (str): Start timestamp string parseable by
+            :class:`pandas.Timestamp` (e.g., ``"2025-01-01 00:00:00"`` or
+            ``"01-01 00:00:00"`` when ``start_year`` is provided).
+        dt_seconds (int): Timestep duration in seconds (e.g., ``3600`` for
+            hourly, ``1800`` for half-hourly).
+        n_timesteps (int): Number of timestamps to generate.
+        time_zone (int): UTC offset in integer hours applied to the series
+            (e.g., ``-6`` for UTC-6).
+        start_year (int | None, optional): If provided, overrides the year
+            component of ``start_time``. Useful when ``start_time`` omits the
+            year. Defaults to ``None``.
+
+    Returns:
+        numpy.ndarray: Array of :class:`datetime.datetime` objects of length
+        ``n_timesteps``, equally spaced by ``dt_seconds`` seconds.
+    """
+
+    start_timestamp = pd.Timestamp(start_time, tz=time_zone, year=start_year)
+    freq = pd.to_timedelta(dt_seconds, unit="s")
+
+    return pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq).to_pydatetime()

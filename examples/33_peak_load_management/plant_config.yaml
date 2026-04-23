@@ -1,0 +1,14 @@
+name: plant_config
+description: Demonstrates multivariable streams with a gas combiner
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+    timezone: -6
+    start_time: 2025/07/01 00:00:00
+technology_interconnections:
+  # include battery charge/discharge in the load
+  - [battery, electrical_load_demand, [electricity_out, electricity_in]]
+  # buy power from the grid to fulfill demand including to accommodate battery operation
+  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_demand]]

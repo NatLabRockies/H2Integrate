@@ -21,9 +21,17 @@ technology_interconnections:
   - [wind, combiner, electricity, cable]
   - [solar, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
-  - [battery, electrolyzer, electricity, cable]
+  # combine the battery output with the wind and solar generation
+  - [battery, elec_combiner, electricity, cable]
+  - [combiner, elec_combiner, electricity, cable]
+  # connect the electricity supply to the electrolyzer
+  - [elec_combiner, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
-  - [h2_storage, ammonia, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # connect the hydrogen supply to the ammonia model
+  - [h2_combiner, ammonia, hydrogen, pipe]
   - [finance_subgroup_hydrogen, ammonia, LCOH]
   # etc
 tech_to_dispatch_connections:
@@ -48,7 +56,7 @@ finance_parameters:
         inflation_rate: 0.0  # 0 for real analysis
         discount_rate: 0.06  # nominal return based on 2024 ATB baseline workbook for land-based wind
         debt_equity_ratio: 0.724  # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.025 # https://www.house.mn.gov/hrd/issinfo/clsrates.aspx and  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf
+        property_tax_and_insurance: 0.025 # https://www.house.mn.gov/hrd/issinfo/clsrates.aspx and  # percent of CAPEX estimated based on https://www.nlr.gov/docs/fy25osti/91775.pdf
         total_income_tax_rate: 0.2574  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
         capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.0  # average combined state and local sales tax https://taxfoundation.org/location/texas/

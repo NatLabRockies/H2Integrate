@@ -37,7 +37,7 @@ technologies:
     dispatch_rule_set:
       model: PyomoRuleStorageBaseclass
     control_strategy:
-      model: HeuristicLoadFollowingController
+      model: HeuristicLoadFollowingStorageController
     performance_model:
       model: PySAMBatteryPerformanceModel
     cost_model:
@@ -48,16 +48,32 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 100000
         max_capacity: 500000
-        n_control_window: 24
-        init_charge_fraction: 0.5
-        max_charge_fraction: 0.9
-        min_charge_fraction: 0.1
-        system_commodity_interface_limit: 1e12
+        init_soc_fraction: 0.5
+        max_soc_fraction: 0.9
+        min_soc_fraction: 0.1
       performance_parameters:
-        system_model_source: pysam
         chemistry: LFPGraphite
+        demand_profile: 40000  # 40 MW
       cost_parameters:
         cost_year: 2022
         energy_capex: 310  # $/kWh from 2024 ATB year 2025
         power_capex: 311  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.25  # 0.25% of capex per year from 2024 ATB
+      control_parameters:
+        n_control_window: 24
+        system_commodity_interface_limit: 1e12
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 50000  # 50 MW

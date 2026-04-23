@@ -4,13 +4,16 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pandas as pd
 import pytest
+import openmdao.api as om
 from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.dict_utils import dict_to_yaml_formatting
+from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
+from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
+from h2integrate.core.supported_models import supported_models
 from h2integrate.core.inputs.validation import load_tech_yaml
 
 
@@ -547,3 +550,221 @@ def test_yaml_no_duplicate_keys(subtests):
         sample = load_yaml(inputs / fn)
         traverse_dict(sample)
         load_tech_yaml(inputs / fn)
+
+
+@pytest.mark.unit
+def test_build_time_series_from_plant_config():
+    plant_config = {
+        "plant": {
+            "simulation": {
+                "n_timesteps": 5,
+                "dt": 1800,
+                "start_time": "2025-01-01 06:30:00",
+                "timezone": 0,
+            }
+        }
+    }
+
+    ts = build_time_series_from_plant_config(plant_config)
+
+    expected = pd.to_datetime(
+        [
+            "2025-01-01 06:30:00+00:00",
+            "2025-01-01 07:00:00+00:00",
+            "2025-01-01 07:30:00+00:00",
+            "2025-01-01 08:00:00+00:00",
+            "2025-01-01 08:30:00+00:00",
+        ]
+    ).to_pydatetime()
+
+    assert (ts == expected).all()
+
+
+def create_om_problem(tech_config):
+    plant_config_base = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
+        },
+        "tech_to_dispatch_connections": [
+            ["wind", "battery"],
+            ["battery", "battery"],
+        ],
+    }
+
+    prob = om.Problem(reports=False)
+    model = prob.model
+    plant_group = om.Group()
+    plant = model.add_subsystem("plant", plant_group, promotes=["*"])
+
+    model_types = [
+        "dispatch_rule_set",
+        "control_strategy",
+        "performance_model",
+        "cost_model",
+    ]
+    for tech_name, individual_tech_config in tech_config["technologies"].items():
+        tech_group = plant.add_subsystem(tech_name, om.Group())
+
+        for model_type in model_types:
+            if model_type in individual_tech_config:
+                if model_type == "control_strategy":
+                    control_params = individual_tech_config["model_inputs"].get(
+                        "control_parameters", {}
+                    )
+                    control_params["tech_name"] = tech_name
+                    individual_tech_config["model_inputs"].update(
+                        {"control_parameters": control_params}
+                    )
+                model_name = individual_tech_config[model_type]["model"]
+                model_object = supported_models[model_name]
+                tech_group.add_subsystem(
+                    model_name,
+                    model_object(
+                        driver_config={},
+                        plant_config=plant_config_base,
+                        tech_config=individual_tech_config,
+                    ),
+                    promotes=["*"],
+                )
+
+    prob.setup()
+    return prob
+
+
+@pytest.mark.unit
+def test_check_inputs(subtests):
+    tech_config_fpath = Path(__file__).parent / "inputs" / "no_duplicates.yaml"
+
+    # 1: check for an unused parameter under performance_parameters
+    tech_config = load_tech_yaml(tech_config_fpath)
+    prob = create_om_problem(tech_config)
+
+    for tech, tech_info in tech_config["technologies"].items():
+        if tech == "battery":
+            with pytest.raises(AttributeError) as excinfo:
+                check_inputs(prob, tech, tech_info, tech_config_fpath)
+                expected_error = (
+                    "The parameter(s) ['system_model_source'] found in performance_parameters "
+                    f"are not used for the 'battery' section of {tech_config_fpath}"
+                )
+                assert expected_error == str(excinfo.value)
+        else:
+            check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+    # 2: check when not-shared parameters are under shared_parameters
+    tech_config = load_tech_yaml(tech_config_fpath)
+    tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
+        "system_model_source"
+    )
+    prob = create_om_problem(tech_config)
+
+    for tech, tech_info in tech_config["technologies"].items():
+        if tech == "battery":
+            with pytest.raises(AttributeError) as excinfo:
+                check_inputs(prob, tech, tech_info, tech_config_fpath)
+                expected_error = (
+                    "The parameter(s) ['n_control_window', 'system_commodity_interface_limit'] "
+                    "found in shared_parameters but should be in control_parameters for "
+                    f"the 'battery' section of {tech_config_fpath}"
+                )
+                assert expected_error == str(excinfo.value)
+        else:
+            check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+    # 3: check when multiple unshared parameters from different categories are under shared\
+    key = "opex_fraction"
+    val = tech_config["technologies"]["battery"]["model_inputs"]["cost_parameters"].pop(key)
+    tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][key] = val
+    for tech, tech_info in tech_config["technologies"].items():
+        if tech == "battery":
+            with pytest.raises(AttributeError) as excinfo:
+                check_inputs(prob, tech, tech_info, tech_config_fpath)
+                expected_error = (
+                    "The following parameter sets were found in shared_parameters but should be"
+                    " contained in the following sections for the 'battery' section of "
+                    f"{tech_config_fpath}:"
+                    "\n\tcontrol_parameters should contain"
+                    " ['n_control_window', 'system_commodity_interface_limit']"
+                    "\n\tcost_parameters should contain ['opex_fraction]"
+                )
+                assert expected_error == str(excinfo.value)
+        else:
+            check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+    # 4: check when an unused parameter is under shared_parameters
+    tech_config = load_tech_yaml(tech_config_fpath)
+    control_parameters = {}
+    tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
+        "system_model_source"
+    )
+    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
+        "shared_parameters"
+    ].pop("n_control_window")
+    control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("system_commodity_interface_limit")
+    tech_config["technologies"]["battery"]["model_inputs"].update(
+        {"control_parameters": control_parameters}
+    )
+    # add unused parameter to shared
+    tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"].update(
+        {"test_unused_input": "fake"}
+    )
+    prob = create_om_problem(tech_config)
+
+    for tech, tech_info in tech_config["technologies"].items():
+        if tech == "battery":
+            with pytest.raises(AttributeError) as excinfo:
+                check_inputs(prob, tech, tech_info, tech_config_fpath)
+                expected_error = (
+                    "The parameter(s) ['test_unused_input'] found in "
+                    f"shared_parameters are not used by any of the models for the "
+                    f"'battery' section of {tech_config_fpath}"
+                )
+                assert expected_error == str(excinfo.value)
+        else:
+            check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+    # 5: check when parameters are shared but specified individually
+    combiner_tech = {
+        "performance_model": {"model": "GenericCombinerPerformanceModel"},
+        "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
+        "model_inputs": {
+            "performance_parameters": {"commodity": "electricity", "commodity_rate_units": "kW"},
+            "dispatch_rule_parameters": {"commodity": "electricity", "commodity_rate_units": "kW"},
+        },
+    }
+
+    tech_config = load_tech_yaml(tech_config_fpath)
+    control_parameters = {}
+    tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
+        "system_model_source"
+    )
+    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
+        "shared_parameters"
+    ].pop("n_control_window")
+    control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("system_commodity_interface_limit")
+    tech_config["technologies"]["battery"]["model_inputs"].update(
+        {"control_parameters": control_parameters}
+    )
+    tech_config["technologies"].update({"combiner": combiner_tech})
+    prob = create_om_problem(tech_config)
+
+    for tech, tech_info in tech_config["technologies"].items():
+        if tech == "combiner":
+            with pytest.raises(AttributeError) as excinfo:
+                check_inputs(prob, tech, tech_info, tech_config_fpath)
+                expected_error = (
+                    "The parameter(s) ['commodity', 'commodity_rate_units] found in "
+                    "performance_parameters should be under shared_parameter(s) for "
+                    f"the 'combiner' section of {tech_config_fpath}"
+                )
+                assert expected_error == str(excinfo.value)
+        else:
+            check_inputs(prob, tech, tech_info, tech_config_fpath)

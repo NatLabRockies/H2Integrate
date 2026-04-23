@@ -56,6 +56,11 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -84,7 +89,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "heat_rate_mmbtu_per_mwh",
             val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/MW/h",
+            units="MMBtu/(MW*h)",
             desc="Plant heat rate in MMBtu/MWh",
         )
 
@@ -114,6 +119,14 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             desc="Natural gas input energy",
         )
 
+        self.add_output(
+            "unmet_electricity_demand",
+            val=0.0,
+            shape=n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Unmet electricity demand for natural gas plant",
+        )
+
     def compute(self, inputs, outputs):
         """
         Compute electricity output from natural gas input.
@@ -125,7 +138,8 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         Args:
             inputs: OpenMDAO inputs object containing natural_gas_in, heat_rate_mmbtu_per_mwh,
                 system_capacity, and electricity_demand.
-            outputs: OpenMDAO outputs object for electricity_out and natural_gas_consumed
+            outputs: OpenMDAO outputs object for electricity_out, natural_gas_consumed,
+                and unmet_electricity_demand.
         """
 
         # calculate max input and output
@@ -166,6 +180,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
+        outputs["unmet_electricity_demand"] = inputs["electricity_demand"] - electricity_out
 
 
 @define(kw_only=True)
@@ -235,6 +250,11 @@ class NaturalGasCostModel(CostModelBaseClass):
         OpEx (float): Total operating expenditure in USD/year
         cost_year (int): Dollar year for the costs
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = NaturalGasCostModelConfig.from_dict(

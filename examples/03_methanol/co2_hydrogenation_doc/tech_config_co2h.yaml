@@ -5,7 +5,7 @@ technologies:
     performance_model:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
-      model: ATBWindPlantCostModel
+      model: GenericConverterCostModel
     model_inputs:
       performance_parameters:
         num_turbines: 24
@@ -39,8 +39,12 @@ technologies:
             row_phase_offset: 0.0
             layout_shape: square
       cost_parameters:
-        capex_per_kW: 1380.0
-        opex_per_kW_per_year: 29.0
+        commodity: electricity
+        commodity_rate_units: kW
+        commodity_amount_units: kW*h
+        unit_capex: 1380.0  # USD/kW
+        unit_opex: 29.0  # USD/kW/year
+        unit_varopex: 0.0  # USD/kWh
         cost_year: 2019
   electricity_splitter:
     performance_model:
@@ -74,7 +78,7 @@ technologies:
           replacement_cost_percent: 0.15  # percent of capex - H2A default case
   h2_storage:
     performance_model:
-      model: SimpleGenericStorage
+      model: StoragePerformanceModel
     cost_model:
       model: GenericStorageCostModel
     control_strategy:
@@ -85,10 +89,9 @@ technologies:
         commodity_rate_units: kg/h
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 103701.401563086  # kg
-      control_parameters:
-        max_charge_fraction: 1.0  # fraction (0-1)
-        min_charge_fraction: 0.1  # fraction (0-1)
-        init_charge_fraction: 0.25  # fraction (0-1)
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.25  # fraction (0-1)
         max_discharge_rate: 5000.0  # kg/time step
         charge_equals_discharge: false
         charge_efficiency: 1.0  # fraction (0-1)
@@ -99,6 +102,13 @@ technologies:
         capacity_capex: 383  # $/kg - based on https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/review22/st235_houchins_2022_p-pdf.pdf?Status=Master
         charge_capex: .000001  # $/kg/h
         opex_fraction: .000001  # percent of capex
+  h2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
   doc:
     performance_model:
       model: DOCPerformanceModel
@@ -130,7 +140,7 @@ technologies:
         infrastructure_type: desal
   co2_storage:
     performance_model:
-      model: SimpleGenericStorage
+      model: StoragePerformanceModel
     cost_model:
       model: GenericStorageCostModel
     control_strategy:
@@ -141,10 +151,9 @@ technologies:
         commodity_rate_units: kg/h
         max_charge_rate: 50000.0  # kg/time step
         max_capacity: 961456.376748904  # kg
-      control_parameters:
-        max_charge_fraction: 1.0  # fraction (0-1)
-        min_charge_fraction: 0.1  # fraction (0-1)
-        init_charge_fraction: 0.25  # fraction (0-1)
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.25  # fraction (0-1)
         max_discharge_rate: 50000.0  # kg/time step
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)
@@ -154,6 +163,13 @@ technologies:
         capacity_capex: 5  # $/kg - based on https://www.maritime.dot.gov/sites/marad.dot.gov/files/2024-11/LCE%20MARAD%20CCS%20TEA%20Final%20Report%20-%2031%20May%202024%20%283%29.pdf
         charge_capex: .000001  # $/kg/h
         opex_fraction: .000001  # percent of capex
+  co2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: co2
+        commodity_rate_units: kg/h
   methanol:
     performance_model:
       model: CO2HMethanolPlantPerformanceModel

@@ -27,7 +27,7 @@ repos:
       - id: yamlfix
         # Exclude YAML files that are used as inputs for testing or examples, or ones for desired schedule in HOPP as they
         # expect misformatted YAML files.
-        exclude: ^(h2integrate/core/test/inputs/.*|examples/11_hybrid_energy_plant/tech_inputs/desired_schedules/.*)$
+        exclude: ^(h2integrate/core/test/inputs/.*|examples/11_hybrid_energy_plant/tech_inputs/desired_schedules/.*|examples/33_peak_load_management/demand_profiles/.*)$
   - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
     rev: v0.8.1

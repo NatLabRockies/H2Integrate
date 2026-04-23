@@ -21,9 +21,19 @@ technology_interconnections:
   - [wind, combiner, electricity, cable]
   - [solar, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
-  - [battery, electrolyzer, electricity, cable]
+  # combine the battery output with the wind and solar generation
+  - [battery, elec_combiner, electricity, cable]
+  - [combiner, elec_combiner, electricity, cable]
+  # connect the electricity supply to the electrolyzer
+  - [elec_combiner, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
-  - [h2_storage, ammonia, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # subtract the hydrogen supplied from the hydrogen demand
+  - [h2_combiner, h2_load_demand, hydrogen, pipe]
+  # connect the hydrogen supplied as the demand to the ammonia model
+  - [h2_load_demand, ammonia, hydrogen, pipe]
   - [n2_feedstock, ammonia, nitrogen, pipe]
   - [electricity_feedstock, ammonia, electricity, cable]
   # etc
@@ -46,7 +56,7 @@ finance_parameters:
         inflation_rate: 0.0  # 0 for real analysis
         discount_rate: 0.06  # nominal return based on 2024 ATB baseline workbook for land-based wind
         debt_equity_ratio: 0.724  # 2024 ATB uses 72.4% debt for land-based wind
-        property_tax_and_insurance: 0.025  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
+        property_tax_and_insurance: 0.025  # percent of CAPEX estimated based on https://www.nlr.gov/docs/fy25osti/91775.pdf https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
         total_income_tax_rate: 0.2574  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
         capital_gains_tax_rate: 0.15  # H2FAST default
         sales_tax_rate: 0.0  # average combined state and local sales tax https://taxfoundation.org/location/texas/
@@ -74,5 +84,8 @@ finance_parameters:
         - battery
         - electrolyzer
         - h2_storage
-        - n2_feedstock
         - ammonia
+    n2:
+      commodity: nitrogen
+      commodity_stream: n2_feedstock
+      technologies: [n2_feedstock]

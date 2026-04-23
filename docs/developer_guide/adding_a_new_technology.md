@@ -258,6 +258,19 @@ In the middle-ground case where the models might use a shared object that is com
 This would require additional logic to first check if the cached object exists and is valid before attempting to load it, otherwise it would create the object from scratch.
 There is an example of this in the `hopp_wrapper.py` file.
 
+### Specifying allowable time step for your model
+If you want your model to run with time steps other than 1 hour (3600 s), then you must specify the `_time_step_bounds` as a class attribute in each of your model classes. To run a simulation with a given time step, all models in the plant must be compatible with the desired time step.
+
+```python
+class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
+    """
+    An OpenMDAO component that wraps the PEM electrolyzer model.
+    Takes electricity input and outputs hydrogen and oxygen generation rates.
+    """
+
+    # (min, max) time step lengths (in seconds) compatible with this model
+    _time_step_bounds = (300, 3600) # (5-min, 1-hour)
+```
 
 ### Other cases
 

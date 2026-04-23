@@ -26,6 +26,11 @@ class GenericSummerPerformanceModel(om.ExplicitComponent):
     Sum the production or consumption profile of some commodity from a single source.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

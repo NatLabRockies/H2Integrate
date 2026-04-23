@@ -22,6 +22,11 @@ class PyomoRuleBaseConfig(BaseConfig):
 
 
 class PyomoRuleBaseClass(om.ExplicitComponent):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
@@ -51,7 +56,7 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
 
         This method sets up all model elements (parameters, variables, constraints,
         and ports) associated with a technology block within the dispatch model.
-        It is typically called in the setup_pyomo() method of the PyomoControllerBaseClass.
+        It is typically called in the setup_pyomo() method of the PyomoStorageControllerBaseClass.
 
         Args:
             pyomo_model (pyo.ConcreteModel): The Pyomo model to which the technology

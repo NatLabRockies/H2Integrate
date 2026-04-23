@@ -53,8 +53,8 @@ The grid performance model handles:
 - `electricity_in`: Power flowing INTO the grid (selling to grid) - limited by interconnection size
 - `electricity_out`: Power flowing OUT OF the grid (buying from grid) - limited by interconnection size
 - `electricity_sold`: Actual electricity sold (up to interconnection limit)
-- `electricity_unmet_demand`: Demand that couldn't be met due to interconnection limit
-- `electricity_excess`: Electricity that couldn't be sold due to interconnection limit
+- `unmet_electricity_demand_out`: Demand that couldn't be met due to interconnection limit
+- `unused_electricity_out`: Electricity that couldn't be sold due to interconnection limit
 
 **Cost Model:**
 - CapEx: Based on interconnection size ($/kW) plus fixed costs
@@ -72,16 +72,16 @@ Solar → Battery → [Grid Buy (purchases) | Grid Sell (sales)]
 
 - Solar generates electricity
 - Battery stores excess and follows 100 MW demand profile
-- Grid Buy purchases electricity when battery cannot meet demand (via `electricity_unmet_demand` → `electricity_demand` connection)
-- Grid Sell accepts excess electricity when battery has surplus (via `electricity_unused_commodity` → `electricity_in` connection)
+- Grid Buy purchases electricity when battery cannot meet demand (via `unmet_electricity_demand_out` → `electricity_demand` connection)
+- Grid Sell accepts excess electricity when battery has surplus (via `unused_electricity_out` → `electricity_in` connection)
 
 ### Technology Interconnections
 
 ```yaml
 technology_interconnections: [
   ["solar", "battery", "electricity", "cable"],
-  ["battery", "grid_buy", ["electricity_unmet_demand", "electricity_demand"]],
-  ["battery", "grid_sell", ["electricity_unused_commodity", "electricity_in"]]
+  ["battery", "grid_buy", ["unmet_electricity_demand_out", "electricity_demand"]],
+  ["battery", "grid_sell", ["unused_electricity_out", "electricity_in"]]
 ]
 ```
 

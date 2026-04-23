@@ -12,7 +12,6 @@ parts:
     chapters:
       - file: user_guide/model_overview
       - file: user_guide/how_to_set_up_an_analysis
-      - file: user_guide/expected_naming_convention
       - file: user_guide/connecting_technologies
       - file: user_guide/defining_sites_and_resources
       - file: user_guide/design_optimization_in_h2i
@@ -26,7 +25,9 @@ parts:
   - caption: Technology Models
     chapters:
       - file: technology_models/feedstocks
+      - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river
+      - file: technology_models/tidal
       - file: technology_models/natural_gas
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
@@ -35,17 +36,25 @@ parts:
       - file: technology_models/atb_costs_pv.md
       - file: technology_models/atb_costs_wind.md
       - file: technology_models/co2.md
-      - file: technology_models/simple_generic_storage.md
       - file: technology_models/methanol.md
       - file: technology_models/ammonia.md
-      - file: technology_models/pysam_battery.md
       - file: technology_models/wind_plant_ard.md
       - file: technology_models/geologic_hydrogen.md
       - file: technology_models/grid
-      - file: technology_models/hydrogen_storage.md
       - file: technology_models/h2_fuel_cell.md
+      - file: technology_models/h2_smr.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
+      - file: technology_models/iron_dri.md
+      - file: technology_models/steel_eaf.md
+      - file: technology_models/steel_eaf_cmu.md
+  - caption: Storage Models
+    chapters:
+      - file: storage/storage_models_index.md
+        sections:
+          - file: storage/simple_generic_storage.md
+          - file: storage/pysam_battery.md
+          - file: storage/hydrogen_storage.md
   - caption: Resource Models
     chapters:
       - file: resource/resource_index
@@ -58,12 +67,17 @@ parts:
           - file: resource/himawari_v3_api
           - file: resource/meteosat_prime_meridian_v4_api
           - file: resource/openmeteo_solar_archive
+          - file: resource/tidal_resource
   - caption: Control
     chapters:
       - file: control/control_overview
       - file: control/open-loop_controllers
       - file: control/pyomo_controllers
       - file: control/controller_demonstrations
+  - caption: Demand
+    chapters:
+      - file: demand/demand_components
+      - file: demand/demand_demo
   - caption: Finance Models
     chapters:
       - file: finance_models/financial_analyses

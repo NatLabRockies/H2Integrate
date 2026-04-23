@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero
+from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -32,6 +32,11 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     Applied Energy 120669.
     https://doi.org/10.1016/j.apenergy.2023.120669
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -99,9 +104,9 @@ class QuinnNuclearCostModelConfig(CostModelBaseConfig):
     """
 
     system_capacity_kw: float = field(validator=gt_zero)
-    capex_per_kw: float = field(validator=gt_zero)
-    fixed_opex_per_kw_year: float = field(validator=gt_zero)
-    variable_opex_per_mwh: float = field(validator=gt_zero)
+    capex_per_kw: float = field(validator=gte_zero)
+    fixed_opex_per_kw_year: float = field(validator=gte_zero)
+    variable_opex_per_mwh: float = field(validator=gte_zero)
     reference_capacity_kw: float | None = field(default=None)
     capex_scaling_exponent: float = field(default=1.0, validator=gt_zero)
 
@@ -123,6 +128,11 @@ class QuinnNuclearCostModel(CostModelBaseClass):
     Applied Energy 120669.
     https://doi.org/10.1016/j.apenergy.2023.120669
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = QuinnNuclearCostModelConfig.from_dict(

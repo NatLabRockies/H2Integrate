@@ -30,7 +30,7 @@ technologies:
         cost_year: 2019
   battery:
     performance_model:
-      model: SimpleGenericStorage
+      model: StoragePerformanceModel
     cost_model:
       model: ATBBatteryCostModel
     control_strategy:
@@ -41,10 +41,9 @@ technologies:
         commodity_rate_units: kW
         max_charge_rate: 5000.0  # kW
         max_capacity: 30000.0  # kWh
-      control_parameters:
-        max_charge_fraction: 1.0  # fraction (0-1)
-        min_charge_fraction: 0.1  # fraction (0-1)
-        init_charge_fraction: 0.25  # fraction (0-1)
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.25  # fraction (0-1)
         max_discharge_rate: 5000.0  # kW
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)
@@ -54,3 +53,18 @@ technologies:
         energy_capex: 300  # $/kWh
         power_capex: 100  # $/kW
         opex_fraction: 0.02  # percent of capex
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 5000  # kW

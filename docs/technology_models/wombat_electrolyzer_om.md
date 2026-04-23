@@ -1,6 +1,6 @@
 # WOMBAT Electrolyzer O&M Model
 
-The `WOMBATElectrolyzerModel` provides a detailed, simulation-based approach to estimating the operations and maintenance (O&M) costs and availability of hydrogen electrolyzers. This model leverages the [WOMBAT](https://github.com/WISDEM/WOMBAT) (Windfarm Operations and Maintenance cost-Benefit Analysis Tool) framework, originally developed for wind farm O&M analysis, and adapts it for hydrogen systems.
+The `WOMBATElectrolyzerModel` provides a detailed, simulation-based approach to estimating the operations and maintenance (O&M) costs and availability of hydrogen electrolyzers. This model leverages the [WOMBAT](https://github.com/NLRWindSystems/WOMBAT) (Windfarm Operations and Maintenance cost-Benefit Analysis Tool) framework, originally developed for wind farm O&M analysis, and adapts it for hydrogen systems.
 
 ## What is WOMBAT?
 
