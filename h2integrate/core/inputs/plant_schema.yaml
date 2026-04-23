@@ -60,6 +60,7 @@ properties:
           timezone:
             type: number
             description: timezone as UTC offset corresponding to start_time
+            default: 0
             minimum: -12
             maximum: 14
         required: [dt, n_timesteps]

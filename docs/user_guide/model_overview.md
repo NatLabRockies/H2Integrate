@@ -148,6 +148,9 @@ Below summarizes the available performance, cost, and financial models for each 
         + `'SteelPerformanceModel'`
         + `'NaturalGasEAFPlantPerformanceComponent'`
         + `'HydrogenEAFPlantPerformanceComponent'`
+        + `'CMUElectricArcFurnaceScrapOnlyPerformanceComponent'`
+        + `'CMUElectricArcFurnaceDRIPerformanceComponent'`
+        + `'CMUElectricArcFurnaceCostModel'`
     - combined cost and financial models:
         + `'SteelCostAndFinancialModel'`
     - cost models:
@@ -285,6 +288,7 @@ Below summarizes the available performance, cost, and financial models for each 
     - `'SimpleStorageOpenLoopController'`: open-loop control; manages resource flow based on demand and input commodity
     - `'DemandOpenLoopStorageController'`: open-loop control; manages resource flow based on demand and storage constraints
     - `'HeuristicLoadFollowingStorageController'`: open-loop control that works on a time window basis to set dispatch commands; uses Pyomo
+    - `'PeakLoadManagementHeuristicOpenLoopStorageController'`: open-loop control that reduces peaks rather than trying to meet a load
 - Optimized Dispatch:
     - `'OptimizedDispatchStorageController'`: optimization-based dispatch using Pyomo
 

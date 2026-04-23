@@ -47,6 +47,7 @@ parts:
       - file: technology_models/iron_mine.md
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
+      - file: technology_models/steel_eaf_cmu.md
   - caption: Storage Models
     chapters:
       - file: storage/storage_models_index.md

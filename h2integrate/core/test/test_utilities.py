@@ -4,12 +4,13 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
 from attrs import field, define
 
 from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
 from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
 from h2integrate.core.supported_models import supported_models
@@ -549,6 +550,34 @@ def test_yaml_no_duplicate_keys(subtests):
         sample = load_yaml(inputs / fn)
         traverse_dict(sample)
         load_tech_yaml(inputs / fn)
+
+
+@pytest.mark.unit
+def test_build_time_series_from_plant_config():
+    plant_config = {
+        "plant": {
+            "simulation": {
+                "n_timesteps": 5,
+                "dt": 1800,
+                "start_time": "2025-01-01 06:30:00",
+                "timezone": 0,
+            }
+        }
+    }
+
+    ts = build_time_series_from_plant_config(plant_config)
+
+    expected = pd.to_datetime(
+        [
+            "2025-01-01 06:30:00+00:00",
+            "2025-01-01 07:00:00+00:00",
+            "2025-01-01 07:30:00+00:00",
+            "2025-01-01 08:00:00+00:00",
+            "2025-01-01 08:30:00+00:00",
+        ]
+    ).to_pydatetime()
+
+    assert (ts == expected).all()
 
 
 def create_om_problem(tech_config):
