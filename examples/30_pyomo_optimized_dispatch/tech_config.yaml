@@ -49,6 +49,8 @@ technologies:
         max_soc_fraction: 0.9  # Maximum SOC allowable for the storage technology
         min_soc_fraction: 0.1  # Minimum SOC allowable for the storage technology
         commodity_rate_units: kW
+        charge_efficiency: 0.95  # Charge efficiency of the storage technology
+        discharge_efficiency: 0.95  # Discharge efficiency of the storage technology
       performance_parameters:
         chemistry: LFPGraphite
         demand_profile: 100000  # 100 MW
@@ -59,8 +61,6 @@ technologies:
         opex_fraction: 0.25  # 0.25% of capex per year from 2024 ATB
       control_parameters:
         commodity: electricity
-        charge_efficiency: 0.95  # Charge efficiency of the storage technology
-        discharge_efficiency: 0.95  # Discharge efficiency of the storage technology
         cost_per_charge: 0.03  # in $/kW, cost to charge the storage (note that charging is incentivized)
         cost_per_discharge: 0.05  # in $/kW, cost to discharge the storage
         commodity_met_value: 0.1  # in $/kW, penalty for not meeting the desired load demand
