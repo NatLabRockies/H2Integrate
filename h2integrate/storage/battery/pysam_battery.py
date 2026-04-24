@@ -4,7 +4,7 @@ import PySAM.BatteryStateful as BatteryStateful
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val
+from h2integrate.core.validators import gt_zero, contains, range_val, range_val_or_none
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -49,6 +49,19 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             environment [W/m2*K]. Defaults to 20.
         resistance (int | float, optional): Battery internal resistance [Ohm].
             Defaults to 0.001.
+        charge_efficiency (float | None, optional): Efficiency of charging the battery,
+            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency).
+            This is applied on top of PySAM's internal chemistry-based efficiency.
+            Optional if ``round_trip_efficiency`` is provided. Defaults to None.
+        discharge_efficiency (float | None, optional): Efficiency of discharging the battery,
+            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency).
+            This is applied on top of PySAM's internal chemistry-based efficiency.
+            Optional if ``round_trip_efficiency`` is provided. Defaults to None.
+        round_trip_efficiency (float | None, optional): Combined efficiency of charging and
+            discharging the battery, represented as a decimal between 0 and 1 (e.g., 0.81 for
+            81% efficiency). If provided, ``charge_efficiency`` and ``discharge_efficiency``
+            are each set to the square root of this value. Optional if
+            ``charge_efficiency`` and ``discharge_efficiency`` are provided. Defaults to None.
     """
 
     max_capacity: float = field(validator=gt_zero)
@@ -67,6 +80,30 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     Cp: int | float = field(default=900)
     battery_h: int | float = field(default=20)
     resistance: int | float = field(default=0.001)
+
+    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+
+    def __attrs_post_init__(self):
+        """Post-initialization to resolve efficiencies.
+
+        If ``round_trip_efficiency`` is provided and individual efficiencies are not,
+        calculates ``charge_efficiency`` and ``discharge_efficiency`` as the square
+        root of ``round_trip_efficiency``. If no efficiency is specified, defaults
+        both to 1.0 (no additional external efficiency loss beyond PySAM's
+        internal chemistry-based efficiency).
+        """
+        if self.round_trip_efficiency is not None and (
+            self.charge_efficiency is None and self.discharge_efficiency is None
+        ):
+            self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
+            self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
+
+        if self.charge_efficiency is None:
+            self.charge_efficiency = 1.0
+        if self.discharge_efficiency is None:
+            self.discharge_efficiency = 1.0
 
 
 class PySAMBatteryPerformanceModel(StoragePerformanceBase):
@@ -249,7 +286,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # slightly exceeds soc_max.
                 actual_charge = max(0.0, min(headroom, max_charge_input, -cmd))
 
-                # Update the charge command for the PySAM batttery
+                # Update the charge command for the PySAM battery
                 cmd = -actual_charge
 
             else:
@@ -266,7 +303,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # Clip and apply discharge efficiency.
                 actual_discharge = max(0.0, min(headroom, max_discharge_input, cmd))
 
-                # Update the discharge command for the PySAM batttery
+                # Update the discharge command for the PySAM battery
                 cmd = actual_discharge
 
             # Set the input variable to the desired value
@@ -276,7 +313,19 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
             self.system_model.execute(0)
 
             # Save outputs at time t based on the simulation
-            storage_power_out_timesteps[t] = self.system_model.value("P")
+            # Apply external charge/discharge efficiency on top of PySAM's
+            # internal chemistry-based losses so the performance model output
+            # is consistent with the Pyomo dispatch optimizer's SOC constraint.
+            P = self.system_model.value("P")
+            if P > 0:
+                # Discharging: less commodity reaches the grid
+                storage_power_out_timesteps[t] = P * self.config.discharge_efficiency
+            else:
+                # Charging (P <= 0): more commodity drawn from the input stream
+                if self.config.charge_efficiency > 0:
+                    storage_power_out_timesteps[t] = P / self.config.charge_efficiency
+                else:
+                    storage_power_out_timesteps[t] = P
             soc_timesteps[t] = self.system_model.value("SOC")
 
         return storage_power_out_timesteps, soc_timesteps

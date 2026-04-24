@@ -39,32 +39,6 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     electricity_demand = np.ones(int(n_control_window)) * 1000.0
 
     prob.model.add_subsystem(
-        name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="kW"),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
-        name="IVC2",
-        subsys=om.IndepVarComp(name="time_step_duration", val=np.ones(n_control_window), units="h"),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
-        name="IVC3",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
-        name="IVC4",
-        subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
-        ),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
         "pysam_battery",
         PySAMBatteryPerformanceModel(
             plant_config=plant_config,
@@ -74,6 +48,9 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     )
 
     prob.setup()
+
+    prob.set_val("electricity_in", electricity_in, units="kW")
+    prob.set_val("electricity_set_point", electricity_demand - electricity_in, units="kW")
 
     prob.run_model()
 
@@ -261,6 +238,126 @@ def test_battery_config(subtests):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("n_timesteps", [24])
+def test_pysam_battery_charge_discharge_efficiency(plant_config, subtests):
+    """Test that charge and discharge efficiencies are applied to the PySAM battery output.
+
+    Runs the battery twice with the same set-point commands:
+    1. With default efficiencies (1.0) — baseline
+    2. With charge_efficiency=0.9 and discharge_efficiency=0.9
+
+    Verifies that:
+    - During discharge timesteps, output power is scaled by discharge_efficiency
+    - During charge timesteps, commodity consumed is scaled by 1/charge_efficiency
+    """
+    charge_eff = 0.9
+    discharge_eff = 0.9
+
+    n_control_window = 24
+    init_charge_rate = 50000.0
+    init_capacity = 200000.0
+
+    # First 12 hours: excess input → charges battery (negative set_point)
+    # Last 12 hours: no input → discharges battery (positive set_point)
+    electricity_in = np.concatenate(
+        (np.ones(int(n_control_window / 2)) * 2000.0, np.zeros(int(n_control_window / 2)))
+    )
+    electricity_demand = np.ones(n_control_window) * 1000.0
+    set_point = electricity_demand - electricity_in
+
+    results = {}
+    for label, ce, de in [("baseline", 1.0, 1.0), ("with_eff", charge_eff, discharge_eff)]:
+        tech_config = {
+            "model_inputs": {
+                "shared_parameters": {
+                    "max_charge_rate": init_charge_rate,
+                    "max_capacity": init_capacity,
+                    "n_control_window": n_control_window,
+                    "init_soc_fraction": 0.5,
+                    "max_soc_fraction": 0.9,
+                    "min_soc_fraction": 0.1,
+                },
+                "performance_parameters": {
+                    "chemistry": "LFPGraphite",
+                    "demand_profile": 0.0,
+                    "charge_efficiency": ce,
+                    "discharge_efficiency": de,
+                },
+            }
+        }
+
+        prob = om.Problem()
+        prob.model.add_subsystem(
+            "pysam_battery",
+            PySAMBatteryPerformanceModel(
+                plant_config=plant_config,
+                tech_config=tech_config,
+            ),
+            promotes=["*"],
+        )
+        prob.setup()
+
+        prob.set_val("electricity_in", electricity_in, units="kW")
+        prob.set_val("electricity_set_point", set_point, units="kW")
+
+        prob.run_model()
+
+        results[label] = prob.get_val("electricity_out", units="kW").copy()
+
+    baseline = results["baseline"]
+    with_eff = results["with_eff"]
+
+    with subtests.test("discharge timesteps scaled by discharge_efficiency"):
+        # Discharge timesteps are where baseline > 0
+        discharge_mask = baseline > 0
+        assert discharge_mask.any(), "Expected some discharge timesteps"
+        np.testing.assert_allclose(
+            with_eff[discharge_mask],
+            baseline[discharge_mask] * discharge_eff,
+            rtol=1e-6,
+        )
+
+    with subtests.test("charge timesteps scaled by 1/charge_efficiency"):
+        # Charge timesteps are where baseline < 0
+        charge_mask = baseline < 0
+        assert charge_mask.any(), "Expected some charge timesteps"
+        np.testing.assert_allclose(
+            with_eff[charge_mask],
+            baseline[charge_mask] / charge_eff,
+            rtol=1e-6,
+        )
+
+    with subtests.test("config round_trip_efficiency"):
+        config_data = {
+            "max_capacity": 20000,
+            "max_charge_rate": 5000,
+            "chemistry": "LFPGraphite",
+            "init_soc_fraction": 0.5,
+            "max_soc_fraction": 0.9,
+            "min_soc_fraction": 0.1,
+            "demand_profile": 0.0,
+            "round_trip_efficiency": 0.81,
+        }
+        config = PySAMBatteryPerformanceModelConfig.from_dict(config_data)
+        assert config.charge_efficiency == pytest.approx(0.9, rel=1e-6)
+        assert config.discharge_efficiency == pytest.approx(0.9, rel=1e-6)
+
+    with subtests.test("config defaults to 1.0 when no efficiency set"):
+        config_data = {
+            "max_capacity": 20000,
+            "max_charge_rate": 5000,
+            "chemistry": "LFPGraphite",
+            "init_soc_fraction": 0.5,
+            "max_soc_fraction": 0.9,
+            "min_soc_fraction": 0.1,
+            "demand_profile": 0.0,
+        }
+        config = PySAMBatteryPerformanceModelConfig.from_dict(config_data)
+        assert config.charge_efficiency == 1.0
+        assert config.discharge_efficiency == 1.0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [24])
 def test_battery_initialization(plant_config, subtests):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
@@ -328,26 +425,6 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     # Set up the OpenMDAO problem
     prob_init = om.Problem()
     prob_init.model.add_subsystem(
-        name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
-        promotes=["*"],
-    )
-
-    prob_init.model.add_subsystem(
-        name="IVC2",
-        subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="MW"),
-        promotes=["*"],
-    )
-
-    prob_init.model.add_subsystem(
-        name="IVC3",
-        subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
-        ),
-        promotes=["*"],
-    )
-
-    prob_init.model.add_subsystem(
         "pysam_battery",
         PySAMBatteryPerformanceModel(
             plant_config=plant_config,
@@ -357,6 +434,9 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     )
 
     prob_init.setup()
+
+    prob_init.set_val("electricity_in", electricity_in, units="MW")
+    prob_init.set_val("electricity_set_point", electricity_demand - electricity_in, units="kW")
 
     prob_init.run_model()
 
@@ -391,26 +471,6 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     # Re-run and set the charge rate as half of what it was before
     prob = om.Problem()
     prob.model.add_subsystem(
-        name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
-        name="IVC2",
-        subsys=om.IndepVarComp(name="electricity_in", val=electricity_in, units="MW"),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
-        name="IVC3",
-        subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
-        ),
-        promotes=["*"],
-    )
-
-    prob.model.add_subsystem(
         "pysam_battery",
         PySAMBatteryPerformanceModel(
             plant_config=plant_config,
@@ -421,6 +481,8 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
 
     prob.setup()
 
+    prob.set_val("electricity_in", electricity_in, units="MW")
+    prob.set_val("electricity_set_point", electricity_demand - electricity_in, units="kW")
     prob.set_val("pysam_battery.max_charge_rate", init_charge_rate / 2, units="kW")
 
     prob.run_model()
