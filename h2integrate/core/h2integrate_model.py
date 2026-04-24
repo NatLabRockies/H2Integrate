@@ -250,7 +250,7 @@ class H2IntegrateModel:
                     # of the same custom model. Also check that all instances of the same custom
                     # model tech name use the same class definition.
                     if model_name in included_custom_models:
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         if (
                             model_class_name
                             != included_custom_models[model_name]["model_class_name"]
@@ -267,7 +267,7 @@ class H2IntegrateModel:
                             continue
 
                     if (model_name not in self.supported_models) and (model_name is not None):
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         model_location = config[model_type].get(f"{prefix}model_location")
 
                         if not model_class_name or not model_location:
@@ -307,7 +307,7 @@ class H2IntegrateModel:
                             or config[model_type].get(f"{prefix}model_location") is not None
                         ):
                             msg = (
-                                f"Custom {prefix}model_class_name or {prefix}model_location "
+                                f"Custom {prefix}model or {prefix}model_location "
                                 f"specified for '{model_name}', "
                                 f"but '{model_name}' is a built-in H2Integrate "
                                 "model. Using built-in model instead is not allowed. "
@@ -324,7 +324,7 @@ class H2IntegrateModel:
         self.create_custom_models(
             self.technology_config["technologies"],
             self.tech_parent_path,
-            ["performance_model", "cost_model", "finance_model"],
+            ["performance_model", "cost_model", "finance_model", "control_strategy"],
         )
 
         # check for custom finance models

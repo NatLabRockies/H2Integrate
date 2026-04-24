@@ -48,7 +48,6 @@ def test_custom_resource_model(subtests, temp_copy_of_example):
     # modify the plant config to use a custom resource
     custom_resource_model_inputs = {
         "resource_model": "CustomRiverResource",
-        "resource_model_class_name": "CustomRiverResource",
         "resource_model_location": str(custom_resource_model_fpath.absolute()),
         "resource_parameters": plant_config["sites"]["site"]["resources"]["river_resource"][
             "resource_parameters"
@@ -113,7 +112,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
     with subtests.test("custom model name should not match built-in model names"):
         # Assert that a ValueError is raised with the expected message when running the model
         error_msg = (
-            r"Custom model_class_name or model_location specified for '"
+            r"Custom model or model_location specified for '"
             r"BasicElectrolyzerCostModel', but 'BasicElectrolyzerCostModel' is a built-in "
             r"H2Integrate model\. "
             r"Using built-in model instead is not allowed\. "
@@ -129,7 +128,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
         tech_config_data = load_tech_yaml(temp_tech_config)
 
         tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
 
@@ -137,8 +136,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
             tech_config_data["technologies"]["electrolyzer"]
         )
         tech_config_data["technologies"]["electrolyzer2"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
-            "model_class_name": "DummyClass",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
         # Save the modified tech_config YAML back

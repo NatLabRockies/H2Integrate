@@ -25,7 +25,6 @@ sites:
     resources:
       river_resource:
         resource_model: CustomRiverResource
-        resource_model_class_name: CustomRiverResource
         resource_model_location: river_resource/river_resource_model.py
         resource_parameters:
           filename: river_data.csv
