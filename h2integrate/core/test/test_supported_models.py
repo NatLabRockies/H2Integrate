@@ -8,7 +8,7 @@ def test_dictionary_mapping():
     """Tests that the supported_models dictionary keys exactly match the model class name,
     except for allowed transport models that simplify configuration readability.
     """
-    allowed_mismatch = ("cable", "pipe")
+    allowed_mismatch = ("cable_passthrough", "pipe_passthrough")
     mismatches = {k for k, v in supported_models.items() if k != v.__name__}
     mismatches = mismatches.difference(allowed_mismatch)
     assert len(mismatches) == 0, f"Model dictionary keys don't match their class name: {mismatches}"

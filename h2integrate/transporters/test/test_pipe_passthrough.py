@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
-from h2integrate.transporters.pipe import PipePerformanceModel
+from h2integrate.transporters.pipe_passthrough import PipePassthroughPerformanceModel
 
 
 @fixture
@@ -18,11 +18,11 @@ def plant_config():
 
 
 @pytest.mark.unit
-def test_pipe_with_hydrogen(plant_config):
-    """Test the pipe transport with hydrogen as transport_item."""
+def test_pipe_passthrough_with_hydrogen(plant_config):
+    """Test the pipe_passthrough transport with hydrogen as transport_item."""
 
     # Create the pipe component with hydrogen as transport item
-    pipe = PipePerformanceModel(plant_config=plant_config, transport_item="hydrogen")
+    pipe = PipePassthroughPerformanceModel(plant_config=plant_config, transport_item="hydrogen")
 
     # Create OpenMDAO problem and add the component
     prob = om.Problem()
@@ -48,8 +48,8 @@ def test_pipe_with_hydrogen(plant_config):
 
 
 @pytest.mark.unit
-def test_pipe_with_invalid_transport_item():
-    """Test that pipe raises an error with invalid transport_item."""
+def test_pipe_passthrough_with_invalid_transport_item():
+    """Test that pipe_passthrough raises an error with invalid transport_item."""
     with pytest.raises(ValueError) as excinfo:
-        PipePerformanceModel(transport_item="invalid_item")
+        PipePassthroughPerformanceModel(transport_item="invalid_item")
     assert "Value ('invalid_item')" in str(excinfo.value)

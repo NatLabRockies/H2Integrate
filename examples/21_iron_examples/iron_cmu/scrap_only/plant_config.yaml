@@ -6,8 +6,8 @@ sites:
     longitude: -88.398
 technology_interconnections:
   - [oxygen_feedstock, steel_plant, oxygen, oxygen_transport]
-  - [electricity_feedstock, steel_plant, electricity, cable]
-  - [natural_gas_feedstock, steel_plant, natural_gas, pipe]
+  - [electricity_feedstock, steel_plant, electricity, cable_passthrough]
+  - [natural_gas_feedstock, steel_plant, natural_gas, pipe_passthrough]
   - [electrodes_feedstock, steel_plant, electrodes, electrodes_transport]
   - [scrap_feedstock, steel_plant, scrap, scrap_transport]
   - [coal_feedstock, steel_plant, coal, coal_transport]

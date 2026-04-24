@@ -18,11 +18,11 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, combiner, electricity, cable]
+  - [wind, combiner, electricity, cable_passthrough]
                                                 # source_tech, dest_tech, transport_item, transport_type = connection
-  - [solar, combiner, electricity, cable]
-  - [combiner, electrolyzer, electricity, cable]
-  - [electrolyzer, methanol, hydrogen, pipe]
+  - [solar, combiner, electricity, cable_passthrough]
+  - [combiner, electrolyzer, electricity, cable_passthrough]
+  - [electrolyzer, methanol, hydrogen, pipe_passthrough]
   - [finance_subgroup_electricity, methanol, LCOE]
   - [finance_subgroup_hydrogen, methanol, LCOH]
 resource_to_tech_connections:

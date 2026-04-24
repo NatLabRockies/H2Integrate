@@ -1,7 +1,7 @@
 import openmdao.api as om
 
 
-class PipePerformanceModel(om.ExplicitComponent):
+class PipePassthroughPerformanceModel(om.ExplicitComponent):
     """
     Pass-through pipe with no losses.
     """

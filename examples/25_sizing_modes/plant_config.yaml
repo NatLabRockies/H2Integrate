@@ -9,10 +9,10 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [hopp, electrolyzer, electricity, cable]
-  - [electrolyzer, ammonia, hydrogen, pipe]
-  - [n2_feedstock, ammonia, nitrogen, pipe]
-  - [electricity_feedstock, ammonia, electricity, cable]
+  - [hopp, electrolyzer, electricity, cable_passthrough]
+  - [electrolyzer, ammonia, hydrogen, pipe_passthrough]
+  - [n2_feedstock, ammonia, nitrogen, pipe_passthrough]
+  - [electricity_feedstock, ammonia, electricity, cable_passthrough]
 plant:
   plant_life: 30
 finance_parameters:

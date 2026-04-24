@@ -136,8 +136,8 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
-    ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+    ["hopp", "electrolyzer", "electricity", "cable_passthrough"],
+    ["electrolyzer", "ammonia", "hydrogen", "pipe_passthrough"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
 ]
 input_config["plant_config"] = plant_config
@@ -170,8 +170,8 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
-    ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+    ["hopp", "electrolyzer", "electricity", "cable_passthrough"],
+    ["electrolyzer", "ammonia", "hydrogen", "pipe_passthrough"],
 ]
 input_config["plant_config"] = plant_config
 driver_config["driver"]["optimization"]["flag"] = True

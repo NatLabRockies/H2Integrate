@@ -65,11 +65,11 @@ def test_resize_by_max_commodity(input_config, subtests):
         "performance_parameters"
     ]["max_commodity_ratio"] = 1.0
     input_config["plant_config"]["technology_interconnections"] = [
-        ["hopp", "electrolyzer", "electricity", "cable"],
-        ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+        ["hopp", "electrolyzer", "electricity", "cable_passthrough"],
+        ["electrolyzer", "ammonia", "hydrogen", "pipe_passthrough"],
         ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
-        ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
-        ["electricity_feedstock", "ammonia", "electricity", "cable"],
+        ["n2_feedstock", "ammonia", "nitrogen", "pipe_passthrough"],
+        ["electricity_feedstock", "ammonia", "electricity", "cable_passthrough"],
     ]
     model = H2IntegrateModel(input_config)
     model.run()

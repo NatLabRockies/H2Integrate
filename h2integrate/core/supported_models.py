@@ -1,8 +1,6 @@
 from h2integrate.resource.river import RiverResource
 from h2integrate.resource.tidal import TidalResource
 from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
-from h2integrate.transporters.pipe import PipePerformanceModel
-from h2integrate.transporters.cable import CablePerformanceModel
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
 from h2integrate.finances.profast_lco import ProFastLCO
 from h2integrate.finances.profast_npv import ProFastNPV
@@ -23,6 +21,7 @@ from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
 from h2integrate.storage.battery.pysam_battery import PySAMBatteryPerformanceModel
 from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
 from h2integrate.transporters.generic_splitter import GenericSplitterPerformanceModel
+from h2integrate.transporters.pipe_passthrough import PipePassthroughPerformanceModel
 from h2integrate.converters.iron.iron_dri_plant import (
     HydrogenIronReductionPlantCostComponent,
     NaturalGasIronReductionPlantCostComponent,
@@ -36,6 +35,7 @@ from h2integrate.converters.iron.iron_transport import (
 from h2integrate.converters.nitrogen.simple_ASU import SimpleASUCostModel, SimpleASUPerformanceModel
 from h2integrate.converters.wind.wind_plant_ard import ArdWindPlantModel
 from h2integrate.resource.solar.openmeteo_solar import OpenMeteoHistoricalSolarResource
+from h2integrate.transporters.cable_passthrough import CablePassthroughPerformanceModel
 from h2integrate.converters.hydrogen.h2_fuel_cell import (
     H2FuelCellCostModel,
     LinearH2FuelCellPerformanceModel,
@@ -272,8 +272,8 @@ supported_models = {
     "QuinnNuclearCostModel": QuinnNuclearCostModel,
     "NaturalGasCostModel": NaturalGasCostModel,
     # Transport
-    "cable": CablePerformanceModel,
-    "pipe": PipePerformanceModel,
+    "cable_passthrough": CablePassthroughPerformanceModel,
+    "pipe_passthrough": PipePassthroughPerformanceModel,
     "GenericCombinerPerformanceModel": GenericCombinerPerformanceModel,
     "GenericSplitterPerformanceModel": GenericSplitterPerformanceModel,
     "GenericTransporterPerformanceModel": GenericTransporterPerformanceModel,
@@ -339,8 +339,8 @@ no_cost_models = {
     "GenericSplitterPerformanceModel",
     "GenericCombinerPerformanceModel",
     "GasStreamCombinerPerformanceModel",
-    "CablePerformanceModel",
-    "PipePerformanceModel",
+    "CablePassthroughPerformanceModel",
+    "PipePassthroughPerformanceModel",
 }
 
 no_replacement_schedule_models = {

@@ -1,7 +1,7 @@
 import openmdao.api as om
 
 
-class CablePerformanceModel(om.ExplicitComponent):
+class CablePassthroughPerformanceModel(om.ExplicitComponent):
     """
     Pass-through cable with no losses.
     """

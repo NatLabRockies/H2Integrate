@@ -14,13 +14,13 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, electrolyzer, electricity, cable]
-  - [electrolyzer, h2_storage, hydrogen, pipe]
+  - [wind, electrolyzer, electricity, cable_passthrough]
+  - [electrolyzer, h2_storage, hydrogen, pipe_passthrough]
   # combine the h2 from the electrolyzer and the h2_storage
-  - [electrolyzer, h2_combiner, hydrogen, pipe]
-  - [h2_storage, h2_combiner, hydrogen, pipe]
+  - [electrolyzer, h2_combiner, hydrogen, pipe_passthrough]
+  - [h2_storage, h2_combiner, hydrogen, pipe_passthrough]
   # subtract hydrogen production from hydrogen demand
-  - [h2_combiner, h2_load_demand, hydrogen, pipe]
+  - [h2_combiner, h2_load_demand, hydrogen, pipe_passthrough]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]

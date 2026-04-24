@@ -459,7 +459,7 @@ class H2IntegrateModel:
             )
             raise NameError(msg)
 
-        reserved_techs = {"pipe", "cable"}
+        reserved_techs = {"pipe_passthrough", "cable_passthrough"}
         # Use set intersection to find any reserved names present in the config
         invalid_techs = sorted(
             set(self.technology_config["technologies"]).intersection(reserved_techs)

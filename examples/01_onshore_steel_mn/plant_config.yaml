@@ -19,18 +19,18 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, combiner, electricity, cable]
-  - [solar, combiner, electricity, cable]
-  - [combiner, battery, electricity, cable]
+  - [wind, combiner, electricity, cable_passthrough]
+  - [solar, combiner, electricity, cable_passthrough]
+  - [combiner, battery, electricity, cable_passthrough]
   # combine the battery output with the wind and solar generation
-  - [battery, elec_combiner, electricity, cable]
-  - [combiner, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable_passthrough]
+  - [combiner, elec_combiner, electricity, cable_passthrough]
   # connect the electricity supply to the electrolyzer
-  - [elec_combiner, electrolyzer, electricity, cable]
-  - [electrolyzer, h2_storage, hydrogen, pipe]
+  - [elec_combiner, electrolyzer, electricity, cable_passthrough]
+  - [electrolyzer, h2_storage, hydrogen, pipe_passthrough]
   # combine the h2 from the electrolyzer and the h2_storage
-  - [electrolyzer, h2_combiner, hydrogen, pipe]
-  - [h2_storage, h2_combiner, hydrogen, pipe]
+  - [electrolyzer, h2_combiner, hydrogen, pipe_passthrough]
+  - [h2_storage, h2_combiner, hydrogen, pipe_passthrough]
   - [finance_subgroup_hydrogen, steel, [LCOH_delivered, LCOH]]
   # etc
 tech_to_dispatch_connections:

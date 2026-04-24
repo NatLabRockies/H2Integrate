@@ -35,7 +35,7 @@ Where:
 - `name_of_feedstock_source`: Name of your feedstock source
 - `consuming_technology`: Technology that uses the feedstock
 - `commodity`: Type identifier (e.g., "natural_gas", "water", "electricity")
-- `connection_type`: Name for the connection (e.g., "pipe", "cable")
+- `connection_type`: Name for the connection (e.g., "pipe_passthrough", "cable_passthrough")
 
 ## Configuration
 

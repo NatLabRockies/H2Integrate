@@ -8,7 +8,7 @@ plant:
   plant_life: 10
 technology_interconnections:
   - [geoh2_well_subsurface, geoh2_well_surface, wellhead_h2_concentration_mol]
-  - [geoh2_well_subsurface, geoh2_well_surface, wellhead_gas, pipe]
+  - [geoh2_well_subsurface, geoh2_well_surface, wellhead_gas, pipe_passthrough]
 finance_parameters:
   finance_groups:
     finance_model: ProFastLCO

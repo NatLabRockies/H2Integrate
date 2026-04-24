@@ -6,23 +6,23 @@ sites:
     longitude: -88.398
 technology_interconnections:
   # Connect feedstocks to iron mine.
-  - [mine_electricity_feedstock, iron_mine, electricity, cable]
+  - [mine_electricity_feedstock, iron_mine, electricity, cable_passthrough]
   - [mine_crude_ore_feedstock, iron_mine, crude_ore, crude_ore_transport]
   # Connect iron_ore price and processed_ore_feedstock to iron_transport
   # Connect the LCOI of iron ore to the price of a feedstock component representing the ore to be used in DRI
   - [finance_subgroup_iron_ore, processed_ore_feedstock, [price_iron_ore, price]]
   # Connect the ore feedstock available to the iron plant
   - [processed_ore_feedstock, iron_plant, iron_ore, iron_ore_transport]
-  - [dri_grid_feedstock, iron_plant, electricity, cable]
+  - [dri_grid_feedstock, iron_plant, electricity, cable_passthrough]
   - [catalyst_feedstock, iron_plant, reformer_catalyst, catalyst_transport]
-  - [water_feedstock, iron_plant, water, pipe]
-  - [natural_gas_feedstock, iron_plant, natural_gas, pipe]
+  - [water_feedstock, iron_plant, water, pipe_passthrough]
+  - [natural_gas_feedstock, iron_plant, natural_gas, pipe_passthrough]
   # Use the iron ore consumed by the iron plant to calculate transport costs
   - [iron_plant, iron_transport, [iron_ore_consumed, iron_ore_in]]
   # Connect feedstocks to steel plant
-  - [eaf_grid_feedstock, steel_plant, electricity, cable]
-  - [eaf_water_feedstock, steel_plant, water, pipe]
-  - [eaf_natural_gas_feedstock, steel_plant, natural_gas, pipe]
+  - [eaf_grid_feedstock, steel_plant, electricity, cable_passthrough]
+  - [eaf_water_feedstock, steel_plant, water, pipe_passthrough]
+  - [eaf_natural_gas_feedstock, steel_plant, natural_gas, pipe_passthrough]
   - [iron_plant, steel_plant, sponge_iron, sponge_iron_transport]
 plant:
   plant_life: 30

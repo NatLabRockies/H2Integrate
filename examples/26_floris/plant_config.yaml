@@ -19,9 +19,9 @@ sites:
         resource_parameters:
           resource_year: 2012
 technology_interconnections:
-  - [utility_wind_plant, combiner, electricity, cable]
+  - [utility_wind_plant, combiner, electricity, cable_passthrough]
                                                               # source_tech, dest_tech, transport_item, transport_type = connection
-  - [distributed_wind_plant, combiner, electricity, cable]
+  - [distributed_wind_plant, combiner, electricity, cable_passthrough]
 resource_to_tech_connections:
   # connect the wind resource at the distributed_wind_site to the distributed_wind_plant technology
   - [distributed_wind_site.wind_resource, distributed_wind_plant, wind_resource_data]

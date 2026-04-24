@@ -48,9 +48,9 @@ This controller only allows one incoming electricity stream and does not apply o
 
 ```python
 technology_interconnections: [
-  ["wind", "combiner", "electricity", "cable"],
-  ["solar", "combiner", "electricity", "cable"],
-  ["combiner", "battery", "electricity", "cable"],
+  ["wind", "combiner", "electricity", "cable_passthrough"],
+  ["solar", "combiner", "electricity", "cable_passthrough"],
+  ["combiner", "battery", "electricity", "cable_passthrough"],
 ]
 
 tech_to_dispatch_connections: [

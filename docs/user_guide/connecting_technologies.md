@@ -31,10 +31,10 @@ There are two connection formats:
 - **source_tech**: Name of the technology providing the output
 - **destination_tech**: Name of the technology receiving the input
 - **variable_name**: The type of variable being transported (e.g., "electricity", "hydrogen", "ammonia")
-- **transport_type**: The transport component to use (e.g., "cable", "pipe")
+- **transport_type**: The transport component to use (e.g., "cable_passthrough", "pipe_passthrough")
 
 ```{note}
-"cable" and "pipe" are transport components that are internal to H2I and do not need to be defined in the technology configuration file. The "cable" can only transport electricity, and the "pipe" can transport a handful of commodities that are commonly used in H2I models (such as hydrogen, co2, methanol, ammonia, water, etc). To transport a commodity that is *not* supported with by "cable" or "pipe" transporters, the `GenericTransporterPerformanceModel` can be used instead. Example usage of the generic transporter is available in Example 21.
+"cable_passthrough" and "pipe_passthrough" are pass-through transport components that are internal to H2I and do not need to be defined in the technology configuration file. The "cable_passthrough" can only transport electricity, and the "pipe_passthrough" can transport a handful of commodities that are commonly used in H2I models (such as hydrogen, co2, methanol, ammonia, water, etc). To transport a commodity that is *not* supported by "cable_passthrough" or "pipe_passthrough" transporters, the `GenericTransporterPerformanceModel` can be used instead. Example usage of the generic transporter is available in Example 21.
 ```
 
 #### 3-element connections (direct connections)
@@ -78,22 +78,22 @@ H2Integrate processes these connections in the `connect_technologies()` method o
 For a simple splitter configuration:
 ```yaml
 technology_interconnections: [
-  ["wind_farm", "electricity_splitter", "electricity", "cable"],
-  ["electricity_splitter", "electrolyzer", "electricity", "cable"],
-  ["electricity_splitter", "doc", "electricity", "cable"],
+  ["wind_farm", "electricity_splitter", "electricity", "cable_passthrough"],
+  ["electricity_splitter", "electrolyzer", "electricity", "cable_passthrough"],
+  ["electricity_splitter", "doc", "electricity", "cable_passthrough"],
 ]
 ```
 
 This creates:
-1. `wind_farm_to_electricity_splitter_cable` component
-2. `electricity_splitter_to_electrolyzer_cable` component
-3. `electricity_splitter_to_doc_cable` component
+1. `wind_farm_to_electricity_splitter_cable_passthrough` component
+2. `electricity_splitter_to_electrolyzer_cable_passthrough` component
+3. `electricity_splitter_to_doc_cable_passthrough` component
 
 And automatically connects:
-- `wind_farm.electricity_out` → `wind_farm_to_electricity_splitter_cable.electricity_in`
-- `wind_farm_to_electricity_splitter_cable.electricity_out` → `electricity_splitter.electricity_in`
-- `electricity_splitter.electricity_out1` → `electricity_splitter_to_electrolyzer_cable.electricity_in`
-- `electricity_splitter.electricity_out2` → `electricity_splitter_to_doc_cable.electricity_in`
+- `wind_farm.electricity_out` → `wind_farm_to_electricity_splitter_cable_passthrough.electricity_in`
+- `wind_farm_to_electricity_splitter_cable_passthrough.electricity_out` → `electricity_splitter.electricity_in`
+- `electricity_splitter.electricity_out1` → `electricity_splitter_to_electrolyzer_cable_passthrough.electricity_in`
+- `electricity_splitter.electricity_out2` → `electricity_splitter_to_doc_cable_passthrough.electricity_in`
 
 ## Multivariable streams
 
@@ -154,7 +154,7 @@ When H2Integrate encounters a stream name that matches a key in `multivariable_s
 
 ```yaml
 technology_interconnections: [
-  ["gas_producer", "gas_consumer", "wellhead_gas_mixture", "pipe"],
+  ["gas_producer", "gas_consumer", "wellhead_gas_mixture", "pipe_passthrough"],
 ]
 ```
 
@@ -251,9 +251,9 @@ where `CF_i` is the capacity factor and `S_i` is the rated commodity production 
 
 ```yaml
 technology_interconnections: [
-  ["wind_farm", "combiner", "electricity", "cable"],
-  ["solar_farm", "combiner", "electricity", "cable"],
-  ["combiner", "electrolyzer", "electricity", "cable"],
+  ["wind_farm", "combiner", "electricity", "cable_passthrough"],
+  ["solar_farm", "combiner", "electricity", "cable_passthrough"],
+  ["combiner", "electrolyzer", "electricity", "cable_passthrough"],
 ]
 ```
 
@@ -331,9 +331,9 @@ The `prescribed_electricity_to_priority_tech` parameter can be provided as eithe
 
 ```yaml
 technology_interconnections: [
-  ["offshore_wind", "electricity_splitter", "electricity", "cable"],
-  ["electricity_splitter", "doc", "electricity", "cable"],      # first output
-  ["electricity_splitter", "electrolyzer", "electricity", "cable"],    # second output
+  ["offshore_wind", "electricity_splitter", "electricity", "cable_passthrough"],
+  ["electricity_splitter", "doc", "electricity", "cable_passthrough"],      # first output
+  ["electricity_splitter", "electrolyzer", "electricity", "cable_passthrough"],    # second output
 ]
 ```
 

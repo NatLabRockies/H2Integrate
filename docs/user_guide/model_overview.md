@@ -239,12 +239,12 @@ Below summarizes the available performance, cost, and financial models for each 
 
 (transport-models)=
 ## Transport Models
-- `cable`
+- `cable_passthrough`
     - performance models:
-        + `'cable'`: specific to `electricity` commodity
-- `pipe`:
+        + `'cable_passthrough'`: specific to `electricity` commodity
+- `pipe_passthrough`:
     - performance models:
-        + `'pipe'`: compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", and "water"
+        + `'pipe_passthrough'`: compatible with the commodities "hydrogen", "co2", "methanol", "ammonia", "nitrogen", "natural_gas", and "water"
 - `combiner`:
     - performance models:
         + `'GenericCombinerPerformanceModel'`: can be used for any commodity

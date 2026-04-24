@@ -24,10 +24,10 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, combiner, electricity, cable]
+  - [wind, combiner, electricity, cable_passthrough]
                                                 # source_tech, dest_tech, transport_item, transport_type = connection
-  - [solar, combiner, electricity, cable]
-  - [combiner, electrolyzer, electricity, cable]
+  - [solar, combiner, electricity, cable_passthrough]
+  - [combiner, electrolyzer, electricity, cable_passthrough]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [wind_site.wind_resource, wind, wind_resource_data]

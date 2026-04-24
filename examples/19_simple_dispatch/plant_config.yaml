@@ -16,12 +16,12 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, battery, electricity, cable]
+  - [wind, battery, electricity, cable_passthrough]
   # combine the electricity from wind and the battery
-  - [wind, elec_combiner, electricity, cable]
-  - [battery, elec_combiner, electricity, cable]
+  - [wind, elec_combiner, electricity, cable_passthrough]
+  - [battery, elec_combiner, electricity, cable_passthrough]
   # subtract electricity production from electricity demand
-  - [elec_combiner, electrical_load_demand, electricity, cable]
+  - [elec_combiner, electrical_load_demand, electricity, cable_passthrough]
   # etc
 resource_to_tech_connections:
   # connect the wind resource to the wind technology

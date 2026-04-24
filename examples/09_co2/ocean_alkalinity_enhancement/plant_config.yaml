@@ -14,12 +14,12 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, battery, electricity, cable]
+  - [wind, battery, electricity, cable_passthrough]
   # combine the battery output with the wind generation
-  - [wind, combiner, electricity, cable]
-  - [battery, combiner, electricity, cable]
+  - [wind, combiner, electricity, cable_passthrough]
+  - [battery, combiner, electricity, cable_passthrough]
   # connect the electricity supply to the oae
-  - [combiner, oae, electricity, cable]
+  - [combiner, oae, electricity, cable_passthrough]
   # etc
 tech_to_dispatch_connections:
   - [wind, battery]

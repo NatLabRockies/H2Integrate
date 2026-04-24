@@ -15,16 +15,16 @@ sites:
           resource_year: 2024
 technology_interconnections:
   # combine the generation and input it to the battery
-  - [distributed_wind_plant, gen_combiner, electricity, cable]
-  - [distributed_pv, gen_combiner, electricity, cable]
-  - [gen_combiner, battery, electricity, cable]
+  - [distributed_wind_plant, gen_combiner, electricity, cable_passthrough]
+  - [distributed_pv, gen_combiner, electricity, cable_passthrough]
+  - [gen_combiner, battery, electricity, cable_passthrough]
   # combine the battery output with the wind and solar generation
-  - [battery, elec_combiner, electricity, cable]
-  - [gen_combiner, elec_combiner, electricity, cable]
+  - [battery, elec_combiner, electricity, cable_passthrough]
+  - [gen_combiner, elec_combiner, electricity, cable_passthrough]
   # subtract the electricity generated from the electricity demand
-  - [elec_combiner, elec_load_demand, electricity, cable]
+  - [elec_combiner, elec_load_demand, electricity, cable_passthrough]
   # connect the electricity supplied to the demand to the electrolyzer
-  - [elec_load_demand, electrolyzer, electricity, cable]
+  - [elec_load_demand, electrolyzer, electricity, cable_passthrough]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, distributed_wind_plant, wind_resource_data]

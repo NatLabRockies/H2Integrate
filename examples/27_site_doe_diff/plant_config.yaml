@@ -25,9 +25,9 @@ resource_to_tech_connections:
   # connect the solar resource to the solar technology
   - [solar_site.solar_resource, solar, solar_resource_data]
 technology_interconnections:
-  - [wind, combiner, electricity, cable]
+  - [wind, combiner, electricity, cable_passthrough]
                                                 # source_tech, dest_tech, transport_item, transport_type = connection
-  - [solar, combiner, electricity, cable]
+  - [solar, combiner, electricity, cable_passthrough]
 plant:
   plant_life: 30
   simulation:
