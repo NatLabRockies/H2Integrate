@@ -362,7 +362,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             if consumption_rate > 0:
                 steel_from_feedstocks[ii] = feedstock_available / consumption_rate
             else:
-                steel_from_feedstocks[ii] = np.inf(len(feedstock_available))
+                steel_from_feedstocks[ii] = np.full(len(feedstock_available), np.inf)
             ii += 1
 
         # output is minimum between available feedstocks and output demand

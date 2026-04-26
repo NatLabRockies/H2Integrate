@@ -98,6 +98,10 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         land_transport_distance = distance.geodesic(
             starting_location, ending_location, ellipsoid="WGS-84"
         ).km
+
+        # Transport distance is 1.5 times the geodesic distance to account for non-straight routes
+        land_transport_distance *= 1.5
+
         return land_transport_distance
 
     def compute(self, inputs, outputs):
