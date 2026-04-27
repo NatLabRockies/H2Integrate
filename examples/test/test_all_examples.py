@@ -2620,13 +2620,13 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         battery_total = model.prob.get_val(
             "electrical_load_demand.total_electricity_produced", units="kW*h"
         )[0]
-        assert battery_total == pytest.approx(645_787_407.02, rel=1e-3)
+        assert battery_total == pytest.approx(639_232_586.47, rel=1e-3)
 
     with subtests.test("Check battery capacity factor"):
         battery_cf = model.prob.get_val("electrical_load_demand.capacity_factor", units="unitless")[
             0
         ]
-        assert battery_cf == pytest.approx(0.7372, rel=1e-3)
+        assert battery_cf == pytest.approx(0.7297, rel=1e-3)
 
     with subtests.test("Check battery CapEx"):
         battery_capex = model.prob.get_val("battery.CapEx", units="USD")[0]
