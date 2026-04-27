@@ -375,7 +375,7 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
 
     # Set the natural gas input
     prob.set_val("natural_gas_in", natural_gas_input)
-    prob.set_val("electricity_demand", electricity_demand_MW)
+    prob.set_val("electricity_set_point", electricity_demand_MW)
     prob.run_model()
 
     electricity_out = prob.get_val("electricity_out", units="MW")

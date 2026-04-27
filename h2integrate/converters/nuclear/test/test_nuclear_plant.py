@@ -64,7 +64,7 @@ def test_nuclear_performance_demand(plant_config, nuclear_performance_params, su
     prob.model.add_subsystem("nuc_perf", perf_comp, promotes=["*"])
     prob.setup()
 
-    prob.set_val("electricity_demand", electricity_demand)
+    prob.set_val("electricity_set_point", electricity_demand)
     prob.run_model()
 
     electricity_out = prob.get_val("electricity_out")

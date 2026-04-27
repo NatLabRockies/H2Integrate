@@ -250,7 +250,7 @@ class H2IntegrateModel:
                     # of the same custom model. Also check that all instances of the same custom
                     # model tech name use the same class definition.
                     if model_name in included_custom_models:
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         if (
                             model_class_name
                             != included_custom_models[model_name]["model_class_name"]
@@ -258,7 +258,7 @@ class H2IntegrateModel:
                             raise (
                                 ValueError(
                                     "User has specified two custom models using the same model"
-                                    "name ({model_name}), but with different model classes. "
+                                    f"name ({model_name}), but with different model classes. "
                                     "Technologies defined with different classes must have "
                                     "different technology names."
                                 )
@@ -267,7 +267,7 @@ class H2IntegrateModel:
                             continue
 
                     if (model_name not in self.supported_models) and (model_name is not None):
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         model_location = config[model_type].get(f"{prefix}model_location")
 
                         if not model_class_name or not model_location:
@@ -307,7 +307,7 @@ class H2IntegrateModel:
                             or config[model_type].get(f"{prefix}model_location") is not None
                         ):
                             msg = (
-                                f"Custom {prefix}model_class_name or {prefix}model_location "
+                                f"Custom {prefix}model or {prefix}model_location "
                                 f"specified for '{model_name}', "
                                 f"but '{model_name}' is a built-in H2Integrate "
                                 "model. Using built-in model instead is not allowed. "
@@ -350,6 +350,26 @@ class H2IntegrateModel:
                     finance_model_names,
                     prefix="finance_",
                 )
+
+        # check for custom resource models
+        if "sites" in self.plant_config:
+            for site_name, site_params in self.plant_config["sites"].items():
+                if "resources" in site_params:
+                    resource_models_config = {
+                        k: v
+                        for k, v in site_params["resources"].items()
+                        if "resource_parameters" in v
+                    }
+
+                    resource_model_names = [
+                        k for k, v in site_params["resources"].items() if "resource_parameters" in v
+                    ]
+                    self.create_custom_models(
+                        {site_name: resource_models_config},
+                        self.plant_parent_path,
+                        resource_model_names,
+                        prefix="resource_",
+                    )
 
     def create_site_model(self):
         """

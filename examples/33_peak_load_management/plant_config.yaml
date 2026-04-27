@@ -11,4 +11,4 @@ technology_interconnections:
   # include battery charge/discharge in the load
   - [battery, electrical_load_demand, [electricity_out, electricity_in]]
   # buy power from the grid to fulfill demand including to accommodate battery operation
-  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
+  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]

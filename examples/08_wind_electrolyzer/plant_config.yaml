@@ -16,8 +16,7 @@ resource_to_tech_connections: [[site.wind_resource, wind, wind_resource_data]]
 finance_parameters:
   finance_groups:
     custom_model:
-      finance_model: simple_lco_finance
-      finance_model_class_name: SimpleLCOFinance
+      finance_model: SimpleLCOFinance
       finance_model_location: user_finance_model/simple_lco.py
       model_inputs:
         discount_rate: 0.09

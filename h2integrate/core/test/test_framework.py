@@ -9,9 +9,64 @@ import numpy as np
 import pytest
 
 import h2integrate.core.h2integrate_model as h2i_model_module
-from h2integrate import EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
+)
+def test_custom_resource_model(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    from h2integrate.resource.river import RiverResource
+
+    resource_model_fpath_parts = [ROOT_DIR] + RiverResource.__module__.split(".")[1:]
+    resource_model_fpath_parts[-1] = f"{resource_model_fpath_parts[-1]}.py"
+
+    # Make folder to hold custom resource model
+    custom_resource_model_dir = temp_copy_of_example / "user_defined_resource"
+    custom_resource_model_fpath = custom_resource_model_dir / "river_resource_model.py"
+    Path(custom_resource_model_dir).mkdir(exist_ok=True)
+
+    # Copy RiverResource model to custom resource model folder
+    h2i_resource_model_fpath = Path(*resource_model_fpath_parts)
+    shutil.copy(h2i_resource_model_fpath, custom_resource_model_fpath)
+
+    # Change the name of the copied RiverResource model
+    new_text = custom_resource_model_fpath.read_text().replace(
+        "RiverResource", "CustomRiverResource"
+    )
+    custom_resource_model_fpath.write_text(new_text, encoding="utf-8")
+
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+
+    # modify the plant config to use a custom resource
+    custom_resource_model_inputs = {
+        "resource_model": "CustomRiverResource",
+        "resource_model_location": str(custom_resource_model_fpath.absolute()),
+        "resource_parameters": plant_config["sites"]["site"]["resources"]["river_resource"][
+            "resource_parameters"
+        ],
+    }
+    plant_config["sites"]["site"]["resources"].update(
+        {"river_resource": custom_resource_model_inputs}
+    )
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+    assert len(h2i.prob.get_val("site.river_resource.discharge")) == 8760
 
 
 @pytest.mark.unit
@@ -57,7 +112,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
     with subtests.test("custom model name should not match built-in model names"):
         # Assert that a ValueError is raised with the expected message when running the model
         error_msg = (
-            r"Custom model_class_name or model_location specified for '"
+            r"Custom model or model_location specified for '"
             r"BasicElectrolyzerCostModel', but 'BasicElectrolyzerCostModel' is a built-in "
             r"H2Integrate model\. "
             r"Using built-in model instead is not allowed\. "
@@ -73,7 +128,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
         tech_config_data = load_tech_yaml(temp_tech_config)
 
         tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
 
@@ -81,8 +136,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
             tech_config_data["technologies"]["electrolyzer"]
         )
         tech_config_data["technologies"]["electrolyzer2"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
-            "model_class_name": "DummyClass",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
         # Save the modified tech_config YAML back
