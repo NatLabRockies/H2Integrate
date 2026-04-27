@@ -324,7 +324,7 @@ class H2IntegrateModel:
         self.create_custom_models(
             self.technology_config["technologies"],
             self.tech_parent_path,
-            ["performance_model", "cost_model", "finance_model", "control_strategy"],
+            ["performance_model", "cost_model", "finance_model"],
         )
 
         # check for custom finance models
