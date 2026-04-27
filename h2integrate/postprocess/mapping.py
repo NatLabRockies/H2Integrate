@@ -353,6 +353,16 @@ def plot_geospatial_point_heat_map(
         zorder=map_preferences.zorder,
     )
 
+    # Plot data labels
+    for _, result in results_gdf.iterrows():
+        ax.annotate(
+            text=f"{result[metric_to_plot]:.2f}",
+            xy=(result.geometry.x, result.geometry.y),
+            xytext=(3, 3),
+            textcoords="offset points",
+            fontsize=map_preferences.colorbar_tick_label_font_size,
+        )
+
     # Create inset axis for color bar legend
     inset_ax = inset_axes(
         ax,

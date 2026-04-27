@@ -23,6 +23,7 @@ class MartinIronMineCostConfig(BaseConfig):
             in units of metric tonnes of pellets produced per hour.
         cost_year (int): target dollar year to convert costs to.
             Cannot be input under `cost_parameters`.
+        ewin_cost_modifier (bool): whether to eliminate processing costs for on-site electrowinning
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
@@ -36,6 +37,7 @@ class MartinIronMineCostConfig(BaseConfig):
     # the cost model is based on costs from 2021 and can be adjusted to another cost year
     # using CPI adjustment.
     cost_year: int = field(converter=int, validator=range_val(2010, 2024))
+    ewin_cost_modifier: bool = field(default=False)
 
 
 class MartinIronMineCostComponent(CostModelBaseClass):
@@ -193,6 +195,13 @@ class MartinIronMineCostComponent(CostModelBaseClass):
             self.coeff_df[self.coeff_df["Type"] == "variable opex/pellet"]["Value"]
             * total_pellets_produced
         ).sum()
+
+        # remove processing costs for electrowinning
+        if self.config.ewin_cost_modifier:
+            var_om_2021USD -= (
+                self.coeff_df[self.coeff_df["Name"] == "Processing"]["Value"].values[0]
+                * total_pellets_produced
+            )
 
         # adjust costs to cost year
         outputs["CapEx"] = inflate_cpi(tot_capex_2021USD, 2021, self.config.cost_year)
