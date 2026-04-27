@@ -11,7 +11,7 @@
 - Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
-- Add charge and discharge efficiency support to `PySAMBatteryPerformanceModel` so dispatch efficiencies are reflected in battery performance output [PR 699](https://github.com/NatLabRockies/H2Integrate/pull/699)
+- Add charge and discharge efficiency support to `StoragePerformanceBaseConfig` and apply efficiency scaling internal to `PySAMBatteryPerformanceModel` so dispatch efficiencies are reflected in battery performance output [PR 699](https://github.com/NatLabRockies/H2Integrate/pull/699)
 
 ## 0.8 [April 15, 2026]
 - Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)

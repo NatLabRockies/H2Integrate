@@ -1,8 +1,7 @@
-import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, range_val, range_val_or_none
+from h2integrate.core.validators import gt_zero, range_val
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -39,16 +38,6 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
         charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
             max_charge_rate. If False, specify the max_discharge_rate as a value different than
             the max_charge_rate. Defaults to True.
-        charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
-            as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        discharge_efficiency (float | None, optional): Efficiency of discharging the storage,
-            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Optional if
-            `round_trip_efficiency` is provided.
-        round_trip_efficiency (float | None, optional): Combined efficiency of charging and
-            discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
-            81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
-            provided.
 
     """
 
@@ -64,32 +53,12 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
     max_discharge_rate: float | None = field(default=None)
     charge_equals_discharge: bool = field(default=True)
 
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-
     def __attrs_post_init__(self):
         """
-        Post-initialization logic to validate and calculate efficiencies.
-
-        Ensures that either `charge_efficiency` and `discharge_efficiency` are provided,
-        or `round_trip_efficiency` is provided. If `round_trip_efficiency` is provided,
-        it calculates `charge_efficiency` and `discharge_efficiency` as the square root
-        of `round_trip_efficiency`.
+        Post-initialization logic to validate and calculate efficiencies
+        and discharge rate defaults.
         """
-        if (self.round_trip_efficiency is not None) and (
-            self.charge_efficiency is None and self.discharge_efficiency is None
-        ):
-            # Calculate charge and discharge efficiencies from round-trip efficiency
-            self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-
-        if self.charge_efficiency is None or self.discharge_efficiency is None:
-            raise ValueError(
-                "Exactly one of the following sets of parameters must be set: (a) "
-                "`round_trip_efficiency`, or (b) both `charge_efficiency` "
-                "and `discharge_efficiency`."
-            )
+        super().__attrs_post_init__()
 
         if self.charge_equals_discharge:
             if (

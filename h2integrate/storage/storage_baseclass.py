@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
+from h2integrate.core.validators import range_val, range_val_or_none
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -17,12 +17,45 @@ class StoragePerformanceBaseConfig(BaseConfig):
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
+        charge_efficiency (float | None, optional): Efficiency of charging the storage,
+            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency).
+            Optional if ``round_trip_efficiency`` is provided. Defaults to None.
+        discharge_efficiency (float | None, optional): Efficiency of discharging the storage,
+            represented as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency).
+            Optional if ``round_trip_efficiency`` is provided. Defaults to None.
+        round_trip_efficiency (float | None, optional): Combined efficiency of charging and
+            discharging the storage, represented as a decimal between 0 and 1 (e.g., 0.81 for
+            81% efficiency). If provided, ``charge_efficiency`` and ``discharge_efficiency``
+            are each set to the square root of this value. Defaults to None.
     """
 
     # Below are used in all storage models
     min_soc_fraction: float = field(validator=range_val(0, 1))
     max_soc_fraction: float = field(validator=range_val(0, 1))
     demand_profile: int | float | list = field()
+
+    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+
+    def __attrs_post_init__(self):
+        """Post-initialization to resolve efficiencies.
+
+        If ``round_trip_efficiency`` is provided and individual efficiencies are not,
+        calculates ``charge_efficiency`` and ``discharge_efficiency`` as the square
+        root of ``round_trip_efficiency``. If no efficiency is specified, defaults
+        both to 1.0 (no additional efficiency loss).
+        """
+        if self.round_trip_efficiency is not None and (
+            self.charge_efficiency is None and self.discharge_efficiency is None
+        ):
+            self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
+            self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
+
+        if self.charge_efficiency is None:
+            self.charge_efficiency = 1.0
+        if self.discharge_efficiency is None:
+            self.discharge_efficiency = 1.0
 
 
 class StoragePerformanceBase(PerformanceModelBaseClass):
