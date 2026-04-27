@@ -45,7 +45,7 @@ def test_grid_performance_outputs(plant_config, subtests):
 
     # Set demand below interconnection limit
     demand = np.full(n_timesteps, 30000.0)  # 30 MW demand
-    prob.set_val("comp.electricity_demand", demand)
+    prob.set_val("comp.electricity_set_point", demand)
 
     prob.run_model()
 
@@ -148,7 +148,7 @@ def test_buying_electricity(plant_config, n_timesteps):
 
     # Set demand below interconnection limit
     demand = np.full(n_timesteps, 30000.0)  # 30 MW demand
-    prob.set_val("grid.electricity_demand", demand)
+    prob.set_val("grid.electricity_set_point", demand)
 
     prob.run_model()
 
@@ -177,7 +177,7 @@ def test_buying_with_interconnection_limit(plant_config, n_timesteps):
 
     # Set demand above interconnection limit
     demand = np.full(n_timesteps, 60000.0)  # 60 MW demand
-    prob.set_val("grid.electricity_demand", demand)
+    prob.set_val("grid.electricity_set_point", demand)
 
     prob.run_model()
 
@@ -247,7 +247,7 @@ def test_simultaneous_buy_and_sell(plant_config, n_timesteps):
     electricity_demand = np.full(n_timesteps, 40000.0)  # 40 MW out
 
     prob.set_val("grid.electricity_in", electricity_in)
-    prob.set_val("grid.electricity_demand", electricity_demand)
+    prob.set_val("grid.electricity_set_point", electricity_demand)
 
     prob.run_model()
 
@@ -272,7 +272,7 @@ def test_varying_demand_profile(plant_config, n_timesteps):
 
     # Create varying demand profile
     demand = np.array([10000, 20000, 30000, 50000, 70000, 90000, 110000, 80000, 60000, 40000])
-    prob.set_val("grid.electricity_demand", demand)
+    prob.set_val("grid.electricity_set_point", demand)
 
     prob.run_model()
 
@@ -302,7 +302,7 @@ def test_non_hourly_dt_demand_profile(subtests, plant_config, n_timesteps):
 
     # Create varying demand profile
     demand = np.array([10000, 20000, 30000, 50000, 70000, 90000, 110000, 80000, 60000, 40000])
-    prob.set_val("grid.electricity_demand", demand, units="kW")
+    prob.set_val("grid.electricity_set_point", demand, units="kW")
 
     prob.run_model()
 
@@ -390,7 +390,7 @@ def test_grid_integration_dt_1800(subtests, tmp_path):
     h2i.setup()
 
     demand = np.full(n_timesteps, demand_kw)
-    h2i.prob.set_val("grid.electricity_demand", demand, units="kW")
+    h2i.prob.set_val("grid.electricity_set_point", demand, units="kW")
     h2i.prob.run_model()
 
     expected_out = np.full(n_timesteps, demand_kw)

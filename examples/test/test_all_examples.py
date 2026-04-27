@@ -1057,7 +1057,9 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
     pre_ng_missed_load = model.prob.get_val(
         "electrical_load_demand.unmet_electricity_demand_out", units="kW"
     )
-    ng_electricity_demand = model.prob.get_val("natural_gas_plant.electricity_demand", units="kW")
+    ng_electricity_set_point = model.prob.get_val(
+        "natural_gas_plant.electricity_set_point", units="kW"
+    )
     ng_electricity_production = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
     bat_init_charge = 200000.0 * 0.1  # max capacity in kW and initial charge rate percentage
 
@@ -1091,11 +1093,11 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
             == sum(ng_electricity_production) + solar_aep
         )
 
-    with subtests.test("Check missed load is natural gas plant electricity demand"):
-        assert pytest.approx(ng_electricity_demand, rel=1e-6) == pre_ng_missed_load
+    with subtests.test("Check missed load is natural gas plant electricity set point"):
+        assert pytest.approx(ng_electricity_set_point, rel=1e-6) == pre_ng_missed_load
 
-    with subtests.test("Check natural_gas_plant electricity out equals demand"):
-        assert pytest.approx(ng_electricity_demand, rel=1e-6) == ng_electricity_production
+    with subtests.test("Check natural_gas_plant electricity out equals set point"):
+        assert pytest.approx(ng_electricity_set_point, rel=1e-6) == ng_electricity_production
 
     # Subtests for checking specific values
     with subtests.test("Check Natural Gas CapEx"):
