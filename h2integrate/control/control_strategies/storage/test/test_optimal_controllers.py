@@ -313,7 +313,10 @@ def test_min_operating_cost_load_following_battery_dispatch(
         assert np.cumsum(charge_plus_discharge).min() >= -1 * capacity
 
     with subtests.test("Expected discharge from hour 10-30"):
-        expected_discharge = np.concat([np.zeros(8), np.ones(8) * 5000, np.zeros(4)])
+        discharge_eff = 0.95
+        expected_discharge = np.concat(
+            [np.zeros(8), np.ones(8) * 5000 * discharge_eff, np.zeros(4)]
+        )
         np.testing.assert_allclose(
             prob.get_val("battery.storage_electricity_discharge", units="kW")[0:20],
             expected_discharge,
@@ -321,7 +324,8 @@ def test_min_operating_cost_load_following_battery_dispatch(
         )
 
     with subtests.test("Expected charge hour 0-24"):
-        expected_charge = -1 * np.concat([np.zeros(16), np.ones(8) * 4000])
+        charge_eff = 0.95
+        expected_charge = -1 * np.concat([np.zeros(16), np.ones(8) * 4000 / charge_eff])
         np.testing.assert_allclose(
             prob.get_val("battery.storage_electricity_charge", units="kW")[0:24],
             expected_charge,
