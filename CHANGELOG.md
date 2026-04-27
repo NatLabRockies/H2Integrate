@@ -10,6 +10,7 @@
   - Adds EAF cost model applicable to both performance models
 - Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
+- Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
 
 ## 0.8 [April 15, 2026]
 - Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)
@@ -65,6 +66,7 @@
 - Modified CI setup so Windows is temporarily disabled and also so unit, regression, and integration tests are run in separate jobs to speed up testing and provide more information on test failures. [PR 668](https://github.com/NatLabRockies/H2Integrate/pull/668)
 - Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653) and [PR 671](https://github.com/NatLabRockies/H2Integrate/pull/671)
 - Remove demand-related outputs from storage performance models and replace usage with demand components [PR 666](https://github.com/NatLabRockies/H2Integrate/pull/666)
+- Added a compressed gas hydrogen storage model [PR 680](https://github.com/NatLabRockies/H2Integrate/pull/680)
 
 ## 0.7.2 [April 9, 2026]
 

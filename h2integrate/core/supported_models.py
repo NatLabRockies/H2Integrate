@@ -55,6 +55,7 @@ from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
 from h2integrate.storage.hydrogen.h2_storage_cost import (
     PipeStorageCostModel,
     SaltCavernStorageCostModel,
+    CompressedGasStorageCostModel,
     LinedRockCavernStorageCostModel,
 )
 from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
@@ -285,6 +286,7 @@ supported_models = {
     "StoragePerformanceModel": StoragePerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
     "LinedRockCavernStorageCostModel": LinedRockCavernStorageCostModel,
+    "CompressedGasStorageCostModel": CompressedGasStorageCostModel,
     "SaltCavernStorageCostModel": SaltCavernStorageCostModel,
     "MCHTOLStorageCostModel": MCHTOLStorageCostModel,
     "PipeStorageCostModel": PipeStorageCostModel,
