@@ -17,6 +17,11 @@ plant:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [wind, battery, electricity, cable]
+  # combine the battery output with the wind generation
+  - [battery, elec_combiner, electricity, cable]
+  - [wind, elec_combiner, electricity, cable]
+  # subtract the generation from the demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
 # array of arrays containing left-to-right technology, technology doing the dispatching
 # in this case, battery is connected to battery because there are controls rules for
 # the battery and battery is controlling the dispatching

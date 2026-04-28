@@ -24,7 +24,7 @@ Multiple grid instances may be used within the same plant to represent different
 | ------------------------ | ------------------ | ----- | ----------------------------------------------------------------- |
 | `interconnection_size`   | scalar             | kW    | Maximum power capacity for grid connection.                       |
 | `electricity_in`         | array[n_timesteps] | kW    | Electricity flowing into the grid (selling to grid).              |
-| `electricity_demand`     | array[n_timesteps] | kW    | Electricity demand from downstream technologies.                  |
+| `electricity_set_point`     | array[n_timesteps] | kW    | Electricity set point from downstream technologies.                  |
 
 **Outputs**
 | Name                       | Shape              | Units | Description                                                         |

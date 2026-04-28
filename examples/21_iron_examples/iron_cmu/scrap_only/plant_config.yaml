@@ -1,0 +1,61 @@
+name: plant_config
+description: Steel plant using CMU decarbSTEEL EAF scrap-only model
+sites:
+  site:
+    latitude: 41.717
+    longitude: -88.398
+technology_interconnections:
+  - [oxygen_feedstock, steel_plant, oxygen, oxygen_transport]
+  - [electricity_feedstock, steel_plant, electricity, cable]
+  - [natural_gas_feedstock, steel_plant, natural_gas, pipe]
+  - [electrodes_feedstock, steel_plant, electrodes, electrodes_transport]
+  - [scrap_feedstock, steel_plant, scrap, scrap_transport]
+  - [coal_feedstock, steel_plant, coal, coal_transport]
+  - [doloma_feedstock, steel_plant, doloma, doloma_transport]
+  - [lime_feedstock, steel_plant, lime, lime_transport]
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+    timezone: 0
+finance_parameters:
+  finance_groups:
+    finance_model: ProFastLCO
+    model_inputs:
+      params:
+        analysis_start_year: 2032
+        installation_time: 36  # months
+        inflation_rate: 0.0
+        discount_rate: 0.09
+        debt_equity_ratio: 2.62
+        property_tax_and_insurance: 0.03
+        total_income_tax_rate: 0.257
+        capital_gains_tax_rate: 0.15
+        sales_tax_rate: 0.07375
+        debt_interest_rate: 0.07
+        debt_type: Revolving debt
+        loan_period_if_used: 0
+        cash_onhand_months: 1
+        admin_expense: 0.00
+      capital_items:
+        depr_type: MACRS
+        depr_period: 5
+        refurb: [0.]
+  cost_adjustment_parameters:
+    cost_year_adjustment_inflation: 0.025
+    target_dollar_year: 2022
+  finance_subgroups:
+    steel:
+      commodity: steel
+      commodity_stream: steel_plant
+      technologies:
+        - oxygen_feedstock
+        - electricity_feedstock
+        - natural_gas_feedstock
+        - electrodes_feedstock
+        - scrap_feedstock
+        - coal_feedstock
+        - doloma_feedstock
+        - lime_feedstock
+        - steel_plant

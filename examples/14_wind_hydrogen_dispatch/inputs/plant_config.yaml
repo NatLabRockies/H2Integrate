@@ -16,6 +16,11 @@ sites:
 technology_interconnections:
   - [wind, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # subtract hydrogen production from hydrogen demand
+  - [h2_combiner, h2_load_demand, hydrogen, pipe]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
@@ -57,7 +62,7 @@ finance_parameters:
       technologies: [wind, electrolyzer, h2_storage]
     dispatched_hydrogen:
       commodity: hydrogen
-      commodity_stream: h2_storage  # use only dispatched hydrogen from h2_storage controller in finance calc
+      commodity_stream: h2_load_demand  # use only dispatched hydrogen from h2_storage controller in finance calc
       technologies: [wind, electrolyzer, h2_storage]
     oxygen:
       commodity: oxygen

@@ -1,0 +1,15 @@
+name: driver_config
+description: driver file
+general:
+  folder_output: outputs
+  create_om_reports: false
+recorder:
+  # required inputs
+  flag: true  # record outputs
+  file: cases.sql  # this file will be written to the folder `outputs`
+
+  # optional but recommended inputs
+  overwrite_recorder: true  # If True, do not create a unique recorder file for subsequent runs. Defaults to False.
+  recorder_attachment: model  #"driver" or "model", defaults to "model". Use "driver" if running a parallel simulation.
+  includes: ['*'] #include everything
+  excludes: ['*resource_data*'] #exclude resource data

@@ -167,7 +167,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     with subtests.test("expected_battery_power"):
         np.testing.assert_allclose(
-            prob.get_val("storage_electricity_out", units="kW"),
+            prob.get_val("electricity_out", units="kW"),
             expected_battery_power,
             rtol=1e-2,
         )
@@ -178,15 +178,21 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
         )
 
     with subtests.test("expected_battery_unmet_demand"):
+        combined_out = electricity_in + prob.get_val("electricity_out", units="kW")
+        combined_commodity_to_demand = np.clip(combined_out, a_min=0, a_max=electricity_demand)
+        unmet_demand = electricity_demand - combined_commodity_to_demand
         np.testing.assert_allclose(
-            prob.get_val("unmet_electricity_demand_out", units="kW"),
+            unmet_demand,
             expected_unment_demand,
             rtol=1e-2,
         )
 
     with subtests.test("expected_battery_unused_commodity"):
+        unused_electricity = np.clip(
+            electricity_in - combined_commodity_to_demand, a_min=0, a_max=None
+        )
         np.testing.assert_allclose(
-            prob.get_val("unused_electricity_out", units="kW"),
+            unused_electricity,
             expected_unused_electricity,
             rtol=1e-2,
         )

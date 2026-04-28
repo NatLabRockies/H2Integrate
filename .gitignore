@@ -161,3 +161,6 @@ resource_files/solar/*
 
 # Ignore library files
 library/*
+
+# Don't ignore docs images
+!docs/*/images/*.png

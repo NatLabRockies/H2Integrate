@@ -19,12 +19,18 @@ sites:
 # - grid_buy: purchases electricity to meet unmet demand (upstream)
 # - grid_sell: sells excess electricity back to grid (downstream)
 technology_interconnections:
+  # connect solar to battery
   - [solar, battery, electricity, cable]
-                                                  # connect solar to battery
-  - [battery, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
-                                                                                 # connect battery demand to grid buying
-  - [battery, grid_sell, [unused_electricity_out, electricity_in]]
-                                                                                  # connect battery surplus to grid selling
+  # combine solar and battery output
+  - [solar, bat_combiner, electricity, cable]
+  - [battery, bat_combiner, electricity, cable]
+  # subtract variable generation from the demand
+  - [bat_combiner, electrical_load_demand, electricity, cable]
+  # connect remaining demand to grid buying
+  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
+  # connect surplus generation to grid selling
+  - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
+  # combine electricity generated from solar and electricity bought from grid
   - [solar, combiner, electricity, cable]
   - [grid_buy, combiner, electricity, cable]
 resource_to_tech_connections:

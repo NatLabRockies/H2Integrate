@@ -1,0 +1,198 @@
+name: technology_config
+description: CMU decarbSTEEL EAF model with scrap-only feedstock
+technologies:
+  oxygen_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: oxygen
+        commodity_rate_units: m**3/h
+      performance_parameters:
+        rated_capacity: 500000.0  # m**3/h
+      cost_parameters:
+        cost_year: 2022
+        price: 0.15  # USD/m**3
+        annual_cost: 0.
+        start_up_cost: 0.
+  oxygen_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: oxygen
+        commodity_rate_units: m**3/h
+  electricity_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+      performance_parameters:
+        rated_capacity: 500000000.0  # kW
+      cost_parameters:
+        cost_year: 2022
+        price: 0.083  # USD/kWh
+        annual_cost: 0.
+        start_up_cost: 0.
+  natural_gas_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
+      performance_parameters:
+        rated_capacity: 10000000.0  # MMBtu/h
+      cost_parameters:
+        cost_year: 2022
+        price: 6.45  # USD/MMBtu
+        annual_cost: 0.
+        start_up_cost: 0.
+  electrodes_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electrodes
+        commodity_rate_units: kg/h
+      performance_parameters:
+        rated_capacity: 2000.0  # kg/h
+      cost_parameters:
+        cost_year: 2022
+        price: 3.67  # USD/kg
+        annual_cost: 0.
+        start_up_cost: 0.
+  electrodes_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electrodes
+        commodity_rate_units: kg/h
+  scrap_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: scrap
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 100000000.0  # t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 1.07  # USD/t
+        annual_cost: 0.
+        start_up_cost: 0.
+  scrap_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: scrap
+        commodity_rate_units: t/h
+  coal_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: coal
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 10.0  # t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 150.00  # USD/t
+        annual_cost: 0.
+        start_up_cost: 0.
+  coal_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: coal
+        commodity_rate_units: t/h
+  doloma_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: doloma
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 2.0  # t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 3670.0  # USD/t (3.67 USD/kg)
+        annual_cost: 0.
+        start_up_cost: 0.
+  doloma_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: doloma
+        commodity_rate_units: t/h
+  lime_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: lime
+        commodity_rate_units: t/h
+      performance_parameters:
+        rated_capacity: 2.0  # t/h
+      cost_parameters:
+        cost_year: 2022
+        price: 120.00  # USD/t
+        annual_cost: 0.
+        start_up_cost: 0.
+  lime_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: lime
+        commodity_rate_units: t/h
+  steel_plant:
+    performance_model:
+      model: CMUElectricArcFurnaceScrapOnlyPerformanceComponent
+    cost_model:
+      model: CMUElectricArcFurnaceCostModel
+    model_inputs:
+      performance_parameters:
+        steel_production_rate_tonnes_per_year: 2000000.0
+        steel_percent_carbon: 0.001
+        scrap_composition:
+          Fe: 0.94
+          SiO2: 0.01
+        energy_mass_balance_dict:
+          natural_gas: 0.44  # MMBtu/ton steel
+          electrodes: 2.00  # kg/ton steel
+          slag_basicity: 1.50  # kg CaO / (kg SiO2 + kg Al2O3)
+          mass_Al2O3_slag_per_tscrap: 0.0
+          mass_Al2O3_slag_per_tLS: 0.0
+          pct_MgO_slag: 0.12
+          pct_FeO_slag: 0.30
+          pct_carbon_steel_tap: 0.03
+          CaO_MgO_ratio: 1.4  # 56/40
+          electricity_kWh_per_tonne_steel: 470.0
+      cost_parameters:
+        cost_year: 2022

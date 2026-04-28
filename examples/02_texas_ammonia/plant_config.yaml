@@ -21,9 +21,17 @@ technology_interconnections:
   - [wind, combiner, electricity, cable]
   - [solar, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
-  - [battery, electrolyzer, electricity, cable]
+  # combine the battery output with the wind and solar generation
+  - [battery, elec_combiner, electricity, cable]
+  - [combiner, elec_combiner, electricity, cable]
+  # connect the electricity supply to the electrolyzer
+  - [elec_combiner, electrolyzer, electricity, cable]
   - [electrolyzer, h2_storage, hydrogen, pipe]
-  - [h2_storage, ammonia, hydrogen, pipe]
+  # combine the h2 from the electrolyzer and the h2_storage
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # connect the hydrogen supply to the ammonia model
+  - [h2_combiner, ammonia, hydrogen, pipe]
   - [finance_subgroup_hydrogen, ammonia, LCOH]
   # etc
 tech_to_dispatch_connections:

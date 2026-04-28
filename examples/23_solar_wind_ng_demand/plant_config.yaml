@@ -27,7 +27,7 @@ technology_interconnections:
                                                                 # connect NG feedstock to NG plant
   - [combiner, electrical_load_demand, [electricity_out, electricity_in]]
                                                                                  # subtract wind and solar from demand
-  - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_demand]]
+  - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
                                                                                                        # give remaining load demand to natural gas plant
   - [combiner, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]

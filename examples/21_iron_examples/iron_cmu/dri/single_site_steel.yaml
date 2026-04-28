@@ -1,0 +1,5 @@
+name: H2Integrate_config
+system_summary: A steel plant using a CMU decarbSTEEL EAF model with DRI and scrap feedstock.
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

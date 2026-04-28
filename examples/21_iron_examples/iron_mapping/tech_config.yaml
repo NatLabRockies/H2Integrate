@@ -156,16 +156,16 @@ technologies:
       model: HydrogenIronReductionPlantCostComponent
     model_inputs:
       shared_parameters:
-        pig_iron_production_rate_tonnes_per_hr: 161.8829908675799  # equivalent to 1418095 t/yr
+        sponge_iron_production_rate_tonnes_per_hr: 161.8829908675799  # equivalent to 1418095 t/yr
       performance_parameters:
         water_density: 1000  # kg/m3
       cost_parameters:
         skilled_labor_cost: 40.85  # 2022 USD/hr
         unskilled_labor_cost: 30.0  # 2022 USD/hr
-  pig_iron_transport:
+  sponge_iron_transport:
     performance_model:
       model: GenericTransporterPerformanceModel
     model_inputs:
       performance_parameters:
-        commodity: pig_iron
+        commodity: sponge_iron
         commodity_rate_units: kg/h

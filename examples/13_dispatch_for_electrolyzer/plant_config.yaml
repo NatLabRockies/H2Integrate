@@ -1,0 +1,78 @@
+name: plant_config
+description: This plant is located in Australia
+sites:
+  site:
+    latitude: -28.454864
+    longitude: 114.551749
+    resources:
+      wind_resource:
+        resource_model: OpenMeteoHistoricalWindResource
+        resource_parameters:
+          resource_year: 2024
+      solar_resource:
+        resource_model: OpenMeteoHistoricalSolarResource
+        resource_parameters:
+          resource_year: 2024
+technology_interconnections:
+  # combine the generation and input it to the battery
+  - [distributed_wind_plant, gen_combiner, electricity, cable]
+  - [distributed_pv, gen_combiner, electricity, cable]
+  - [gen_combiner, battery, electricity, cable]
+  # combine the battery output with the wind and solar generation
+  - [battery, elec_combiner, electricity, cable]
+  - [gen_combiner, elec_combiner, electricity, cable]
+  # subtract the electricity generated from the electricity demand
+  - [elec_combiner, elec_load_demand, electricity, cable]
+  # connect the electricity supplied to the demand to the electrolyzer
+  - [elec_load_demand, electrolyzer, electricity, cable]
+resource_to_tech_connections:
+  # connect the wind resource to the wind technology
+  - [site.wind_resource, distributed_wind_plant, wind_resource_data]
+  - [site.solar_resource, distributed_pv, solar_resource_data]
+plant:
+  plant_life: 30
+  simulation:
+    timezone: 8
+finance_parameters:
+  finance_groups:
+    finance_model: ProFastLCO
+    model_inputs:
+      params:
+        analysis_start_year: 2032
+        installation_time: 36  # months
+        inflation_rate: 0.0  # 0 for nominal analysis
+        discount_rate: 0.09  # 9% discount rate
+        debt_equity_ratio: 2.62  #
+        property_tax_and_insurance: 0.03  # 3%
+        total_income_tax_rate: 0.257  # 25.7%
+        capital_gains_tax_rate: 0.15  # 15%
+        sales_tax_rate: 0.07375  # 7.3%
+        debt_interest_rate: 0.07  # 7%
+        debt_type: Revolving debt  #
+        loan_period_if_used: 0  # Not used for revolving debt
+        cash_onhand_months: 1  # months
+        admin_expense: 0.00  # percent of sales H2FAST default
+      capital_items:
+        depr_type: MACRS   # can be "MACRS" or "Straight line"
+        depr_period: 5  # 5 years
+        refurb: [0.]
+  finance_subgroups:
+    generated_electricity:
+      commodity: electricity
+      commodity_stream: gen_combiner
+      technologies: [distributed_wind_plant, distributed_pv]
+    electrical_system:
+      commodity: electricity
+      commodity_stream: elec_combiner
+      technologies: [distributed_wind_plant, distributed_pv, battery]
+    electrical_load:
+      commodity: electricity
+      commodity_stream: elec_load_demand
+      technologies: [distributed_wind_plant, distributed_pv, battery]
+    hydrogen:
+      commodity: hydrogen
+      commodity_stream: electrolyzer
+      technologies: [distributed_wind_plant, distributed_pv, battery, electrolyzer]
+  cost_adjustment_parameters:
+    cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
+    target_dollar_year: 2022

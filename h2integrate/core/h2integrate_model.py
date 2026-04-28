@@ -23,8 +23,8 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
-from h2integrate.control.control_strategies.pyomo_controller_baseclass import (
-    PyomoControllerBaseClass,
+from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+    PyomoStorageControllerBaseClass,
 )
 
 
@@ -208,7 +208,7 @@ class H2IntegrateModel:
                 controller_model_name = vals["control_strategy"]["model"]
                 controller_cls = supported_models.get(controller_model_name)
                 if controller_cls is not None and issubclass(
-                    controller_cls, PyomoControllerBaseClass
+                    controller_cls, PyomoStorageControllerBaseClass
                 ):
                     model_inputs = self.technology_config["technologies"][name]["model_inputs"]
                     if (
@@ -250,7 +250,7 @@ class H2IntegrateModel:
                     # of the same custom model. Also check that all instances of the same custom
                     # model tech name use the same class definition.
                     if model_name in included_custom_models:
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         if (
                             model_class_name
                             != included_custom_models[model_name]["model_class_name"]
@@ -258,7 +258,7 @@ class H2IntegrateModel:
                             raise (
                                 ValueError(
                                     "User has specified two custom models using the same model"
-                                    "name ({model_name}), but with different model classes. "
+                                    f"name ({model_name}), but with different model classes. "
                                     "Technologies defined with different classes must have "
                                     "different technology names."
                                 )
@@ -267,7 +267,7 @@ class H2IntegrateModel:
                             continue
 
                     if (model_name not in self.supported_models) and (model_name is not None):
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         model_location = config[model_type].get(f"{prefix}model_location")
 
                         if not model_class_name or not model_location:
@@ -307,7 +307,7 @@ class H2IntegrateModel:
                             or config[model_type].get(f"{prefix}model_location") is not None
                         ):
                             msg = (
-                                f"Custom {prefix}model_class_name or {prefix}model_location "
+                                f"Custom {prefix}model or {prefix}model_location "
                                 f"specified for '{model_name}', "
                                 f"but '{model_name}' is a built-in H2Integrate "
                                 "model. Using built-in model instead is not allowed. "
@@ -350,6 +350,26 @@ class H2IntegrateModel:
                     finance_model_names,
                     prefix="finance_",
                 )
+
+        # check for custom resource models
+        if "sites" in self.plant_config:
+            for site_name, site_params in self.plant_config["sites"].items():
+                if "resources" in site_params:
+                    resource_models_config = {
+                        k: v
+                        for k, v in site_params["resources"].items()
+                        if "resource_parameters" in v
+                    }
+
+                    resource_model_names = [
+                        k for k, v in site_params["resources"].items() if "resource_parameters" in v
+                    ]
+                    self.create_custom_models(
+                        {site_name: resource_models_config},
+                        self.plant_parent_path,
+                        resource_model_names,
+                        prefix="resource_",
+                    )
 
     def create_site_model(self):
         """
@@ -795,7 +815,12 @@ class H2IntegrateModel:
                         f"technologies: {list(self.technology_config['technologies'].keys())}"
                     )
             if commodity_stream is not None:
-                if "combiner" not in commodity_stream and commodity_stream not in tech_names:
+                commodity_stream_has_cost = (
+                    self.technology_config["technologies"]
+                    .get(commodity_stream, {})
+                    .get("cost_model", False)
+                )
+                if commodity_stream_has_cost and commodity_stream not in tech_names:
                     raise UserWarning(
                         f"The technology specific for the commodity_stream '{commodity_stream}' "
                         f"is not included in subgroup '{subgroup_name}' technologies list."
@@ -820,7 +845,14 @@ class H2IntegrateModel:
                     elec_tech_names = [
                         tech for tech in tech_configs if is_electricity_producer(tech)
                     ]
-                    if len(elec_tech_names) != 1:
+                    if len(elec_tech_names) < 1:
+                        msg = (
+                            "Commodity 'electricity' was specified, but no electricity "
+                            "producing techs were found."
+                        )
+                        raise ValueError(msg)
+
+                    elif len(elec_tech_names) > 1:
                         msg = (
                             f"Multiple electricity producing technologies found in finance subgroup"
                             f" '{subgroup_name}'. Please specify the commodity_stream for the "

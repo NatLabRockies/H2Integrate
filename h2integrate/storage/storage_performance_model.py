@@ -83,7 +83,7 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
             # Calculate charge and discharge efficiencies from round-trip efficiency
             self.charge_efficiency = np.sqrt(self.round_trip_efficiency)
             self.discharge_efficiency = np.sqrt(self.round_trip_efficiency)
-            self.round_trip_efficiency = None
+
         if self.charge_efficiency is None or self.discharge_efficiency is None:
             raise ValueError(
                 "Exactly one of the following sets of parameters must be set: (a) "

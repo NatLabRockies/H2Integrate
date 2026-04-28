@@ -15,6 +15,7 @@ class Compressor:
         self,
         p_outlet,
         flow_rate_kg_d,
+        compressor_type="pipeline",
         p_inlet=20,
         n_compressors=2,
         sizing_safety_factor=1.1,
@@ -22,9 +23,12 @@ class Compressor:
         """
         Parameters:
         ---------------
+        compressor_type: "pipeline" or "storage"
+        p_inlet: inlet pressure (bar)
         p_outlet: outlet pressure (bar)
         flow_rate_kg_d: mass flow rate in kg/day
         """
+        self.compressor_type = compressor_type
         self.p_inlet = p_inlet  # bar
         self.p_outlet = p_outlet  # bar
         self.flow_rate_kg_d = flow_rate_kg_d  # kg/day
@@ -121,14 +125,22 @@ class Compressor:
         n_comp_total = (
             self.n_compressors + self.n_comp_back_up
         )  # 2 compressors + 1 backup for reliability
-        production_volume_factor = 0.55  # Assume high production volume
-        CEPCI = 1.29 / 1.1  # Convert from 2007 to 2016$
+        production_volume_factor = 0.55  # Assume high production volume - HDSAM "Scenario" tab Q7
 
-        cost_per_unit = 1962.2 * self.motor_rating**0.8225 * production_volume_factor * CEPCI
+        # From HDSAM "Cost Data" tab, rows 120-131
+        if self.compressor_type == "pipeline":
+            cost_per_unit_2007 = 1962.2 * self.motor_rating**0.8225 * production_volume_factor
+            CEPCI_2007_to_2016 = 1.29 / 1.1  # Convert from 2007 to 2016$
+            cost_per_unit = cost_per_unit_2007 * CEPCI_2007_to_2016
+            install_cost_factor = 2
+        elif self.compressor_type == "storage":
+            cost_per_unit_2013 = (3758.2 * self.motor_rating + 107562) * production_volume_factor
+            CEPCI_2013_to_2016 = 1.29 / 1.22  # Convert from 2013 to 2016$
+            cost_per_unit = cost_per_unit_2013 * CEPCI_2013_to_2016
+            install_cost_factor = 1.3
+
         if self.stages > 2:
             cost_per_unit = cost_per_unit * (1 + 0.2 * (self.stages - 2))
-
-        install_cost_factor = 2
 
         direct_capex = cost_per_unit * n_comp_total * install_cost_factor
 
