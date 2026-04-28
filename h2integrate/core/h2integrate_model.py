@@ -46,6 +46,11 @@ class H2IntegrateModel:
         # read in config file; it's a yaml dict that looks like this:
         self.load_config(config_input)
 
+        # add bool for whether using system-level control
+        self.slc = False
+        if "system_level_control" in self.plant_config:
+            self.slc = True
+
         # load in supported models
         self.supported_models = supported_models.copy()
 
@@ -463,6 +468,7 @@ class H2IntegrateModel:
         self.dispatch_rule_sets = []
         self.cost_models = []
         self.finance_models = []
+        self.tech_control_classifiers = {}  # for system-level control
 
         combined_performance_and_cost_models = [
             "HOPPComponent",
@@ -520,6 +526,7 @@ class H2IntegrateModel:
                     tech_config=individual_tech_config,
                 )
                 self._check_time_step(perf_model, comp)
+                self.tech_control_classifiers.update({tech_name: "feedback"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
                 tech_group = self.plant.add_subsystem(tech_name, om.Group())
@@ -555,6 +562,9 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
+
+                    self._check_control_classifier(perf_model, comp)
+                    self.tech_control_classifiers.update({tech_name: comp._control_classifier})
                     self._check_time_step(perf_model, comp)
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
@@ -582,6 +592,52 @@ class H2IntegrateModel:
                         else:
                             plural_model_type_name = model_type + "s"
                         getattr(self, plural_model_type_name).append(om_model_object)
+
+                        # below logic is only used if using system-level control
+                        if self.slc and model_type == "performance_model":
+                            self._check_control_classifier(perf_model, om_model_object)
+                            control_classifier = comp._control_classifier
+                            self.tech_control_classifiers.update(
+                                {tech_name: getattr(comp, control_classifier)}
+                            )
+
+                            # add curtail component to curtailable technology performance models
+                            if control_classifier == "curtailable":
+                                # get the commodity output from this component with length
+                                # 4 connections
+                                # TODO: update to handle length 3 connections
+                                tech_is_source_connections = [
+                                    k
+                                    for k in self.plant_config["technology_interconnections"]
+                                    if k[0] == tech_name and len(k) == 4
+                                ]
+                                if len(tech_is_source_connections) == 0:
+                                    msg = (
+                                        f"{tech_name} is not a source technology "
+                                        f"for another component"
+                                    )
+
+                                    raise ValueError(msg)
+                                # Get unique commodity outputs
+                                tech_commodity_output = list(
+                                    {k[3] for k in tech_is_source_connections}
+                                )
+                                if len(tech_commodity_output) > 1:
+                                    msg = (
+                                        f"{tech_name} has multiple commodity outputs "
+                                        f"({tech_commodity_output}) which is not yet supported"
+                                    )
+                                    raise ValueError(msg)
+                                # get the commodity of the component
+                                model_object = self.supported_models["CurtailableComponentModel"]
+                                om_model_object = tech_group.add_subsystem(
+                                    "CurtailableComponentModel",
+                                    model_object(
+                                        commodity=tech_commodity_output[0],
+                                        plant_config=self.plant_config,
+                                    ),
+                                    promotes=["*"],
+                                )
 
                 # Process the finance models
                 if "finance_model" in individual_tech_config:
@@ -646,6 +702,13 @@ class H2IntegrateModel:
                 "was specified. Please set plant_config['plant']['simulation']['dt'] to a"
                 f" value within the range [{min_ts}, {max_ts}]."
             )
+            raise ValueError(msg)
+
+    def _check_control_classifier(self, model_name, model_object):
+        if not self.slc:
+            return
+        if not hasattr(model_object, "_control_classifier"):
+            msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
     def create_finance_model(self):

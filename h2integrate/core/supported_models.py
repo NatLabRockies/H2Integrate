@@ -158,6 +158,9 @@ from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import 
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass import (
     PyomoRuleStorageBaseclass,
 )
+from h2integrate.control.control_strategies.converters.curtailable_component import (
+    CurtailableComponentModel,
+)
 from h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models import (
     MeteosatPrimeMeridianSolarAPI,
     MeteosatPrimeMeridianTMYSolarAPI,
@@ -281,6 +284,8 @@ supported_models = {
     "IronTransportCostComponent": IronTransportCostComponent,
     # Simple Summers
     "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
+    # Curtailable component
+    "CurtailableComponentModel": CurtailableComponentModel,
     # Storage
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
     "StoragePerformanceModel": StoragePerformanceModel,
