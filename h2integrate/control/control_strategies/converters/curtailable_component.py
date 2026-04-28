@@ -29,6 +29,7 @@ class CurtailableComponentModel(om.ExplicitComponent):
             units=None,
             copy_units=f"{self.commodity}_out",
         )
+
         self.add_output(
             f"curtailed_{self.commodity}_out",
             shape=n_timesteps,
