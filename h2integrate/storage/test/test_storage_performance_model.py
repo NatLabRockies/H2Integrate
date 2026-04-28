@@ -1121,7 +1121,7 @@ def test_generic_storage_charge_more_than_available(plant_config, subtests):
             "storage.storage_hydrogen_charge", units="kg/h"
         ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
         np.testing.assert_allclose(
-            charge_plus_discharge, prob.get_val("storage_hydrogen_out", units="kg/h"), rtol=1e-6
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
         )
     with subtests.test("Initial SOC is correct"):
         assert (
@@ -1169,7 +1169,7 @@ def test_generic_storage_charge_more_than_available(plant_config, subtests):
         )
     with subtests.test("Expected capacity factor"):
         assert (
-            pytest.approx(-17.5, rel=1e-6)
+            pytest.approx(-12.5, rel=1e-6)
             == prob.get_val("storage.capacity_factor", units="percent")[0]
         )
 

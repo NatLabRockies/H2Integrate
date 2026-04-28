@@ -188,16 +188,14 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
         )
 
     with subtests.test("Total unused commodity"):
-        assert (
-            pytest.approx(prob.get_val("unused_hydrogen_out", units="kg/h").sum(), rel=1e-6) == 5.0
-        )
+        combined_out = prob.get_val("hydrogen_out", units="kg/h") + commodity_in
+        unused_commodity_out = combined_out - commodity_demand
+        assert pytest.approx(unused_commodity_out.sum(), rel=1e-6) == 5.0
+
     with subtests.test("Charge never exceeds available commodity"):
         charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
         indx_charging = np.argwhere(charge_profile).flatten()
         assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
-        combined_out = prob.get_val("hydrogen_out", units="kg/h") + commodity_in
-        unused_commodity_out = combined_out - commodity_demand
-        assert pytest.approx(unused_commodity_out.sum(), rel=1e-6) == 5.0
 
 
 @pytest.mark.regression
