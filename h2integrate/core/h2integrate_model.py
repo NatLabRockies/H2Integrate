@@ -1219,10 +1219,17 @@ class H2IntegrateModel:
 
                 else:
                     # Connect the source technology to the connection component
-                    self.plant.connect(
-                        f"{source_tech}.{transport_item}_out",
-                        f"{connection_name}.{transport_item}_in",
-                    )
+
+                    if self.slc and self.tech_control_classifiers[source_tech] == "curtailable":
+                        self.plant.connect(
+                            f"{source_tech}.modulated_{transport_item}_out",
+                            f"{connection_name}.{transport_item}_in",
+                        )
+                    else:
+                        self.plant.connect(
+                            f"{source_tech}.{transport_item}_out",
+                            f"{connection_name}.{transport_item}_in",
+                        )
 
                 # Check if the transport type is a combiner
                 if "combiner" in dest_tech:
