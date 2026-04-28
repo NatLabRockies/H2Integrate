@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - develop
+      - system_level_control
   pull_request:
     branches:
       - main
