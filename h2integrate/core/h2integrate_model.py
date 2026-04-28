@@ -1220,7 +1220,10 @@ class H2IntegrateModel:
                 else:
                     # Connect the source technology to the connection component
 
-                    if self.slc and self.tech_control_classifiers[source_tech] == "curtailable":
+                    if (
+                        self.slc
+                        and self.tech_control_classifiers.get(source_tech, "") == "curtailable"
+                    ):
                         self.plant.connect(
                             f"{source_tech}.modulated_{transport_item}_out",
                             f"{connection_name}.{transport_item}_in",
