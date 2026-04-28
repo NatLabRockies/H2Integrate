@@ -501,14 +501,10 @@ class ProFastBase(om.ExplicitComponent):
     def setup(self):
         """Set up component inputs and outputs based on plant and technology configurations."""
         # Determine commodity units
-        if self.options["commodity_type"] == "electricity":
-            self.price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-            self.commodity_amount_units = "kWh"
-        else:
-            self.price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-            self.commodity_amount_units = "kg"
+        # if self.options["commodity_type"] == "electricity":
+        #     self.price_units = "USD/(kW*h)"
+        # else:
+        #     self.price_units = "USD/kg"
 
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups
@@ -525,13 +521,17 @@ class ProFastBase(om.ExplicitComponent):
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Add rated capacity and capacity factor inputs
-        self.add_input(
+        meta_inputs = self.add_input(
             f"rated_{self.options['commodity_type']}_production",
             val=0.0,
-            units=commodity_rate_units,
+            units=None,
+            units_by_conn=True,
             shape=1,
             require_connection=True,
         )
+
+        self.commodity_amount_units = f"({meta_inputs['units']})*h"
+        self.price_units = f"USD/({self.commodity_amount_units})"
         self.add_input(
             "capacity_factor",
             val=0.0,
