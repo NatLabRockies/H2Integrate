@@ -1,3 +1,16 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.18.1
+kernelspec:
+  display_name: Python 3.11.13 ('h2i_env')
+  language: python
+  name: python3
+---
+
 (open-loop-control)=
 # Open-Loop Controllers
 
@@ -20,9 +33,48 @@ For examples of how to use the `SimpleStorageOpenLoopController` open-loop contr
 ### Demand Open-Loop Storage Controller
 The `DemandOpenLoopStorageController` uses simple logic to dispatch the storage technology when demand is higher than commodity generation and charges the storage technology when the commodity generation exceeds demand, both cases depending on the storage technology's state of charge. For the `DemandOpenLoopStorageController`, the storage state of charge is an estimate in the control logic and is not informed in any way by the storage technology performance model.
 
-An example of an N2 diagram for a system using the open-loop control framework for hydrogen storage and dispatch is shown below ([click here for an interactive version](./figures/open-loop-n2.html)). Note that the hydrogen out going into the finance model is coming from the control component.
+An interactive example of an N2 diagram for a system using the open-loop control framework for hydrogen storage and dispatch is shown below.
 
-![](./figures/open-loop-n2.png)
+Open `h2i_n2.html` in a browser to explore model groups, components, and variable connections.
+
+```{code-cell} ipython3
+:tags: [remove-input]
+
+from h2integrate.core.h2integrate_model import H2IntegrateModel
+import openmdao.api as om
+import os
+
+import html
+from pathlib import Path
+from IPython.display import HTML, display
+
+# Change to an example directory
+os.chdir("../../examples/14_wind_hydrogen_dispatch/")
+
+# Build and set up the model
+h2i_model = H2IntegrateModel("inputs/h2i_wind_to_h2_storage.yaml")
+h2i_model.setup()
+
+# Write interactive N2 HTML diagram
+om.n2(
+    h2i_model.prob,
+    outfile="h2i_n2.html",
+    display_in_notebook=False, # set to True to display in-line in a notebook
+    show_browser=False, # set to True to open in a browser at run time
+)
+
+n2_html = "h2i_n2.html"
+n2_srcdoc = html.escape(Path(n2_html).read_text(encoding="utf-8"))
+display(
+    HTML(
+        f'<div style="width:100%; height:600px; overflow:auto; margin:0; padding:0; border:0;">'
+        f'<iframe srcdoc="{n2_srcdoc}" '
+        'style="display:block; width:200%; height:600px; border:0; margin:0; padding:0; background:transparent;" '
+        'loading="lazy"></iframe>'
+        '</div>'
+    )
+)
+```
 
 For examples of how to use the `DemandOpenLoopStorageController` open-loop control framework, see the following:
 - `examples/14_wind_hydrogen_dispatch/`

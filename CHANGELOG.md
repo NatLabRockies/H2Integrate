@@ -13,6 +13,8 @@
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
 - Added ability to have a custom/user-specified resource model [PR 698](https://github.com/NatLabRockies/H2Integrate/pull/698)
+- Rename `n_control_window` to `n_control_window_hours` for unit clarity [PR 712](https://github.com/NatLabRockies/H2Integrate/pull/712)
+- Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
 
 ## 0.8 [April 15, 2026]
 - Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)

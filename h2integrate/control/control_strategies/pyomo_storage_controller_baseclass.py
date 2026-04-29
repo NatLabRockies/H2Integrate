@@ -34,8 +34,8 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
             0.0 allows full depletion; >0 reserves minimum inventory.
         init_soc_fraction (float):
             Initial state of charge at simulation start as a fraction in [0, 1].
-        n_control_window (int):
-            Number of consecutive timesteps processed per control action
+        n_control_window_hours (int):
+            Number of consecutive hours processed per control action
             (rolling control / dispatch window length).
         commodity (str):
             Base name of the controlled commodity (e.g., "hydrogen", "electricity").
@@ -48,7 +48,7 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
             the broader OpenMDAO model (e.g., "battery", "h2_storage").
         system_commodity_interface_limit (float | int | str |list[float]): Max interface
             (e.g. grid interface) flow used to bound dispatch (scalar or per-timestep list of
-            length n_control_window).
+            length n_control_window_hours).
         round_digits (int):
             The number of digits to round to in the Pyomo model for numerical stability.
             The default of this parameter is 4.
@@ -58,7 +58,7 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
     max_soc_fraction: float = field(validator=range_val(0, 1))
     min_soc_fraction: float = field(validator=range_val(0, 1))
     init_soc_fraction: float = field(validator=range_val(0, 1))
-    n_control_window: int = field()
+    n_control_window_hours: int = field()
     commodity: str = field()
     commodity_rate_units: str = field()
     tech_name: str = field()
@@ -71,7 +71,7 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
         if isinstance(self.system_commodity_interface_limit, float | int):
             self.system_commodity_interface_limit = [
                 self.system_commodity_interface_limit
-            ] * self.n_control_window
+            ] * self.n_control_window_hours
 
 
 class PyomoStorageControllerBaseClass(om.ExplicitComponent):
@@ -153,7 +153,7 @@ class PyomoStorageControllerBaseClass(om.ExplicitComponent):
             Execute rolling-window dispatch for the controlled technology.
 
             Iterates over the full simulation period in chunks of size
-            `self.config.n_control_window`, (re)configures per-window dispatch
+            `self.config.n_control_window_hours`, (re)configures per-window dispatch
             parameters, applies the chosen control strategy, and then calls the
             provided performance_model over each window to obtain storage output and
             SOC trajectories.
@@ -164,7 +164,7 @@ class PyomoStorageControllerBaseClass(om.ExplicitComponent):
                     window. Signature must accept (storage_dispatch_commands,
                     **performance_model_kwargs, sim_start_index=<int>)
                     and return (storage_out_window, soc_window) arrays of length
-                    n_control_window.
+                    n_control_window_hours.
                 performance_model_kwargs (dict):
                     Extra keyword arguments forwarded unchanged to performance_model
                     at window (e.g., efficiencies, timestep size).

@@ -74,7 +74,7 @@ def make_battery_pyo_group(plant_config_bat):
                 "shared_parameters": {
                     "max_charge_rate": 50000,
                     "max_capacity": 200000,
-                    "n_control_window": 24,
+                    "n_control_window_hours": 24,
                     "n_horizon_window": 48,
                     "init_soc_fraction": 0.5,
                     "max_soc_fraction": 0.9,
@@ -141,7 +141,7 @@ def make_h2_storage_pyo_group(plant_config_h2s):
                 "control_parameters": {
                     "tech_name": "h2_storage",
                     "system_commodity_interface_limit": 10.0,
-                    "n_control_window": 24,
+                    "n_control_window_hours": 24,
                 },
             },
         }
