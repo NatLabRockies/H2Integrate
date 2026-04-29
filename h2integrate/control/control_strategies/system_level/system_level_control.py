@@ -1,14 +1,19 @@
 import numpy as np
 import openmdao.api as om
 
-from h2integrate.core.supported_models import supported_models
-
 
 class SystemLevelControl(om.ExplicitComponent):
     """System-level control that satisfies demand across all technologies.
 
-    Parses ``tech_config`` to classify each technology by its
-    ``_control_classifier`` attribute (curtailable, dispatchable, or storage).
+    Reads pre-computed technology classification from
+    ``plant_config["system_level_control"]``, which must contain:
+
+    - ``commodity``: the commodity being controlled (e.g. "electricity")
+    - ``commodity_units``: units string (or None)
+    - ``demand_tech``: name of the demand technology
+    - ``curtailable_techs``: list of curtailable technology names
+    - ``dispatchable_techs``: list of dispatchable technology names
+    - ``storage_techs``: list of storage technology names
 
     Only one commodity demand stream is supported.  At each timestep,
     curtailable production is applied first, then the remaining demand
@@ -22,73 +27,35 @@ class SystemLevelControl(om.ExplicitComponent):
 
     def setup(self):
         plant_config = self.options["plant_config"]
-        tech_config = self.options["tech_config"]
+        slc_config = plant_config["system_level_control"]
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
-        plant_config.get("technology_interconnections", [])
-        technologies = tech_config.get("technologies", {})
 
-        # ---- 1. Identify the (single) demand technology from tech_config ----
-        # A demand tech has "Demand" in its performance model name.
-        self.commodity = None
-        self.demand_profile = None
-        self.commodity_units = None
-        for tech_name, tech_def in technologies.items():
-            model_name = tech_def.get("performance_model", {}).get("model", "")
-            if "Demand" not in model_name:
-                continue
+        # Read pre-computed classification from plant_config
+        self.commodity = slc_config["commodity"]
+        self.commodity_units = slc_config.get("commodity_units", None)
+        self.demand_tech = slc_config["demand_tech"]
+        self.curtailable_techs = list(slc_config.get("curtailable_techs", []))
+        self.dispatchable_techs = list(slc_config.get("dispatchable_techs", []))
+        self.storage_techs = list(slc_config.get("storage_techs", []))
 
-            model_inputs = tech_def.get("model_inputs", {})
-            perf_params = model_inputs.get("performance_parameters", {})
-            shared_params = model_inputs.get("shared_parameters", {})
-            all_params = {**shared_params, **perf_params}
-
-            if self.commodity is not None:
-                raise ValueError(
-                    "SystemLevelControl currently supports only one demand "
-                    f"stream, but found demands for both '{self.commodity}' "
-                    f"and '{all_params.get('commodity', tech_name)}'."
-                )
-            self.commodity = all_params["commodity"]
-            self.commodity_units = all_params.get("commodity_rate_units", None)
-            self.demand_profile = all_params.get("demand_profile", 0.0)
-            self.demand_tech = tech_name
-
-        # Input: demand profile
+        # Input: demand profile (default value from config)
+        demand_profile = slc_config.get("demand_profile", 0.0)
         self.demand_input_name = f"{self.commodity}_demand"
         self.add_input(
             self.demand_input_name,
-            val=self.demand_profile,
+            val=demand_profile,
             shape=self.n_timesteps,
             units=self.commodity_units,
             desc=f"Demand profile of {self.commodity}",
         )
 
-        # ---- 2. Classify technologies by _control_classifier ----
-        self.curtailable_techs = []
-        self.dispatchable_techs = []
-        self.storage_techs = []
-
-        for tech_name, tech_def in technologies.items():
-            perf_model_name = tech_def.get("performance_model", {}).get("model", "")
-            if perf_model_name not in supported_models:
-                continue
-            model_cls = supported_models[perf_model_name]
-            classifier = getattr(model_cls, "_control_classifier", None)
-            if classifier == "curtailable":
-                self.curtailable_techs.append(tech_name)
-            elif classifier == "dispatchable":
-                self.dispatchable_techs.append(tech_name)
-            elif classifier == "storage":
-                self.storage_techs.append(tech_name)
-
-        # ---- 3. Add OpenMDAO inputs / outputs ----
-        # Inputs & outputs for curtailable techs
+        # ---- Add OpenMDAO inputs / outputs per tech category ----
+        # Curtailable techs: read-only (no set_point output, since these
+        # produce based on resource availability, not a set_point)
         self.curtailable_input_names = []
-        self.curtailable_output_names = []
         for tech_name in self.curtailable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
             self.add_input(
                 in_name,
                 val=0.0,
@@ -96,17 +63,18 @@ class SystemLevelControl(om.ExplicitComponent):
                 units=self.commodity_units,
                 desc=f"{self.commodity} output from {tech_name}",
             )
-            self.add_output(
-                out_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=self.commodity_units,
-                desc=f"Set point for {tech_name} {self.commodity} production",
-            )
             self.curtailable_input_names.append(in_name)
-            self.curtailable_output_names.append(out_name)
 
-        # Inputs & outputs for dispatchable techs
+        # Compute a reasonable initial set_point for dispatchable techs
+        n_dispatchable = len(self.dispatchable_techs)
+        if n_dispatchable > 0:
+            if np.isscalar(demand_profile):
+                initial_sp = demand_profile / n_dispatchable
+            else:
+                initial_sp = np.array(demand_profile) / n_dispatchable
+        else:
+            initial_sp = 0.0
+
         self.dispatchable_input_names = []
         self.dispatchable_output_names = []
         for tech_name in self.dispatchable_techs:
@@ -121,7 +89,7 @@ class SystemLevelControl(om.ExplicitComponent):
             )
             self.add_output(
                 out_name,
-                val=0.0,
+                val=initial_sp,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
@@ -129,7 +97,6 @@ class SystemLevelControl(om.ExplicitComponent):
             self.dispatchable_input_names.append(in_name)
             self.dispatchable_output_names.append(out_name)
 
-        # Inputs & outputs for storage techs
         self.storage_input_names = []
         self.storage_output_names = []
         for tech_name in self.storage_techs:
@@ -155,11 +122,9 @@ class SystemLevelControl(om.ExplicitComponent):
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
 
-        # 1. Apply curtailable production first (pass through actual output)
-        for in_name, out_name in zip(self.curtailable_input_names, self.curtailable_output_names):
-            curtailable_output = inputs[in_name]
-            outputs[out_name] = curtailable_output
-            demand -= curtailable_output
+        # 1. Subtract curtailable production from demand
+        for in_name in self.curtailable_input_names:
+            demand -= inputs[in_name]
 
         # Remaining demand after curtailable production
         remaining = np.maximum(demand, 0.0)

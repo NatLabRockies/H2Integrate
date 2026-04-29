@@ -23,6 +23,9 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
+from h2integrate.control.control_strategies.system_level.system_level_control import (
+    SystemLevelControl,
+)
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
 )
@@ -80,6 +83,11 @@ class H2IntegrateModel:
         self.create_technology_models()
 
         self.create_finance_model()
+
+        # add system-level controller if configured
+        if self.slc:
+            self._classify_slc_technologies()
+            self.add_system_level_controller()
 
         # connect technologies
         # technologies are connected within the `technology_interconnections` section of the
@@ -458,6 +466,130 @@ class H2IntegrateModel:
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
 
+    def _classify_slc_technologies(self):
+        """Classify technologies for system-level control and store in plant_config.
+
+        Uses ``self.tech_control_classifiers`` (populated by ``create_technology_models()``)
+        to partition technologies into curtailable, dispatchable, and storage lists.
+        Also identifies the single demand technology and its commodity.
+
+        Results are written into ``self.plant_config["system_level_control"]`` so
+        they are available to the ``SystemLevelControl`` component at setup time.
+        """
+        slc_config = self.plant_config["system_level_control"]
+        technologies = self.technology_config.get("technologies", {})
+
+        # Identify the (single) demand technology
+        commodity = None
+        demand_tech = None
+        commodity_units = None
+        for tech_name, tech_def in technologies.items():
+            model_name = tech_def.get("performance_model", {}).get("model", "")
+            if "Demand" not in model_name:
+                continue
+
+            model_inputs = tech_def.get("model_inputs", {})
+            perf_params = model_inputs.get("performance_parameters", {})
+            shared_params = model_inputs.get("shared_parameters", {})
+            all_params = {**shared_params, **perf_params}
+
+            if commodity is not None:
+                raise ValueError(
+                    "SystemLevelControl currently supports only one demand "
+                    f"stream, but found demands for both '{commodity}' "
+                    f"and '{all_params.get('commodity', tech_name)}'."
+                )
+            commodity = all_params["commodity"]
+            commodity_units = all_params.get("commodity_rate_units", None)
+            demand_profile = all_params.get("demand_profile", 0.0)
+            demand_tech = tech_name
+
+        # Classify technologies using pre-computed classifiers
+        curtailable_techs = []
+        dispatchable_techs = []
+        storage_techs = []
+        for tech_name, classifier in self.tech_control_classifiers.items():
+            if classifier == "curtailable":
+                curtailable_techs.append(tech_name)
+            elif classifier == "dispatchable":
+                dispatchable_techs.append(tech_name)
+            elif classifier == "storage":
+                storage_techs.append(tech_name)
+
+        # Store classification results in plant_config for SLC component
+        slc_config["commodity"] = commodity
+        slc_config["commodity_units"] = commodity_units
+        slc_config["demand_tech"] = demand_tech
+        slc_config["demand_profile"] = demand_profile
+        slc_config["curtailable_techs"] = curtailable_techs
+        slc_config["dispatchable_techs"] = dispatchable_techs
+        slc_config["storage_techs"] = storage_techs
+
+    def add_system_level_controller(self):
+        """Add the SystemLevelControl component and configure the plant solver.
+
+        This method:
+        1. Adds a ``SystemLevelControl`` subsystem to the plant group
+        2. Configures the nonlinear solver on the plant group based on
+           ``plant_config["system_level_control"]`` parameters
+        3. Creates connections between the controller and each technology
+        """
+        slc_config = self.plant_config["system_level_control"]
+
+        # Map user-facing solver names to OpenMDAO solver classes
+        solver_map = {
+            "gauss_seidel": om.NonlinearBlockGS,
+            "newton": om.NewtonSolver,
+            "block_jacobi": om.NonlinearBlockJac,
+        }
+
+        # 1. Add the controller as the first subsystem in the plant group
+        slc_comp = SystemLevelControl(
+            driver_config=self.driver_config,
+            plant_config=self.plant_config,
+            tech_config=self.technology_config,
+        )
+        self.plant.add_subsystem("system_level_controller", slc_comp)
+
+        # 2. Configure the nonlinear solver
+        solver_name = slc_config.get("solver_name", "gauss_seidel")
+        solver_cls = solver_map.get(solver_name)
+        if solver_cls is None:
+            raise ValueError(
+                f"Unknown solver_name '{solver_name}' in system_level_control. "
+                f"Supported: {list(solver_map.keys())}"
+            )
+        solver = solver_cls()
+        solver.options["maxiter"] = slc_config.get("max_iter", 20)
+        solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
+        solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
+        solver.options["iprint"] = 2  # print convergence at each iteration
+        self.plant.nonlinear_solver = solver
+        self.plant.linear_solver = om.DirectSolver()
+
+        # 3. Connect the controller's inputs/outputs to technology models
+        commodity = slc_config["commodity"]
+
+        # Curtailable techs: read their output but don't write a set_point
+        # (curtailable sources like wind produce based on resource, not a set_point)
+        for tech_name in slc_config["curtailable_techs"]:
+            self.plant.connect(
+                f"{tech_name}.{commodity}_out",
+                f"system_level_controller.{tech_name}_{commodity}_out",
+            )
+
+        # Dispatchable and storage techs: read output and write set_point
+        for tech_list in ["dispatchable_techs", "storage_techs"]:
+            for tech_name in slc_config[tech_list]:
+                self.plant.connect(
+                    f"{tech_name}.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                self.plant.connect(
+                    f"system_level_controller.{tech_name}_{commodity}_set_point",
+                    f"{tech_name}.{commodity}_set_point",
+                )
+
     def create_technology_models(self):
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
@@ -593,51 +725,13 @@ class H2IntegrateModel:
                             plural_model_type_name = model_type + "s"
                         getattr(self, plural_model_type_name).append(om_model_object)
 
-                        # below logic is only used if using system-level control
-                        if self.slc and model_type == "performance_model":
-                            self._check_control_classifier(perf_model, om_model_object)
-                            control_classifier = comp._control_classifier
-                            self.tech_control_classifiers.update(
-                                {tech_name: getattr(comp, control_classifier)}
-                            )
-
-                            # add curtail component to curtailable technology performance models
-                            if control_classifier == "curtailable":
-                                # get the commodity output from this component with length
-                                # 4 connections
-                                # TODO: update to handle length 3 connections
-                                tech_is_source_connections = [
-                                    k
-                                    for k in self.plant_config["technology_interconnections"]
-                                    if k[0] == tech_name and len(k) == 4
-                                ]
-                                if len(tech_is_source_connections) == 0:
-                                    msg = (
-                                        f"{tech_name} is not a source technology "
-                                        f"for another component"
-                                    )
-
-                                    raise ValueError(msg)
-                                # Get unique commodity outputs
-                                tech_commodity_output = list(
-                                    {k[3] for k in tech_is_source_connections}
-                                )
-                                if len(tech_commodity_output) > 1:
-                                    msg = (
-                                        f"{tech_name} has multiple commodity outputs "
-                                        f"({tech_commodity_output}) which is not yet supported"
-                                    )
-                                    raise ValueError(msg)
-                                # get the commodity of the component
-                                model_object = self.supported_models["CurtailableComponentModel"]
-                                om_model_object = tech_group.add_subsystem(
-                                    "CurtailableComponentModel",
-                                    model_object(
-                                        commodity=tech_commodity_output[0],
-                                        plant_config=self.plant_config,
-                                    ),
-                                    promotes=["*"],
-                                )
+                        # Collect control classifier for system-level control
+                        if model_type == "performance_model" and self.slc:
+                            perf_cls = self.supported_models.get(perf_model)
+                            if perf_cls is not None:
+                                classifier = getattr(perf_cls, "_control_classifier", None)
+                                if classifier is not None:
+                                    self.tech_control_classifiers[tech_name] = classifier
 
                 # Process the finance models
                 if "finance_model" in individual_tech_config:

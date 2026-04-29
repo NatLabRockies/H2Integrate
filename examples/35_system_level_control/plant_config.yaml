@@ -20,8 +20,6 @@ technology_interconnections:
   # connect NG feedstock to NG plant
   - [combiner, electrical_load_demand, electricity, cable]
   # subtract wind from demand
-  - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
-  # give remaining load demand to natural gas plant
   - [combiner, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]
 resource_to_tech_connections:
@@ -32,6 +30,11 @@ plant:
   simulation:
     n_timesteps: 8760
     dt: 3600
+system_level_control:
+  control_strategy: load_meeting
+  solver_name: gauss_seidel
+  max_iter: 20
+  convergence_tolerance: 1.0e-6
 finance_parameters:
   finance_groups:
     profast_lco:
