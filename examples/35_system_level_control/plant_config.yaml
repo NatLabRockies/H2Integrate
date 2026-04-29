@@ -19,7 +19,7 @@ technology_interconnections:
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
   # connect NG feedstock to NG plant
   - [combiner, electrical_load_demand, electricity, cable]
-  # subtract wind and solar from demand
+  # subtract wind from demand
   - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
   # give remaining load demand to natural gas plant
   - [combiner, fin_combiner, electricity, cable]
@@ -27,7 +27,6 @@ technology_interconnections:
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
-  - [site.solar_resource, solar, solar_resource_data]
 plant:
   plant_life: 30
   simulation:
@@ -85,7 +84,7 @@ finance_parameters:
       commodity: electricity
       commodity_stream: combiner
       finance_groups: [profast_lco, profast_npv]
-      technologies: [solar, wind]
+      technologies: [wind]
     natural_gas:
       commodity: electricity
       commodity_stream: natural_gas_plant
@@ -95,7 +94,7 @@ finance_parameters:
       commodity: electricity
       commodity_stream: fin_combiner
       finance_groups: [profast_lco]
-      technologies: [solar, wind, natural_gas_plant, ng_feedstock]
+      technologies: [wind, natural_gas_plant, ng_feedstock]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022
