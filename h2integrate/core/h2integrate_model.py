@@ -23,11 +23,17 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
-from h2integrate.control.control_strategies.system_level.system_level_control import (
-    SystemLevelControl,
-)
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
+)
+from h2integrate.control.control_strategies.system_level.demand_following_control import (
+    DemandFollowingControl,
+)
+from h2integrate.control.control_strategies.system_level.cost_minimization_control import (
+    CostMinimizationControl,
+)
+from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
+    ProfitMaximizationControl,
 )
 
 
@@ -529,12 +535,21 @@ class H2IntegrateModel:
         """Add the SystemLevelControl component and configure the plant solver.
 
         This method:
-        1. Adds a ``SystemLevelControl`` subsystem to the plant group
-        2. Configures the nonlinear solver on the plant group based on
-           ``plant_config["system_level_control"]`` parameters
-        3. Creates connections between the controller and each technology
+        1. Selects the appropriate controller class based on ``control_strategy``
+        2. Adds it as a subsystem to the plant group
+        3. Configures the nonlinear solver on the plant group
+        4. Creates connections between the controller and each technology
+        5. For cost/profit strategies, connects marginal cost inputs
         """
         slc_config = self.plant_config["system_level_control"]
+
+        # Map control_strategy config values to controller classes
+        strategy_map = {
+            "demand_following": DemandFollowingControl,
+            "load_meeting": DemandFollowingControl,  # alias
+            "cost_minimization": CostMinimizationControl,
+            "profit_maximization": ProfitMaximizationControl,
+        }
 
         # Map user-facing solver names to OpenMDAO solver classes
         solver_map = {
@@ -543,8 +558,16 @@ class H2IntegrateModel:
             "block_jacobi": om.NonlinearBlockJac,
         }
 
-        # 1. Add the controller as the first subsystem in the plant group
-        slc_comp = SystemLevelControl(
+        # 1. Select controller class based on strategy
+        strategy_name = slc_config.get("control_strategy", "demand_following")
+        slc_cls = strategy_map.get(strategy_name)
+        if slc_cls is None:
+            raise ValueError(
+                f"Unknown control_strategy '{strategy_name}' in system_level_control. "
+                f"Supported: {list(strategy_map.keys())}"
+            )
+
+        slc_comp = slc_cls(
             driver_config=self.driver_config,
             plant_config=self.plant_config,
             tech_config=self.technology_config,
@@ -604,6 +627,23 @@ class H2IntegrateModel:
                     f"{tech_name}.rated_{commodity}_production",
                     f"system_level_controller.{tech_name}_rated_{commodity}_production",
                 )
+
+        # 4. For cost-aware strategies, connect marginal costs
+        #    Marginal cost defaults are set from tech_config; they can also be
+        #    connected from cost model outputs if available.
+        if strategy_name in ("cost_minimization", "profit_maximization"):
+            technologies = self.technology_config.get("technologies", {})
+            for tech_name in slc_config["dispatchable_techs"]:
+                tech_def = technologies.get(tech_name, {})
+                model_inputs = tech_def.get("model_inputs", {})
+                shared = model_inputs.get("shared_parameters", {})
+                cost_params = model_inputs.get("cost_parameters", {})
+                all_params = {**shared, **cost_params}
+
+                mc = all_params.get("marginal_cost", None)
+                if mc is not None:
+                    mc_input = f"system_level_controller.{tech_name}_marginal_cost"
+                    self.prob.set_val(mc_input, mc)
 
         ### Commented out for now; we'll need to determine how to treat demand
         ### components in the new SLC paradigm.
