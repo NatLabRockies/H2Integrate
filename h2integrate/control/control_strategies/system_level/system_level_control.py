@@ -53,11 +53,11 @@ class SystemLevelControl(om.ExplicitComponent):
         # ---- Add OpenMDAO inputs / outputs per tech category ----
         # Curtailable techs: read output + rated production, write set_point
         self.curtailable_input_names = []
-        self.curtailable_output_names = []
+        self.curtailable_set_point_names = []
         self.curtailable_rated_names = []
         for tech_name in self.curtailable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -73,14 +73,14 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} curtailment",
             )
             self.curtailable_input_names.append(in_name)
-            self.curtailable_output_names.append(out_name)
+            self.curtailable_set_point_names.append(set_point_name)
             self.curtailable_rated_names.append(rated_name)
 
         # Compute a reasonable initial set_point for dispatchable techs
@@ -94,11 +94,11 @@ class SystemLevelControl(om.ExplicitComponent):
             initial_set_point = 0.0
 
         self.dispatchable_input_names = []
-        self.dispatchable_output_names = []
+        self.dispatchable_set_point_names = []
         self.dispatchable_rated_names = []
         for tech_name in self.dispatchable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -114,22 +114,22 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=initial_set_point,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
             )
             self.dispatchable_input_names.append(in_name)
-            self.dispatchable_output_names.append(out_name)
+            self.dispatchable_set_point_names.append(set_point_name)
             self.dispatchable_rated_names.append(rated_name)
 
         self.storage_input_names = []
-        self.storage_output_names = []
+        self.storage_set_point_names = []
         self.storage_rated_names = []
         for tech_name in self.storage_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -145,38 +145,38 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
             )
             self.storage_input_names.append(in_name)
-            self.storage_output_names.append(out_name)
+            self.storage_set_point_names.append(set_point_name)
             self.storage_rated_names.append(rated_name)
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
 
         # 1. Curtailable techs: set_point = rated production (no curtailment)
-        for in_name, out_name, rated_name in zip(
+        for in_name, set_point_name, rated_name in zip(
             self.curtailable_input_names,
-            self.curtailable_output_names,
+            self.curtailable_set_point_names,
             self.curtailable_rated_names,
         ):
             curtailable_output = inputs[in_name]
-            outputs[out_name] = inputs[rated_name] * np.ones(self.n_timesteps)
+            outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
             demand -= curtailable_output
 
         # 2. Storage dispatch: set_point = net demand per storage tech
         #    positive set_point → discharge, negative → charge
         #    The storage model's simulate() handles rate/SOC/availability clipping
         #    internally, so we pass the raw demand signal here.
-        n_storage = len(self.storage_output_names)
+        n_storage = len(self.storage_set_point_names)
         if n_storage > 0:
             storage_share = demand / n_storage
-            for out_name in self.storage_output_names:
-                outputs[out_name] = storage_share
+            for set_point_name in self.storage_set_point_names:
+                outputs[set_point_name] = storage_share
 
         # Subtract actual storage output from demand
         # (electricity_out > 0 when discharging, < 0 when charging)
@@ -185,8 +185,8 @@ class SystemLevelControl(om.ExplicitComponent):
 
         # 3. Remaining demand after curtailable + storage → dispatchable techs
         remaining = np.maximum(demand, 0.0)
-        n_dispatchable = len(self.dispatchable_output_names)
+        n_dispatchable = len(self.dispatchable_set_point_names)
         if n_dispatchable > 0:
             share = remaining / n_dispatchable
-            for out_name in self.dispatchable_output_names:
-                outputs[out_name] = share
+            for set_point_name in self.dispatchable_set_point_names:
+                outputs[set_point_name] = share
