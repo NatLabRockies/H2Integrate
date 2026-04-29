@@ -48,7 +48,7 @@ axes[0].fill_between(
 axes[0].plot(hours, demand, color="black", linewidth=1.5, linestyle="--", label="Demand")
 axes[0].set_ylabel("Power (kW)")
 axes[0].set_title("System-Level Control: First 168 Hours")
-axes[0].legend(loc="upper right")
+axes[0].legend()
 
 axes[1].plot(hours, batt_soc, color="tab:cyan")
 axes[1].set_ylabel("Battery SOC (%)")
