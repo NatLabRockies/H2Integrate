@@ -597,12 +597,13 @@ class H2IntegrateModel:
                     f"{tech_name}.{commodity}_set_point",
                 )
 
-        # Dispatchable techs: also connect rated production
-        for tech_name in slc_config["dispatchable_techs"]:
-            self.plant.connect(
-                f"{tech_name}.rated_{commodity}_production",
-                f"system_level_controller.{tech_name}_rated_{commodity}_production",
-            )
+        # Dispatchable and storage techs: also connect rated production
+        for tech_list in ["dispatchable_techs", "storage_techs"]:
+            for tech_name in slc_config[tech_list]:
+                self.plant.connect(
+                    f"{tech_name}.rated_{commodity}_production",
+                    f"system_level_controller.{tech_name}_rated_{commodity}_production",
+                )
 
         ### Commented out for now; we'll need to determine how to treat demand
         ### components in the new SLC paradigm.

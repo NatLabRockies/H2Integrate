@@ -126,15 +126,23 @@ class SystemLevelControl(om.ExplicitComponent):
 
         self.storage_input_names = []
         self.storage_output_names = []
+        self.storage_rated_names = []
         for tech_name in self.storage_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
             out_name = f"{tech_name}_{self.commodity}_set_point"
+            rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"{self.commodity} output from {tech_name}",
+            )
+            self.add_input(
+                rated_name,
+                val=0.0,
+                units=self.commodity_units,
+                desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
                 out_name,
@@ -145,6 +153,7 @@ class SystemLevelControl(om.ExplicitComponent):
             )
             self.storage_input_names.append(in_name)
             self.storage_output_names.append(out_name)
+            self.storage_rated_names.append(rated_name)
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
@@ -159,16 +168,25 @@ class SystemLevelControl(om.ExplicitComponent):
             outputs[out_name] = inputs[rated_name] * np.ones(self.n_timesteps)
             demand -= curtailable_output
 
-        # Remaining demand after curtailable production
-        remaining = np.maximum(demand, 0.0)
+        # 2. Storage dispatch: set_point = net demand per storage tech
+        #    positive set_point → discharge, negative → charge
+        #    The storage model's simulate() handles rate/SOC/availability clipping
+        #    internally, so we pass the raw demand signal here.
+        n_storage = len(self.storage_output_names)
+        if n_storage > 0:
+            storage_share = demand / n_storage
+            for out_name in self.storage_output_names:
+                outputs[out_name] = storage_share
 
-        # 2. Distribute remaining demand equally across dispatchable techs
+        # Subtract actual storage output from demand
+        # (electricity_out > 0 when discharging, < 0 when charging)
+        for in_name in self.storage_input_names:
+            demand -= inputs[in_name]
+
+        # 3. Remaining demand after curtailable + storage → dispatchable techs
+        remaining = np.maximum(demand, 0.0)
         n_dispatchable = len(self.dispatchable_output_names)
         if n_dispatchable > 0:
             share = remaining / n_dispatchable
             for out_name in self.dispatchable_output_names:
                 outputs[out_name] = share
-
-        # 3. Storage techs get zero set_point for now
-        for out_name in self.storage_output_names:
-            outputs[out_name] = np.zeros(self.n_timesteps)
