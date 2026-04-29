@@ -1,6 +1,6 @@
+from h2integrate.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 from h2integrate.resource.river import RiverResource
 from h2integrate.resource.tidal import TidalResource
-from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 from h2integrate.transporters.pipe import PipePerformanceModel
 from h2integrate.transporters.cable import CablePerformanceModel
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
