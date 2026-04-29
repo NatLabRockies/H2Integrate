@@ -485,7 +485,7 @@ class H2IntegrateModel:
         commodity_units = None
         for tech_name, tech_def in technologies.items():
             model_name = tech_def.get("performance_model", {}).get("model", "")
-            if "Demand" not in model_name:
+            if "DemandComponent" not in model_name:
                 continue
 
             model_inputs = tech_def.get("model_inputs", {})

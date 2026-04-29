@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import fixture
 
@@ -24,6 +25,7 @@ def plant_config_base():
     return plant_config
 
 
+@pytest.mark.unit
 def test_curtailable_component(plant_config_base, subtests):
     prob = om.Problem()
 
