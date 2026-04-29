@@ -63,6 +63,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "curtailable"
 
     def setup(self):
         self.config = ECOElectrolyzerPerformanceModelConfig.from_dict(
