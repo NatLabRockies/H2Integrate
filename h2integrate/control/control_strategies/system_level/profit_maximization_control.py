@@ -20,7 +20,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
     Configuration:
         ``plant_config["system_level_control"]["commodity_sell_price"]``
-        must be set ($/commodity_rate_unit·h, e.g. $/kWh).
+        must be set ($/(commodity_rate_unit*h), e.g. $/kWh).
 
     Each dispatchable technology must have a ``marginal_cost`` input
     representing its variable cost per unit of production.
@@ -31,11 +31,12 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
         slc_config = self.options["plant_config"]["system_level_control"]
 
-        # Commodity sell price — user-set in config
+        # Commodity sell price — user-set in config, can be scalar or time-varying
         default_sell_price = slc_config.get("commodity_sell_price", 0.0)
         self.add_input(
             "commodity_sell_price",
             val=default_sell_price,
+            shape=self.n_timesteps,
             units=f"USD/({self.commodity_units}*h)",
             desc=f"Sell price per unit of {self.commodity}",
         )
@@ -54,7 +55,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
-        sell_price = inputs["commodity_sell_price"][0]
+        sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
 
         # 1. Curtailable techs: full production (always profitable)
         demand = self._subtract_curtailable(inputs, outputs, demand)
@@ -72,15 +73,15 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         for set_point_name in self.dispatchable_set_point_names:
             outputs[set_point_name] = np.zeros(self.n_timesteps)
 
-        # Dispatch only if profitable
+        # Dispatch only where profitable (element-wise comparison)
         for idx in dispatch_order:
-            if marginal_costs[idx] >= sell_price:
-                break  # remaining techs are even more expensive
+            mc = marginal_costs[idx]
+            profitable = mc < sell_price  # boolean mask per timestep
 
             set_point_name = self.dispatchable_set_point_names[idx]
             rated_name = self.dispatchable_rated_names[idx]
             rated = inputs[rated_name]
 
-            dispatch = np.minimum(remaining, rated)
+            dispatch = np.where(profitable, np.minimum(remaining, rated), 0.0)
             outputs[set_point_name] = dispatch
             remaining -= dispatch

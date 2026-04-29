@@ -152,6 +152,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
+    marginal_cost: float = field(default=0.0)
 
 
 class CostModelBaseClass(om.ExplicitComponent):
@@ -164,6 +165,7 @@ class CostModelBaseClass(om.ExplicitComponent):
         - CapEx (float): capital expenditure costs in $
         - OpEx (float): annual fixed operating expenditure costs in $/year
         - VarOpEx (float): annual variable operating expenditure costs in $/year
+        - marginal_cost (float): marginal cost of production for dispatch decisions
 
     Discrete Outputs:
         - cost_year (int): dollar-year corresponding to CapEx and OpEx values.
@@ -190,6 +192,17 @@ class CostModelBaseClass(om.ExplicitComponent):
         # Define discrete outputs: cost_year
         self.add_discrete_output(
             "cost_year", val=self.config.cost_year, desc="Dollar year for costs"
+        )
+
+        # Marginal cost output for dispatch decisions
+        model_inputs = self.options["tech_config"].get("model_inputs", {})
+        shared = model_inputs.get("shared_parameters", {})
+        commodity_rate_units = shared.get("commodity_rate_units", "kW")
+        self.add_output(
+            "marginal_cost",
+            val=self.config.marginal_cost,
+            units=f"USD/({commodity_rate_units}*h)",
+            desc="Marginal cost of production for dispatch decisions",
         )
 
         # dt is seconds per timestep

@@ -628,22 +628,13 @@ class H2IntegrateModel:
                     f"system_level_controller.{tech_name}_rated_{commodity}_production",
                 )
 
-        # 4. For cost-aware strategies, connect marginal costs
-        #    Marginal cost defaults are set from tech_config; they can also be
-        #    connected from cost model outputs if available.
+        # 4. For cost-aware strategies, connect marginal costs from cost models
         if strategy_name in ("cost_minimization", "profit_maximization"):
-            technologies = self.technology_config.get("technologies", {})
             for tech_name in slc_config["dispatchable_techs"]:
-                tech_def = technologies.get(tech_name, {})
-                model_inputs = tech_def.get("model_inputs", {})
-                shared = model_inputs.get("shared_parameters", {})
-                cost_params = model_inputs.get("cost_parameters", {})
-                all_params = {**shared, **cost_params}
-
-                mc = all_params.get("marginal_cost", None)
-                if mc is not None:
-                    mc_input = f"system_level_controller.{tech_name}_marginal_cost"
-                    self.prob.set_val(mc_input, mc)
+                self.plant.connect(
+                    f"{tech_name}.marginal_cost",
+                    f"system_level_controller.{tech_name}_marginal_cost",
+                )
 
         ### Commented out for now; we'll need to determine how to treat demand
         ### components in the new SLC paradigm.
@@ -1625,7 +1616,7 @@ class H2IntegrateModel:
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
         if self.state < State.SETUP:
-            self.prob.setup()
+            self.setup()
 
         if self.state < State.RUN:
             # OpenMDAO will skip this step if it encounters an issue leading to silent failures
