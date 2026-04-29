@@ -1,0 +1,30 @@
+name: plant_config
+description: Wind + NG plant with profit-maximization control and diurnal pricing.
+sites:
+  site:
+    latitude: 30.6617
+    longitude: -101.7096
+    resources:
+      wind_resource:
+        resource_model: WTKNLRDeveloperAPIWindResource
+        resource_parameters:
+          resource_year: 2013
+technology_interconnections:
+  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+  - [wind, battery, electricity, cable]
+  - [wind, fin_combiner, electricity, cable]
+  - [battery, fin_combiner, electricity, cable]
+  - [natural_gas_plant, fin_combiner, electricity, cable]
+  - [fin_combiner, electrical_load_demand, electricity, cable]
+resource_to_tech_connections:
+  - [site.wind_resource, wind, wind_resource_data]
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+system_level_control:
+  control_strategy: profit_maximization
+  commodity_sell_price: 0.06  # $/kWh default; overridden in run script
+  solver_name: gauss_seidel
+  max_iter: 20
