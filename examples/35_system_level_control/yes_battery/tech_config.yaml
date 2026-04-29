@@ -70,18 +70,11 @@ technologies:
         commodity: electricity
         commodity_rate_units: kW
         demand_profile: 30000
-  combiner:
-    performance_model:
-      model: GenericCombinerPerformanceModel
-    model_inputs:
-      performance_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
   battery:
     performance_model:
-      model: PySAMBatteryPerformanceModel
+      model: StoragePerformanceModel
     cost_model:
-      model: ATBBatteryCostModel
+      model: GenericStorageCostModel
     model_inputs:
       shared_parameters:
         commodity: electricity
@@ -92,12 +85,12 @@ technologies:
         max_soc_fraction: 1.0
         min_soc_fraction: 0.1
       performance_parameters:
-        chemistry: LFPGraphite
+        round_trip_efficiency: 0.90
         demand_profile: 50000  # kW, required by storage base config
       cost_parameters:
         cost_year: 2022
-        energy_capex: 310  # $/kWh
-        power_capex: 311  # $/kW
+        capacity_capex: 310  # $/kWh
+        charge_capex: 311  # $/kW
         opex_fraction: 0.025
   fin_combiner:
     performance_model:
