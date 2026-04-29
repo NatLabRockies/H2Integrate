@@ -590,6 +590,15 @@ class H2IntegrateModel:
                     f"{tech_name}.{commodity}_set_point",
                 )
 
+        ### Commented out for now; we'll need to determine how to treat demand
+        ### components in the new SLC paradigm.
+        # # Connect demand profile to the controller
+        # demand_tech = slc_config["demand_tech"]
+        # self.plant.connect(
+        #     f"{demand_tech}.{commodity}_demand",
+        #     f"system_level_controller.{commodity}_demand",
+        # )
+
     def create_technology_models(self):
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
