@@ -311,3 +311,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
         outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)

@@ -51,11 +51,14 @@ class SystemLevelControl(om.ExplicitComponent):
         )
 
         # ---- Add OpenMDAO inputs / outputs per tech category ----
-        # Curtailable techs: read-only (no set_point output, since these
-        # produce based on resource availability, not a set_point)
+        # Curtailable techs: read output + rated production, write set_point
         self.curtailable_input_names = []
+        self.curtailable_output_names = []
+        self.curtailable_rated_names = []
         for tech_name in self.curtailable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
+            out_name = f"{tech_name}_{self.commodity}_set_point"
+            rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
                 val=0.0,
@@ -63,23 +66,40 @@ class SystemLevelControl(om.ExplicitComponent):
                 units=self.commodity_units,
                 desc=f"{self.commodity} output from {tech_name}",
             )
+            self.add_input(
+                rated_name,
+                val=0.0,
+                units=self.commodity_units,
+                desc=f"Rated {self.commodity} production for {tech_name}",
+            )
+            self.add_output(
+                out_name,
+                val=0.0,
+                shape=self.n_timesteps,
+                units=self.commodity_units,
+                desc=f"Set point for {tech_name} {self.commodity} curtailment",
+            )
             self.curtailable_input_names.append(in_name)
+            self.curtailable_output_names.append(out_name)
+            self.curtailable_rated_names.append(rated_name)
 
         # Compute a reasonable initial set_point for dispatchable techs
         n_dispatchable = len(self.dispatchable_techs)
         if n_dispatchable > 0:
             if np.isscalar(demand_profile):
-                initial_sp = demand_profile / n_dispatchable
+                initial_set_point = demand_profile / n_dispatchable
             else:
-                initial_sp = np.array(demand_profile) / n_dispatchable
+                initial_set_point = np.array(demand_profile) / n_dispatchable
         else:
-            initial_sp = 0.0
+            initial_set_point = 0.0
 
         self.dispatchable_input_names = []
         self.dispatchable_output_names = []
+        self.dispatchable_rated_names = []
         for tech_name in self.dispatchable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
             out_name = f"{tech_name}_{self.commodity}_set_point"
+            rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
                 val=0.0,
@@ -87,15 +107,22 @@ class SystemLevelControl(om.ExplicitComponent):
                 units=self.commodity_units,
                 desc=f"{self.commodity} output from {tech_name}",
             )
+            self.add_input(
+                rated_name,
+                val=0.0,
+                units=self.commodity_units,
+                desc=f"Rated {self.commodity} production for {tech_name}",
+            )
             self.add_output(
                 out_name,
-                val=initial_sp,
+                val=initial_set_point,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
             )
             self.dispatchable_input_names.append(in_name)
             self.dispatchable_output_names.append(out_name)
+            self.dispatchable_rated_names.append(rated_name)
 
         self.storage_input_names = []
         self.storage_output_names = []
@@ -122,9 +149,15 @@ class SystemLevelControl(om.ExplicitComponent):
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
 
-        # 1. Subtract curtailable production from demand
-        for in_name in self.curtailable_input_names:
-            demand -= inputs[in_name]
+        # 1. Curtailable techs: set_point = rated production (no curtailment)
+        for in_name, out_name, rated_name in zip(
+            self.curtailable_input_names,
+            self.curtailable_output_names,
+            self.curtailable_rated_names,
+        ):
+            curtailable_output = inputs[in_name]
+            outputs[out_name] = inputs[rated_name] * np.ones(self.n_timesteps)
+            demand -= curtailable_output
 
         # Remaining demand after curtailable production
         remaining = np.maximum(demand, 0.0)

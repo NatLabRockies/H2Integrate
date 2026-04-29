@@ -215,3 +215,6 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["annual_oxygen_produced"] = H2_Results["Performance Schedules"][
             "Annual O2 Production [kg/year]"
         ]
+
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)

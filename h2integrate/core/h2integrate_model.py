@@ -570,12 +570,19 @@ class H2IntegrateModel:
         # 3. Connect the controller's inputs/outputs to technology models
         commodity = slc_config["commodity"]
 
-        # Curtailable techs: read their output but don't write a set_point
-        # (curtailable sources like wind produce based on resource, not a set_point)
+        # Curtailable techs: read their output and write set_point
         for tech_name in slc_config["curtailable_techs"]:
             self.plant.connect(
                 f"{tech_name}.{commodity}_out",
                 f"system_level_controller.{tech_name}_{commodity}_out",
+            )
+            self.plant.connect(
+                f"{tech_name}.rated_{commodity}_production",
+                f"system_level_controller.{tech_name}_rated_{commodity}_production",
+            )
+            self.plant.connect(
+                f"system_level_controller.{tech_name}_{commodity}_set_point",
+                f"{tech_name}.{commodity}_set_point",
             )
 
         # Dispatchable and storage techs: read output and write set_point
@@ -589,6 +596,13 @@ class H2IntegrateModel:
                     f"system_level_controller.{tech_name}_{commodity}_set_point",
                     f"{tech_name}.{commodity}_set_point",
                 )
+
+        # Dispatchable techs: also connect rated production
+        for tech_name in slc_config["dispatchable_techs"]:
+            self.plant.connect(
+                f"{tech_name}.rated_{commodity}_production",
+                f"system_level_controller.{tech_name}_rated_{commodity}_production",
+            )
 
         ### Commented out for now; we'll need to determine how to treat demand
         ### components in the new SLC paradigm.
