@@ -69,7 +69,7 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        demand_profile: 50000
+        demand_profile: 30000
   combiner:
     performance_model:
       model: GenericCombinerPerformanceModel
