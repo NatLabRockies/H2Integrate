@@ -14,7 +14,7 @@ def test_slc_no_battery(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("plant.wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
@@ -31,7 +31,7 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("plant.wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
