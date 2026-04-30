@@ -166,13 +166,21 @@ class FeedstockCostModel(CostModelBaseClass):
         self.add_output("replacement_schedule", val=0.0, shape=plant_life, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # Capacity factor is the total amount consumed / the total amount available
+        """Calculates the following outputs:
+
+        - ``capacity_factor``: commodity_consumed / commodity_out
+        - ``total_commodity_consumed``: sum of commodity_consumed divided by number
+          of hours simulated.
+        - ``anual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
+        - ``rated_commodity_production``: maximum input ``commodity_out``.
+        - ``CapEx``: :py:attr:`FeedstockCostConfig.start_up_cost`.
+        - ``OpEx``: :py:attr:`FeedstockCostConfig.annual_cost`.
+        - ``VarOpEx``: sum of (:py:attr:`FeedstockCostConfig.price` * input ``commodity_consumed``).
+        """
         outputs["capacity_factor"] = (
             inputs[f"{self.config.commodity}_consumed"].sum()
             / inputs[f"{self.config.commodity}_out"].sum()
         )
-
-        # Sum the amount consumed
         outputs[f"total_{self.config.commodity}_consumed"] = inputs[
             f"{self.config.commodity}_consumed"
         ].sum() * (self.dt / 3600)
@@ -186,7 +194,6 @@ class FeedstockCostModel(CostModelBaseClass):
             f"{self.config.commodity}_out"
         ].max()
 
-        # Calculate costs
         price = inputs["price"]
         hourly_consumption = inputs[f"{self.config.commodity}_consumed"]
         cost_per_year = sum(price * hourly_consumption)
