@@ -37,6 +37,15 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
 
+    with subtests.test("lcoe"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)"),
+                rel=1e-6,
+            )
+            == 0.10902004
+        )
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize(

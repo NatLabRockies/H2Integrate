@@ -660,10 +660,12 @@ class H2IntegrateModel:
                         f"{tech_name}.{commodity}_out",
                         f"system_level_controller.{tech_name}_{commodity}_out",
                     )
+
                     self.plant.connect(
                         f"{tech_name}.rated_{commodity}_production",
                         f"system_level_controller.{tech_name}_rated_{commodity}_production",
                     )
+
                     self.plant.connect(
                         f"system_level_controller.{tech_name}_{commodity}_set_point",
                         f"{tech_name}.{commodity}_set_point",

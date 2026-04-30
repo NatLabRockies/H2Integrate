@@ -28,8 +28,17 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         # 3. Dispatchable techs: equal share of remaining demand
         remaining = np.maximum(demand, 0.0)
-        n_dispatchable = len(self.dispatchable_set_point_names)
+        n_dispatchable = len(
+            [
+                s
+                for s in self.dispatchable_set_point_names
+                if self.commodity in self._get_commodity_for_tech(s)
+            ]
+        )
         if n_dispatchable > 0:
             share = remaining / n_dispatchable
-            for set_point_name in self.dispatchable_set_point_names:
-                outputs[set_point_name] = share
+            for set_point_name, commodity in zip(
+                self.dispatchable_set_point_names, self.dispatchable_commodity_names
+            ):
+                if commodity == self.commodity:
+                    outputs[set_point_name] = share

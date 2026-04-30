@@ -86,11 +86,11 @@ finance_parameters:
       commodity_stream: elec_combiner
       finance_groups: [profast_lco]
       technologies: [wind, battery, natural_gas_plant, ng_feedstock]
-    hydrogen:
-      commodity: hydrogen
-      commodity_stream: h2_combiner
-      finance_groups: [profast_lco]
-      technologies: [wind, battery, natural_gas_plant, ng_feedstock, electrolyzer, h2_storage]
+    # hydrogen:
+    #   commodity: hydrogen
+    #   commodity_stream: h2_combiner
+    #   finance_groups: [profast_lco]
+    #   technologies: [wind, battery, natural_gas_plant, ng_feedstock, electrolyzer, h2_storage]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022

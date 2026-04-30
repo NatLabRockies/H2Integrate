@@ -378,7 +378,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             [
                 s
                 for s in self.storage_set_point_names
-                if self.techs_to_commodities[s] == self.commodity
+                if self.commodity in self._get_commodity_for_tech(s)
             ]
         )
         if n_storage > 0:
@@ -390,5 +390,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     outputs[set_point_name] = storage_share
 
         for in_name in self.storage_input_names:
-            demand -= inputs[in_name]
+            if self.commodity in self._get_commodity_for_tech(in_name.split("_out")[0]):
+                demand -= inputs[in_name]
+
         return demand
+
+    def _get_commodity_for_tech(self, tech_name):
+        tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
+        # if len(tech_commodities)==1:
+        #     return tech_commodities[0]
+        # else:
+        return tech_commodities
