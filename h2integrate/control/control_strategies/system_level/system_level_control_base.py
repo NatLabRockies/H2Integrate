@@ -53,9 +53,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
             desc=f"Demand profile of {self.commodity}",
         )
 
-        self.techs_to_commodities = self._create_sources_to_commodities(
-            self.options["plant_config"].get("technology_interconnections")
-        )
+        self.techs_to_commodities = slc_config["tech_to_commodity"]
+        # self._create_sources_to_commodities(
+        #     self.options["plant_config"].get("technology_interconnections")
+        # )
         self.multi_commodity = (
             True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
         )
@@ -231,7 +232,13 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     def _setup_dispatchable_techs(self, demand_profile):
         """Create I/O for dispatchable technologies."""
-        n_dispatchable = len(self.dispatchable_techs)
+        n_dispatchable = len(
+            [
+                s
+                for s in self.dispatchable_techs
+                if self.commodity in self._get_commodity_for_tech(s)
+            ]
+        )
         if n_dispatchable > 0:
             if np.isscalar(demand_profile):
                 initial_set_point = demand_profile / n_dispatchable
@@ -375,11 +382,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns the updated demand array.
         """
         n_storage = len(
-            [
-                s
-                for s in self.storage_set_point_names
-                if self.commodity in self._get_commodity_for_tech(s)
-            ]
+            [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
         )
         if n_storage > 0:
             storage_share = demand / n_storage

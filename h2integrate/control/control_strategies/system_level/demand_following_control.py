@@ -31,7 +31,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         n_dispatchable = len(
             [
                 s
-                for s in self.dispatchable_set_point_names
+                for s in self.dispatchable_techs
                 if self.commodity in self._get_commodity_for_tech(s)
             ]
         )

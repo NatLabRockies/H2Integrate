@@ -557,7 +557,7 @@ class H2IntegrateModel:
 
         # Classify technologies based on their output commodity (or commodities)
         G = nx.DiGraph()
-        for connection in tech_interconnections:
+        for connection in self.plant_config["technology_interconnections"]:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
