@@ -52,61 +52,58 @@ class SystemLevelControlBase(om.ExplicitComponent):
             desc=f"Demand profile of {self.commodity}",
         )
 
-        self._setup_curtailable_techs()
-        self._setup_dispatchable_techs(demand_profile)
-        self._setup_storage_techs()
+        self._setup_tech_category("curtailable", self.curtailable_techs)
+        self._setup_tech_category("dispatchable", self.dispatchable_techs, demand_profile)
+        self._setup_tech_category("storage", self.storage_techs)
 
-    def _setup_curtailable_techs(self):
-        """Create I/O for curtailable technologies."""
-        self.curtailable_input_names = []
-        self.curtailable_set_point_names = []
-        self.curtailable_rated_names = []
-        for tech_name in self.curtailable_techs:
-            in_name = f"{tech_name}_{self.commodity}_out"
-            set_point_name = f"{tech_name}_{self.commodity}_set_point"
-            rated_name = f"{tech_name}_rated_{self.commodity}_production"
-            self.add_input(
-                in_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=self.commodity_units,
-                desc=f"{self.commodity} output from {tech_name}",
-            )
-            self.add_input(
-                rated_name,
-                val=0.0,
-                units=self.commodity_units,
-                desc=f"Rated {self.commodity} production for {tech_name}",
-            )
-            self.add_output(
-                set_point_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=self.commodity_units,
-                desc=f"Set point for {tech_name} {self.commodity} curtailment",
-            )
-            self.curtailable_input_names.append(in_name)
-            self.curtailable_set_point_names.append(set_point_name)
-            self.curtailable_rated_names.append(rated_name)
+    def _setup_tech_category(self, category, tech_names, demand_profile=None):
+        """Create OpenMDAO I/O variables for a category of technologies.
 
-    def _setup_dispatchable_techs(self, demand_profile):
-        """Create I/O for dispatchable technologies."""
-        n_dispatchable = len(self.dispatchable_techs)
-        if n_dispatchable > 0:
+        For each technology in the category, this method creates three variables:
+
+        - ``{tech}_{commodity}_out``: an input for the technology's actual commodity
+          output at each timestep (shape ``n_timesteps``).
+        - ``{tech}_rated_{commodity}_production``: an input for the technology's
+          rated (maximum) production capacity (scalar).
+        - ``{tech}_{commodity}_set_point``: an output for the dispatch set-point
+          sent back to the technology at each timestep (shape ``n_timesteps``).
+
+        The variable names are collected into three lists stored as instance
+        attributes named ``{category}_input_names``,
+        ``{category}_set_point_names``, and ``{category}_rated_names``.
+
+        Args:
+            category: Technology classification label (e.g. ``"curtailable"``,
+                ``"dispatchable"``, ``"storage"``).  Used to name the instance
+                attribute lists and the set-point description.
+            tech_names: Iterable of technology name strings belonging to this
+                category.
+            demand_profile: Optional demand profile used to initialize the
+                set-point output for dispatchable technologies.  When provided,
+                the initial set-point is ``demand_profile / n_techs`` so that
+                the solver starts from a reasonable guess.  Ignored (or
+                ``None``) for curtailable and storage categories, whose
+                set-points default to zero.
+        """
+        # Compute initial set-point value
+        n_techs = len(tech_names)
+        if demand_profile is not None and n_techs > 0:
             if np.isscalar(demand_profile):
-                initial_set_point = demand_profile / n_dispatchable
+                initial_set_point = demand_profile / n_techs
             else:
-                initial_set_point = np.array(demand_profile) / n_dispatchable
+                initial_set_point = np.array(demand_profile) / n_techs
         else:
             initial_set_point = 0.0
 
-        self.dispatchable_input_names = []
-        self.dispatchable_set_point_names = []
-        self.dispatchable_rated_names = []
-        for tech_name in self.dispatchable_techs:
+        input_names = []
+        set_point_names = []
+        rated_names = []
+
+        for tech_name in tech_names:
             in_name = f"{tech_name}_{self.commodity}_out"
             set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
+
             self.add_input(
                 in_name,
                 val=0.0,
@@ -125,44 +122,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 val=initial_set_point,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
-                desc=f"Set point for {tech_name} {self.commodity} production",
+                desc=f"{category} set point for {tech_name} {self.commodity}",
             )
-            self.dispatchable_input_names.append(in_name)
-            self.dispatchable_set_point_names.append(set_point_name)
-            self.dispatchable_rated_names.append(rated_name)
 
-    def _setup_storage_techs(self):
-        """Create I/O for storage technologies."""
-        self.storage_input_names = []
-        self.storage_set_point_names = []
-        self.storage_rated_names = []
-        for tech_name in self.storage_techs:
-            in_name = f"{tech_name}_{self.commodity}_out"
-            set_point_name = f"{tech_name}_{self.commodity}_set_point"
-            rated_name = f"{tech_name}_rated_{self.commodity}_production"
-            self.add_input(
-                in_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=self.commodity_units,
-                desc=f"{self.commodity} output from {tech_name}",
-            )
-            self.add_input(
-                rated_name,
-                val=0.0,
-                units=self.commodity_units,
-                desc=f"Rated {self.commodity} production for {tech_name}",
-            )
-            self.add_output(
-                set_point_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=self.commodity_units,
-                desc=f"Set point for {tech_name} {self.commodity} production",
-            )
-            self.storage_input_names.append(in_name)
-            self.storage_set_point_names.append(set_point_name)
-            self.storage_rated_names.append(rated_name)
+            input_names.append(in_name)
+            set_point_names.append(set_point_name)
+            rated_names.append(rated_name)
+
+        setattr(self, f"{category}_input_names", input_names)
+        setattr(self, f"{category}_set_point_names", set_point_names)
+        setattr(self, f"{category}_rated_names", rated_names)
 
     def _subtract_curtailable(self, inputs, outputs, demand):
         """Apply curtailable techs: set_point = rated, subtract output from demand.
