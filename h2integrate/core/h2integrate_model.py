@@ -483,6 +483,7 @@ class H2IntegrateModel:
         commodity = None
         demand_tech = None
         commodity_units = None
+        demand_commodity = None
         for tech_name, tech_def in technologies.items():
             model_name = tech_def.get("performance_model", {}).get("model", "")
             if "DemandComponent" not in model_name:
@@ -503,6 +504,23 @@ class H2IntegrateModel:
             commodity_units = all_params.get("commodity_rate_units", None)
             demand_profile = all_params.get("demand_profile", 0.0)
             demand_tech = tech_name
+            # Check that the demand tech is in the technology_interconnections
+            tech_interconnections = self.plant_config["technology_interconnections"]
+            demand_is_source_connection = [
+                tech_connection
+                for tech_connection in tech_interconnections
+                if tech_connection[0] == demand_tech
+            ]
+            demand_is_destination_connection = [
+                tech_connection
+                for tech_connection in tech_interconnections
+                if tech_connection[1] == demand_tech
+            ]
+            if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
+                # demand is not in tech interconnections
+                demand_tech = None
+                demand_commodity = None
+                commodity_units = None
 
         # Classify technologies using pre-computed classifiers
         curtailable_techs = []
@@ -521,6 +539,7 @@ class H2IntegrateModel:
         slc_config["commodity_units"] = commodity_units
         slc_config["demand_tech"] = demand_tech
         slc_config["demand_profile"] = demand_profile
+        slc_config["demand_commodity"] = demand_commodity
         slc_config["curtailable_techs"] = curtailable_techs
         slc_config["dispatchable_techs"] = dispatchable_techs
         slc_config["storage_techs"] = storage_techs
@@ -560,6 +579,7 @@ class H2IntegrateModel:
                 f"Supported: {list(solver_map.keys())}"
             )
         solver = solver_cls()
+        # TODO: make a config for the below defaults
         solver.options["maxiter"] = slc_config.get("max_iter", 20)
         solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
         solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
