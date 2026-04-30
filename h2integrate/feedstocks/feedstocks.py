@@ -100,6 +100,7 @@ class FeedstockCostModel(CostModelBaseClass):
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        plant_life *= 1
 
         # Set cost outputs
         super().setup()
@@ -138,15 +139,12 @@ class FeedstockCostModel(CostModelBaseClass):
             val=0.0,
             units=self.config.commodity_amount_units,
         )
-
         self.add_output(
             f"annual_{self.config.commodity}_consumed",
             val=0.0,
             shape=self.plant_life,
             units=f"({self.config.commodity_amount_units})/year",
         )
-
-        # Capacity factor is feedstock_consumed/max_feedstock_available
         self.add_output(
             "capacity_factor",
             val=0.0,
@@ -154,16 +152,21 @@ class FeedstockCostModel(CostModelBaseClass):
             units="unitless",
             desc="Capacity factor",
         )
+        self.add_output(
+            "replacement_schedule",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Lifetime estimate of item replacements as a fraction of capacity",
+        )
 
-        # The should be equal to the commodity_capacity input of the FeedstockPerformanceModel
+        # TODO: Update to the commodity_capacity input of the FeedstockPerformanceModel
+        # NOTE: Should I set this to rated_capacity if it's available?
         self.add_output(
             f"rated_{self.config.commodity}_production",
             val=0,
             units=self.config.commodity_rate_units,
         )
-
-        # lifetime estimate of item replacements, represented as a fraction of the capacity.
-        self.add_output("replacement_schedule", val=0.0, shape=plant_life, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Calculates the following outputs:
