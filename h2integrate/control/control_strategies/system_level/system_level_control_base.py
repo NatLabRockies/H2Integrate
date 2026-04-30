@@ -56,11 +56,32 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.techs_to_commodities = self._create_sources_to_commodities(
             self.options["plant_config"].get("technology_interconnections")
         )
+        self.multi_commodity = (
+            True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
+        )
+
         self.commodities_to_units = {self.commodity: self.commodity_units}
         self.commodities_to_ref_var = {}
         self._setup_curtailable_techs()
         self._setup_dispatchable_techs(demand_profile)
         self._setup_storage_techs()
+
+    def _define_upstream_commodities(self):
+        # ESG TODO: finish the logic here
+        # The point is to only look at techs and commodities that are upstream
+        # of the demand tech
+        # Aka - if someone is trying to set electricity demand in a electricity/hydrogen system
+        # Then we dont care about the hydrogen parts
+
+        # techs_to_connect = set(
+        #     self.curtailable_techs + self.dispatchable_techs + self.storage_techs
+        # )
+        # non_demand_commodities = set([
+        # e[-1] for e in self.techs_to_commodities if e[-1]!=self.commodity])
+
+        # upstream_commodities_components = {}
+        # demand_commodity_components = {}
+        pass
 
     def _create_sources_to_commodities(self, tech_interconnections):
         techs_to_connect = set(
@@ -84,6 +105,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         techs_to_commodities = {
             (e[0], e[-1]) for e in sources_to_commodities if e[0] in techs_to_connect
         }
+
+        self.graph_connections = G
+
         return techs_to_commodities
 
     def _setup_commodity_for_given_units(
@@ -332,13 +356,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Returns the updated demand array.
         """
-        for in_name, set_point_name, rated_name in zip(
+        for in_name, set_point_name, rated_name, commodity in zip(
             self.curtailable_input_names,
             self.curtailable_set_point_names,
             self.curtailable_rated_names,
+            self.curtailable_commodity_names,
         ):
-            outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
-            demand -= inputs[in_name]
+            if commodity == self.commodity:
+                outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
+                demand -= inputs[in_name]
         return demand
 
     def _dispatch_storage(self, inputs, outputs, demand):
