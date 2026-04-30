@@ -14,7 +14,7 @@ The performance model limits electricity production by the rated capacity and an
 | Name | Shape | Units | Description |
 | --- | --- | --- | --- |
 | `system_capacity` | scalar | kW | Rated electrical capacity. |
-| `electricity_demand` | array[n_timesteps] | kW | Optional demand profile; defaults to rated capacity. |
+| `electricity_set_point` | array[n_timesteps] | kW | Optional set point profile; defaults to rated capacity. |
 
 **Outputs**
 | Name | Shape | Units | Description |

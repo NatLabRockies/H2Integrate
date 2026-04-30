@@ -667,7 +667,8 @@ def test_check_inputs(subtests):
             with pytest.raises(AttributeError) as excinfo:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
                 expected_error = (
-                    "The parameter(s) ['n_control_window', 'system_commodity_interface_limit'] "
+                    "The parameter(s) ['n_control_window_hours', "
+                    "'system_commodity_interface_limit'] "
                     "found in shared_parameters but should be in control_parameters for "
                     f"the 'battery' section of {tech_config_fpath}"
                 )
@@ -688,7 +689,7 @@ def test_check_inputs(subtests):
                     " contained in the following sections for the 'battery' section of "
                     f"{tech_config_fpath}:"
                     "\n\tcontrol_parameters should contain"
-                    " ['n_control_window', 'system_commodity_interface_limit']"
+                    " ['n_control_window_hours', 'system_commodity_interface_limit']"
                     "\n\tcost_parameters should contain ['opex_fraction]"
                 )
                 assert expected_error == str(excinfo.value)
@@ -701,9 +702,9 @@ def test_check_inputs(subtests):
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
-    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
-        "shared_parameters"
-    ].pop("n_control_window")
+    control_parameters["n_control_window_hours"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("n_control_window_hours")
     control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
         "model_inputs"
     ]["shared_parameters"].pop("system_commodity_interface_limit")
@@ -744,9 +745,9 @@ def test_check_inputs(subtests):
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
-    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
-        "shared_parameters"
-    ].pop("n_control_window")
+    control_parameters["n_control_window_hours"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("n_control_window_hours")
     control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
         "model_inputs"
     ]["shared_parameters"].pop("system_commodity_interface_limit")

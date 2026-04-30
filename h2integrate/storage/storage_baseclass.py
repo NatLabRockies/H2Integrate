@@ -321,7 +321,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         storage_capacity: float,
         sim_start_index: int = 0,
     ):
-        """Run the storage model over a control window of ``n_control_window`` timesteps.
+        """Run the storage model over a control window of ``n_control_window_hours`` length of time.
 
         Iterates through ``storage_dispatch_commands`` one timestep at a time.
         A negative command requests charging; a positive command requests
@@ -348,7 +348,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             storage_dispatch_commands (array_like[float]):
                 Dispatch set-points for each timestep in ``commodity_rate_units``.
                 Negative values command charging; positive values command
-                discharging.  Length must equal ``config.n_control_window``.
+                discharging.  Length must equal ``config.n_control_window_hours``.
             charge_rate (float):
                 Maximum commodity input rate to storage in
                 ``commodity_rate_units`` (before charge efficiency is applied).

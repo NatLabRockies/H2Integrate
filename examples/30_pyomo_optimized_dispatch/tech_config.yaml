@@ -66,7 +66,7 @@ technologies:
         commodity_met_value: 0.1  # in $/kW, penalty for not meeting the desired load demand
         cost_per_production: 0.0  # in $/kW, cost to use the incoming produced commodity (i.e. electricity from wind)
         time_weighting_factor: 0.995  # This parameter discounts each subsequent time step incrementally in the future in the horizon window by this amount
-        n_control_window: 24  # in timesteps (currently hours), The length of time that the control is applied to in the rolling window optimization
+        n_control_window_hours: 24  # in hours. The length of time that the control is applied to in the rolling window optimization
         system_commodity_interface_limit: 1e12
   elec_combiner:
     performance_model:

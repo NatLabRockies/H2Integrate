@@ -109,9 +109,9 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             desc="Storage capacity",
         )
 
-        self.max_soc_fraction = [0.0] * self.config.n_control_window
-        self.max_discharge_fraction = [0.0] * self.config.n_control_window
-        self._fixed_dispatch = [0.0] * self.config.n_control_window
+        self.max_soc_fraction = [0.0] * self.config.n_control_window_hours
+        self.max_discharge_fraction = [0.0] * self.config.n_control_window_hours
+        self._fixed_dispatch = [0.0] * self.config.n_control_window_hours
 
     def pyomo_setup(self, discrete_inputs):
         """Create the Pyomo model, attach per-tech Blocks, and return dispatch solver.
@@ -124,7 +124,7 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
 
-        index_set = pyomo.Set(initialize=range(self.config.n_control_window))
+        index_set = pyomo.Set(initialize=range(self.config.n_control_window_hours))
 
         # run each pyomo rule set up function for each technology
         for connection in self.dispatch_connections:
@@ -158,7 +158,7 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             Execute rolling-window dispatch for the controlled technology.
 
             Iterates over the full simulation period in chunks of size
-            `self.config.n_control_window`, (re)configures per-window dispatch
+            `self.config.n_control_window_hours`, (re)configures per-window dispatch
             parameters, invokes a heuristic control strategy to set fixed
             dispatch decisions, and then calls the provided performance_model
             over each window to obtain storage output and SOC trajectories.
@@ -169,7 +169,7 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
                     window. Signature must accept (storage_dispatch_commands,
                     **performance_model_kwargs, sim_start_index=<int>)
                     and return (storage_out_window, soc_window) arrays of length
-                    n_control_window.
+                    n_control_window_hours.
                 performance_model_kwargs (dict):
                     Extra keyword arguments forwarded unchanged to performance_model
                     at window (e.g., efficiencies, timestep size).
@@ -201,7 +201,9 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             soc = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
-            window_start_indices = list(range(0, self.n_timesteps, self.config.n_control_window))
+            window_start_indices = list(
+                range(0, self.n_timesteps, self.config.n_control_window_hours)
+            )
 
             self.initialize_parameters(inputs)
 
@@ -209,9 +211,11 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             for t in window_start_indices:
                 # get the inputs over the current control window
                 commodity_in = inputs[self.config.commodity + "_in"][
-                    t : t + self.config.n_control_window
+                    t : t + self.config.n_control_window_hours
                 ]
-                demand_in = inputs[f"{commodity_name}_demand"][t : t + self.config.n_control_window]
+                demand_in = inputs[f"{commodity_name}_demand"][
+                    t : t + self.config.n_control_window_hours
+                ]
 
                 # Update time series parameters for the heuristic method
                 self.update_time_series_parameters()
@@ -232,7 +236,7 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
                 )
 
                 # get a list of all time indices belonging to the current control window
-                window_indices = list(range(t, t + self.config.n_control_window))
+                window_indices = list(range(t, t + self.config.n_control_window_hours))
 
                 # loop over all time steps in the current control window
                 for j in window_indices:
