@@ -117,7 +117,7 @@ technologies:
     performance_model:
       model: StoragePerformanceModel
     cost_model:
-      model: LinedRockCavernStorageCostModel
+      model: GenericStorageCostModel
     # control_strategy:
     #   model: DemandOpenLoopStorageController
     model_inputs:
@@ -133,7 +133,12 @@ technologies:
         max_discharge_rate: 100.0  # kg/time step
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)
-        # demand_profile: 500.0  # constant demand of 5000 kg per hour (see commodity_rate_units)
+        demand_profile: 500.0  # constant demand of 5000 kg per hour (see commodity_rate_units)
+      cost_parameters:
+        cost_year: 2022
+        capacity_capex: 100  # $/kg
+        charge_capex: 100  # $/kg/h
+        opex_fraction: 0.025
   h2_combiner:
     performance_model:
       model: GenericCombinerPerformanceModel

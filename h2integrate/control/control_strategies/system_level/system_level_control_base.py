@@ -57,6 +57,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.options["plant_config"].get("technology_interconnections")
         )
         self.commodities_to_units = {self.commodity: self.commodity_units}
+        self.commodities_to_ref_var = {}
         self._setup_curtailable_techs()
         self._setup_dispatchable_techs(demand_profile)
         self._setup_storage_techs()
@@ -85,6 +86,71 @@ class SystemLevelControlBase(om.ExplicitComponent):
         }
         return techs_to_commodities
 
+    def _setup_commodity_for_given_units(
+        self, tech_name, commodity, commodity_units, add_in_name=True, set_point0=0.0
+    ):
+        in_name = f"{tech_name}_{commodity}_out"
+        set_point_name = f"{tech_name}_{commodity}_set_point"
+        rated_name = f"{tech_name}_rated_{commodity}_production"
+
+        if add_in_name:
+            self.add_input(
+                in_name,
+                val=0.0,
+                shape=self.n_timesteps,
+                units=commodity_units,
+                desc=f"{commodity} output from {tech_name}",
+            )
+        self.add_input(
+            rated_name,
+            val=0.0,
+            units=commodity_units,
+            desc=f"Rated {commodity} production for {tech_name}",
+        )
+        self.add_output(
+            set_point_name,
+            val=set_point0,
+            shape=self.n_timesteps,
+            units=commodity_units,
+            desc=f"Set point for {tech_name} {commodity} curtailment",
+        )
+
+        return in_name, set_point_name, rated_name
+
+    def _setup_commodity_for_copy_units(
+        self, tech_name, commodity, commodity_reference_var, add_in_name=True, set_point0=0.0
+    ):
+        in_name = f"{tech_name}_{commodity}_out"
+        set_point_name = f"{tech_name}_{commodity}_set_point"
+        rated_name = f"{tech_name}_rated_{commodity}_production"
+
+        if add_in_name:
+            self.add_input(
+                in_name,
+                val=0.0,
+                shape=self.n_timesteps,
+                units=None,
+                copy_units=commodity_reference_var,
+                desc=f"{commodity} output from {tech_name}",
+            )
+        self.add_input(
+            rated_name,
+            val=0.0,
+            units=None,
+            copy_units=commodity_reference_var,
+            desc=f"Rated {commodity} production for {tech_name}",
+        )
+        self.add_output(
+            set_point_name,
+            val=set_point0,
+            shape=self.n_timesteps,
+            units=None,
+            copy_units=commodity_reference_var,
+            desc=f"Set point for {tech_name} {commodity} curtailment",
+        )
+
+        return in_name, set_point_name, rated_name
+
     def _setup_curtailable_techs(self):
         """Create I/O for curtailable technologies."""
         self.curtailable_input_names = []
@@ -94,22 +160,21 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for tech_name in self.curtailable_techs:
             tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
             for commodity in tech_commodities:
-                in_name = f"{tech_name}_{commodity}_out"
-                set_point_name = f"{tech_name}_{commodity}_set_point"
-                rated_name = f"{tech_name}_rated_{commodity}_production"
-
                 # Determine units of the commodity
                 if commodity in self.commodities_to_units:
-                    commodity_units = self.commodities_to_units[commodity]
-                    self.add_input(
-                        in_name,
-                        val=0.0,
-                        shape=self.n_timesteps,
-                        units=commodity_units,
-                        desc=f"{commodity} output from {tech_name}",
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                        tech_name, commodity, self.commodities_to_units[commodity], add_in_name=True
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                        tech_name,
+                        commodity,
+                        self.commodities_to_ref_var[commodity],
+                        add_in_name=True,
                     )
                 else:
-                    # commodity units not yet defined, so get it
+                    # commodity units not yet defined
+                    in_name = f"{tech_name}_{commodity}_out"
                     meta_data = self.add_input(
                         in_name,
                         val=0.0,
@@ -118,21 +183,23 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         units_by_conn=True,
                         desc=f"{commodity} output from {tech_name}",
                     )
-                    self.commodities_to_units.update({commodity: meta_data["units"]})
+                    if meta_data["units"] is None:
+                        self.commodities_to_ref_var[commodity] = in_name
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_ref_var[commodity],
+                            add_in_name=False,
+                        )
+                    else:
+                        self.commodities_to_units.update({commodity: meta_data["units"]})
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_units[commodity],
+                            add_in_name=False,
+                        )
 
-                self.add_input(
-                    rated_name,
-                    val=0.0,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Rated {commodity} production for {tech_name}",
-                )
-                self.add_output(
-                    set_point_name,
-                    val=0.0,
-                    shape=self.n_timesteps,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Set point for {tech_name} {commodity} curtailment",
-                )
                 self.curtailable_commodity_names.append(commodity)
                 self.curtailable_input_names.append(in_name)
                 self.curtailable_set_point_names.append(set_point_name)
@@ -156,20 +223,25 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for tech_name in self.dispatchable_techs:
             tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
             for commodity in tech_commodities:
-                in_name = f"{tech_name}_{self.commodity}_out"
-                set_point_name = f"{tech_name}_{self.commodity}_set_point"
-                rated_name = f"{tech_name}_rated_{self.commodity}_production"
                 if commodity in self.commodities_to_units:
-                    commodity_units = self.commodities_to_units[commodity]
-                    self.add_input(
-                        in_name,
-                        val=0.0,
-                        shape=self.n_timesteps,
-                        units=commodity_units,
-                        desc=f"{commodity} output from {tech_name}",
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                        tech_name,
+                        commodity,
+                        self.commodities_to_units[commodity],
+                        add_in_name=True,
+                        set_point0=initial_set_point,
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                        tech_name,
+                        commodity,
+                        self.commodities_to_ref_var[commodity],
+                        add_in_name=True,
+                        set_point0=initial_set_point,
                     )
                 else:
-                    # commodity units not yet defined, so get it
+                    # commodity units not yet defined
+                    in_name = f"{tech_name}_{commodity}_out"
                     meta_data = self.add_input(
                         in_name,
                         val=0.0,
@@ -178,21 +250,25 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         units_by_conn=True,
                         desc=f"{commodity} output from {tech_name}",
                     )
-                    self.commodities_to_units.update({commodity: meta_data["units"]})
+                    if meta_data["units"] is None:
+                        self.commodities_to_ref_var[commodity] = in_name
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_ref_var[commodity],
+                            add_in_name=False,
+                            set_point0=initial_set_point,
+                        )
+                    else:
+                        self.commodities_to_units.update({commodity: meta_data["units"]})
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_units[commodity],
+                            add_in_name=False,
+                            set_point0=initial_set_point,
+                        )
 
-                self.add_input(
-                    rated_name,
-                    val=0.0,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Rated {commodity} production for {tech_name}",
-                )
-                self.add_output(
-                    set_point_name,
-                    val=initial_set_point,
-                    shape=self.n_timesteps,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Set point for {tech_name} {commodity} production",
-                )
                 self.dispatchable_commodity_names.append(commodity)
                 self.dispatchable_input_names.append(in_name)
                 self.dispatchable_set_point_names.append(set_point_name)
@@ -207,20 +283,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for tech_name in self.storage_techs:
             tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
             for commodity in tech_commodities:
-                in_name = f"{tech_name}_{self.commodity}_out"
-                set_point_name = f"{tech_name}_{self.commodity}_set_point"
-                rated_name = f"{tech_name}_rated_{self.commodity}_production"
                 if commodity in self.commodities_to_units:
-                    commodity_units = self.commodities_to_units[commodity]
-                    self.add_input(
-                        in_name,
-                        val=0.0,
-                        shape=self.n_timesteps,
-                        units=commodity_units,
-                        desc=f"{commodity} output from {tech_name}",
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                        tech_name, commodity, self.commodities_to_units[commodity], add_in_name=True
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                        tech_name,
+                        commodity,
+                        self.commodities_to_ref_var[commodity],
+                        add_in_name=True,
                     )
                 else:
-                    # commodity units not yet defined, so get it
+                    # commodity units not yet defined
+                    in_name = f"{tech_name}_{commodity}_out"
                     meta_data = self.add_input(
                         in_name,
                         val=0.0,
@@ -229,20 +305,23 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         units_by_conn=True,
                         desc=f"{commodity} output from {tech_name}",
                     )
-                    self.commodities_to_units.update({commodity: meta_data["units"]})
-                self.add_input(
-                    rated_name,
-                    val=0.0,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Rated {commodity} production for {tech_name}",
-                )
-                self.add_output(
-                    set_point_name,
-                    val=0.0,
-                    shape=self.n_timesteps,
-                    units=self.commodities_to_units[commodity],
-                    desc=f"Set point for {tech_name} {commodity} production",
-                )
+                    if meta_data["units"] is None:
+                        self.commodities_to_ref_var[commodity] = in_name
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_ref_var[commodity],
+                            add_in_name=False,
+                        )
+                    else:
+                        self.commodities_to_units.update({commodity: meta_data["units"]})
+                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                            tech_name,
+                            commodity,
+                            self.commodities_to_units[commodity],
+                            add_in_name=False,
+                        )
+
                 self.storage_commodity_names.append(commodity)
                 self.storage_input_names.append(in_name)
                 self.storage_set_point_names.append(set_point_name)
