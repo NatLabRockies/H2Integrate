@@ -96,9 +96,9 @@ def convert_to_monthly(df: pd.DataFrame, year: int) -> pd.DataFrame | None:
     """
     match df.shape[0]:
         case 12:
-            return df
+            return df.resample("MS").bfill()  # ensure it's start of the month
         case 1:
-            df = df.reindex(pd.date_range(f"{year}-01", f"{year}-12", freq="MS"), method="nearest")
+            df = df.resample("MS").nearest()
             return df
         case _:
             pass
@@ -248,6 +248,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
                 df = df.loc[df.index.dt.year.eq(self.config.resource_year)]
                 df = convert_to_monthly(df, self.config.resource_year)
+                df = df.rename(columns={"value": "price"})
                 if df is not None:
                     return df
 
@@ -265,7 +266,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         df.period = pd.to_datetime(df.period)
         df = df[cols].set_index("period")
         df = convert_to_monthly(df)
-        df.value *= MCF_to_MMBTU
+        df = df.rename(columns={"value": "price"})
+        df.price *= MCF_to_MMBTU
 
         if filename is not None:
             df.to_csv(filename, index_label="period")
@@ -277,15 +279,27 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
 
+    def _extrapolate_price(self) -> pd.DataFrame:
+        """Converts the monthly EIA price timeseries to an hourly time series for ``plant_life``
+        number of years.
+        """
+        price = self.config.price.copy()
+
+        last = price.iloc[[-1]].resample("ME").ffill()
+        last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
+        price = pd.concat((price, last)).resample("h").ffill()
+        return price
+
     def setup(self):
-        # Define inputs and outputs
+        """Defines the inputs and outputs of the model and converts the
+        :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
+        ``plant_life``.
+        """
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             self.options["resource_config"],
             additional_cls_name=self.__class__.__name__,
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-
-        self.add_output("price", shape=12, val=self.config.price, units="USD/MMBtu")
 
         super().setup()
 
@@ -294,6 +308,7 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         self.fraction_of_year_simulated = (
             self.dt / SECONDS_PER_HOUR * self.n_timesteps / HOURS_PER_YEAR
         )
+        price = self._extrapolate_price()
 
         self.add_input(
             f"{self.config.commodity}_consumed",
@@ -310,7 +325,7 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         )
         self.add_input(
             "price",
-            val=self.config.price,
+            val=price.price.to_numpy(),
             units=f"USD/({self.config.commodity_amount_units})",
             desc=f"Price profile of {self.config.commodity}",
         )
@@ -320,15 +335,12 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
             val=0.0,
             units=self.config.commodity_amount_units,
         )
-
         self.add_output(
             f"annual_{self.config.commodity}_consumed",
             val=0.0,
             shape=self.plant_life,
             units=f"({self.config.commodity_amount_units})/year",
         )
-
-        # Capacity factor is feedstock_consumed/max_feedstock_available
         self.add_output(
             "capacity_factor",
             val=0.0,
@@ -336,18 +348,34 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
             units="unitless",
             desc="Capacity factor",
         )
+        self.add_output(
+            "replacement_schedule",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Lifetime estimate of item replacements as a fraction of capacity",
+        )
 
-        # The should be equal to the commodity_capacity input of the FeedstockPerformanceModel
+        # TODO: Update to the commodity_capacity input of the FeedstockPerformanceModel
+        # NOTE: Should I set this to rated_capacity if it's available?
         self.add_output(
             f"rated_{self.config.commodity}_production",
             val=0,
             units=self.config.commodity_rate_units,
         )
 
-        # lifetime estimate of item replacements, represented as a fraction of the capacity.
-        self.add_output("replacement_schedule", val=0.0, shape=self.plant_life, units="unitless")
-
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        """Calculates the following outputs:
+
+        - ``capacity_factor``: commodity_consumed / commodity_out
+        - ``total_commodity_consumed``: sum of commodity_consumed divided by number
+          of hours simulated.
+        - ``anual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
+        - ``rated_commodity_production``: maximum input ``commodity_out``.
+        - ``CapEx``: :py:attr:`FeedstockCostConfig.start_up_cost`.
+        - ``OpEx``: :py:attr:`FeedstockCostConfig.annual_cost`.
+        - ``VarOpEx``: sum of (:py:attr:`FeedstockCostConfig.price` * input ``commodity_consumed``).
+        """
         outputs["capacity_factor"] = (
             inputs[f"{self.config.commodity}_consumed"].sum()
             / inputs[f"{self.config.commodity}_out"].sum()
