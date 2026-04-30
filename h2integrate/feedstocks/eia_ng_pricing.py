@@ -279,7 +279,7 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
 
-    def _extrapolate_price(self) -> pd.DataFrame:
+    def _extrapolate_price_to_hourly(self) -> pd.DataFrame:
         """Converts the monthly EIA price timeseries to an hourly time series for ``plant_life``
         number of years.
         """
@@ -288,6 +288,12 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         last = price.iloc[[-1]].resample("ME").ffill()
         last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
         price = pd.concat((price, last)).resample("h").ffill()
+        if price.shape[0] != self.n_timesteps:
+            msg = (
+                "An error occurred converting EIA data to hourly to match size: "
+                f"{price.shape[0]} to simulation {self.n_timesteps=}"
+            )
+            raise ValueError(msg)
         return price
 
     def setup(self):
@@ -308,7 +314,7 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         self.fraction_of_year_simulated = (
             self.dt / SECONDS_PER_HOUR * self.n_timesteps / HOURS_PER_YEAR
         )
-        price = self._extrapolate_price()
+        price = self._extrapolate_price_to_hourly()
 
         self.add_input(
             f"{self.config.commodity}_consumed",
