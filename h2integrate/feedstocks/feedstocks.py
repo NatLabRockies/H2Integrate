@@ -101,7 +101,6 @@ class FeedstockCostModel(CostModelBaseClass):
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-        plant_life *= 1
 
         # Set cost outputs
         super().setup()
