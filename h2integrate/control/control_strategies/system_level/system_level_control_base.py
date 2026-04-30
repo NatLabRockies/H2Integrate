@@ -1,5 +1,4 @@
 import numpy as np
-import networkx as nx
 import openmdao.api as om
 
 
@@ -54,9 +53,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
 
         self.techs_to_commodities = slc_config["tech_to_commodity"]
-        # self._create_sources_to_commodities(
-        #     self.options["plant_config"].get("technology_interconnections")
-        # )
+
         self.multi_commodity = (
             True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
         )
@@ -67,53 +64,28 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_dispatchable_techs(demand_profile)
         self._setup_storage_techs()
 
-    def _define_upstream_commodities(self):
-        # ESG TODO: finish the logic here
-        # The point is to only look at techs and commodities that are upstream
-        # of the demand tech
-        # Aka - if someone is trying to set electricity demand in a electricity/hydrogen system
-        # Then we dont care about the hydrogen parts
-
-        # techs_to_connect = set(
-        #     self.curtailable_techs + self.dispatchable_techs + self.storage_techs
-        # )
-        # non_demand_commodities = set([
-        # e[-1] for e in self.techs_to_commodities if e[-1]!=self.commodity])
-
-        # upstream_commodities_components = {}
-        # demand_commodity_components = {}
-        pass
-
-    def _create_sources_to_commodities(self, tech_interconnections):
-        techs_to_connect = set(
-            self.curtailable_techs + self.dispatchable_techs + self.storage_techs
-        )
-
-        G = nx.DiGraph()
-        for connection in tech_interconnections:
-            source = connection[0]
-            destination = connection[1]
-            if len(connection) == 4:
-                G.add_edge(source, destination, commodity=connection[2])
-            else:
-                G.add_edge(source, destination)
-
-        # Use a set to remove duplicates (in case one tech produces multiple commodities)
-        sources_to_commodities = {
-            (e[0], e[-1]) for e in G.edges(data="commodity") if e[-1] is not None
-        }
-        # Remove feedstocks and connectors
-        techs_to_commodities = {
-            (e[0], e[-1]) for e in sources_to_commodities if e[0] in techs_to_connect
-        }
-
-        self.graph_connections = G
-
-        return techs_to_commodities
-
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, set_point0=0.0
     ):
+        """Adds inputs and outputs for a commodity when the units are known.
+        The inputs and outputs that are added have the below naming convention:
+
+        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
+        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
+            capacity of tech_name
+        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
+
+        Args:
+            tech_name (str): name of technology
+            commodity (str): commodity of the technology described by `tech_name`
+            commodity_units (str): units of commodity
+            add_in_name (bool, optional): If True, add the input for the in_name variable.
+                Defaults to True.
+            set_point0 (float, optional): Add as the initial value for the set_point variable.
+                Defaults to 0.0.
+        Returns:
+            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
+        """
         in_name = f"{tech_name}_{commodity}_out"
         set_point_name = f"{tech_name}_{commodity}_set_point"
         rated_name = f"{tech_name}_rated_{commodity}_production"
@@ -145,6 +117,28 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def _setup_commodity_for_copy_units(
         self, tech_name, commodity, commodity_reference_var, add_in_name=True, set_point0=0.0
     ):
+        """Adds inputs and outputs for a commodity where the units are based on a reference
+        input variable. The inputs and outputs that are added have the below
+        naming convention:
+
+        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
+        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
+            capacity of tech_name
+        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
+
+
+        Args:
+            tech_name (str): name of technology
+            commodity (str): commodity of the technology described by `tech_name`
+            commodity_reference_var (str): name of input to copy units from
+            add_in_name (bool, optional): If True, add the input for the in_name variable.
+                Defaults to True.
+            set_point0 (float, optional): Add as the initial value for the set_point variable.
+                Defaults to 0.0.
+
+        Returns:
+            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
+        """
         in_name = f"{tech_name}_{commodity}_out"
         set_point_name = f"{tech_name}_{commodity}_set_point"
         rated_name = f"{tech_name}_rated_{commodity}_production"
