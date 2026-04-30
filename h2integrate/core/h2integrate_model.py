@@ -26,15 +26,6 @@ from h2integrate.core.commodity_stream_definitions import (
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
 )
-from h2integrate.control.control_strategies.system_level.demand_following_control import (
-    DemandFollowingControl,
-)
-from h2integrate.control.control_strategies.system_level.cost_minimization_control import (
-    CostMinimizationControl,
-)
-from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
-    ProfitMaximizationControl,
-)
 
 
 try:
@@ -543,13 +534,6 @@ class H2IntegrateModel:
         """
         slc_config = self.plant_config["system_level_control"]
 
-        # Map control_strategy config values to controller classes
-        strategy_map = {
-            "demand_following": DemandFollowingControl,
-            "cost_minimization": CostMinimizationControl,
-            "profit_maximization": ProfitMaximizationControl,
-        }
-
         # Map user-facing solver names to OpenMDAO solver classes
         solver_map = {
             "gauss_seidel": om.NonlinearBlockGS,
@@ -558,12 +542,12 @@ class H2IntegrateModel:
         }
 
         # 1. Select controller class based on strategy
-        strategy_name = slc_config.get("control_strategy", "demand_following")
-        slc_cls = strategy_map.get(strategy_name)
+        strategy_name = slc_config.get("control_strategy", "DemandFollowingControl")
+        slc_cls = self.supported_models.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
                 f"Unknown control_strategy '{strategy_name}' in system_level_control. "
-                f"Supported: {list(strategy_map.keys())}"
+                f"Must be a valid model name in supported_models."
             )
 
         slc_comp = slc_cls(
@@ -628,7 +612,7 @@ class H2IntegrateModel:
                 )
 
         # 4. For cost-aware strategies, connect marginal costs from cost models
-        if strategy_name in ("cost_minimization", "profit_maximization"):
+        if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
             for tech_name in slc_config["dispatchable_techs"]:
                 self.plant.connect(
                     f"{tech_name}.marginal_cost",
