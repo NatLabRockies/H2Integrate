@@ -1,0 +1,295 @@
+import json
+from pathlib import Path
+from datetime import datetime
+
+import attrs
+import numpy as np
+import pandas as pd
+import requests
+from attrs import field, define
+
+from h2integrate.core.file_utils import get_path
+from h2integrate.core.model_baseclasses import BaseConfig, CostModelBaseClass
+
+
+MCF_to_MMBTU = 1 / 0.964
+STATE_MAP = {
+    "Alabama": "AL",
+    "Alaska": "AK",
+    "Arizona": "AZ",
+    "Arkansas": "AR",
+    "California": "CA",
+    "Colorado": "CO",
+    "Connecticut": "CT",
+    "Delaware": "DE",
+    "Florida": "FL",
+    "Georgia": "GA",
+    "Hawaii": "HI",
+    "Idaho": "ID",
+    "Illinois": "IL",
+    "Indiana": "IN",
+    "Iowa": "IA",
+    "Kansas": "KS",
+    "Kentucky": "KY",
+    "Louisiana": "LA",
+    "Maine": "ME",
+    "Maryland": "MD",
+    "Massachusetts": "MA",
+    "Michigan": "MI",
+    "Minnesota": "MN",
+    "Mississippi": "MS",
+    "Missouri": "MO",
+    "Montana": "MT",
+    "Nebraska": "NE",
+    "Nevada": "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    "Ohio": "OH",
+    "Oklahoma": "OK",
+    "Oregon": "OR",
+    "Pennsylvania": "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    "Tennessee": "TN",
+    "Texas": "TX",
+    "Utah": "UT",
+    "Vermont": "VT",
+    "Virginia": "VA",
+    "Washington": "WA",
+    "West Virginia": "WV",
+    "Wisconsin": "WI",
+    "Wyoming": "WY",
+    "District of Columbia": "DC",
+    "United States": "US",
+}
+CURRENT_YEAR = datetime.now().year
+
+EIA_FACET = {
+    "wellhead": "N9190{}3",
+    "imports": "N9100{}3",
+    "citygate": "N3050{}3",
+    "residential": "N3010{}3",
+    "commercial": "N3020{}3",
+    "industrial": "N3035{}3",
+    "electrical_power": "N3045{}3",
+    "exports": "N9130{}3",
+}
+
+
+def convert_to_monthly(df: pd.DataFrame, year: int) -> pd.DataFrame | None:
+    """Converts an annual timeseries to monthly by repeating the one value, or returns
+    the data passed, if already monthly.
+
+    Args:
+        df (pd.DataFrame): The annual or monthly natural gas pricing data.
+        year (int): The resource year.
+
+    Returns:
+        pd.DataFrame | None: Returns back the monthly data if the original data have either
+            1 or 12 data entries, otherwise None is returned.
+    """
+    match df.shape[0]:
+        case 12:
+            return df
+        case 1:
+            df = df.reindex(pd.date_range(f"{year}-01", f"{year}-12", freq="MS"), method="nearest")
+            return df
+        case _:
+            pass
+
+
+def convert_state_value(state: str) -> str:
+    """Convert potential two-letter state abbreviations to upper case and all else to title
+    casing to align with the ``STATE_MAP`` keys and values.
+
+    Args:
+        state (str): Either a two-letter state abbreviation or full state name.
+
+    Returns:
+        str: Upper case state abbreviation or title case state name.
+    """
+    if len(state) == 2:
+        return state.upper()
+    return state.title()
+
+
+def convert_state_to_code(state: str) -> str:
+    """Converts the :py:attr:`state` name to a two-letter abbreviation or returns the input value.
+
+    Args:
+        state (str): Full state name in title casing or two-letter state abbreviation in upper case.
+
+    Returns:
+        str: Two-letter state abbreviation.
+    """
+    return STATE_MAP.get(state, state)
+
+
+def get_eia_api_key(filename: Path) -> str:
+    """Retrieves the EIA API key from a file, and returns the key following "EIA_API_KEY:".
+
+    Args:
+        filename (Path): Full file path and name of where the EIA API key is located. Must be
+            encoded as "EIA_API_KEY: xxxxxx"
+
+    Returns:
+        str: The EIA API key.
+    """
+    with filename.open() as f:
+        for line in f.readlines():
+            if ":" in line:
+                name, val = line.strip().split(":")
+                if name == "EIA_API_KEY":
+                    return val.strip()
+
+
+@define
+class EIANaturalGasFeedstockConfig(BaseConfig):
+    """EIA Industrial Natural Gas Pricing API configuration and downloader for the US and all 50 US
+    states, in $/MCF, converted to $/MMBtu. Please see
+    https://www.eia.gov/opendata/browser/natural-gas/pri/sum for further details about data
+    availability.
+
+    Args:
+        state (str): Full name of the state or two-letter state abbreviation, such as
+            "United States" or "US". Only the "US" or all 50 states will produce valid results.
+        resource_year (int): The YYYY-format year whose data should be retrieved. Must be between
+            2001 and the current year, inclusive of endpoints.
+        cost_year (int): dollar-year for costs. Defaults to the current year.
+        monthly (Path): True, if monthly data is desired, False if annual data is desired.
+        api_key_file (Path): Full file name of the file where the API key is located.
+        filename (str, optinal): Filename for where to save the data or where the data may
+            already be located. If the file exists, the columns "period", "state", and "price" must
+            exist, otherwise the file will not be used. "period" should be of the form YYYY or
+            YYYY-MM, and state should be either the full state name or the two-letter abbreviation.
+        annual_cost (float, optional): fixed cost associated with the feedstock in USD/year.
+            Defaults to 0.0.
+        start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
+            Defaults to 0.0.
+        commodity_rate_units (str): feedstock usage rate units (such as "galUS/h", "kg/h" or "kW")
+        commodity_amount_units (str, optional): the amount units of the commodity (i.e.,
+            "galUS", "kg" or "kW*h"). If None, will be set as `commodity_rate_units*h`
+    """
+
+    resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
+    monthly: bool = field(validator=attrs.validators.instance_of(bool))
+    api_key_file: str = field(converter=get_path)
+    state: str = field(
+        converter=attrs.converters.pipe(convert_state_value, convert_state_to_code),
+        validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
+    )
+    price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
+    commodity_rate_units: str = field()
+    commodity_amount_units: str = field()
+
+    url: str = field(init=False)
+    series: str = field(init=False)
+    price: np.ndarray = field(init=False)
+    cost_year: int = field(default=CURRENT_YEAR)
+    annual_cost: float = field(default=0.0, converter=float)
+    start_up_cost: float = field(default=0.0, converter=float)
+    commodity: str = field(default="natural_gas", init=False)
+    filename: str = field(default=None, converter=attrs.converters.optional(get_path))
+
+    def __attrs_post_init__(self):
+        """Creates the EIA natural gas facet series code based on validated user inputs, sets the
+        :py:attr:`commodity_amount_units` if not given a value, and fetches the EIA natural gas
+        price.
+        """
+        self.series = EIA_FACET[self.price_category].format(self.state)
+        if self.commodity_amount_units is None:
+            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
+        self.url = self.create_url()
+
+    def create_url(self):
+        base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
+        frequency = f"frequency={'monthly' if self.config.monthly else 'annual'}"
+        data = "data[0]=value"
+        facet = f"facets[series][]={self.config.series}"
+        start = f"start={self.config.resource_year}"
+        end = f"end={self.config.resource_year}"
+        if self.config.monthly:
+            start = f"{start}-01"
+            end = f"{start}-12"
+        sort_col = "sort[0][column]=period"
+        sort_dir = "sort[0][direction]=asc"
+        api_key = f"api_key={get_eia_api_key(self.config.api_key_file)}"
+
+        url_opts = "&".join((frequency, data, facet, start, end, sort_col, sort_dir, api_key))
+        url = f"{base_url}?{url_opts}"
+        return url
+
+    def get_data(self, filename: Path | None = None) -> pd.DataFrame:
+        """Loads the previously saved data from :py:attr:`filename` if ``resource_year``
+        is available as either annual or monthly data, otherwise data is retrieved from the EIA API.
+
+        Args:
+            filename (Path | None, optional): The full filename where the natural gas pricing data
+                should be saved to or loaded from, if available. Defaults to None.
+
+        Raises:
+            requests.exceptions.HTTPError: Raised if an unsuccessful API query result is returned.
+
+        Returns:
+            pandas.DataFrame: DataFrame with index "period" and column "value" with natural gas
+                pricing in $/MMBtu (converted from the EIA's USD per thousands of cubic feet) as
+                either the monthly value or extrapolated annual values to a monthly resolution.
+        """
+        if filename is None:
+            filename = self.filename
+
+        if filename is not None:
+            filename = Path(filename).resolve()
+            if filename.exists():
+                df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
+                df = df.loc[df.index.dt.year.eq(self.config.resource_year)]
+                df = convert_to_monthly(df, self.config.resource_year)
+                return df
+
+        r = requests.get(self.url)
+        if r.status_code != 200:
+            err = json.loads(r.text)["error"]
+            msg = f"{err['code']}: {err['message']}"
+            raise requests.exceptions.HTTPError(msg)
+
+        cols = ["period", "value"]
+        df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
+        if df.size == 0:
+            raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
+
+        df.period = pd.to_datetime(df.period)
+        df = df[cols].set_index("period")
+        df = convert_to_monthly(df)
+
+        if filename is not None:
+            df.to_csv(filename, index_label="period")
+        return df
+
+
+class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
+    """ """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
+
+    def setup(self):
+        # Define inputs and outputs
+        self.config = EIANaturalGasFeedstockConfig.from_dict(
+            self.options["resource_config"],
+            additional_cls_name=self.__class__.__name__,
+        )
+        self.config.get_data()
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        int(self.options["plant_config"]["plant"]["plant_life"])
+        site_config = self.options["plant_config"]["site"]
+        self.add_input("latitude", site_config.get("latitude", 0.0), units="deg")
+        self.add_input("longitude", site_config.get("longitude", 0.0), units="deg")
+        self.add_output("price", shape=12, val=0.0, units="USD/(ft**3/1000)")
+
+    def compute(self, inputs, outputs):
+        ng_price_monthly = self.load_data(self.config.filename)
+        outputs["price"] = ng_price_monthly.to_numpy()
