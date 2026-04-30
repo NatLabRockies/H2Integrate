@@ -362,9 +362,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.curtailable_rated_names,
             self.curtailable_commodity_names,
         ):
+            outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
             if commodity == self.commodity:
-                outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
                 demand -= inputs[in_name]
+
         return demand
 
     def _dispatch_storage(self, inputs, outputs, demand):
@@ -373,11 +374,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Positive set_point = discharge, negative = charge.
         Returns the updated demand array.
         """
-        n_storage = len(self.storage_set_point_names)
+        n_storage = len(
+            [
+                s
+                for s in self.storage_set_point_names
+                if self.techs_to_commodities[s] == self.commodity
+            ]
+        )
         if n_storage > 0:
             storage_share = demand / n_storage
-            for set_point_name in self.storage_set_point_names:
-                outputs[set_point_name] = storage_share
+            for set_point_name, commodity in zip(
+                self.storage_set_point_names, self.storage_commodity_names
+            ):
+                if commodity == self.commodity:
+                    outputs[set_point_name] = storage_share
 
         for in_name in self.storage_input_names:
             demand -= inputs[in_name]
