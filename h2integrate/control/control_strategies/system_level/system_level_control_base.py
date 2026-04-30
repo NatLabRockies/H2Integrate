@@ -54,7 +54,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         self.techs_to_commodities = slc_config["tech_to_commodity"]
 
-        self.multi_commodity = (
+        # There are multiple commodities being produced by technologies in the system
+        self.multi_commodity_system = (
             True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
         )
 
