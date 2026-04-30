@@ -480,7 +480,7 @@ class H2IntegrateModel:
         Also identifies the single demand technology and its commodity.
 
         Results are written into ``self.plant_config["system_level_control"]`` so
-        they are available to the ``SystemLevelControl`` component at setup time.
+        they are available to the ``DemandFollowingControl`` component at setup time.
         """
         slc_config = self.plant_config["system_level_control"]
         technologies = self.technology_config.get("technologies", {})
@@ -501,7 +501,7 @@ class H2IntegrateModel:
 
             if commodity is not None:
                 raise ValueError(
-                    "SystemLevelControl currently supports only one demand "
+                    "DemandFollowingControl currently supports only one demand "
                     f"stream, but found demands for both '{commodity}' "
                     f"and '{all_params.get('commodity', tech_name)}'."
                 )
@@ -532,7 +532,7 @@ class H2IntegrateModel:
         slc_config["storage_techs"] = storage_techs
 
     def add_system_level_controller(self):
-        """Add the SystemLevelControl component and configure the plant solver.
+        """Add the DemandFollowingControl component and configure the plant solver.
 
         This method:
         1. Selects the appropriate controller class based on ``control_strategy``
@@ -546,7 +546,6 @@ class H2IntegrateModel:
         # Map control_strategy config values to controller classes
         strategy_map = {
             "demand_following": DemandFollowingControl,
-            "load_meeting": DemandFollowingControl,  # alias
             "cost_minimization": CostMinimizationControl,
             "profit_maximization": ProfitMaximizationControl,
         }
