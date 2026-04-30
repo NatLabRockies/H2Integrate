@@ -42,3 +42,11 @@ class DemandFollowingControl(SystemLevelControlBase):
             ):
                 if commodity == self.commodity:
                     outputs[set_point_name] = share
+
+        # Check for nans or inf
+        if not all(np.isfinite(c).all() for k, c in outputs.items()):
+            buggy_outputs = [k for k, c in outputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"Buggy outputs {buggy_outputs}")
+        if not all(np.isfinite(c).all() for k, c in inputs.items()):
+            buggy_inputs = [k for k, c in inputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"Buggy inputs {buggy_inputs}")
