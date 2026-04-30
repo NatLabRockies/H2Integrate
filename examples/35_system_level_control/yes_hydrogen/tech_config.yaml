@@ -104,7 +104,7 @@ technologies:
       performance_parameters:
         size_mode: normal
         n_clusters: 10
-        cluster_rating_MW: 60
+        cluster_rating_MW: 3
         eol_eff_percent_loss: 10  # eol defined as x% change in efficiency from bol
         uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: true  # include degradation
