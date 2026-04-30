@@ -287,7 +287,12 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
 
         last = price.iloc[[-1]].resample("ME").ffill()
         last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
-        price = pd.concat((price, last)).resample("h").ffill()
+        price = (
+            pd.concat((price, last))
+            .resample("h")
+            .ffill()
+            .drop(price.loc[(price.index.month == 2) & (price.index.day == 29)].index)
+        )
         if price.shape[0] != self.n_timesteps:
             msg = (
                 "An error occurred converting EIA data to hourly to match size: "
