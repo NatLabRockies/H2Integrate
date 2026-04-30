@@ -2,11 +2,17 @@ import numpy as np
 import openmdao.api as om
 
 
-class SystemLevelControl(om.ExplicitComponent):
-    """System-level control that satisfies demand across all technologies.
+class SystemLevelControlBase(om.ExplicitComponent):
+    """Base class for system-level controllers.
 
-    Reads pre-computed technology classification from
-    ``plant_config["system_level_control"]``, which must contain:
+    Provides common setup logic shared by all system-level control strategies:
+    demand input, curtailable/dispatchable/storage technology I/O creation,
+    and technology classification reading from ``plant_config``.
+
+    Subclasses must implement ``compute()`` with their dispatch strategy.
+
+    Configuration is read from ``plant_config["system_level_control"]``,
+    which must contain:
 
     - ``commodity``: the commodity being controlled (e.g. "electricity")
     - ``commodity_units``: units string (or None)
@@ -14,10 +20,6 @@ class SystemLevelControl(om.ExplicitComponent):
     - ``curtailable_techs``: list of curtailable technology names
     - ``dispatchable_techs``: list of dispatchable technology names
     - ``storage_techs``: list of storage technology names
-
-    Only one commodity demand stream is supported.  At each timestep,
-    curtailable production is applied first, then the remaining demand
-    is distributed equally across dispatchable technologies.
     """
 
     def initialize(self):
@@ -50,14 +52,18 @@ class SystemLevelControl(om.ExplicitComponent):
             desc=f"Demand profile of {self.commodity}",
         )
 
-        # ---- Add OpenMDAO inputs / outputs per tech category ----
-        # Curtailable techs: read output + rated production, write set_point
+        self._setup_curtailable_techs()
+        self._setup_dispatchable_techs(demand_profile)
+        self._setup_storage_techs()
+
+    def _setup_curtailable_techs(self):
+        """Create I/O for curtailable technologies."""
         self.curtailable_input_names = []
-        self.curtailable_output_names = []
+        self.curtailable_set_point_names = []
         self.curtailable_rated_names = []
         for tech_name in self.curtailable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -73,17 +79,18 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} curtailment",
             )
             self.curtailable_input_names.append(in_name)
-            self.curtailable_output_names.append(out_name)
+            self.curtailable_set_point_names.append(set_point_name)
             self.curtailable_rated_names.append(rated_name)
 
-        # Compute a reasonable initial set_point for dispatchable techs
+    def _setup_dispatchable_techs(self, demand_profile):
+        """Create I/O for dispatchable technologies."""
         n_dispatchable = len(self.dispatchable_techs)
         if n_dispatchable > 0:
             if np.isscalar(demand_profile):
@@ -94,11 +101,11 @@ class SystemLevelControl(om.ExplicitComponent):
             initial_set_point = 0.0
 
         self.dispatchable_input_names = []
-        self.dispatchable_output_names = []
+        self.dispatchable_set_point_names = []
         self.dispatchable_rated_names = []
         for tech_name in self.dispatchable_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -114,22 +121,24 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=initial_set_point,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
             )
             self.dispatchable_input_names.append(in_name)
-            self.dispatchable_output_names.append(out_name)
+            self.dispatchable_set_point_names.append(set_point_name)
             self.dispatchable_rated_names.append(rated_name)
 
+    def _setup_storage_techs(self):
+        """Create I/O for storage technologies."""
         self.storage_input_names = []
-        self.storage_output_names = []
+        self.storage_set_point_names = []
         self.storage_rated_names = []
         for tech_name in self.storage_techs:
             in_name = f"{tech_name}_{self.commodity}_out"
-            out_name = f"{tech_name}_{self.commodity}_set_point"
+            set_point_name = f"{tech_name}_{self.commodity}_set_point"
             rated_name = f"{tech_name}_rated_{self.commodity}_production"
             self.add_input(
                 in_name,
@@ -145,48 +154,42 @@ class SystemLevelControl(om.ExplicitComponent):
                 desc=f"Rated {self.commodity} production for {tech_name}",
             )
             self.add_output(
-                out_name,
+                set_point_name,
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_units,
                 desc=f"Set point for {tech_name} {self.commodity} production",
             )
             self.storage_input_names.append(in_name)
-            self.storage_output_names.append(out_name)
+            self.storage_set_point_names.append(set_point_name)
             self.storage_rated_names.append(rated_name)
 
-    def compute(self, inputs, outputs):
-        demand = inputs[self.demand_input_name].copy()
+    def _subtract_curtailable(self, inputs, outputs, demand):
+        """Apply curtailable techs: set_point = rated, subtract output from demand.
 
-        # 1. Curtailable techs: set_point = rated production (no curtailment)
-        for in_name, out_name, rated_name in zip(
+        Returns the updated demand array.
+        """
+        for in_name, set_point_name, rated_name in zip(
             self.curtailable_input_names,
-            self.curtailable_output_names,
+            self.curtailable_set_point_names,
             self.curtailable_rated_names,
         ):
-            curtailable_output = inputs[in_name]
-            outputs[out_name] = inputs[rated_name] * np.ones(self.n_timesteps)
-            demand -= curtailable_output
+            outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
+            demand -= inputs[in_name]
+        return demand
 
-        # 2. Storage dispatch: set_point = net demand per storage tech
-        #    positive set_point → discharge, negative → charge
-        #    The storage model's simulate() handles rate/SOC/availability clipping
-        #    internally, so we pass the raw demand signal here.
-        n_storage = len(self.storage_output_names)
+    def _dispatch_storage(self, inputs, outputs, demand):
+        """Dispatch storage techs proportionally and subtract actual output from demand.
+
+        Positive set_point = discharge, negative = charge.
+        Returns the updated demand array.
+        """
+        n_storage = len(self.storage_set_point_names)
         if n_storage > 0:
             storage_share = demand / n_storage
-            for out_name in self.storage_output_names:
-                outputs[out_name] = storage_share
+            for set_point_name in self.storage_set_point_names:
+                outputs[set_point_name] = storage_share
 
-        # Subtract actual storage output from demand
-        # (electricity_out > 0 when discharging, < 0 when charging)
         for in_name in self.storage_input_names:
             demand -= inputs[in_name]
-
-        # 3. Remaining demand after curtailable + storage → dispatchable techs
-        remaining = np.maximum(demand, 0.0)
-        n_dispatchable = len(self.dispatchable_output_names)
-        if n_dispatchable > 0:
-            share = remaining / n_dispatchable
-            for out_name in self.dispatchable_output_names:
-                outputs[out_name] = share
+        return demand

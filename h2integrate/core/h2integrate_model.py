@@ -23,11 +23,17 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
-from h2integrate.control.control_strategies.system_level.system_level_control import (
-    SystemLevelControl,
-)
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
+)
+from h2integrate.control.control_strategies.system_level.demand_following_control import (
+    DemandFollowingControl,
+)
+from h2integrate.control.control_strategies.system_level.cost_minimization_control import (
+    CostMinimizationControl,
+)
+from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
+    ProfitMaximizationControl,
 )
 
 
@@ -474,7 +480,7 @@ class H2IntegrateModel:
         Also identifies the single demand technology and its commodity.
 
         Results are written into ``self.plant_config["system_level_control"]`` so
-        they are available to the ``SystemLevelControl`` component at setup time.
+        they are available to the ``DemandFollowingControl`` component at setup time.
         """
         slc_config = self.plant_config["system_level_control"]
         technologies = self.technology_config.get("technologies", {})
@@ -496,7 +502,7 @@ class H2IntegrateModel:
 
             if commodity is not None:
                 raise ValueError(
-                    "SystemLevelControl currently supports only one demand "
+                    "DemandFollowingControl currently supports only one demand "
                     f"stream, but found demands for both '{commodity}' "
                     f"and '{all_params.get('commodity', tech_name)}'."
                 )
@@ -545,15 +551,23 @@ class H2IntegrateModel:
         slc_config["storage_techs"] = storage_techs
 
     def add_system_level_controller(self):
-        """Add the SystemLevelControl component and configure the plant solver.
+        """Add the DemandFollowingControl component and configure the plant solver.
 
         This method:
-        1. Adds a ``SystemLevelControl`` subsystem to the plant group
-        2. Configures the nonlinear solver on the plant group based on
-           ``plant_config["system_level_control"]`` parameters
-        3. Creates connections between the controller and each technology
+        1. Selects the appropriate controller class based on ``control_strategy``
+        2. Adds it as a subsystem to the plant group
+        3. Configures the nonlinear solver on the plant group
+        4. Creates connections between the controller and each technology
+        5. For cost/profit strategies, connects marginal cost inputs
         """
         slc_config = self.plant_config["system_level_control"]
+
+        # Map control_strategy config values to controller classes
+        strategy_map = {
+            "demand_following": DemandFollowingControl,
+            "cost_minimization": CostMinimizationControl,
+            "profit_maximization": ProfitMaximizationControl,
+        }
 
         # Map user-facing solver names to OpenMDAO solver classes
         solver_map = {
@@ -562,8 +576,16 @@ class H2IntegrateModel:
             "block_jacobi": om.NonlinearBlockJac,
         }
 
-        # 1. Add the controller as the first subsystem in the plant group
-        slc_comp = SystemLevelControl(
+        # 1. Select controller class based on strategy
+        strategy_name = slc_config.get("control_strategy", "demand_following")
+        slc_cls = strategy_map.get(strategy_name)
+        if slc_cls is None:
+            raise ValueError(
+                f"Unknown control_strategy '{strategy_name}' in system_level_control. "
+                f"Supported: {list(strategy_map.keys())}"
+            )
+
+        slc_comp = slc_cls(
             driver_config=self.driver_config,
             plant_config=self.plant_config,
             tech_config=self.technology_config,
@@ -623,6 +645,14 @@ class H2IntegrateModel:
                 self.plant.connect(
                     f"{tech_name}.rated_{commodity}_production",
                     f"system_level_controller.{tech_name}_rated_{commodity}_production",
+                )
+
+        # 4. For cost-aware strategies, connect marginal costs from cost models
+        if strategy_name in ("cost_minimization", "profit_maximization"):
+            for tech_name in slc_config["dispatchable_techs"]:
+                self.plant.connect(
+                    f"{tech_name}.marginal_cost",
+                    f"system_level_controller.{tech_name}_marginal_cost",
                 )
 
         ### Commented out for now; we'll need to determine how to treat demand
@@ -1605,7 +1635,7 @@ class H2IntegrateModel:
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
         if self.state < State.SETUP:
-            self.prob.setup()
+            self.setup()
 
         if self.state < State.RUN:
             # OpenMDAO will skip this step if it encounters an issue leading to silent failures
