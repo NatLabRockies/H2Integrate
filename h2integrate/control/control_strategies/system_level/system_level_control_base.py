@@ -179,12 +179,13 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for tech_name in self.curtailable_techs:
             tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
             for commodity in tech_commodities:
-                # Determine units of the commodity
                 if commodity in self.commodities_to_units:
+                    # The units of this commodity are defined in self.commodities_to_units
                     in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
                         tech_name, commodity, self.commodities_to_units[commodity], add_in_name=True
                     )
                 elif commodity in self.commodities_to_ref_var:
+                    # The units of this commodity are defined by a reference variable
                     in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
                         tech_name,
                         commodity,
@@ -192,7 +193,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         add_in_name=True,
                     )
                 else:
-                    # commodity units not yet defined
+                    # The units of this commodity are unknown at this moment
                     in_name = f"{tech_name}_{commodity}_out"
                     meta_data = self.add_input(
                         in_name,
@@ -203,6 +204,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         desc=f"{commodity} output from {tech_name}",
                     )
                     if meta_data["units"] is None:
+                        # If the units are still unknown, use the in_name of this
+                        # technology as the reference variable for future technologies
+                        # that use this commodity
                         self.commodities_to_ref_var[commodity] = in_name
                         in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
                             tech_name,
@@ -211,6 +215,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             add_in_name=False,
                         )
                     else:
+                        # If the units are known from a connection,
+                        # then use those units for this commodity
                         self.commodities_to_units.update({commodity: meta_data["units"]})
                         in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
                             tech_name,
@@ -226,6 +232,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     def _setup_dispatchable_techs(self, demand_profile):
         """Create I/O for dispatchable technologies."""
+        # calculate the number of dispatchable technologies that
+        # produce the demanded commodity
         n_dispatchable = len(
             [
                 s
@@ -363,6 +371,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.curtailable_rated_names,
             self.curtailable_commodity_names,
         ):
+            # Output the set-point as the rated production of that technology
             outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
             if commodity == self.commodity:
                 demand -= inputs[in_name]
@@ -375,6 +384,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Positive set_point = discharge, negative = charge.
         Returns the updated demand array.
         """
+        # calculate the number of storage technologies that
+        # produce the demanded commodity
         n_storage = len(
             [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
         )
@@ -393,8 +404,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return demand
 
     def _get_commodity_for_tech(self, tech_name):
+        """Get a list of the commodities produced for a technology.
+
+        Args:
+            tech_name (str): name of technology
+
+        Returns:
+            list[str]: list of commodities produced by the tech_name
+        """
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
-        # if len(tech_commodities)==1:
-        #     return tech_commodities[0]
-        # else:
+
         return tech_commodities

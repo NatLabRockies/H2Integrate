@@ -35,6 +35,9 @@ class DemandFollowingControl(SystemLevelControlBase):
                 if self.commodity in self._get_commodity_for_tech(s)
             ]
         )
+
+        # calculate the number of dispatchable technologies that
+        # produce the demanded commodity
         if n_dispatchable > 0:
             share = remaining / n_dispatchable
             for set_point_name, commodity in zip(
