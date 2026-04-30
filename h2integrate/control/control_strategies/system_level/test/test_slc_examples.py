@@ -71,3 +71,20 @@ def test_slc_profit_max(subtests, temp_copy_of_example):
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/yes_hydrogen", None)]
+)
+def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+
+    model.run()
+
+    wind_out = model.prob.get_val("wind.electricity_out")
+
+    with subtests.test("wind farm generates power"):
+        assert wind_out.sum() > 0
