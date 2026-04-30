@@ -177,9 +177,7 @@ class FeedstockCostModel(CostModelBaseClass):
             f"{self.config.commodity}_consumed"
         ].sum() * (self.dt / 3600)
 
-        # Estimate annual consumption based on consumption over the simulation
-        # NOTE: once we standardize feedstock consumption outputs in models, this should
-        # be updated to handle consumption that varies over years of operation
+        # TODO: update to handle varying consumption levels when feedstock consumption is available
         outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
             f"total_{self.config.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)

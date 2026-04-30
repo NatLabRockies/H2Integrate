@@ -3,7 +3,6 @@ from pathlib import Path
 from datetime import datetime
 
 import attrs
-import numpy as np
 import pandas as pd
 import requests
 from attrs import field, define
@@ -12,6 +11,8 @@ from h2integrate.core.file_utils import get_path
 from h2integrate.core.model_baseclasses import BaseConfig, CostModelBaseClass
 
 
+HOURS_PER_YEAR = 8760
+SECONDS_PER_HOUR = 3600
 MCF_to_MMBTU = 1 / 0.964
 STATE_MAP = {
     "Alabama": "AL",
@@ -171,9 +172,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             Defaults to 0.0.
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
             Defaults to 0.0.
-        commodity_rate_units (str): feedstock usage rate units (such as "galUS/h", "kg/h" or "kW")
-        commodity_amount_units (str, optional): the amount units of the commodity (i.e.,
-            "galUS", "kg" or "kW*h"). If None, will be set as `commodity_rate_units*h`
     """
 
     resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
@@ -184,16 +182,16 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
     )
     price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
-    commodity_rate_units: str = field()
-    commodity_amount_units: str = field()
 
     url: str = field(init=False)
     series: str = field(init=False)
-    price: np.ndarray = field(init=False)
+    price: pd.DataFrame = field(init=False, validator=attrs.validators.instance_of(pd.DataFrame))
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
     commodity: str = field(default="natural_gas", init=False)
+    commodity_rate_units: str = field(default="MMBtu/h", init=False)
+    commodity_amount_units: str = field(default="MMBtu", init=False)
     filename: str = field(default=None, converter=attrs.converters.optional(get_path))
 
     def __attrs_post_init__(self):
@@ -204,9 +202,10 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.series = EIA_FACET[self.price_category].format(self.state)
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
-        self.url = self.create_url()
+        self.url = self.create_eia_api_url()
+        self.price = self.get_data()
 
-    def create_url(self):
+    def create_eia_api_url(self):
         base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
         frequency = f"frequency={'monthly' if self.config.monthly else 'annual'}"
         data = "data[0]=value"
@@ -249,7 +248,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
                 df = df.loc[df.index.dt.year.eq(self.config.resource_year)]
                 df = convert_to_monthly(df, self.config.resource_year)
-                return df
+                if df is not None:
+                    return df
 
         r = requests.get(self.url)
         if r.status_code != 200:
@@ -265,6 +265,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         df.period = pd.to_datetime(df.period)
         df = df[cols].set_index("period")
         df = convert_to_monthly(df)
+        df.value *= MCF_to_MMBTU
 
         if filename is not None:
             df.to_csv(filename, index_label="period")
@@ -282,14 +283,93 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
             self.options["resource_config"],
             additional_cls_name=self.__class__.__name__,
         )
-        self.config.get_data()
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        int(self.options["plant_config"]["plant"]["plant_life"])
-        site_config = self.options["plant_config"]["site"]
-        self.add_input("latitude", site_config.get("latitude", 0.0), units="deg")
-        self.add_input("longitude", site_config.get("longitude", 0.0), units="deg")
-        self.add_output("price", shape=12, val=0.0, units="USD/(ft**3/1000)")
 
-    def compute(self, inputs, outputs):
-        ng_price_monthly = self.load_data(self.config.filename)
-        outputs["price"] = ng_price_monthly.to_numpy()
+        self.add_output("price", shape=12, val=self.config.price, units="USD/MMBtu")
+
+        super().setup()
+
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        self.fraction_of_year_simulated = (
+            self.dt / SECONDS_PER_HOUR * self.n_timesteps / HOURS_PER_YEAR
+        )
+
+        self.add_input(
+            f"{self.config.commodity}_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.config.commodity_rate_units,
+            desc=f"Consumption profile of {self.config.commodity}",
+        )
+        self.add_input(
+            f"{self.config.commodity}_out",
+            val=0,
+            shape=self.n_timesteps,
+            units=self.config.commodity_rate_units,
+        )
+        self.add_input(
+            "price",
+            val=self.config.price,
+            units=f"USD/({self.config.commodity_amount_units})",
+            desc=f"Price profile of {self.config.commodity}",
+        )
+
+        self.add_output(
+            f"total_{self.config.commodity}_consumed",
+            val=0.0,
+            units=self.config.commodity_amount_units,
+        )
+
+        self.add_output(
+            f"annual_{self.config.commodity}_consumed",
+            val=0.0,
+            shape=self.plant_life,
+            units=f"({self.config.commodity_amount_units})/year",
+        )
+
+        # Capacity factor is feedstock_consumed/max_feedstock_available
+        self.add_output(
+            "capacity_factor",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Capacity factor",
+        )
+
+        # The should be equal to the commodity_capacity input of the FeedstockPerformanceModel
+        self.add_output(
+            f"rated_{self.config.commodity}_production",
+            val=0,
+            units=self.config.commodity_rate_units,
+        )
+
+        # lifetime estimate of item replacements, represented as a fraction of the capacity.
+        self.add_output("replacement_schedule", val=0.0, shape=self.plant_life, units="unitless")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        outputs["capacity_factor"] = (
+            inputs[f"{self.config.commodity}_consumed"].sum()
+            / inputs[f"{self.config.commodity}_out"].sum()
+        )
+        outputs[f"total_{self.config.commodity}_consumed"] = inputs[
+            f"{self.config.commodity}_consumed"
+        ].sum() * (self.dt / 3600)
+
+        # TODO: update to handle varying consumption levels when feedstock consumption is available
+        outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
+            f"total_{self.config.commodity}_consumed"
+        ] * (1 / self.fraction_of_year_simulated)
+
+        outputs[f"rated_{self.config.commodity}_production"] = inputs[
+            f"{self.config.commodity}_out"
+        ].max()
+
+        # TODO: Calculate costs
+        price = inputs["price"]
+        hourly_consumption = inputs[f"{self.config.commodity}_consumed"]
+        cost_per_year = sum(price * hourly_consumption)
+
+        outputs["CapEx"] = self.config.start_up_cost
+        outputs["OpEx"] = self.config.annual_cost
+        outputs["VarOpEx"] = cost_per_year
