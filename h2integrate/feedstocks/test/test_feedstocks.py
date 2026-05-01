@@ -10,7 +10,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.core.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
+from h2integrate.feedstocks.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
 
 
 @fixture
