@@ -180,11 +180,11 @@ class GeospatialMapConfig(BaseConfig):
     colorbar_tick_label_exp_notation_decimal_limit: tuple[int, ...] = field(default=(-3, 4))
     basemap_leftpad: float = field(default=0.05)
     basemap_rightpad: float = field(default=0.05)
-    basemap_upperpad: float = field(default=0.2125)
+    basemap_upperpad: float = field(default=0.15)
     basemap_lowerpad: float = field(default=0.05)
     basemap_provider: TileProvider = field(default=ctx.providers.OpenStreetMap.Mapnik)
-    basemap_zoom: int = field(default=6)
-    zorder: int = field(default=1)
+    basemap_zoom: int = field(default=5)
+    zorder: int = field(default=2)
     linestyle: str = field(default="--")
     linecolor: str = field(default="black")
     linewidth: float = field(default=1.5)
@@ -341,6 +341,18 @@ def plot_geospatial_point_heat_map(
 
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
+    # Plot data labels
+    for _, result in results_gdf.iterrows():
+        ax.annotate(
+            text=f"{result[metric_to_plot]:.3f}",
+            xy=(result.geometry.x, result.geometry.y),
+            xytext=(3, 3),
+            textcoords="offset points",
+            fontsize=map_preferences.colorbar_tick_label_font_size,
+            backgroundcolor="white",
+            zorder=map_preferences.zorder - 1,
+        )
+
     results_gdf.plot(
         ax=ax,
         column=metric_to_plot,
@@ -352,16 +364,6 @@ def plot_geospatial_point_heat_map(
         norm=norm,
         zorder=map_preferences.zorder,
     )
-
-    # Plot data labels
-    for _, result in results_gdf.iterrows():
-        ax.annotate(
-            text=f"{result[metric_to_plot]:.2f}",
-            xy=(result.geometry.x, result.geometry.y),
-            xytext=(3, 3),
-            textcoords="offset points",
-            fontsize=map_preferences.colorbar_tick_label_font_size,
-        )
 
     # Create inset axis for color bar legend
     inset_ax = inset_axes(

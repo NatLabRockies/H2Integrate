@@ -275,7 +275,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         elif ewin_type == "mse":
             capex_modifier = 583.9 / 10946.85
         elif ewin_type == "moe":
-            capex_modifier = 1163.81 / 4901.86
+            capex_modifier = 764.52 / 4901.86  # 1163.81
         processing_capex *= capex_modifier
         electrolysis_capex *= capex_modifier
         rectifier_capex *= capex_modifier
