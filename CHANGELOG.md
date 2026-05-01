@@ -19,11 +19,12 @@
 - Rename `n_control_window` to `n_control_window_hours` for unit clarity [PR 712](https://github.com/NatLabRockies/H2Integrate/pull/712)
 - Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
 - `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks`
+  [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA
   natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve
   the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries. Additionally, a `EIANaturalGasFeedstockPerformanceConfig` and
   `EIANaturalGasFeedstockPerformanceModel` are created to be compatible with the hard-coded
-  definitions from the cost model.
+  definitions from the cost model. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 
 ## 0.8 [April 15, 2026]
 
