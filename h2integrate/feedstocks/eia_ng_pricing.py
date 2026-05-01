@@ -344,7 +344,11 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
         df.period = pd.to_datetime(df.period)
         df.value = df.value.astype(float)
-        df = df.set_index("period").rename(columns={"value": "price"})[["state", "price"]]
+        df = (
+            df.set_index("period")
+            .rename(columns={"value": "price", "area-name": "state"})
+            .replace("U.S.", "US")
+        )[["state", "price"]]
         df = convert_to_monthly(df)
         df.price *= MCF_to_MMBTU
 
