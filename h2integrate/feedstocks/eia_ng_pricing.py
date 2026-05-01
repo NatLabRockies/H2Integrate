@@ -180,6 +180,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             2001 and the current year, inclusive of endpoints.
         cost_year (int): dollar-year for costs. Defaults to the current year.
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
+        price_category (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
+            "industrial", "electrical_power", or "exports". Note that not all categories will return
+            state-level data.
         api_key_file (Path, optional): Full file name of the file where the API key is located. If
             no file name is provided, then the environment variables ``EIA_API_KEY`` is used.
         filename (str, optional): Filename for where to save the data or where the data may
@@ -200,7 +203,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
     )
     price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
-
     url: str = field(init=False)
     series: str = field(init=False)
     price: pd.DataFrame = field(init=False, validator=attrs.validators.instance_of(pd.DataFrame))
