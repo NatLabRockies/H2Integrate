@@ -50,6 +50,7 @@ dependencies = [
   "ProFAST",
   "Pyomo>=6.1.2",
   "rainflow",
+  "requests",
   "requests-cache",
   "retry_requests",
   "rich>=13.7.0",
