@@ -190,7 +190,7 @@ class FeedstockCostModel(CostModelBaseClass):
         - ``capacity_factor``: commodity_consumed / commodity_out
         - ``total_commodity_consumed``: sum of commodity_consumed divided by number
           of hours simulated.
-        - ``anual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
+        - ``annual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
         - ``rated_commodity_production``: maximum input ``commodity_out``.
         - ``CapEx``: :py:attr:`FeedstockCostConfig.start_up_cost`.
         - ``OpEx``: :py:attr:`FeedstockCostConfig.annual_cost`.
