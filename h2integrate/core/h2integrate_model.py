@@ -570,7 +570,7 @@ class H2IntegrateModel:
 
         # 2. Configure the nonlinear solver
         solver_config = SLCSolverOptionsConfig.from_dict(slc_config.get("solver_options", {}))
-        solver_cls = solver_config.get_solver_options()
+        solver_cls = solver_config.return_nonlinear_solver()
         solver = solver_cls()
         solver_options = solver_config.get_solver_options()
         for k, v in solver_options.items():

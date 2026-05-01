@@ -10,12 +10,12 @@ from h2integrate.core.validators import gt_zero, contains, gte_zero
 @define(kw_only=True)
 class SLCSolverOptionsConfig(BaseConfig):
     solver_name: str = field(
-        default="gauss_seidel", validator=contains["gauss_seidel", "newton", "block_jacobi"]
+        default="gauss_seidel", validator=contains(["gauss_seidel", "newton", "block_jacobi"])
     )
-    maxiter: int = field(default=20, converter=int, validator=gte_zero())
+    max_iter: int = field(default=20, converter=int, validator=gte_zero)
     atol: float | None = field(default=None)
     rtol: float | None = field(default=None)
-    convergence_tolerance: float = field(default=1e-6, validator=gt_zero())
+    convergence_tolerance: float = field(default=1e-6, validator=gt_zero)
     iprint: int = field(default=2)
     solver_option_kwargs: dict = field(default={})
 
@@ -38,9 +38,12 @@ class SLCSolverOptionsConfig(BaseConfig):
             "solver_map",
             "solver_option_kwargs",
             "convergence_tolerance",
+            "max_iter",
         ]
         solver_options = {k: v for k, v in d.items() if k not in non_solver_option_attrs}
-        solver_options_full = solver_options | self.solver_option_kwargs
+        solver_options_full = (
+            solver_options | self.solver_option_kwargs | {"maxiter": self.max_iter}
+        )
         return solver_options_full
 
     def return_nonlinear_solver(self):
