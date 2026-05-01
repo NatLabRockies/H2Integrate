@@ -86,13 +86,12 @@ EIA_FACET = {
 }
 
 
-def convert_to_monthly(df: pd.DataFrame, year: int) -> pd.DataFrame | None:
+def convert_to_monthly(df: pd.DataFrame) -> pd.DataFrame | None:
     """Converts an annual timeseries to monthly by repeating the one value, or returns
     the data passed, if already monthly.
 
     Args:
         df (pd.DataFrame): The annual or monthly natural gas pricing data.
-        year (int): The resource year.
 
     Returns:
         pd.DataFrame | None: Returns back the monthly data if the original data have either
