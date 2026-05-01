@@ -1,3 +1,4 @@
+import os
 import json
 from pathlib import Path
 from datetime import datetime
@@ -131,22 +132,38 @@ def convert_state_to_code(state: str) -> str:
     return STATE_MAP.get(state, state)
 
 
-def get_eia_api_key(filename: Path) -> str:
+def get_eia_api_key(api_key_file: Path | None) -> str:
     """Retrieves the EIA API key from a file, and returns the key following "EIA_API_KEY:".
 
     Args:
-        filename (Path): Full file path and name of where the EIA API key is located. Must be
-            encoded as "EIA_API_KEY: xxxxxx"
+        api_key_file (Path, optional): Full file path and name of where the EIA API key is located.
+            If none is provided, then the API key is retrieved from the environment variables. Must
+            be encoded as "EIA_API_KEY: xxxxxx"
+
+    Raises:
+        ValueError: Raised either if no file is provided and an environment variable has not be
+            defined, or if a filename is provided but "EIA_API_KEY" is not found.
 
     Returns:
         str: The EIA API key.
     """
-    with filename.open() as f:
+    if api_key_file is None:
+        key = os.environ.get("EIA_API_KEY")
+        if key is None:
+            msg = (
+                "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY' is not defined as an"
+                "environment variable."
+            )
+            raise ValueError(msg)
+        return key
+
+    with api_key_file.open() as f:
         for line in f.readlines():
             if ":" in line:
                 name, val = line.strip().split(":")
                 if name == "EIA_API_KEY":
                     return val.strip()
+    raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
 
 
 @define
@@ -163,8 +180,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             2001 and the current year, inclusive of endpoints.
         cost_year (int): dollar-year for costs. Defaults to the current year.
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
-        api_key_file (Path): Full file name of the file where the API key is located.
-        filename (str, optinal): Filename for where to save the data or where the data may
+        api_key_file (Path, optional): Full file name of the file where the API key is located. If
+            no file name is provided, then the environment variables ``EIA_API_KEY`` is used.
+        filename (str, optional): Filename for where to save the data or where the data may
             already be located. If the file exists, the columns "period", "state", and "price" must
             exist, otherwise the file will not be used. "period" should be of the form YYYY or
             YYYY-MM, and state should be either the full state name or the two-letter abbreviation.
@@ -176,7 +194,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
     resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
     monthly: bool = field(validator=attrs.validators.instance_of(bool))
-    api_key_file: str = field(converter=get_path)
+    api_key_file: str | None = field(converter=attrs.converters.optional(get_path))
     state: str = field(
         converter=attrs.converters.pipe(convert_state_value, convert_state_to_code),
         validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
@@ -207,17 +225,17 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
     def create_eia_api_url(self):
         base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
-        frequency = f"frequency={'monthly' if self.config.monthly else 'annual'}"
+        frequency = f"frequency={'monthly' if self.monthly else 'annual'}"
         data = "data[0]=value"
-        facet = f"facets[series][]={self.config.series}"
-        start = f"start={self.config.resource_year}"
-        end = f"end={self.config.resource_year}"
-        if self.config.monthly:
+        facet = f"facets[series][]={self.series}"
+        start = f"start={self.resource_year}"
+        end = f"end={self.resource_year}"
+        if self.monthly:
             start = f"{start}-01"
             end = f"{start}-12"
         sort_col = "sort[0][column]=period"
         sort_dir = "sort[0][direction]=asc"
-        api_key = f"api_key={get_eia_api_key(self.config.api_key_file)}"
+        api_key = f"api_key={get_eia_api_key(self.api_key_file)}"
 
         url_opts = "&".join((frequency, data, facet, start, end, sort_col, sort_dir, api_key))
         url = f"{base_url}?{url_opts}"
@@ -242,12 +260,13 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         if filename is None:
             filename = self.filename
 
+        cols = ["period", "value"]
         if filename is not None:
             filename = Path(filename).resolve()
             if filename.exists():
                 df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
-                df = df.loc[df.index.dt.year.eq(self.config.resource_year)]
-                df = convert_to_monthly(df, self.config.resource_year)
+                df = df.loc[df.index.dt.year.eq(self.resource_year) & df.state.eq(self.state)]
+                df = convert_to_monthly(df, self.resource_year)
                 df = df.rename(columns={"value": "price"})
                 if df is not None:
                     return df
@@ -258,7 +277,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             msg = f"{err['code']}: {err['message']}"
             raise requests.exceptions.HTTPError(msg)
 
-        cols = ["period", "value"]
         df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
         if df.size == 0:
             raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
