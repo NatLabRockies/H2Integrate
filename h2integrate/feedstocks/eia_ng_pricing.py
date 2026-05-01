@@ -318,7 +318,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         if filename is None:
             filename = self.filename
 
-        cols = ["period", "price"]
         if filename is not None:
             filename = Path(filename).resolve()
             if filename.exists():
@@ -339,7 +338,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
 
         df.period = pd.to_datetime(df.period)
-        df = df.set_index("period").rename(columns={"value": "price"})[cols]
+        df = df.set_index("period").rename(columns={"value": "price"})[["price"]]
         df = convert_to_monthly(df)
         df.price *= MCF_to_MMBTU
 
