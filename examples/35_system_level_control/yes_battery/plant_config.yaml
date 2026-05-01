@@ -35,10 +35,11 @@ plant:
     n_timesteps: 8760
     dt: 3600
 system_level_control:
-  control_strategy: demand_following
-  solver_name: gauss_seidel
-  max_iter: 20
-  convergence_tolerance: 1.0e-6
+  control_strategy: DemandFollowingControl
+  solver_options:
+    solver_name: gauss_seidel
+    max_iter: 20
+    convergence_tolerance: 1.0e-6
 finance_parameters:
   finance_groups:
     profast_lco:

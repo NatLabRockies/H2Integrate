@@ -12,6 +12,7 @@ from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.finances.finances import AdjustedCapexOpexComp
 from h2integrate.core.supported_models import (
+    strategy_map,
     no_cost_models,
     supported_models,
     no_replacement_schedule_models,
@@ -23,17 +24,11 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
+from h2integrate.control.control_strategies.system_level.solver_options import (
+    SLCSolverOptionsConfig,
+)
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
-)
-from h2integrate.control.control_strategies.system_level.demand_following_control import (
-    DemandFollowingControl,
-)
-from h2integrate.control.control_strategies.system_level.cost_minimization_control import (
-    CostMinimizationControl,
-)
-from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
-    ProfitMaximizationControl,
 )
 
 
@@ -544,21 +539,21 @@ class H2IntegrateModel:
         slc_config = self.plant_config["system_level_control"]
 
         # Map control_strategy config values to controller classes
-        strategy_map = {
-            "demand_following": DemandFollowingControl,
-            "cost_minimization": CostMinimizationControl,
-            "profit_maximization": ProfitMaximizationControl,
-        }
+        # strategy_map = {
+        #     "demand_following": DemandFollowingControl,
+        #     "cost_minimization": CostMinimizationControl,
+        #     "profit_maximization": ProfitMaximizationControl,
+        # }
 
         # Map user-facing solver names to OpenMDAO solver classes
-        solver_map = {
-            "gauss_seidel": om.NonlinearBlockGS,
-            "newton": om.NewtonSolver,
-            "block_jacobi": om.NonlinearBlockJac,
-        }
+        # solver_map = {
+        #     "gauss_seidel": om.NonlinearBlockGS,
+        #     "newton": om.NewtonSolver,
+        #     "block_jacobi": om.NonlinearBlockJac,
+        # }
 
         # 1. Select controller class based on strategy
-        strategy_name = slc_config.get("control_strategy", "demand_following")
+        strategy_name = slc_config.get("control_strategy", "DemandFollowingControl")
         slc_cls = strategy_map.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
@@ -574,20 +569,27 @@ class H2IntegrateModel:
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
         # 2. Configure the nonlinear solver
-        solver_name = slc_config.get("solver_name", "gauss_seidel")
-        solver_cls = solver_map.get(solver_name)
-        if solver_cls is None:
-            raise ValueError(
-                f"Unknown solver_name '{solver_name}' in system_level_control. "
-                f"Supported: {list(solver_map.keys())}"
-            )
+        solver_config = SLCSolverOptionsConfig.from_dict(slc_config.get("solver_options", {}))
+        solver_cls = solver_config.get_solver_options()
         solver = solver_cls()
-        solver.options["maxiter"] = slc_config.get("max_iter", 20)
-        solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
-        solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
-        solver.options["iprint"] = 2  # print convergence at each iteration
+        solver_options = solver_config.get_solver_options()
+        for k, v in solver_options.items():
+            solver.options[k] = v
         self.plant.nonlinear_solver = solver
         self.plant.linear_solver = om.DirectSolver()
+        # solver_name = slc_config.get("solver_name", "gauss_seidel")
+        # solver_cls = solver_map.get(solver_name)
+
+        # if solver_cls is None:
+        #     raise ValueError(
+        #         f"Unknown solver_name '{solver_name}' in system_level_control. "
+        #         f"Supported: {list(solver_map.keys())}"
+        #     )
+
+        # solver.options["maxiter"] = slc_config.get("max_iter", 20)
+        # solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
+        # solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
+        # solver.options["iprint"] = 2  # print convergence at each iteration
 
         # 3. Connect the controller's inputs/outputs to technology models
         commodity = slc_config["commodity"]

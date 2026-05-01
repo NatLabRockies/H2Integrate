@@ -174,11 +174,20 @@ from h2integrate.control.control_strategies.storage.optimized_pyomo_controller i
 from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
     SimpleStorageOpenLoopController,
 )
+from h2integrate.control.control_strategies.system_level.demand_following_control import (
+    DemandFollowingControl,
+)
+from h2integrate.control.control_strategies.system_level.cost_minimization_control import (
+    CostMinimizationControl,
+)
 from h2integrate.control.control_strategies.storage.plm_openloop_storage_controller import (
     PeakLoadManagementHeuristicOpenLoopStorageController,
 )
 from h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost import (
     PyomoRuleStorageMinOperatingCosts,
+)
+from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
+    ProfitMaximizationControl,
 )
 from h2integrate.control.control_rules.converters.generic_converter_min_operating_cost import (
     PyomoDispatchGenericConverterMinOperatingCosts,
@@ -350,4 +359,11 @@ no_cost_models = {
 
 no_replacement_schedule_models = {
     "IronTransportPerformanceComponent",
+}
+
+# System-level controllers
+strategy_map = {
+    "DemandFollowingControl": DemandFollowingControl,
+    "CostMinimizationControl": CostMinimizationControl,
+    "ProfitMaximizationControl": ProfitMaximizationControl,
 }
