@@ -384,7 +384,7 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         ``plant_life``.
         """
         self.config = EIANaturalGasFeedstockConfig.from_dict(
-            self.options["resource_config"],
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
