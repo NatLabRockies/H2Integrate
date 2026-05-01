@@ -266,13 +266,17 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     commodity: str = field(default="natural_gas", init=False)
     commodity_rate_units: str = field(default="MMBtu/h", init=False)
     commodity_amount_units: str = field(default="MMBtu", init=False)
-    filename: str = field(default=None, converter=attrs.converters.optional(get_path))
+    filename: str = field(default=None)
 
     def __attrs_post_init__(self):
         """Creates the EIA natural gas facet series code based on validated user inputs, sets the
         :py:attr:`commodity_amount_units` if not given a value, and fetches the EIA natural gas
         price.
         """
+        try:
+            self.filename = get_path(self.filename)
+        except FileNotFoundError:
+            self.filename = Path(self.filename).resolve()
         self.series = EIA_FACET[self.price_category].format(self.state)
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
@@ -280,15 +284,16 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.price = self.get_data()
 
     def create_eia_api_url(self):
+        year = self.resource_year
         base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
         frequency = f"frequency={'monthly' if self.monthly else 'annual'}"
         data = "data[0]=value"
         facet = f"facets[series][]={self.series}"
-        start = f"start={self.resource_year}"
-        end = f"end={self.resource_year}"
+        start = f"start={year}"
+        end = f"end={year}"
         if self.monthly:
             start = f"{start}-01"
-            end = f"{start}-12"
+            end = f"{end}-12"
         sort_col = "sort[0][column]=period"
         sort_dir = "sort[0][direction]=asc"
         api_key = f"api_key={get_eia_api_key(self.api_key_file)}"
@@ -321,22 +326,24 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             filename = Path(filename).resolve()
             if filename.exists():
                 df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
-                df = df.loc[df.index.dt.year.eq(self.resource_year) & df.state.eq(self.state)]
-                df = convert_to_monthly(df, self.resource_year)
+                df = df.loc[
+                    (df.index.year == self.resource_year) & df.state.eq(self.state), ["price"]
+                ]
+                df = convert_to_monthly(df)
                 if df is not None:
                     return df
 
         r = requests.get(self.url)
         if r.status_code != 200:
             err = json.loads(r.text)["error"]
-            msg = f"{err['code']}: {err['message']}"
-            raise requests.exceptions.HTTPError(msg)
+            raise requests.exceptions.HTTPError(err)
 
         df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
         if df.size == 0:
             raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
 
         df.period = pd.to_datetime(df.period)
+        df.value = df.value.astype(float)
         df = df.set_index("period").rename(columns={"value": "price"})[["price"]]
         df = convert_to_monthly(df)
         df.price *= MCF_to_MMBTU
