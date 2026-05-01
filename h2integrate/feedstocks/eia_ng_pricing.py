@@ -249,7 +249,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
         Args:
             filename (Path | None, optional): The full filename where the natural gas pricing data
-                should be saved to or loaded from, if available. Defaults to None.
+                should be saved to or loaded from, if available. Must have columns "period" and
+                "price". Defaults to None.
 
         Raises:
             requests.exceptions.HTTPError: Raised if an unsuccessful API query result is returned.
@@ -262,14 +263,13 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         if filename is None:
             filename = self.filename
 
-        cols = ["period", "value"]
+        cols = ["period", "price"]
         if filename is not None:
             filename = Path(filename).resolve()
             if filename.exists():
                 df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
                 df = df.loc[df.index.dt.year.eq(self.resource_year) & df.state.eq(self.state)]
                 df = convert_to_monthly(df, self.resource_year)
-                df = df.rename(columns={"value": "price"})
                 if df is not None:
                     return df
 
@@ -284,9 +284,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
 
         df.period = pd.to_datetime(df.period)
-        df = df[cols].set_index("period")
+        df = df.set_index("period").rename(columns={"value": "price"})[cols]
         df = convert_to_monthly(df)
-        df = df.rename(columns={"value": "price"})
         df.price *= MCF_to_MMBTU
 
         if filename is not None:
