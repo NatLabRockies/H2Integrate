@@ -21,7 +21,9 @@
 - `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks`
 - Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA
   natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve
-  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries.
+  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries. Additionally, a `EIANaturalGasFeedstockPerformanceConfig` and
+  `EIANaturalGasFeedstockPerformanceModel` are created to be compatible with the hard-coded
+  definitions from the cost model.
 
 ## 0.8 [April 15, 2026]
 
