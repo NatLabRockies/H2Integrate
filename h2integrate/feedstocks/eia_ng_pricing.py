@@ -4,10 +4,13 @@ from pathlib import Path
 from datetime import datetime
 
 import attrs
+import numpy as np
 import pandas as pd
 import requests
+import openmdao.api as om
 from attrs import field, define
 
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path
 from h2integrate.core.model_baseclasses import BaseConfig, CostModelBaseClass
 
@@ -166,6 +169,58 @@ def get_eia_api_key(api_key_file: Path | None) -> str:
     raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
 
 
+@define(kw_only=True)
+class EIANaturalGasFeedstockPerformanceConfig(BaseConfig):
+    """Configuration class for the EIA natural gas price feedstock, which uses base units of MMBtu.
+
+    Attributes:
+        rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
+            This is used to size the feedstock supply to meet the plant's needs.
+    """
+
+    rated_capacity: float = field()
+    commodity: str = field(default="natural_gas", init=False)
+    commodity_rate_units: str = field(default="MMBtu/h", init=False)
+
+
+class EIANaturalGasFeedstockPerformanceModel(om.ExplicitComponent):
+    """Feedstock performance model compatible with the hard-coded units and commodity inputs
+    from the :py:class:`EIANaturalGasFeedstockCostModel` and
+    :py:class:`EIANaturalGasFeedstockConfig`.
+    """
+
+    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
+
+    def initialize(self):
+        self.options.declare("driver_config", types=dict)
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("tech_config", types=dict)
+
+    def setup(self):
+        self.config = EIANaturalGasFeedstockPerformanceConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
+        )
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.add_input(
+            f"{self.config.commodity}_capacity",
+            val=self.config.rated_capacity,
+            units=self.config.commodity_rate_units,
+        )
+
+        self.add_output(
+            f"{self.config.commodity}_out",
+            shape=self.n_timesteps,
+            units=self.config.commodity_rate_units,
+        )
+
+    def compute(self, inputs, outputs):
+        """Generates the feedstock array operating at full capacity for a full year."""
+        outputs[f"{self.config.commodity}_out"] = np.full(
+            self.n_timesteps, inputs[f"{self.config.commodity}_capacity"][0]
+        )
+
+
 @define
 class EIANaturalGasFeedstockConfig(BaseConfig):
     """EIA Industrial Natural Gas Pricing API configuration and downloader for the US and all 50 US
@@ -294,7 +349,10 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
 
 class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
-    """ """
+    """Feedstock cost model based on the EIA natural gas price API results that uses
+    annual or monthly data to model an hourly time step for a single year to model the
+    price of natural gas used in the model.
+    """
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
 

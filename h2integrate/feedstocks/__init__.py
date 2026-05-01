@@ -1,2 +1,5 @@
 from h2integrate.feedstocks.feedstocks import FeedstockPerformanceModel, FeedstockCostModel
-from h2integrate.feedstocks.eia_ng_pricing import EIANaturalGasFeedstockCostModel
+from h2integrate.feedstocks.eia_ng_pricing import (
+    EIANaturalGasFeedstockCostModel,
+    EIANaturalGasFeedstockPerformanceModel,
+)
