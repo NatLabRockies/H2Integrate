@@ -1,6 +1,6 @@
 # Hydrogen Fuel Cell Model
 
-The hydrogen fuel cell performance model implemented in H2Integrate is a linearized model that depends on the hydrogen inflow, `fuel_cell_efficiency_hhv` and `system_capacity_kw` to calculate the output electricity. The model will not allow negative electricity to be produced or more than the `system_capacity_kw`.
+The hydrogen fuel cell performance model implemented in H2Integrate is a linearized model that depends on the hydrogen inflow, `electricity_set_point`, `fuel_cell_efficiency_hhv` and `system_capacity_kw` to calculate the output electricity. The model will not allow negative electricity to be produced or more than the `system_capacity_kw`, or the `electricity_set_point`.
 
 There are no non-linear considerations in this model such as warm-up delays, degraded performance over operational life, etc.
 

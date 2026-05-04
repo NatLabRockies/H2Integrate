@@ -10,13 +10,13 @@ class CostMinimizationControl(SystemLevelControlBase):
 
     Meets demand at minimum variable cost using merit-order dispatch:
 
-    1. Curtailable techs run at rated capacity (zero marginal cost).
+    1. Curtailable techs run at rated capacity (assuming zero marginal cost).
     2. Storage absorbs surplus / provides deficit.
     3. Dispatchable techs are dispatched in ascending marginal-cost order,
        each up to its rated capacity, until remaining demand is met.
 
     Each dispatchable technology must have a ``marginal_cost`` input
-    ($/commodity_rate_unit·h, e.g. $/kWh) representing its variable cost
+    ($/commodity_rate_unit*h, e.g. $/kWh) representing its variable cost
     per unit of production.  These are connected from cost model outputs
     or set as defaults in the plant config.
     """
