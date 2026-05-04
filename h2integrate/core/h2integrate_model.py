@@ -482,9 +482,9 @@ class H2IntegrateModel:
         technologies = self.technology_config.get("technologies", {})
 
         # Identify the (single) demand technology
-        commodity = None
         demand_tech = None
-        commodity_units = None
+        demand_commodity = None
+        demand_commodity_rate_units = None
         for tech_name, tech_def in technologies.items():
             model_name = tech_def.get("performance_model", {}).get("model", "")
             if "DemandComponent" not in model_name:
@@ -495,16 +495,45 @@ class H2IntegrateModel:
             shared_params = model_inputs.get("shared_parameters", {})
             all_params = {**shared_params, **perf_params}
 
-            if commodity is not None:
+            if demand_commodity is not None:
+                # NOTE: this error should only be raised if two demand components
+                # are in the tech connections
                 raise ValueError(
                     "DemandFollowingControl currently supports only one demand "
-                    f"stream, but found demands for both '{commodity}' "
+                    f"stream, but found demands for both '{demand_commodity}' "
                     f"and '{all_params.get('commodity', tech_name)}'."
                 )
-            commodity = all_params["commodity"]
-            commodity_units = all_params.get("commodity_rate_units", None)
+
+            demand_commodity = all_params["commodity"]
+            demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
             demand_profile = all_params.get("demand_profile", 0.0)
             demand_tech = tech_name
+            # Check that the demand tech is in the technology_interconnections
+            tech_interconnections = self.plant_config["technology_interconnections"]
+            demand_is_source_connection = [
+                tech_connection
+                for tech_connection in tech_interconnections
+                if tech_connection[0] == demand_tech
+            ]
+            demand_is_destination_connection = [
+                tech_connection
+                for tech_connection in tech_interconnections
+                if tech_connection[1] == demand_tech
+            ]
+            if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
+                # demand is not in tech interconnections
+                demand_tech = None
+                demand_commodity = None
+
+                demand_commodity_rate_units = None
+
+        # Raise error if no demand commodity was defined
+        if demand_tech is None:
+            msg = (
+                "No demand commodity was found in the technology interconnections. "
+                "Please define a demand component."
+            )
+            raise ValueError(msg)
 
         # Classify technologies using pre-computed classifiers
         curtailable_techs = []
@@ -518,14 +547,29 @@ class H2IntegrateModel:
             elif classifier == "storage":
                 storage_techs.append(tech_name)
 
+        # Classify technologies based on their output commodity (or commodities)
+        # Use a set to remove duplicates (in case one tech produces multiple commodities)
+        sources_to_commodities = {
+            (e[0], e[-1])
+            for e in self.technology_graph.edges(data="commodity")
+            if e[-1] is not None
+        }
+
+        # Remove feedstocks and connectors
+        techs_to_connect = set(curtailable_techs + dispatchable_techs + storage_techs)
+        tech_to_commodities = {
+            (e[0], e[-1]) for e in sources_to_commodities if e[0] in techs_to_connect
+        }
+
         # Store classification results in plant_config for SLC component
-        slc_config["commodity"] = commodity
-        slc_config["commodity_units"] = commodity_units
         slc_config["demand_tech"] = demand_tech
         slc_config["demand_profile"] = demand_profile
+        slc_config["demand_commodity"] = demand_commodity
+        slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["curtailable_techs"] = curtailable_techs
         slc_config["dispatchable_techs"] = dispatchable_techs
         slc_config["storage_techs"] = storage_techs
+        slc_config["tech_to_commodity"] = tech_to_commodities
 
     def add_system_level_controller(self):
         """Add the DemandFollowingControl component and configure the plant solver.
@@ -571,6 +615,7 @@ class H2IntegrateModel:
                 f"Supported: {list(solver_map.keys())}"
             )
         solver = solver_cls()
+        # TODO: make a config for the below defaults
         solver.options["maxiter"] = slc_config.get("max_iter", 20)
         solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
         solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
@@ -579,42 +624,26 @@ class H2IntegrateModel:
         self.plant.linear_solver = om.DirectSolver()
 
         # 3. Connect the controller's inputs/outputs to technology models
-        commodity = slc_config["commodity"]
 
-        # Curtailable techs: read their output and write set_point
-        for tech_name in slc_config["curtailable_techs"]:
-            self.plant.connect(
-                f"{tech_name}.{commodity}_out",
-                f"system_level_controller.{tech_name}_{commodity}_out",
-            )
-            self.plant.connect(
-                f"{tech_name}.rated_{commodity}_production",
-                f"system_level_controller.{tech_name}_rated_{commodity}_production",
-            )
-            self.plant.connect(
-                f"system_level_controller.{tech_name}_{commodity}_set_point",
-                f"{tech_name}.{commodity}_set_point",
-            )
-
-        # Dispatchable and storage techs: read output and write set_point
-        for tech_list in ["dispatchable_techs", "storage_techs"]:
+        # Curtailable, dispatchable, and storage techs: read output and write set_point
+        for tech_list in ["curtailable_techs", "dispatchable_techs", "storage_techs"]:
             for tech_name in slc_config[tech_list]:
-                self.plant.connect(
-                    f"{tech_name}.{commodity}_out",
-                    f"system_level_controller.{tech_name}_{commodity}_out",
-                )
-                self.plant.connect(
-                    f"system_level_controller.{tech_name}_{commodity}_set_point",
-                    f"{tech_name}.{commodity}_set_point",
-                )
+                tech_commodities = self._get_commodity_for_tech(tech_name)
+                for commodity in tech_commodities:
+                    self.plant.connect(
+                        f"{tech_name}.{commodity}_out",
+                        f"system_level_controller.{tech_name}_{commodity}_out",
+                    )
 
-        # Dispatchable and storage techs: also connect rated production
-        for tech_list in ["dispatchable_techs", "storage_techs"]:
-            for tech_name in slc_config[tech_list]:
-                self.plant.connect(
-                    f"{tech_name}.rated_{commodity}_production",
-                    f"system_level_controller.{tech_name}_rated_{commodity}_production",
-                )
+                    self.plant.connect(
+                        f"{tech_name}.rated_{commodity}_production",
+                        f"system_level_controller.{tech_name}_rated_{commodity}_production",
+                    )
+
+                    self.plant.connect(
+                        f"system_level_controller.{tech_name}_{commodity}_set_point",
+                        f"{tech_name}.{commodity}_set_point",
+                    )
 
         # 4. For cost-aware strategies, connect marginal costs from cost models
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
@@ -628,6 +657,7 @@ class H2IntegrateModel:
         ### components in the new SLC paradigm.
         # # Connect demand profile to the controller
         # demand_tech = slc_config["demand_tech"]
+        # demand_commodity = slc_config["demand_commodity"]
         # self.plant.connect(
         #     f"{demand_tech}.{commodity}_demand",
         #     f"system_level_controller.{commodity}_demand",
@@ -701,7 +731,7 @@ class H2IntegrateModel:
                     tech_config=individual_tech_config,
                 )
                 self._check_time_step(perf_model, comp)
-                self.tech_control_classifiers.update({tech_name: "feedback"})
+                self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
                 tech_group = self.plant.add_subsystem(tech_name, om.Group())

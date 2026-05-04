@@ -28,8 +28,28 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         # 3. Dispatchable techs: equal share of remaining demand
         remaining = np.maximum(demand, 0.0)
-        n_dispatchable = len(self.dispatchable_set_point_names)
+        n_dispatchable = len(
+            [
+                s
+                for s in self.dispatchable_techs
+                if self.commodity in self._get_commodity_for_tech(s)
+            ]
+        )
+
+        # calculate the number of dispatchable technologies that
+        # produce the demanded commodity
         if n_dispatchable > 0:
             share = remaining / n_dispatchable
-            for set_point_name in self.dispatchable_set_point_names:
-                outputs[set_point_name] = share
+            for set_point_name, commodity in zip(
+                self.dispatchable_set_point_names, self.dispatchable_commodity_names
+            ):
+                if commodity == self.commodity:
+                    outputs[set_point_name] = share
+
+        # Check for nans or inf
+        if not all(np.isfinite(c).all() for k, c in outputs.items()):
+            bad_outputs = [k for k, c in outputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"These outputs contain non-finite values: {bad_outputs}")
+        if not all(np.isfinite(c).all() for k, c in inputs.items()):
+            bad_inputs = [k for k, c in inputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"These inputs contain non-finite values: {bad_inputs}")
