@@ -482,9 +482,7 @@ class H2IntegrateModel:
         technologies = self.technology_config.get("technologies", {})
 
         # Identify the (single) demand technology
-        commodity = None
         demand_tech = None
-        commodity_units = None
         demand_commodity = None
         demand_commodity_rate_units = None
         for tech_name, tech_def in technologies.items():
@@ -497,16 +495,14 @@ class H2IntegrateModel:
             shared_params = model_inputs.get("shared_parameters", {})
             all_params = {**shared_params, **perf_params}
 
-            if commodity is not None:
+            if demand_commodity is not None:
                 # NOTE: this error should only be raised if two demand components
                 # are in the tech connections
                 raise ValueError(
                     "DemandFollowingControl currently supports only one demand "
-                    f"stream, but found demands for both '{commodity}' "
+                    f"stream, but found demands for both '{demand_commodity}' "
                     f"and '{all_params.get('commodity', tech_name)}'."
                 )
-            commodity = all_params["commodity"]
-            commodity_units = all_params.get("commodity_rate_units", None)
 
             demand_commodity = all_params["commodity"]
             demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
@@ -528,7 +524,7 @@ class H2IntegrateModel:
                 # demand is not in tech interconnections
                 demand_tech = None
                 demand_commodity = None
-                commodity_units = None
+
                 demand_commodity_rate_units = None
 
         # Raise error if no demand commodity was defined
@@ -566,8 +562,6 @@ class H2IntegrateModel:
         }
 
         # Store classification results in plant_config for SLC component
-        slc_config["commodity"] = commodity  # TODO: remove
-        slc_config["commodity_units"] = commodity_units  # TODO: remove
         slc_config["demand_tech"] = demand_tech
         slc_config["demand_profile"] = demand_profile
         slc_config["demand_commodity"] = demand_commodity
