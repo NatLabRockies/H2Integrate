@@ -17,7 +17,7 @@ from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 model = H2IntegrateModel("iron_map.yaml")
 model.run()

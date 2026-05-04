@@ -75,7 +75,7 @@ We initialize and setup the H2I model
 ```{code-cell} ipython3
 from pathlib import Path
 from matplotlib import pyplot as plt
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate import EXAMPLE_DIR
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 

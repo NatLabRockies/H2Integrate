@@ -3,8 +3,8 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate import H2IntegrateModel
 from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 @fixture

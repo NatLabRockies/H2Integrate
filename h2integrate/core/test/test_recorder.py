@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_driver_yaml
 
 

@@ -41,7 +41,7 @@ from h2integrate import EXAMPLE_DIR
 from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.inputs.validation import load_tech_yaml
 from h2integrate.preprocess.wind_turbine_file_tools import export_turbine_to_pysam_format
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 ```
 
 Load the tech config file that we want to update the turbine model for:

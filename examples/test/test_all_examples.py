@@ -7,9 +7,8 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR
+from h2integrate import ROOT_DIR, H2IntegrateModel
 from h2integrate.core.file_utils import load_yaml
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 ROOT = Path(__file__).parents[1]

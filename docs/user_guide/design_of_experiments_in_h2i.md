@@ -156,7 +156,7 @@ from pathlib import Path
 
 from h2integrate.core.file_utils import check_file_format_for_csv_generator, load_yaml
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_driver_yaml, write_yaml
 ```
 

@@ -65,7 +65,7 @@ from pathlib import Path
 import numpy as np
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseClass, ResizeablePerformanceModelBaseConfig
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_driver_yaml, load_plant_yaml
 
 

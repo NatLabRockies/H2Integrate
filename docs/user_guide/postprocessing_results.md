@@ -71,7 +71,7 @@ The keys in the object are the names of the variables in the model, and the valu
 Here is an example of how to access the results from the `prob` object:
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create a H2Integrate model
@@ -102,7 +102,7 @@ The `vars_to_save` argument supports three different input formats:
 #### Example 1: Save all timeseries data
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 # Create and run a H2Integrate model
@@ -205,7 +205,7 @@ print(df.head())
 #### Postprocessing the results of a completed H2Integrate model run
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
 
 model = H2IntegrateModel("top_level_config.yaml")
