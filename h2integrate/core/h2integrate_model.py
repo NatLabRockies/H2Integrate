@@ -634,9 +634,7 @@ class H2IntegrateModel:
         # Curtailable, dispatchable, and storage techs: read output and write set_point
         for tech_list in ["curtailable_techs", "dispatchable_techs", "storage_techs"]:
             for tech_name in slc_config[tech_list]:
-                tech_commodities = [
-                    e[1] for e in slc_config["tech_to_commodity"] if e[0] == tech_name
-                ]
+                tech_commodities = self._get_commodity_for_tech(tech_name)
                 for commodity in tech_commodities:
                     self.plant.connect(
                         f"{tech_name}.{commodity}_out",
