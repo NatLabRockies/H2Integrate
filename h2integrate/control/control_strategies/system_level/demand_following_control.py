@@ -48,8 +48,8 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         # Check for nans or inf
         if not all(np.isfinite(c).all() for k, c in outputs.items()):
-            buggy_outputs = [k for k, c in outputs.items() if not np.isfinite(c).all()]
-            raise ValueError(f"Buggy outputs {buggy_outputs}")
+            bad_outputs = [k for k, c in outputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"These outputs contain non-finite values: {bad_outputs}")
         if not all(np.isfinite(c).all() for k, c in inputs.items()):
-            buggy_inputs = [k for k, c in inputs.items() if not np.isfinite(c).all()]
-            raise ValueError(f"Buggy inputs {buggy_inputs}")
+            bad_inputs = [k for k, c in inputs.items() if not np.isfinite(c).all()]
+            raise ValueError(f"These inputs contain non-finite values: {bad_inputs}")

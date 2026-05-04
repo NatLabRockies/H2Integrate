@@ -66,7 +66,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_storage_techs()
 
     def _setup_commodity_for_given_units(
-        self, tech_name, commodity, commodity_units, add_in_name=True, set_point0=0.0
+        self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=0.0
     ):
         """Adds inputs and outputs for a commodity when the units are known.
         The inputs and outputs that are added have the below naming convention:
@@ -82,8 +82,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             commodity_units (str): units of commodity
             add_in_name (bool, optional): If True, add the input for the in_name variable.
                 Defaults to True.
-            set_point0 (float, optional): Add as the initial value for the set_point variable.
-                Defaults to 0.0.
+            initial_set_point (float, optional): Add as the initial value for the
+                set_point variable. Defaults to 0.0.
         Returns:
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
         """
@@ -107,7 +107,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
         self.add_output(
             set_point_name,
-            val=set_point0,
+            val=initial_set_point,
             shape=self.n_timesteps,
             units=commodity_units,
             desc=f"Set point for {tech_name} {commodity} curtailment",
@@ -116,7 +116,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return in_name, set_point_name, rated_name
 
     def _setup_commodity_for_copy_units(
-        self, tech_name, commodity, commodity_reference_var, add_in_name=True, set_point0=0.0
+        self, tech_name, commodity, commodity_reference_var, add_in_name=True, initial_set_point=0.0
     ):
         """Adds inputs and outputs for a commodity where the units are based on a reference
         input variable. The inputs and outputs that are added have the below
@@ -127,15 +127,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
             capacity of tech_name
         - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
 
-
         Args:
             tech_name (str): name of technology
             commodity (str): commodity of the technology described by `tech_name`
             commodity_reference_var (str): name of input to copy units from
             add_in_name (bool, optional): If True, add the input for the in_name variable.
                 Defaults to True.
-            set_point0 (float, optional): Add as the initial value for the set_point variable.
-                Defaults to 0.0.
+            initial_set_point (float, optional): Add as the initial value for the
+                set_point variable. Defaults to 0.0.
 
         Returns:
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
@@ -162,7 +161,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
         self.add_output(
             set_point_name,
-            val=set_point0,
+            val=initial_set_point,
             shape=self.n_timesteps,
             units=None,
             copy_units=commodity_reference_var,
@@ -263,7 +262,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         commodity,
                         self.commodities_to_units[commodity],
                         add_in_name=True,
-                        set_point0=initial_set_point,
+                        initial_set_point=initial_set_point,
                     )
                 elif commodity in self.commodities_to_ref_var:
                     in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
@@ -271,7 +270,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         commodity,
                         self.commodities_to_ref_var[commodity],
                         add_in_name=True,
-                        set_point0=initial_set_point,
+                        initial_set_point=initial_set_point,
                     )
                 else:
                     # commodity units not yet defined
@@ -291,7 +290,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             commodity,
                             self.commodities_to_ref_var[commodity],
                             add_in_name=False,
-                            set_point0=initial_set_point,
+                            initial_set_point=initial_set_point,
                         )
                     else:
                         self.commodities_to_units.update({commodity: meta_data["units"]})
@@ -300,7 +299,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             commodity,
                             self.commodities_to_units[commodity],
                             add_in_name=False,
-                            set_point0=initial_set_point,
+                            initial_set_point=initial_set_point,
                         )
 
                 self.dispatchable_commodity_names.append(commodity)
