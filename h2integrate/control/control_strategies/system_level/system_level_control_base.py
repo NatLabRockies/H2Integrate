@@ -61,9 +61,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         self.commodities_to_units = {self.commodity: self.commodity_units}
         self.commodities_to_ref_var = {}
-        self._setup_curtailable_techs()
-        self._setup_dispatchable_techs(demand_profile)
-        self._setup_storage_techs()
+        self._setup_tech_category("curtailable", self.curtailable_techs)
+        self._setup_tech_category(
+            "dispatchable", self.dispatchable_techs, demand_profile=demand_profile
+        )
+        self._setup_tech_category("storage", self.storage_techs)
 
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=0.0
@@ -170,93 +172,77 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return in_name, set_point_name, rated_name
 
-    def _setup_curtailable_techs(self):
-        """Create I/O for curtailable technologies."""
-        self.curtailable_input_names = []
-        self.curtailable_set_point_names = []
-        self.curtailable_rated_names = []
-        self.curtailable_commodity_names = []
-        for tech_name in self.curtailable_techs:
-            tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
-            for commodity in tech_commodities:
-                if commodity in self.commodities_to_units:
-                    # The units of this commodity are defined in self.commodities_to_units
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
-                        tech_name, commodity, self.commodities_to_units[commodity], add_in_name=True
-                    )
-                elif commodity in self.commodities_to_ref_var:
-                    # The units of this commodity are defined by a reference variable
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
-                        tech_name,
-                        commodity,
-                        self.commodities_to_ref_var[commodity],
-                        add_in_name=True,
-                    )
+    def _setup_tech_category(self, category, tech_list, demand_profile=None):
+        """Create OpenMDAO I/O variables for all technologies in a given category.
+
+        This single method handles curtailable, dispatchable, and storage
+        technologies.  The logic is identical for all three categories —
+        iterate over each technology's commodities and register the
+        appropriate inputs (production output, rated capacity) and output
+        (control set-point) — with one difference:
+
+        * **Curtailable / Storage** (``demand_profile is None``):
+          ``initial_set_point`` is ``0.0``.  Curtailable techs are later
+          assigned set-points equal to their rated production; storage techs
+          get set-points computed at run-time in ``_dispatch_storage``.
+
+        * **Dispatchable** (``demand_profile`` is provided):
+          ``initial_set_point`` is the demand evenly divided among the
+          dispatchable techs that produce the demanded commodity, giving
+          the solver a reasonable starting guess.
+
+        After this method returns, four lists are stored on ``self`` under
+        names produced by the *category* prefix:
+
+            ``self.{category}_input_names``
+            ``self.{category}_set_point_names``
+            ``self.{category}_rated_names``
+            ``self.{category}_commodity_names``
+
+        These lists are consumed by ``compute()`` and the helper methods
+        ``_subtract_curtailable`` and ``_dispatch_storage``.
+
+        Args:
+            category (str): One of ``"curtailable"``, ``"dispatchable"``,
+                or ``"storage"``.  Used to name the attribute lists.
+            tech_list (list[str]): Technology names belonging to this category
+                (e.g. ``self.curtailable_techs``).
+            demand_profile (float | np.ndarray | None, optional):
+                Only relevant for **dispatchable** techs.  When provided, the
+                demand is split equally among dispatchable techs that produce
+                the demanded commodity to set a non-zero ``initial_set_point``.
+                For curtailable and storage techs, leave as ``None`` (default).
+        """
+        # --- Compute initial_set_point --------------------------------
+        # Dispatchable techs: split demand equally among those that produce
+        # the demanded commodity so the solver starts from a feasible guess.
+        # Curtailable and storage techs always start at 0.
+        if demand_profile is not None:
+            n_producing = len(
+                [t for t in tech_list if self.commodity in self._get_commodity_for_tech(t)]
+            )
+            if n_producing > 0:
+                if np.isscalar(demand_profile):
+                    initial_set_point = demand_profile / n_producing
                 else:
-                    # The units of this commodity are unknown at this moment
-                    in_name = f"{tech_name}_{commodity}_out"
-                    meta_data = self.add_input(
-                        in_name,
-                        val=0.0,
-                        shape=self.n_timesteps,
-                        units=None,
-                        units_by_conn=True,
-                        desc=f"{commodity} output from {tech_name}",
-                    )
-                    if meta_data["units"] is None:
-                        # If the units are still unknown, use the in_name of this
-                        # technology as the reference variable for future technologies
-                        # that use this commodity
-                        self.commodities_to_ref_var[commodity] = in_name
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
-                            tech_name,
-                            commodity,
-                            self.commodities_to_ref_var[commodity],
-                            add_in_name=False,
-                        )
-                    else:
-                        # If the units are known from a connection,
-                        # then use those units for this commodity
-                        self.commodities_to_units.update({commodity: meta_data["units"]})
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
-                            tech_name,
-                            commodity,
-                            self.commodities_to_units[commodity],
-                            add_in_name=False,
-                        )
-
-                self.curtailable_commodity_names.append(commodity)
-                self.curtailable_input_names.append(in_name)
-                self.curtailable_set_point_names.append(set_point_name)
-                self.curtailable_rated_names.append(rated_name)
-
-    def _setup_dispatchable_techs(self, demand_profile):
-        """Create I/O for dispatchable technologies."""
-        # calculate the number of dispatchable technologies that
-        # produce the demanded commodity
-        n_dispatchable = len(
-            [
-                s
-                for s in self.dispatchable_techs
-                if self.commodity in self._get_commodity_for_tech(s)
-            ]
-        )
-        if n_dispatchable > 0:
-            if np.isscalar(demand_profile):
-                initial_set_point = demand_profile / n_dispatchable
+                    initial_set_point = np.array(demand_profile) / n_producing
             else:
-                initial_set_point = np.array(demand_profile) / n_dispatchable
+                initial_set_point = 0.0
         else:
             initial_set_point = 0.0
 
-        self.dispatchable_input_names = []
-        self.dispatchable_set_point_names = []
-        self.dispatchable_rated_names = []
-        self.dispatchable_commodity_names = []
-        for tech_name in self.dispatchable_techs:
+        # --- Initialize the four per-category bookkeeping lists -------
+        input_names = []
+        set_point_names = []
+        rated_names = []
+        commodity_names = []
+
+        # --- Register I/O for every (tech, commodity) pair ------------
+        for tech_name in tech_list:
             tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
             for commodity in tech_commodities:
                 if commodity in self.commodities_to_units:
+                    # Units are already known explicitly
                     in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
                         tech_name,
                         commodity,
@@ -265,6 +251,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         initial_set_point=initial_set_point,
                     )
                 elif commodity in self.commodities_to_ref_var:
+                    # Units are inferred from a previously-registered reference variable
                     in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
                         tech_name,
                         commodity,
@@ -273,7 +260,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         initial_set_point=initial_set_point,
                     )
                 else:
-                    # commodity units not yet defined
+                    # Units are unknown; try to discover them from the connection
                     in_name = f"{tech_name}_{commodity}_out"
                     meta_data = self.add_input(
                         in_name,
@@ -284,6 +271,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         desc=f"{commodity} output from {tech_name}",
                     )
                     if meta_data["units"] is None:
+                        # Still unknown: register in_name as the reference
+                        # variable so later techs with this commodity can
+                        # copy its units.
                         self.commodities_to_ref_var[commodity] = in_name
                         in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
                             tech_name,
@@ -293,7 +283,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             initial_set_point=initial_set_point,
                         )
                     else:
-                        self.commodities_to_units.update({commodity: meta_data["units"]})
+                        # Connection provided units — record them for future use
+                        self.commodities_to_units[commodity] = meta_data["units"]
                         in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
                             tech_name,
                             commodity,
@@ -302,63 +293,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             initial_set_point=initial_set_point,
                         )
 
-                self.dispatchable_commodity_names.append(commodity)
-                self.dispatchable_input_names.append(in_name)
-                self.dispatchable_set_point_names.append(set_point_name)
-                self.dispatchable_rated_names.append(rated_name)
+                commodity_names.append(commodity)
+                input_names.append(in_name)
+                set_point_names.append(set_point_name)
+                rated_names.append(rated_name)
 
-    def _setup_storage_techs(self):
-        """Create I/O for storage technologies."""
-        self.storage_input_names = []
-        self.storage_set_point_names = []
-        self.storage_rated_names = []
-        self.storage_commodity_names = []
-        for tech_name in self.storage_techs:
-            tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
-            for commodity in tech_commodities:
-                if commodity in self.commodities_to_units:
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
-                        tech_name, commodity, self.commodities_to_units[commodity], add_in_name=True
-                    )
-                elif commodity in self.commodities_to_ref_var:
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
-                        tech_name,
-                        commodity,
-                        self.commodities_to_ref_var[commodity],
-                        add_in_name=True,
-                    )
-                else:
-                    # commodity units not yet defined
-                    in_name = f"{tech_name}_{commodity}_out"
-                    meta_data = self.add_input(
-                        in_name,
-                        val=0.0,
-                        shape=self.n_timesteps,
-                        units=None,
-                        units_by_conn=True,
-                        desc=f"{commodity} output from {tech_name}",
-                    )
-                    if meta_data["units"] is None:
-                        self.commodities_to_ref_var[commodity] = in_name
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
-                            tech_name,
-                            commodity,
-                            self.commodities_to_ref_var[commodity],
-                            add_in_name=False,
-                        )
-                    else:
-                        self.commodities_to_units.update({commodity: meta_data["units"]})
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
-                            tech_name,
-                            commodity,
-                            self.commodities_to_units[commodity],
-                            add_in_name=False,
-                        )
-
-                self.storage_commodity_names.append(commodity)
-                self.storage_input_names.append(in_name)
-                self.storage_set_point_names.append(set_point_name)
-                self.storage_rated_names.append(rated_name)
+        # --- Store lists as self.<category>_<suffix> attributes -------
+        setattr(self, f"{category}_input_names", input_names)
+        setattr(self, f"{category}_set_point_names", set_point_names)
+        setattr(self, f"{category}_rated_names", rated_names)
+        setattr(self, f"{category}_commodity_names", commodity_names)
 
     def _subtract_curtailable(self, inputs, outputs, demand):
         """Apply curtailable techs: set_point = rated, subtract output from demand.
