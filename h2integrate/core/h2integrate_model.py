@@ -552,18 +552,11 @@ class H2IntegrateModel:
                 storage_techs.append(tech_name)
 
         # Classify technologies based on their output commodity (or commodities)
-        G = nx.DiGraph()
-        for connection in self.plant_config["technology_interconnections"]:
-            source = connection[0]
-            destination = connection[1]
-            if len(connection) == 4:
-                G.add_edge(source, destination, commodity=connection[2])
-            else:
-                G.add_edge(source, destination)
-
         # Use a set to remove duplicates (in case one tech produces multiple commodities)
         sources_to_commodities = {
-            (e[0], e[-1]) for e in G.edges(data="commodity") if e[-1] is not None
+            (e[0], e[-1])
+            for e in self.technology_graph.edges(data="commodity")
+            if e[-1] is not None
         }
 
         # Remove feedstocks and connectors
@@ -573,11 +566,11 @@ class H2IntegrateModel:
         }
 
         # Store classification results in plant_config for SLC component
-        slc_config["commodity"] = commodity  # TODO: replace with demand_commodity
-        slc_config["commodity_units"] = commodity_units  # TODO: replace with demand commodity units
+        slc_config["commodity"] = commodity  # TODO: remove
+        slc_config["commodity_units"] = commodity_units  # TODO: remove
         slc_config["demand_tech"] = demand_tech
         slc_config["demand_profile"] = demand_profile
-        slc_config["demand_commodity"] = demand_commodity  # TODO: use this to replace commodity
+        slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["curtailable_techs"] = curtailable_techs
         slc_config["dispatchable_techs"] = dispatchable_techs
