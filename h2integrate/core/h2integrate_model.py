@@ -88,8 +88,8 @@ class H2IntegrateModel:
 
         # add system-level controller if configured
         if self.slc:
-            self._classify_slc_technologies()
-            self.add_system_level_controller()
+            slc_config = self._classify_slc_technologies()
+            self.add_system_level_controller(slc_config)
 
         # connect technologies
         # technologies are connected within the `technology_interconnections` section of the
@@ -478,7 +478,7 @@ class H2IntegrateModel:
         Results are written into ``self.plant_config["system_level_control"]`` so
         they are available to the ``DemandFollowingControl`` component at setup time.
         """
-        slc_config = self.plant_config["system_level_control"]
+        slc_config = {}  # self.plant_config["system_level_control"]
         technologies = self.technology_config.get("technologies", {})
 
         # Identify the (single) demand technology
@@ -586,8 +586,9 @@ class H2IntegrateModel:
         slc_config["tech_to_commodity"] = tech_to_commodities
         slc_config["storage_techs_to_control"] = storage_tech_to_control
         slc_config["technology_graph"] = self.technology_graph
+        return slc_config
 
-    def add_system_level_controller(self):
+    def add_system_level_controller(self, slc_config):
         """Add the DemandFollowingControl component and configure the plant solver.
 
         This method:
@@ -597,7 +598,6 @@ class H2IntegrateModel:
         4. Creates connections between the controller and each technology
         5. For cost/profit strategies, connects marginal cost inputs
         """
-        slc_config = self.plant_config["system_level_control"]
 
         # Map user-facing solver names to OpenMDAO solver classes
         solver_map = {
