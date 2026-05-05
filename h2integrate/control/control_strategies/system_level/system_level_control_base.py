@@ -38,11 +38,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.commodity = slc_config["demand_commodity"]
         self.commodity_units = slc_config.get("demand_commodity_rate_units", None)
         self.demand_tech = slc_config["demand_tech"]
-        self.curtailable_techs = list(slc_config.get("curtailable_techs", []))
-        self.dispatchable_techs = list(slc_config.get("dispatchable_techs", []))
-        self.storage_techs = list(slc_config.get("storage_techs", []))
         self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
         self.technology_graph = slc_config["technology_graph"]
+
+        self.curtailable_techs = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "curtailable"
+        ]
+        self.dispatchable_techs = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "dispatchable"
+        ]
+        self.storage_techs = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
+        ]
 
         # Input: demand profile (default value from config)
         demand_profile = slc_config.get("demand_profile", 0.0)
