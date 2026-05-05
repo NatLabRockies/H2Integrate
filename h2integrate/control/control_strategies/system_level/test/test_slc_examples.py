@@ -97,3 +97,22 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("35_system_level_control/battery_with_controller", None)],
+)
+def test_slc_battery_with_controller(subtests, temp_copy_of_example):
+    # TODO: this test still needs to be completed!
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+
+    model.run()
+
+    wind_out = model.prob.get_val("wind.electricity_out")
+
+    with subtests.test("wind farm generates power"):
+        assert wind_out.sum() > 0

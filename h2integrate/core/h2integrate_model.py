@@ -555,6 +555,20 @@ class H2IntegrateModel:
             if e[-1] is not None
         }
 
+        # Check if storage models have a controller
+        storage_tech_to_control = {}
+        for tech in storage_techs:
+            control_model = (
+                self.technology_config["technologies"][tech]
+                .get("control_strategy", {})
+                .get("model", None)
+            )
+            if control_model is None:
+                storage_tech_to_control[tech] = False
+            else:
+                # storage model does use a controller
+                storage_tech_to_control[tech] = True
+
         # Remove feedstocks and connectors
         techs_to_connect = set(curtailable_techs + dispatchable_techs + storage_techs)
         tech_to_commodities = {
@@ -570,6 +584,8 @@ class H2IntegrateModel:
         slc_config["dispatchable_techs"] = dispatchable_techs
         slc_config["storage_techs"] = storage_techs
         slc_config["tech_to_commodity"] = tech_to_commodities
+        slc_config["storage_techs_to_control"] = storage_tech_to_control
+        slc_config["technology_graph"] = self.technology_graph
 
     def add_system_level_controller(self):
         """Add the DemandFollowingControl component and configure the plant solver.
@@ -640,10 +656,27 @@ class H2IntegrateModel:
                         f"system_level_controller.{tech_name}_rated_{commodity}_production",
                     )
 
-                    self.plant.connect(
-                        f"system_level_controller.{tech_name}_{commodity}_set_point",
-                        f"{tech_name}.{commodity}_set_point",
-                    )
+                    if tech_list == "storage_techs":
+                        if slc_config["storage_techs_to_control"][tech_name]:
+                            # storage has its own controller
+                            # provide demand to storage controller,
+                            # storage controller will provide set-point to performance model
+                            self.plant.connect(
+                                f"system_level_controller.{tech_name}_{commodity}_demand",
+                                f"{tech_name}.{commodity}_demand",
+                            )
+
+                        else:
+                            # storage doesnt have its own controller, it takes in set-point
+                            self.plant.connect(
+                                f"system_level_controller.{tech_name}_{commodity}_set_point",
+                                f"{tech_name}.{commodity}_set_point",
+                            )
+                    else:
+                        self.plant.connect(
+                            f"system_level_controller.{tech_name}_{commodity}_set_point",
+                            f"{tech_name}.{commodity}_set_point",
+                        )
 
         # 4. For cost-aware strategies, connect marginal costs from cost models
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):

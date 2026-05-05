@@ -40,6 +40,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.curtailable_techs = list(slc_config.get("curtailable_techs", []))
         self.dispatchable_techs = list(slc_config.get("dispatchable_techs", []))
         self.storage_techs = list(slc_config.get("storage_techs", []))
+        self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
+        self.technology_graph = slc_config["technology_graph"]
 
         # Input: demand profile (default value from config)
         demand_profile = slc_config.get("demand_profile", 0.0)
@@ -67,6 +69,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
         self._setup_tech_category("storage", self.storage_techs)
 
+    # def _get_upstream_techs(self, inputs, tech_name):
+    #     tech_commodities = self._get_commodity_for_tech(tech_name)
+
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=0.0
     ):
@@ -90,8 +95,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
         """
         in_name = f"{tech_name}_{commodity}_out"
-        set_point_name = f"{tech_name}_{commodity}_set_point"
         rated_name = f"{tech_name}_rated_{commodity}_production"
+
+        if self.storage_techs_to_control.get(tech_name, False):
+            # tech_name is storage and does have an attached controller
+            set_point_name = f"{tech_name}_{commodity}_demand"
+        else:
+            # if tech_name is not in storage_techs_to_control
+            # or storage tech does not have an attached controller
+            set_point_name = f"{tech_name}_{commodity}_set_point"
 
         if add_in_name:
             self.add_input(
@@ -142,8 +154,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
         """
         in_name = f"{tech_name}_{commodity}_out"
-        set_point_name = f"{tech_name}_{commodity}_set_point"
         rated_name = f"{tech_name}_rated_{commodity}_production"
+
+        if self.storage_techs_to_control.get(tech_name, False):
+            # tech_name is storage and does have an attached controller
+            set_point_name = f"{tech_name}_{commodity}_demand"
+        else:
+            # if tech_name is not in storage_techs_to_control
+            # or storage tech does not have an attached controller
+            set_point_name = f"{tech_name}_{commodity}_set_point"
 
         if add_in_name:
             self.add_input(
@@ -334,12 +353,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
             [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
         )
         if n_storage > 0:
+            # split the demand across the storage technologies
             storage_share = demand / n_storage
             for set_point_name, commodity in zip(
                 self.storage_set_point_names, self.storage_commodity_names
             ):
                 if commodity == self.commodity:
-                    outputs[set_point_name] = storage_share
+                    if f"_{commodity}_demand" in set_point_name:
+                        # storage tech has a controller, output combined demand (always positive)
+                        # TODO: update to output whatever is input to storage + storage_share
+                        outputs[set_point_name] = np.clip(storage_share, a_min=0.0, a_max=None)
+                    else:
+                        # storage tech does not have a controller,
+                        # output set point (charge/discharge) command
+                        # charge when remaining demand is negative
+                        # discharge when remaining demand is positive
+                        outputs[set_point_name] = storage_share
 
         for tech_name, in_name in zip(self.storage_techs, self.storage_input_names):
             if self.commodity in self._get_commodity_for_tech(tech_name):
