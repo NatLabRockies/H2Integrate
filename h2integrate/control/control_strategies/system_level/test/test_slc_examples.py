@@ -69,7 +69,7 @@ def test_slc_profit_max(subtests, temp_copy_of_example):
     model.setup()
 
     model.prob.set_val(
-        "plant.system_level_controller.commodity_sell_price",
+        "system_level_controller.commodity_sell_price",
         sell_price,
         units="USD/(kW*h)",
     )

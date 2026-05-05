@@ -1,8 +1,15 @@
 import numpy as np
+from attrs import field, define
 
+from h2integrate.core.utilities import BaseConfig
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
     SystemLevelControlBase,
 )
+
+
+@define(kw_only=True)
+class ProfitMaximizationControlConfig(BaseConfig):
+    commodity_sell_price: float = field(default=0.0)
 
 
 class ProfitMaximizationControl(SystemLevelControlBase):
@@ -29,13 +36,13 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     def setup(self):
         super().setup()
 
-        slc_config = self.options["plant_config"]["system_level_control"]
-
+        config = ProfitMaximizationControlConfig.from_dict(
+            self.options["plant_config"]["system_level_control"]["control_parameters"]
+        )
         # Commodity sell price — user-set in config, can be scalar or time-varying
-        default_sell_price = slc_config.get("commodity_sell_price", 0.0)
         self.add_input(
             "commodity_sell_price",
-            val=default_sell_price,
+            val=config.commodity_sell_price,
             shape=self.n_timesteps,
             units=f"USD/({self.commodity_units}*h)",
             desc=f"Sell price per unit of {self.commodity}",

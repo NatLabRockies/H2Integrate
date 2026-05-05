@@ -607,7 +607,9 @@ class H2IntegrateModel:
         }
 
         # 1. Select controller class based on strategy
-        strategy_name = slc_config.get("control_strategy", "DemandFollowingControl")
+        strategy_name = self.plant_config["system_level_control"].get(
+            "control_strategy", "DemandFollowingControl"
+        )
         slc_cls = self.supported_models.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
@@ -619,6 +621,7 @@ class H2IntegrateModel:
             driver_config=self.driver_config,
             plant_config=self.plant_config,
             tech_config=self.technology_config,
+            slc_config=slc_config,
         )
         self.plant.add_subsystem("system_level_controller", slc_comp)
 

@@ -126,7 +126,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Should be called at the end of each curtailable model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
-        if "system_level_controller" in self.options["plant_config"]:
+        if "system_level_control" in self.options["plant_config"]:
             if getattr(self, "_control_classifier", None) != "curtailable":
                 return
 
