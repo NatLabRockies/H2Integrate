@@ -68,15 +68,13 @@ We don't want to send more electricity to the electrolyzer than the electrolyzer
 :lines: 112-119
 ```
 
-
-
 We initialize and setup the H2I model
 
 ```{code-cell} ipython3
 from pathlib import Path
 from matplotlib import pyplot as plt
-from h2integrate import H2IntegrateModel
-from h2integrate import EXAMPLE_DIR
+
+from h2integrate import H2IntegrateModel, EXAMPLE_DIR
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 ex_dir = EXAMPLE_DIR / "13_dispatch_for_electrolyzer"
