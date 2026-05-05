@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python ${{ matrix.python-version }}
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
