@@ -123,10 +123,22 @@ Similar to the standard feedstock model, the following variables are able to be 
 Additionally, there are a few other settings that users will need to provide for the model to work
 that differ from the standard cost model.
 
+:::{important}
+If relying on site coordinate data (`latitude` and `longitude`), then the `reverse_geocoder` package
+is required, which can be pip installed directly or through the `gis` library extras.
+:::
+
 - `resource_year` (int): Which year to obtain the data from in the range [2001, 2026].
 - `monthly` (bool): If True, the monthly data are retrieved, otherwise the annual price is used.
-- `state` (str): Full name of the state or two-letter state abbreviation, such as "United States" or
-  "US". Only the "US" or all 50 states will produce valid results
+- location data options 1) use `state` or 2) use `latitude` and `longitude`:
+  - `state` (str): Full name of the state or two-letter state abbreviation, such as "United States" or
+    "US". Only the "US" or all 50 states will produce valid results. When `state` is provided, the
+    site coordinate data will be ignored.
+  - `latitude` (float): Latitude of the natural gas plant site. Only used when `state` is not
+    provided, and will be filled from the plant configuration's site data if not provided.
+  - `longitude` (float): Longitude of the natural gas plant site. Only used when `state` is not
+    provided, and will be filled from the plant configuration's site data if not provided.
+
 - `price_category` (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
   "industrial", "electrical_power", or "exports". Note that not all categories will return
   state-level data.
