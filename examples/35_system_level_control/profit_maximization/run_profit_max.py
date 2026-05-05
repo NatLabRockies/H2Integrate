@@ -59,22 +59,22 @@ price = sell_price[:n_hours]
 fig, axes = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
 
 # Panel 1: stacked supply vs demand
-axes[0].fill_between(hours, 0, wind_out, alpha=0.7, color="tab:blue", label="Wind")
+axes[0].fill_between(hours, 0, ng_out, alpha=0.7, color="tab:orange", label="Natural Gas")
 axes[0].fill_between(
     hours,
-    wind_out,
-    wind_out + batt_discharge,
+    ng_out,
+    ng_out + batt_discharge,
     alpha=0.7,
     color="tab:purple",
     label="Battery Discharge",
 )
 axes[0].fill_between(
     hours,
-    wind_out + batt_discharge,
-    wind_out + batt_discharge + ng_out,
+    ng_out + batt_discharge,
+    ng_out + batt_discharge + wind_out,
     alpha=0.7,
-    color="tab:orange",
-    label="Natural Gas",
+    color="tab:blue",
+    label="Wind",
 )
 axes[0].plot(hours, demand, "k--", linewidth=1.5, label="Demand")
 axes[0].set_ylabel("Power (kW)")

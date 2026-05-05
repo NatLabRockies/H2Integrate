@@ -22,8 +22,13 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         ``plant_config["system_level_control"]["commodity_sell_price"]``
         must be set ($/(commodity_rate_unit*h), e.g. $/kWh).
 
-    Each dispatchable technology must have a ``marginal_cost`` input
-    representing its variable cost per unit of production.
+    Marginal costs are configured via ``cost_per_tech`` in the
+    ``system_level_control`` section of ``plant_config``.  Each
+    dispatchable technology's entry can be:
+
+    - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)
+    - ``"buy_price"`` — use the technology's purchase price
+    - ``"VarOpEx"``   — derive from VarOpEx / total production
     """
 
     def setup(self):
@@ -41,17 +46,8 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             desc=f"Sell price per unit of {self.commodity}",
         )
 
-        # Add marginal cost inputs for dispatchable techs
-        self.dispatchable_marginal_cost_names = []
-        for tech_name in self.dispatchable_techs:
-            mc_name = f"{tech_name}_marginal_cost"
-            self.add_input(
-                mc_name,
-                val=0.0,
-                units=f"USD/({self.commodity_units}*h)",
-                desc=f"Marginal cost of {self.commodity} from {tech_name}",
-            )
-            self.dispatchable_marginal_cost_names.append(mc_name)
+        # Set up marginal cost inputs based on cost_per_tech config
+        self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
@@ -66,8 +62,11 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         # 3. Profit-driven merit-order dispatch
         remaining = np.maximum(demand, 0.0)
 
-        marginal_costs = np.array([inputs[mc][0] for mc in self.dispatchable_marginal_cost_names])
-        dispatch_order = np.argsort(marginal_costs)
+        marginal_costs = self._compute_marginal_costs(inputs)
+
+        # Merit order: sort by mean marginal cost (cheapest first)
+        mean_costs = np.array([mc.mean() for mc in marginal_costs])
+        dispatch_order = np.argsort(mean_costs)
 
         # Initialize all dispatchable set_points to zero
         for set_point_name in self.dispatchable_set_point_names:
@@ -75,7 +74,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
         # Dispatch only where profitable (element-wise comparison)
         for idx in dispatch_order:
-            mc = marginal_costs[idx]
+            mc = marginal_costs[idx]  # per-timestep array
             profitable = mc < sell_price  # boolean mask per timestep
 
             set_point_name = self.dispatchable_set_point_names[idx]
