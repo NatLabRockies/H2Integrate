@@ -101,7 +101,9 @@ def convert_to_monthly(df: pd.DataFrame) -> pd.DataFrame | None:
         case 12:
             return df.resample("MS").bfill()  # ensure it's start of the month
         case 1:
-            df = df.resample("MS").nearest()
+            year = df.index.year[0]
+            ix = pd.date_range(f"{year}-01", f"{year}-12", freq="MS")
+            df = df.reindex(ix, method="nearest")
             return df
         case _:
             pass
