@@ -26,10 +26,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
+        self.options.declare("slc_config", types=dict)
 
     def setup(self):
         plant_config = self.options["plant_config"]
-        slc_config = plant_config["system_level_control"]
+        slc_config = self.options["slc_config"]
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
 
