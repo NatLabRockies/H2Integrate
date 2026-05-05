@@ -535,18 +535,6 @@ class H2IntegrateModel:
             )
             raise ValueError(msg)
 
-        # Classify technologies using pre-computed classifiers
-        curtailable_techs = []
-        dispatchable_techs = []
-        storage_techs = []
-        for tech_name, classifier in self.tech_control_classifiers.items():
-            if classifier == "curtailable":
-                curtailable_techs.append(tech_name)
-            elif classifier == "dispatchable":
-                dispatchable_techs.append(tech_name)
-            elif classifier == "storage":
-                storage_techs.append(tech_name)
-
         # Classify technologies based on their output commodity (or commodities)
         # Use a set to remove duplicates (in case one tech produces multiple commodities)
         sources_to_commodities = {
@@ -556,9 +544,11 @@ class H2IntegrateModel:
         }
 
         # Remove feedstocks and connectors
-        techs_to_connect = set(curtailable_techs + dispatchable_techs + storage_techs)
+        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage"]
         tech_to_commodities = {
-            (e[0], e[-1]) for e in sources_to_commodities if e[0] in techs_to_connect
+            (e[0], e[-1])
+            for e in sources_to_commodities
+            if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
         }
 
         # Store classification results in plant_config for SLC component
@@ -566,10 +556,9 @@ class H2IntegrateModel:
         slc_config["demand_profile"] = demand_profile
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
-        slc_config["curtailable_techs"] = curtailable_techs
-        slc_config["dispatchable_techs"] = dispatchable_techs
-        slc_config["storage_techs"] = storage_techs
         slc_config["tech_to_commodity"] = tech_to_commodities
+        slc_config["tech_control_classifiers"] = self.tech_control_classifiers
+
         return slc_config
 
     def add_system_level_controller(self, slc_config):
@@ -633,32 +622,32 @@ class H2IntegrateModel:
         # 3. Connect the controller's inputs/outputs to technology models
 
         # Curtailable, dispatchable, and storage techs: read output and write set_point
-        for tech_list in ["curtailable_techs", "dispatchable_techs", "storage_techs"]:
-            for tech_name in slc_config[tech_list]:
-                tech_commodities = self._get_commodity_for_tech(tech_name)
-                for commodity in tech_commodities:
-                    self.plant.connect(
-                        f"{tech_name}.{commodity}_out",
-                        f"system_level_controller.{tech_name}_{commodity}_out",
-                    )
+        for tech_to_commodity in slc_config["tech_to_commodity"]:
+            tech_name, commodity = tech_to_commodity
+            self.plant.connect(
+                f"{tech_name}.{commodity}_out",
+                f"system_level_controller.{tech_name}_{commodity}_out",
+            )
 
-                    self.plant.connect(
-                        f"{tech_name}.rated_{commodity}_production",
-                        f"system_level_controller.{tech_name}_rated_{commodity}_production",
-                    )
+            self.plant.connect(
+                f"{tech_name}.rated_{commodity}_production",
+                f"system_level_controller.{tech_name}_rated_{commodity}_production",
+            )
 
-                    self.plant.connect(
-                        f"system_level_controller.{tech_name}_{commodity}_set_point",
-                        f"{tech_name}.{commodity}_set_point",
-                    )
+            self.plant.connect(
+                f"system_level_controller.{tech_name}_{commodity}_set_point",
+                f"{tech_name}.{commodity}_set_point",
+            )
 
         # 4. For cost-aware strategies, connect marginal costs from cost models
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
-            for tech_name in slc_config["dispatchable_techs"]:
-                self.plant.connect(
-                    f"{tech_name}.marginal_cost",
-                    f"system_level_controller.{tech_name}_marginal_cost",
-                )
+            for tech_to_commodity in slc_config["tech_to_commodity"]:
+                tech_name, commodity = tech_to_commodity
+                if self.tech_control_classifiers[tech_name] == "dispatchable":
+                    self.plant.connect(
+                        f"{tech_name}.marginal_cost",
+                        f"system_level_controller.{tech_name}_marginal_cost",
+                    )
 
         ### Commented out for now; we'll need to determine how to treat demand
         ### components in the new SLC paradigm.
