@@ -126,18 +126,19 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Should be called at the end of each curtailable model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
-        if getattr(self, "_control_classifier", None) != "curtailable":
-            return
+        if "system_level_controller" in self.options["plant_config"]:
+            if getattr(self, "_control_classifier", None) != "curtailable":
+                return
 
-        commodity_out_key = f"{self.commodity}_out"
-        uncurtailed_key = f"uncurtailed_{self.commodity}_out"
-        set_point_key = f"{self.commodity}_set_point"
+            commodity_out_key = f"{self.commodity}_out"
+            uncurtailed_key = f"uncurtailed_{self.commodity}_out"
+            set_point_key = f"{self.commodity}_set_point"
 
-        uncurtailed = np.array(outputs[commodity_out_key])
-        outputs[uncurtailed_key] = uncurtailed
+            uncurtailed = np.array(outputs[commodity_out_key])
+            outputs[uncurtailed_key] = uncurtailed
 
-        set_point = self._inputs[set_point_key]
-        outputs[commodity_out_key] = np.minimum(uncurtailed, set_point)
+            set_point = self._inputs[set_point_key]
+            outputs[commodity_out_key] = np.minimum(uncurtailed, set_point)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
