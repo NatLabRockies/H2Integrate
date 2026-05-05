@@ -251,15 +251,18 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
     resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
     monthly: bool = field(validator=attrs.validators.instance_of(bool))
-    api_key_file: str | None = field(converter=attrs.converters.optional(get_path))
+    price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
+    url: str = field(default=None, init=False)
+    series: str = field(init=False)
+    price: pd.DataFrame = field(init=False, validator=attrs.validators.instance_of(pd.DataFrame))
+    api_key_file: str | None = field(default=None, converter=attrs.converters.optional(get_path))
     state: str = field(
+        default=None,
         converter=attrs.converters.pipe(convert_state_value, convert_state_to_code),
         validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
     )
-    price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
-    url: str = field(init=False)
-    series: str = field(init=False)
-    price: pd.DataFrame = field(init=False, validator=attrs.validators.instance_of(pd.DataFrame))
+    latitude: float = field(default=0.0, validator=attrs.validators.instance_of(float))
+    longitude: float = field(default=0.0, validator=attrs.validators.instance_of(float))
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
@@ -280,7 +283,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.series = EIA_FACET[self.price_category].format(self.state)
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
-        self.url = self.create_eia_api_url()
+        if self.api_key_file is not None:
+            self.url = self.create_eia_api_url()
         self.price = self.get_data()
 
     def create_eia_api_url(self):
@@ -332,6 +336,13 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 df = convert_to_monthly(df)
                 if df is not None:
                     return df
+
+        if self.url is None:
+            msg = (
+                "One of `api_key_file` or `filename` with existing data provided to use the"
+                "`EIANaturalGasFeedstock` cost and performance models."
+            )
+            raise ValueError(msg)
 
         r = requests.get(self.url)
         if r.status_code != 200:
@@ -392,9 +403,14 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
         ``plant_life``.
         """
+        # TODO: figure out mult-site or single site usage for coordinates input
+        # if (site_config := self.options["plant_config"].get("site")) is None:
+        #     raise ValueError("Single-site definition is missing from the plant configuration.")
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            # merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost") | site_config,  # noqa: E501
             additional_cls_name=self.__class__.__name__,
+            strict=False,
         )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
