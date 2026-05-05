@@ -111,7 +111,8 @@ examples = [
 ]
 gis = [
   "geopandas",
-  "contextily"
+  "contextily",
+  "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
 extras = ["h2integrate[gis,ard]"]

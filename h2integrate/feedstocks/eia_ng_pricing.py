@@ -107,6 +107,31 @@ def convert_to_monthly(df: pd.DataFrame) -> pd.DataFrame | None:
             pass
 
 
+def get_state_from_coords(latitude: float, longitude: float) -> str:
+    """Reverse geocodes a :py:attr:`latitude` and :py:attr:`longitude` pair to get the
+    state containing the coordinate pair.
+
+    Args:
+        latitude (float): Site latitude.
+        longitude (float): Site longitude.
+
+    Returns:
+        str: 2-letter state code (i.e., "Alabama" -> "AL").
+    """
+    try:
+        import reverse_geocoder as rg
+    except ModuleNotFoundError as e:
+        msg = (
+            "EIA natural gas feedstock coordinate input requires `reverse_geocoder` to be"
+            " installed. Directly `pip install reverse_geocoder` or use"
+            " `pip install h2integrate[gis]`."
+        )
+        raise ModuleNotFoundError(msg) from e
+
+    result = rg.search((latitude, longitude))
+    return convert_state_to_code(convert_state_value(result["admin1"]))
+
+
 def convert_state_value(state: str) -> str:
     """Convert potential two-letter state abbreviations to upper case and all else to title
     casing to align with the ``STATE_MAP`` keys and values.
@@ -154,7 +179,7 @@ def get_eia_api_key(api_key_file: Path | None) -> str:
         if key is None:
             msg = (
                 "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY' is not defined as an"
-                "environment variable."
+                " environment variable."
             )
             raise ValueError(msg)
         return key
@@ -258,11 +283,15 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     api_key_file: str | None = field(default=None, converter=attrs.converters.optional(get_path))
     state: str = field(
         default=None,
-        converter=attrs.converters.pipe(convert_state_value, convert_state_to_code),
-        validator=attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()]),
+        converter=attrs.converters.optional(
+            attrs.converters.pipe(convert_state_value, convert_state_to_code)
+        ),
+        validator=attrs.validators.optional(
+            attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()])
+        ),
     )
-    latitude: float = field(default=0.0, validator=attrs.validators.instance_of(float))
-    longitude: float = field(default=0.0, validator=attrs.validators.instance_of(float))
+    latitude: float = field(default=999.9, validator=attrs.validators.instance_of(float))
+    longitude: float = field(default=999.9, validator=attrs.validators.instance_of(float))
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
@@ -280,6 +309,17 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             self.filename = get_path(self.filename)
         except FileNotFoundError:
             self.filename = Path(self.filename).resolve()
+
+        if self.state is None:
+            if self.latitude == 999.9 or self.longitude == 999.9:
+                msg = (
+                    "The EIA natural gas feedstock model require one of `state` or"
+                    " `latitude` and `longitude`."
+                )
+                raise ValueError(msg)
+
+            self.state = get_state_from_coords(self.latitude, self.longitude)
+
         self.series = EIA_FACET[self.price_category].format(self.state)
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
@@ -340,7 +380,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         if self.url is None:
             msg = (
                 "One of `api_key_file` or `filename` with existing data provided to use the"
-                "`EIANaturalGasFeedstock` cost and performance models."
+                " `EIANaturalGasFeedstock` cost and performance models."
             )
             raise ValueError(msg)
 
@@ -392,8 +432,8 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
         )
         if price.shape[0] != self.n_timesteps:
             msg = (
-                "An error occurred converting EIA data to hourly to match size: "
-                f"{price.shape[0]} to simulation {self.n_timesteps=}"
+                "An error occurred converting EIA data to hourly to match size:"
+                f" {price.shape[0]} to simulation {self.n_timesteps=}"
             )
             raise ValueError(msg)
         return price
