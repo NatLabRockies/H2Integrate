@@ -25,8 +25,9 @@ plant:
     dt: 3600
 system_level_control:
   control_strategy: ProfitMaximizationControl
-  commodity_sell_price: 0.06  # $/kWh default; overridden in run script
   cost_per_tech:
     natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
+  control_parameters:
+    commodity_sell_price: 0.06  # $/kWh default; overridden in run script
   solver_name: gauss_seidel
   max_iter: 20

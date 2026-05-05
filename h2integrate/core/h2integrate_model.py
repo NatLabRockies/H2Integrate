@@ -88,8 +88,8 @@ class H2IntegrateModel:
 
         # add system-level controller if configured
         if self.slc:
-            self._classify_slc_technologies()
-            self.add_system_level_controller()
+            slc_config = self._classify_slc_technologies()
+            self.add_system_level_controller(slc_config)
 
         # connect technologies
         # technologies are connected within the `technology_interconnections` section of the
@@ -478,7 +478,7 @@ class H2IntegrateModel:
         Results are written into ``self.plant_config["system_level_control"]`` so
         they are available to the ``DemandFollowingControl`` component at setup time.
         """
-        slc_config = self.plant_config["system_level_control"]
+        slc_config = {}
         technologies = self.technology_config.get("technologies", {})
 
         # Identify the (single) demand technology
@@ -570,8 +570,9 @@ class H2IntegrateModel:
         slc_config["dispatchable_techs"] = dispatchable_techs
         slc_config["storage_techs"] = storage_techs
         slc_config["tech_to_commodity"] = tech_to_commodities
+        return slc_config
 
-    def add_system_level_controller(self):
+    def add_system_level_controller(self, slc_config):
         """Add the DemandFollowingControl component and configure the plant solver.
 
         This method:
@@ -581,7 +582,6 @@ class H2IntegrateModel:
         4. Creates connections between the controller and each technology
         5. For cost/profit strategies, connects marginal cost inputs
         """
-        slc_config = self.plant_config["system_level_control"]
 
         # Map user-facing solver names to OpenMDAO solver classes
         solver_map = {
@@ -591,7 +591,9 @@ class H2IntegrateModel:
         }
 
         # 1. Select controller class based on strategy
-        strategy_name = slc_config.get("control_strategy", "DemandFollowingControl")
+        strategy_name = self.plant_config["system_level_control"].get(
+            "control_strategy", "DemandFollowingControl"
+        )
         slc_cls = self.supported_models.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
@@ -603,6 +605,7 @@ class H2IntegrateModel:
             driver_config=self.driver_config,
             plant_config=self.plant_config,
             tech_config=self.technology_config,
+            slc_config=slc_config,
         )
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
@@ -616,9 +619,13 @@ class H2IntegrateModel:
             )
         solver = solver_cls()
         # TODO: make a config for the below defaults
-        solver.options["maxiter"] = slc_config.get("max_iter", 20)
-        solver.options["atol"] = slc_config.get("convergence_tolerance", 1e-6)
-        solver.options["rtol"] = slc_config.get("convergence_tolerance", 1e-6)
+        solver.options["maxiter"] = self.plant_config["system_level_control"].get("max_iter", 20)
+        solver.options["atol"] = self.plant_config["system_level_control"].get(
+            "convergence_tolerance", 1e-6
+        )
+        solver.options["rtol"] = self.plant_config["system_level_control"].get(
+            "convergence_tolerance", 1e-6
+        )
         solver.options["iprint"] = 2  # print convergence at each iteration
         self.plant.nonlinear_solver = solver
         self.plant.linear_solver = om.DirectSolver()
