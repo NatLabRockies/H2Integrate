@@ -330,6 +330,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.price = self.get_data()
 
     def create_eia_api_url(self):
+        """Creates the full EIA natural gas API url."""
         year = self.resource_year
         base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
         frequency = f"frequency={'monthly' if self.monthly else 'annual'}"
