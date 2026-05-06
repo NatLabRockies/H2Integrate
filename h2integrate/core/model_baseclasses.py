@@ -103,14 +103,14 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         if getattr(self, "_control_classifier", None) == "curtailable":
             self.add_input(
                 f"{self.commodity}_set_point",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Set point for {self.commodity} production (curtailment limit)",
             )
             self.add_output(
                 f"uncurtailed_{self.commodity}_out",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Full (uncurtailed) {self.commodity} output",
