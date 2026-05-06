@@ -307,10 +307,11 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         :py:attr:`commodity_amount_units` if not given a value, and fetches the EIA natural gas
         price.
         """
-        try:
-            self.filename = get_path(self.filename)
-        except FileNotFoundError:
-            self.filename = Path(self.filename).resolve()
+        if self.filename is not None:
+            try:
+                self.filename = get_path(self.filename)
+            except FileNotFoundError:
+                self.filename = Path(self.filename).resolve()
 
         if self.state is None:
             if self.latitude == 999.9 or self.longitude == 999.9:
@@ -325,12 +326,13 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.series = EIA_FACET[self.price_category].format(self.state)
         if self.commodity_amount_units is None:
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
-        if self.api_key_file is not None:
-            self.url = self.create_eia_api_url()
+        self.url = self.create_eia_api_url()
         self.price = self.get_data()
 
     def create_eia_api_url(self):
         """Creates the full EIA natural gas API url."""
+        api_key = get_eia_api_key(self.api_key_file)
+
         year = self.resource_year
         base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
         frequency = f"frequency={'monthly' if self.monthly else 'annual'}"
@@ -343,7 +345,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             end = f"{end}-12"
         sort_col = "sort[0][column]=period"
         sort_dir = "sort[0][direction]=asc"
-        api_key = f"api_key={get_eia_api_key(self.api_key_file)}"
+        api_key = f"api_key={api_key}"
 
         url_opts = "&".join((frequency, data, facet, start, end, sort_col, sort_dir, api_key))
         url = f"{base_url}?{url_opts}"
@@ -379,13 +381,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 df = convert_to_monthly(df)
                 if df is not None:
                     return df
-
-        if self.url is None:
-            msg = (
-                "One of `api_key_file` or `filename` with existing data provided to use the"
-                " `EIANaturalGasFeedstock` cost and performance models."
-            )
-            raise ValueError(msg)
 
         r = requests.get(self.url)
         if r.status_code != 200:
