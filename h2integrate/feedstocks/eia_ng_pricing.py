@@ -130,7 +130,7 @@ def get_state_from_coords(latitude: float, longitude: float) -> str:
         )
         raise ModuleNotFoundError(msg) from e
 
-    result = rg.search((latitude, longitude))
+    result = rg.search((latitude, longitude))[0]
     return convert_state_to_code(convert_state_value(result["admin1"]))
 
 
