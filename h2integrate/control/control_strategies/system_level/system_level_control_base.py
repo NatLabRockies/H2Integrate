@@ -79,9 +79,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
 
-    # def _get_upstream_techs(self, inputs, tech_name):
-    #     tech_commodities = self._get_commodity_for_tech(tech_name)
-
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
     ):

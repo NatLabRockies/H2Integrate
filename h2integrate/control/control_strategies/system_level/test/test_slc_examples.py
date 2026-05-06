@@ -105,7 +105,6 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
     [("35_system_level_control/battery_with_controller", None)],
 )
 def test_slc_battery_with_controller(subtests, temp_copy_of_example):
-    # TODO: this test still needs to be completed!
     example_folder = temp_copy_of_example
 
     model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
