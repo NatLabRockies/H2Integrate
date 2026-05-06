@@ -185,7 +185,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         appropriate inputs (production output, rated capacity) and output
         (control set-point).
 
-        All initial set-points are ``0.0``; the solver converges from there
+        All initial set-points are ``1.0``; the solver converges from there
         using the connected rated-production inputs at run time.
 
         After this method returns, four lists are stored on ``self`` under
