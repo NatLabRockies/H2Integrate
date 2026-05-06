@@ -374,8 +374,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 if commodity == self.commodity:
                     if f"_{commodity}_demand" in set_point_name:
                         # storage tech has a controller, output combined demand (always positive)
-                        # TODO: update to output whatever is input to storage + storage_share
-                        outputs[set_point_name] = np.clip(storage_share, a_min=0.0, a_max=None)
+                        # demand should be what is input to storage + storage_share
+                        storage_tech_name = set_point_name.split(f"_{commodity}_demand")[0]
+                        upstream_techs = self.get_upstream_techs_for_commodity(
+                            storage_tech_name, commodity
+                        )
+                        commodity_into_storage = np.zeros(self.n_timesteps)
+                        for tech_name in upstream_techs:
+                            commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
+                        outputs[set_point_name] = commodity_into_storage + storage_share
                     else:
                         # storage tech does not have a controller,
                         # output set point (charge/discharge) command
