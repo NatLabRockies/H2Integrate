@@ -652,7 +652,7 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_rated_{commodity}_production",
             )
 
-            if slc_config["storage_techs_to_control"][tech_name]:
+            if slc_config["storage_techs_to_control"].get(tech_name, False):
                 # storage has its own controller
                 # provide demand to storage controller,
                 # storage controller will provide set-point to performance model

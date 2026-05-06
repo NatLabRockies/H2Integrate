@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 import openmdao.api as om
 
 
@@ -50,6 +51,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.storage_techs = [
             k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
         ]
+
+        self.input_techs = set(
+            self.curtailable_techs + self.dispatchable_techs + self.storage_techs
+        )
 
         # Input: demand profile (default value from config)
         demand_profile = slc_config.get("demand_profile", 0.0)
@@ -396,3 +401,95 @@ class SystemLevelControlBase(om.ExplicitComponent):
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
 
         return tech_commodities
+
+    def get_upstream_techs_for_commodity(self, tech_name: str, commodity: str):
+        """Get the name of technologies that are upstream
+        of `tech_name` and that output `commodity`
+
+        Args:
+            tech_name (str): name of technology
+            commodity (str): commodity name
+
+        Returns:
+            list[str]: list of technologies upstream of the tech_name that produce a given commodity
+        """
+        # figure out where the upstream commodity is coming from
+        upstream_components = nx.ancestors(self.technology_graph, tech_name)
+        # iterates through a list of 3 length tuples (source, dest, commodity)
+        upstream_components_shared_commodity = [
+            s[0]
+            for s in list(self.technology_graph.edges(data="commodity"))
+            if s[0] in upstream_components and s[2] == commodity
+        ]
+        # get the technologies that are available to the controller
+        upstream_techs = set(upstream_components_shared_commodity).intersection(
+            set(self.input_techs)
+        )
+        return list(upstream_techs)
+
+    def find_converter_techs(self):
+        """Get the name of the technology that transforms a commodity
+
+        Returns:
+            set(tuple): set of converter technologies formatted as
+                (input_commodity, converter tech name, output_commodity)
+        """
+        if not self.multi_commodity_system:
+            return
+
+        converter_techs = set()
+
+        edges = list(self.technology_graph.edges(data="commodity"))
+        upstream_converter = None
+        # for tech in self.input_techs:
+        for edge in edges:
+            tech, dest_tech, cmod = edge
+            if tech in self.input_techs:
+                tech_output_commodity = self._get_commodity_for_tech(tech)
+
+                # NOTE: unsure how this would work for systems with tiered converters
+                # aka - maybe have to eliminate a converter once we've discovered it
+                if upstream_converter is None:
+                    upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
+                        set(self.input_techs)
+                    )
+                else:
+                    idx_upstream_converter = [
+                        i
+                        for i, n in enumerate(self.technology_graph.__iter__())
+                        if n == upstream_converter
+                    ]
+                    downstream_of_previous_converter = [
+                        n
+                        for i, n in enumerate(self.technology_graph.__iter__())
+                        if i > idx_upstream_converter
+                    ]
+                    all_upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
+                        set(self.input_techs)
+                    )
+                    upstream_techs = all_upstream_techs.intersection(
+                        set(downstream_of_previous_converter)
+                    )
+
+                connected_upstream_techs = [
+                    t for t in upstream_techs if nx.has_path(self.technology_graph, t, tech)
+                ]
+                upstream_commodities = [
+                    self._get_commodity_for_tech(t) for t in connected_upstream_techs
+                ]
+                # symmetric difference
+                # commodities that are not in both
+                input_output_commodity = set(upstream_commodities) ^ set(tech_output_commodity)
+                if len(input_output_commodity) > 1:
+                    input_commodity = list(
+                        input_output_commodity.intersection(set(upstream_commodities))
+                    )
+                    output_commodity = list(
+                        input_output_commodity.intersection(set(tech_output_commodity))
+                    )
+
+                    # formatted as (input commodity, tech_name, output comodity)
+                    converter_techs.add((input_commodity, tech, output_commodity))
+                    upstream_converter = tech
+
+        return converter_techs
