@@ -1,10 +1,5 @@
 """
-Profit-maximization example with diurnal electricity sell prices.
-
-The NG plant has a fixed marginal cost of $0.05/kWh.  The electricity sell
-price follows a diurnal pattern that swings above and below this cost:
-  - Night (22:00-16:00): $0.03/kWh, NG is unprofitable, not dispatched
-  - Peak (16:00-22:00): $0.08/kWh, NG is profitable, dispatched
+Profit-maximization example with simple electricity price profiles.
 
 The controller dispatches the NG plant only during hours when the sell price
 exceeds the marginal cost, demonstrating profit-driven curtailment of
@@ -17,28 +12,11 @@ import matplotlib.pyplot as plt
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
-# -- Build diurnal sell-price profile ($/kWh) --
-n_timesteps = 8760
-sell_price = np.zeros(n_timesteps)
-for h in range(n_timesteps):
-    hour_of_day = h % 24
-    if 16 <= hour_of_day < 22:
-        sell_price[h] = 0.08  # peak
-    else:
-        sell_price[h] = 0.03  # night (cheap)
-
 # -- Create and run model --
 h2i = H2IntegrateModel("wind_ng_demand.yaml")
 
 # Setup first so we can set values
 h2i.setup()
-
-# Override the sell price with our diurnal profile
-h2i.prob.set_val(
-    "plant.system_level_controller.commodity_sell_price",
-    sell_price,
-    units="USD/(kW*h)",
-)
 
 h2i.run()
 h2i.post_process()
@@ -53,7 +31,7 @@ batt_discharge = h2i.prob.get_val("plant.battery.storage_electricity_discharge")
 batt_soc = h2i.prob.get_val("plant.battery.SOC")[:n_hours]
 demand = h2i.prob.get_val("plant.electrical_load_demand.electricity_demand")[:n_hours]
 curtailed = h2i.prob.get_val("plant.electrical_load_demand.unused_electricity_out")[:n_hours]
-price = sell_price[:n_hours]
+price = h2i.prob.get_val("system_level_controller.commodity_sell_price")[:n_hours]
 
 # -- Plot --
 fig, axes = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
