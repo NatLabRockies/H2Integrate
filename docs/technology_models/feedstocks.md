@@ -73,14 +73,15 @@ ng_feedstock:
 - `commodity_rate_units` (str): Must match the performance model commodity_rate_units
 - `price` (float, int, or list): Cost per unit in `USD/commodity_amount_units`. Can be:
   - Scalar: Constant price for all timesteps and years
-  - List: Price per timestep
+  - List of length `n_timesteps`: Price per timestep, applied uniformly across all years
+  - List of length `plant_life`: Price per year of plant operation
 - `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
 - `start_up_cost` (float, optional): One-time capital cost in USD. Defaults to 0.0
 - `cost_year` (int): Dollar year for cost inputs
 - `commodity_amount_units` (str | None, optional): the amount units of the commodity (i.e., "MMBtu", "kg", "galUS" or "kW*h"). If None, will be set as `commodity_rate_units*h`
 
 ```{tip}
-The `price` parameter is flexible - you can specify constant pricing with a single value or time-varying pricing with an array of values matching the number of simulation timesteps.
+The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation will be used and a warning is issued for clarity.
 ```
 
 ### Consumed Feedstock Outputs

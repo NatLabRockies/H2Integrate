@@ -12,7 +12,12 @@
 - Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
+- Add per-year pricing support for Grid and Feedstock cost models, allowing price arrays of length `plant_life` in addition to scalar and per-timestep arrays. [PR 700](https://github.com/NatLabRockies/H2Integrate/pull/700)
 - Added ability to have a custom/user-specified resource model [PR 698](https://github.com/NatLabRockies/H2Integrate/pull/698)
+- Add `{commodity}_set_point` as an input to hydrogen fuel cell model [PR 709](https://github.com/NatLabRockies/H2Integrate/pull/709)
+- Rename `n_control_window` to `n_control_window_hours` for unit clarity [PR 712](https://github.com/NatLabRockies/H2Integrate/pull/712)
+- Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
+- Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
 
 ## 0.8 [April 15, 2026]
 - Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)

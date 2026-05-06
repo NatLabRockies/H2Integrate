@@ -14,6 +14,83 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_check_tech_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    tech_interconnections = plant_config["technology_interconnections"].copy()
+    idx_electrolyzer_connect = [
+        i
+        for i, connection in enumerate(tech_interconnections)
+        if connection[0] == "electrolyzer" and len(connection) == 4
+    ]
+    idx_electrolyzer_to_combiner = [
+        i for i in idx_electrolyzer_connect if tech_interconnections[i][1] == "h2_combiner"
+    ]
+    # update so that trying to connect oxygen out of electrolyzer to h2_combiner
+    # should get error because h2_combiner doesn't have an input for oxygen
+    tech_interconnections[idx_electrolyzer_to_combiner[0]] = [
+        "electrolyzer",
+        "h2_combiner",
+        "oxygen",
+        "pipe",
+    ]
+    plant_config["technology_interconnections"] = tech_interconnections
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+
+    with subtests.test("Commodity not input to destination"):
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "do not accept their specified input commodity" in err
+        assert "`h2_combiner` <- `oxygen`" in err
+        assert "Update `technology_interconnections`" in err
+
+    # Fix the plant config from the previous test
+    tech_interconnections[idx_electrolyzer_to_combiner[0]] = [
+        "electrolyzer",
+        "h2_combiner",
+        "hydrogen",
+        "pipe",
+    ]
+    idx_h2_storage_connect = [
+        i
+        for i, connection in enumerate(tech_interconnections)
+        if connection[0] == "h2_storage" and len(connection) == 4
+    ]
+    # update so that the battery is connected to the h2_combiner
+    tech_interconnections[idx_h2_storage_connect[0]] = [
+        "battery",
+        "h2_combiner",
+        "hydrogen",
+        "pipe",
+    ]
+    plant_config["technology_interconnections"] = tech_interconnections
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+
+    with subtests.test("Commodity not output from source"):
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "do not output their specified commodity" in err
+        assert "`battery` -> `hydrogen`" in err
+        assert "Update `technology_interconnections`" in err
+        assert "Update `technology_interconnections`" in err
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]

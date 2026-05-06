@@ -63,7 +63,7 @@ def tech_config_battery():
                         "commodity_met_value": 0.1,
                         "round_digits": 4,
                         "time_weighting_factor": 0.995,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                     },
                 },
             },
@@ -122,7 +122,7 @@ def tech_config_generic():
                         "cost_per_production": 0.0,  # USD/kg
                         "time_weighting_factor": 0.995,
                         "system_commodity_interface_limit": 10.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                     },
                 },
             }
@@ -161,7 +161,7 @@ def tech_config_autosizing():
                         "cost_per_production": 0.0,  # USD/kg
                         "time_weighting_factor": 0.995,
                         "system_commodity_interface_limit": 10.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "max_charge_rate": 5.0,
                         "max_capacity": 5.0,
                         "init_soc_fraction": 0.1,
