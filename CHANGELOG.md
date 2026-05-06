@@ -26,6 +26,7 @@
   `EIANaturalGasFeedstockPerformanceModel` are created to be compatible with the hard-coded
   definitions from the cost model. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
+- Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
 
 ## 0.8 [April 15, 2026]
 

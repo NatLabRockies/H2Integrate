@@ -249,7 +249,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # slightly exceeds soc_max.
                 actual_charge = max(0.0, min(headroom, max_charge_input, -cmd))
 
-                # Update the charge command for the PySAM batttery
+                # Update the charge command for the PySAM battery
                 cmd = -actual_charge
 
             else:
@@ -266,7 +266,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # Clip and apply discharge efficiency.
                 actual_discharge = max(0.0, min(headroom, max_discharge_input, cmd))
 
-                # Update the discharge command for the PySAM batttery
+                # Update the discharge command for the PySAM battery
                 cmd = actual_discharge
 
             # Set the input variable to the desired value
