@@ -202,7 +202,7 @@ class CostModelBaseClass(om.ExplicitComponent):
 
         self.add_output(
             "marginal_cost",
-            val=self.config.marginal_cost,
+            val=getattr(self.config, "marginal_cost", 0.0),
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
