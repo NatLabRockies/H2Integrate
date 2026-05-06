@@ -94,6 +94,14 @@ class DemandComponentBase(PerformanceModelBaseClass):
             desc=f"Excess production of {self.commodity}",
         )
 
+        self.add_output(
+            f"{self.commodity}_demand_out",
+            val=self.config.demand_profile,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Pass-through of {self.commodity} demand profile",
+        )
+
     def compute():
         """This method must be implemented by subclasses to define the
         demand component.
@@ -124,6 +132,8 @@ class DemandComponentBase(PerformanceModelBaseClass):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
+
+        outputs[f"{self.commodity}_demand_out"] = commodity_demand
 
         remaining_demand = commodity_demand - commodity_in
 
