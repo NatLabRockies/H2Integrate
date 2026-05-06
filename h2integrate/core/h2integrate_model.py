@@ -542,6 +542,21 @@ class H2IntegrateModel:
             if e[-1] is not None
         }
 
+        # Check if storage models have a controller
+        storage_tech_to_control = {}
+        for tech, classifier in self.tech_control_classifiers.items():
+            if classifier == "storage":
+                control_model = (
+                    self.technology_config["technologies"][tech]
+                    .get("control_strategy", {})
+                    .get("model", None)
+                )
+                if control_model is None:
+                    storage_tech_to_control[tech] = False
+                else:
+                    # storage model does use a controller
+                    storage_tech_to_control[tech] = True
+
         # Remove feedstocks and connectors
         control_classifiers_to_connect = ["curtailable", "dispatchable", "storage"]
         tech_to_commodities = {
@@ -555,6 +570,9 @@ class H2IntegrateModel:
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodities
+        slc_config["storage_techs_to_control"] = storage_tech_to_control
+        slc_config["technology_graph"] = self.technology_graph
+
         slc_config["tech_control_classifiers"] = self.tech_control_classifiers
 
         return slc_config
@@ -632,10 +650,19 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_rated_{commodity}_production",
             )
 
-            self.plant.connect(
-                f"system_level_controller.{tech_name}_{commodity}_set_point",
-                f"{tech_name}.{commodity}_set_point",
-            )
+            if slc_config["storage_techs_to_control"].get(tech_name, False):
+                # storage has its own controller
+                # provide demand to storage controller,
+                # storage controller will provide set-point to performance model
+                self.plant.connect(
+                    f"system_level_controller.{tech_name}_{commodity}_demand",
+                    f"{tech_name}.{commodity}_demand",
+                )
+            else:
+                self.plant.connect(
+                    f"system_level_controller.{tech_name}_{commodity}_set_point",
+                    f"{tech_name}.{commodity}_set_point",
+                )
 
         # 4. For cost-aware strategies, connect marginal costs from cost models
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
