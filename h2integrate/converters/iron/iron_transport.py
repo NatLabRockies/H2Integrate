@@ -165,6 +165,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 class IronTransportCostConfig(BaseConfig):
     transport_year: int = field(converter=int, validator=range_val(2022, 2065))
     cost_year: int = field(converter=int, validator=range_val(2010, 2024))
+    marginal_cost: float = field(default=0.0)
 
 
 class IronTransportCostComponent(CostModelBaseClass):

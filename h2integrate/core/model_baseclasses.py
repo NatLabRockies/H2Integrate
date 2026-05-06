@@ -199,6 +199,7 @@ class CostModelBaseClass(om.ExplicitComponent):
         model_inputs = self.options["tech_config"].get("model_inputs", {})
         shared = model_inputs.get("shared_parameters", {})
         commodity_rate_units = shared.get("commodity_rate_units", "kW")
+
         self.add_output(
             "marginal_cost",
             val=self.config.marginal_cost,
