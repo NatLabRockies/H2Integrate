@@ -193,6 +193,18 @@ class CostModelBaseClass(om.ExplicitComponent):
             "cost_year", val=self.config.cost_year, desc="Dollar year for costs"
         )
 
+        # Marginal cost output for dispatch decisions
+        model_inputs = self.options["tech_config"].get("model_inputs", {})
+        shared = model_inputs.get("shared_parameters", {})
+        commodity_rate_units = shared.get("commodity_rate_units", "kW")
+
+        self.add_output(
+            "marginal_cost",
+            val=getattr(self.config, "marginal_cost", 0.0),
+            units=f"USD/({commodity_rate_units}*h)",
+            desc="Marginal cost of production for dispatch decisions",
+        )
+
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 

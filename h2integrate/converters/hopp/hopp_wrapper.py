@@ -16,6 +16,7 @@ class HOPPComponentModelConfig(CacheBaseConfig):
     hopp_config: dict = field()
     cost_year: int = field(converter=int)
     electrolyzer_rating: int | float | None = field(default=None)
+    marginal_cost: float = field(default=0.0)
 
 
 class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
