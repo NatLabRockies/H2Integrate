@@ -103,14 +103,14 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         if getattr(self, "_control_classifier", None) == "curtailable":
             self.add_input(
                 f"{self.commodity}_set_point",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Set point for {self.commodity} production (curtailment limit)",
             )
             self.add_output(
                 f"uncurtailed_{self.commodity}_out",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Full (uncurtailed) {self.commodity} output",
@@ -199,9 +199,10 @@ class CostModelBaseClass(om.ExplicitComponent):
         model_inputs = self.options["tech_config"].get("model_inputs", {})
         shared = model_inputs.get("shared_parameters", {})
         commodity_rate_units = shared.get("commodity_rate_units", "kW")
+
         self.add_output(
             "marginal_cost",
-            val=self.config.marginal_cost,
+            val=getattr(self.config, "marginal_cost", 0.0),
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )

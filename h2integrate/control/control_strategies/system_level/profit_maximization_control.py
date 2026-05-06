@@ -27,11 +27,40 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
     Configuration:
         ``plant_config["system_level_control"]["commodity_sell_price"]``
-        must be set ($/(commodity_rate_unit*h), e.g. $/kWh).
+        must be set as either a numeric value ($/(commodity_rate_unit*h),
+        e.g. $/kWh) or the name of a finance group (e.g. ``"profast_npv"``)
+        whose ``model_inputs.commodity_sell_price`` will be used.
 
     Each dispatchable technology must have a ``marginal_cost`` input
     representing its variable cost per unit of production.
     """
+
+    def _resolve_sell_price(self, config):
+        """Resolve commodity_sell_price from config.
+
+        If the value is a string, look it up from
+        ``finance_parameters.finance_groups.<name>.model_inputs.commodity_sell_price``.
+        Otherwise return it as-is (numeric).
+        """
+        raw = config.commodity_sell_price
+        if isinstance(raw, str):
+            finance_groups = (
+                self.options["plant_config"].get("finance_parameters", {}).get("finance_groups", {})
+            )
+            group = finance_groups.get(raw)
+            if group is None:
+                raise ValueError(
+                    f"commodity_sell_price references finance group '{raw}', "
+                    f"but it was not found in finance_parameters.finance_groups. "
+                    f"Available groups: {list(finance_groups.keys())}"
+                )
+            price = group.get("model_inputs", {}).get("commodity_sell_price", None)
+            if price is None:
+                raise ValueError(
+                    f"Finance group '{raw}' does not contain " f"model_inputs.commodity_sell_price."
+                )
+            return price
+        return raw
 
     def setup(self):
         super().setup()
@@ -39,10 +68,13 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         config = ProfitMaximizationControlConfig.from_dict(
             self.options["plant_config"]["system_level_control"]["control_parameters"]
         )
-        # Commodity sell price — user-set in config, can be scalar or time-varying
+
+        # Commodity sell price - user-set in config, can be scalar or time-varying
+        # Accepts a numeric value or the name of a finance group to look up
+        commodity_sell_price = self._resolve_sell_price(config)
         self.add_input(
             "commodity_sell_price",
-            val=config.commodity_sell_price,
+            val=commodity_sell_price,
             shape=self.n_timesteps,
             units=f"USD/({self.commodity_units}*h)",
             desc=f"Sell price per unit of {self.commodity}",

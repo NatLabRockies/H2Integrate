@@ -1,0 +1,4 @@
+name: driver_config
+description: Complex profit-maximization dispatch with variable pricing and demand
+general:
+  folder_output: outputs

@@ -51,6 +51,7 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
     storage_pressure_bar: float = field(default=200, validator=range_val(0, 700))
     cg_capex_per_kg_350_bar: float = field(default=1333.11625, validator=gte_zero)
     cg_capex_per_kg_700_bar: float = field(default=1999.67437, validator=gte_zero)
+    marginal_cost: float = field(default=0.0)
 
     def __attrs_post_init__(self):
         undefined_capacities = self.max_capacity is None or self.max_charge_rate is None

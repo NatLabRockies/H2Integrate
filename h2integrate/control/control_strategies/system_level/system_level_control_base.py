@@ -57,11 +57,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
 
         # Input: demand profile (default value from config)
-        demand_profile = slc_config.get("demand_profile", 0.0)
         self.demand_input_name = f"{self.commodity}_demand"
         self.add_input(
             self.demand_input_name,
-            val=demand_profile,
+            val=10.0,
             shape=self.n_timesteps,
             units=self.commodity_units,
             desc=f"Demand profile of {self.commodity}",
@@ -77,16 +76,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.commodities_to_units = {self.commodity: self.commodity_units}
         self.commodities_to_ref_var = {}
         self._setup_tech_category("curtailable", self.curtailable_techs)
-        self._setup_tech_category(
-            "dispatchable", self.dispatchable_techs, demand_profile=demand_profile
-        )
+        self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
 
     # def _get_upstream_techs(self, inputs, tech_name):
     #     tech_commodities = self._get_commodity_for_tech(tech_name)
 
     def _setup_commodity_for_given_units(
-        self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=0.0
+        self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
     ):
         """Adds inputs and outputs for a commodity when the units are known.
         The inputs and outputs that are added have the below naming convention:
@@ -103,7 +100,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             add_in_name (bool, optional): If True, add the input for the in_name variable.
                 Defaults to True.
             initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 0.0.
+                set_point variable. Defaults to 1.0.
         Returns:
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
         """
@@ -143,7 +140,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return in_name, set_point_name, rated_name
 
     def _setup_commodity_for_copy_units(
-        self, tech_name, commodity, commodity_reference_var, add_in_name=True, initial_set_point=0.0
+        self, tech_name, commodity, commodity_reference_var, add_in_name=True, initial_set_point=1.0
     ):
         """Adds inputs and outputs for a commodity where the units are based on a reference
         input variable. The inputs and outputs that are added have the below
@@ -161,7 +158,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             add_in_name (bool, optional): If True, add the input for the in_name variable.
                 Defaults to True.
             initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 0.0.
+                set_point variable. Defaults to 1.0.
 
         Returns:
             tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
@@ -204,24 +201,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return in_name, set_point_name, rated_name
 
-    def _setup_tech_category(self, category, tech_list, demand_profile=None):
+    def _setup_tech_category(self, category, tech_list):
         """Create OpenMDAO I/O variables for all technologies in a given category.
 
         This single method handles curtailable, dispatchable, and storage
         technologies.  The logic is identical for all three categories —
         iterate over each technology's commodities and register the
         appropriate inputs (production output, rated capacity) and output
-        (control set-point) — with one difference:
+        (control set-point).
 
-        * **Curtailable / Storage** (``demand_profile is None``):
-          ``initial_set_point`` is ``0.0``.  Curtailable techs are later
-          assigned set-points equal to their rated production; storage techs
-          get set-points computed at run-time in ``_dispatch_storage``.
-
-        * **Dispatchable** (``demand_profile`` is provided):
-          ``initial_set_point`` is the demand evenly divided among the
-          dispatchable techs that produce the demanded commodity, giving
-          the solver a reasonable starting guess.
+        All initial set-points are ``1.0``; the solver converges from there
+        using the connected rated-production inputs at run time.
 
         After this method returns, four lists are stored on ``self`` under
         names produced by the *category* prefix:
@@ -239,29 +229,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 or ``"storage"``.  Used to name the attribute lists.
             tech_list (list[str]): Technology names belonging to this category
                 (e.g. ``self.curtailable_techs``).
-            demand_profile (float | np.ndarray | None, optional):
-                Only relevant for **dispatchable** techs.  When provided, the
-                demand is split equally among dispatchable techs that produce
-                the demanded commodity to set a non-zero ``initial_set_point``.
-                For curtailable and storage techs, leave as ``None`` (default).
         """
-        # --- Compute initial_set_point --------------------------------
-        # Dispatchable techs: split demand equally among those that produce
-        # the demanded commodity so the solver starts from a feasible guess.
-        # Curtailable and storage techs always start at 0.
-        if demand_profile is not None:
-            n_producing = len(
-                [t for t in tech_list if self.commodity in self._get_commodity_for_tech(t)]
-            )
-            if n_producing > 0:
-                if np.isscalar(demand_profile):
-                    initial_set_point = demand_profile / n_producing
-                else:
-                    initial_set_point = np.array(demand_profile) / n_producing
-            else:
-                initial_set_point = 0.0
-        else:
-            initial_set_point = 0.0
+        initial_set_point = 1.0
 
         # --- Initialize the four per-category bookkeeping lists -------
         input_names = []

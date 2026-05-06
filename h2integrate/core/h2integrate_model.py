@@ -506,7 +506,6 @@ class H2IntegrateModel:
 
             demand_commodity = all_params["commodity"]
             demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
-            demand_profile = all_params.get("demand_profile", 0.0)
             demand_tech = tech_name
             # Check that the demand tech is in the technology_interconnections
             tech_interconnections = self.plant_config["technology_interconnections"]
@@ -568,7 +567,6 @@ class H2IntegrateModel:
 
         # Store classification results in plant_config for SLC component
         slc_config["demand_tech"] = demand_tech
-        slc_config["demand_profile"] = demand_profile
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodities
@@ -676,15 +674,13 @@ class H2IntegrateModel:
                         f"system_level_controller.{tech_name}_marginal_cost",
                     )
 
-        ### Commented out for now; we'll need to determine how to treat demand
-        ### components in the new SLC paradigm.
-        # # Connect demand profile to the controller
-        # demand_tech = slc_config["demand_tech"]
-        # demand_commodity = slc_config["demand_commodity"]
-        # self.plant.connect(
-        #     f"{demand_tech}.{commodity}_demand",
-        #     f"system_level_controller.{commodity}_demand",
-        # )
+        # Connect demand profile from the demand component to the controller
+        demand_tech = slc_config["demand_tech"]
+        demand_commodity = slc_config["demand_commodity"]
+        self.plant.connect(
+            f"{demand_tech}.{demand_commodity}_demand_out",
+            f"system_level_controller.{demand_commodity}_demand",
+        )
 
     def create_technology_models(self):
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
