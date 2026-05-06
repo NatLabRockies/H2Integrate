@@ -1,8 +1,15 @@
 import numpy as np
+from attrs import field, define
 
+from h2integrate.core.utilities import BaseConfig
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
     SystemLevelControlBase,
 )
+
+
+@define(kw_only=True)
+class ProfitMaximizationControlConfig(BaseConfig):
+    commodity_sell_price: float = field(default=0.0)
 
 
 class ProfitMaximizationControl(SystemLevelControlBase):
@@ -28,14 +35,14 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     representing its variable cost per unit of production.
     """
 
-    def _resolve_sell_price(self, slc_config):
+    def _resolve_sell_price(self, config):
         """Resolve commodity_sell_price from config.
 
         If the value is a string, look it up from
         ``finance_parameters.finance_groups.<name>.model_inputs.commodity_sell_price``.
         Otherwise return it as-is (numeric).
         """
-        raw = slc_config.get("commodity_sell_price", 0.0)
+        raw = config.commodity_sell_price
         if isinstance(raw, str):
             finance_groups = (
                 self.options["plant_config"].get("finance_parameters", {}).get("finance_groups", {})
@@ -58,14 +65,16 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     def setup(self):
         super().setup()
 
-        slc_config = self.options["plant_config"]["system_level_control"]
+        config = ProfitMaximizationControlConfig.from_dict(
+            self.options["plant_config"]["system_level_control"]["control_parameters"]
+        )
 
         # Commodity sell price - user-set in config, can be scalar or time-varying
         # Accepts a numeric value or the name of a finance group to look up
-        default_sell_price = self._resolve_sell_price(slc_config)
+        commodity_sell_price = self._resolve_sell_price(config)
         self.add_input(
             "commodity_sell_price",
-            val=default_sell_price,
+            val=commodity_sell_price,
             shape=self.n_timesteps,
             units=f"USD/({self.commodity_units}*h)",
             desc=f"Sell price per unit of {self.commodity}",
