@@ -597,8 +597,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         """Find feedstock technologies connected upstream of tech_name.
 
         Scans ``technology_interconnections`` for connections whose
-        destination is tech_name and whose source uses
-        ``FeedstockPerformanceModel`` or ``FeedstockCostModel``.
+        destination is tech_name and whose source is a feedstock.
 
         Args:
             tech_name (str): the dispatchable technology name.
@@ -666,6 +665,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Args:
             tech_name (str): name of technology
             commodity (str): commodity name
+            include_feedstock_sources (bool, optional): If True, include techs
+                that have an input commodity from a feedstock. Defaults to True.
 
         Returns:
             list[str]: list of technologies upstream of the tech_name that produce a given commodity
@@ -689,7 +690,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     def find_converter_techs(self, include_feedstock_sources=True):
         """Get the name of the technology that transforms a commodity.
-        Does not include feedstocks.
+
+        Args:
+            include_feedstock_sources (bool, optional): If True, include techs
+                that have an input commodity from a feedstock. Defaults to True.
 
         Returns:
             set(tuple): set of converter technologies formatted as
