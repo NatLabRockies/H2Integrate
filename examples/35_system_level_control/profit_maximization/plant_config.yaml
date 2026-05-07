@@ -25,6 +25,8 @@ plant:
     dt: 3600
 system_level_control:
   control_strategy: ProfitMaximizationControl
+  cost_per_tech:
+    natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
   control_parameters:
     commodity_sell_price: profast_npv  # name of finance group whose commodity_sell_price to use
   solver_name: gauss_seidel

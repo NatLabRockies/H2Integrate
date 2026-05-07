@@ -31,8 +31,13 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         e.g. $/kWh) or the name of a finance group (e.g. ``"profast_npv"``)
         whose ``model_inputs.commodity_sell_price`` will be used.
 
-    Each dispatchable technology must have a ``marginal_cost`` input
-    representing its variable cost per unit of production.
+    Marginal costs are configured via ``cost_per_tech`` in the
+    ``system_level_control`` section of ``plant_config``.  Each
+    dispatchable technology's entry can be:
+
+    - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)
+    - ``"buy_price"`` — use the technology's purchase price
+    - ``"VarOpEx"``   — derive from VarOpEx / total production
     """
 
     def _resolve_sell_price(self, config):
@@ -80,33 +85,44 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             desc=f"Sell price per unit of {self.commodity}",
         )
 
-        # Add marginal cost inputs for dispatchable techs
-        self.dispatchable_marginal_cost_names = []
-        for tech_name in self.dispatchable_techs:
-            mc_name = f"{tech_name}_marginal_cost"
-            self.add_input(
-                mc_name,
-                val=0.0,
-                units=f"USD/({self.commodity_units}*h)",
-                desc=f"Marginal cost of {self.commodity} from {tech_name}",
-            )
-            self.dispatchable_marginal_cost_names.append(mc_name)
+        # Set up marginal cost inputs based on cost_per_tech config
+        self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
         sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
 
         # 1. Curtailable techs: full production (always profitable)
-        demand = self._subtract_curtailable(inputs, outputs, demand)
+        for curtailable_tech in self.curtailable_techs:
+            commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
+            # check that this tech produces the commodity demanded
+            if self.commodity in commodity_from_tech:
+                # if the commodity produced from a tech is the demanded commodity
+                # then subtract the curtailable production from the demand
+                demand = self._subtract_curtailable(
+                    curtailable_tech, demand, self.commodity, inputs, outputs
+                )
 
         # 2. Storage dispatch
-        demand = self._dispatch_storage(inputs, outputs, demand)
+        # number of storage components that produce the demanded commodity
+        n_storage = len(
+            [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
+        )
+        for storage_tech in self.storage_techs:
+            commodity_from_tech = self._get_commodity_for_tech(storage_tech)
+            if self.commodity in commodity_from_tech:
+                demand = self._dispatch_storage(
+                    storage_tech, demand / n_storage, self.commodity, inputs, outputs
+                )
 
         # 3. Profit-driven merit-order dispatch
         remaining = np.maximum(demand, 0.0)
 
-        marginal_costs = np.array([inputs[mc][0] for mc in self.dispatchable_marginal_cost_names])
-        dispatch_order = np.argsort(marginal_costs)
+        marginal_costs = self._compute_marginal_costs(inputs)
+
+        # Merit order: sort by mean marginal cost (cheapest first)
+        mean_costs = np.array([mc.mean() for mc in marginal_costs])
+        dispatch_order = np.argsort(mean_costs)
 
         # Initialize all dispatchable set_points to zero
         for set_point_name in self.dispatchable_set_point_names:
@@ -114,7 +130,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
         # Dispatch only where profitable (element-wise comparison)
         for idx in dispatch_order:
-            mc = marginal_costs[idx]
+            mc = marginal_costs[idx]  # per-timestep array
             profitable = mc < sell_price  # boolean mask per timestep
 
             set_point_name = self.dispatchable_set_point_names[idx]

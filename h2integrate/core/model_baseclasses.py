@@ -153,7 +153,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
-    marginal_cost: float = field(default=0.0)
 
 
 class CostModelBaseClass(om.ExplicitComponent):
@@ -166,7 +165,6 @@ class CostModelBaseClass(om.ExplicitComponent):
         - CapEx (float): capital expenditure costs in $
         - OpEx (float): annual fixed operating expenditure costs in $/year
         - VarOpEx (float): annual variable operating expenditure costs in $/year
-        - marginal_cost (float): marginal cost of production for dispatch decisions
 
     Discrete Outputs:
         - cost_year (int): dollar-year corresponding to CapEx and OpEx values.
