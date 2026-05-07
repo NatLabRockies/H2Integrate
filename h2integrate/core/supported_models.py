@@ -364,3 +364,10 @@ no_cost_models = {
 no_replacement_schedule_models = {
     "IronTransportPerformanceComponent",
 }
+
+# System-level controllers
+strategy_map = {
+    "DemandFollowingControl": DemandFollowingControl,
+    "CostMinimizationControl": CostMinimizationControl,
+    "ProfitMaximizationControl": ProfitMaximizationControl,
+}

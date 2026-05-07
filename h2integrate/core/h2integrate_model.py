@@ -24,6 +24,9 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
+from h2integrate.control.control_strategies.system_level.solver_options import (
+    SLCSolverOptionsConfig,
+)
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
 )
@@ -558,7 +561,7 @@ class H2IntegrateModel:
                     storage_tech_to_control[tech] = True
 
         # Remove feedstocks and connectors
-        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage"]
+        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage", "feedstock"]
         tech_to_commodities = {
             (e[0], e[-1])
             for e in sources_to_commodities
@@ -587,18 +590,10 @@ class H2IntegrateModel:
         4. Creates connections between the controller and each technology
         5. For cost/profit strategies, connects marginal cost inputs
         """
-
-        # Map user-facing solver names to OpenMDAO solver classes
-        solver_map = {
-            "gauss_seidel": om.NonlinearBlockGS,
-            "newton": om.NewtonSolver,
-            "block_jacobi": om.NonlinearBlockJac,
-        }
+        slc_config = self.plant_config["system_level_control"]
 
         # 1. Select controller class based on strategy
-        strategy_name = self.plant_config["system_level_control"].get(
-            "control_strategy", "DemandFollowingControl"
-        )
+        strategy_name = self.plant_config["system_level_control"].get("control_strategy")
         slc_cls = self.supported_models.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
@@ -615,31 +610,29 @@ class H2IntegrateModel:
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
         # 2. Configure the nonlinear solver
-        solver_name = slc_config.get("solver_name", "gauss_seidel")
-        solver_cls = solver_map.get(solver_name)
-        if solver_cls is None:
-            raise ValueError(
-                f"Unknown solver_name '{solver_name}' in system_level_control. "
-                f"Supported: {list(solver_map.keys())}"
-            )
+        solver_config = SLCSolverOptionsConfig.from_dict(slc_config.get("solver_options", {}))
+        solver_cls = solver_config.return_nonlinear_solver()
         solver = solver_cls()
-        # TODO: make a config for the below defaults
-        solver.options["maxiter"] = self.plant_config["system_level_control"].get("max_iter", 20)
-        solver.options["atol"] = self.plant_config["system_level_control"].get(
-            "convergence_tolerance", 1e-6
-        )
-        solver.options["rtol"] = self.plant_config["system_level_control"].get(
-            "convergence_tolerance", 1e-6
-        )
-        solver.options["iprint"] = 2  # print convergence at each iteration
+        solver_options = solver_config.get_solver_options()
+        for k, v in solver_options.items():
+            solver.options[k] = v
         self.plant.nonlinear_solver = solver
         self.plant.linear_solver = om.DirectSolver()
-
         # 3. Connect the controller's inputs/outputs to technology models
 
         # Curtailable, dispatchable, and storage techs: read output and write set_point
         for tech_to_commodity in slc_config["tech_to_commodity"]:
             tech_name, commodity = tech_to_commodity
+            if slc_config["tech_control_classifiers"][tech_name] == "feedstock":
+                # Only connect the feedstock output to the SLC
+                self.plant.connect(
+                    f"{tech_name}_source.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                continue
+
+            # For all other techs, connect the tech output and rated production
+            # to the SLC
             self.plant.connect(
                 f"{tech_name}.{commodity}_out",
                 f"system_level_controller.{tech_name}_{commodity}_out",
@@ -650,6 +643,7 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_rated_{commodity}_production",
             )
 
+            # Connect the SLC to the controllable tech input
             if slc_config["storage_techs_to_control"].get(tech_name, False):
                 # storage has its own controller
                 # provide demand to storage controller,
@@ -664,15 +658,35 @@ class H2IntegrateModel:
                     f"{tech_name}.{commodity}_set_point",
                 )
 
-        # 4. For cost-aware strategies, connect marginal costs from cost models
+        # 4. For cost-aware strategies, connect cost inputs based on cost_per_tech
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
-            for tech_to_commodity in slc_config["tech_to_commodity"]:
-                tech_name, commodity = tech_to_commodity
+            cost_per_tech = slc_config.get("cost_per_tech", {})
+            for tech_name, _ in slc_config["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
-                    self.plant.connect(
-                        f"{tech_name}.marginal_cost",
-                        f"system_level_controller.{tech_name}_marginal_cost",
-                    )
+                    cost_spec = cost_per_tech.get(tech_name, 0.0)
+                    if cost_spec == "VarOpEx":
+                        self.plant.connect(
+                            f"{tech_name}.VarOpEx",
+                            f"system_level_controller.{tech_name}_VarOpEx",
+                        )
+                    elif cost_spec == "feedstock":
+                        # Connect VarOpEx from each upstream feedstock
+                        interconnections = self.plant_config.get("technology_interconnections", [])
+                        technologies = self.technology_config.get("technologies", {})
+                        for conn in interconnections:
+                            if conn[1] != tech_name:
+                                continue
+                            upstream = conn[0]
+                            tech_def = technologies.get(upstream, {})
+                            perf_model = tech_def.get("performance_model", {}).get("model", "")
+                            cost_model = tech_def.get("cost_model", {}).get("model", "")
+                            if "Feedstock" in perf_model or "Feedstock" in cost_model:
+                                self.plant.connect(
+                                    f"{upstream}.VarOpEx",
+                                    f"system_level_controller.{upstream}_VarOpEx",
+                                )
+                    # buy_price: defaults from tech config, overridable via set_val
+                    # scalar: no connection needed
 
         # Connect demand profile from the demand component to the controller
         demand_tech = slc_config["demand_tech"]

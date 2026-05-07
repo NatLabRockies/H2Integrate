@@ -4,6 +4,14 @@ import functools
 import numpy as np
 import networkx as nx
 import openmdao.api as om
+from attrs import field, define
+
+from h2integrate.core.utilities import BaseConfig
+
+
+@define(kw_only=True)
+class SystemLevelControlBaseConfig(BaseConfig):
+    demand_tech: str | None = field(default=None)
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -54,6 +62,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.storage_techs = [
             k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
         ]
+        self.feedstock_comps = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "feedstock"
+        ]
 
         self.input_techs = set(
             self.curtailable_techs + self.dispatchable_techs + self.storage_techs
@@ -81,6 +92,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("curtailable", self.curtailable_techs)
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
+        self._setup_feedstock_category(self.feedstock_comps)
 
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
@@ -205,7 +217,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         """Create OpenMDAO I/O variables for all technologies in a given category.
 
         This single method handles curtailable, dispatchable, and storage
-        technologies.  The logic is identical for all three categories —
+        technologies. The logic is identical for all three categories —
         iterate over each technology's commodities and register the
         appropriate inputs (production output, rated capacity) and output
         (control set-point).
@@ -226,7 +238,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Args:
             category (str): One of ``"curtailable"``, ``"dispatchable"``,
-                or ``"storage"``.  Used to name the attribute lists.
+                or ``"storage"``. Used to name the attribute lists.
             tech_list (list[str]): Technology names belonging to this category
                 (e.g. ``self.curtailable_techs``).
         """
@@ -305,6 +317,55 @@ class SystemLevelControlBase(om.ExplicitComponent):
         setattr(self, f"{category}_rated_names", rated_names)
         setattr(self, f"{category}_commodity_names", commodity_names)
 
+    def _setup_feedstock_category(self, feedstock_list):
+        """Iterate over the feedstocks and add inputs for the available feedstock
+
+        Args:
+            feedstock_list (list[str]): name of feedstock techs
+        """
+        for tech_name in feedstock_list:
+            tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
+            for commodity in tech_commodities:
+                in_name = f"{tech_name}_{commodity}_out"
+
+                if commodity in self.commodities_to_units:
+                    # Units are already known explicitly
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=self.commodities_to_units[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    # Units are inferred from a previously-registered reference variable
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        copy_units=self.commodities_to_ref_var[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                else:
+                    # Units are unknown; try to discover them from the connection
+                    meta_data = self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        units_by_conn=True,
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                    if meta_data["units"] is None:
+                        # Still unknown: register in_name as the reference
+                        # variable so later techs with this commodity can
+                        # copy its units.
+                        self.commodities_to_ref_var[commodity] = in_name
+                    else:
+                        # Connection provided units — record them for future use
+                        self.commodities_to_units[commodity] = meta_data["units"]
+
     def _subtract_curtailable(self, curtailable_tech, remaining_demand, commodity, inputs, outputs):
         """Apply curtailable techs: set_point = rated, subtract output from demand.
 
@@ -365,6 +426,237 @@ class SystemLevelControlBase(om.ExplicitComponent):
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
 
         return tech_commodities
+
+    # ------------------------------------------------------------------
+    # Marginal-cost helpers for cost-aware controllers
+    # ------------------------------------------------------------------
+
+    def _setup_marginal_costs(self):
+        """Set up marginal cost inputs for dispatchable techs based on ``cost_per_tech``.
+
+        Should be called from ``setup()`` of cost-aware controllers
+        (e.g., ``CostMinimizationControl``, ``ProfitMaximizationControl``).
+
+        Reads ``cost_per_tech`` from
+        ``plant_config["system_level_control"]`` and creates appropriate
+        OpenMDAO inputs for each dispatchable technology:
+
+        - Numeric value (e.g. ``0.05``): used directly as a constant
+          marginal cost in ``USD/(commodity_rate_unit*h)``. No additional
+          inputs or connections are required.
+        - ``"buy_price"``: creates a ``{tech_name}_buy_price`` input
+          whose default value is read from the technology's cost config
+          (``electricity_buy_price`` for Grid, ``price`` for Feedstock).
+          Can be scalar or time-varying and may be overridden at runtime
+          via ``prob.set_val()``.
+        - ``"VarOpEx"``: creates a ``{tech_name}_VarOpEx`` input
+          connected to the cost model's ``VarOpEx`` output. The
+          per-unit marginal cost is computed at run time by dividing
+          ``VarOpEx`` by the total production.
+        - ``"feedstock"``: looks up ``technology_interconnections`` to
+          find all feedstock technologies connected upstream of the
+          dispatchable tech, sums their ``VarOpEx`` outputs, and
+          divides by the tech's total production. Handles the common
+          single-feedstock case as well as multiple feedstock streams.
+        """
+        slc_config = self.options["plant_config"]["system_level_control"]
+        self.cost_per_tech = slc_config.get("cost_per_tech", {})
+        self.dt_hours = self.options["plant_config"]["plant"]["simulation"]["dt"] / 3600
+        hours_simulated = self.dt_hours * self.n_timesteps
+        self.fraction_of_year_simulated = hours_simulated / 8760
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
+        self.dispatchable_marginal_cost_types = []
+
+        for tech_name in self.dispatchable_techs:
+            cost_spec = self.cost_per_tech.get(tech_name, 0.0)
+
+            if isinstance(cost_spec, int | float):
+                self.dispatchable_marginal_cost_types.append(("scalar", cost_spec))
+
+            elif cost_spec == "buy_price":
+                # Read default buy price from tech config
+                tech_config = self.options["tech_config"]
+                tech_def = tech_config.get("technologies", {}).get(tech_name, {})
+                model_inputs = tech_def.get("model_inputs", {})
+                cost_params = model_inputs.get("cost_parameters", {})
+                shared_params = model_inputs.get("shared_parameters", {})
+                all_params = {**shared_params, **cost_params}
+
+                default_price = all_params.get(
+                    "electricity_buy_price",
+                    all_params.get("price", 0.0),
+                )
+
+                self.add_input(
+                    f"{tech_name}_buy_price",
+                    val=default_price,
+                    shape=self.n_timesteps,
+                    units=f"USD/({self.commodity_units}*h)",
+                    desc=f"Buy price for {tech_name}",
+                )
+                self.dispatchable_marginal_cost_types.append(("buy_price", tech_name))
+
+            elif cost_spec == "VarOpEx":
+                self.add_input(
+                    f"{tech_name}_VarOpEx",
+                    val=0.0,
+                    shape=plant_life,
+                    units="USD/year",
+                    desc=f"Variable operating expenditure from {tech_name}",
+                )
+                self.dispatchable_marginal_cost_types.append(("VarOpEx", tech_name))
+
+            elif cost_spec == "feedstock":
+                # Find feedstock techs connected upstream of this tech
+                feedstock_names = self._find_feedstock_techs(tech_name)
+                if not feedstock_names:
+                    raise ValueError(
+                        f"cost_per_tech '{cost_spec}' for '{tech_name}' requires "
+                        f"at least one feedstock connected upstream in "
+                        f"technology_interconnections, but none were found."
+                    )
+                for feedstock_name in feedstock_names:
+                    self.add_input(
+                        f"{feedstock_name}_VarOpEx",
+                        val=0.0,
+                        shape=plant_life,
+                        units="USD/year",
+                        desc=f"Variable operating expenditure from feedstock {feedstock_name}",
+                    )
+                self.dispatchable_marginal_cost_types.append(
+                    ("feedstock", (tech_name, feedstock_names))
+                )
+
+            else:
+                raise ValueError(
+                    f"Unknown cost_per_tech value '{cost_spec}' for '{tech_name}'. "
+                    f"Must be a numeric value, 'buy_price', 'VarOpEx', or 'feedstock'."
+                )
+
+    def _compute_marginal_costs(self, inputs):
+        """Compute per-timestep marginal costs for each dispatchable tech.
+
+        Returns:
+            list[np.ndarray]: marginal cost arrays, one per dispatchable
+            tech, each of shape ``(n_timesteps,)``.
+        """
+        marginal_costs = []
+
+        for marginal_cost_type, marginal_cost_data in self.dispatchable_marginal_cost_types:
+            if marginal_cost_type == "scalar":
+                marginal_cost = np.full(self.n_timesteps, marginal_cost_data)
+            elif marginal_cost_type == "buy_price":
+                marginal_cost = self._buy_price_marginal_cost(inputs, marginal_cost_data)
+            elif marginal_cost_type == "VarOpEx":
+                marginal_cost = self._varopex_marginal_cost(inputs, marginal_cost_data)
+            elif marginal_cost_type == "feedstock":
+                marginal_cost = self._feedstock_marginal_cost(inputs, marginal_cost_data)
+            else:
+                marginal_cost = np.zeros(self.n_timesteps)
+
+            marginal_costs.append(marginal_cost)
+
+        return marginal_costs
+
+    def _buy_price_marginal_cost(self, inputs, tech_name):
+        """Compute marginal cost from buy price.
+
+        Returns a per-timestep marginal cost array equal to the
+        technology's buy price (scalar or time-varying).
+        """
+        return np.broadcast_to(inputs[f"{tech_name}_buy_price"], self.n_timesteps).copy()
+
+    def _varopex_marginal_cost(self, inputs, tech_name):
+        """Compute marginal cost from VarOpEx and commodity output.
+
+        Divides the first-year ``VarOpEx`` (``$/year``) by the
+        annualized total production to obtain an average marginal cost
+        in ``$/(commodity_amount_unit)``.
+
+        Returns a constant per-timestep array.
+        """
+        varopex = inputs[f"{tech_name}_VarOpEx"]  # $/year, shape=plant_life
+
+        # Use commodity_out already connected for this dispatchable tech
+        tech_commodities = self._get_commodity_for_tech(tech_name)
+        commodity = tech_commodities[0] if tech_commodities else self.commodity
+
+        production = inputs[f"{tech_name}_{commodity}_out"]  # rate units, shape=n_timesteps
+        total_production = production.sum() * self.dt_hours
+
+        if total_production > 0:
+            annual_production = total_production / self.fraction_of_year_simulated
+            marginal_cost_scalar = varopex[0] / annual_production
+        else:
+            marginal_cost_scalar = 0.0
+
+        return np.full(self.n_timesteps, marginal_cost_scalar)
+
+    def _find_feedstock_techs(self, tech_name):
+        """Find feedstock technologies connected upstream of tech_name.
+
+        Scans ``technology_interconnections`` for connections whose
+        destination is tech_name and whose source uses
+        ``FeedstockPerformanceModel`` or ``FeedstockCostModel``.
+
+        Args:
+            tech_name (str): the dispatchable technology name.
+
+        Returns:
+            list[str]: names of upstream feedstock technologies.
+        """
+        tech_config = self.options["tech_config"]
+        technologies = tech_config.get("technologies", {})
+        interconnections = self.options["plant_config"].get("technology_interconnections", [])
+
+        # Upstream tech names for this dispatchable tech
+        upstream_techs = [conn[0] for conn in interconnections if conn[1] == tech_name]
+
+        feedstock_names = []
+        for upstream in upstream_techs:
+            tech_def = technologies.get(upstream, {})
+            perf_model = tech_def.get("performance_model", {}).get("model", "")
+            cost_model = tech_def.get("cost_model", {}).get("model", "")
+            if "Feedstock" in perf_model or "Feedstock" in cost_model:
+                feedstock_names.append(upstream)
+
+        return feedstock_names
+
+    def _feedstock_marginal_cost(self, inputs, marginal_cost_data):
+        """Compute marginal cost from upstream feedstock VarOpEx values.
+
+        Sums the first-year ``VarOpEx`` from all feedstock technologies
+        connected to the dispatchable tech, then divides by the tech's
+        annualized total production.
+
+        Args:
+            marginal_cost_data (tuple): ``(tech_name, feedstock_names)`` where
+                tech_name is the dispatchable tech and feedstock_names
+                is a list of upstream feedstock technology names.
+
+        Returns:
+            np.ndarray: constant per-timestep marginal cost array.
+        """
+        tech_name, feedstock_names = marginal_cost_data
+
+        # Sum VarOpEx from all connected feedstocks (first year)
+        total_varopex = sum(inputs[f"{fs}_VarOpEx"][0] for fs in feedstock_names)
+
+        # Get the tech's production
+        tech_commodities = self._get_commodity_for_tech(tech_name)
+        commodity = tech_commodities[0] if tech_commodities else self.commodity
+
+        production = inputs[f"{tech_name}_{commodity}_out"]
+        total_production = production.sum() * self.dt_hours
+
+        if total_production > 0:
+            annual_production = total_production / self.fraction_of_year_simulated
+            marginal_cost_scalar = total_varopex / annual_production
+        else:
+            marginal_cost_scalar = 0.0
+
+        return np.full(self.n_timesteps, marginal_cost_scalar)
 
     def get_upstream_techs_for_commodity(self, tech_name: str, commodity: str):
         """Get the name of technologies that are upstream

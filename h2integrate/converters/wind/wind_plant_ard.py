@@ -38,6 +38,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _control_classifier = "curtailable"
 
     def initialize(self):
         super().initialize()

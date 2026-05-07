@@ -15,26 +15,20 @@ class CostMinimizationControl(SystemLevelControlBase):
     3. Dispatchable techs are dispatched in ascending marginal-cost order,
        each up to its rated capacity, until remaining demand is met.
 
-    Each dispatchable technology must have a ``marginal_cost`` input
-    ($/commodity_rate_unit*h, e.g. $/kWh) representing its variable cost
-    per unit of production.  These are connected from cost model outputs
-    or set as defaults in the plant config.
+    Marginal costs are configured via ``cost_per_tech`` in the
+    ``system_level_control`` section of ``plant_config``.  Each
+    dispatchable technology's entry can be:
+
+    - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)
+    - ``"buy_price"`` - use the technology's purchase price
+    - ``"VarOpEx"``   - derive from VarOpEx / total production
     """
 
     def setup(self):
         super().setup()
 
-        # Add marginal cost inputs for dispatchable techs
-        self.dispatchable_marginal_cost_names = []
-        for tech_name in self.dispatchable_techs:
-            mc_name = f"{tech_name}_marginal_cost"
-            self.add_input(
-                mc_name,
-                val=0.0,
-                units=f"USD/({self.commodity_units}*h)",
-                desc=f"Marginal cost of {self.commodity} from {tech_name}",
-            )
-            self.dispatchable_marginal_cost_names.append(mc_name)
+        # Set up marginal cost inputs based on cost_per_tech config
+        self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
@@ -65,9 +59,11 @@ class CostMinimizationControl(SystemLevelControlBase):
         # 3. Merit-order dispatch: cheapest dispatchable first
         remaining = np.maximum(demand, 0.0)
 
-        # Collect marginal costs and sort by ascending cost
-        marginal_costs = np.array([inputs[mc][0] for mc in self.dispatchable_marginal_cost_names])
-        dispatch_order = np.argsort(marginal_costs)
+        marginal_costs = self._compute_marginal_costs(inputs)
+
+        # Merit order: sort by mean marginal cost (cheapest first)
+        mean_costs = np.array([mc.mean() for mc in marginal_costs])
+        dispatch_order = np.argsort(mean_costs)
 
         # Initialize all dispatchable set_points to zero
         for set_point_name in self.dispatchable_set_point_names:
