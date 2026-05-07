@@ -97,10 +97,27 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
 
         # 1. Curtailable techs: full production (always profitable)
-        demand = self._subtract_curtailable(inputs, outputs, demand)
+        for curtailable_tech in self.curtailable_techs:
+            commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
+            # check that this tech produces the commodity demanded
+            if self.commodity in commodity_from_tech:
+                # if the commodity produced from a tech is the demanded commodity
+                # then subtract the curtailable production from the demand
+                demand = self._subtract_curtailable(
+                    curtailable_tech, demand, self.commodity, inputs, outputs
+                )
 
         # 2. Storage dispatch
-        demand = self._dispatch_storage(inputs, outputs, demand)
+        # number of storage components that produce the demanded commodity
+        n_storage = len(
+            [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
+        )
+        for storage_tech in self.storage_techs:
+            commodity_from_tech = self._get_commodity_for_tech(storage_tech)
+            if self.commodity in commodity_from_tech:
+                demand = self._dispatch_storage(
+                    storage_tech, demand / n_storage, self.commodity, inputs, outputs
+                )
 
         # 3. Profit-driven merit-order dispatch
         remaining = np.maximum(demand, 0.0)

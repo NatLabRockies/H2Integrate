@@ -320,18 +320,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         remaining_demand -= inputs[f"{curtailable_tech}_{commodity}_out"]
 
         return remaining_demand
-        # for in_name, set_point_name, rated_name, commodity in zip(
-        #     self.curtailable_input_names,
-        #     self.curtailable_set_point_names,
-        #     self.curtailable_rated_names,
-        #     self.curtailable_commodity_names,
-        # ):
-        #     # Output the set-point as the rated production of that technology
-        #     outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
-        #     if commodity == self.commodity:
-        #         demand -= inputs[in_name]
-
-        # return demand
 
     def _dispatch_storage(self, storage_tech, remaining_demand, commodity, inputs, outputs):
         if storage_tech not in self.storage_techs:
@@ -361,48 +349,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
             outputs[f"{storage_tech}_{commodity}_set_point"] = remaining_demand
             remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
             return remaining_demand
-
-    # def _dispatch_storage(self, inputs, outputs, demand):
-    #     """Dispatch storage techs proportionally and subtract actual output from demand.
-
-    #     Positive set_point = discharge, negative = charge.
-    #     Returns the updated demand array.
-    #     """
-    #     # calculate the number of storage technologies that
-    #     # produce the demanded commodity
-    #     n_storage = len(
-    #         [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
-    #     )
-    #     if n_storage > 0:
-    #         # split the demand across the storage technologies
-    #         storage_share = demand / n_storage
-    #         for set_point_name, commodity in zip(
-    #             self.storage_set_point_names, self.storage_commodity_names
-    #         ):
-    #             if commodity == self.commodity:
-    #                 if f"_{commodity}_demand" in set_point_name:
-    #                     # storage tech has a controller, output combined demand (always positive)
-    #                     # demand should be what is input to storage + storage_share
-    #                     storage_tech_name = set_point_name.split(f"_{commodity}_demand")[0]
-    #                     upstream_techs = self.get_upstream_techs_for_commodity(
-    #                         storage_tech_name, commodity
-    #                     )
-    #                     commodity_into_storage = np.zeros(self.n_timesteps)
-    #                     for tech_name in upstream_techs:
-    #                         commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
-    #                     outputs[set_point_name] = commodity_into_storage + storage_share
-    #                 else:
-    #                     # storage tech does not have a controller,
-    #                     # output set point (charge/discharge) command
-    #                     # charge when remaining demand is negative
-    #                     # discharge when remaining demand is positive
-    #                     outputs[set_point_name] = storage_share
-
-    #     for tech_name, in_name in zip(self.storage_techs, self.storage_input_names):
-    #         if self.commodity in self._get_commodity_for_tech(tech_name):
-    #             demand -= inputs[in_name]
-
-    #     return demand
 
     def _get_commodity_for_tech(self, tech_name):
         """Get a list of the commodities produced for a technology.
