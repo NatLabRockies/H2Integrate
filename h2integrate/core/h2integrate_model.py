@@ -590,10 +590,10 @@ class H2IntegrateModel:
         4. Creates connections between the controller and each technology
         5. For cost/profit strategies, connects marginal cost inputs
         """
-        slc_config = self.plant_config["system_level_control"]
+        plant_slc_config = self.plant_config["system_level_control"]
 
         # 1. Select controller class based on strategy
-        strategy_name = self.plant_config["system_level_control"].get("control_strategy")
+        strategy_name = plant_slc_config.get("control_strategy")
         slc_cls = self.supported_models.get(strategy_name)
         if slc_cls is None:
             raise ValueError(
@@ -610,7 +610,7 @@ class H2IntegrateModel:
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
         # 2. Configure the nonlinear solver
-        solver_config = SLCSolverOptionsConfig.from_dict(slc_config.get("solver_options", {}))
+        solver_config = SLCSolverOptionsConfig.from_dict(plant_slc_config.get("solver_options", {}))
         solver_cls = solver_config.return_nonlinear_solver()
         solver = solver_cls()
         solver_options = solver_config.get_solver_options()
@@ -660,7 +660,7 @@ class H2IntegrateModel:
 
         # 4. For cost-aware strategies, connect cost inputs based on cost_per_tech
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
-            cost_per_tech = slc_config.get("cost_per_tech", {})
+            cost_per_tech = plant_slc_config.get("cost_per_tech", {})
             for tech_name, _ in slc_config["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
                     cost_spec = cost_per_tech.get(tech_name, 0.0)
