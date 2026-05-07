@@ -156,6 +156,10 @@ class ArdWindPlantModel(om.Group):
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
 
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
+
         if set_up_ard_model is None:
             msg = (
                 "Please install `ard-nrel` or `h2integrate[ard]` to use the"

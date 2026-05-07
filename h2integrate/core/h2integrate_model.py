@@ -1952,7 +1952,7 @@ class H2IntegrateModel:
                         if group is None:
                             continue
 
-                io_params.update(group.get_io_metadata().keys())
+                io_params.update([key.split(".")[-1] for key in group.get_io_metadata().keys()])
 
             tech_io[tech_name] = io_params
 
