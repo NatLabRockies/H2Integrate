@@ -20,6 +20,9 @@ class DemandFollowingControl(SystemLevelControlBase):
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
 
+        if self.multi_commodity_system:
+            self.find_converter_techs()
+
         # 1. Curtailable techs: full production
         for curtailable_tech in self.curtailable_techs:
             commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
