@@ -1,3 +1,6 @@
+import operator
+import functools
+
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -655,9 +658,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return np.full(self.n_timesteps, marginal_cost_scalar)
 
-    def get_upstream_techs_for_commodity(self, tech_name: str, commodity: str):
+    def get_upstream_techs_for_commodity(
+        self, tech_name: str, commodity: str, include_feedstock_sources=True
+    ):
         """Get the name of technologies that are upstream
-        of `tech_name` and that output `commodity`
+        of `tech_name` and that output `commodity`.
 
         Args:
             tech_name (str): name of technology
@@ -666,6 +671,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns:
             list[str]: list of technologies upstream of the tech_name that produce a given commodity
         """
+        if include_feedstock_sources:
+            input_techs = self.input_techs | set(self.feedstock_comps)
+        else:
+            input_techs = self.input_techs.copy()
+
         # figure out where the upstream commodity is coming from
         upstream_components = nx.ancestors(self.technology_graph, tech_name)
         # iterates through a list of 3 length tuples (source, dest, commodity)
@@ -675,18 +685,21 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if s[0] in upstream_components and s[2] == commodity
         ]
         # get the technologies that are available to the controller
-        upstream_techs = set(upstream_components_shared_commodity).intersection(
-            set(self.input_techs)
-        )
+        upstream_techs = set(upstream_components_shared_commodity).intersection(set(input_techs))
         return list(upstream_techs)
 
-    def find_converter_techs(self):
-        """Get the name of the technology that transforms a commodity
+    def find_converter_techs(self, include_feedstock_sources=True):
+        """Get the name of the technology that transforms a commodity.
+        Does not include feedstocks.
 
         Returns:
             set(tuple): set of converter technologies formatted as
                 (input_commodity, converter tech name, output_commodity)
         """
+        if include_feedstock_sources:
+            input_techs = self.input_techs | set(self.feedstock_comps)
+        else:
+            input_techs = self.input_techs.copy()
         if not self.multi_commodity_system:
             return
 
@@ -694,17 +707,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         edges = list(self.technology_graph.edges(data="commodity"))
         upstream_converter = None
-        # for tech in self.input_techs:
         for edge in edges:
             tech, dest_tech, cmod = edge
-            if tech in self.input_techs:
+            if tech in input_techs:
                 tech_output_commodity = self._get_commodity_for_tech(tech)
 
                 # NOTE: unsure how this would work for systems with tiered converters
                 # aka - maybe have to eliminate a converter once we've discovered it
                 if upstream_converter is None:
                     upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(self.input_techs)
+                        set(input_techs)
                     )
                 else:
                     idx_upstream_converter = [
@@ -715,10 +727,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     downstream_of_previous_converter = [
                         n
                         for i, n in enumerate(self.technology_graph.__iter__())
-                        if i > idx_upstream_converter
+                        if i > min(idx_upstream_converter)
                     ]
                     all_upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(self.input_techs)
+                        set(input_techs)
                     )
                     upstream_techs = all_upstream_techs.intersection(
                         set(downstream_of_previous_converter)
@@ -730,19 +742,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 upstream_commodities = [
                     self._get_commodity_for_tech(t) for t in connected_upstream_techs
                 ]
+                upstream_commodities = functools.reduce(operator.iadd, upstream_commodities, [])
                 # symmetric difference
                 # commodities that are not in both
                 input_output_commodity = set(upstream_commodities) ^ set(tech_output_commodity)
                 if len(input_output_commodity) > 1:
-                    input_commodity = list(
+                    input_commodities = list(
                         input_output_commodity.intersection(set(upstream_commodities))
                     )
-                    output_commodity = list(
+                    output_commodities = list(
                         input_output_commodity.intersection(set(tech_output_commodity))
                     )
 
-                    # formatted as (input commodity, tech_name, output commodity)
-                    converter_techs.add((input_commodity, tech, output_commodity))
+                    for input_commodity in input_commodities:
+                        for output_commodity in output_commodities:
+                            # formatted as (input commodity, tech_name, output comodity)
+                            converter_techs.add((input_commodity, tech, output_commodity))
                     upstream_converter = tech
 
         return converter_techs
