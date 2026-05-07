@@ -27,6 +27,7 @@
   definitions from the cost model. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
 - Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
+- Added ability to use timeseries for finance calculations [PR 725](https://github.com/NatLabRockies/H2Integrate/pull/725)
 
 ## 0.8 [April 15, 2026]
 

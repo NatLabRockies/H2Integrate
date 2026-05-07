@@ -10,6 +10,7 @@ import openmdao.api as om
 from h2integrate import ROOT_DIR
 from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate.core.inputs.validation import load_plant_yaml
 
 
 ROOT = Path(__file__).parents[1]
@@ -646,8 +647,38 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
 def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
+    new_finance_subgroup_h2 = {
+        "hydrogen_ts": {
+            "commodity": "hydrogen",
+            "commodity_stream": "electrolyzer",
+            "use_commodity_stream_timeseries": True,
+            "commodity_stream_output": "hydrogen_out",
+            "technologies": ["wind", "electrolyzer"],
+        }
+    }
+
+    new_finance_subgroup_wind = {
+        "electricity_ts": {
+            "commodity": "electricity",
+            "commodity_stream": "wind",
+            "use_commodity_stream_timeseries": True,
+            "commodity_stream_output": "electricity_out",
+            "technologies": ["wind"],
+        }
+    }
+
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+
+    plant_config["finance_parameters"]["finance_subgroups"].update(new_finance_subgroup_h2)
+    plant_config["finance_parameters"]["finance_subgroups"].update(new_finance_subgroup_wind)
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": example_folder / "tech_config.yaml",
+        "driver_config": example_folder / "driver_config.yaml",
+    }
     # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "offshore_plant_splitter_doc_h2.yaml")
+    model = H2IntegrateModel(top_level_config)
 
     # Run the model
     model.run()
@@ -679,6 +710,23 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
             == 9.8059083
         )
 
+    with subtests.test(
+        "Check LCOH (using timeseries) is less than LCOH using lifetime performance"
+    ):
+        assert (
+            model.prob.get_val("finance_subgroup_hydrogen_ts.LCOH", units="USD/kg")[0]
+            < model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
+        )
+
+    with subtests.test("Check LCOH (using timeseries)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_ts.LCOH", units="USD/kg")[0],
+                rel=1e-3,
+            )
+            == 9.34595395123
+        )
+
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(
@@ -694,6 +742,58 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
                 rel=1e-3,
             )
             == 132.395036462
+        )
+
+    with subtests.test("Check LCOE (using timeseries)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity_ts.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+        )
+
+    with subtests.test("Check LCOE (doc)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity_doc.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 674.2414136935529
+        )
+
+    with subtests.test("Check finance_subgroup_electricity_doc electricity inputs"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_doc.rated_electricity_production", units="kW"
+                ),
+                rel=1e-6,
+            )
+            == model.prob.get_val("doc.electricity_in", units="kW").mean()
+        )
+
+    with subtests.test("Check LCOE (electrolyzer)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_electrolyzer.LCOE", units="USD/(MW*h)"
+                )[0],
+                rel=1e-3,
+            )
+            == 182.8942790183688
+        )
+
+    with subtests.test("Check finance_subgroup_electricity_electrolyzer electricity inputs"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_electrolyzer.rated_electricity_production",
+                    units="kW",
+                ),
+                rel=1e-6,
+            )
+            == model.prob.get_val("electrolyzer.electricity_in", units="kW").mean()
         )
 
 
