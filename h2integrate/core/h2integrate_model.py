@@ -558,7 +558,7 @@ class H2IntegrateModel:
                     storage_tech_to_control[tech] = True
 
         # Remove feedstocks and connectors
-        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage"]
+        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage", "feedstock"]
         tech_to_commodities = {
             (e[0], e[-1])
             for e in sources_to_commodities
@@ -640,6 +640,16 @@ class H2IntegrateModel:
         # Curtailable, dispatchable, and storage techs: read output and write set_point
         for tech_to_commodity in slc_config["tech_to_commodity"]:
             tech_name, commodity = tech_to_commodity
+            if slc_config["tech_control_classifiers"][tech_name] == "feedstock":
+                # Only connect the feedstock output to the SLC
+                self.plant.connect(
+                    f"{tech_name}_source.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                continue
+
+            # For all other techs, connect the tech output and rated production
+            # to the SLC
             self.plant.connect(
                 f"{tech_name}.{commodity}_out",
                 f"system_level_controller.{tech_name}_{commodity}_out",
@@ -650,6 +660,7 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_rated_{commodity}_production",
             )
 
+            # Connect the SLC to the controllable tech input
             if slc_config["storage_techs_to_control"].get(tech_name, False):
                 # storage has its own controller
                 # provide demand to storage controller,

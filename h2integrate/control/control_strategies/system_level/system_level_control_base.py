@@ -51,6 +51,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.storage_techs = [
             k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
         ]
+        self.feedstock_comps = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "feedstock"
+        ]
 
         self.input_techs = set(
             self.curtailable_techs + self.dispatchable_techs + self.storage_techs
@@ -78,6 +81,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("curtailable", self.curtailable_techs)
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
+        self._setup_feedstock_category(self.feedstock_comps)
 
     def _setup_commodity_for_given_units(
         self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
@@ -301,6 +305,55 @@ class SystemLevelControlBase(om.ExplicitComponent):
         setattr(self, f"{category}_set_point_names", set_point_names)
         setattr(self, f"{category}_rated_names", rated_names)
         setattr(self, f"{category}_commodity_names", commodity_names)
+
+    def _setup_feedstock_category(self, feedstock_list):
+        """Iterate over the feedstocks and add inputs for the available feedstock
+
+        Args:
+            feedstock_list (list[str]): name of feedstock techs
+        """
+        for tech_name in feedstock_list:
+            tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
+            for commodity in tech_commodities:
+                in_name = f"{tech_name}_{commodity}_out"
+
+                if commodity in self.commodities_to_units:
+                    # Units are already known explicitly
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=self.commodities_to_units[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    # Units are inferred from a previously-registered reference variable
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        copy_units=self.commodities_to_ref_var[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                else:
+                    # Units are unknown; try to discover them from the connection
+                    meta_data = self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        units_by_conn=True,
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                    if meta_data["units"] is None:
+                        # Still unknown: register in_name as the reference
+                        # variable so later techs with this commodity can
+                        # copy its units.
+                        self.commodities_to_ref_var[commodity] = in_name
+                    else:
+                        # Connection provided units — record them for future use
+                        self.commodities_to_units[commodity] = meta_data["units"]
 
     def _subtract_curtailable(self, inputs, outputs, demand):
         """Apply curtailable techs: set_point = rated, subtract output from demand.
