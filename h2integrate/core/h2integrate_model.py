@@ -664,15 +664,35 @@ class H2IntegrateModel:
                     f"{tech_name}.{commodity}_set_point",
                 )
 
-        # 4. For cost-aware strategies, connect marginal costs from cost models
+        # 4. For cost-aware strategies, connect cost inputs based on cost_per_tech
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
-            for tech_to_commodity in slc_config["tech_to_commodity"]:
-                tech_name, commodity = tech_to_commodity
+            cost_per_tech = slc_config.get("cost_per_tech", {})
+            for tech_name, _ in slc_config["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
-                    self.plant.connect(
-                        f"{tech_name}.marginal_cost",
-                        f"system_level_controller.{tech_name}_marginal_cost",
-                    )
+                    cost_spec = cost_per_tech.get(tech_name, 0.0)
+                    if cost_spec == "VarOpEx":
+                        self.plant.connect(
+                            f"{tech_name}.VarOpEx",
+                            f"system_level_controller.{tech_name}_VarOpEx",
+                        )
+                    elif cost_spec == "feedstock":
+                        # Connect VarOpEx from each upstream feedstock
+                        interconnections = self.plant_config.get("technology_interconnections", [])
+                        technologies = self.technology_config.get("technologies", {})
+                        for conn in interconnections:
+                            if conn[1] != tech_name:
+                                continue
+                            upstream = conn[0]
+                            tech_def = technologies.get(upstream, {})
+                            perf_model = tech_def.get("performance_model", {}).get("model", "")
+                            cost_model = tech_def.get("cost_model", {}).get("model", "")
+                            if "Feedstock" in perf_model or "Feedstock" in cost_model:
+                                self.plant.connect(
+                                    f"{upstream}.VarOpEx",
+                                    f"system_level_controller.{upstream}_VarOpEx",
+                                )
+                    # buy_price: defaults from tech config, overridable via set_val
+                    # scalar: no connection needed
 
         # Connect demand profile from the demand component to the controller
         demand_tech = slc_config["demand_tech"]

@@ -63,7 +63,6 @@ technologies:
         fixed_opex_per_kw_per_year: 10.0
         variable_opex_per_mwh: 0.0
         cost_year: 2023
-        marginal_cost: 0.05  # $/kWh — NG dispatch cost
   electrical_load_demand:
     performance_model:
       model: GenericDemandComponent
