@@ -392,7 +392,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return list(upstream_techs)
 
     def find_converter_techs(self):
-        """Get the name of the technology that transforms a commodity
+        """Get the name of the technology that transforms a commodity.
 
         Returns:
             set(tuple): set of converter technologies formatted as
