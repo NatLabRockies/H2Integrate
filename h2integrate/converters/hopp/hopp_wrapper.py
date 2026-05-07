@@ -16,6 +16,7 @@ class HOPPComponentModelConfig(CacheBaseConfig):
     hopp_config: dict = field()
     cost_year: int = field(converter=int)
     electrolyzer_rating: int | float | None = field(default=None)
+    marginal_cost: float = field(default=0.0)
 
 
 class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
@@ -32,6 +33,7 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "curtailable"
 
     def initialize(self):
         super().initialize()

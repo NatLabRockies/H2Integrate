@@ -28,6 +28,8 @@ class GeoH2SurfacePerformanceConfig(BaseConfig):
 
 
 class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
+    _control_classifier = "dispatchable"
+
     """OpenMDAO component for modeling the performance of the wellhead surface processing for
         geologic hydrogen.
 

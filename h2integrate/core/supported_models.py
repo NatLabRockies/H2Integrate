@@ -316,6 +316,10 @@ supported_models = {
     "OptimizedDispatchStorageController": OptimizedDispatchStorageController,
     "GenericDemandComponent": GenericDemandComponent,
     "FlexibleDemandComponent": FlexibleDemandComponent,
+    # System-level control strategies
+    "DemandFollowingControl": DemandFollowingControl,
+    "CostMinimizationControl": CostMinimizationControl,
+    "ProfitMaximizationControl": ProfitMaximizationControl,
     # Dispatch
     "PyomoDispatchGenericConverter": PyomoDispatchGenericConverter,
     "PyomoRuleStorageBaseclass": PyomoRuleStorageBaseclass,

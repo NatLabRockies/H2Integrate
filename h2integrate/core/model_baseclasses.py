@@ -103,14 +103,14 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         if getattr(self, "_control_classifier", None) == "curtailable":
             self.add_input(
                 f"{self.commodity}_set_point",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Set point for {self.commodity} production (curtailment limit)",
             )
             self.add_output(
                 f"uncurtailed_{self.commodity}_out",
-                val=0.0,
+                val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
                 desc=f"Full (uncurtailed) {self.commodity} output",
@@ -126,18 +126,19 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Should be called at the end of each curtailable model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
-        if getattr(self, "_control_classifier", None) != "curtailable":
-            return
+        if "system_level_control" in self.options["plant_config"]:
+            if getattr(self, "_control_classifier", None) != "curtailable":
+                return
 
-        commodity_out_key = f"{self.commodity}_out"
-        uncurtailed_key = f"uncurtailed_{self.commodity}_out"
-        set_point_key = f"{self.commodity}_set_point"
+            commodity_out_key = f"{self.commodity}_out"
+            uncurtailed_key = f"uncurtailed_{self.commodity}_out"
+            set_point_key = f"{self.commodity}_set_point"
 
-        uncurtailed = np.array(outputs[commodity_out_key])
-        outputs[uncurtailed_key] = uncurtailed
+            uncurtailed = np.array(outputs[commodity_out_key])
+            outputs[uncurtailed_key] = uncurtailed
 
-        set_point = self._inputs[set_point_key]
-        outputs[commodity_out_key] = np.minimum(uncurtailed, set_point)
+            set_point = self._inputs[set_point_key]
+            outputs[commodity_out_key] = np.minimum(uncurtailed, set_point)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
@@ -152,7 +153,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
-    marginal_cost: float = field(default=0.0)
 
 
 class CostModelBaseClass(om.ExplicitComponent):
@@ -165,7 +165,6 @@ class CostModelBaseClass(om.ExplicitComponent):
         - CapEx (float): capital expenditure costs in $
         - OpEx (float): annual fixed operating expenditure costs in $/year
         - VarOpEx (float): annual variable operating expenditure costs in $/year
-        - marginal_cost (float): marginal cost of production for dispatch decisions
 
     Discrete Outputs:
         - cost_year (int): dollar-year corresponding to CapEx and OpEx values.
@@ -198,9 +197,10 @@ class CostModelBaseClass(om.ExplicitComponent):
         model_inputs = self.options["tech_config"].get("model_inputs", {})
         shared = model_inputs.get("shared_parameters", {})
         commodity_rate_units = shared.get("commodity_rate_units", "kW")
+
         self.add_output(
             "marginal_cost",
-            val=self.config.marginal_cost,
+            val=getattr(self.config, "marginal_cost", 0.0),
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
