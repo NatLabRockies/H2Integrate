@@ -590,7 +590,6 @@ class H2IntegrateModel:
         4. Creates connections between the controller and each technology
         5. For cost/profit strategies, connects marginal cost inputs
         """
-        slc_config = self.plant_config["system_level_control"]
 
         # 1. Select controller class based on strategy
         strategy_name = self.plant_config["system_level_control"].get("control_strategy")
