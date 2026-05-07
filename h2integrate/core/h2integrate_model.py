@@ -11,7 +11,7 @@ from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
-from h2integrate.finances.finances import AdjustedCapexOpexComp
+from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
@@ -798,7 +798,6 @@ class H2IntegrateModel:
             )
             tech_names = subgroup_params.get("technologies")
             commodity_stream = subgroup_params.get("commodity_stream", None)
-
             if isinstance(finance_group_names, str):
                 finance_group_names = [finance_group_names]
 
@@ -839,9 +838,16 @@ class H2IntegrateModel:
                         "commodity": commodity,
                         "commodity_stream": commodity_stream,
                         "is_system_finance_model": True,
+                        "use_commodity_stream_timeseries": subgroup_params.get(
+                            "use_commodity_stream_timeseries", False
+                        ),
+                        "commodity_stream_output": subgroup_params.get(
+                            "commodity_stream_output", None
+                        ),
                     }
                 }
             )
+
             finance_subgroup = om.Group()
 
             # Default logic for handling cases without specified commodity streams
@@ -1001,6 +1007,24 @@ class H2IntegrateModel:
                         # update the description to include the finance model name to ensure
                         # uniquely named outputs
                         commodity_output_desc = commodity_output_desc + f"_{finance_group_name}"
+
+                if finance_subgroups[subgroup_name]["use_commodity_stream_timeseries"]:
+                    if (
+                        finance_subgroups[subgroup_name].get("commodity_stream_output", None)
+                        is None
+                    ):
+                        msg = (
+                            "`commodity_stream_output` is a required input if "
+                            f"`use_commodity_stream_timeseries` is True. Please add the "
+                            f"`commodity_stream_output` for finance subgroup `{subgroup_name}`"
+                        )
+                        raise ValueError(msg)
+
+                    adj_cf_comp = AdjustedCapacityFactorComp(
+                        plant_config=filtered_plant_config,
+                        commodity_type=commodity,
+                    )
+                    finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
 
                 # create the finance component
                 fin_comp = fin_model(
@@ -1298,17 +1322,24 @@ class H2IntegrateModel:
                 is_system_finance_model = group_configs.get("is_system_finance_model")
 
                 if is_system_finance_model:
-                    # Connect the rated commodity production and capacity factor
-                    # for system-level finance models
-                    self.plant.connect(
-                        f"{commodity_stream}.rated_{primary_commodity_type}_production",
-                        f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
-                    )
+                    if group_configs.get("use_commodity_stream_timeseries", False):
+                        # TODO: finish this logic
+                        self.plant.connect(
+                            f"{commodity_stream}.{group_configs.get('commodity_stream_output')}",
+                            f"finance_subgroup_{group_id}.{primary_commodity_type}_produced",
+                        )
+                    else:
+                        # Connect the rated commodity production and capacity factor
+                        # for system-level finance models
+                        self.plant.connect(
+                            f"{commodity_stream}.rated_{primary_commodity_type}_production",
+                            f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
+                        )
 
-                    self.plant.connect(
-                        f"{commodity_stream}.capacity_factor",
-                        f"finance_subgroup_{group_id}.capacity_factor",
-                    )
+                        self.plant.connect(
+                            f"{commodity_stream}.capacity_factor",
+                            f"finance_subgroup_{group_id}.capacity_factor",
+                        )
 
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
