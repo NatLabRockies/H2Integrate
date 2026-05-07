@@ -22,13 +22,16 @@ def _make_plant_config(
     curtailable=None,
     dispatchable=None,
     storage=None,
+    feedstock=None,
     sell_price=0.06,
     cost_per_tech=None,
     technology_interconnections=None,
 ):
     """Build a minimal plant_config dict for controller tests."""
-    all_techs = (curtailable or []) + (dispatchable or []) + (storage or [])
+    all_techs = (curtailable or []) + (dispatchable or []) + (storage or []) + (feedstock or [])
+
     tech_to_commodity = {(t, "electricity") for t in all_techs}
+
     config = {
         "plant": {"simulation": {"n_timesteps": n_timesteps, "dt": 3600}, "plant_life": 30},
         "system_level_control": {
@@ -39,6 +42,7 @@ def _make_plant_config(
             "curtailable_techs": curtailable or [],
             "dispatchable_techs": dispatchable or [],
             "storage_techs": storage or [],
+            "feedstock_techs": feedstock or [],
             "tech_to_commodity": tech_to_commodity,
             "commodity_sell_price": sell_price,
             "cost_per_tech": cost_per_tech or {},
@@ -56,7 +60,8 @@ def _make_slc_config(plant_config):
     curtailable = slc.get("curtailable_techs", [])
     dispatchable = slc.get("dispatchable_techs", [])
     storage = slc.get("storage_techs", [])
-    all_techs = curtailable + dispatchable + storage
+    feedstock = slc.get("feedstock_techs", [])
+    all_techs = curtailable + dispatchable + storage + feedstock
 
     # Build technology graph
     tech_graph = nx.DiGraph()
@@ -79,6 +84,8 @@ def _make_slc_config(plant_config):
         classifiers[t] = "dispatchable"
     for t in storage:
         classifiers[t] = "storage"
+    for t in feedstock:
+        classifiers[t] = "feedstock"
 
     return {
         "demand_commodity": slc["demand_commodity"],
@@ -91,7 +98,7 @@ def _make_slc_config(plant_config):
     }
 
 
-def _build_problem(slc_cls, plant_config, tech_config=None):
+def _build_problem(slc_cls, plant_config):
     """Create and setup an OpenMDAO Problem with the given controller."""
     slc_config = _make_slc_config(plant_config)
     prob = om.Problem()
@@ -100,7 +107,7 @@ def _build_problem(slc_cls, plant_config, tech_config=None):
         slc_cls(
             driver_config={},
             plant_config=plant_config,
-            tech_config=tech_config or {},
+            tech_config={},
             slc_config=slc_config,
         ),
     )
@@ -482,6 +489,7 @@ class TestProfitMaximizationControl:
         """feedstock mode: single upstream feedstock drives marginal cost."""
         pc = _make_plant_config(
             dispatchable=["ng_plant"],
+            feedstock=["ng_feed"],
             demand=50000,
             sell_price=0.10,
             cost_per_tech={"ng_plant": "feedstock"},
@@ -489,15 +497,8 @@ class TestProfitMaximizationControl:
                 ["ng_feed", "ng_plant", "natural_gas", "pipe"],
             ],
         )
-        tech_config = {
-            "technologies": {
-                "ng_feed": {
-                    "performance_model": {"model": "FeedstockPerformanceModel"},
-                    "cost_model": {"model": "FeedstockCostModel"},
-                },
-            }
-        }
-        prob = _build_problem(CostMinimizationControl, pc, tech_config=tech_config)
+
+        prob = _build_problem(CostMinimizationControl, pc)
         prob.set_val("slc.ng_plant_rated_electricity_production", 100000)
         # Feedstock VarOpEx: $1M/yr; production: 100 MW * 4 h = 400 MWh
         prob.set_val("slc.ng_feed_VarOpEx", np.full(30, 1_000_000.0))
@@ -513,6 +514,7 @@ class TestProfitMaximizationControl:
         """feedstock mode: multiple upstream feedstocks are summed."""
         pc = _make_plant_config(
             dispatchable=["plant"],
+            feedstock=["feed_a", "feed_b"],
             demand=50000,
             sell_price=0.10,
             cost_per_tech={"plant": "feedstock"},
@@ -522,22 +524,8 @@ class TestProfitMaximizationControl:
                 ["other_tech", "plant", "something", "cable"],
             ],
         )
-        tech_config = {
-            "technologies": {
-                "feed_a": {
-                    "performance_model": {"model": "FeedstockPerformanceModel"},
-                    "cost_model": {"model": "FeedstockCostModel"},
-                },
-                "feed_b": {
-                    "performance_model": {"model": "FeedstockPerformanceModel"},
-                    "cost_model": {"model": "FeedstockCostModel"},
-                },
-                "other_tech": {
-                    "performance_model": {"model": "SomePerformanceModel"},
-                },
-            }
-        }
-        prob = _build_problem(CostMinimizationControl, pc, tech_config=tech_config)
+
+        prob = _build_problem(CostMinimizationControl, pc)
         prob.set_val("slc.plant_rated_electricity_production", 100000)
         # Two feedstocks: $500k and $300k → total $800k/yr
         prob.set_val("slc.feed_a_VarOpEx", np.full(30, 500_000.0))
@@ -554,6 +542,7 @@ class TestProfitMaximizationControl:
         """feedstock mode in profit max: unprofitable when feedstock costs exceed sell price."""
         pc = _make_plant_config(
             dispatchable=["ng_plant"],
+            feedstock=["ng_feed"],
             demand=50000,
             sell_price=0.01,  # very low sell price
             cost_per_tech={"ng_plant": "feedstock"},
@@ -561,15 +550,8 @@ class TestProfitMaximizationControl:
                 ["ng_feed", "ng_plant", "natural_gas", "pipe"],
             ],
         )
-        tech_config = {
-            "technologies": {
-                "ng_feed": {
-                    "performance_model": {"model": "FeedstockPerformanceModel"},
-                    "cost_model": {"model": "FeedstockCostModel"},
-                },
-            }
-        }
-        prob = _build_problem(ProfitMaximizationControl, pc, tech_config=tech_config)
+
+        prob = _build_problem(ProfitMaximizationControl, pc)
         prob.set_val("slc.ng_plant_rated_electricity_production", 100000)
         prob.set_val("slc.commodity_sell_price", 0.01)
         # Very expensive feedstock: $100M/yr → high marginal cost
@@ -591,12 +573,6 @@ class TestProfitMaximizationControl:
                 ["some_tech", "ng_plant", "electricity", "cable"],
             ],
         )
-        tech_config = {
-            "technologies": {
-                "some_tech": {
-                    "performance_model": {"model": "SomePerformanceModel"},
-                },
-            }
-        }
+
         with pytest.raises(ValueError, match="at least one feedstock"):
-            _build_problem(CostMinimizationControl, pc, tech_config=tech_config)
+            _build_problem(CostMinimizationControl, pc)

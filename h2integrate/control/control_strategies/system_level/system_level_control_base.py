@@ -606,20 +606,19 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns:
             list[str]: names of upstream feedstock technologies.
         """
-        tech_config = self.options["tech_config"]
-        technologies = tech_config.get("technologies", {})
         interconnections = self.options["plant_config"].get("technology_interconnections", [])
 
         # Upstream tech names for this dispatchable tech
+        # NOTE: could getting upstream_techs be replaced with the two lines below
+        # comds = self._get_commodity_for_tech(tech_name)
+        # upstream_techs = list(
+        #     set([self.get_upstream_techs_for_commodity(tech_name, c) for c in comds])
+        #     )
         upstream_techs = [conn[0] for conn in interconnections if conn[1] == tech_name]
 
-        feedstock_names = []
-        for upstream in upstream_techs:
-            tech_def = technologies.get(upstream, {})
-            perf_model = tech_def.get("performance_model", {}).get("model", "")
-            cost_model = tech_def.get("cost_model", {}).get("model", "")
-            if "Feedstock" in perf_model or "Feedstock" in cost_model:
-                feedstock_names.append(upstream)
+        feedstock_names = [
+            upstream for upstream in upstream_techs if upstream in self.feedstock_comps
+        ]
 
         return feedstock_names
 
