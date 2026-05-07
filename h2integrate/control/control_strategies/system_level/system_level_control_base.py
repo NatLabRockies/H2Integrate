@@ -1,3 +1,6 @@
+import operator
+import functools
+
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -423,7 +426,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     downstream_of_previous_converter = [
                         n
                         for i, n in enumerate(self.technology_graph.__iter__())
-                        if i > idx_upstream_converter
+                        if i > min(idx_upstream_converter)
                     ]
                     all_upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
                         set(self.input_techs)
@@ -438,19 +441,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 upstream_commodities = [
                     self._get_commodity_for_tech(t) for t in connected_upstream_techs
                 ]
+                upstream_commodities = functools.reduce(operator.iadd, upstream_commodities, [])
                 # symmetric difference
                 # commodities that are not in both
                 input_output_commodity = set(upstream_commodities) ^ set(tech_output_commodity)
                 if len(input_output_commodity) > 1:
-                    input_commodity = list(
+                    input_commodities = list(
                         input_output_commodity.intersection(set(upstream_commodities))
                     )
-                    output_commodity = list(
+                    output_commodities = list(
                         input_output_commodity.intersection(set(tech_output_commodity))
                     )
 
-                    # formatted as (input commodity, tech_name, output comodity)
-                    converter_techs.add((input_commodity, tech, output_commodity))
+                    for input_commodity in input_commodities:
+                        for output_commodity in output_commodities:
+                            # formatted as (input commodity, tech_name, output comodity)
+                            converter_techs.add((input_commodity, tech, output_commodity))
                     upstream_converter = tech
 
         return converter_techs
