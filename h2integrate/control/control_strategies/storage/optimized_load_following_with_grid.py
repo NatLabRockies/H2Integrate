@@ -325,7 +325,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             for t in window_start_indices:
                 # get the inputs over the current control window
                 time_update_inputs = self.create_time_update_dictionary(inputs, t)
-                n_control_window_hours = self.config.n_control_window_hours
+                # n_control_window_hours = self.config.n_control_window_hours
                 # commodity_in = inputs[f"{self.config.commodity}_in"][
                 #     t : t + self.n_control_window_hours
                 # ]
