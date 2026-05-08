@@ -8,13 +8,24 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 class DemandFollowingControl(SystemLevelControlBase):
     """Demand-following system-level controller.
 
-    Dispatch priority:
-    1. Curtailable techs run at rated capacity (zero marginal cost).
-    2. Storage absorbs surplus / provides deficit (set_point = net demand).
-    3. Remaining demand is split equally across dispatchable techs.
+    Dispatches technologies to meet a time-varying demand profile without
+    considering costs. The demand is satisfied in a fixed three-step priority
+    order, and each step's shortfall or surplus is passed to the next:
 
-    This strategy always attempts to meet demand exactly; it does not
-    consider costs.
+    1. **Curtailable techs** run at their full rated capacity. Their total
+       output is subtracted from the demand, which may drive the residual
+       demand negative (surplus).
+
+    2. **Storage techs** receive the residual demand (which may be positive
+       or negative). When demand is positive the storage is commanded to
+       discharge; when negative it is commanded to charge. If multiple
+       storage techs produce the demanded commodity, the residual demand is
+       split **evenly** across them (each receives ``demand / n_storage``).
+
+    3. **Dispatchable techs** cover any remaining positive demand after
+       storage. The remaining demand (floored at zero) is split **evenly**
+       across all dispatchable techs that produce the demanded commodity
+       (each receives ``remaining_demand / n_dispatchable``).
     """
 
     def compute(self, inputs, outputs):
