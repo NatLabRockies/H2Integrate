@@ -43,8 +43,17 @@ A dispatchable performance model represents anything that can receive a set poin
 ```
 
 ## Storage
-Storage is a unique control classifier because it assumes that within the model that energy isn't created or destroyed (minus some efficiency losses). While it's technically "dispatchable" in that it can receive and change its performance based on a set point it's handling within H2I is unique because it's attached to storage performance models, which is handled differently than converter performance models.
+Storage is a unique control classifier because it assumes that within the model that energy isn't created or destroyed (minus some efficiency losses). While it's technically "dispatchable" in that it can receive and change its performance based on a set point it's handling within H2I is unique because it's attached to storage performance models, which is handled differently than converter performance models. A converter model only has positive (or zero) `{commodity}_out`, whereas a storage model can have positive or negative `{commodity}_out`.
 
-The storage performance models that have the "storage" control classifier additionally require a storage-level controller in addition to the overarching system level controller. See the image below for reference. The storage-level controller takes in the system level-controller set points and outputs charge (negative) and discharge (positive) commands (storage-level set points) to the storage performance model.
+There are two types of cases for the storage control classifier:
+1. **with a storage controller**
+When the storage performance model is controlled with a storage-level controller (open-loop or feedback controlled), the system-level controller outputs combined demand, that is always positive to the storage-level controller. The demand is `{commodity}_in` from the technologies upstream of the storage that output the same commodity to the storage performance model and the `remaining_demand`.
 
-ADD IMAGE - wait until [PR # 731](https://github.com/NatLabRockies/H2Integrate/pull/731) comes in.
+2. **without a storage controller**
+The system-level controller outputs set points to the storage performance model which can be considered charge (negative) and discharge (positive) commands (storage-level set points) to the storage performance model, directly.
+
+
+```{figure} figures/storage.png
+:width: 85%
+:align: center
+```
