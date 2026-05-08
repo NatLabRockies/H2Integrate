@@ -52,8 +52,21 @@ finance_parameters:
     electricity:
       commodity: electricity
       technologies: [wind]
+    electricity_doc:
+      commodity: electricity
+      commodity_stream: electricity_splitter
+      use_commodity_stream_timeseries: true
+      commodity_stream_output: electricity_out1
+      technologies: [wind, doc]
+    electricity_electrolyzer:
+      commodity: electricity
+      commodity_stream: electricity_splitter
+      use_commodity_stream_timeseries: true
+      commodity_stream_output: electricity_out2
+      technologies: [wind, electrolyzer]
     hydrogen:
       commodity: hydrogen
+      commodity_stream: electrolyzer
       technologies: [wind, electrolyzer]
     co2:
       commodity: co2

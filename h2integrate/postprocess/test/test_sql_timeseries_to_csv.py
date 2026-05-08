@@ -4,8 +4,7 @@ import numpy as np
 import pytest
 from pytest import fixture
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_yaml, load_tech_yaml, load_driver_yaml
+from h2integrate import H2IntegrateModel, load_yaml, load_tech_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 h2i = H2IntegrateModel("wind_battery_dispatch.yaml")

@@ -20,7 +20,7 @@ Resource data for a technology can be set using the `set_val()` command. In the 
 
 ```python
 import pandas as pd
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 # Create an H2I model
 h2i = H2IntegrateModel("07_run_of_river.yaml")
 

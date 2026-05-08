@@ -6,7 +6,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.core.file_utils import load_yaml
+from h2integrate import load_yaml
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
     SimpleStorageOpenLoopController,

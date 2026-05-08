@@ -9,9 +9,47 @@ import numpy as np
 import pytest
 
 import h2integrate.core.h2integrate_model as h2i_model_module
-from h2integrate import ROOT_DIR, EXAMPLE_DIR
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
+)
+def test_use_commodity_stream_timeseries_finances_error(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+
+    # Remove commodity_stream_output from finace subgroup
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity_doc"].pop(
+        "commodity_stream_output"
+    )
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    with pytest.raises(ValueError) as excinfo:
+        H2IntegrateModel(top_level_config)
+    err = str(excinfo.value)
+    with subtests.test("Commodity stream name is missing (commodity_stream_output is required)"):
+        assert "`commodity_stream_output` is a required input" in err
+    with subtests.test(
+        "Commodity stream name is missing (use_commodity_stream_timeseries is True)"
+    ):
+        assert "`use_commodity_stream_timeseries` is True" in err
+    with subtests.test("Commodity stream name is missing (finance subgroup `electricity_doc`)"):
+        assert "finance subgroup `electricity_doc`" in err
 
 
 @pytest.mark.integration
