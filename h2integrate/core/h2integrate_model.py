@@ -562,7 +562,7 @@ class H2IntegrateModel:
 
         # Remove feedstocks and connectors
         control_classifiers_to_connect = ["curtailable", "dispatchable", "storage", "feedstock"]
-        tech_to_commodities = {
+        tech_to_commodity = {
             (e[0], e[-1])
             for e in sources_to_commodities
             if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
@@ -572,7 +572,7 @@ class H2IntegrateModel:
         slc_config["demand_tech"] = demand_tech
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
-        slc_config["tech_to_commodity"] = tech_to_commodities
+        slc_config["tech_to_commodity"] = tech_to_commodity
         slc_config["storage_techs_to_control"] = storage_tech_to_control
         slc_config["technology_graph"] = self.technology_graph
 

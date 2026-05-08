@@ -94,121 +94,93 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
 
-    def _setup_commodity_for_given_units(
-        self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
+    def _setup_commodity(
+        self,
+        tech_name,
+        commodity,
+        commodity_units=None,
+        commodity_reference_var=None,
+        add_in_name=True,
+        initial_set_point=1.0,
     ):
-        """Adds inputs and outputs for a commodity when the units are known.
-        The inputs and outputs that are added have the below naming convention:
+        """Register OpenMDAO inputs and outputs for a single (tech, commodity) pair.
 
-        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
-        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
-            capacity of tech_name
-        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
+        This method handles unit specification in two mutually exclusive ways:
+
+        1. **Explicit units** - pass ``commodity_units`` (e.g. ``"kW"``).
+           Each variable is created with ``units=commodity_units``.
+        2. **Copied units** - pass ``commodity_reference_var`` (the name of an
+           already-registered input whose units should be reused).
+           Each variable is created with ``units=None, copy_units=commodity_reference_var``.
+
+        Exactly one of ``commodity_units`` or ``commodity_reference_var`` must be
+        provided.
+
+        The following OpenMDAO variables are created:
+
+        - Input ``"{tech_name}_{commodity}_out"`` - commodity produced by the tech
+          (only if ``add_in_name=True``).
+        - Input ``"{tech_name}_rated_{commodity}_production"`` - rated production
+          capacity of the tech.
+        - Output ``"{tech_name}_{commodity}_set_point"`` (or
+          ``"{tech_name}_{commodity}_demand"`` for storage techs with an attached
+          controller) - control set-point sent to the tech.
 
         Args:
-            tech_name (str): name of technology
-            commodity (str): commodity of the technology described by `tech_name`
-            commodity_units (str): units of commodity
-            add_in_name (bool, optional): If True, add the input for the in_name variable.
-                Defaults to True.
-            initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 1.0.
+            tech_name (str): Name of the technology.
+            commodity (str): Commodity produced by ``tech_name``.
+            commodity_units (str | None): Explicit unit string for the commodity.
+                Mutually exclusive with ``commodity_reference_var``.
+            commodity_reference_var (str | None): Name of an existing input
+                variable whose units should be copied. Mutually exclusive with
+                ``commodity_units``.
+            add_in_name (bool, optional): If True, register the
+                ``"{tech_name}_{commodity}_out"`` input. Defaults to True.
+            initial_set_point (float, optional): Initial value for the
+                set-point output. Defaults to 1.0.
+
         Returns:
-            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
+            tuple[str, str, str]: ``(in_name, set_point_name, rated_name)``
         """
+        # --- Determine unit kwargs for add_input / add_output ---------
+        # Either explicit units or copy_units from a reference variable.
+        if commodity_units is not None:
+            unit_kwargs = {"units": commodity_units}
+        else:
+            unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
+
+        # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
 
+        # Storage techs with an attached controller receive a "demand"
+        # output instead of a "set_point" output.
         if self.storage_techs_to_control.get(tech_name, False):
-            # tech_name is storage and does have an attached controller
             set_point_name = f"{tech_name}_{commodity}_demand"
         else:
-            # if tech_name is not in storage_techs_to_control
-            # or storage tech does not have an attached controller
             set_point_name = f"{tech_name}_{commodity}_set_point"
 
+        # --- Register inputs and output -------------------------------
         if add_in_name:
             self.add_input(
                 in_name,
                 val=0.0,
                 shape=self.n_timesteps,
-                units=commodity_units,
                 desc=f"{commodity} output from {tech_name}",
+                **unit_kwargs,
             )
         self.add_input(
             rated_name,
             val=0.0,
-            units=commodity_units,
             desc=f"Rated {commodity} production for {tech_name}",
+            **unit_kwargs,
         )
         self.add_output(
             set_point_name,
             val=initial_set_point,
             shape=self.n_timesteps,
-            units=commodity_units,
             desc=f"Set point for {tech_name} {commodity} curtailment",
-        )
-
-        return in_name, set_point_name, rated_name
-
-    def _setup_commodity_for_copy_units(
-        self, tech_name, commodity, commodity_reference_var, add_in_name=True, initial_set_point=1.0
-    ):
-        """Adds inputs and outputs for a commodity where the units are based on a reference
-        input variable. The inputs and outputs that are added have the below
-        naming convention:
-
-        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
-        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
-            capacity of tech_name
-        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
-
-        Args:
-            tech_name (str): name of technology
-            commodity (str): commodity of the technology described by `tech_name`
-            commodity_reference_var (str): name of input to copy units from
-            add_in_name (bool, optional): If True, add the input for the in_name variable.
-                Defaults to True.
-            initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 1.0.
-
-        Returns:
-            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
-        """
-        in_name = f"{tech_name}_{commodity}_out"
-        rated_name = f"{tech_name}_rated_{commodity}_production"
-
-        if self.storage_techs_to_control.get(tech_name, False):
-            # tech_name is storage and does have an attached controller
-            set_point_name = f"{tech_name}_{commodity}_demand"
-        else:
-            # if tech_name is not in storage_techs_to_control
-            # or storage tech does not have an attached controller
-            set_point_name = f"{tech_name}_{commodity}_set_point"
-
-        if add_in_name:
-            self.add_input(
-                in_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=None,
-                copy_units=commodity_reference_var,
-                desc=f"{commodity} output from {tech_name}",
-            )
-        self.add_input(
-            rated_name,
-            val=0.0,
-            units=None,
-            copy_units=commodity_reference_var,
-            desc=f"Rated {commodity} production for {tech_name}",
-        )
-        self.add_output(
-            set_point_name,
-            val=initial_set_point,
-            shape=self.n_timesteps,
-            units=None,
-            copy_units=commodity_reference_var,
-            desc=f"Set point for {tech_name} {commodity} curtailment",
+            **unit_kwargs,
         )
 
         return in_name, set_point_name, rated_name
@@ -256,19 +228,19 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for commodity in tech_commodities:
                 if commodity in self.commodities_to_units:
                     # Units are already known explicitly
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                    in_name, set_point_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
-                        self.commodities_to_units[commodity],
+                        commodity_units=self.commodities_to_units[commodity],
                         add_in_name=True,
                         initial_set_point=initial_set_point,
                     )
                 elif commodity in self.commodities_to_ref_var:
                     # Units are inferred from a previously-registered reference variable
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                    in_name, set_point_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
-                        self.commodities_to_ref_var[commodity],
+                        commodity_reference_var=self.commodities_to_ref_var[commodity],
                         add_in_name=True,
                         initial_set_point=initial_set_point,
                     )
@@ -288,20 +260,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         # variable so later techs with this commodity can
                         # copy its units.
                         self.commodities_to_ref_var[commodity] = in_name
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                        in_name, set_point_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
-                            self.commodities_to_ref_var[commodity],
+                            commodity_reference_var=self.commodities_to_ref_var[commodity],
                             add_in_name=False,
                             initial_set_point=initial_set_point,
                         )
                     else:
                         # Connection provided units — record them for future use
                         self.commodities_to_units[commodity] = meta_data["units"]
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                        in_name, set_point_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
-                            self.commodities_to_units[commodity],
+                            commodity_units=self.commodities_to_units[commodity],
                             add_in_name=False,
                             initial_set_point=initial_set_point,
                         )

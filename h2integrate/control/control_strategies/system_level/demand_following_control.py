@@ -21,7 +21,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         commodity = self.commodity
         demand = inputs[self.demand_input_name].copy()
 
-        # 1. Curtailable techs: full production
+        # 1. Curtailable techs: operate at full production
         for curtailable_tech in self.curtailable_techs:
             commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
             # check that this tech produces the commodity demanded
