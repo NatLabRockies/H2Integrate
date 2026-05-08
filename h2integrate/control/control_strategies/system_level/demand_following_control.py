@@ -17,8 +17,9 @@ class DemandFollowingControl(SystemLevelControlBase):
     consider costs.
     """
 
-    def run_control_for_commodity_subset(self, inputs, outputs, commodity, commodity_demand):
-        demand = commodity_demand.copy()
+    def compute(self, inputs, outputs):
+        commodity = self.commodity
+        demand = inputs[self.demand_input_name].copy()
 
         # 1. Curtailable techs: full production
         for curtailable_tech in self.curtailable_techs:
@@ -57,13 +58,3 @@ class DemandFollowingControl(SystemLevelControlBase):
                 outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
                     remaining_demand / n_dispatchable
                 )
-
-        return outputs
-
-    def compute(self, inputs, outputs):
-        if self.multi_commodity_system:
-            self.find_converter_techs()
-
-        outputs = self.run_control_for_commodity_subset(
-            inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
-        )

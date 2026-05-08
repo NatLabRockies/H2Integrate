@@ -70,7 +70,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.curtailable_techs + self.dispatchable_techs + self.storage_techs
         )
 
-        # Input: demand profile (default value from config)
+        # Input: demand profile
         self.demand_input_name = f"{self.commodity}_demand"
         self.add_input(
             self.demand_input_name,
