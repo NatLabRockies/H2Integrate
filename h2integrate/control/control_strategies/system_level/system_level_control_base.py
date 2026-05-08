@@ -759,7 +759,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
                     for input_commodity in input_commodities:
                         for output_commodity in output_commodities:
-                            # formatted as (input commodity, tech_name, output comodity)
+                            # formatted as (input commodity, tech_name, output commodity)
                             converter_techs.add((input_commodity, tech, output_commodity))
                     upstream_converter = tech
 
