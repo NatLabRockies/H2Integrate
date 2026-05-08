@@ -1,6 +1,3 @@
-import operator
-import functools
-
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -566,32 +563,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return np.full(self.n_timesteps, marginal_cost_scalar)
 
     def _find_feedstock_techs(self, tech_name):
-        """Find feedstock technologies connected upstream of tech_name.
+        """Find feedstock technologies upstream of ``tech_name`` at any depth.
 
-        Scans ``technology_interconnections`` for connections whose
-        destination is tech_name and whose source is a feedstock.
+        Uses graph ancestors rather than direct interconnections so that
+        feedstocks behind intermediate components (e.g. combiners) are found.
 
         Args:
-            tech_name (str): the dispatchable technology name.
+            tech_name (str): The dispatchable technology name.
 
         Returns:
-            list[str]: names of upstream feedstock technologies.
+            list[str]: Names of upstream feedstock technologies.
         """
-        interconnections = self.options["plant_config"].get("technology_interconnections", [])
-
-        # Upstream tech names for this dispatchable tech
-        # NOTE: could getting upstream_techs be replaced with the two lines below
-        # comds = self._get_commodity_for_tech(tech_name)
-        # upstream_techs = list(
-        #     set([self.get_upstream_techs_for_commodity(tech_name, c) for c in comds])
-        #     )
-        upstream_techs = [conn[0] for conn in interconnections if conn[1] == tech_name]
-
-        feedstock_names = [
-            upstream for upstream in upstream_techs if upstream in self.feedstock_comps
-        ]
-
-        return feedstock_names
+        # All ancestors at any depth, filtered to feedstocks
+        ancestors = nx.ancestors(self.technology_graph, tech_name)
+        return [tech for tech in ancestors if tech in self.feedstock_comps]
 
     def _feedstock_marginal_cost(self, inputs, marginal_cost_data):
         """Compute marginal cost from upstream feedstock VarOpEx values.
@@ -631,108 +616,115 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
     ):
-        """Get the name of technologies that are upstream
-        of `tech_name` and that output `commodity`.
+        """Find controlled technologies upstream of ``tech_name`` that output ``commodity``.
+
+        Walks the technology graph backwards from ``tech_name``, finds all ancestor
+        nodes that have an outgoing edge carrying ``commodity``, then filters to only
+        those managed by the controller.
 
         Args:
-            tech_name (str): name of technology
-            commodity (str): commodity name
-            include_feedstock_sources (bool, optional): If True, include techs
-                that have an input commodity from a feedstock. Defaults to True.
+            tech_name (str): Technology whose upstream suppliers are sought.
+            commodity (str): Commodity of interest (e.g. ``"electricity"``).
+            include_feedstock_sources (bool, optional): If True, feedstock techs are
+                included in the set of controller-managed technologies. Defaults to True.
 
         Returns:
-            list[str]: list of technologies upstream of the tech_name that produce a given commodity
+            list[str]: Controller-managed technologies upstream of ``tech_name``
+                that produce ``commodity``.
         """
+        # Build the set of techs the controller can see
         if include_feedstock_sources:
             input_techs = self.input_techs | set(self.feedstock_comps)
         else:
             input_techs = self.input_techs.copy()
 
-        # figure out where the upstream commodity is coming from
-        upstream_components = nx.ancestors(self.technology_graph, tech_name)
-        # iterates through a list of 3 length tuples (source, dest, commodity)
-        upstream_components_shared_commodity = [
-            s[0]
-            for s in list(self.technology_graph.edges(data="commodity"))
-            if s[0] in upstream_components and s[2] == commodity
-        ]
-        # get the technologies that are available to the controller
-        upstream_techs = set(upstream_components_shared_commodity).intersection(set(input_techs))
-        return list(upstream_techs)
+        # All graph ancestors of tech_name (any depth)
+        ancestors = nx.ancestors(self.technology_graph, tech_name)
+
+        # Keep only ancestors that have an outgoing edge carrying the target commodity.
+        # Edges are (source, dest, commodity) tuples
+        ancestors_with_commodity = {
+            src
+            for src, _, comm in self.technology_graph.edges(data="commodity")
+            if src in ancestors and comm == commodity
+        }
+
+        # Intersect with controller-managed techs
+        return list(ancestors_with_commodity & input_techs)
 
     def find_converter_techs(self, include_feedstock_sources=True):
-        """Get the name of the technology that transforms a commodity.
+        """Identify technologies that transform one commodity into another.
+
+        A "converter" is a tech whose output commodities differ from the commodities
+        produced by its upstream ancestors (e.g. an electrolyzer: electricity → hydrogen).
 
         Args:
-            include_feedstock_sources (bool, optional): If True, include techs
-                that have an input commodity from a feedstock. Defaults to True.
+            include_feedstock_sources (bool, optional): If True, include feedstock techs
+                in the set of candidate technologies. Defaults to True.
 
         Returns:
-            set(tuple): set of converter technologies formatted as
-                (input_commodity, converter tech name, output_commodity)
+            set[tuple[str, str, str]]: Set of ``(input_commodity, tech_name, output_commodity)``
+                tuples for each detected conversion. Returns ``None`` for single-commodity systems.
         """
         if include_feedstock_sources:
             input_techs = self.input_techs | set(self.feedstock_comps)
         else:
             input_techs = self.input_techs.copy()
+
+        # Single-commodity systems have no special handling by definition
         if not self.multi_commodity_system:
             return
 
         converter_techs = set()
-
+        node_order = list(self.technology_graph.nodes())
         edges = list(self.technology_graph.edges(data="commodity"))
-        upstream_converter = None
-        for edge in edges:
-            tech, dest_tech, cmod = edge
-            if tech in input_techs:
-                tech_output_commodity = self._get_commodity_for_tech(tech)
 
-                # NOTE: unsure how this would work for systems with tiered converters
-                # aka - maybe have to eliminate a converter once we've discovered it
-                if upstream_converter is None:
-                    upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(input_techs)
-                    )
-                else:
-                    idx_upstream_converter = [
-                        i
-                        for i, n in enumerate(self.technology_graph.__iter__())
-                        if n == upstream_converter
-                    ]
-                    downstream_of_previous_converter = [
-                        n
-                        for i, n in enumerate(self.technology_graph.__iter__())
-                        if i > min(idx_upstream_converter)
-                    ]
-                    all_upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(input_techs)
-                    )
-                    upstream_techs = all_upstream_techs.intersection(
-                        set(downstream_of_previous_converter)
-                    )
+        # Track the most recently discovered converter so we can scope
+        # upstream searches for chained converters (A→B→C where B and C
+        # both convert). Without this, C would see A's commodity as upstream
+        # input even though B already consumed it.
+        last_converter = None
 
-                connected_upstream_techs = [
-                    t for t in upstream_techs if nx.has_path(self.technology_graph, t, tech)
-                ]
-                upstream_commodities = [
-                    self._get_commodity_for_tech(t) for t in connected_upstream_techs
-                ]
-                upstream_commodities = functools.reduce(operator.iadd, upstream_commodities, [])
-                # symmetric difference
-                # commodities that are not in both
-                input_output_commodity = set(upstream_commodities) ^ set(tech_output_commodity)
-                if len(input_output_commodity) > 1:
-                    input_commodities = list(
-                        input_output_commodity.intersection(set(upstream_commodities))
-                    )
-                    output_commodities = list(
-                        input_output_commodity.intersection(set(tech_output_commodity))
-                    )
+        for source_tech, _, _ in edges:
+            if source_tech not in input_techs:
+                continue
 
-                    for input_commodity in input_commodities:
-                        for output_commodity in output_commodities:
-                            # formatted as (input commodity, tech_name, output commodity)
-                            converter_techs.add((input_commodity, tech, output_commodity))
-                    upstream_converter = tech
+            # Get the commodities produced by this tech (the "output" side of the conversion)
+            output_commodities = set(self._get_commodity_for_tech(source_tech))
+
+            # Find controlled ancestors of this tech
+            all_ancestors = nx.ancestors(self.technology_graph, source_tech) & input_techs
+
+            if last_converter is not None:
+                # Only consider ancestors that appear after the last converter
+                # in topological order, preventing double-counting across
+                # chained converters.
+                converter_idx = node_order.index(last_converter)
+                nodes_after_converter = set(node_order[converter_idx + 1 :])
+                ancestors = all_ancestors & nodes_after_converter
+            else:
+                ancestors = all_ancestors
+
+            # Keep only ancestors actually connected (reachable) to this tech
+            connected_ancestors = [
+                t for t in ancestors if nx.has_path(self.technology_graph, t, source_tech)
+            ]
+
+            # Gather all commodities produced by connected ancestors
+            input_commodities = set()
+            for ancestor in connected_ancestors:
+                input_commodities.update(self._get_commodity_for_tech(ancestor))
+
+            # A converter has commodities that appear only on one side:
+            # upstream-only commodities are consumed, output-only are produced.
+            consumed = input_commodities - output_commodities
+            produced = output_commodities - input_commodities
+
+            # If both sides have unique commodities, this tech is a converter
+            if consumed and produced:
+                for in_comm in consumed:
+                    for out_comm in produced:
+                        converter_techs.add((in_comm, source_tech, out_comm))
+                last_converter = source_tech
 
         return converter_techs
