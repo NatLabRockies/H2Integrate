@@ -186,6 +186,9 @@ from h2integrate.control.control_rules.converters.generic_converter_min_operatin
 from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
     DemandOpenLoopStorageController,
 )
+from h2integrate.control.control_strategies.storage.optimized_load_following_with_buying import (
+    OptimizedDispatchLoadFollowingBuyingController,
+)
 
 
 supported_models = {
@@ -304,6 +307,9 @@ supported_models = {
     "PeakLoadManagementOptimizedStorageController": (PeakLoadManagementOptimizedStorageController),
     "HeuristicLoadFollowingStorageController": HeuristicLoadFollowingStorageController,
     "OptimizedDispatchStorageController": OptimizedDispatchStorageController,
+    "OptimizedDispatchLoadFollowingBuyingController": (
+        OptimizedDispatchLoadFollowingBuyingController
+    ),
     "GenericDemandComponent": GenericDemandComponent,
     "FlexibleDemandComponent": FlexibleDemandComponent,
     # Dispatch

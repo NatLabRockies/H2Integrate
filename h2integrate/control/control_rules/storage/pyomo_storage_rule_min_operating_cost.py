@@ -25,7 +25,7 @@ class PyomoRuleStorageMinOperatingCosts:
         index_set: pyo.Set,
         round_digits: int,
         time_duration: float,
-        allow_commodity_buying: bool,
+        allow_commodity_buying: bool = False,
         block_set_name: str = "storage",
     ):
         # Set the number of digits to round to in the Pyomo model

@@ -61,17 +61,9 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
         time_duration (float):
             The duration of each time step in the Pyomo model in hours.
             The default of this parameter is 1.0 (i.e., 1 hour time steps).
-        commodity_import_limit (float):
-            Maximum amount of the commodity that the storage/system can buy
-                (i.e. transmission limit for grid charging)
-        allow_commodity_buying (bool):
-            This sets whether the storage can buy commodity to charge or not
-        commodity_buy_price (int, float, list):
-            Price of the commodity that can be bought for storage.
     """
 
     max_charge_rate: int | float = field()
-    allow_commodity_buying: bool = field()
     charge_efficiency: float = field(validator=range_val(0, 1), default=None)
     discharge_efficiency: float = field(validator=range_val(0, 1), default=None)
     # TODO: note that this definition of cost_per_production is not generalizable to multiple
@@ -83,39 +75,6 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
     demand_met_value: int | float | list = field(default=None)
     time_weighting_factor: float = field(validator=range_val(0, 1), default=0.995)
     time_duration: float = field(default=1.0)  # hours
-    # Can we set this to interconnection? do we want to?
-    commodity_import_limit: float = field(default=None)
-    commodity_buy_price: int | float | list = field(default=None)
-
-    def __attrs_post_init__(self):
-        # Check inputs for commodity buying parameters
-        if self.allow_commodity_buying:
-            if self.commodity_buy_price:
-                # Check commodity buy price
-                if isinstance(self.commodity_buy_price, float | int):
-                    if self.commodity_buy_price == 0:
-                        raise ValueError(
-                            "commodity_buy_price must be defined as an input and >0 \
-                                if using commodity buying"
-                        )
-                if isinstance(self.commodity_buy_price, list) or self.commodity_buy_price is None:
-                    if all(self.commodity_buy_price) == 0:
-                        raise ValueError(
-                            "commodity_buy_price must be defined as an input and >0 \
-                                if using commodity buying"
-                        )
-            else:
-                raise ValueError(
-                    "commodity_buy_price must be defined as an input and >0 \
-                        if using commodity buying"
-                )
-
-            # Check max system capacity
-            if self.commodity_import_limit == 0 or self.commodity_import_limit is None:
-                raise ValueError(
-                    "commodity_import_limit must be defined as an input and \
-                        >0 if using commodity buying"
-                )
 
     def make_dispatch_inputs(self):
         dispatch_keys = [
@@ -129,12 +88,7 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
             "charge_efficiency",
             "discharge_efficiency",
             "max_charge_rate",
-            "allow_commodity_buying",
         ]
-
-        if self.allow_commodity_buying:
-            dispatch_keys.append("commodity_import_limit")
-            dispatch_keys.append("commodity_buy_price")
 
         dispatch_inputs = {k: self.as_dict()[k] for k in dispatch_keys}
         dispatch_inputs.update({"initial_soc_fraction": self.init_soc_fraction})
@@ -183,28 +137,6 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             units="USD/" + self.config.commodity_rate_units,
             desc="Value of meeting the demand",
         )
-
-        if self.config.allow_commodity_buying:
-            self.add_input(
-                f"{self.config.commodity}_buy_price",
-                val=self.config.commodity_buy_price,
-                shape=self.n_timesteps,
-                units="USD/" + self.config.commodity_rate_units,
-                desc="Value of meeting the demand",
-            )
-            self.add_input(
-                f"{self.config.commodity}_available_to_buy",
-                val=self.config.commodity_import_limit,
-                shape=self.n_timesteps,
-                units=self.config.commodity_rate_units,
-            )
-
-            self.add_output(
-                f"{self.config.commodity}_bought_for_storage",
-                val=0,
-                shape=self.n_timesteps,
-                units=self.config.commodity_rate_units,
-            )
 
         self.add_output(
             "controller_estimated_SOC",
@@ -314,8 +246,6 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             storage_commodity_out = np.zeros(self.n_timesteps)
             soc = np.zeros(self.n_timesteps)
             controller_storage_commands = np.zeros(self.n_timesteps)
-            if self.config.allow_commodity_buying:
-                commodity_bought = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
             window_start_indices = list(
@@ -373,13 +303,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                     storage_commodity_out[j] = storage_commodity_out_control_window[j - t]
                     soc[j] = soc_control_window[j - t]
                     controller_storage_commands[j] = self.storage_dispatch_commands[j - t]
-                    if self.config.allow_commodity_buying:
-                        commodity_bought[j] = self.hybrid_dispatch_rule.storage_commodity_bought[
-                            j - t
-                        ]
 
-            if self.config.allow_commodity_buying:
-                outputs[f"{self.config.commodity}_bought_for_storage"] = commodity_bought
             # Note that this SOC is from the performance model and not the
             #   controller's internal SOC variable
             outputs["controller_estimated_SOC"] = soc
@@ -425,8 +349,6 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             time_update_inputs[i] = inputs[i][t : t + self.config.n_control_window_hours]
 
         additional_keys = ["demand_met_value"]
-        if self.config.allow_commodity_buying:
-            additional_keys.append(f"{self.config.commodity}_buy_price")
         for i in additional_keys:
             time_update_inputs[i] = self.dispatch_inputs[i][
                 t : t + self.config.n_control_window_hours
@@ -486,7 +408,6 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                     model.forecast_horizon,
                     self.config.round_digits,
                     self.config.time_duration,
-                    self.config.allow_commodity_buying,
                     block_set_name=f"{tech}_rule",
                 )
                 self.pyomo_model.__setattr__(f"{tech}_rule", dispatch)
@@ -517,10 +438,6 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
         self.dispatch_inputs["max_charge_rate"] = inputs["max_charge_rate"][0]
         self.dispatch_inputs["max_capacity"] = inputs["storage_capacity"][0]
         self.dispatch_inputs["demand_met_value"] = inputs["demand_met_value"][:]
-        if self.config.allow_commodity_buying:
-            self.dispatch_inputs[f"{self.config.commodity}_buy_price"] = inputs[
-                f"{self.config.commodity}_buy_price"
-            ][:]
 
         discrete_outputs["pyomo_dispatch_solver"] = self.pyomo_setup(discrete_inputs, outputs)
 
