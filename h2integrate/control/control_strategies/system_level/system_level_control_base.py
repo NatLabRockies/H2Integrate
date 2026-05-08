@@ -53,18 +53,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
         self.technology_graph = slc_config["technology_graph"]
 
-        self.curtailable_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "curtailable"
-        ]
-        self.dispatchable_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "dispatchable"
-        ]
-        self.storage_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
-        ]
-        self.feedstock_comps = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "feedstock"
-        ]
+        # Partition technologies by control classifier in a single pass
+        classifiers = slc_config["tech_control_classifiers"]
+        techs_by_category = {"curtailable": [], "dispatchable": [], "storage": [], "feedstock": []}
+        for tech, category in classifiers.items():
+            if category in techs_by_category:
+                techs_by_category[category].append(tech)
+
+        self.curtailable_techs = techs_by_category["curtailable"]
+        self.dispatchable_techs = techs_by_category["dispatchable"]
+        self.storage_techs = techs_by_category["storage"]
+        self.feedstock_comps = techs_by_category["feedstock"]
 
         self.input_techs = set(
             self.curtailable_techs + self.dispatchable_techs + self.storage_techs
