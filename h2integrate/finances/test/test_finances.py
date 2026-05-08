@@ -5,9 +5,8 @@ import pytest
 import openmdao.api as om
 from pytest import approx
 
-from h2integrate import EXAMPLE_DIR
+from h2integrate import EXAMPLE_DIR, load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.finances.profast_lco import ProFastLCO
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
 @pytest.fixture(scope="module")

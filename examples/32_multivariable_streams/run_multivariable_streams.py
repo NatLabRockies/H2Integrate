@@ -19,7 +19,7 @@ The wellhead_gas_mixture stream includes:
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create and setup the H2Integrate model

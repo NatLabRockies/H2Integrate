@@ -1,0 +1,12 @@
+name: plant_config
+description: Simulation for Peak Load Management MILP-optimized battery dispatch
+plant:
+  plant_life: 1
+  simulation:
+    n_timesteps: 8760  # full year (hourly)
+    dt: 3600  # 1-hour timesteps
+    timezone: -6  # MDT (UTC-6)
+    start_time: 2025/01/01 00:00:00
+tech_to_dispatch_connections:
+  - [grid_buy, battery]
+  - [battery, battery]
