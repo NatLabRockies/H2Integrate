@@ -133,8 +133,9 @@ Use the built-in `create_xdsm()` method to generate a static system diagram from
 `technology_interconnections` section of your plant config.
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 import os
+
+from h2integrate import H2IntegrateModel
 
 
 # Change to an example directory
@@ -160,9 +161,11 @@ This creates a PDF named `connections_xdsm.pdf` in your current working director
 Use OpenMDAO's `n2` utility to generate an interactive HTML diagram of the full model.
 
 ```{code-cell} ipython3
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-import openmdao.api as om
 import os
+
+import openmdao.api as om
+
+from h2integrate import H2IntegrateModel
 
 
 # Change to an example directory
@@ -204,17 +207,12 @@ display(
 *Figure: Interactive OpenMDAO N2 diagram showing the full model structure and variable connections.*
 
 
-
 ## Running the analysis
 
 Once you have the config files defined, you can run the analysis using a simple Python script that inputs the top-level config yaml.
 Here, we will show a script that runs one of the example analyses included in the H2Integrate package.
 
 ```{code-cell} ipython3
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-import os
-
-
 # Change the current working directory
 os.chdir("../../examples/08_wind_electrolyzer/")
 

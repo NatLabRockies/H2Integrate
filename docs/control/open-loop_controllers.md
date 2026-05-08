@@ -40,7 +40,7 @@ Open `h2i_n2.html` in a browser to explore model groups, components, and variabl
 ```{code-cell} ipython3
 :tags: [remove-input]
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 import openmdao.api as om
 import os
 

@@ -1,6 +1,3 @@
-import operator
-import functools
-
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -70,7 +67,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.curtailable_techs + self.dispatchable_techs + self.storage_techs
         )
 
-        # Input: demand profile (default value from config)
+        # Input: demand profile
         self.demand_input_name = f"{self.commodity}_demand"
         self.add_input(
             self.demand_input_name,
@@ -94,121 +91,93 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
 
-    def _setup_commodity_for_given_units(
-        self, tech_name, commodity, commodity_units, add_in_name=True, initial_set_point=1.0
+    def _setup_commodity(
+        self,
+        tech_name,
+        commodity,
+        commodity_units=None,
+        commodity_reference_var=None,
+        add_in_name=True,
+        initial_set_point=1.0,
     ):
-        """Adds inputs and outputs for a commodity when the units are known.
-        The inputs and outputs that are added have the below naming convention:
+        """Register OpenMDAO inputs and outputs for a single (tech, commodity) pair.
 
-        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
-        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
-            capacity of tech_name
-        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
+        This method handles unit specification in two mutually exclusive ways:
+
+        1. **Explicit units** - pass ``commodity_units`` (e.g. ``"kW"``).
+           Each variable is created with ``units=commodity_units``.
+        2. **Copied units** - pass ``commodity_reference_var`` (the name of an
+           already-registered input whose units should be reused).
+           Each variable is created with ``units=None, copy_units=commodity_reference_var``.
+
+        Exactly one of ``commodity_units`` or ``commodity_reference_var`` must be
+        provided.
+
+        The following OpenMDAO variables are created:
+
+        - Input ``"{tech_name}_{commodity}_out"`` - commodity produced by the tech
+          (only if ``add_in_name=True``).
+        - Input ``"{tech_name}_rated_{commodity}_production"`` - rated production
+          capacity of the tech.
+        - Output ``"{tech_name}_{commodity}_set_point"`` (or
+          ``"{tech_name}_{commodity}_demand"`` for storage techs with an attached
+          controller) - control set-point sent to the tech.
 
         Args:
-            tech_name (str): name of technology
-            commodity (str): commodity of the technology described by `tech_name`
-            commodity_units (str): units of commodity
-            add_in_name (bool, optional): If True, add the input for the in_name variable.
-                Defaults to True.
-            initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 1.0.
+            tech_name (str): Name of the technology.
+            commodity (str): Commodity produced by ``tech_name``.
+            commodity_units (str | None): Explicit unit string for the commodity.
+                Mutually exclusive with ``commodity_reference_var``.
+            commodity_reference_var (str | None): Name of an existing input
+                variable whose units should be copied. Mutually exclusive with
+                ``commodity_units``.
+            add_in_name (bool, optional): If True, register the
+                ``"{tech_name}_{commodity}_out"`` input. Defaults to True.
+            initial_set_point (float, optional): Initial value for the
+                set-point output. Defaults to 1.0.
+
         Returns:
-            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
+            tuple[str, str, str]: ``(in_name, set_point_name, rated_name)``
         """
+        # --- Determine unit kwargs for add_input / add_output ---------
+        # Either explicit units or copy_units from a reference variable.
+        if commodity_units is not None:
+            unit_kwargs = {"units": commodity_units}
+        else:
+            unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
+
+        # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
 
+        # Storage techs with an attached controller receive a "demand"
+        # output instead of a "set_point" output.
         if self.storage_techs_to_control.get(tech_name, False):
-            # tech_name is storage and does have an attached controller
             set_point_name = f"{tech_name}_{commodity}_demand"
         else:
-            # if tech_name is not in storage_techs_to_control
-            # or storage tech does not have an attached controller
             set_point_name = f"{tech_name}_{commodity}_set_point"
 
+        # --- Register inputs and output -------------------------------
         if add_in_name:
             self.add_input(
                 in_name,
                 val=0.0,
                 shape=self.n_timesteps,
-                units=commodity_units,
                 desc=f"{commodity} output from {tech_name}",
+                **unit_kwargs,
             )
         self.add_input(
             rated_name,
             val=0.0,
-            units=commodity_units,
             desc=f"Rated {commodity} production for {tech_name}",
+            **unit_kwargs,
         )
         self.add_output(
             set_point_name,
             val=initial_set_point,
             shape=self.n_timesteps,
-            units=commodity_units,
             desc=f"Set point for {tech_name} {commodity} curtailment",
-        )
-
-        return in_name, set_point_name, rated_name
-
-    def _setup_commodity_for_copy_units(
-        self, tech_name, commodity, commodity_reference_var, add_in_name=True, initial_set_point=1.0
-    ):
-        """Adds inputs and outputs for a commodity where the units are based on a reference
-        input variable. The inputs and outputs that are added have the below
-        naming convention:
-
-        - ``f"{tech_name}_{commodity}_out"``: input commodity produced by tech_name
-        - ``f"{tech_name}_rated_{commodity}_production"``: input rated commodity production
-            capacity of tech_name
-        - ``f"{tech_name}_{commodity}_set_point"``: output control setpoint for tech_name
-
-        Args:
-            tech_name (str): name of technology
-            commodity (str): commodity of the technology described by `tech_name`
-            commodity_reference_var (str): name of input to copy units from
-            add_in_name (bool, optional): If True, add the input for the in_name variable.
-                Defaults to True.
-            initial_set_point (float, optional): Add as the initial value for the
-                set_point variable. Defaults to 1.0.
-
-        Returns:
-            tuple(str, str, str): tuple of in_name, set_point_name, and rated_name
-        """
-        in_name = f"{tech_name}_{commodity}_out"
-        rated_name = f"{tech_name}_rated_{commodity}_production"
-
-        if self.storage_techs_to_control.get(tech_name, False):
-            # tech_name is storage and does have an attached controller
-            set_point_name = f"{tech_name}_{commodity}_demand"
-        else:
-            # if tech_name is not in storage_techs_to_control
-            # or storage tech does not have an attached controller
-            set_point_name = f"{tech_name}_{commodity}_set_point"
-
-        if add_in_name:
-            self.add_input(
-                in_name,
-                val=0.0,
-                shape=self.n_timesteps,
-                units=None,
-                copy_units=commodity_reference_var,
-                desc=f"{commodity} output from {tech_name}",
-            )
-        self.add_input(
-            rated_name,
-            val=0.0,
-            units=None,
-            copy_units=commodity_reference_var,
-            desc=f"Rated {commodity} production for {tech_name}",
-        )
-        self.add_output(
-            set_point_name,
-            val=initial_set_point,
-            shape=self.n_timesteps,
-            units=None,
-            copy_units=commodity_reference_var,
-            desc=f"Set point for {tech_name} {commodity} curtailment",
+            **unit_kwargs,
         )
 
         return in_name, set_point_name, rated_name
@@ -256,19 +225,19 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for commodity in tech_commodities:
                 if commodity in self.commodities_to_units:
                     # Units are already known explicitly
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                    in_name, set_point_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
-                        self.commodities_to_units[commodity],
+                        commodity_units=self.commodities_to_units[commodity],
                         add_in_name=True,
                         initial_set_point=initial_set_point,
                     )
                 elif commodity in self.commodities_to_ref_var:
                     # Units are inferred from a previously-registered reference variable
-                    in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                    in_name, set_point_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
-                        self.commodities_to_ref_var[commodity],
+                        commodity_reference_var=self.commodities_to_ref_var[commodity],
                         add_in_name=True,
                         initial_set_point=initial_set_point,
                     )
@@ -288,20 +257,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         # variable so later techs with this commodity can
                         # copy its units.
                         self.commodities_to_ref_var[commodity] = in_name
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_copy_units(
+                        in_name, set_point_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
-                            self.commodities_to_ref_var[commodity],
+                            commodity_reference_var=self.commodities_to_ref_var[commodity],
                             add_in_name=False,
                             initial_set_point=initial_set_point,
                         )
                     else:
                         # Connection provided units — record them for future use
                         self.commodities_to_units[commodity] = meta_data["units"]
-                        in_name, set_point_name, rated_name = self._setup_commodity_for_given_units(
+                        in_name, set_point_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
-                            self.commodities_to_units[commodity],
+                            commodity_units=self.commodities_to_units[commodity],
                             add_in_name=False,
                             initial_set_point=initial_set_point,
                         )
@@ -598,32 +567,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return np.full(self.n_timesteps, marginal_cost_scalar)
 
     def _find_feedstock_techs(self, tech_name):
-        """Find feedstock technologies connected upstream of tech_name.
+        """Find feedstock technologies upstream of ``tech_name`` at any depth.
 
-        Scans ``technology_interconnections`` for connections whose
-        destination is tech_name and whose source is a feedstock.
+        Uses graph ancestors rather than direct interconnections so that
+        feedstocks behind intermediate components (e.g. combiners) are found.
 
         Args:
-            tech_name (str): the dispatchable technology name.
+            tech_name (str): The dispatchable technology name.
 
         Returns:
-            list[str]: names of upstream feedstock technologies.
+            list[str]: Names of upstream feedstock technologies.
         """
-        interconnections = self.options["plant_config"].get("technology_interconnections", [])
-
-        # Upstream tech names for this dispatchable tech
-        # NOTE: could getting upstream_techs be replaced with the two lines below
-        # comds = self._get_commodity_for_tech(tech_name)
-        # upstream_techs = list(
-        #     set([self.get_upstream_techs_for_commodity(tech_name, c) for c in comds])
-        #     )
-        upstream_techs = [conn[0] for conn in interconnections if conn[1] == tech_name]
-
-        feedstock_names = [
-            upstream for upstream in upstream_techs if upstream in self.feedstock_comps
-        ]
-
-        return feedstock_names
+        # All ancestors at any depth, filtered to feedstocks
+        ancestors = nx.ancestors(self.technology_graph, tech_name)
+        return [tech for tech in ancestors if tech in self.feedstock_comps]
 
     def _feedstock_marginal_cost(self, inputs, marginal_cost_data):
         """Compute marginal cost from upstream feedstock VarOpEx values.
@@ -663,108 +620,115 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
     ):
-        """Get the name of technologies that are upstream
-        of `tech_name` and that output `commodity`.
+        """Find controlled technologies upstream of ``tech_name`` that output ``commodity``.
+
+        Walks the technology graph backwards from ``tech_name``, finds all ancestor
+        nodes that have an outgoing edge carrying ``commodity``, then filters to only
+        those managed by the controller.
 
         Args:
-            tech_name (str): name of technology
-            commodity (str): commodity name
-            include_feedstock_sources (bool, optional): If True, include techs
-                that have an input commodity from a feedstock. Defaults to True.
+            tech_name (str): Technology whose upstream suppliers are sought.
+            commodity (str): Commodity of interest (e.g. ``"electricity"``).
+            include_feedstock_sources (bool, optional): If True, feedstock techs are
+                included in the set of controller-managed technologies. Defaults to True.
 
         Returns:
-            list[str]: list of technologies upstream of the tech_name that produce a given commodity
+            list[str]: Controller-managed technologies upstream of ``tech_name``
+                that produce ``commodity``.
         """
+        # Build the set of techs the controller can see
         if include_feedstock_sources:
             input_techs = self.input_techs | set(self.feedstock_comps)
         else:
             input_techs = self.input_techs.copy()
 
-        # figure out where the upstream commodity is coming from
-        upstream_components = nx.ancestors(self.technology_graph, tech_name)
-        # iterates through a list of 3 length tuples (source, dest, commodity)
-        upstream_components_shared_commodity = [
-            s[0]
-            for s in list(self.technology_graph.edges(data="commodity"))
-            if s[0] in upstream_components and s[2] == commodity
-        ]
-        # get the technologies that are available to the controller
-        upstream_techs = set(upstream_components_shared_commodity).intersection(set(input_techs))
-        return list(upstream_techs)
+        # All graph ancestors of tech_name (any depth)
+        ancestors = nx.ancestors(self.technology_graph, tech_name)
+
+        # Keep only ancestors that have an outgoing edge carrying the target commodity.
+        # Edges are (source, dest, commodity) tuples
+        ancestors_with_commodity = {
+            src
+            for src, _, comm in self.technology_graph.edges(data="commodity")
+            if src in ancestors and comm == commodity
+        }
+
+        # Intersect with controller-managed techs
+        return list(ancestors_with_commodity & input_techs)
 
     def find_converter_techs(self, include_feedstock_sources=True):
-        """Get the name of the technology that transforms a commodity.
+        """Identify technologies that transform one commodity into another.
+
+        A "converter" is a tech whose output commodities differ from the commodities
+        produced by its upstream ancestors (e.g. an electrolyzer: electricity → hydrogen).
 
         Args:
-            include_feedstock_sources (bool, optional): If True, include techs
-                that have an input commodity from a feedstock. Defaults to True.
+            include_feedstock_sources (bool, optional): If True, include feedstock techs
+                in the set of candidate technologies. Defaults to True.
 
         Returns:
-            set(tuple): set of converter technologies formatted as
-                (input_commodity, converter tech name, output_commodity)
+            set[tuple[str, str, str]]: Set of ``(input_commodity, tech_name, output_commodity)``
+                tuples for each detected conversion. Returns ``None`` for single-commodity systems.
         """
         if include_feedstock_sources:
             input_techs = self.input_techs | set(self.feedstock_comps)
         else:
             input_techs = self.input_techs.copy()
+
+        # Single-commodity systems have no special handling by definition
         if not self.multi_commodity_system:
             return
 
         converter_techs = set()
-
+        node_order = list(self.technology_graph.nodes())
         edges = list(self.technology_graph.edges(data="commodity"))
-        upstream_converter = None
-        for edge in edges:
-            tech, dest_tech, cmod = edge
-            if tech in input_techs:
-                tech_output_commodity = self._get_commodity_for_tech(tech)
 
-                # NOTE: unsure how this would work for systems with tiered converters
-                # aka - maybe have to eliminate a converter once we've discovered it
-                if upstream_converter is None:
-                    upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(input_techs)
-                    )
-                else:
-                    idx_upstream_converter = [
-                        i
-                        for i, n in enumerate(self.technology_graph.__iter__())
-                        if n == upstream_converter
-                    ]
-                    downstream_of_previous_converter = [
-                        n
-                        for i, n in enumerate(self.technology_graph.__iter__())
-                        if i > min(idx_upstream_converter)
-                    ]
-                    all_upstream_techs = nx.ancestors(self.technology_graph, tech).intersection(
-                        set(input_techs)
-                    )
-                    upstream_techs = all_upstream_techs.intersection(
-                        set(downstream_of_previous_converter)
-                    )
+        # Track the most recently discovered converter so we can scope
+        # upstream searches for chained converters (A→B→C where B and C
+        # both convert). Without this, C would see A's commodity as upstream
+        # input even though B already consumed it.
+        last_converter = None
 
-                connected_upstream_techs = [
-                    t for t in upstream_techs if nx.has_path(self.technology_graph, t, tech)
-                ]
-                upstream_commodities = [
-                    self._get_commodity_for_tech(t) for t in connected_upstream_techs
-                ]
-                upstream_commodities = functools.reduce(operator.iadd, upstream_commodities, [])
-                # symmetric difference
-                # commodities that are not in both
-                input_output_commodity = set(upstream_commodities) ^ set(tech_output_commodity)
-                if len(input_output_commodity) > 1:
-                    input_commodities = list(
-                        input_output_commodity.intersection(set(upstream_commodities))
-                    )
-                    output_commodities = list(
-                        input_output_commodity.intersection(set(tech_output_commodity))
-                    )
+        for source_tech, _, _ in edges:
+            if source_tech not in input_techs:
+                continue
 
-                    for input_commodity in input_commodities:
-                        for output_commodity in output_commodities:
-                            # formatted as (input commodity, tech_name, output comodity)
-                            converter_techs.add((input_commodity, tech, output_commodity))
-                    upstream_converter = tech
+            # Get the commodities produced by this tech (the "output" side of the conversion)
+            output_commodities = set(self._get_commodity_for_tech(source_tech))
+
+            # Find controlled ancestors of this tech
+            all_ancestors = nx.ancestors(self.technology_graph, source_tech) & input_techs
+
+            if last_converter is not None:
+                # Only consider ancestors that appear after the last converter
+                # in topological order, preventing double-counting across
+                # chained converters.
+                converter_idx = node_order.index(last_converter)
+                nodes_after_converter = set(node_order[converter_idx + 1 :])
+                ancestors = all_ancestors & nodes_after_converter
+            else:
+                ancestors = all_ancestors
+
+            # Keep only ancestors actually connected (reachable) to this tech
+            connected_ancestors = [
+                t for t in ancestors if nx.has_path(self.technology_graph, t, source_tech)
+            ]
+
+            # Gather all commodities produced by connected ancestors
+            input_commodities = set()
+            for ancestor in connected_ancestors:
+                input_commodities.update(self._get_commodity_for_tech(ancestor))
+
+            # A converter has commodities that appear only on one side:
+            # upstream-only commodities are consumed, output-only are produced.
+            consumed = input_commodities - output_commodities
+            produced = output_commodities - input_commodities
+
+            # If both sides have unique commodities, this tech is a converter
+            if consumed and produced:
+                for in_comm in consumed:
+                    for out_comm in produced:
+                        converter_techs.add((in_comm, source_tech, out_comm))
+                last_converter = source_tech
 
         return converter_techs
