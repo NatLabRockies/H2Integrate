@@ -46,7 +46,7 @@ An example is shown in `run_ammonia_synloop.py`:
 from pathlib import Path
 
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create a H2Integrate model

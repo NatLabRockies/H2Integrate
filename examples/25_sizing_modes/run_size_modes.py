@@ -2,9 +2,8 @@
 
 import numpy as np
 
+from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.model_baseclasses import (
     ResizeablePerformanceModelBaseClass,
     ResizeablePerformanceModelBaseConfig,

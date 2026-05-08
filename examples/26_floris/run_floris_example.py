@@ -1,8 +1,7 @@
 import os
 from pathlib import Path
 
-from h2integrate.core.file_utils import load_yaml
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel, load_yaml
 
 
 os.chdir(Path(__file__).parent)

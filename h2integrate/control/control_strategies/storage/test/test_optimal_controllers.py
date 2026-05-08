@@ -66,7 +66,7 @@ def tech_config_battery():
                         "demand_met_value": 0.1,
                         "round_digits": 4,
                         "time_weighting_factor": 0.995,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "allow_commodity_buying": False,
                     },
                 },
@@ -126,7 +126,7 @@ def tech_config_generic():
                         "cost_per_production": 0.0,  # USD/kg
                         "time_weighting_factor": 0.995,
                         "system_commodity_interface_limit": 10.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "allow_commodity_buying": False,
                     },
                 },
@@ -166,7 +166,7 @@ def tech_config_autosizing():
                         "cost_per_production": 0.0,  # USD/kg
                         "time_weighting_factor": 0.995,
                         "system_commodity_interface_limit": 10.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "max_charge_rate": 5.0,
                         "max_capacity": 5.0,
                         "init_soc_fraction": 0.1,
@@ -650,7 +650,7 @@ def test_optimal_control_config_with_commodity_buying(subtests):
         "cost_per_production": 0.0,  # USD/kg
         "time_weighting_factor": 0.995,
         "system_commodity_interface_limit": 10.0,
-        "n_control_window": 24,
+        "n_control_window_hours": 24,
         "allow_commodity_buying": False,
     }
 
@@ -701,7 +701,7 @@ def test_optimal_control_with_commodity_buying_generic_storage(
         "cost_per_production": 0.0,  # USD/kg
         "time_weighting_factor": 0.995,
         "system_commodity_interface_limit": 10.0,
-        "n_control_window": 24,
+        "n_control_window_hours": 24,
         "allow_commodity_buying": True,
         "commodity_buy_price": 1,
         "commodity_import_limit": commodity_import_limit,
@@ -905,7 +905,7 @@ def _setup_commodity_buying_problem(
         "cost_per_production": 0.0,
         "time_weighting_factor": 0.995,
         "system_commodity_interface_limit": 10.0,
-        "n_control_window": 24,
+        "n_control_window_hours": 24,
         "allow_commodity_buying": True,
         "commodity_buy_price": 1,
         "commodity_import_limit": commodity_import_limit,

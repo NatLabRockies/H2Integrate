@@ -204,7 +204,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         Args:
             storage_dispatch_commands : Sequence[float]
                 Commanded power per timestep (kW). Negative = charge, positive = discharge.
-                Length should be = ``config.n_control_window``.
+                Length should be = ``config.n_control_window_hours``.
             control_variable : str
                 PySAM control input to set each step ("input_power" or "input_current").
             sim_start_index : int, optional
@@ -249,7 +249,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # slightly exceeds soc_max.
                 actual_charge = max(0.0, min(headroom, max_charge_input, -cmd))
 
-                # Update the charge command for the PySAM batttery
+                # Update the charge command for the PySAM battery
                 cmd = -actual_charge
 
             else:
@@ -266,7 +266,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # Clip and apply discharge efficiency.
                 actual_discharge = max(0.0, min(headroom, max_discharge_input, cmd))
 
-                # Update the discharge command for the PySAM batttery
+                # Update the discharge command for the PySAM battery
                 cmd = actual_discharge
 
             # Set the input variable to the desired value

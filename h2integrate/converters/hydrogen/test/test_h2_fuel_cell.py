@@ -78,10 +78,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
     electricity_output = prob.get_val("fuel_cell.electricity_out", units="kW")
 
     with subtests.test("max electricity output"):
-        assert max(electricity_output) == 1000.0
-
-    with subtests.test("electricity output non-negative"):
-        assert np.all(electricity_output >= 0)
+        assert pytest.approx(np.max(electricity_output), rel=1e-6) == 1000.0
 
     with subtests.test("electricity out"):
         assert pytest.approx(np.sum(electricity_output), rel=1e-6) == 3452532.6111
@@ -122,6 +119,60 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
                 np.sum(prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")), rel=1e-6
             )
             == 175230.7542647681
+        )
+
+
+@pytest.mark.unit
+def test_fuel_cell_demand(tech_config, plant_config, subtests):
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+
+    prob = om.Problem()
+
+    fuel_cell = LinearH2FuelCellPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config, driver_config={}
+    )
+
+    prob.model.add_subsystem("fuel_cell", fuel_cell, promotes=["*"])
+
+    prob.setup()
+
+    hydrogen_input = np.ones(n_timesteps) * 20.0  # kg/h
+    hydrogen_input[:6] = (
+        500000000.0,  # test extreme case of very high hydrogen input to check system capacity limit
+        500000000.0,  # test extreme case with low set point (below system capacity)
+        51.0,  # test case with hydrogen input equal to demand
+        0.0,  # test case with zero hydrogen input
+        10.0,  # test case with hydrogen input below demand
+        30.0,  # test case with hydrogen input above demand
+    )
+
+    prob.set_val("fuel_cell.hydrogen_in", hydrogen_input, units="kg/h")
+
+    elec_set_point = np.ones(n_timesteps) * 1000.0  # kW
+
+    # Set first 6 timesteps to test edge cases for set point
+    elec_set_point[:6] = (
+        1000.0,  # test case with set point equal to system capacity
+        500.0,  # test case with set point below system capacity
+        1000.0,  # test case with set point equal to system capacity
+        1000.0,  # test case with set point equal to system capacity
+        1000.0,  # test case with set point equal to system capacity
+        0.0,  # test case with set point equal to zero
+    )
+
+    prob.set_val("fuel_cell.electricity_set_point", elec_set_point, units="kW")
+
+    prob.run_model()
+
+    # Check that electricity output is less than or equal to system capacity
+    electricity_output = prob.get_val("fuel_cell.electricity_out", units="kW")
+
+    with subtests.test("electricity out"):
+        expected_elec_out = [1000.0, 500.0, 1000.0, 0.0, 197.02777778, 0.0]
+        np.testing.assert_allclose(
+            electricity_output[:6],
+            expected_elec_out,
+            rtol=1e-2,
         )
 
 

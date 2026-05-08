@@ -75,13 +75,13 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 desc=f"{feedstock} consumed for iron reduction",
             )
 
-        # Default the sponge iron demand input as the rated capacity
+        # Default the sponge iron set point input as the rated capacity
         self.add_input(
-            "sponge_iron_demand",
+            "sponge_iron_set_point",
             val=self.config.sponge_iron_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units="t/h",
-            desc="Pig iron demand for iron plant",
+            desc="Pig iron set point for iron plant",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -224,20 +224,20 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 feedstocks["Name"] == "Reformer Catalyst"
             ]["Value"].sum()
 
-        # sponge iron demand, saturated at maximum rated system capacity
-        sponge_iron_demand = np.where(
-            inputs["sponge_iron_demand"] > inputs["system_capacity"],
+        # sponge iron set point, saturated at maximum rated system capacity
+        sponge_iron_set_point = np.where(
+            inputs["sponge_iron_set_point"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["sponge_iron_demand"],
+            inputs["sponge_iron_set_point"],
         )
 
         # initialize an array of how much sponge iron could be produced
-        # from the available feedstocks and the demand
+        # from the available feedstocks and the set point
         sponge_iron_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["sponge_iron_demand"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["sponge_iron_set_point"]))
         )
-        # first entry is the sponge iron demand
-        sponge_iron_from_feedstocks[0] = sponge_iron_demand
+        # first entry is the sponge iron set point
+        sponge_iron_from_feedstocks[0] = sponge_iron_set_point
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity

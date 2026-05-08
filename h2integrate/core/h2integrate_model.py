@@ -1,3 +1,4 @@
+import re
 import importlib.util
 from enum import IntEnum
 
@@ -10,7 +11,7 @@ from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
-from h2integrate.finances.finances import AdjustedCapexOpexComp
+from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
@@ -45,6 +46,10 @@ class H2IntegrateModel:
     def __init__(self, config_input):
         # read in config file; it's a yaml dict that looks like this:
         self.load_config(config_input)
+
+        # create technology connection graph based on technology interconnections
+        # defined in plant config
+        self.create_technology_graph()
 
         # load in supported models
         self.supported_models = supported_models.copy()
@@ -250,7 +255,7 @@ class H2IntegrateModel:
                     # of the same custom model. Also check that all instances of the same custom
                     # model tech name use the same class definition.
                     if model_name in included_custom_models:
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         if (
                             model_class_name
                             != included_custom_models[model_name]["model_class_name"]
@@ -258,7 +263,7 @@ class H2IntegrateModel:
                             raise (
                                 ValueError(
                                     "User has specified two custom models using the same model"
-                                    "name ({model_name}), but with different model classes. "
+                                    f"name ({model_name}), but with different model classes. "
                                     "Technologies defined with different classes must have "
                                     "different technology names."
                                 )
@@ -267,7 +272,7 @@ class H2IntegrateModel:
                             continue
 
                     if (model_name not in self.supported_models) and (model_name is not None):
-                        model_class_name = config[model_type].get(f"{prefix}model_class_name")
+                        model_class_name = config[model_type].get(f"{prefix}model")
                         model_location = config[model_type].get(f"{prefix}model_location")
 
                         if not model_class_name or not model_location:
@@ -307,7 +312,7 @@ class H2IntegrateModel:
                             or config[model_type].get(f"{prefix}model_location") is not None
                         ):
                             msg = (
-                                f"Custom {prefix}model_class_name or {prefix}model_location "
+                                f"Custom {prefix}model or {prefix}model_location "
                                 f"specified for '{model_name}', "
                                 f"but '{model_name}' is a built-in H2Integrate "
                                 "model. Using built-in model instead is not allowed. "
@@ -350,6 +355,26 @@ class H2IntegrateModel:
                     finance_model_names,
                     prefix="finance_",
                 )
+
+        # check for custom resource models
+        if "sites" in self.plant_config:
+            for site_name, site_params in self.plant_config["sites"].items():
+                if "resources" in site_params:
+                    resource_models_config = {
+                        k: v
+                        for k, v in site_params["resources"].items()
+                        if "resource_parameters" in v
+                    }
+
+                    resource_model_names = [
+                        k for k, v in site_params["resources"].items() if "resource_parameters" in v
+                    ]
+                    self.create_custom_models(
+                        {site_name: resource_models_config},
+                        self.plant_parent_path,
+                        resource_model_names,
+                        prefix="resource_",
+                    )
 
     def create_site_model(self):
         """
@@ -773,7 +798,6 @@ class H2IntegrateModel:
             )
             tech_names = subgroup_params.get("technologies")
             commodity_stream = subgroup_params.get("commodity_stream", None)
-
             if isinstance(finance_group_names, str):
                 finance_group_names = [finance_group_names]
 
@@ -814,9 +838,16 @@ class H2IntegrateModel:
                         "commodity": commodity,
                         "commodity_stream": commodity_stream,
                         "is_system_finance_model": True,
+                        "use_commodity_stream_timeseries": subgroup_params.get(
+                            "use_commodity_stream_timeseries", False
+                        ),
+                        "commodity_stream_output": subgroup_params.get(
+                            "commodity_stream_output", None
+                        ),
                     }
                 }
             )
+
             finance_subgroup = om.Group()
 
             # Default logic for handling cases without specified commodity streams
@@ -904,10 +935,10 @@ class H2IntegrateModel:
                         tech_configs.get(finance_group_name).get("finance_model", {}).get("model")
                     )
 
-                    # this is created in create_technologies()
+                    # this is created in create_technology_models()
                     if tech_finance_group_name is not None:
                         n_tech_finances_in_group += 1
-                        # tech specific finance models are created in create_technologies()
+                        # tech specific finance models are created in create_technology_models()
                         # and do not need to be included in the system finance models.
                         # set commodity_stream to None so that inputs needed for system-level
                         # finance models are not connected to tech-specific finance models.
@@ -976,6 +1007,24 @@ class H2IntegrateModel:
                         # update the description to include the finance model name to ensure
                         # uniquely named outputs
                         commodity_output_desc = commodity_output_desc + f"_{finance_group_name}"
+
+                if finance_subgroups[subgroup_name]["use_commodity_stream_timeseries"]:
+                    if (
+                        finance_subgroups[subgroup_name].get("commodity_stream_output", None)
+                        is None
+                    ):
+                        msg = (
+                            "`commodity_stream_output` is a required input if "
+                            f"`use_commodity_stream_timeseries` is True. Please add the "
+                            f"`commodity_stream_output` for finance subgroup `{subgroup_name}`"
+                        )
+                        raise ValueError(msg)
+
+                    adj_cf_comp = AdjustedCapacityFactorComp(
+                        plant_config=filtered_plant_config,
+                        commodity_type=commodity,
+                    )
+                    finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
 
                 # create the finance component
                 fin_comp = fin_model(
@@ -1273,17 +1322,24 @@ class H2IntegrateModel:
                 is_system_finance_model = group_configs.get("is_system_finance_model")
 
                 if is_system_finance_model:
-                    # Connect the rated commodity production and capacity factor
-                    # for system-level finance models
-                    self.plant.connect(
-                        f"{commodity_stream}.rated_{primary_commodity_type}_production",
-                        f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
-                    )
+                    if group_configs.get("use_commodity_stream_timeseries", False):
+                        # TODO: finish this logic
+                        self.plant.connect(
+                            f"{commodity_stream}.{group_configs.get('commodity_stream_output')}",
+                            f"finance_subgroup_{group_id}.{primary_commodity_type}_produced",
+                        )
+                    else:
+                        # Connect the rated commodity production and capacity factor
+                        # for system-level finance models
+                        self.plant.connect(
+                            f"{commodity_stream}.rated_{primary_commodity_type}_production",
+                            f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
+                        )
 
-                    self.plant.connect(
-                        f"{commodity_stream}.capacity_factor",
-                        f"finance_subgroup_{group_id}.capacity_factor",
-                    )
+                        self.plant.connect(
+                            f"{commodity_stream}.capacity_factor",
+                            f"finance_subgroup_{group_id}.capacity_factor",
+                        )
 
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
@@ -1318,15 +1374,8 @@ class H2IntegrateModel:
 
         # Check if there are any loops in the technology interconnections
         # If loops are present, add solvers to resolve the coupling
-        # Create a directed graph from the technology interconnections
-        G = nx.DiGraph()
-        for connection in technology_interconnections:
-            source = connection[0]
-            destination = connection[1]
-            G.add_edge(source, destination)
-
-        # Check if there are any cycles (loops) in the graph
-        if list(nx.simple_cycles(G)):
+        # Check if there are any cycles (loops) in the technology graph
+        if list(nx.simple_cycles(self.technology_graph)):
             # If cycles are found, set solvers for the plant to resolve the coupling
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
@@ -1379,6 +1428,7 @@ class H2IntegrateModel:
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
+        self._check_tech_connections()
 
     def run(self):
         # do model setup based on the driver config
@@ -1617,3 +1667,122 @@ class H2IntegrateModel:
                 "Generating an XDSM diagram requires technology interconnections, "
                 "but none were found."
             )
+
+    def create_technology_graph(self):
+        """Create a directed graph of the technology interconnections.
+
+        Builds a NetworkX directed graph where nodes represent technologies
+        and edges represent connections between them. If a connection includes
+        a commodity (length-4 entry), it is stored as an edge attribute.
+
+        Sets:
+            self.technology_graph (nx.DiGraph): A directed graph with
+                technologies as nodes and interconnections as edges.
+        """
+        self.technology_graph = nx.DiGraph()
+
+        for connection in self.plant_config.get("technology_interconnections", {}):
+            source = connection[0]
+            destination = connection[1]
+            if len(connection) == 4:
+                self.technology_graph.add_edge(source, destination, commodity=connection[2])
+            else:
+                self.technology_graph.add_edge(source, destination)
+
+    def _check_tech_connections(self):
+        """Check that commodity streams between technologies are valid.
+
+        Validates that each commodity in a length-4 technology interconnection
+        is output by the source technology and accepted as input by the
+        destination technology. Does not check length-3 connections or
+        missing input commodity streams.
+
+        Raises:
+            ValueError: If any commodity connection is invalid.
+        """
+        # Collect IO parameter names for each technology in the graph
+        tech_io = {}
+        for tech_name in self.technology_graph.nodes():
+            tech_info = self.technology_config["technologies"].get(tech_name, {})
+            io_params = set()
+
+            for model_type in [
+                "performance_model",
+                "finance_model",
+                "cost_model",
+                "control_strategy",
+            ]:
+                if not tech_info or model_type not in tech_info:
+                    continue
+
+                model_name = tech_info[model_type]["model"]
+
+                if model_name == "FeedstockPerformanceModel":
+                    group = getattr(self.prob.model.plant, f"{tech_name}_source")
+                else:
+                    group = getattr(self.prob.model.plant, tech_name)
+                    if model_name != "FeedstockCostModel":
+                        group = getattr(group, model_name, None)
+                        if group is None:
+                            continue
+
+                io_params.update(group.get_io_metadata().keys())
+
+            tech_io[tech_name] = io_params
+
+        def _has_commodity_param(params, commodity, direction):
+            """Check if the technology has the commodity parameter, either exact
+            or numbered (splitter/combiner)."""
+            return f"{commodity}_{direction}" in params or any(
+                re.fullmatch(rf"{commodity}_{direction}\d", p) for p in params
+            )
+
+        # Validate commodity connections
+        invalid_outputs = set()  # (tech, commodity) pairs where source lacks _out param
+        invalid_inputs = set()  # (tech, commodity) pairs where dest lacks _in param
+        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
+            if commodity is None:
+                continue  # length-3 connections have no commodity to check
+            if not _has_commodity_param(tech_io[source], commodity, "out"):
+                invalid_outputs.add((source, commodity))
+            if not _has_commodity_param(tech_io[dest], commodity, "in"):
+                invalid_inputs.add((dest, commodity))
+
+        # Build a single error message grouping output and input issues separately
+        if invalid_outputs or invalid_inputs:
+            parts = []
+            if invalid_outputs:
+                items = ", ".join(f"`{tech}` -> `{comm}`" for tech, comm in sorted(invalid_outputs))
+                parts.append(
+                    f"The following technologies do not output their specified commodity: {items}."
+                )
+            if invalid_inputs:
+                items = ", ".join(f"`{tech}` <- `{comm}`" for tech, comm in sorted(invalid_inputs))
+                parts.append(
+                    f"The following technologies do not accept "
+                    f"their specified input commodity: {items}."
+                )
+            # Point user to the file that needs fixing
+            parts.append(f"Update `technology_interconnections` in {self.plant_config_path}.")
+            raise ValueError("\n".join(parts))
+
+    def _get_commodity_for_tech(self, tech_name):
+        """Get a list of the commodities produced for a technology.
+
+        Args:
+            tech_name (str): name of technology
+
+        Returns:
+            list[str]: list of commodities produced by the tech_name
+        """
+        # Define the commodities produced by each technology from technology_interconnections
+        # Each element of the set is a tuple of (source_tech, commodity_produced)
+        self.techs_to_commodities = {
+            (e[0], e[-1])
+            for e in self.technology_graph.edges(data="commodity")
+            if e[-1] is not None
+        }
+
+        tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
+
+        return tech_commodities

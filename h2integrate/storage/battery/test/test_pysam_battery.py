@@ -28,15 +28,18 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     # Set up the OpenMDAO problem
     prob = om.Problem()
 
-    n_control_window = tech_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
-        "n_control_window"
-    ]
+    n_control_window_hours = tech_config["technologies"]["battery"]["model_inputs"][
+        "control_parameters"
+    ]["n_control_window_hours"]
 
     electricity_in = np.concatenate(
-        (np.ones(int(n_control_window / 2)) * 1000.0, np.zeros(int(n_control_window / 2)))
+        (
+            np.ones(int(n_control_window_hours / 2)) * 1000.0,
+            np.zeros(int(n_control_window_hours / 2)),
+        )
     )
 
-    electricity_demand = np.ones(int(n_control_window)) * 1000.0
+    electricity_demand = np.ones(int(n_control_window_hours)) * 1000.0
 
     prob.model.add_subsystem(
         name="IVC1",
@@ -46,7 +49,9 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="time_step_duration", val=np.ones(n_control_window), units="h"),
+        subsys=om.IndepVarComp(
+            name="time_step_duration", val=np.ones(n_control_window_hours), units="h"
+        ),
         promotes=["*"],
     )
 
@@ -163,7 +168,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             1.5813561713279114,
         ]
     )
-    expected_unused_electricity = np.zeros(n_control_window)
+    expected_unused_electricity = np.zeros(n_control_window_hours)
 
     with subtests.test("expected_battery_power"):
         np.testing.assert_allclose(
@@ -317,7 +322,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             "shared_parameters": {
                 "max_charge_rate": init_charge_rate,
                 "max_capacity": init_capacity,
-                "n_control_window": 48,
+                "n_control_window_hours": 48,
                 "init_soc_fraction": 0.1,
                 "max_soc_fraction": 1.0,
                 "min_soc_fraction": 0.1,

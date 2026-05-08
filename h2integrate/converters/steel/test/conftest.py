@@ -1,7 +1,6 @@
 import pytest
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_driver_yaml
+from h2integrate import EXAMPLE_DIR, load_driver_yaml
 
 from test.conftest import (  # noqa: F401
     temp_dir,

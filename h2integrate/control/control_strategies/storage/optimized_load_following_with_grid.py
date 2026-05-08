@@ -217,7 +217,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
 
         super().setup()
 
-        self.n_control_window = self.config.n_control_window
+        self.n_control_window_hours = self.config.n_control_window_hours
         self.updated_initial_soc = self.config.init_soc_fraction
 
         self.commodity_info = {
@@ -238,7 +238,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
 
-        pyomo.Set(initialize=range(self.config.n_control_window))
+        pyomo.Set(initialize=range(self.config.n_control_window_hours))
 
         self.source_techs = []
         self.dispatch_tech = []
@@ -267,7 +267,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             Execute rolling-window dispatch for the controlled technology.
 
             Iterates over the full simulation period in chunks of size
-            `self.config.n_control_window`, (re)configures per-window dispatch
+            `self.config.n_control_window_hours`, (re)configures per-window dispatch
             parameters, solves the Pyomo optimization model to determine
             dispatch decisions, and then calls the provided performance_model
             over each window to obtain storage output and SOC trajectories.
@@ -278,7 +278,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                     window. Signature must accept (storage_dispatch_commands,
                     **performance_model_kwargs, sim_start_index=<int>)
                     and return (storage_out_window, soc_window) arrays of length
-                    n_control_window.
+                    n_control_window_hours.
                 performance_model_kwargs (dict):
                     Extra keyword arguments forwarded unchanged to performance_model
                     at window (e.g., efficiencies, timestep size).
@@ -313,7 +313,9 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                 commodity_bought = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
-            window_start_indices = list(range(0, self.n_timesteps, self.config.n_control_window))
+            window_start_indices = list(
+                range(0, self.n_timesteps, self.config.n_control_window_hours)
+            )
 
             # Initialize parameters for optimized dispatch strategy
             time_update_inputs = self.create_time_update_dictionary(inputs, window_start_indices[0])
@@ -323,15 +325,16 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
             for t in window_start_indices:
                 # get the inputs over the current control window
                 time_update_inputs = self.create_time_update_dictionary(inputs, t)
+                n_control_window_hours = self.config.n_control_window_hours
                 # commodity_in = inputs[f"{self.config.commodity}_in"][
-                #     t : t + self.config.n_control_window
+                #     t : t + self.n_control_window_hours
                 # ]
                 # if self.config.allow_commodity_buying:
-                #     inputs[f"{commodity_name}_met_value_in"][t : t + self.config.n_control_window]
-                #     inputs[f"{commodity_name}_buy_price_in"][t : t + self.config.n_control_window]
+                #     inputs[f"{commodity_name}_met_value_in"][t : t + self.n_control_window_hours]
+                #     inputs[f"{commodity_name}_buy_price_in"][t : t + self.n_control_window_hours]
 
                 # Progress report
-                if t % (self.n_timesteps // 4) < self.n_control_window:
+                if t % (self.n_timesteps // 4) < self.n_control_window_hours:
                     percentage = round((t / self.n_timesteps) * 100)
                     print(f"{percentage}% done with optimal dispatch")
                 # Update time series parameters for the optimization method
@@ -356,7 +359,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
                 self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
 
                 # get a list of all time indices belonging to the current control window
-                window_indices = list(range(t, t + self.config.n_control_window))
+                window_indices = list(range(t, t + self.config.n_control_window_hours))
 
                 # loop over all time steps in the current control window
                 for j in window_indices:
@@ -414,13 +417,15 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         time_update_inputs = {}
         input_keys = inputs.keys()
         for i in input_keys:
-            time_update_inputs[i] = inputs[i][t : t + self.config.n_control_window]
+            time_update_inputs[i] = inputs[i][t : t + self.config.n_control_window_hours]
 
         additional_keys = ["demand_met_value"]
         if self.config.allow_commodity_buying:
             additional_keys.append(f"{self.config.commodity}_buy_price")
         for i in additional_keys:
-            time_update_inputs[i] = self.dispatch_inputs[i][t : t + self.config.n_control_window]
+            time_update_inputs[i] = self.dispatch_inputs[i][
+                t : t + self.config.n_control_window_hours
+            ]
 
         return time_update_inputs
 
@@ -466,7 +471,7 @@ class OptimizedDispatchController(PyomoControllerBaseClass):
         #################################
         model.forecast_horizon = pyomo.Set(
             doc="Set of time periods in time horizon",
-            initialize=range(self.config.n_control_window),
+            initialize=range(self.config.n_control_window_hours),
         )
         for tech in self.source_techs:
             if tech == self.dispatch_tech[0]:

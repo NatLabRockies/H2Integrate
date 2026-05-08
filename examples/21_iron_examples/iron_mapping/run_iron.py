@@ -8,12 +8,11 @@ Warning: this may take some time (up to a few minutes) depending on your PC's pr
 
 """
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model

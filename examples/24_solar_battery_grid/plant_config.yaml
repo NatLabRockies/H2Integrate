@@ -27,7 +27,7 @@ technology_interconnections:
   # subtract variable generation from the demand
   - [bat_combiner, electrical_load_demand, electricity, cable]
   # connect remaining demand to grid buying
-  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_demand]]
+  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
   # connect surplus generation to grid selling
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
   # combine electricity generated from solar and electricity bought from grid
