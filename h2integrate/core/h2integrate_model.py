@@ -660,7 +660,7 @@ class H2IntegrateModel:
 
         # 4. For cost-aware strategies, connect cost inputs based on cost_per_tech
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
-            cost_per_tech = plant_slc_config.get("cost_per_tech", {})
+            cost_per_tech = plant_slc_config.get("control_parameters", {}).get("cost_per_tech", {})
             for tech_name, _ in slc_config["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
                     cost_spec = cost_per_tech.get(tech_name, 0.0)

@@ -438,7 +438,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         (e.g., ``CostMinimizationControl``, ``ProfitMaximizationControl``).
 
         Reads ``cost_per_tech`` from
-        ``plant_config["system_level_control"]`` and creates appropriate
+        ``plant_config["system_level_control"]["control_parameters"]`` and creates appropriate
         OpenMDAO inputs for each dispatchable technology:
 
         - Numeric value (e.g. ``0.05``): used directly as a constant
@@ -459,8 +459,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
           divides by the tech's total production. Handles the common
           single-feedstock case as well as multiple feedstock streams.
         """
-        slc_config = self.options["plant_config"]["system_level_control"]
-        self.cost_per_tech = slc_config.get("cost_per_tech", {})
+
+        self.cost_per_tech = (
+            self.options["plant_config"]["system_level_control"]
+            .get("control_parameters", {})
+            .get("cost_per_tech", {})
+        )
         self.dt_hours = self.options["plant_config"]["plant"]["simulation"]["dt"] / 3600
         hours_simulated = self.dt_hours * self.n_timesteps
         self.fraction_of_year_simulated = hours_simulated / 8760

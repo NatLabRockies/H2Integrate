@@ -16,7 +16,7 @@ class CostMinimizationControl(SystemLevelControlBase):
        each up to its rated capacity, until remaining demand is met.
 
     Marginal costs are configured via ``cost_per_tech`` in the
-    ``system_level_control`` section of ``plant_config``.  Each
+    ``system_level_control["control_parameters"]`` section of ``plant_config``.  Each
     dispatchable technology's entry can be:
 
     - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)

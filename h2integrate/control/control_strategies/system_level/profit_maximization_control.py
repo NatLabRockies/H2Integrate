@@ -10,6 +10,7 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 @define(kw_only=True)
 class ProfitMaximizationControlConfig(BaseConfig):
     commodity_sell_price: float = field(default=0.0)
+    cost_per_tech: dict = field(default={})
 
 
 class ProfitMaximizationControl(SystemLevelControlBase):
@@ -32,7 +33,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         whose ``model_inputs.commodity_sell_price`` will be used.
 
     Marginal costs are configured via ``cost_per_tech`` in the
-    ``system_level_control`` section of ``plant_config``.  Each
+    ``system_level_control["control_parameters"]`` section of ``plant_config``.  Each
     dispatchable technology's entry can be:
 
     - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)

@@ -42,9 +42,10 @@ system_level_control:
   control_strategy: ProfitMaximizationControl
   control_parameters:
     commodity_sell_price: 0.06  # $/kWh default; overridden in run script
-  cost_per_tech:
-    natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
-    grid_buy: buy_price  # use electricity_buy_price from cost config
-  solver_name: gauss_seidel
-  max_iter: 30
-  convergence_tolerance: 1.0e-6
+    cost_per_tech:
+      natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
+      grid_buy: buy_price  # use electricity_buy_price from cost config
+  solver_options:
+    solver_name: gauss_seidel
+    max_iter: 30
+    convergence_tolerance: 1.0e-6
