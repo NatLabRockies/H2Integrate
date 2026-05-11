@@ -36,12 +36,19 @@ class DemandFollowingControl(SystemLevelControlBase):
         for curtailable_tech in self.curtailable_techs:
             commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
             # check that this tech produces the commodity demanded
-            if commodity in commodity_from_tech:
-                # if the commodity produced from a tech is the demanded commodity
-                # then subtract the curtailable production from the demand
-                demand = self._subtract_curtailable(
-                    curtailable_tech, demand, commodity, inputs, outputs
-                )
+            for tech_commodity in commodity_from_tech:
+                if tech_commodity == commodity:
+                    # if the commodity produced from a tech is the demanded commodity
+                    # then subtract the curtailable production from the demand
+                    demand = self._subtract_curtailable(
+                        curtailable_tech, demand, commodity, inputs, outputs
+                    )
+                else:
+                    if f"{curtailable_tech}_rated_{tech_commodity}_production" in inputs:
+                        # set the set-point as the rated production
+                        outputs[f"{curtailable_tech}_{tech_commodity}_set_point"] = inputs[
+                            f"{curtailable_tech}_rated_{tech_commodity}_production"
+                        ] * np.ones(self.n_timesteps)
 
         # 2. Storage dispatch
         # number of storage components that produce the demanded commodity

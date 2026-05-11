@@ -98,6 +98,14 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
 
+    with subtests.test("LCOH"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
+            )
+            == 14.878096642042243
+        )
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
