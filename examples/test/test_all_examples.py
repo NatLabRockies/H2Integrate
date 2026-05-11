@@ -7,10 +7,7 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR
-from h2integrate.core.file_utils import load_yaml
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_plant_yaml
+from h2integrate import ROOT_DIR, H2IntegrateModel, load_yaml, load_plant_yaml
 
 
 ROOT = Path(__file__).parents[1]
@@ -850,7 +847,7 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     "example_folder,resource_example_folder", [("13_dispatch_for_electrolyzer", None)]
 )
 def test_electrolyzer_demand(subtests, temp_copy_of_example):
-    from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+    from h2integrate import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
     example_folder = temp_copy_of_example
 
@@ -1756,9 +1753,9 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
         assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
+    from h2integrate import write_yaml, load_driver_yaml
     from h2integrate.core.dict_utils import update_defaults
     from h2integrate.core.file_utils import check_file_format_for_csv_generator
-    from h2integrate.core.inputs.validation import write_yaml, load_driver_yaml
 
     # load the driver config file
     driver_config = load_driver_yaml("driver_config.yaml")
@@ -2984,3 +2981,50 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         )
         grid_purchase = model.prob.get_val("grid_buy.electricity_out", units="kW")
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("34_plm_optimized_dispatch", None)]
+)
+def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    # Create a H2Integrate model
+    model = H2IntegrateModel(example_folder / "34_plm_optimized_dispatch.yaml")
+    model.setup()
+
+    # Run the model
+    model.run()
+
+    battery_power = model.prob.get_val("battery.storage_electricity_discharge", units="kW")
+    soc_pct = model.prob.get_val("battery.SOC", units="percent")
+
+    with subtests.test("Check battery power is discharging at some point"):
+        assert (battery_power >= 0).all()
+
+    with subtests.test("Check SOC is between 10 and 90%"):
+        assert (soc_pct >= 10 - 1e-2).all()
+        assert (soc_pct <= 90 + 1e-2).all()
+
+    with subtests.test("Check battery CAPEX"):
+        battery_capex = model.prob.get_val("battery.CapEx", units="USD")[0]
+        assert pytest.approx(battery_capex, rel=1e-6) == 929700.0
+
+    with subtests.test("Check battery OPEX"):
+        battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
+        assert pytest.approx(battery_opex, rel=1e-1) == 23242.5
+
+    with subtests.test("Check number of discharge events"):
+        # With the given demand profile and battery size, there should be 2 discharge events
+        num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
+        assert num_discharge_events == 588
+
+    with subtests.test("Check total energy discharged"):
+        total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 2428.0
+
+    with subtests.test("Check total energy charged"):
+        battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
+        total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0

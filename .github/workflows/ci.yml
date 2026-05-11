@@ -1,13 +1,16 @@
 name: Testing
 on:
-  push:
-    branches:
-      - main
-      - develop
   pull_request:
     branches:
       - main
       - develop
+    types:
+      - opened
+      - ready_for_review
+      - review_requested
+      - enqueued
+    paths:
+      - h2integrate/**.py
   schedule:
     - cron: 0 0 * * MON
 jobs:

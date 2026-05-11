@@ -3,7 +3,7 @@ from pathlib import Path
 
 import openmdao.api as om
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 os.chdir(Path(__file__).parent)

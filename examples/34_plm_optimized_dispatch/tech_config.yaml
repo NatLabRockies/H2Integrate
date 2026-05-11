@@ -1,0 +1,59 @@
+name: technology_config
+description: 300 kW / 2 MWh battery with Peak Load Management MILP-optimized dispatch controller
+technologies:
+  battery:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: ATBBatteryCostModel
+    control_strategy:
+      model: PeakLoadManagementOptimizedStorageController
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 300.0  # kW rated power
+        max_capacity: 2000.0  # kWh usable capacity
+        max_soc_fraction: 0.90
+        min_soc_fraction: 0.10
+        init_soc_fraction: 0.90
+        charge_efficiency: 0.95
+        discharge_efficiency: 0.95
+      performance_parameters:
+        demand_profile: 0.0
+      control_parameters:
+        system_commodity_interface_limit: 1.0e9
+        supervisory_signal: !include demand_profiles/supervisory_signal.yaml
+        peak_window:
+          start: 12:00:00
+          end: 20:00:00
+        performance_incentive_per_event: 16800.0  # $/event
+        n_max_events: 10  # maximum discharge events per month
+        signal_threshold_percentile: 95.0  # only dispatch when LMP >= this percentile
+        n_control_window_hours: 24  # hours; converted to timesteps using simulation dt
+        event_duration:  # omit or set to null to use static peak_window
+          units: h  # any pandas timedelta unit: h, min, s,
+          val: 4  # battery eligible +/ - val h around the daily peak
+        min_peak_separation:  # omit or set to null to allow any peak spacing
+          units: h
+          val: 4  # drop any eligible peak within this distance of a higher peak
+        round_digits: 4
+      cost_parameters:
+        cost_year: 2024
+        energy_capex: 408  # $/kWh
+        power_capex: 379  # $/kW
+        opex_fraction: 0.025
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 100000  # kW
+      cost_parameters:
+        cost_year: 2024
+        fixed_interconnection_cost: 0.0
+        interconnection_capex_per_kw: 0.0
+        interconnection_opex_per_kw: 0.0
+        electricity_buy_price: 0.09  # $/kWh
