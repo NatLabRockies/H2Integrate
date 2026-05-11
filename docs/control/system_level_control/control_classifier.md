@@ -13,6 +13,7 @@ Classifier | Meaning | Example Techs
 curtailable | Produces based on resource or input commodity; can only be reduced | wind, solar, nuclear
 dispatchable | Can modulate consumption/production within bounds | grid, NG turbine
 storage | Can modulate consumption/production within bounds while tracking SOC; does not produce/consume energy | battery, h2 storage, any storage
+feedstock | Can't be controlled but system knows how much is available | NG from a pipe
 
 To add a classifier for a particular model it would look something like this in the class:
 ```{python}
@@ -57,3 +58,6 @@ The system-level controller outputs set points to the storage performance model 
 :width: 85%
 :align: center
 ```
+
+## Feedstock
+Another category of control classifiers are feedstocks. The unique thing about feedstocks is that they are considered outside of the controllable system within H2I. While they can't be controlled it can be helpful for controllers to know how much feedstock is available within the system, hence their classification.

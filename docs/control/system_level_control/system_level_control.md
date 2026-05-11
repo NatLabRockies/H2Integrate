@@ -11,7 +11,7 @@ The most basic SLC is shown in the figured below, where the SLC receives a deman
 
 The SLC control strategy and solver options are set within `plant_config.yaml` under the `"system_level_control"` section.
 
-```{yaml}
+```yaml
 system_level_control:
   control_strategy: DemandFollowingControl
   solver_options:
@@ -22,7 +22,7 @@ system_level_control:
 
 To set the demand for the SLC that is configured in the `tech_config.yaml` using a demand block/component. For example:
 
-```{yaml}
+```yaml
 electrical_load_demand:
 performance_model:
     model: GenericDemandComponent
