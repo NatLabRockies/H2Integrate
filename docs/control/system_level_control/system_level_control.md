@@ -45,7 +45,7 @@ The current control strategies are:
 The strategies currently implemented are experimental and will likely require further development for specific analyses.
 ```
 
-All control strategies inherit `SystemLevelControlBase`, which is a base class that has common setup logic shared by all system-level control strategies.
+All control strategies inherit [`SystemLevelControlBase`](#slc-base), which is a base class that has common setup logic shared by all system-level control strategies.
 
 See additional information, which is more developer focused, about the [`SystemLevelControlBase`](#slc-base).
 

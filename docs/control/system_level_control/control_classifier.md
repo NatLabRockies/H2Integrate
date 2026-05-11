@@ -6,14 +6,14 @@ To enable a generic system level control framework we need to classify each tech
 While in real life there are a lot of controllable parameters allowing for ramping production up or down for a particular technology (e.g., turbine yaw). The particular model in H2I might not be capable of simulating a modulated response based on an input signal.
 ```
 
-We have identified three key classifiers that are able to represent the different behaviors that we can expect from the model. Each performance model includes a parameter setting the classifier `_control_classifier`.
+We have identified four key classifiers that are able to represent the different behaviors that we can expect from the models. Each performance model includes a parameter setting the classifier `_control_classifier`.
 
 Classifier | Meaning | Example Techs
 -- | -- | --
 curtailable | Produces based on resource or input commodity; can only be reduced | wind, solar, nuclear
 dispatchable | Can modulate consumption/production within bounds | grid, NG turbine
 storage | Can modulate consumption/production within bounds while tracking SOC; does not produce/consume energy | battery, h2 storage, any storage
-feedstock | Can't be controlled but system knows how much is available | NG from a pipe
+feedstock | Can't be controlled but system knows how much is available | NG or water from feedstock
 
 To add a classifier for a particular model it would look something like this in the class:
 ```{python}

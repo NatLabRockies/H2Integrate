@@ -3,7 +3,7 @@
 
 The demand following controller, `DemandFollowingControl`, aims to fully meet the demand and does not have any inputs related to cost.
 
-## Inputs
+## Inputs and Outputs
 
 The inputs for technologies classified as `curtailable`, `dispatchable`, and `storage` are:
 
@@ -13,7 +13,7 @@ The inputs for technologies classified as `curtailable`, `dispatchable`, and `st
 The inputs for technologies classified as `feedstock` are:
 - `f"{tech_name}_{commodity}_out"`
 
-## Outputs
+
 The outputs for technologies classified as `curtailable`, `dispatchable`, or `storage` and *without a storage controller* are:
 - `f"{tech_name}_{tech_output_commodity}_set_point"`
 
