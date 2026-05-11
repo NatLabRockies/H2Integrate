@@ -28,6 +28,7 @@ percentile = model.technology_config["technologies"]["battery"]["model_inputs"][
 ]["signal_threshold_percentile"]
 
 model.run()
+model.post_process()
 
 lmp = np.array(
     model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][

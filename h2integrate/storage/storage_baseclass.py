@@ -284,7 +284,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Storage specific timeseries outputs
         outputs[f"storage_{self.commodity}_charge"] = np.where(
-            storage_commodity_out < 0, storage_commodity_out, 0
+            storage_commodity_out < 0, -storage_commodity_out, 0
         )
         outputs[f"storage_{self.commodity}_discharge"] = np.where(
             storage_commodity_out > 0, storage_commodity_out, 0

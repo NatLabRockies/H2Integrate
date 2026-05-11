@@ -43,6 +43,14 @@ technologies:
         energy_capex: 408  # $/kWh
         power_capex: 379  # $/kW
         opex_fraction: 0.025
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 0.0  # dummy demand profile to be overwritten in simulation by battery charge needs
   grid_buy:
     performance_model:
       model: GridPerformanceModel

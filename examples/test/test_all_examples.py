@@ -3027,4 +3027,11 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
         total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0
+        assert pytest.approx(total_energy_charged, rel=1e-3) == 2663.0
+
+    with subtests.test("Check energy balance with battery and grid"):
+        battery_charge_power_series = model.prob.get_val(
+            "battery.storage_electricity_charge", units="kW"
+        )
+        grid_purchase_power_series = model.prob.get_val("grid_buy.electricity_out")
+        assert pytest.approx(battery_charge_power_series) == grid_purchase_power_series
