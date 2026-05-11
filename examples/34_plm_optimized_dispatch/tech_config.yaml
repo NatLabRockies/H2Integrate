@@ -20,7 +20,7 @@ technologies:
         charge_efficiency: 0.95
         discharge_efficiency: 0.95
       performance_parameters:
-        demand_profile: 0.0
+        demand_profile: !include demand_profiles/supervisory_signal.yaml
       control_parameters:
         system_commodity_interface_limit: 1.0e9
         supervisory_signal: !include demand_profiles/supervisory_signal.yaml
@@ -57,3 +57,11 @@ technologies:
         interconnection_capex_per_kw: 0.0
         interconnection_opex_per_kw: 0.0
         electricity_buy_price: 0.09  # $/kWh
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: !include demand_profiles/supervisory_signal.yaml
