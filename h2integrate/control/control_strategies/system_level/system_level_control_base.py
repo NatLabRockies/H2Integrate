@@ -1,14 +1,6 @@
 import numpy as np
 import networkx as nx
 import openmdao.api as om
-from attrs import field, define
-
-from h2integrate.core.utilities import BaseConfig
-
-
-@define(kw_only=True)
-class SystemLevelControlBaseConfig(BaseConfig):
-    demand_tech: str | None = field(default=None)
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
