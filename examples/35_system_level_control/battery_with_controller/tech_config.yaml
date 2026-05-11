@@ -97,7 +97,7 @@ technologies:
         capacity_capex: 310  # $/kWh
         charge_capex: 311  # $/kW
         opex_fraction: 0.025
-  fin_combiner:
+  combiner:
     performance_model:
       model: GenericCombinerPerformanceModel
     model_inputs:

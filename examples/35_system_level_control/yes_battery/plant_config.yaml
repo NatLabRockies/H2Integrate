@@ -14,18 +14,18 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
   # connect NG feedstock to NG plant
-  - [wind, battery, electricity, cable]
+  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
   # wind output available for battery charging (electricity_in)
-  - [wind, fin_combiner, electricity, cable]
+  - [wind, battery, electricity, cable]
   # wind to combined output
-  - [battery, fin_combiner, electricity, cable]
+  - [wind, combiner, electricity, cable]
   # battery net output to combined output
-  - [natural_gas_plant, fin_combiner, electricity, cable]
+  - [battery, combiner, electricity, cable]
   # NG to combined output
-  - [fin_combiner, electrical_load_demand, electricity, cable]
+  - [natural_gas_plant, combiner, electricity, cable]
   # combined supply to demand
+  - [combiner, electrical_load_demand, electricity, cable]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
@@ -100,7 +100,7 @@ finance_parameters:
       technologies: [natural_gas_plant, ng_feedstock]
     electricity:
       commodity: electricity
-      commodity_stream: fin_combiner
+      commodity_stream: combiner
       finance_groups: [profast_lco]
       technologies: [wind, battery, natural_gas_plant, ng_feedstock]
   cost_adjustment_parameters:

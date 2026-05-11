@@ -14,14 +14,14 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [wind, combiner, electricity, cable]
   # source_tech, dest_tech, transport_item, transport_type = connection
-  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
   # connect NG feedstock to NG plant
+  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+  # combine the electricity and natural gas production
+  - [wind, combiner, electricity, cable]
+  - [natural_gas_plant, combiner, electricity, cable]
+  # subtract the combined electricity production from the demand
   - [combiner, electrical_load_demand, electricity, cable]
-  # subtract wind from demand
-  - [combiner, fin_combiner, electricity, cable]
-  - [natural_gas_plant, fin_combiner, electricity, cable]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
@@ -86,7 +86,7 @@ finance_parameters:
   finance_subgroups:
     renewables:
       commodity: electricity
-      commodity_stream: combiner
+      commodity_stream: wind
       finance_groups: [profast_lco, profast_npv]
       technologies: [wind]
     natural_gas:
@@ -96,7 +96,7 @@ finance_parameters:
       technologies: [natural_gas_plant, ng_feedstock]
     electricity:
       commodity: electricity
-      commodity_stream: fin_combiner
+      commodity_stream: combiner
       finance_groups: [profast_lco]
       technologies: [wind, natural_gas_plant, ng_feedstock]
   cost_adjustment_parameters:

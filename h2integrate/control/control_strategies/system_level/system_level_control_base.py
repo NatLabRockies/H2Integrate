@@ -1,14 +1,6 @@
 import numpy as np
 import networkx as nx
 import openmdao.api as om
-from attrs import field, define
-
-from h2integrate.core.utilities import BaseConfig
-
-
-@define(kw_only=True)
-class SystemLevelControlBaseConfig(BaseConfig):
-    demand_tech: str | None = field(default=None)
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -16,19 +8,27 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     Provides common setup logic shared by all system-level control strategies:
     demand input, curtailable/dispatchable/storage technology I/O creation,
-    and technology classification reading from ``plant_config``.
+    and technology classification reading from ``plant_config`` and ``slc_config``
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
 
-    Configuration is read from ``plant_config["system_level_control"]``,
+    Information passed to the controller from H2IntegrateModel is input in the ``slc_config``,
     which must contain:
 
-    - ``commodity``: the commodity being controlled (e.g. "electricity")
-    - ``commodity_units``: units string (or None)
+    - ``demand_commodity``: the commodity being controlled (e.g. "electricity")
+    - ``demand_commodity_rate_units``: units string (or None) of the demand commodity
     - ``demand_tech``: name of the demand technology
-    - ``curtailable_techs``: list of curtailable technology names
-    - ``dispatchable_techs``: list of dispatchable technology names
-    - ``storage_techs``: list of storage technology names
+    - ``storage_techs_to_control``: dictionary with keys of the technology names. The value is True
+        if the technology is classified as "storage" and has an attached controller.
+        Otherwise the value is False.
+    - ``technology_graph``: directional graph object representation of the
+        technology_interconnections found in the ``plant_config``
+    - ``tech_to_commodity``: set of tuples formatted as (tech_name, tech_output_commodity)
+    - ``tech_control_classifiers``: dictionary of technologies with keys as the technology names the
+        value as the corresponding control classifier
+
+    Controller-specific configuration parameters may be read from
+    ``plant_config["system_level_control"]["control_parameters"]``
     """
 
     def initialize(self):
