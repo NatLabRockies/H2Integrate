@@ -14,7 +14,7 @@ Setup I/O for SLC controllers.
 - `_setup_tech_category()`
 - `_setup_feedstock_category()`
 - `find_converter_techs()`
-    - Note: this currently is not implemented but will be used for heterogeneous commodity systems.
+    - Note: this method is currently is not used but will be used for heterogeneous commodity systems.
 
 Functions for controlling components based on assigned control classifier.
 - `_subtract_curtailable()`

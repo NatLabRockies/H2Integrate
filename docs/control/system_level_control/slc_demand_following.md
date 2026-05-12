@@ -53,6 +53,27 @@ display(
     )
 )
 ```
+## Dispatch Logic
+
+The he demand is satisfied in a fixed three-step priority order, and each step's shortfall or surplus is passed to the next:
+
+1. **Curtailable techs** run at their full rated capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
+
+2. **Storage techs** receive the residual demand (which may be positive or negative). When demand is positive the storage is commanded to discharge; when negative it is commanded to charge. If multiple storage techs produce the demanded commodity, the residual demand is
+split **evenly** across them (each receives ``demand / n_storage``).
+
+3. **Dispatchable techs** cover any remaining positive demand after storage. The remaining demand (floored at zero) is split **evenly** across all dispatchable techs that produce the demanded commodity (each receives ``remaining_demand / n_dispatchable``).
+
+### Example Configuration
+
+```yaml
+system_level_control:
+  control_strategy: DemandFollowingControl
+  solver_options: # solver options for resolving feedback
+    solver_name: gauss_seidel
+    max_iter: 20
+    convergence_tolerance: 1.0e-6
+```
 
 ## Inputs and Outputs
 
@@ -84,9 +105,3 @@ This framework provides a starting point for hybrid energy system control but is
 - Even splitting across storage: When multiple storage technologies produce the demanded commodity, the residual demand is divided evenly among them (`demand / n_storage`), regardless of differences in capacity, state of charge, or efficiency.
 - Even splitting across dispatchable technologies: Similarly, any remaining demand after storage dispatch is split evenly across all dispatchable technologies (`remaining_demand / n_dispatchable`), without accounting for marginal costs or capacity constraints.
 - Fixed priority order: The dispatch order (curtailable → storage → dispatchable) is fixed in the current implementation.
-
-## General Logic
-
-First, control logic is as follows:
-- For every technology classified as "curtailable", set the set-point as the rated commodity production of that technology. Subtract the commodity produced by the technology from the overall demand profile
-- The remaining demand profile will be negative when the curtailable technologies produce more commodity than demanded and positive when the curtailable technologies produce less commodity than demanded. The remaining demand profile is divided by the number of storage technologies in the system to get the set point for each storage technology. This set point is negative to command the storage to charge, and positive to command the storage to discharge.

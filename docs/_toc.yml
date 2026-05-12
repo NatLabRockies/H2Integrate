@@ -77,8 +77,8 @@ parts:
           - file: control/system_level_control/controllers
             sections:
               - file: control/system_level_control/slc_demand_following
-              - file: control/system_level_control/slc_cost_min
               - file: control/system_level_control/slc_profit_max
+              - file: control/system_level_control/slc_cost_min
       - file: control/technology_level_control/technology_control_overview
         sections:
           - file: control/technology_level_control/open-loop_controllers

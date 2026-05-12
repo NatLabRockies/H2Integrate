@@ -3,8 +3,8 @@ There are several simple control strategies already implemented in the SLC parad
 
 The current control strategies are:
 1. [Demand Following](#slc-demand-following)
-2. [Cost Minimization](#slc-cost-min)
-3. [Profit Maximization](#slc-profit-max)
+2. [Profit Maximization](#slc-profit-max)
+3. [Cost Minimization](#slc-cost-min)
 
 ```{note}
 The strategies currently implemented are experimental and will likely require further development for specific analyses.
