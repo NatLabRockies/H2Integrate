@@ -27,9 +27,10 @@ import os
 
 import html
 from pathlib import Path
+from h2integrate import EXAMPLE_DIR
 from IPython.display import HTML, display
 
-os.chdir("../../../examples/35_system_level_control/battery_with_controller/")
+os.chdir("EXAMPLE_DIR/35_system_level_control/battery_with_controller/")
 
 h2i_model = H2IntegrateModel("wind_ng_demand.yaml")
 h2i_model.setup()
@@ -55,7 +56,7 @@ display(
 ```
 ## Dispatch Logic
 
-The he demand is satisfied in a fixed three-step priority order, and each step's shortfall or surplus is passed to the next:
+The demand is satisfied in a fixed three-step priority order, and each step's shortfall or surplus is passed to the next:
 
 1. **Curtailable techs** run at their full rated capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
 
