@@ -96,7 +96,7 @@ The outputs for technologies classified as `storage` that *have a storage contro
 ## Systems with Heterogeneous Commodities
 
 The `DemandFollowingControl` controller can be used in hybrid systems where technologies produce different commodities.
-For example, in a system where an electrolyzer produces hydrogen and the demand commodity is hydrogen, the controller can set the electricity-generating technologies' set-points to meet the hydrogen demand.
+For example, in a system where an electrolyzer produces hydrogen and the demand commodity is hydrogen, the controller can set the electricity-generating *curtailable* technologies' set-points to meet the hydrogen demand.
 
 This framework provides a starting point for hybrid energy system control but is intended to be extended with more sophisticated strategies for complex multi-commodity systems.
 
