@@ -472,14 +472,22 @@ class H2IntegrateModel:
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
 
     def _classify_slc_technologies(self):
-        """Classify technologies for system-level control and store in plant_config.
+        """Classify technologies for system-level control.
 
         Uses ``self.tech_control_classifiers`` (populated by ``create_technology_models()``)
         to partition technologies into curtailable, dispatchable, and storage lists.
         Also identifies the single demand technology and its commodity.
 
-        Results are written into ``self.plant_config["system_level_control"]`` so
-        they are available to the ``DemandFollowingControl`` component at setup time.
+        Returns:
+            dict: Classification dictionary (``slc_config``) with keys:
+
+                - ``"demand_tech"`` (str)
+                - ``"demand_commodity"`` (str)
+                - ``"demand_commodity_rate_units"`` (str | None)
+                - ``"tech_to_commodity"`` (set[tuple[str, str]])
+                - ``"storage_techs_to_control"`` (dict[str, bool])
+                - ``"technology_graph"`` (nx.DiGraph)
+                - ``"tech_control_classifiers"`` (dict[str, str])
         """
         slc_config = {}
         technologies = self.technology_config.get("technologies", {})
@@ -629,8 +637,11 @@ class H2IntegrateModel:
            specification determines which cost signal is connected:
 
            - ``"VarOpEx"``: connects the tech's own ``VarOpEx`` output.
-           - ``"feedstock"``: scans ``technology_interconnections`` for upstream feedstock
-             technologies and connects each feedstock's ``VarOpEx`` output.
+           - ``"feedstock"``: uses graph traversal (``nx.ancestors``) on the
+             ``technology_graph`` to find all upstream feedstock technologies
+             at any depth and connects each feedstock's ``VarOpEx`` output.
+             This is consistent with the ``_find_feedstock_techs`` method
+             used by the controller component internally.
            - ``"buy_price"``: no connection needed; the controller reads a default value from the
              tech config that can be overridden at runtime via ``prob.set_val()``.
            - Numeric scalar: no connection needed; the value is used directly as a constant
@@ -740,6 +751,7 @@ class H2IntegrateModel:
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
             cost_per_tech = plant_slc_config.get("control_parameters", {}).get("cost_per_tech", {})
+            technology_graph = slc_config["technology_graph"]
             for tech_name, _ in slc_config["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
                     cost_spec = cost_per_tech.get(tech_name, 0.0)
@@ -750,21 +762,20 @@ class H2IntegrateModel:
                             f"system_level_controller.{tech_name}_VarOpEx",
                         )
                     elif cost_spec == "feedstock":
-                        # Sum VarOpEx from all upstream feedstock technologies
-                        interconnections = self.plant_config.get("technology_interconnections", [])
-                        technologies = self.technology_config.get("technologies", {})
-                        for conn in interconnections:
-                            if conn[1] != tech_name:
-                                continue
-                            upstream = conn[0]
-                            tech_def = technologies.get(upstream, {})
-                            perf_model = tech_def.get("performance_model", {}).get("model", "")
-                            cost_model = tech_def.get("cost_model", {}).get("model", "")
-                            if "Feedstock" in perf_model or "Feedstock" in cost_model:
-                                self.plant.connect(
-                                    f"{upstream}.VarOpEx",
-                                    f"system_level_controller.{upstream}_VarOpEx",
-                                )
+                        # Find all upstream feedstock technologies using
+                        # graph traversal (matches _find_feedstock_techs
+                        # in the SLC component).
+                        ancestors = nx.ancestors(technology_graph, tech_name)
+                        feedstock_names = [
+                            t
+                            for t in ancestors
+                            if self.tech_control_classifiers.get(t) == "feedstock"
+                        ]
+                        for feedstock_name in feedstock_names:
+                            self.plant.connect(
+                                f"{feedstock_name}.VarOpEx",
+                                f"system_level_controller.{feedstock_name}_VarOpEx",
+                            )
                     # "buy_price": default from tech config, overridable via set_val
                     # numeric scalar: used directly, no connection needed
 
