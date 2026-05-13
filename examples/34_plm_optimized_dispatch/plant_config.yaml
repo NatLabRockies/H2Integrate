@@ -8,12 +8,8 @@ plant:
     timezone: -6  # MDT (UTC-6)
     start_time: 2025/01/01 00:00:00
 technology_interconnections:
-  # supply the battery with electricity bought from the grid
-  - [grid_buy, battery, electricity, cable]
-  # battery net output (positive = discharge, negative = charge) feeds the demand component
-  - [battery, electrical_load_demand, electricity, cable]
-  # grid buys whatever demand the battery doesn't cover
-  - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
+  # supply the battery with electricity feedstock
+  - [electricity_feedstock, battery, electricity, cable]
 tech_to_dispatch_connections:
-  - [grid_buy, battery]
+  - [electricity_feedstock, battery]
   - [battery, battery]
