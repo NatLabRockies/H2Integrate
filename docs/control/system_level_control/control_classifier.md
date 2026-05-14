@@ -10,7 +10,7 @@ This is a useful and necessary distinction that delineates different model capab
 
 We have identified five key classifiers that are able to represent the different behaviors that we can expect from the models. Each performance model includes a parameter setting the classifier `_control_classifier`.
 
-Classifier | Meaning | Example Techs
+Classifier | Meaning | Example Technology Models
 -- | -- | --
 fixed | Always produces commodity and cannot be controlled or reduced; does not receive a set-point | classical nuclear
 flexible | Produces based on resource; can only reduce (curtail) | wind, solar
@@ -67,10 +67,3 @@ The system-level controller outputs set points to the storage performance model 
 
 ## Feedstock
 Another category of control classifiers are feedstocks. The unique thing about feedstocks is that they are considered outside of the controllable system within H2I. While they can't be controlled it can be helpful for controllers to know how much feedstock is available within the system, hence their classification.
-
-## SLC Dispatch Order
-The system level controllers dispatch technologies in the following order:
-1. **Fixed** — subtract their production from demand
-2. **Flexible** — run at full capacity, subtract from demand
-3. **Storage** — absorb surplus or provide deficit
-4. **Dispatchable** — cover remaining demand
