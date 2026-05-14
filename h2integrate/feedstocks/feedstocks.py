@@ -204,7 +204,8 @@ class FeedstockCostModel(CostModelBaseClass):
             f"{self.config.commodity}_consumed"
         ].sum() * (self.dt / 3600)
 
-        # TODO: update to handle varying consumption levels when feedstock consumption is available
+        # TODO: once the feedstock consumption has standardized outputs, update this to handle
+        # consumption that varies over all years of operations.
         outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
             f"total_{self.config.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)
