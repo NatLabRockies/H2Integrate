@@ -6,69 +6,25 @@ import attrs
 import numpy as np
 import pandas as pd
 import requests
-import openmdao.api as om
 from attrs import field, define
 
+from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path
-from h2integrate.core.model_baseclasses import BaseConfig, CostModelBaseClass
+from h2integrate.core.validators import range_val
+from h2integrate.feedstocks.feedstocks import FeedstockCostModel
+from h2integrate.core.model_baseclasses import BaseConfig
 
 
 HOURS_PER_YEAR = 8760
 SECONDS_PER_HOUR = 3600
 CURRENT_YEAR = datetime.now().year
 
-
-@define(kw_only=True)
-class EIANaturalGasFeedstockPerformanceConfig(BaseConfig):
-    """Configuration class for the EIA natural gas price feedstock, which uses base units of MMBtu.
-
-    Attributes:
-        rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
-            This is used to size the feedstock supply to meet the plant's needs.
-    """
-
-    rated_capacity: float = field()
-    commodity: str = field(default="natural_gas", init=False)
-    commodity_rate_units: str = field(default="MMBtu/h", init=False)
-
-
-class EIANaturalGasFeedstockPerformanceModel(om.ExplicitComponent):
-    """Feedstock performance model compatible with the hard-coded units and commodity inputs
-    from the :py:class:`EIANaturalGasFeedstockCostModel` and
-    :py:class:`EIANaturalGasFeedstockConfig`.
-    """
-
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
-
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
-    def setup(self):
-        self.config = EIANaturalGasFeedstockPerformanceConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            additional_cls_name=self.__class__.__name__,
-        )
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.add_input(
-            f"{self.config.commodity}_capacity",
-            val=self.config.rated_capacity,
-            units=self.config.commodity_rate_units,
-        )
-
-        self.add_output(
-            f"{self.config.commodity}_out",
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-        )
-
-    def compute(self, inputs, outputs):
-        """Generates the feedstock array operating at full capacity for a full year."""
-        outputs[f"{self.config.commodity}_out"] = np.full(
-            self.n_timesteps, inputs[f"{self.config.commodity}_capacity"][0]
-        )
+default_price = pd.DataFrame(
+    np.zeros(8760, dtype=float).reshape(-1, 1),
+    columns=["price"],
+    index=pd.date_range("2001-01-01", "2001-12-31 23:00:00", freq="h"),
+)
 
 
 @define
@@ -102,29 +58,36 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
     resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
     monthly: bool = field(validator=attrs.validators.instance_of(bool))
-    price_category: str = field(converter=str.lower, validator=attrs.validators.in_(EIA_FACET))
-    url: str = field(default=None, init=False)
-    series: str = field(init=False)
-    price: pd.DataFrame = field(init=False, validator=attrs.validators.instance_of(pd.DataFrame))
+    price_category: str = field(
+        converter=str.lower, validator=attrs.validators.in_(eia.EIA_NG_FACET)
+    )
     api_key_file: str | None = field(default=None, converter=attrs.converters.optional(get_path))
     state: str = field(
         default=None,
         converter=attrs.converters.optional(
-            attrs.converters.pipe(convert_state_value, convert_state_to_code)
+            attrs.converters.pipe(geospatial.convert_state_value, geospatial.convert_state_to_code)
         ),
         validator=attrs.validators.optional(
-            attrs.validators.in_([*STATE_MAP, *STATE_MAP.values()])
+            attrs.validators.in_([*geospatial.STATE_MAP, *geospatial.STATE_MAP.values()])
         ),
     )
-    latitude: float = field(default=999.9, validator=attrs.validators.instance_of(float))
-    longitude: float = field(default=999.9, validator=attrs.validators.instance_of(float))
+    latitude: float | None = field(
+        default=None, validator=attrs.validators.optional(range_val(-90.0, 90.0))
+    )
+    longitude: float | None = field(
+        default=None, validator=attrs.validators.optional(range_val(-180.0, 180.0))
+    )
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
+    filename: str = field(default=None)
+
     commodity: str = field(default="natural_gas", init=False)
     commodity_rate_units: str = field(default="MMBtu/h", init=False)
     commodity_amount_units: str = field(default="MMBtu", init=False)
-    filename: str = field(default=None)
+    price: pd.DataFrame = field(
+        default=default_price, init=False, validator=attrs.validators.instance_of(pd.DataFrame)
+    )
 
     def __attrs_post_init__(self):
         """Creates the EIA natural gas facet series code based on validated user inputs, sets the
@@ -145,35 +108,17 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 )
                 raise ValueError(msg)
 
-            self.state = get_state_from_coords(self.latitude, self.longitude)
+            self.state = geospatial.get_state_from_coords(self.latitude, self.longitude)
 
-        self.series = EIA_FACET[self.price_category].format(self.state)
-        if self.commodity_amount_units is None:
-            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
-        self.url = self.create_eia_api_url()
+        self.series = eia.EIA_NG_FACET[self.price_category].format(self.state)
+        self.url = eia.create_eia_ng_api_url(
+            api_key_file=self.api_key_file,
+            resource_year=self.resource_year,
+            price_category=self.price_category,
+            state=self.state,
+            monthly=self.monthly,
+        )
         self.price = self.get_data()
-
-    def create_eia_api_url(self):
-        """Creates the full EIA natural gas API url."""
-        api_key = get_eia_api_key(self.api_key_file)
-
-        year = self.resource_year
-        base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
-        frequency = f"frequency={'monthly' if self.monthly else 'annual'}"
-        data = "data[0]=value"
-        facet = f"facets[series][]={self.series}"
-        start = f"start={year}"
-        end = f"end={year}"
-        if self.monthly:
-            start = f"{start}-01"
-            end = f"{end}-12"
-        sort_col = "sort[0][column]=period"
-        sort_dir = "sort[0][direction]=asc"
-        api_key = f"api_key={api_key}"
-
-        url_opts = "&".join((frequency, data, facet, start, end, sort_col, sort_dir, api_key))
-        url = f"{base_url}?{url_opts}"
-        return url
 
     def get_data(self, filename: Path | None = None) -> pd.DataFrame:
         """Loads the previously saved data from :py:attr:`filename` if ``resource_year``
@@ -230,13 +175,11 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         return df[["price"]]
 
 
-class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
+class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     """Feedstock cost model based on the EIA natural gas price API results that uses
     annual or monthly data to model an hourly time step for a single year to model the
     price of natural gas used in the model.
     """
-
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths (seconds) allowed
 
     def _extrapolate_price_to_hourly(self) -> pd.DataFrame:
         """Converts the monthly EIA price timeseries to an hourly time series for ``plant_life``
@@ -260,22 +203,76 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
             raise ValueError(msg)
         return price
 
+    def get_ng_price(self, filename: Path | None = None) -> pd.DataFrame:
+        """Loads the previously saved data from :py:attr:`filename` if ``resource_year``
+        is available as either annual or monthly data, otherwise data is retrieved from the EIA API.
+
+        Args:
+            filename (Path | None, optional): The full filename where the natural gas pricing data
+                should be saved to or loaded from, if available. Must have columns "period" and
+                "price". Defaults to None.
+
+        Raises:
+            requests.exceptions.HTTPError: Raised if an unsuccessful API query result is returned.
+
+        Returns:
+            pandas.DataFrame: DataFrame with index "period" and column "value" with natural gas
+                pricing in $/MMBtu (converted from the EIA's USD per thousands of cubic feet) as
+                either the monthly value or extrapolated annual values to a monthly resolution.
+        """
+        if filename is None:
+            filename = self.filename
+
+        if filename is not None:
+            filename = Path(filename).resolve()
+            if filename.exists():
+                df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
+                df = df.loc[
+                    (df.index.year == self.resource_year) & df.state.eq(self.state), ["price"]
+                ]
+                df = eia.convert_to_monthly(df)
+                if df is not None:
+                    return df
+
+        r = requests.get(self.url)
+        if r.status_code != 200:
+            err = json.loads(r.text)["error"]
+            raise requests.exceptions.HTTPError(err)
+
+        df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
+        if df.size == 0:
+            raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
+
+        df.period = pd.to_datetime(df.period)
+        df.value = df.value.astype(float)
+        df = (
+            df.set_index("period")
+            .rename(columns={"value": "price", "area-name": "state"})
+            .replace("U.S.", "US")
+        )[["state", "price"]]
+        df = eia.convert_to_monthly(df)
+        df.price *= MCF_to_MMBTU
+
+        if filename is not None:
+            df.to_csv(filename, index_label="period")
+
+        self.price = df[["price"]]
+
     def setup(self):
         """Defines the inputs and outputs of the model and converts the
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
         ``plant_life``.
         """
         # TODO: figure out mult-site or single site usage for coordinates input
-        # if (site_config := self.options["plant_config"].get("site")) is None:
-        #     raise ValueError("Single-site definition is missing from the plant configuration.")
+        if (site_config := self.options["plant_config"].get("site")) is None:
+            raise ValueError("Single-site definition is missing from the plant configuration.")
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             # merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost") | site_config,  # noqa: E501
             additional_cls_name=self.__class__.__name__,
             strict=False,
         )
-        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-
+        self.get_ng_price()
         super().setup()
 
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
@@ -359,7 +356,8 @@ class EIANaturalGasFeedstockCostModel(CostModelBaseClass):
             f"{self.config.commodity}_consumed"
         ].sum() * (self.dt / 3600)
 
-        # TODO: update to handle varying consumption levels when feedstock consumption is available
+        # TODO: once the feedstock consumption has standardized outputs, update this to handle
+        # consumption that varies over all years of operations.
         outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
             f"total_{self.config.commodity}_consumed"
         ] * (1 / self.fraction_of_year_simulated)
