@@ -95,10 +95,12 @@ class FeedstockCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = FeedstockCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
-            additional_cls_name=self.__class__.__name__,
-        )
+        # Enable subclassing where a custom configuration is required
+        if not hasattr(self, "config"):
+            self.config = FeedstockCostConfig.from_dict(
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+                additional_cls_name=self.__class__.__name__,
+            )
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
