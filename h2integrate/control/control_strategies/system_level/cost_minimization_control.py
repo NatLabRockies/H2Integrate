@@ -10,9 +10,10 @@ class CostMinimizationControl(SystemLevelControlBase):
 
     Meets demand at minimum variable cost using merit-order dispatch:
 
-    1. Curtailable techs run at rated capacity (assuming zero marginal cost).
-    2. Storage absorbs surplus / provides deficit.
-    3. Dispatchable techs are dispatched in ascending marginal-cost order,
+    1. Fixed techs always produce (cannot be controlled).
+    2. Flexible techs run at rated capacity (assuming zero marginal cost).
+    3. Storage absorbs surplus / provides deficit.
+    4. Dispatchable techs are dispatched in ascending marginal-cost order,
        each up to its rated capacity, until remaining demand is met.
 
     Marginal costs are configured via ``cost_per_tech`` in the
@@ -33,18 +34,21 @@ class CostMinimizationControl(SystemLevelControlBase):
     def compute(self, inputs, outputs):
         demand = inputs[self.demand_input_name].copy()
 
-        # 1. Curtailable techs: full production
-        for curtailable_tech in self.curtailable_techs:
-            commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
-            # check that this tech produces the commodity demanded
+        # 1. Fixed techs: always produce, subtract from demand
+        for fixed_tech in self.fixed_techs:
+            commodity_from_tech = self._get_commodity_for_tech(fixed_tech)
             if self.commodity in commodity_from_tech:
-                # if the commodity produced from a tech is the demanded commodity
-                # then subtract the curtailable production from the demand
-                demand = self._subtract_curtailable(
-                    curtailable_tech, demand, self.commodity, inputs, outputs
+                demand = self._subtract_fixed(fixed_tech, demand, self.commodity, inputs)
+
+        # 2. Flexible techs: full production
+        for flexible_tech in self.flexible_techs:
+            commodity_from_tech = self._get_commodity_for_tech(flexible_tech)
+            if self.commodity in commodity_from_tech:
+                demand = self._subtract_flexible(
+                    flexible_tech, demand, self.commodity, inputs, outputs
                 )
 
-        # 2. Storage dispatch
+        # 3. Storage dispatch
         # number of storage components that produce the demanded commodity
         n_storage = len(
             [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
@@ -56,7 +60,7 @@ class CostMinimizationControl(SystemLevelControlBase):
                     storage_tech, demand / n_storage, self.commodity, inputs, outputs
                 )
 
-        # 3. Merit-order dispatch: cheapest dispatchable first
+        # 4. Merit-order dispatch: cheapest dispatchable first
         remaining = np.maximum(demand, 0.0)
 
         marginal_costs = self._compute_marginal_costs(inputs)

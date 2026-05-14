@@ -475,7 +475,7 @@ class H2IntegrateModel:
         """Classify technologies for system-level control.
 
         Uses ``self.tech_control_classifiers`` (populated by ``create_technology_models()``)
-        to partition technologies into curtailable, dispatchable, and storage lists.
+        to partition technologies into fixed, flexible, dispatchable, and storage lists.
         Also identifies the single demand technology and its commodity.
 
         Returns:
@@ -569,7 +569,13 @@ class H2IntegrateModel:
                     storage_tech_to_control[tech] = True
 
         # Remove feedstocks and connectors
-        control_classifiers_to_connect = ["curtailable", "dispatchable", "storage", "feedstock"]
+        control_classifiers_to_connect = [
+            "fixed",
+            "flexible",
+            "dispatchable",
+            "storage",
+            "feedstock",
+        ]
         tech_to_commodity = {
             (e[0], e[-1])
             for e in sources_to_commodities
@@ -618,7 +624,10 @@ class H2IntegrateModel:
            - **Feedstock techs**: Only the commodity output
              (``{tech_name}_source.{commodity}_out``) is connected to the controller. Feedstocks
              have no set-point or rated-production connection.
-           - **Curtailable / dispatchable / storage techs**: Both the commodity output
+           - **Fixed techs**: Only the commodity output
+             (``{tech_name}.{commodity}_out``) is connected to the controller. Fixed techs
+             always produce and receive no set-point or rated-production connection.
+           - **Flexible / dispatchable / storage techs**: Both the commodity output
              (``{tech_name}.{commodity}_out``) and rated production
              (``{tech_name}.rated_{commodity}_production``) are connected as controller inputs.
              The controller's set-point output is connected back to the tech:
@@ -660,7 +669,7 @@ class H2IntegrateModel:
                 - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of ``(tech_name,
                   commodity)`` pairs for all controlled techs.
                 - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name to
-                  classifier (``"curtailable"``, ``"dispatchable"``, ``"storage"``,
+                  classifier (``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``,
                   ``"feedstock"``).
                 - ``"storage_techs_to_control"`` (dict[str, bool]): Whether each storage tech
                   has its own sub-controller.
@@ -719,7 +728,16 @@ class H2IntegrateModel:
                 )
                 continue
 
-            # Curtailable, dispatchable, and storage techs: connect their
+            if slc_config["tech_control_classifiers"][tech_name] == "fixed":
+                # Fixed techs only provide their commodity output to the
+                # controller; they always produce and receive no set-point.
+                self.plant.connect(
+                    f"{tech_name}.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                continue
+
+            # Flexible, dispatchable, and storage techs: connect their
             # commodity output and rated production as controller inputs.
             self.plant.connect(
                 f"{tech_name}.{commodity}_out",

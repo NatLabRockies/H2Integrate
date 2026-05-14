@@ -46,7 +46,7 @@ class GeoH2SubsurfacePerformanceConfig(BaseConfig):
 
 
 class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
-    _control_classifier = "curtailable"
+    _control_classifier = "dispatchable"
 
     """OpenMDAO component for modeling the performance of the well subsurface for
         geologic hydrogen.

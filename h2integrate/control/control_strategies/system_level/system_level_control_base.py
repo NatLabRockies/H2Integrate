@@ -7,7 +7,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
     """Base class for system-level controllers.
 
     Provides common setup logic shared by all system-level control strategies:
-    demand input, curtailable/dispatchable/storage technology I/O creation,
+    demand input, fixed/flexible/dispatchable/storage technology I/O creation,
     and technology classification reading from ``plant_config`` and ``slc_config``
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
@@ -50,8 +50,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
         self.technology_graph = slc_config["technology_graph"]
 
-        self.curtailable_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "curtailable"
+        self.fixed_techs = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "fixed"
+        ]
+        self.flexible_techs = [
+            k for k, v in slc_config["tech_control_classifiers"].items() if v == "flexible"
         ]
         self.dispatchable_techs = [
             k for k, v in slc_config["tech_control_classifiers"].items() if v == "dispatchable"
@@ -64,7 +67,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         ]
 
         self.input_techs = set(
-            self.curtailable_techs + self.dispatchable_techs + self.storage_techs
+            self.fixed_techs + self.flexible_techs + self.dispatchable_techs + self.storage_techs
         )
 
         # Input: demand profile
@@ -86,7 +89,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         self.commodities_to_units = {self.commodity: self.commodity_units}
         self.commodities_to_ref_var = {}
-        self._setup_tech_category("curtailable", self.curtailable_techs)
+        self._setup_fixed_category(self.fixed_techs)
+        self._setup_tech_category("flexible", self.flexible_techs)
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
@@ -185,7 +189,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def _setup_tech_category(self, category, tech_list):
         """Create OpenMDAO I/O variables for all technologies in a given category.
 
-        This single method handles curtailable, dispatchable, and storage
+        This single method handles flexible, dispatchable, and storage
         technologies. The logic is identical for all three categories —
         iterate over each technology's commodities and register the
         appropriate inputs (production output, rated capacity) and output
@@ -203,13 +207,13 @@ class SystemLevelControlBase(om.ExplicitComponent):
             ``self.{category}_commodity_names``
 
         These lists are consumed by ``compute()`` and the helper methods
-        ``_subtract_curtailable`` and ``_dispatch_storage``.
+        ``_subtract_flexible`` and ``_dispatch_storage``.
 
         Args:
-            category (str): One of ``"curtailable"``, ``"dispatchable"``,
+            category (str): One of ``"flexible"``, ``"dispatchable"``,
                 or ``"storage"``. Used to name the attribute lists.
             tech_list (list[str]): Technology names belonging to this category
-                (e.g. ``self.curtailable_techs``).
+                (e.g. ``self.flexible_techs``).
         """
         initial_set_point = 1.0
 
@@ -286,6 +290,67 @@ class SystemLevelControlBase(om.ExplicitComponent):
         setattr(self, f"{category}_rated_names", rated_names)
         setattr(self, f"{category}_commodity_names", commodity_names)
 
+    def _setup_fixed_category(self, fixed_list):
+        """Create OpenMDAO input variables for fixed technologies.
+
+        Fixed technologies always produce at their rated capacity and do not
+        receive a set-point from the controller. Only commodity output inputs
+        are registered so the controller can read their production and subtract
+        it from demand.
+
+        After this method returns, two lists are stored on ``self``:
+
+            ``self.fixed_input_names``
+            ``self.fixed_commodity_names``
+
+        Args:
+            fixed_list (list[str]): Technology names classified as ``"fixed"``.
+        """
+        input_names = []
+        commodity_names = []
+
+        for tech_name in fixed_list:
+            tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
+            for commodity in tech_commodities:
+                in_name = f"{tech_name}_{commodity}_out"
+
+                if commodity in self.commodities_to_units:
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=self.commodities_to_units[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                elif commodity in self.commodities_to_ref_var:
+                    self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        copy_units=self.commodities_to_ref_var[commodity],
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                else:
+                    meta_data = self.add_input(
+                        in_name,
+                        val=0.0,
+                        shape=self.n_timesteps,
+                        units=None,
+                        units_by_conn=True,
+                        desc=f"{commodity} output from {tech_name}",
+                    )
+                    if meta_data["units"] is None:
+                        self.commodities_to_ref_var[commodity] = in_name
+                    else:
+                        self.commodities_to_units[commodity] = meta_data["units"]
+
+                input_names.append(in_name)
+                commodity_names.append(commodity)
+
+        self.fixed_input_names = input_names
+        self.fixed_commodity_names = commodity_names
+
     def _setup_feedstock_category(self, feedstock_list):
         """Iterate over the feedstocks and add inputs for the available feedstock
 
@@ -335,22 +400,39 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         # Connection provided units — record them for future use
                         self.commodities_to_units[commodity] = meta_data["units"]
 
-    def _subtract_curtailable(self, curtailable_tech, remaining_demand, commodity, inputs, outputs):
-        """Apply curtailable techs: set_point = rated, subtract output from demand.
+    def _subtract_fixed(self, fixed_tech, remaining_demand, commodity, inputs):
+        """Apply fixed techs: subtract their output from demand.
+
+        Fixed techs always produce and do not receive a set-point.
 
         Returns the updated demand array.
         """
-        if curtailable_tech not in self.curtailable_techs:
+        if fixed_tech not in self.fixed_techs:
+            return remaining_demand
+
+        in_name = f"{fixed_tech}_{commodity}_out"
+        if in_name not in inputs:
+            return remaining_demand
+
+        remaining_demand -= inputs[in_name]
+        return remaining_demand
+
+    def _subtract_flexible(self, flexible_tech, remaining_demand, commodity, inputs, outputs):
+        """Apply flexible techs: set_point = rated, subtract output from demand.
+
+        Returns the updated demand array.
+        """
+        if flexible_tech not in self.flexible_techs:
             return
 
-        if f"{curtailable_tech}_rated_{commodity}_production" not in inputs:
+        if f"{flexible_tech}_rated_{commodity}_production" not in inputs:
             return
 
         # Output the set-point as the rated production of that technology
-        outputs[f"{curtailable_tech}_{commodity}_set_point"] = inputs[
-            f"{curtailable_tech}_rated_{commodity}_production"
+        outputs[f"{flexible_tech}_{commodity}_set_point"] = inputs[
+            f"{flexible_tech}_rated_{commodity}_production"
         ] * np.ones(self.n_timesteps)
-        remaining_demand -= inputs[f"{curtailable_tech}_{commodity}_out"]
+        remaining_demand -= inputs[f"{flexible_tech}_{commodity}_out"]
 
         return remaining_demand
 

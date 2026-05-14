@@ -99,8 +99,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # operational life of the technology if the technology cannot be replaced
         self.add_output("operational_life", val=self.plant_life, units="yr")
 
-        # Curtailable models get additional I/O for set_point-based curtailment
-        if getattr(self, "_control_classifier", None) == "curtailable":
+        # Flexible models get additional I/O for set_point-based curtailment
+        if getattr(self, "_control_classifier", None) == "flexible":
             self.add_input(
                 f"{self.commodity}_set_point",
                 val=1.0,
@@ -122,12 +122,12 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
         then clips ``{commodity}_out`` to ``min(uncurtailed, set_point)`` element-wise.
 
-        Only operates when the model has ``_control_classifier == "curtailable"``.
-        Should be called at the end of each curtailable model's ``compute()`` method
+        Only operates when the model has ``_control_classifier == "flexible"``.
+        Should be called at the end of each flexible model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
         if "system_level_control" in self.options["plant_config"]:
-            if getattr(self, "_control_classifier", None) != "curtailable":
+            if getattr(self, "_control_classifier", None) != "flexible":
                 return
 
             commodity_out_key = f"{self.commodity}_out"

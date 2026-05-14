@@ -50,9 +50,10 @@ def _build_technology_graph(technology_interconnections):
 
 
 def _build_tech_control_classifiers(
-    curtailable=None, dispatchable=None, storage=None, feedstock=None
+    fixed=None, flexible=None, dispatchable=None, storage=None, feedstock=None
 ):
-    tech_control_classifiers = {k: "curtailable" for k in (curtailable or [])}
+    tech_control_classifiers = {k: "fixed" for k in (fixed or [])}
+    tech_control_classifiers |= {k: "flexible" for k in (flexible or [])}
     tech_control_classifiers |= {k: "dispatchable" for k in (dispatchable or [])}
     tech_control_classifiers |= {k: "storage" for k in (storage or [])}
     tech_control_classifiers |= {k: "feedstock" for k in (feedstock or [])}
@@ -148,11 +149,11 @@ def _build_problem(slc_cls, plant_config, slc_config, demand=50000, tech_config=
 class TestSystemLevelControlBase:
     """Tests for the abstract base class setup logic."""
 
-    def test_base_creates_curtailable_io(self):
+    def test_base_creates_flexible_io(self):
         tech_connections = [["wind", "demand", "electricity", "cable"]]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
-        tech_control_classifiers = _build_tech_control_classifiers(curtailable=["wind"])
+        tech_control_classifiers = _build_tech_control_classifiers(flexible=["wind"])
         slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
         # Use DemandFollowingControl since base is abstract
         prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
@@ -226,7 +227,7 @@ class TestDemandFollowingControl:
         np.testing.assert_allclose(sp1, 25000)
         np.testing.assert_allclose(sp2, 25000)
 
-    def test_curtailable_reduces_demand(self):
+    def test_flexible_reduces_demand(self):
         tech_connections = [
             ["wind", "combiner", "electricity", "cable"],
             ["ng", "combiner", "electricity", "cable"],
@@ -235,7 +236,7 @@ class TestDemandFollowingControl:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(
-            curtailable=["wind"], dispatchable=["ng"]
+            flexible=["wind"], dispatchable=["ng"]
         )
         slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
         prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
@@ -261,7 +262,7 @@ class TestDemandFollowingControl:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(
-            curtailable=["wind"], storage=["battery"], dispatchable=["ng"]
+            flexible=["wind"], storage=["battery"], dispatchable=["ng"]
         )
         slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
         prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
@@ -348,7 +349,7 @@ class TestCostMinimizationControl:
         np.testing.assert_allclose(cheap_sp, 30000)
         np.testing.assert_allclose(expensive_sp, 20000)
 
-    def test_with_curtailable_reduces_dispatch(self):
+    def test_with_flexible_reduces_dispatch(self):
         tech_connections = [
             ["wind", "combiner", "electricity", "cable"],
             ["ng", "combiner", "electricity", "cable"],
@@ -357,7 +358,7 @@ class TestCostMinimizationControl:
         plant_config = _build_plant_config(tech_connections, cost_per_tech={"ng": 0.05})
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(
-            curtailable=["wind"], dispatchable=["ng"]
+            flexible=["wind"], dispatchable=["ng"]
         )
         slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
         prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)

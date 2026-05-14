@@ -37,7 +37,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
-    _control_classifier = "dispatchable"
+    _control_classifier = "fixed"
 
     def initialize(self):
         super().initialize()

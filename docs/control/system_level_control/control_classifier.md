@@ -4,24 +4,30 @@ To enable a generic system level control framework we need to classify each tech
 
 ```{note}
 While in real life there are a lot of controllable parameters allowing for ramping production up or down for a particular technology (e.g., turbine yaw). The particular model in H2I might not be capable of simulating a modulated response based on an input signal.
+These classifications are for how the models in H2I are implemented, **not** how the actual physical subsystem might operate.
+This is a useful and necessary distinction that delineates different model capabilities clearly.
 ```
 
-We have identified four key classifiers that are able to represent the different behaviors that we can expect from the models. Each performance model includes a parameter setting the classifier `_control_classifier`.
+We have identified five key classifiers that are able to represent the different behaviors that we can expect from the models. Each performance model includes a parameter setting the classifier `_control_classifier`.
 
 Classifier | Meaning | Example Techs
 -- | -- | --
-curtailable | Produces based on resource or input commodity; can only be reduced | wind, solar, nuclear
-dispatchable | Can modulate consumption/production within bounds | grid, NG turbine
-storage | Can modulate consumption/production within bounds while tracking SOC; does not produce/consume energy | battery, h2 storage, any storage
-feedstock | Can't be controlled but system knows how much is available | NG or water from feedstock
+fixed | Always produces commodity and cannot be controlled or reduced; does not receive a set-point | classical nuclear
+flexible | Produces based on resource; can only reduce (curtail) | wind, solar
+dispatchable | Can modulate consumption/production within bounds; receives a commodity set-point | grid, electrolyzer, NG turbine
+storage | Can modulate consumption/production within bounds while tracking SOC | battery, h2 storage, any storage
+feedstock | Are not directly controlled, but useful for SLC to know about to make dispatch decisions | feedstocks
 
 To add a classifier for a particular model it would look something like this in the class:
 ```{python}
-_control_classifier = "curtailable"
+_control_classifier = "flexible"
 ```
 
-## Curtailable
-A curtailable performance model represents anything that can have the output reduced based on a give set point from the system level controller. This classifier and the inputs and outputs are included in the figure below. A good example of this is the PVWatts PySAM solar plant in H2I, the performance of the system is based on the input solar resource. The solar performance does not change based on, for example, an updated set point to the tracking software, but we could limit the power output from the solar performance model based on a given demand set point. To simplify the implementation of applying this curtailment or reduction based on a set point we added a method, `apply_curtailment()` to the `PerformanceBaseClass`.
+## Fixed
+A fixed performance model represents anything that always produces at its rated capacity and cannot be controlled or reduced by the system level controller. The SLC reads the output from a fixed technology and subtracts it from the demand, but does not send a set-point back to the technology. A good example of this is a classical nuclear plant model — it produces a constant output that the rest of the system must accommodate.
+
+## Flexible
+A flexible performance model represents anything that can have the output reduced based on a given set point from the system level controller. A good example of this is the PVWatts PySAM solar plant in H2I, the performance of the system is based on the input solar resource. The solar performance does not change based on, for example, an updated set point to the tracking software, but we could limit the power output from the solar performance model based on a given demand set point. To simplify the implementation of applying this curtailment or reduction based on a set point we added a method, `apply_curtailment()` to the `PerformanceBaseClass`.
 
 ```{figure} figures/curtailable.png
 :width: 70%
@@ -61,3 +67,10 @@ The system-level controller outputs set points to the storage performance model 
 
 ## Feedstock
 Another category of control classifiers are feedstocks. The unique thing about feedstocks is that they are considered outside of the controllable system within H2I. While they can't be controlled it can be helpful for controllers to know how much feedstock is available within the system, hence their classification.
+
+## SLC Dispatch Order
+The system level controllers dispatch technologies in the following order:
+1. **Fixed** — subtract their production from demand
+2. **Flexible** — run at full capacity, subtract from demand
+3. **Storage** — absorb surplus or provide deficit
+4. **Dispatchable** — cover remaining demand

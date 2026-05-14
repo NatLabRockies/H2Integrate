@@ -19,10 +19,11 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     Dispatches technologies only when the commodity sell price exceeds
     the marginal cost of production:
 
-    1. Curtailable techs run at rated capacity (zero marginal cost,
+    1. Fixed techs always produce (cannot be controlled).
+    2. Flexible techs run at rated capacity (zero marginal cost,
        always profitable to produce).
-    2. Storage absorbs surplus / provides deficit.
-    3. Dispatchable techs are dispatched in merit order (cheapest first),
+    3. Storage absorbs surplus / provides deficit.
+    4. Dispatchable techs are dispatched in merit order (cheapest first),
        but **only if** their marginal cost is below the sell price.
        Demand may go unmet if dispatch is unprofitable.
 
@@ -93,18 +94,21 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         demand = inputs[self.demand_input_name].copy()
         sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
 
-        # 1. Curtailable techs: full production (always profitable)
-        for curtailable_tech in self.curtailable_techs:
-            commodity_from_tech = self._get_commodity_for_tech(curtailable_tech)
-            # check that this tech produces the commodity demanded
+        # 1. Fixed techs: always produce, subtract from demand
+        for fixed_tech in self.fixed_techs:
+            commodity_from_tech = self._get_commodity_for_tech(fixed_tech)
             if self.commodity in commodity_from_tech:
-                # if the commodity produced from a tech is the demanded commodity
-                # then subtract the curtailable production from the demand
-                demand = self._subtract_curtailable(
-                    curtailable_tech, demand, self.commodity, inputs, outputs
+                demand = self._subtract_fixed(fixed_tech, demand, self.commodity, inputs)
+
+        # 2. Flexible techs: full production (always profitable)
+        for flexible_tech in self.flexible_techs:
+            commodity_from_tech = self._get_commodity_for_tech(flexible_tech)
+            if self.commodity in commodity_from_tech:
+                demand = self._subtract_flexible(
+                    flexible_tech, demand, self.commodity, inputs, outputs
                 )
 
-        # 2. Storage dispatch
+        # 3. Storage dispatch
         # number of storage components that produce the demanded commodity
         n_storage = len(
             [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
@@ -116,7 +120,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
                     storage_tech, demand / n_storage, self.commodity, inputs, outputs
                 )
 
-        # 3. Profit-driven merit-order dispatch
+        # 4. Profit-driven merit-order dispatch
         remaining = np.maximum(demand, 0.0)
 
         marginal_costs = self._compute_marginal_costs(inputs)

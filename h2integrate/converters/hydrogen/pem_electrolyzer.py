@@ -63,7 +63,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
-    _control_classifier = "curtailable"
+    _control_classifier = "dispatchable"
 
     def setup(self):
         self.config = ECOElectrolyzerPerformanceModelConfig.from_dict(
@@ -223,5 +223,8 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "Annual O2 Production [kg/year]"
         ]
 
-        # Apply curtailment based on set_point
-        self.apply_curtailment(outputs)
+        # Apply set_point from system-level controller if present
+        if "system_level_control" in self.options["plant_config"]:
+            set_point = inputs[f"{self.commodity}_set_point"]
+            commodity_out_key = f"{self.commodity}_out"
+            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], set_point)
