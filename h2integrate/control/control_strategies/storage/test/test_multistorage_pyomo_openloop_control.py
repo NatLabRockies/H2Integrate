@@ -788,3 +788,101 @@ def test_battery_pyomo_h2s_openloop(subtests, plant_config):
             h2s_expected_discharge,
             rtol=1e-6,
         )
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("pyo_controllers", ["bat"])
+def test_battery_pyomo_battery_openloop(subtests, plant_config):
+    bat2_expected_discharge = np.concat([np.zeros(18), np.ones(6)])
+    bat2_expected_charge = np.concat([np.zeros(8), np.arange(-1, -9, -1), np.zeros(8)])
+    bat_expected_charge = np.concat(
+        [
+            np.zeros(12),
+            np.array(
+                [
+                    -3988.62235554,
+                    -3989.2357847,
+                    -3989.76832626,
+                    -3990.26170521,
+                    -3990.71676106,
+                    -3991.13573086,
+                    -3991.52143699,
+                    -3991.87684905,
+                    -3992.20485715,
+                    -3992.50815603,
+                    -3992.78920148,
+                    -3993.05020268,
+                ]
+            ),
+        ]
+    )
+    bat_expected_discharge = np.concat(
+        [
+            np.array(
+                [
+                    5999.99995059,
+                    5990.56676743,
+                    5990.138959,
+                    5989.64831176,
+                    5989.08548217,
+                    5988.44193888,
+                    5987.70577962,
+                    5986.86071125,
+                    5985.88493352,
+                    5984.7496388,
+                    5983.41717191,
+                    5981.839478,
+                ]
+            ),
+            np.zeros(12),
+        ]
+    )
+
+    prob = om.Problem()
+
+    # make h2 storage group
+    h2s_group = prob.model.add_subsystem("battery_2", om.Group())
+    h2s_ivc_comp, h2s_perf_comp, h2s_control_comp = make_h2_storage_openloop_group(plant_config)
+    h2s_group.add_subsystem("IVC1", h2s_ivc_comp, promotes=["*"])
+    h2s_group.add_subsystem("control", h2s_control_comp, promotes=["*"])
+    h2s_group.add_subsystem("perf", h2s_perf_comp, promotes=["*"])
+
+    # make battery group
+    bat_rule_comp, bat_perf_comp, bat_control_comp, electricity_in = make_battery_pyo_group(
+        plant_config
+    )
+    bat_group = prob.model.add_subsystem("battery", om.Group())
+    bat_group.add_subsystem("IVC2", electricity_in, promotes=["*"])
+    bat_group.add_subsystem("rule", bat_rule_comp, promotes=["*"])
+    bat_group.add_subsystem("control", bat_control_comp, promotes=["*"])
+    bat_group.add_subsystem("perf", bat_perf_comp, promotes=["*"])
+
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("Battery #1: Expected charge"):
+        np.testing.assert_allclose(
+            prob.get_val("battery.storage_electricity_charge", units="kW")[:24],
+            bat_expected_charge,
+            rtol=1e-6,
+        )
+    with subtests.test("Battery #1: Expected discharge"):
+        np.testing.assert_allclose(
+            prob.get_val("battery.storage_electricity_discharge", units="kW")[:24],
+            bat_expected_discharge,
+            rtol=1e-6,
+        )
+
+    # battery_2 is a "hydrogen battery"
+    with subtests.test("Battery #2: Expected charge"):
+        np.testing.assert_allclose(
+            prob.get_val("battery_2.storage_hydrogen_charge", units="kg/h")[:24],
+            bat2_expected_charge,
+            rtol=1e-6,
+        )
+    with subtests.test("Battery #2: Expected discharge"):
+        np.testing.assert_allclose(
+            prob.get_val("battery_2.storage_hydrogen_discharge", units="kg/h")[:24],
+            bat2_expected_discharge,
+            rtol=1e-6,
+        )

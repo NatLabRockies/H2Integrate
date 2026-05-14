@@ -227,11 +227,7 @@ class GridCostModel(CostModelBaseClass):
         if self.config.electricity_buy_price is not None:
             self._buy_price_mode = self.config.buy_price_mode
             if self._buy_price_mode is None:
-                # Default: scalar if single value, per_timestep if array
-                if isinstance(self.config.electricity_buy_price, list | np.ndarray):
-                    self._buy_price_mode = "per_timestep"
-                else:
-                    self._buy_price_mode = "per_timestep"
+                self._buy_price_mode = "per_timestep"
 
             if self._buy_price_mode == "per_year":
                 buy_price_shape = plant_life
@@ -270,10 +266,7 @@ class GridCostModel(CostModelBaseClass):
         if self.config.electricity_sell_price is not None:
             self._sell_price_mode = self.config.sell_price_mode
             if self._sell_price_mode is None:
-                if isinstance(self.config.electricity_sell_price, list | np.ndarray):
-                    self._sell_price_mode = "per_timestep"
-                else:
-                    self._sell_price_mode = "per_timestep"
+                self._sell_price_mode = "per_timestep"
 
             if self._sell_price_mode == "per_year":
                 sell_price_shape = plant_life

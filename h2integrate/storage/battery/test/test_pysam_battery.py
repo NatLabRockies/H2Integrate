@@ -201,6 +201,10 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             expected_unused_electricity,
             rtol=1e-2,
         )
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
 
 
 @pytest.mark.regression
@@ -393,6 +397,11 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             == init_charge_rate
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob_init.get_val("pysam_battery.storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
+
     # Re-run and set the charge rate as half of what it was before
     prob = om.Problem()
     prob.model.add_subsystem(
@@ -469,3 +478,8 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             )
             == 2.5
         )
+
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("pysam_battery.storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])

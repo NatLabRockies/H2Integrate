@@ -162,7 +162,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             for _source_tech, intended_dispatch_tech in self.options["plant_config"][
                 "tech_to_dispatch_connections"
             ]:
-                if any(intended_dispatch_tech in name for name in self.tech_group_name):
+                if any(intended_dispatch_tech == name for name in self.tech_group_name):
                     self.add_input(
                         f"{commodity}_demand",
                         val=self.config.demand_profile,
@@ -260,6 +260,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 "charge_rate": charge_rate,
                 "discharge_rate": discharge_rate,
                 "storage_capacity": storage_capacity,
+                "commodity_available": inputs[f"{self.commodity}_in"],
             }
             storage_commodity_out, soc = dispatch(self.simulate, kwargs, inputs)
 
@@ -269,6 +270,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 charge_rate=charge_rate,
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,
+                commodity_available=inputs[f"{self.commodity}_in"],
             )
 
         # determine storage charge and discharge
@@ -319,6 +321,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         charge_rate: float,
         discharge_rate: float,
         storage_capacity: float,
+        commodity_available: list | np.ndarray,
         sim_start_index: int = 0,
     ):
         """Run the storage model over a control window of ``n_control_window_hours`` length of time.
@@ -357,6 +360,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 ``commodity_rate_units`` (before discharge efficiency is applied).
             storage_capacity (float):
                 Rated storage capacity in ``commodity_amount_units``.
+            commodity_available (list | np.ndarray): the input commodity available
+                to charge storage.
             sim_start_index (int, optional):
                 Starting index for writing into persistent output arrays.
                 Defaults to 0.
@@ -399,11 +404,18 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 # expressed as a rate (commodity_rate_units).
                 headroom = (soc_max - soc) * storage_capacity / self.dt_hr
 
+                # charge available based on the available input commodity
+                charge_available = commodity_available[sim_start_index + t]
+
                 # Clip to the most restrictive limit, then apply efficiency.
                 # max(0, ...) guards against negative headroom when SOC
                 # slightly exceeds soc_max.
                 # correct headroom to not include charge_eff.
-                actual_charge = max(0.0, min(headroom / charge_eff, charge_rate, -cmd)) * charge_eff
+
+                actual_charge = (
+                    max(0.0, min(headroom / charge_eff, charge_rate, -cmd, charge_available))
+                    * charge_eff
+                )
 
                 # Update SOC (actual_charge is in post-efficiency units)
                 soc += actual_charge / storage_capacity
