@@ -1,7 +1,9 @@
 import os
+import json
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 from h2integrate.preprocess import geospatial
 from h2integrate.core.file_utils import get_path
@@ -159,6 +161,23 @@ def _validate_price_category(price_category: str | list[str]) -> list[str]:
     return price_category
 
 
+def _validate_file_name(filename: str | Path | None) -> Path | None:
+    """Finds and validates the :py:attr:`filename` if one is passed.
+
+    Args:
+        filename (str | Path | None): Full file path or None.
+
+    Returns:
+        Path | None: A resolved :py:attr:`filename` if one was provided.
+    """
+    if filename is not None:
+        try:
+            filename = get_path(filename)
+        except FileNotFoundError:
+            filename = Path(filename).resolve()
+    return filename
+
+
 def create_eia_ng_api_url(
     api_key_file: str | Path | None,
     resource_year: int | tuple[int, int],
@@ -211,3 +230,95 @@ def create_eia_ng_api_url(
     url_opts = "&".join((frequency, data, facets, start, end, sort_col, sort_dir, api_key))
     url = f"{base_url}?{url_opts}"
     return url
+
+
+def get_eia_ng_data(
+    api_key_file: str | Path | None,
+    resource_year: int | tuple[int, int],
+    price_category: str | list[str],
+    state: str | list[str],
+    filename: str | Path | None = None,
+    *,
+    monthly: bool = True,
+):
+    """Create a validated EIA Natural Gas API URL that is ready to be queried.
+
+    Args:
+        api_key_file (Path, optional): Full file name of the file where the API key is located. If
+            no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
+        resource_year (int | list[int]): The YYYY-formatted year or length-2 tuple of years whose
+            data should be retrieved. Should be between 2001 and the current year, inclusive of
+            endpoints as that is all that the EIA provides, regardless of what is queried.
+        price_category (str | list[str]): One or a combination of "wellhead", "imports", "citygate",
+            "residential", "commercial","industrial", "electrical_power", or "exports". Note that
+            not all categories will return state-level data.
+        state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
+            as "United States" or "US". Only the "US" or one of the 50 US states will produce valid
+            results.
+        filename (str | Path | None): Full file name where the EIA data can either be loaded from
+            or should be saved to. If None, then data will be queried and returned with saving
+            left to the user.
+        monthly (Path): True, if monthly data is desired, False if annual data is desired.
+
+    Returns:
+        pd.DataFrame: A monthly dataframe containing the date, state, price_category, and price
+            (MMBTU).
+    """
+
+    filename = _validate_file_name(filename)
+    state = _validate_state(state)
+    price_category = _validate_price_category(price_category)
+    resource_year = _validate_resource_year(resource_year)
+
+    url = create_eia_ng_api_url(
+        api_key_file=api_key_file,
+        resource_year=resource_year,
+        price_category=price_category,
+        state=state,
+        monthly=monthly,
+    )
+
+    start, end = resource_year
+    keep_cols = ["price"]
+    if len(state) > 1:
+        keep_cols = ["state", *keep_cols]
+    if len(price_category) > 1:
+        keep_cols = ["price_category", *keep_cols]
+    if filename is not None:
+        if filename.exists():
+            df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
+            df = df.loc[
+                (df.index.year >= start)(df.index.year <= end)
+                & df.category.isin(price_category)
+                & df.state.isin(state),
+                cols,
+            ]
+            df = convert_to_monthly(df)
+            if df is not None:
+                return df
+
+    r = requests.get(url)
+    if r.status_code != 200:
+        err = json.loads(r.text)["error"]
+        raise requests.exceptions.HTTPError(err)
+
+    df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
+    if df.size == 0:
+        raise ValueError(f"No data for combination {state=}, {price_category=}")
+
+    df.period = pd.to_datetime(df.period)
+    df.value = df.value.astype(float)
+    return df
+    # TODO: finished off here
+    df = (
+        df.set_index("period")
+        .rename(columns={"value": "price", "area-name": "state"})
+        .replace("U.S.", "US")
+    )[["state", "price"]]
+    df = convert_to_monthly(df)
+    df.price *= MCF_to_MMBTU
+
+    if filename is not None:
+        df.to_csv(filename, index_label="period")
+
+    return df
