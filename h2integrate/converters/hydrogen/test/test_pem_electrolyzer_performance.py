@@ -202,3 +202,44 @@ def test_electrolyzer_results(tech_config, plant_config, subtests):
             pytest.approx(52.72613937672745, rel=1e-6)
             == total_electricity_consumed / total_h2_produced
         )
+
+
+@pytest.mark.unit
+def test_electrolyzer_outputs_never_operated(tech_config, plant_config, subtests):
+    int(plant_config["plant"]["plant_life"])
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+
+    prob = om.Problem()
+    comp = ECOElectrolyzerPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    power_profile = np.zeros(n_timesteps)
+    prob.set_val("comp.electricity_in", power_profile, units="MW")
+
+    prob.run_model()
+
+    with subtests.test("Time until replacement is same as config"):
+        assert (
+            prob.get_val("comp.time_until_replacement")[0]
+            == tech_config["model_inputs"]["performance_parameters"]["uptime_hours_until_eol"]
+        )
+
+    with subtests.test("Zero efficiency"):
+        assert prob.get_val("comp.efficiency") == 0.0
+
+    with subtests.test("Zero hydrogen production"):
+        assert prob.get_val("comp.hydrogen_out").sum() == 0.0
+
+    with subtests.test("Zero oxygen production"):
+        assert prob.get_val("comp.oxygen_out").sum() == 0.0
+
+    with subtests.test("Zero water consumption"):
+        assert prob.get_val("comp.water_consumed").sum() == 0.0
+
+    with subtests.test("Zero power consumption"):
+        assert prob.get_val("comp.electricity_consumed").sum() == 0.0
+
+    with subtests.test("Zero capacity factor"):
+        assert prob.get_val("comp.capacity_factor").sum() == 0.0
