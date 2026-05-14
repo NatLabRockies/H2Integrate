@@ -279,6 +279,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             initial_set_point=initial_set_point,
                         )
 
+                if category == "storage":
+                    self.add_input(
+                        f"{tech_name}_{commodity}_storage_duration", val=0.0, shape=1, units="h"
+                    )
+
                 commodity_names.append(commodity)
                 input_names.append(in_name)
                 set_point_names.append(set_point_name)

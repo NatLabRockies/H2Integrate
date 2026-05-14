@@ -749,6 +749,13 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_rated_{commodity}_production",
             )
 
+            # Storage tech: connect the storage duration as a controller input
+            if slc_config["tech_control_classifiers"][tech_name] == "storage":
+                self.plant.connect(
+                    f"{tech_name}.storage_duration",
+                    f"system_level_controller.{tech_name}_{commodity}_storage_duration",
+                )
+
             # Connect the controller's output back to the technology.
             if slc_config["storage_techs_to_control"].get(tech_name, False):
                 # Storage tech with its own sub-controller: provide a demand
