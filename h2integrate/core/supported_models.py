@@ -2,7 +2,6 @@ from h2integrate.feedstocks import (
     FeedstockCostModel,
     FeedstockPerformanceModel,
     EIANaturalGasFeedstockCostModel,
-    EIANaturalGasFeedstockPerformanceModel,
 )
 from h2integrate.resource.river import RiverResource
 from h2integrate.resource.tidal import TidalResource
@@ -320,7 +319,6 @@ supported_models = {
     "FeedstockPerformanceModel": FeedstockPerformanceModel,
     "FeedstockCostModel": FeedstockCostModel,
     "EIANaturalGasFeedstockCostModel": EIANaturalGasFeedstockCostModel,
-    "EIANaturalGasFeedstockPerformanceModel": EIANaturalGasFeedstockPerformanceModel,
     # Grid
     "GridPerformanceModel": GridPerformanceModel,
     "GridCostModel": GridCostModel,
