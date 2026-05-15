@@ -1,11 +1,4 @@
-try:
-    import reverse_geocoder as rg
-except ModuleNotFoundError as e:
-    msg = (
-        "Geospatial tools require the `reverse_geocoder` library to be installed. Directly"
-        " `pip install reverse_geocoder` or use `pip install h2integrate[gis]`."
-    )
-    raise ModuleNotFoundError(msg) from e
+"""Geospatial preprocessing tools. Currently geared towards helping with processing of EIA data."""
 
 STATE_MAP = {
     "Alabama": "AL",
@@ -90,26 +83,59 @@ def convert_state_to_code(state: str) -> str:
     return STATE_MAP.get(state, state)
 
 
-def get_state_from_coords(latitude: float, longitude: float) -> str:
+def get_state_from_coords(
+    *,
+    coordinates: tuple[float, float] | list[tuple, float, float] | None = None,
+    latitude: float | list[float] | None = None,
+    longitude: float | list[float] | None = None,
+) -> str | list[str]:
     """Reverse geocodes a :py:attr:`latitude` and :py:attr:`longitude` pair to get the
-    state containing the coordinate pair.
+    state containing the coordinate pair. Use one of :py:attr:`coordinates` or :py:attr:`latitude`
+    with :py:attr:`longitude`, not both.
+
+    ``reverse_geocoder`` library required. Directly ``pip install reverse_geocoder`` or use
+    ``pip install h2integrate[gis]``
 
     Args:
-        latitude (float): Site latitude.
-        longitude (float): Site longitude.
+        coordinates (tuple[float, float] | list[tuple[float, float]], optional): Either a tuple
+            coordinate pair as (latitude, longitude), or a list of coordinate pairs in the same
+            format.
+        latitude (float | list[float], optional): Site latitude or a list of site latitudes. Use one
+            of :py:attr:`coordinates` or :py:attr:`latitude` with :py:attr:`longitude`, not both.
+        longitude (float | list[float], optional): Site longitude or a list of site longitudes. Use
+            one of :py:attr:`coordinates` or :py:attr:`latitude` with :py:attr:`longitude`, not
+            both.
 
     Returns:
-        str: 2-letter state code (i.e., "Alabama" -> "AL").
+        str | list[str]: 2-letter state code (i.e., "Alabama" -> "AL") for each site that was
+        provided.
     """
     try:
         import reverse_geocoder as rg
     except ModuleNotFoundError as e:
         msg = (
-            "EIA natural gas feedstock coordinate input requires `reverse_geocoder` to be"
-            " installed. Directly `pip install reverse_geocoder` or use"
+            "`reverse_geocoder` library required. Directly `pip install reverse_geocoder` or use"
             " `pip install h2integrate[gis]`."
         )
         raise ModuleNotFoundError(msg) from e
 
-    result = rg.search((latitude, longitude))[0]
-    return convert_state_to_code(convert_state_value(result["admin1"]))
+    if coordinates is None:
+        if latitude is None or longitude is None:
+            msg = (
+                "At least one value provided for `coordinates` or combination of `latitude` and"
+                " `longitude`."
+            )
+            raise ValueError(msg)
+        if isinstance(latitude, float | int):
+            latitude = [latitude]
+        if isinstance(longitude, float | int):
+            longitude = [longitude]
+        if (lat_len := len(latitude)) != (lon_len := len(longitude)):
+            msg = f"Length of `latitude` ({lat_len}) and `longitude` ({lon_len}) inputs not equal."
+            raise ValueError(msg)
+        coordinates = list(zip(latitude, longitude))
+
+    result = rg.search(coordinates)
+    single = len(result) == 1
+    state = [convert_state_to_code(convert_state_value(el["admin1"])) for el in result]
+    return state[0] if single else state
