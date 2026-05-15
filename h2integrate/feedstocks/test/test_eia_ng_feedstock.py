@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from requests.exceptions import HTTPError
 
-from h2integrate.feedstocks import eia_ng_pricing as eia
+from h2integrate.feedstocks import eia_ng_price as eia
 
 
 DUMMY_KEY = "xxxxxx"

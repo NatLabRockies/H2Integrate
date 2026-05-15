@@ -44,6 +44,10 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             state-level data.
         api_key_file (Path, optional): Full file name of the file where the API key is located. If
             no file name is provided, then the environment variables ``EIA_API_KEY`` is used.
+        latitude (float | None): WGS-84 y-coordinate of the site. Will not be used if
+            :py:attr:`state` has been provided.
+        longitude (float | None): WGS-84 x-coordinate of the site. Will not be used if
+            :py:attr:`state` has been provided.
         filename (str, optional): Filename for where to save the data or where the data may
             already be located. If the file exists, the columns "period", "state", and "price" must
             exist, otherwise the file will not be used. "period" should be of the form YYYY or
@@ -113,6 +117,10 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     """Feedstock cost model based on the EIA natural gas price API results that uses
     annual or monthly data to model an hourly time step for a single year to model the
     price of natural gas used in the model.
+
+    The model will pull the single site data if it is made available to pass the ``latitude`` and
+    ``longitude`` from the site configuration, otherwise the ``state`` will need to be provided
+    in the configuration.
     """
 
     def setup(self):
@@ -120,12 +128,9 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
         ``plant_life``.
         """
-        # TODO: figure out mult-site or single site usage for coordinates input
-        if (site_config := self.options["plant_config"].get("site")) is None:
-            raise ValueError("Single-site definition is missing from the plant configuration.")
+        site_config = self.options["plant_config"].get("site", {})
         self.config = EIANaturalGasFeedstockConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
-            # merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost") | site_config,  # noqa: E501
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost") | site_config,
             additional_cls_name=self.__class__.__name__,
             strict=False,
         )
