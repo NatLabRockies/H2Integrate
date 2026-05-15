@@ -296,11 +296,11 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        # Units of total_{commodity}_produced are in commodity_amount_units, 
+        # Units of total_{commodity}_produced are in commodity_amount_units,
         # To make sure the LHS and RHS have
-        # consistent units, we need to multiply by dt_hr 
+        # consistent units, we need to multiply by dt_hr
         # to convert it to commodity_amount_units.
-        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)*self.dt_hr
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_hr
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
@@ -313,7 +313,9 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_hr
             )
             # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
-            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_hr
+            total_commodity_discharged = (
+                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_hr
+            )
             outputs["standard_capacity_factor"] = (total_commodity_discharged) / (
                 outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_hr
             )

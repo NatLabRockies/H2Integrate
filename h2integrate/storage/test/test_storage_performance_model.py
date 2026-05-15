@@ -1211,6 +1211,7 @@ def test_round_trip_efficiency_preserved_in_config(subtests):
         assert config_dict["charge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
         assert config_dict["discharge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
 
+
 @pytest.fixture
 def plant_config_non_hourly(n_timesteps):
     plant = {
@@ -1225,7 +1226,6 @@ def plant_config_non_hourly(n_timesteps):
     return plant
 
 
-
 @pytest.mark.regression
 def test_storage_half_hourly_known_outputs(subtests):
     """Verify SOC, charge/discharge profiles, and scalar outputs against calculated
@@ -1236,8 +1236,8 @@ def test_storage_half_hourly_known_outputs(subtests):
         t2, t3: discharge at 10 kg/h — removes 5 kg each step
 
     With capacity=40 kg, init_soc=0.1, eff=1.0, min_soc=0.1, max_soc=1.0:
-        SOC[0] = 0.1 + 5/40 = 0.225   
-        SOC[1] = 0.225 + 5/40 = 0.35  
+        SOC[0] = 0.1 + 5/40 = 0.225
+        SOC[1] = 0.225 + 5/40 = 0.35
         SOC[2] = 0.35  - 5/40 = 0.225
         SOC[3] = 0.225 - 5/40 = 0.1
     total_hydrogen_produced = (-10 - 10 + 10 + 10) * 0.5 hr = 0 kg
@@ -1314,12 +1314,15 @@ def test_storage_half_hourly_known_outputs(subtests):
         )
 
     with subtests.test("total_hydrogen_produced = 0 kg (charge equals discharge)"):
-        assert pytest.approx(
-            prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9
-        ) == 0.0
+        assert (
+            pytest.approx(prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9)
+            == 0.0
+        )
 
     with subtests.test("standard_capacity_factor = 50 %"):
-        assert pytest.approx(
-            prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
-        ) == 50.0
-
+        assert (
+            pytest.approx(
+                prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
+            )
+            == 50.0
+        )
