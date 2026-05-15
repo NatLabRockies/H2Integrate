@@ -24,6 +24,7 @@ peaks in demand_profile to demonstrate how the peak selection impacts dispatch.
 
 import numpy as np
 import pandas as pd
+import openmdao.api as om
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -35,17 +36,11 @@ from h2integrate.core.utilities import build_time_series_from_plant_config
 model = H2IntegrateModel("33_peak_load_management.yaml")
 
 model.setup()
+om.n2(model.prob)
 model.run()
 model.post_process()
 
-# plot the results for the first week
-supervisor_demand = np.array(
-    model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
-        "demand_profile_upstream"
-    ]
-)
-
-secondary_demand = model.prob.get_val("battery.electricity_demand", units="kW")
+demand_profile = model.prob.get_val("fuel_cell.electricity_demand", units="kW")
 grid_output = model.prob.get_val("grid_buy.electricity_out", units="MW")
 
 time_series = build_time_series_from_plant_config(model.plant_config)
@@ -57,25 +52,20 @@ time_plot = time_series[:n_plot]
 peak_patch = Patch(facecolor="orange", alpha=0.12, label="Expected peak window (12pm to 7pm)")
 
 fig, ax = plt.subplots(4, 1, sharex=True, figsize=(10, 5))
-ax[0].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
-ax[0].plot(time_plot, supervisor_demand[:n_plot] * 1e-3, label="Overriding demand (MW)")
+ax[0].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[0].legend(handles=[*ax[0].get_legend_handles_labels()[0], peak_patch], frameon=True, ncol=3)
 
-ax[1].plot(time_plot, model.prob.get_val("battery.SOC", units="percent")[:n_plot])
-ax[1].set(ylabel="SOC", ylim=[0, 100])
-ax[1].legend(handles=[*ax[1].get_legend_handles_labels()[0]], frameon=False, ncol=2)
-
-ax[2].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[2].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[2].plot(
     time_plot,
-    model.prob.get_val("battery.electricity_out", units="MW")[:n_plot],
-    label="Battery charge/discharge",
+    model.prob.get_val("fuel_cell.electricity_out", units="MW")[:n_plot],
+    label="fuel_cell charge/discharge",
 )
 ax[2].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[2].legend(handles=[*ax[2].get_legend_handles_labels()[0]], frameon=False, ncol=2)
 
-ax[3].plot(time_plot, secondary_demand[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[3].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[3].plot(
     time_plot,
     model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="MW")[:n_plot],
@@ -107,40 +97,40 @@ for axis in ax:
 ############################## annotate override peaks ###########################
 
 # Find top 3 daily peaks in supervisor demand (one per day in first week)
-supervisor_demand_first_week = supervisor_demand[:n_plot] * 1e-3
-days_first_week = pd.to_datetime(np.unique(pd.DatetimeIndex(time_plot).normalize()))
+# supervisor_demand_first_week = supervisor_demand[:n_plot] * 1e-3
+# days_first_week = pd.to_datetime(np.unique(pd.DatetimeIndex(time_plot).normalize()))
 
-daily_peaks = []
-for day in days_first_week:
-    day_start = day
-    day_end = day + pd.Timedelta(days=1)
-    day_mask = (time_plot >= day_start) & (time_plot < day_end)
-    if day_mask.any():
-        day_indices = np.where(day_mask)[0]
-        peak_idx = day_indices[np.argmax(supervisor_demand_first_week[day_indices])]
-        peak_time = time_plot[peak_idx]
-        peak_value = supervisor_demand_first_week[peak_idx]
-        daily_peaks.append((peak_time, peak_value))
+# daily_peaks = []
+# for day in days_first_week:
+#     day_start = day
+#     day_end = day + pd.Timedelta(days=1)
+#     day_mask = (time_plot >= day_start) & (time_plot < day_end)
+#     if day_mask.any():
+#         day_indices = np.where(day_mask)[0]
+#         peak_idx = day_indices[np.argmax(supervisor_demand_first_week[day_indices])]
+#         peak_time = time_plot[peak_idx]
+#         peak_value = supervisor_demand_first_week[peak_idx]
+#         daily_peaks.append((peak_time, peak_value))
 
-# Sort by peak value and get top 3
-top_3_peaks = sorted(daily_peaks, key=lambda x: x[1], reverse=True)[:3]
-top_3_peaks_sorted_by_time = sorted(top_3_peaks, key=lambda x: x[0])
+# # Sort by peak value and get top 3
+# top_3_peaks = sorted(daily_peaks, key=lambda x: x[1], reverse=True)[:3]
+# top_3_peaks_sorted_by_time = sorted(top_3_peaks, key=lambda x: x[0])
 
-# Draw vertical dashed lines for top 3 daily peaks across all subplots
-colors = ["k", "k", "k"]
-for idx, (peak_time, _) in enumerate(top_3_peaks_sorted_by_time):
-    for axis in ax:
-        axis.axvline(peak_time, color=colors[idx], linestyle="--", linewidth=1.5, alpha=0.7)
-    # Add label on top subplot
-    ax[0].text(
-        peak_time,
-        ax[0].get_ylim()[1] + 0.3,
-        f"Peak override {idx + 1}",
-        fontsize=9,
-        ha="center",
-        color=colors[idx],
-        weight="bold",
-    )
+# # Draw vertical dashed lines for top 3 daily peaks across all subplots
+# colors = ["k", "k", "k"]
+# for idx, (peak_time, _) in enumerate(top_3_peaks_sorted_by_time):
+#     for axis in ax:
+#         axis.axvline(peak_time, color=colors[idx], linestyle="--", linewidth=1.5, alpha=0.7)
+#     # Add label on top subplot
+#     ax[0].text(
+#         peak_time,
+#         ax[0].get_ylim()[1] + 0.3,
+#         f"Peak override {idx + 1}",
+#         fontsize=9,
+#         ha="center",
+#         color=colors[idx],
+#         weight="bold",
+#     )
 ###########################################################################################
 
 plt.tight_layout()

@@ -186,6 +186,9 @@ from h2integrate.control.control_rules.converters.generic_converter_min_operatin
 from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
     DemandOpenLoopStorageController,
 )
+from h2integrate.control.control_strategies.converters.plm_openloop_converter_controller import (
+    PeakLoadManagementHeuristicOpenLoopConverterController,
+)
 
 
 supported_models = {
@@ -285,6 +288,9 @@ supported_models = {
     # Simple Summers
     "GenericSummerPerformanceModel": GenericSummerPerformanceModel,
     # Storage
+    "PeakLoadManagementHeuristicOpenLoopConverterController": (
+        PeakLoadManagementHeuristicOpenLoopConverterController
+    ),
     "PySAMBatteryPerformanceModel": PySAMBatteryPerformanceModel,
     "StoragePerformanceModel": StoragePerformanceModel,
     "StorageAutoSizingModel": StorageAutoSizingModel,
