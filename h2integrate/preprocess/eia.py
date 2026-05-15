@@ -109,8 +109,7 @@ def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, 
         return resource_year, resource_year
 
     msg = (
-        "Either pass a single `resource_year` or length-2 tuple for the starting"
-        " and ending years."
+        "Either pass a single `resource_year` or length-2 tuple for the starting and ending years."
     )
     raise TypeError(msg)
 
@@ -212,7 +211,7 @@ def create_eia_ng_api_url(
 
     start_year, end_year = _validate_resource_year(resource_year)
     state = _validate_state(state)
-    price_category = _validate_price_category
+    price_category = _validate_price_category(price_category)
     series = [EIA_NG_FACET[c].format(s) for c in price_category for s in state]
 
     base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
