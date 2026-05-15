@@ -8,6 +8,7 @@ plant:
     timezone: -6
     start_time: 2025/07/01 00:00:00
 technology_interconnections:
+  - [grid_buy, battery, electricity, cable]
   # include battery charge/discharge in the load
   - [battery, electrical_load_demand, [electricity_out, electricity_in]]
   # buy power from the grid to fulfill demand including to accommodate battery operation
