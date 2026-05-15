@@ -296,7 +296,11 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)
+        # Units of total_{commodity}_produced are in commodity_amount_units, 
+        # To make sure the LHS and RHS have
+        # consistent units, we need to multiply by dt_hr 
+        # to convert it to commodity_amount_units.
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)*self.dt_hr
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
@@ -306,12 +310,12 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             outputs["standard_capacity_factor"] = 0.0
         else:
             outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_hr
             )
             # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
-            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum()
-            outputs["standard_capacity_factor"] = total_commodity_discharged / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_hr
+            outputs["standard_capacity_factor"] = (total_commodity_discharged) / (
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_hr
             )
         return outputs
 
@@ -418,7 +422,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 )
 
                 # Update SOC (actual_charge is in post-efficiency units)
-                soc += actual_charge / storage_capacity
+                soc += actual_charge * self.dt_hr / storage_capacity
 
                 # Update the amount of commodity used to charge from the input stream
                 # If charge_eff<1, more commodity is pulled from the input stream than
@@ -437,7 +441,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 )
 
                 # Update SOC (actual_discharge is before efficiency losses are applied.)
-                soc -= actual_discharge / storage_capacity
+                soc -= actual_discharge * self.dt_hr / storage_capacity
 
                 # If discharge_eff<1, then less commodity is output from the storage
                 # than the commodity discharged from storage

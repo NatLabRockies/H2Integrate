@@ -1210,3 +1210,116 @@ def test_round_trip_efficiency_preserved_in_config(subtests):
         assert config_dict["round_trip_efficiency"] == round_trip_eff
         assert config_dict["charge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
         assert config_dict["discharge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
+
+@pytest.fixture
+def plant_config_non_hourly(n_timesteps):
+    plant = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "dt": 1800,
+                "n_timesteps": n_timesteps,
+            },
+        },
+    }
+    return plant
+
+
+
+@pytest.mark.regression
+def test_storage_half_hourly_known_outputs(subtests):
+    """Verify SOC, charge/discharge profiles, and scalar outputs against calculated
+    values for a simple scenario at dt=1800s (30-min dt).
+
+    Scenario (4 timesteps * 30 min = 2 hours total):
+        t0, t1: charge at 10 kg/h - stores 5 kg each step
+        t2, t3: discharge at 10 kg/h — removes 5 kg each step
+
+    With capacity=40 kg, init_soc=0.1, eff=1.0, min_soc=0.1, max_soc=1.0:
+        SOC[0] = 0.1 + 5/40 = 0.225   
+        SOC[1] = 0.225 + 5/40 = 0.35  
+        SOC[2] = 0.35  - 5/40 = 0.225
+        SOC[3] = 0.225 - 5/40 = 0.1
+    total_hydrogen_produced = (-10 - 10 + 10 + 10) * 0.5 hr = 0 kg
+    standard_capacity_factor = (10+10)*0.5 / (10 * 4 * 0.5) = 10/20 = 0.5 -> 50 %
+    """
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"dt": 1800, "n_timesteps": 4},
+        }
+    }
+    model_inputs = {
+        "shared_parameters": {
+            "commodity": "hydrogen",
+            "commodity_rate_units": "kg/h",
+        },
+        "performance_parameters": {
+            "max_capacity": 40.0,
+            "max_charge_rate": 10.0,
+            "min_soc_fraction": 0.1,
+            "max_soc_fraction": 1.0,
+            "init_soc_fraction": 0.1,
+            "commodity_amount_units": "kg",
+            "charge_equals_discharge": True,
+            "charge_efficiency": 1.0,
+            "discharge_efficiency": 1.0,
+            "demand_profile": 0.0,
+        },
+    }
+
+    commodity_in = np.array([10.0, 10.0, 0.0, 0.0])
+    set_point = np.array([-10.0, -10.0, 10.0, 10.0])
+
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "IVC1",
+        om.IndepVarComp("hydrogen_in", val=commodity_in, units="kg/h"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "IVC2",
+        om.IndepVarComp("hydrogen_set_point", val=set_point, units="kg/h"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config,
+            tech_config={"model_inputs": model_inputs},
+        ),
+        promotes=["*"],
+    )
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("SOC profile matches hand-calculated values"):
+        expected_soc_pct = np.array([22.5, 35.0, 22.5, 10.0])
+        np.testing.assert_allclose(
+            prob.get_val("storage.SOC", units="percent"), expected_soc_pct, rtol=1e-9
+        )
+
+    with subtests.test("Charge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
+            np.array([-10.0, -10.0, 0.0, 0.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("Discharge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/h"),
+            np.array([0.0, 0.0, 10.0, 10.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("total_hydrogen_produced = 0 kg (charge equals discharge)"):
+        assert pytest.approx(
+            prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9
+        ) == 0.0
+
+    with subtests.test("standard_capacity_factor = 50 %"):
+        assert pytest.approx(
+            prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
+        ) == 50.0
+
