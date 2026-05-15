@@ -122,8 +122,8 @@ def get_state_from_coords(
     if coordinates is None:
         if latitude is None or longitude is None:
             msg = (
-                "At least one value provided for `coordinates` or combination of `latitude` and"
-                " `longitude`."
+                "At least one value must be provided for `coordinates` or combination of"
+                " `latitude` and `longitude`."
             )
             raise ValueError(msg)
         if isinstance(latitude, float | int):

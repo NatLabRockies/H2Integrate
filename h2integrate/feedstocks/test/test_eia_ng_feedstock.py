@@ -1,5 +1,4 @@
 import os
-import importlib
 
 import numpy as np
 import pandas as pd
@@ -56,51 +55,6 @@ def test_convert_to_monthly(subtests):
         df = eia.convert_to_monthly(df)
         assert (df.index == correct_ix).all()
         assert (df.price.to_numpy() == correct_monthly_vals).all()
-
-
-@pytest.mark.unit
-@pytest.mark.skipif(
-    importlib.util.find_spec("reverse_geocoder") is None, reason="reverse_geocoder is not installed"
-)
-def test_get_state_from_coords(subtests):
-    """Test the reverse geocoding for state data functionality."""
-    best_trailer_in_colorado_coords = (39.9140081, -105.2249155)
-    definitely_not_the_us_coords = (53.5265263, -113.657807)
-
-    with subtests.test("Test valid US coordinate pair"):
-        assert "CO" == eia.get_state_from_coords(*best_trailer_in_colorado_coords)
-
-    with subtests.test("Test invalid US coordinate pair"):
-        result = eia.get_state_from_coords(*definitely_not_the_us_coords)
-        assert result not in eia.STATE_MAP.values()
-        assert result == "Alberta"
-
-
-@pytest.mark.unit
-@pytest.mark.skipif(
-    importlib.util.find_spec("reverse_geocoder") is not None, reason="reverse_geocoder is installed"
-)
-def test_get_state_from_coords_fail():
-    """Tests that the correct error is raised when ``reverse_geocoder` is missing."""
-    msg = "EIA natural gas feedstock coordinate input requires `reverse_geocoder`"
-    with pytest.raises(ModuleNotFoundError, match=msg):
-        eia.get_state_from_coords(0, 0)
-
-
-@pytest.mark.unit
-def test_convert_state_value():
-    """Tests the conversion of the state value to a compliant name or code format."""
-    assert eia.convert_state_value("united states") == "United States"
-    assert eia.convert_state_value("us") == "US"
-
-
-@pytest.mark.unit
-def test_convert_state_to_code():
-    """Tests the conversion of a state name to a 2 letter code."""
-    assert eia.convert_state_to_code("Washington") == "WA"
-    assert eia.convert_state_to_code("DC") == "DC"
-    assert eia.convert_state_to_code("JK") == "JK"
-    assert eia.convert_state_to_code("washington") == "washington"
 
 
 @pytest.mark.unit
