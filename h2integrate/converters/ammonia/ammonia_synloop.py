@@ -1,5 +1,6 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
+from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, range_val
@@ -76,6 +77,46 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
     purge_gas_x_ar: float = field(validator=range_val(0, 1))
     purge_gas_x_nh3: float = field(validator=range_val(0, 1))
     purge_gas_mass_ratio: float = field(validator=gt_zero)
+    # dynamics inputs
+    turndown_ratio: float = field(default=0.0, validator=range_val(0.0, 1.0))
+    ramp_up_rate_fraction: float = field(default=1.0, validator=range_val(0.0, 1.0))
+    ramp_down_rate_fraction: float = field(default=1.0, validator=range_val(0.0, 1.0))
+
+    include_cold_start: bool = field(default=False)
+    off_hours_cold_start: float = field(validator=validators.optional(gt_zero))
+    cold_start_delay_hours: float = field(validator=validators.optional(gt_zero))
+
+    include_warm_start: bool = field(default=False)
+    off_hours_warm_start: float = field(validator=validators.optional(gt_zero))
+    warm_start_delay_hours: float = field(validator=validators.optional(gt_zero))
+
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+
+        provided_cold_start_params = all(
+            getattr(self, param, None) is not None
+            for param in ["off_hours_cold_start", "cold_start_delay_hours"]
+        )
+        provided_warm_start_params = all(
+            getattr(self, param, None) is not None
+            for param in ["off_hours_warm_start", "warm_start_delay_hours"]
+        )
+
+        if self.include_cold_start and not provided_cold_start_params:
+            missing_params = [
+                param
+                for param in ["off_hours_cold_start", "cold_start_delay_hours"]
+                if getattr(self, param, None) is not None
+            ]
+            raise AttributeError(f"`include_cold_start` is True, missing inputs {missing_params}")
+
+        if self.include_warm_start and not provided_warm_start_params:
+            missing_params = [
+                param
+                for param in ["off_hours_warm_start", "warm_start_delay_hours"]
+                if getattr(self, param, None) is not None
+            ]
+            raise AttributeError(f"`include_warm_start` is True, missing inputs {missing_params}")
 
 
 class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
@@ -162,6 +203,31 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             "ammonia_production_capacity", val=self.config.production_capacity, units="kg/h"
         )
 
+        # Flexibility inputs
+        self.add_input("turndown_ratio", val=self.config.turndown_ratio, shape=1, units="unitless")
+        self.add_input(
+            "ramp_up_rate", val=self.config.ramp_up_rate_fraction, shape=1, units="unitless"
+        )
+        self.add_input(
+            "ramp_down_rate", val=self.config.ramp_down_rate_fraction, shape=1, units="unitless"
+        )
+
+        if self.config.include_warm_start:
+            self.add_input(
+                "off_time_warm_start", val=self.config.off_hours_warm_start, shape=1, units="h"
+            )
+            self.add_input(
+                "warm_start_delay", val=self.config.warm_start_delay_hours, shape=1, units="h"
+            )
+
+        if self.config.include_cold_start:
+            self.add_input(
+                "off_time_cold_start", val=self.config.off_hours_cold_start, shape=1, units="h"
+            )
+            self.add_input(
+                "cold_start_delay", val=self.config.cold_start_delay_hours, shape=1, units="h"
+            )
+
         # Feedstocks input
         self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
@@ -184,6 +250,290 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         self.add_output("limiting_input", val=0, shape=self.n_timesteps, units="unitless")
         self.add_output("max_hydrogen_capacity", val=1000.0, units="kg/h")
+
+    def subdt_offtime_subdt_startup(self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod):
+        """Calculates the production multiplier when the off-time to trigger a delayed start-up
+        event is less than or equal to the timestep and the start-up delay is also less than
+        or equal to the timestep.
+
+        Args:
+            offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
+                Must be less than or equal to dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be less than or equal to dt.
+            min_prod_pt (float): The minimum production threshold in the same units of init_prod
+            init_prod (np.array): The initial production profile.
+
+        Returns:
+            np.array: production multiplier to reflect start-up losses.
+        """
+        # offtime for start-up delay are less than dt, like electrolyzer model
+
+        # if off-time is less than or equal to dt, then we assume that off-time is equal to dt
+        offtime = units.convert_units(offtime_hrs, "h", "s")
+        if offtime > self.dt:
+            raise ValueError(
+                "Please use the method `subdt_offtime_multidt_startup` when"
+                " offtime is greater than dt"
+            )
+        # the logic for this requries the delay to be in seconds
+        delay = units.convert_units(start_up_delay_hrs, "h", "s")
+
+        startup_production_multiplier = 1 - (delay / self.dt)
+
+        # on=1, off=0
+        on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
+        # off_indx = np.argwhere(init_prod<min_prod_pt).flatten()
+
+        # no delay at beginning of sim
+        # TODO: check that this works if starting off or starting on
+        change_status = [0, *list(np.diff(on_off_status))]
+
+        change_status = np.array(change_status)
+
+        prod_multiplier = np.where(change_status > 0, startup_production_multiplier, 1)
+
+        return prod_multiplier
+
+    def subdt_offtime_multidt_startup(
+        self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
+    ):
+        """Calculates the production multiplier when the off-time to trigger a delayed
+        start-up event is less than or equal to the timestep and the start-up delay is
+        greater than the timestep.
+
+        Args:
+            offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
+                Must be less than or equal to dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be greater than dt.
+            min_prod_pt (float): The minimum production threshold in the same units of init_prod
+            init_prod (np.array): The initial production profile.
+
+        Returns:
+            np.array: production multiplier to reflect start-up losses.
+        """
+        # has to be off for 1 timestep to trigger start-up delay
+        # start up takes multiple timesteps
+
+        # the logic for this requires that offtime be converted to the timestep
+        # and the delay to be in seconds
+        offtime = units.convert_units(offtime_hrs, "h", f"{self.dt}*s")
+        delay = units.convert_units(start_up_delay_hrs, "h", "s")
+
+        startup_production_multiplier = 1 - (delay / self.dt)
+
+        # on=1, off=0
+        on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
+        off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
+
+        # Get the indices where its off for at least the offtime
+        off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
+        # off_index_sets[:,1] is the end of an off-cycle
+        # off_index_sets[:,0] is the start of an off-cycle
+        n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        index_set_of_off_events = off_index_sets[
+            np.argwhere(n_hours_off_per_off_event > offtime).flatten()
+        ]
+        # initialize production multiplier as ones
+        prod_multiplier = np.ones(len(init_prod))
+        # set the multiplier to zero for off hours
+        prod_multiplier[off_indx] = 0
+        # set the multiplier to the startup_production_multiplier in hours after off-times
+        # that are at least the defined off-time
+        prod_multiplier[index_set_of_off_events[:, 1]] = startup_production_multiplier
+
+        return prod_multiplier
+
+    def multidt_offtime_multidt_startup(
+        self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
+    ):
+        """Calculates the production multiplier when the off-time to trigger a delayed
+        start-up event is greater than the timestep and the start-up delay is also
+        greater than the timestep.
+
+        Args:
+            offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
+                Must be greater than dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be greater than dt.
+            min_prod_pt (float): The minimum production threshold in the same units of init_prod
+            init_prod (np.array): The initial production profile.
+
+        Returns:
+            np.array: production multiplier to reflect start-up losses.
+        """
+
+        # has to be off for multiple timesteps to have some start-up delay
+        # start-up delay is also multiple timesteps
+
+        # the logic for this requires that offtime and delay be converted to the timestep
+        offtime = units.convert_units(offtime_hrs, "h", f"{self.dt}*s")
+        delay = units.convert_units(start_up_delay_hrs, "h", f"{self.dt}*s")
+
+        # on=1, off=0
+        on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
+        off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
+
+        # Get the indices where its off for at least the offtime
+        # off_index_sets[:,0] is the index where its turned off
+        # off_index_sets[:,1] is the index after its turned on
+        off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
+        n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        index_set_of_off_events = off_index_sets[
+            np.argwhere(n_hours_off_per_off_event > offtime).flatten()
+        ]
+        # index_set_of_off_events[:,1] is the first on-hour after the offtime that
+        # qualifies a start-up delay
+
+        # initialize production multiplier as ones
+        prod_multiplier = np.ones(len(init_prod))
+        # set the multiplier to zero for off hours
+        prod_multiplier[off_indx] = 0
+
+        for i_turn_on in index_set_of_off_events[:1]:  # NOTE: should this be [:,1]?
+            on_hrs_after_delay_subindx_set = (
+                np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
+                .nonzero()[0]
+                .reshape(-1, 2)[0]
+            )
+            on_hrs_after_delay_indx_set = np.array(
+                [int(i_turn_on + ii) for ii in on_hrs_after_delay_subindx_set]
+            )
+            on_hrs_after_delay = (
+                on_hrs_after_delay_indx_set[:, 1] - on_hrs_after_delay_indx_set[:, 0]
+            )
+            if on_hrs_after_delay >= delay:
+                # delay>on hours after delay
+                # production is zero while starting up
+                # TODO: this should be adjusted to handle fraction of delays, like 4.5 dt delays
+                prod_multiplier[on_hrs_after_delay_indx_set[0] : on_hrs_after_delay_indx_set[1]] = 0
+            else:
+                # interrupted by another shut-off while starting up
+                # TODO: will need to update the amount of off-time for the following start-up (somehow)
+                # like if warming up for 2 hours then shut off, then we could adjust the off-time
+                # for the following on-switch to be 2 hrs less
+                # For now, just set it to zero
+                prod_multiplier[on_hrs_after_delay_indx_set[0] : on_hrs_after_delay_indx_set[1]] = 0
+
+        return prod_multiplier
+
+    def multidt_offtime_subdt_startup(
+        self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
+    ):
+        # has to be off for multiple timesteps to have some start-up delay
+
+        # on=1, off=0
+        on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
+        np.argwhere(init_prod < min_prod_pt).flatten()
+
+        # on_index_sets[:,0] is the index where its turned on
+        # on_index_sets[:,1] is the index after its turned off
+        np.ediff1d(np.r_[0, on_off_status == 1, 0]).nonzero()[0].reshape(-1, 2)
+        raise NotImplementedError("Multidt delay and subdt start is not yet implemented")
+
+    def apply_startup_losses(
+        self, offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
+    ):
+        dt_hrs = self.dt / 3600
+
+        offtime_category = "subdt" if offtime_hrs <= dt_hrs else "multidt"
+        startup_category = "subdt" if start_up_delay_hrs <= dt_hrs else "multidt"
+
+        if offtime_category == "subdt" and startup_category == "subdt":
+            production_mult = self.subdt_offtime_subdt_startup(
+                offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
+            )
+            return production_mult * nh3_production
+        if offtime_category == "subdt" and startup_category == "multidt":
+            production_mult = self.subdt_offtime_multidt_startup(
+                offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
+            )
+            return production_mult * nh3_production
+        if offtime_category == "multidt" and startup_category == "subdt":
+            production_mult = self.multidt_offtime_subdt_startup(
+                offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
+            )
+            return production_mult * nh3_production
+        if offtime_category == "multidt" and startup_category == "multidt":
+            production_mult = self.multidt_offtime_multidt_startup(
+                offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
+            )
+            return production_mult * nh3_production
+
+    def apply_ramping_constraints(self, init_prod, production_bounds, ramp_rate_bounds):
+        min_production, rated_production = production_bounds
+        ramp_down_rate, ramp_up_rate = ramp_rate_bounds
+
+        # Instantiate the production profile array and populate the first timestep
+        # with the first value from pre_demand_met_clipped
+        production_profile = np.zeros(len(init_prod))
+        production_profile[0] = init_prod[0]
+
+        # Loop through each timestep and adjust for ramping constraints
+        for i in range(1, len(production_profile)):
+            prior_timestep_demand = production_profile[i - 1]
+
+            # Calculate the change in load from the prior timestep
+            load_change = init_prod[i] - prior_timestep_demand
+
+            # If ramp is too steep down, set new_demand accordingly
+            if load_change < (-1 * ramp_down_rate):
+                new_demand = prior_timestep_demand - ramp_down_rate
+                production_profile[i] = np.clip(new_demand, min_production, rated_production)
+
+            # If ramp is too steep up, set new_demand accordingly
+            elif load_change > ramp_up_rate:
+                new_demand = prior_timestep_demand + ramp_up_rate
+                production_profile[i] = np.clip(new_demand, min_production, rated_production)
+
+            else:
+                production_profile[i] = init_prod[i]
+
+        return production_profile
+
+    def apply_dynamic_operation(self, inputs, nh3_production):
+        # calculate operating constraints in terms of kg NH3/hour
+        minimum_production = inputs["ammonia_production_capacity"] * np.clip(
+            inputs["turndown_ratio"], a_min=0.0, a_max=1.0
+        )
+        ramp_up_rate_kg_per_hr = inputs["ammonia_production_capacity"] * np.clip(
+            inputs["ramp_up_rate"], a_min=0.0, a_max=1.0
+        )
+        ramp_down_rate_kg_per_hr = inputs["ammonia_production_capacity"] * np.clip(
+            inputs["ramp_down_rate"], a_min=0.0, a_max=1.0
+        )
+
+        # apply minimum production losses
+        nh3_production = np.clip(
+            nh3_production, a_min=minimum_production, a_max=inputs["ammonia_production_capacity"]
+        )
+
+        # apply start-up delays
+        if "warm_start_delay" in inputs:
+            nh3_production = self.apply_startup_losses(
+                inputs["off_time_warm_start"],
+                inputs["warm_start_delay"],
+                minimum_production,
+                nh3_production,
+            )
+
+        if "cold_start_delay" in inputs:
+            nh3_production = self.apply_startup_losses(
+                inputs["off_time_cold_start"],
+                inputs["cold_start_delay"],
+                minimum_production,
+                nh3_production,
+            )
+
+        # apply ramping constraints
+        nh3_production = self.apply_ramping_constraints(
+            nh3_production,
+            (minimum_production, inputs["ammonia_production_capacity"]),
+            (ramp_down_rate_kg_per_hr, ramp_up_rate_kg_per_hr),
+        )
+
+        return nh3_production
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Get config values
