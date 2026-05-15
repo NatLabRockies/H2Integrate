@@ -67,24 +67,6 @@ def dynamics_config():
     return params
 
 
-# def create_status_profile_for_delays(dt, n_timesteps, offtime_hrs, delay_hrs, start_on=True):
-#     dt_hr = dt/3600
-
-#     if offtime_hrs<=dt_hr:
-#         offtime_dt = 1.0 # offtime in dt
-#     else:
-#         # check that this is right
-#         offtime_dt = offtime_hrs/dt_hr
-
-#     # delay time
-#     delay_dt = delay_hrs/dt_hr
-#     production_multiplier = np.zeros(n_timesteps)
-#     i = 0
-#     if start_on:
-#         production_multiplier[0] = 1.0
-#         i +=1
-
-
 def make_production_sequence(min_prod, max_prod, onoff_sequence, n_timesteps, start_on=True):
     if isinstance(onoff_sequence, list):
         onoff_sequence = np.array(onoff_sequence)
@@ -301,3 +283,42 @@ def test_ammonia_multidt_offtime_multidt_delay(
             expected_delay_losses_per_sequence + expected_off_time_losses_per_sequence
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_multidt_offtime_subdt_startup(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_moms_cold_soss_warm_start(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in
+    # cold start params, off time of 4 hours, delay time of 2
+    # cold start is multi_offtime_multi_startup (moms)
+    dynamics_config["include_cold_start"] = True
+    dynamics_config["off_hours_cold_start"] = 4
+    dynamics_config["cold_start_delay_hours"] = 2
+    # warm start: off time of 0.5 hrs, delay time of 0.5
+    # warm start is subdt_offtime_subdt_startup (soss)
+    dynamics_config["include_warm_start"] = True
+    dynamics_config["off_hours_warm_start"] = 0.25
+    dynamics_config["warm_start_delay_hours"] = 0.5
+
+    dynamics_config["turndown_ratio"] = 0.1
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_ramp_constraints(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in
+    pass
