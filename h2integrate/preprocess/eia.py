@@ -22,6 +22,17 @@ EIA_NG_FACET = {
     "exports": "N9130{}3",
 }
 
+NG_PROCESS_NAME_MAP = {
+    "Industrial Price": "industrial",
+    "Imports Price": "imports",
+    "City Gate Price": "citygate",
+    "Price Delivered to Residential Consumers": "residential",
+    "Wellhead Acquisition Price": "wellhead",
+    "Price Delivered to Commercial Sectors": "commercial",
+    "Exports (Price)": "exports",
+    "Electric Power Price": "electrical_power",
+}
+
 
 def get_eia_api_key(api_key_file: Path | None) -> str:
     """Retrieves the EIA API key from a file, and returns the key following "EIA_API_KEY:".
@@ -57,27 +68,56 @@ def get_eia_api_key(api_key_file: Path | None) -> str:
     raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
 
 
-def convert_to_monthly(df: pd.DataFrame) -> pd.DataFrame | None:
+def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame | None:
     """Converts an annual timeseries to monthly by repeating the one value, or returns
     the data passed, if already monthly.
 
     Args:
         df (pd.DataFrame): The annual or monthly natural gas pricing data.
+        start_year (int): Starting year of the data.
+        end_year (int): Ending year of the data.
 
     Returns:
         pd.DataFrame | None: Returns back the monthly data if the original data have either
             1 or 12 data entries, otherwise None is returned.
     """
-    match df.shape[0]:
-        case 12:
-            return df.resample("MS").bfill()  # ensure it's start of the month
-        case 1:
-            year = df.index.year[0]
-            ix = pd.date_range(f"{year}-01", f"{year}-12", freq="MS")
-            df = df.reindex(ix, method="nearest")
+    years = 1 + end_year - start_year
+    is_multi_ix = isinstance(df.index, pd.MultiIndex)
+    dt_ix = df.index if not is_multi_ix else df.index.get_level_values("period").unique()
+    if is_multi_ix:
+        ix_names = [el for el in df.index.names if el != "period"]
+        ix_levels = list(range(1, len(ix_names) + 1))
+    if dt_ix.size % 12 == 0:
+        # use bfill in case of end of the month--won't impact if already start of the month
+        if not is_multi_ix:
+            return df.resample("MS").bfill()  # ensure it's always the start of the month
+        df = (
+            df.unstack(level=ix_levels)  # noqa: PD010, PD013 <- melt and pivot create more work
+            .resample("MS")
+            .bfill()
+            .stack(level=ix_levels, future_stack=True)
+            .sort_index()
+        )
+        return df
+    if dt_ix.size == years:
+        # annual data are assumed to have been converted to format YYYY-01-01 via pd.to_datetime()
+        monthly_ix = pd.date_range(f"{start_year}-01", f"{end_year}-12", freq="MS")
+        if not is_multi_ix:
+            df = df.reindex(monthly_ix, method="ffill")
             return df
-        case _:
-            pass
+        df = (
+            df.unstack(level=ix_levels)  # noqa: PD010, PD013 <- melt and pivot create more work
+            .reindex(monthly_ix, method="ffill")
+            .stack(level=ix_levels, future_stack=True)
+            .sort_index()
+        )
+        return df
+
+    msg = (
+        f"Irregular data size passed, expected compatibility with {years} years, annually, or"
+        " monthly. Please check your data."
+    )
+    raise ValueError(msg)
 
 
 def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, int]:
@@ -283,7 +323,7 @@ def get_eia_ng_data(
     if len(state) > 1:
         keep_cols = ["state", *keep_cols]
     if len(price_category) > 1:
-        keep_cols = ["price_category", *keep_cols]
+        keep_cols = ["category", *keep_cols]
     if filename is not None:
         if filename.exists():
             df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
@@ -306,16 +346,21 @@ def get_eia_ng_data(
     if df.size == 0:
         raise ValueError(f"No data for combination {state=}, {price_category=}")
 
-    df.period = pd.to_datetime(df.period)
+    df.period = pd.to_datetime(df.period)  # NOTE: if annual, converts year to Jan 1 timestamp
     df.value = df.value.astype(float)
-    return df
-    # TODO: finished off here
     df = (
         df.set_index("period")
-        .rename(columns={"value": "price", "area-name": "state"})
+        .rename(columns={"value": "price", "area-name": "state", "process-name": "category"})
+        .loc[:, keep_cols]
         .replace("U.S.", "US")
-    )[["state", "price"]]
-    df = convert_to_monthly(df)
+        .replace(NG_PROCESS_NAME_MAP)
+    )
+    df.state = (
+        df.state.str.replace("USA-", "").str.title().replace(geospatial.STATE_MAP).str.upper()
+    )
+    df = df.set_index([el for el in keep_cols if el != "price"], append=True)
+    return df
+    df = convert_to_monthly(df, *resource_year)
     df.price *= MCF_to_MMBTU
 
     if filename is not None:
