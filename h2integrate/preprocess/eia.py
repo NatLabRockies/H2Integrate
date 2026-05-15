@@ -137,6 +137,8 @@ def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, 
         tuple[int, int]: The starting and ending year for a data query.
     """
     if isinstance(resource_year, tuple | list):
+        if len(resource_year) == 1:
+            return resource_year * 2
         if len(resource_year) != 2:
             msg = (
                 "Either pass a single `resource_year` or length-2 tuple for the starting"
@@ -355,9 +357,10 @@ def get_eia_ng_data(
         .replace("U.S.", "US")
         .replace(NG_PROCESS_NAME_MAP)
     )
-    df.state = (
-        df.state.str.replace("USA-", "").str.title().replace(geospatial.STATE_MAP).str.upper()
-    )
+    if "state" in keep_cols:
+        df.state = (
+            df.state.str.replace("USA-", "").str.title().replace(geospatial.STATE_MAP).str.upper()
+        )
     df = df.set_index([el for el in keep_cols if el != "price"], append=True)
     return df
     df = convert_to_monthly(df, *resource_year)
