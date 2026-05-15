@@ -115,28 +115,6 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     price of natural gas used in the model.
     """
 
-    def _extrapolate_price_to_hourly(self) -> pd.DataFrame:
-        """Converts the monthly EIA price timeseries to an hourly time series for ``plant_life``
-        number of years.
-        """
-        price = self.config.price.copy()
-
-        last = price.iloc[[-1]].resample("ME").ffill()
-        last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
-        price = (
-            pd.concat((price, last))
-            .resample("h")
-            .ffill()
-            .drop(price.loc[(price.index.month == 2) & (price.index.day == 29)].index)
-        )
-        if price.shape[0] != self.n_timesteps:
-            msg = (
-                "An error occurred converting EIA data to hourly to match size:"
-                f" {price.shape[0]} to simulation {self.n_timesteps=}"
-            )
-            raise ValueError(msg)
-        return price
-
     def setup(self):
         """Defines the inputs and outputs of the model and converts the
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
@@ -159,104 +137,6 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
             monthly=self.config.monthly,
             filename=self.config.filename,
         )
+        price = eia.convert_to_hourly(price)
+        self.config.price = price
         super().setup()
-
-        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-        self.fraction_of_year_simulated = (
-            self.dt / SECONDS_PER_HOUR * self.n_timesteps / HOURS_PER_YEAR
-        )
-        price = self._extrapolate_price_to_hourly()
-
-        self.add_input(
-            f"{self.config.commodity}_consumed",
-            val=0.0,
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-            desc=f"Consumption profile of {self.config.commodity}",
-        )
-        self.add_input(
-            f"{self.config.commodity}_out",
-            val=0,
-            shape=self.n_timesteps,
-            units=self.config.commodity_rate_units,
-        )
-        self.add_input(
-            "price",
-            val=price.price.to_numpy(),
-            units=f"USD/({self.config.commodity_amount_units})",
-            desc=f"Price profile of {self.config.commodity}",
-        )
-
-        self.add_output(
-            f"total_{self.config.commodity}_consumed",
-            val=0.0,
-            units=self.config.commodity_amount_units,
-        )
-        self.add_output(
-            f"annual_{self.config.commodity}_consumed",
-            val=0.0,
-            shape=self.plant_life,
-            units=f"({self.config.commodity_amount_units})/year",
-        )
-        self.add_output(
-            "capacity_factor",
-            val=0.0,
-            shape=self.plant_life,
-            units="unitless",
-            desc="Capacity factor",
-        )
-        self.add_output(
-            "replacement_schedule",
-            val=0.0,
-            shape=self.plant_life,
-            units="unitless",
-            desc="Lifetime estimate of item replacements as a fraction of capacity",
-        )
-
-        # TODO: Update to the commodity_capacity input of the FeedstockPerformanceModel
-        # NOTE: Should I set this to rated_capacity if it's available?
-        self.add_output(
-            f"rated_{self.config.commodity}_production",
-            val=0,
-            units=self.config.commodity_rate_units,
-        )
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """Calculates the following outputs:
-
-        - ``capacity_factor``: commodity_consumed / commodity_out
-        - ``total_commodity_consumed``: sum of commodity_consumed divided by number
-          of hours simulated.
-        - ``annual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
-        - ``rated_commodity_production``: maximum input ``commodity_out``.
-        - ``CapEx``: :py:attr:`FeedstockCostConfig.start_up_cost`.
-        - ``OpEx``: :py:attr:`FeedstockCostConfig.annual_cost`.
-        - ``VarOpEx``: sum of (:py:attr:`FeedstockCostConfig.price` * input ``commodity_consumed``).
-        """
-        outputs["capacity_factor"] = (
-            inputs[f"{self.config.commodity}_consumed"].sum()
-            / inputs[f"{self.config.commodity}_out"].sum()
-        )
-        outputs[f"total_{self.config.commodity}_consumed"] = inputs[
-            f"{self.config.commodity}_consumed"
-        ].sum() * (self.dt / 3600)
-
-        # TODO: once the feedstock consumption has standardized outputs, update this to handle
-        # consumption that varies over all years of operations.
-        outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
-            f"total_{self.config.commodity}_consumed"
-        ] * (1 / self.fraction_of_year_simulated)
-
-        outputs[f"rated_{self.config.commodity}_production"] = inputs[
-            f"{self.config.commodity}_out"
-        ].max()
-
-        # TODO: Calculate costs
-        price = inputs["price"]
-        hourly_consumption = inputs[f"{self.config.commodity}_consumed"]
-        cost_per_year = sum(price * hourly_consumption)
-
-        outputs["CapEx"] = self.config.start_up_cost
-        outputs["OpEx"] = self.config.annual_cost
-        outputs["VarOpEx"] = cost_per_year
