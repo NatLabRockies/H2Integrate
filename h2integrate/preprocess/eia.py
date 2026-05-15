@@ -90,8 +90,10 @@ def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.D
     is_multi_ix = isinstance(df.index, pd.MultiIndex)
     dt_ix = df.index if not is_multi_ix else df.index.get_level_values("period").unique()
     if is_multi_ix:
+        df = df.swaplevel("period", 0)
         ix_names = [el for el in df.index.names if el != "period"]
         ix_levels = list(range(1, len(ix_names) + 1))
+        print(df.index.names)
     if dt_ix.size % 12 == 0:
         # use bfill in case of end of the month--won't impact if already start of the month
         if not is_multi_ix:
@@ -106,16 +108,20 @@ def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.D
         return df
     if dt_ix.size == years:
         # annual data are assumed to have been converted to format YYYY-01-01 via pd.to_datetime()
-        monthly_ix = pd.date_range(f"{start_year}-01", f"{end_year}-12", freq="MS")
+        monthly_ix = pd.DatetimeIndex(
+            pd.date_range(f"{start_year}-01", f"{end_year}-12", freq="MS"), name="period"
+        )
         if not is_multi_ix:
             df = df.reindex(monthly_ix, method="ffill")
             return df
+        print(df.index.names)
         df = (
             df.unstack(level=ix_levels)  # noqa: PD010, PD013 <- melt and pivot create more work
             .reindex(monthly_ix, method="ffill")
             .stack(level=ix_levels, future_stack=True)
             .sort_index()
         )
+        print(df.index.names)
         return df
 
     msg = (
