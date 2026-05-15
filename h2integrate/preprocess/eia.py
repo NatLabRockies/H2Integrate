@@ -90,7 +90,8 @@ def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, 
 
     Raises:
         ValueError: Raised if a :py:attr:`resource_year` is a sequence and does not have 2 elements.
-        TypeError: Raised if :py:attr:`resource_year` is neither a :py:obj:`tuple` nor :py:obj:`int`.
+        TypeError: Raised if :py:attr:`resource_year` is neither a :py:obj:`tuple` nor
+            :py:obj:`int`.
 
     Returns:
         tuple[int, int]: The starting and ending year for a data query.
@@ -105,13 +106,13 @@ def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, 
         return resource_year
 
     if isinstance(resource_year, int):
-        msg = (
-            "Either pass a single `resource_year` or length-2 tuple for the starting"
-            " and ending years."
-        )
-        raise TypeError(msg)
+        return resource_year, resource_year
 
-    return resource_year, resource_year
+    msg = (
+        "Either pass a single `resource_year` or length-2 tuple for the starting"
+        " and ending years."
+    )
+    raise TypeError(msg)
 
 
 def _validate_state(state: str | list[str]) -> list[str]:
@@ -291,7 +292,7 @@ def get_eia_ng_data(
                 (df.index.year >= start)(df.index.year <= end)
                 & df.category.isin(price_category)
                 & df.state.isin(state),
-                cols,
+                keep_cols,
             ]
             df = convert_to_monthly(df)
             if df is not None:
