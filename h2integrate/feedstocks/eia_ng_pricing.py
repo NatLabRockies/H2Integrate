@@ -1,11 +1,9 @@
-import json
 from pathlib import Path
 from datetime import datetime
 
 import attrs
 import numpy as np
 import pandas as pd
-import requests
 from attrs import field, define
 
 from h2integrate.preprocess import eia, geospatial
@@ -101,7 +99,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 self.filename = Path(self.filename).resolve()
 
         if self.state is None:
-            if self.latitude == 999.9 or self.longitude == 999.9:
+            if self.latitude is None or self.longitude is None:
                 msg = (
                     "The EIA natural gas feedstock model require one of `state` or"
                     " `latitude` and `longitude`."
@@ -109,70 +107,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 raise ValueError(msg)
 
             self.state = geospatial.get_state_from_coords(self.latitude, self.longitude)
-
-        self.series = eia.EIA_NG_FACET[self.price_category].format(self.state)
-        self.url = eia.create_eia_ng_api_url(
-            api_key_file=self.api_key_file,
-            resource_year=self.resource_year,
-            price_category=self.price_category,
-            state=self.state,
-            monthly=self.monthly,
-        )
-        self.price = self.get_data()
-
-    def get_data(self, filename: Path | None = None) -> pd.DataFrame:
-        """Loads the previously saved data from :py:attr:`filename` if ``resource_year``
-        is available as either annual or monthly data, otherwise data is retrieved from the EIA API.
-
-        Args:
-            filename (Path | None, optional): The full filename where the natural gas pricing data
-                should be saved to or loaded from, if available. Must have columns "period" and
-                "price". Defaults to None.
-
-        Raises:
-            requests.exceptions.HTTPError: Raised if an unsuccessful API query result is returned.
-
-        Returns:
-            pandas.DataFrame: DataFrame with index "period" and column "value" with natural gas
-                pricing in $/MMBtu (converted from the EIA's USD per thousands of cubic feet) as
-                either the monthly value or extrapolated annual values to a monthly resolution.
-        """
-        if filename is None:
-            filename = self.filename
-
-        if filename is not None:
-            filename = Path(filename).resolve()
-            if filename.exists():
-                df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
-                df = df.loc[
-                    (df.index.year == self.resource_year) & df.state.eq(self.state), ["price"]
-                ]
-                df = convert_to_monthly(df)
-                if df is not None:
-                    return df
-
-        r = requests.get(self.url)
-        if r.status_code != 200:
-            err = json.loads(r.text)["error"]
-            raise requests.exceptions.HTTPError(err)
-
-        df = pd.DataFrame.from_dict(json.loads(r.text)["response"]["data"])
-        if df.size == 0:
-            raise ValueError(f"No data for combination {self.state=}, {self.price_category=}")
-
-        df.period = pd.to_datetime(df.period)
-        df.value = df.value.astype(float)
-        df = (
-            df.set_index("period")
-            .rename(columns={"value": "price", "area-name": "state"})
-            .replace("U.S.", "US")
-        )[["state", "price"]]
-        df = convert_to_monthly(df)
-        df.price *= MCF_to_MMBTU
-
-        if filename is not None:
-            df.to_csv(filename, index_label="period")
-        return df[["price"]]
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
@@ -217,7 +151,14 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
             additional_cls_name=self.__class__.__name__,
             strict=False,
         )
-        self.config.price = eia.get_eia_ng_data(...)  # TODO
+        price = eia.get_eia_ng_data(
+            api_key_file=self.config.api_key_file,
+            resource_year=self.config.resource_year,
+            price_category=self.config.price_category,
+            state=self.config.state,
+            monthly=self.config.monthly,
+            filename=self.config.filename,
+        )
         super().setup()
 
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]

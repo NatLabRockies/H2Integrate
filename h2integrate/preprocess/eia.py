@@ -10,6 +10,7 @@ from h2integrate.core.file_utils import get_path
 
 
 MCF_to_MMBTU = 1 / 0.964
+HOURS_PER_YEAR = 8760
 
 EIA_NG_FACET = {
     "wellhead": "N9190{}3",
@@ -68,12 +69,14 @@ def get_eia_api_key(api_key_file: Path | None) -> str:
     raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
 
 
-def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame | None:
-    """Converts an annual timeseries to monthly by repeating the one value, or returns
-    the data passed, if already monthly.
+def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
+    """Converts an annual or monthly timeseries to monthly (at start of month) by repeating the one
+    value, or returns the input data converted, if already monthly.
 
     Args:
-        df (pd.DataFrame): The annual or monthly natural gas pricing data.
+        df (pd.DataFrame): The annual or monthly pricing data. Must have the index column, or first
+            index column if ``MultiIndex``, be named "period" and already be converted to a
+            ``DatetimeIndex``.
         start_year (int): Starting year of the data.
         end_year (int): Ending year of the data.
 
@@ -118,6 +121,44 @@ def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.D
         " monthly. Please check your data."
     )
     raise ValueError(msg)
+
+
+def convert_to_hourly(df: pd.DataFrame) -> pd.DataFrame:
+    """Converts the monthly EIA price timeseries to an hourly time series for ``plant_life``
+    number of years, removing any leap year data in the process.
+
+    Args:
+        df (pd.DataFrame): The monthly EIA price data. Must have the index column, or first index
+            column if ``MultiIndex``, be named "period" and already be converted to a
+            ``DatetimeIndex``.
+
+    Raises:
+        ValueError: Raised if the ending result failed to convert the monthly timeseries to an 8760
+            hour per year timeseries.
+
+    Returns:
+        pd.DataFrame | None: Returns the data back an hourly timeseries of price data that has been
+            forward filled from month-start entries.
+    """
+    is_multi_ix = isinstance(df.index, pd.MultiIndex)
+    if is_multi_ix:
+        ix_names = [el for el in df.index.names if el != "period"]
+        ix_levels = list(range(1, len(ix_names) + 1))
+        df = df.unstack(level=ix_levels)  # noqa: PD010
+    last = df.iloc[[-1]].resample("ME").ffill()
+    last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
+    df = (
+        pd.concat((df, last))
+        .resample("h")
+        .ffill()
+        .drop(df.loc[(df.index.month == 2) & (df.index.day == 29)].index)
+    )
+    if is_multi_ix:
+        df = df.stack(level=ix_levels)  # noqa: PD013
+    if df.shape[0] % HOURS_PER_YEAR != 0:
+        msg = f"An error occurred converting data to hourly to match size ({df.shape[0]}) to 8760"
+        raise ValueError(msg)
+    return df
 
 
 def _validate_resource_year(resource_year: int | tuple[int, int]) -> tuple[int, int]:
