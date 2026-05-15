@@ -1,3 +1,5 @@
+"""Tools for getting the EIA natural gas data that could be expanded into other EIA API data."""
+
 import os
 import json
 from pathlib import Path
