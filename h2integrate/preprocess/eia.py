@@ -270,18 +270,18 @@ def _validate_file_name(filename: str | Path | None) -> Path | None:
 
 
 def create_eia_ng_api_url(
-    api_key_file: str | Path | None,
     resource_year: int | tuple[int, int],
     price_category: str | list[str],
     state: str | list[str],
+    api_key_file: str | Path | None = None,
     *,
     monthly: bool = True,
 ):
-    """Create a validated EIA Natural Gas API URL that is ready to be queried.
+    """Create a validated EIA Natural Gas API URL that is ready to be queried. If no
+    :py:attr:`api_key_file` is passed, then the API key is assumed to be an environment variable
+    called ``EIA_API_KEY``.
 
     Args:
-        api_key_file (Path, optional): Full file name of the file where the API key is located. If
-            no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
         resource_year (int | list[int]): The YYYY-formatted year or length-2 tuple of years whose
             data should be retrieved. Should be between 2001 and the current year, inclusive of
             endpoints as that is all that the EIA provides, regardless of what is queried.
@@ -291,6 +291,9 @@ def create_eia_ng_api_url(
         state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
             as "United States" or "US". Only the "US" or one of the 50 US states will produce valid
             results.
+        api_key_file (Path, optional): Full file name of the file where the API key is located. If
+            no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
+            Default is None
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
 
     Returns:
@@ -303,7 +306,7 @@ def create_eia_ng_api_url(
     start_year, end_year = _validate_resource_year(resource_year)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)
-    series = [EIA_NG_FACET[c].format(s) for c in price_category for s in state]
+    series = sorted([EIA_NG_FACET[c].format(s) for c in price_category for s in state])
 
     base_url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
     frequency = f"frequency={'monthly' if monthly else 'annual'}"

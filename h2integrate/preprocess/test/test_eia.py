@@ -147,7 +147,69 @@ def test_get_eia_api_key(subtests, EIA_API_key_file):
 
 
 @pytest.mark.unit
-def test_create_eia_ng_api_url(): ...
+def test_create_eia_ng_api_url(subtests, EIA_API_key_file):
+    """Tests API URL generation for basic parameterizations."""
+    if (api_key := os.environ.get("EIA_API_KEY")) is None:
+        api_key = DUMMY_KEY
+        os.environ["EIA_API_KEY"] = api_key
+
+    correct_single_url = (
+        "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
+        "?frequency=annual"
+        "&data[0]=value"
+        "&facets[series][]=N3035AK3"
+        "&start=2022"
+        "&end=2022"
+        "&sort[0][column]=period"
+        "&sort[0][direction]=asc"
+        f"&api_key={api_key}"
+    )
+    correct_multi_url = (
+        "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
+        "?frequency=monthly"
+        "&data[0]=value"
+        "&facets[series][]=N3035AK3"
+        "&facets[series][]=N3035CO3"
+        "&facets[series][]=N9190AK3"
+        "&facets[series][]=N9190CO3"
+        "&start=2022-01"
+        "&end=2024-12"
+        "&sort[0][column]=period"
+        "&sort[0][direction]=asc"
+        f"&api_key={api_key}"
+    )
+    with subtests.test("Check API URL for a single entry query"):
+        url = eia.create_eia_ng_api_url(
+            state="ak",
+            resource_year=2022,
+            monthly=False,
+            price_category="industrial",
+        )
+        assert url == correct_single_url
+
+    with subtests.test("Check API URL for a multiple entry query"):
+        url = eia.create_eia_ng_api_url(
+            state=("ak", "CO"),
+            resource_year=(2022, 2024),
+            monthly=True,
+            price_category=["industrial", "wellhead"],
+        )
+        assert url == correct_multi_url
+
+    if api_key == DUMMY_KEY:
+        del os.environ["EIA_API_KEY"]
+    # with subtests.test("Check no location data failure"):
+    #     msg = (
+    #         "The EIA natural gas feedstock model require one of `state` or"
+    #         " `latitude` and `longitude`."
+    #     )
+    #     with pytest.raises(ValueError, match=msg):
+    #         eia.EIANaturalGasFeedstockConfig(
+    #             resource_year=2022,
+    #             cost_year=2025,
+    #             monthly=True,
+    #             price_category="industrial",
+    #         )
 
 
 @pytest.mark.unit
