@@ -22,9 +22,12 @@
   [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA
   natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve
-  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries. Additionally, a `EIANaturalGasFeedstockPerformanceConfig` and
-  `EIANaturalGasFeedstockPerformanceModel` are created to be compatible with the hard-coded
-  definitions from the cost model. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly
+  timeseries. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates a series of preprocessing tools for basic state name and abbreviation handling, and for
+  reverse geocoding coordinates to state data. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates a series of preprocessing tools for downloading EIA natural gas prices to monthly and
+  hourly timeseries that could be extended to other EIA API data in the future. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
 - Adds `H2IntegrateModel`, `load_yaml`, `write_yaml`, and `write_readable_yaml` as package-level imports [PR 728](https://github.com/NatLabRockies/H2Integrate/pull/728).
 - Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
