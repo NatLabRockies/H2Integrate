@@ -82,7 +82,40 @@ def test_convert_to_monthly(subtests):
 
 
 @pytest.mark.unit
-def test_convert_to_hourly(): ...
+def test_convert_to_hourly(subtests):
+    dt_ix = pd.DatetimeIndex(pd.date_range("2000-01", "2001-12", freq="MS"), name="period")
+
+    with subtests.test("Check single index conversion"):
+        df = pd.DataFrame(np.arange(1, 25).reshape(-1, 1), columns=["price"], index=dt_ix)
+        new_df = eia.convert_to_hourly(df)
+        assert new_df.shape == (8760 * 2, 1)
+        assert new_df.index.name == df.index.name
+        assert new_df.columns == ["price"]
+        assert (df.price.unique() == np.arange(1, 25)).all()
+
+    with subtests.test("Check multi index conversion"):
+        ix = pd.MultiIndex.from_product(
+            [dt_ix, ["industrial", "wellhead"], ["CO", "AK"]], names=["period", "category", "state"]
+        )
+        df = pd.DataFrame([[0.0]], columns=["price"], index=ix)
+        df.loc[(slice(None), "industrial", "CO"), "price"] = np.arange(1, 25)
+        df.loc[(slice(None), "wellhead", "CO"), "price"] = np.arange(1, 25) * 2
+        df.loc[(slice(None), "industrial", "AK"), "price"] = np.arange(1, 25) * 3
+        df.loc[(slice(None), "wellhead", "AK"), "price"] = np.arange(1, 25) * 4
+
+        new_df = eia.convert_to_hourly(df)
+        assert new_df.shape == (8760 * 8, 1)
+        assert new_df.index.names == df.index.names
+        assert new_df.columns == ["price"]
+
+        ind_co = new_df.loc[(slice(None), "industrial", "CO"), "price"].unique()
+        well_co = new_df.loc[(slice(None), "wellhead", "CO"), "price"].unique()
+        ind_ak = new_df.loc[(slice(None), "industrial", "AK"), "price"].unique()
+        well_ak = new_df.loc[(slice(None), "wellhead", "AK"), "price"].unique()
+        assert (ind_co == np.arange(1, 25)).all()
+        assert (well_co == np.arange(1, 25) * 2).all()
+        assert (ind_ak == np.arange(1, 25) * 3).all()
+        assert (well_ak == np.arange(1, 25) * 4).all()
 
 
 @pytest.mark.unit

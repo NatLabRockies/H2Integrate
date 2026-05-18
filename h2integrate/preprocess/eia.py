@@ -154,13 +154,11 @@ def convert_to_hourly(df: pd.DataFrame) -> pd.DataFrame:
         ix_levels = list(range(1, len(ix_names) + 1))
         df = df.unstack(level=ix_levels)  # noqa: PD010
     last = df.iloc[[-1]].resample("ME").ffill()
-    last.index = [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))]
-    df = (
-        pd.concat((df, last))
-        .resample("h")
-        .ffill()
-        .drop(df.loc[(df.index.month == 2) & (df.index.day == 29)].index)
+    last.index = pd.DatetimeIndex(
+        [pd.to_datetime(last.index[0].to_pydatetime().replace(hour=23))], name="period"
     )
+    df = pd.concat((df, last)).resample("h").ffill()
+    df = df.drop(df.loc[(df.index.month == 2) & (df.index.day == 29)].index)
     if is_multi_ix:
         df = df.stack(level=ix_levels)  # noqa: PD013
     if df.shape[0] % HOURS_PER_YEAR != 0:
