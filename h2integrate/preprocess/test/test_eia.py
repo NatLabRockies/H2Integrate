@@ -1,4 +1,5 @@
 import os
+import itertools
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,7 @@ from h2integrate.preprocess import eia
 
 
 DUMMY_KEY = "xxxxxx"
+VALID_API_KEY_EXISTS = os.environ.get("EIA_API_KEY") is not None
 
 
 @pytest.fixture
@@ -147,9 +149,9 @@ def test_get_eia_api_key(subtests, EIA_API_key_file):
 
 
 @pytest.mark.unit
-def test_create_eia_ng_api_url(subtests, EIA_API_key_file):
+def test_create_eia_ng_api_url(subtests):
     """Tests API URL generation for basic parameterizations."""
-    if (api_key := os.environ.get("EIA_API_KEY")) is None:
+    if not VALID_API_KEY_EXISTS:
         api_key = DUMMY_KEY
         os.environ["EIA_API_KEY"] = api_key
 
@@ -196,21 +198,40 @@ def test_create_eia_ng_api_url(subtests, EIA_API_key_file):
         )
         assert url == correct_multi_url
 
-    if api_key == DUMMY_KEY:
-        del os.environ["EIA_API_KEY"]
-    # with subtests.test("Check no location data failure"):
-    #     msg = (
-    #         "The EIA natural gas feedstock model require one of `state` or"
-    #         " `latitude` and `longitude`."
-    #     )
-    #     with pytest.raises(ValueError, match=msg):
-    #         eia.EIANaturalGasFeedstockConfig(
-    #             resource_year=2022,
-    #             cost_year=2025,
-    #             monthly=True,
-    #             price_category="industrial",
-    #         )
-
 
 @pytest.mark.unit
-def test_get_eia_ng_data(): ...
+@pytest.mark.skipif(not VALID_API_KEY_EXISTS, reason="No valid API key found to test data download")
+def test_get_eia_ng_data():
+    """Check the data for correct dimensionality and extrapolation properties."""
+
+    df = eia.create_eia_ng_api_url(
+        state=("ak", "CO"),
+        resource_year=(2022, 2024),
+        monthly=True,
+        price_category=["industrial", "wellhead"],
+    )
+    assert df.index.names == ["period", "state", "category"]
+    assert df.columns == ["price"]
+    assert df.shape == (144, 1)  # 2 states x 2 categories x 3 years x 12 months
+    assert df.index.get_level_values("state").unique() == ["AK", "CO"]
+    assert df.index.get_level_values("category").unique() == ["industrial", "wellhead"]
+
+    df = eia.create_eia_ng_api_url(
+        state=("ak", "CO"),
+        resource_year=(2022, 2024),
+        monthly=False,
+        price_category=["industrial", "wellhead"],
+    )
+    assert df.index.names == ["period", "category", "state"]
+    assert df.columns == ["price"]
+    assert df.shape == (144, 1)  # 2 states x 2 categories x 3 years x 12 months
+    assert df.index.get_level_values("state").unique() == ["AK", "CO"]
+    assert df.index.get_level_values("category").unique() == ["industrial", "wellhead"]
+
+    # Ensure an extrapolated annual value is the same value for all 12 months
+    combinations = itertools.product(range(2022, 2025), ("AK", "CO"), ("industrial", "wellhead"))
+    for year, state, category in combinations:
+        dt_ix = df.index.get_level_values("period").year == year
+        st_ix = df.index.get_level_values("state") == state
+        cat_ix = df.index.get_level_values("category") == category
+        assert len(df.loc[dt_ix & st_ix & cat_ix].unique()) == 1
