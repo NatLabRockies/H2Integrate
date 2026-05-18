@@ -1,70 +1,82 @@
-import os
+from pathlib import Path
 
-import pandas as pd
 import pytest
-from requests.exceptions import HTTPError
 
 from h2integrate.feedstocks import eia_ng_price as eia
 
 
 DUMMY_KEY = "xxxxxx"
+best_trailer_in_colorado_coords = (39.9140081, -105.2249155)
+
+
+@pytest.fixture
+def EIA_API_key_file(temp_dir):
+    """Creates a dummy EIA API key configuration file and returns the file path object."""
+    good_api_fn = temp_dir / ".eiarc"
+    bad_api_fn = temp_dir / ".badeiarc"
+    with good_api_fn.open("w") as f:
+        f.write(f"EIA_API_KEY: {DUMMY_KEY}")
+    with bad_api_fn.open("w") as f:
+        f.write(f"EIA_API: {DUMMY_KEY}")
+    return good_api_fn, bad_api_fn
 
 
 @pytest.mark.unit
 def test_EIANaturalGasFeedstockConfig(subtests, EIA_API_key_file):
     """Tests a failed API for basic parameterizations."""
-    if (api_key := os.environ.get("EIA_API_KEY")) is None:
-        api_key = DUMMY_KEY
-        os.environ["EIA_API_KEY"] = api_key
 
-    correct_url = (
-        "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
-        "?frequency=monthly"
-        "&data[0]=value"
-        "&facets[series][]=N3035AK3"
-        "&start=2022-01"
-        "&end=2022-12"
-        "&sort[0][column]=period"
-        "&sort[0][direction]=asc"
-        f"&api_key={api_key}"
-    )
-    if api_key == DUMMY_KEY:
-        with subtests.test("Ensure API URL is correct for no API key"):
-            with pytest.raises(HTTPError):
-                config = eia.EIANaturalGasFeedstockConfig(
-                    state="ak",
-                    resource_year=2022,
-                    cost_year=2025,
-                    monthly=True,
-                    price_category="industrial",
-                )
-                assert config.url == correct_url
-        del os.environ["EIA_API_KEY"]
-    else:
-        with subtests.test("Ensure API works if a valid API environment variable exists"):
-            config = eia.EIANaturalGasFeedstockConfig(
-                state="ak",
-                resource_year=2022,
-                cost_year=2025,
-                monthly=True,
-                price_category="industrial",
-            )
-            assert config.url == correct_url
-            assert isinstance(config.price, pd.DataFrame)
-            assert config.price.shape == (12, 1)
-            assert (
-                config.price.index == pd.Index(pd.date_range("2022-01", "2022-12", freq="MS"))
-            ).all()
+    good_api_fn, bad_api_fn = EIA_API_key_file
 
-    with subtests.test("Check no location data failure"):
-        msg = (
-            "The EIA natural gas feedstock model require one of `state` or"
-            " `latitude` and `longitude`."
+    with subtests.test("Check basic full parameterization"):
+        ng_feedstock = eia.EIANaturalGasFeedstockConfig(
+            resource_year=2022,
+            monthly=False,
+            price_category="WELLHEAD",
+            state="connecticut",
+            latitude=best_trailer_in_colorado_coords[0],
+            longitude=best_trailer_in_colorado_coords[1],
+            cost_year=2025,
+            annual_cost=1,
+            start_up_cost=2,
+            filename="data.csv",
+            api_key_file=good_api_fn,
         )
-        with pytest.raises(ValueError, match=msg):
-            eia.EIANaturalGasFeedstockConfig(
-                resource_year=2022,
-                cost_year=2025,
-                monthly=True,
-                price_category="industrial",
-            )
+        assert ng_feedstock.commodity == "natural_gas"
+        assert ng_feedstock.commodity_rate_units == "MMBtu/h"
+        assert ng_feedstock.commodity_amount_units == "MMBtu"
+        assert ng_feedstock.filename == Path("./data.csv").resolve()
+        assert not ng_feedstock.filename.exists()
+        assert ng_feedstock.price.size == 8760
+        assert ng_feedstock.price.price.sum() == 0
+        assert ng_feedstock.resource_year == 2022
+        assert not ng_feedstock.monthly
+        assert ng_feedstock.price_category == "wellhead"
+        assert ng_feedstock.state == "CT"
+        assert ng_feedstock.latitude == best_trailer_in_colorado_coords[0]
+        assert ng_feedstock.longitude == best_trailer_in_colorado_coords[1]
+        assert ng_feedstock.cost_year == 2025
+        assert ng_feedstock.annual_cost == 1.0
+        assert ng_feedstock.start_up_cost == 2.0
+        assert ng_feedstock.api_key_file == good_api_fn
+
+    with subtests.test("Check alternative parameterization and defaults"):
+        ng_feedstock = eia.EIANaturalGasFeedstockConfig(
+            resource_year=2022,
+            price_category="WELLHEAD",
+            latitude=best_trailer_in_colorado_coords[0],
+            longitude=best_trailer_in_colorado_coords[1],
+            monthly=True,
+        )
+        assert ng_feedstock.commodity == "natural_gas"
+        assert ng_feedstock.commodity_rate_units == "MMBtu/h"
+        assert ng_feedstock.commodity_amount_units == "MMBtu"
+        assert ng_feedstock.filename is None
+        assert ng_feedstock.price.size == 8760
+        assert ng_feedstock.price.price.sum() == 0
+        assert ng_feedstock.resource_year == 2022
+        assert ng_feedstock.monthly
+        assert ng_feedstock.price_category == "wellhead"
+        assert ng_feedstock.state == "CO"
+        assert ng_feedstock.cost_year == eia.CURRENT_YEAR
+        assert ng_feedstock.annual_cost == 0.0
+        assert ng_feedstock.start_up_cost == 0.0

@@ -110,7 +110,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 )
                 raise ValueError(msg)
 
-            self.state = geospatial.get_state_from_coords(self.latitude, self.longitude)
+            self.state = geospatial.get_state_from_coords(
+                latitude=self.latitude, longitude=self.longitude
+            )
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
