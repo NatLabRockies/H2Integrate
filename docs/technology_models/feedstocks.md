@@ -99,9 +99,9 @@ The feedstock model outputs cost and performance information about the consumed 
 A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` (see
 [the relevant API docs](https://h2integrate.readthedocs.io/en/latest/_autosummary/h2integrate.feedstocks.eia_ng_price.html)
 for complete details) exists to enable users to download data from the EIA API's natural gas price
-portal. Access to the wellhead, import, citygate, residential, commercial, industrial, electrical
-power, and exports price facets are supported for all 50 US states and the US as a whole, though
-it is best to see which data are
+portal for a single site. Access to the wellhead, import, citygate, residential, commercial,
+industrial, electrical power, and exports price facets are supported for all 50 US states and the US
+as a whole, though it is best to see which data are
 [availble online in the EIA API documentation](https://www.eia.gov/opendata/browser/natural-gas/pri/sum)
 prior to using in an analysis.
 
@@ -110,7 +110,11 @@ Users are expected to get an EIA API key from the
 the model to load.
 
 At present, the EIA natural gas cost model uses only a single year of price data (annual or monthly)
-and extrapolates it to an hourly timeseries automatically.
+and extrapolates it to an hourly timeseries automatically. For users that wish to download a large
+batch of data from the EIA, please see the EIA preprocessing tools in
+[`h2integrate/preprocess/eia.py`](https://github.com/NatLabRockies/H2Integrate/h2integrate/preprocess/eia.py).
+In particular, use the `get_eia_ng_data` function once an API has been created and saved to your
+environment variables or to a file.
 
 ### Configuring the EIA Cost Model
 
@@ -145,6 +149,8 @@ is required, which can be pip installed directly or through the `gis` library ex
 - `api_key_file` (str, optional): The file where the user's API key is stored. If storing in a file,
   define it on its own line using the convention "EIA_API_KEY: xxxx", or have the API key defined as
   an environment variable set as "EIA_API_KEY".
+- `filename` (str, optional): Filename where the data should be loaded from if it exists or saved
+  to once it is downloaded.
 
 - `commodity`: Set to "natural_gas" internally.
 - `commodity_rate_units`: Set to "MMBtu/h" internally.
