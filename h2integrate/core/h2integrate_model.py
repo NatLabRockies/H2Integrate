@@ -462,6 +462,17 @@ class H2IntegrateModel:
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
 
+        if (
+            len(self.technology_config["technologies"]) > 1
+            and len(self.plant_config.get("technology_interconnections", [])) == 0
+        ):
+            msg = (
+                f"{len(self.technology_config['technologies'])} technologies have been defined "
+                "in the technology config but are not connected. Please add or populate "
+                "`technology_interconnections` in the plant configuration."
+            )
+            raise ValueError(msg)
+
         self.tech_names = []
         self.performance_models = []
         self.control_strategies = []

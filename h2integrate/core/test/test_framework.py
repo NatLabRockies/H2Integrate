@@ -20,6 +20,32 @@ from h2integrate import (
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_missing_tech_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    # remove technology interconnections
+    plant_config.pop("technology_interconnections")
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    expected_error_start = (
+        "9 technologies have been defined in the technology config but are not connected"
+    )
+
+    with subtests.test("Commodity not input to destination"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(top_level_config)
+        err = str(excinfo.value)
+        assert expected_error_start in err
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
 )
