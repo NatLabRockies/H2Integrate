@@ -414,7 +414,6 @@ def get_eia_ng_data(
             df.state.str.replace("USA-", "").str.title().replace(geospatial.STATE_MAP).str.upper()
         )
     df = df.set_index([el for el in keep_cols if el != "price"], append=True)
-    return df
     df = convert_to_monthly(df, *resource_year)
     df.price *= MCF_to_MMBTU
 
