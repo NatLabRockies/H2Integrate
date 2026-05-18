@@ -267,13 +267,14 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         Returns:
             np.array: production multiplier to reflect start-up losses.
         """
+        # example: offtime of 1, delay of 0.2
         # offtime for start-up delay are less than dt, like electrolyzer model
 
         # if off-time is less than or equal to dt, then we assume that off-time is equal to dt
         offtime = units.convert_units(offtime_hrs, "h", "s")
         if offtime > self.dt:
             raise ValueError(
-                "Please use the method `subdt_offtime_multidt_startup` when"
+                "Please use the method `multidt_offtime_subdt_startup` when"
                 " offtime is greater than dt"
             )
         # the logic for this requries the delay to be in seconds
@@ -295,7 +296,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         return prod_multiplier
 
-    def subdt_offtime_multidt_startup(
+    def multidt_offtime_subdt_startup(
         self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
     ):
         """Calculates the production multiplier when the off-time to trigger a delayed
@@ -313,6 +314,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         Returns:
             np.array: production multiplier to reflect start-up losses.
         """
+        # example: offtime of 4, delay of 0.2
         # has to be off for 1 timestep to trigger start-up delay
         # start up takes multiple timesteps
 
@@ -363,6 +365,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         Returns:
             np.array: production multiplier to reflect start-up losses.
         """
+        # example: offtime of 4, delay of 5
 
         # has to be off for multiple timesteps to have some start-up delay
         # start-up delay is also multiple timesteps
@@ -391,7 +394,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # set the multiplier to zero for off hours
         prod_multiplier[off_indx] = 0
 
-        for i_turn_on in index_set_of_off_events[:1]:  # NOTE: should this be [:,1]?
+        # NOTE: should we be looping as [:,1] or [:1]? I think [:,1]
+        for i_turn_on in index_set_of_off_events[:, 1]:
             on_hrs_after_delay_subindx_set = (
                 np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
                 .nonzero()[0]
@@ -418,24 +422,63 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         return prod_multiplier
 
-    def multidt_offtime_subdt_startup(
+    def subdt_offtime_multidt_startup(
         self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
     ):
+        # example: offtime of 1, delay of 5
         # has to be off for multiple timesteps to have some start-up delay
 
-        # on=1, off=0
+        offtime = units.convert_units(offtime_hrs, "h", "s")
+        if offtime > self.dt:
+            raise ValueError("wrong method")
+
+        # logic requires delay to be in number of timesteps
+        delay = units.convert_units(start_up_delay_hrs, "h", f"{self.dt}*s")
+
         on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
-        np.argwhere(init_prod < min_prod_pt).flatten()
+        off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
+
+        # initialize production multiplier as ones
+        prod_multiplier = np.ones(len(init_prod))
+        # set the multiplier to zero for off hours
+        prod_multiplier[off_indx] = 0
+
+        # Get the indices where its off for at least the offtime
+        # off_index_sets[:,0] is the index where its turned off
+        # off_index_sets[:,1] is the index after its turned on
+        off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
+        n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        off_index_sets[np.argwhere(n_hours_off_per_off_event > offtime).flatten()]
+        # index_set_of_off_events[:,1] is the first on-hour after the offtime that
+        # qualifies a start-up delay
 
         # on_index_sets[:,0] is the index where its turned on
         # on_index_sets[:,1] is the index after its turned off
-        np.ediff1d(np.r_[0, on_off_status == 1, 0]).nonzero()[0].reshape(-1, 2)
-        raise NotImplementedError("Multidt delay and subdt start is not yet implemented")
+        on_index_sets = np.ediff1d(np.r_[0, on_off_status == 1, 0]).nonzero()[0].reshape(-1, 2)
+        n_hours_on_per_on_event = on_index_sets[:, 1] - on_index_sets[:, 0]
+        index_set_of_on_events = on_index_sets[
+            np.argwhere(n_hours_on_per_on_event > delay).flatten()
+        ]
+
+        # NOTE: should this be [:,1] or [:1]? I think [:,1]
+        for i_turn_off in index_set_of_on_events[:, 1]:
+            off_hrs_after_delay_subindx_set = (
+                np.ediff1d(np.r_[0, on_off_status[i_turn_off:] == 1, 0])
+                .nonzero()[0]
+                .reshape(-1, 2)[0]
+            )
+            off_hrs_after_delay_indx_set = np.array(
+                [int(i_turn_off + ii) for ii in off_hrs_after_delay_subindx_set]
+            )
+            (off_hrs_after_delay_indx_set[:, 1] - off_hrs_after_delay_indx_set[:, 0])
+
+        raise NotImplementedError("Subdt offtime and multidt start-up delay is not yet implemented")
 
     def apply_startup_losses(
         self, offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
     ):
         dt_hrs = self.dt / 3600
+        # TODO: add consumption losses. Feedstocks are consumed during start-up delay
 
         offtime_category = "subdt" if offtime_hrs <= dt_hrs else "multidt"
         startup_category = "subdt" if start_up_delay_hrs <= dt_hrs else "multidt"
@@ -511,6 +554,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         # apply start-up delays
         if "warm_start_delay" in inputs:
+            # TODO: add consumption losses
             nh3_production = self.apply_startup_losses(
                 inputs["off_time_warm_start"],
                 inputs["warm_start_delay"],
@@ -519,6 +563,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             )
 
         if "cold_start_delay" in inputs:
+            # TODO: add consumption losses
             nh3_production = self.apply_startup_losses(
                 inputs["off_time_cold_start"],
                 inputs["cold_start_delay"],
