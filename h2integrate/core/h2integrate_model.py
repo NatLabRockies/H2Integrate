@@ -622,7 +622,7 @@ class H2IntegrateModel:
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             cost_model = individual_tech_config.get("cost_model", {}).get("model")
 
-            if cost_model == "FeedstockCostModel":
+            if "FeedstockCostModel" in cost_model:
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -1143,7 +1143,7 @@ class H2IntegrateModel:
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
-                if cost_model_name == "FeedstockCostModel":
+                if "FeedstockCostModel" in cost_model_name:
                     self.plant.connect(
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
@@ -1732,7 +1732,7 @@ class H2IntegrateModel:
                     group = getattr(self.prob.model.plant, f"{tech_name}_source")
                 else:
                     group = getattr(self.prob.model.plant, tech_name)
-                    if model_name != "FeedstockCostModel":
+                    if "FeedstockCostModel" not in model_name:
                         group = getattr(group, model_name, None)
                         if group is None:
                             continue
