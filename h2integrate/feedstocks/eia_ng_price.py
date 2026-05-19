@@ -135,11 +135,19 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         """Defines the inputs and outputs of the model and converts the
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
         ``plant_life``.
+
+        Populates the site latitude and longitude with either the configuration's provided site
+        name or the first site in plant configuration's ``sites`` dictionary when a ``state`` is
+        not directly provided.
         """
         site_config = {}
+        sites = self.options["plant_config"].get("sites", {})
         cost_config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
-        if (site_name := cost_config.get("site_name")) is not None:
-            site_config = self.options["plant_config"].get("sites", {}).get(site_name, {})
+        if cost_config.get("state") is None:
+            if (site_name := cost_config.get("site_name")) is not None and sites:
+                site_config = sites.get(site_name, {})
+            if site_name is None and sites:
+                site_config = sites[[*sites][0]]
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             cost_config | site_config, additional_cls_name=self.__class__.__name__, strict=False
         )
