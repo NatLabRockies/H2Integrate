@@ -16,8 +16,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from h2integrate import H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model

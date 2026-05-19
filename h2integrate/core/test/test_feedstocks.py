@@ -340,3 +340,56 @@ def test_zero_cost_feedstock():
 
     assert capex == 0.0
     assert opex == 0.0
+
+
+@pytest.mark.unit
+def test_per_year_pricing():
+    """Test feedstock with per-year pricing (array of length plant_life)."""
+    plant_life = 30
+    n_timesteps = 8760
+
+    # Different price each year
+    yearly_prices = np.linspace(3.0, 6.0, plant_life).tolist()
+
+    tech_config, plant_config, driver_config = create_basic_feedstock_config(
+        price=yearly_prices, start_up_cost=0.0
+    )
+
+    cost_model = FeedstockCostModel()
+    cost_model.options["tech_config"] = tech_config
+    cost_model.options["plant_config"] = plant_config
+    cost_model.options["driver_config"] = driver_config
+
+    prob = om.Problem()
+    prob.model.add_subsystem("feedstock_cost", cost_model)
+    prob.setup()
+
+    consumption = np.full(n_timesteps, 50.0)  # 50 MMBtu/h
+    prob.set_val("feedstock_cost.natural_gas_consumed", consumption)
+    prob.run_model()
+
+    dt = plant_config["plant"]["simulation"]["dt"]
+    total_consumption = consumption.sum() * (dt / 3600)
+    expected_varopex = total_consumption * np.array(yearly_prices)
+
+    varopex = prob.get_val("feedstock_cost.VarOpEx", units="USD/year")
+    np.testing.assert_allclose(varopex, expected_varopex)
+
+
+@pytest.mark.unit
+def test_per_year_pricing_invalid_length():
+    """Test that an invalid price array length raises ValueError."""
+    bad_prices = [4.2] * 15  # Neither n_timesteps (8760) nor plant_life (30)
+
+    tech_config, plant_config, driver_config = create_basic_feedstock_config(price=bad_prices)
+
+    cost_model = FeedstockCostModel()
+    cost_model.options["tech_config"] = tech_config
+    cost_model.options["plant_config"] = plant_config
+    cost_model.options["driver_config"] = driver_config
+
+    prob = om.Problem()
+    prob.model.add_subsystem("feedstock_cost", cost_model)
+
+    with pytest.raises(ValueError, match="must match n_timesteps.*or plant_life"):
+        prob.setup()

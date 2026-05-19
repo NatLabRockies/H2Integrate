@@ -45,6 +45,9 @@ Within this framework, there are two distinct layers, **finance groups** and **f
     A text label to further distinguish outputs for a commodity. This is particularly useful when multiple finance models or subgroups reference the same commodity but need to produce separate outputs.
   - `commodity_stream` (optional):
     A text label of a technology that outputs the specified ``commodity`` to use as the commodity production stream in finance calculations. This is particularly useful when wanting to choose a specific commodity stream to use in finance calculations (such as the outputs of combiners or splitters)
+  - The below two parameters are only needed to [use a specified timeseries profile for finance calculations](fin:commodity_output_streams)
+    - `use_commodity_stream_timeseries` (optional): A boolean that defaults to False. If True, then flags to use a timeseries profile for the finance calculation rather than the capacity factor and rated commodity production of the `commodity_stream` technology.
+    - `commodity_stream_output`: The name of timeseries profile output variable from `commodity_stream` to use for the finance calculation(s). This parameter is required if `use_commodity_stream_timeseries` is True.
 
 ```{important}
 If no subgroups are defined, a **default subgroup** is created that contains *all technologies* and references the default finance model and commodity defined in `finance_groups`.
@@ -159,3 +162,45 @@ Examples:
 - Finance groups must not include a key named "default", as this is reserved for internal use.
 - Each subgroup must reference valid technology keys from technology_config['technologies']. Invalid keys raise errors.
 - Finance models must be listed in `self.supported_models`. Unknown models raise errors.
+
+(fin:commodity_output_streams)=
+## Using custom output streams for finance calculations
+Typically, the finance models use the capacity factor and rated commodity production rate of the technology specified as the `commodity_stream` for the finance calculations.
+
+In some cases, the capacity factor or rated commodity production rate are not available or may not contain the information desired for the finance calculation. Some technologies, such as splitters, don't output the capacity factor or rated commodity production, they just output two timeseries profiles. Other technologies, such as the grid, output the capacity factor based on the electricity bought, but not the electricity sold. Below illustrates how to use a specified timeseries profile for the finance calculations rather than the capacity factor and rated commodity production rate output from the `commodity_stream` technology.
+
+Below shows three different finance subgroups that use the timeseries outputs.
+- `subgroup_a` is using the `wind.electricity_out` profile for the finance calculation.
+- `subgroup_b` is using the `splitter.electricity_out1` profile for the finance calculation.
+- `subgroup_c` is using the `grid.electricity_sold` profile for the finance calculation.
+
+To use this functionality, `use_commodity_stream_timeseries` must be True and `commodity_stream_output` must be specified.
+
+General format:
+```yaml
+finance_parameters:
+  finance_groups:
+    finance_model: ProFastLCO
+    model_inputs: #dictionary of inputs for ProFastLCO
+  finance_subgroups:
+    subgroup_a:
+      commodity: electricity #required
+      commodity_stream: wind # technology that electricity is output from
+      use_commodity_stream_timeseries: true
+      commodity_stream_output: electricity_out
+      technologies: [wind]
+    subgroup_b:
+      commodity: electricity #required
+      commodity_stream: splitter
+      use_commodity_stream_timeseries: true
+      commodity_stream_output: electricity_out1
+      technologies: [wind, electrolyzer]
+    subgroup_c:
+      commodity: electricity #required
+      commodity_stream: grid
+      use_commodity_stream_timeseries: true
+      commodity_stream_output: electricity_sold
+      technologies: [grid]
+```
+
+- [Example 17](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/17_splitter_wind_doc_h2/plant_config.yaml)

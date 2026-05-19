@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create an H2Integrate model

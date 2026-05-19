@@ -67,7 +67,8 @@ class FeedstockCostConfig(CostModelBaseConfig):
         commodity_rate_units (str): feedstock usage rate units (such as "galUS/h", "kg/h" or "kW")
         price (scalar or list):  The cost of the feedstock in USD/`commodity_amount_units`.
             If scalar, cost is assumed to be constant for each timestep and each year.
-            If list, then it can be the cost per timestep of the simulation
+            If list with length n_timesteps, then it is the cost per timestep of the simulation.
+            If list with length plant_life, then it is the cost per year of operation.
         cost_year (int): dollar-year for costs.
         annual_cost (float, optional): fixed cost associated with the feedstock in USD/year
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
@@ -77,7 +78,7 @@ class FeedstockCostConfig(CostModelBaseConfig):
 
     commodity: str = field()
     commodity_rate_units: str = field()
-    price: int | float | list = field()
+    price: int | float | list | np.ndarray = field()
     annual_cost: float = field(default=0.0)
     start_up_cost: float = field(default=0.0)
     commodity_amount_units: str | None = field(default=None)
@@ -117,6 +118,22 @@ class FeedstockCostModel(CostModelBaseClass):
             shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
         )
+
+        # Determine price mode from array length
+        if isinstance(self.config.price, list | np.ndarray):
+            price_len = len(self.config.price)
+            if price_len == plant_life:
+                self._price_mode = "per_year"
+            elif price_len == self.n_timesteps:
+                self._price_mode = "per_timestep"
+            else:
+                raise ValueError(
+                    f"price length ({price_len}) "
+                    f"must match n_timesteps ({self.n_timesteps}) "
+                    f"or plant_life ({plant_life})"
+                )
+        else:
+            self._price_mode = "scalar"
 
         self.add_input(
             "price",
@@ -191,7 +208,14 @@ class FeedstockCostModel(CostModelBaseClass):
         # Calculate costs
         price = inputs["price"]
         hourly_consumption = inputs[f"{self.config.commodity}_consumed"]
-        cost_per_year = sum(price * hourly_consumption)
+
+        if self._price_mode == "per_year":
+            # Per-year price: total consumption * price per year
+            total_consumption = hourly_consumption.sum() * (self.dt / 3600)
+            cost_per_year = total_consumption * price
+        else:
+            # Scalar or per-timestep: same cost each year
+            cost_per_year = sum(price * hourly_consumption) * (self.dt / 3600)
 
         outputs["CapEx"] = self.config.start_up_cost
         outputs["OpEx"] = self.config.annual_cost

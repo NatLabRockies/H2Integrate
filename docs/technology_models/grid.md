@@ -48,10 +48,14 @@ Multiple grid instances may be used within the same plant to represent different
 | `interconnection_capex_per_kw`  | scalar                       | $/kW      | Capital cost per kW of interconnection.                                |
 | `interconnection_opex_per_kw`   | scalar                       | $/kW/year | Annual O&M cost per kW of interconnection.                             |
 | `fixed_interconnection_cost`    | scalar                       | $         | One-time fixed cost regardless of size.                                |
-| `electricity_out`               | array[n_timesteps]           | kW        | Electricity flowing out of grid (buying from grid).                    |
-| `electricity_buy_price`         | scalar/array[n_timesteps]    | $/kWh     | Price to buy electricity from grid (optional, time-varying supported). |
-| `electricity_sold`              | array[n_timesteps]           | kW        | Electricity flowing into grid (selling to grid).                       |
-| `electricity_sell_price`        | scalar/array[n_timesteps]    | $/kWh     | Price to sell electricity to grid (optional, time-varying supported).  |
+| `electricity_buy_price`         | scalar or array              | $/kWh     | Price to buy electricity from grid (optional). Shape is `n_timesteps` when `buy_price_mode` is `per_timestep`, or `plant_life` when `per_year`. |
+| `buy_price_mode`                | string                       | —         | `"per_timestep"` or `"per_year"`. Controls the buy price input shape and cost calculation. |
+| `electricity_out`               | array[n_timesteps]           | kW        | Electricity flowing out of grid (buying). Present when `buy_price_mode` is `per_timestep` (or buy price is not set). |
+| `annual_electricity_out`        | array[plant_life]            | kWh/yr    | Annual electricity bought from grid. Present when `buy_price_mode` is `per_year`. |
+| `electricity_sell_price`        | scalar or array              | $/kWh     | Price to sell electricity to grid (optional). Shape is `n_timesteps` when `sell_price_mode` is `per_timestep`, or `plant_life` when `per_year`. |
+| `sell_price_mode`               | string                       | —         | `"per_timestep"` or `"per_year"`. Controls the sell price input shape and cost calculation. |
+| `electricity_sold`              | array[n_timesteps]           | kW        | Electricity flowing into grid (selling). Present when `sell_price_mode` is `per_timestep` (or sell price is not set). |
+| `annual_electricity_sold`       | array[plant_life]            | kWh/yr    | Annual electricity sold to grid. Present when `sell_price_mode` is `per_year`. |
 
 **Outputs**
 | Name      | Description                                                                                                     |
@@ -70,4 +74,21 @@ If you're using a price-maker financial model (e.g., calculating the LCOE) and s
 
 ```{note}
 The grid components are currently compatible with 5-minute (300-second) to 1-hour (3600-second) time steps.
+```
+
+### Price Input Modes
+
+The pricing mode is controlled explicitly via `buy_price_mode` and `sell_price_mode` in the grid cost configuration. Each can be set to:
+
+- **`per_timestep`** (default): The price is a scalar or an array of length `n_timesteps`. The cost model uses the timestep-level `electricity_out` / `electricity_sold` inputs (in kW) and converts to energy using `dt`. The resulting `VarOpEx` is a single value applied uniformly across all years.
+- **`per_year`**: The price is an array of length `plant_life`. The cost model uses `annual_electricity_out` / `annual_electricity_sold` inputs (in kWh/yr, shape `plant_life`) directly, producing a per-year `VarOpEx` array with no `dt` conversion needed in the cost model.
+
+Example YAML configuration for per-year pricing:
+
+```yaml
+cost_parameters:
+  electricity_buy_price: [0.05, 0.06, 0.07, ...]  # length = plant_life
+  buy_price_mode: per_year
+  electricity_sell_price: [0.03, 0.04, 0.05, ...]  # length = plant_life
+  sell_price_mode: per_year
 ```

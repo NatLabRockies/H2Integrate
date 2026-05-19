@@ -12,7 +12,7 @@ how the technologies are set up, as well as the  plant_config.yaml (particularly
 technology_interconnections) to see how the technologies are connected.
 """
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create H2Integrate model

@@ -1,6 +1,6 @@
 from plot_co2h_methanol import plot_methanol
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create an H2I model
