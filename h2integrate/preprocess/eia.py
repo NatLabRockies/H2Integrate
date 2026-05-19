@@ -325,10 +325,10 @@ def create_eia_ng_api_url(
 
 
 def get_eia_ng_data(
-    api_key_file: str | Path | None,
     resource_year: int | tuple[int, int],
     price_category: str | list[str],
     state: str | list[str],
+    api_key_file: str | Path | None = None,
     filename: str | Path | None = None,
     *,
     monthly: bool = True,
@@ -336,8 +336,6 @@ def get_eia_ng_data(
     """Create a validated EIA Natural Gas API URL that is ready to be queried.
 
     Args:
-        api_key_file (Path, optional): Full file name of the file where the API key is located. If
-            no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
         resource_year (int | list[int]): The YYYY-formatted year or length-2 tuple of years whose
             data should be retrieved. Should be between 2001 and the current year, inclusive of
             endpoints as that is all that the EIA provides, regardless of what is queried.
@@ -347,6 +345,8 @@ def get_eia_ng_data(
         state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
             as "United States" or "US". Only the "US" or one of the 50 US states will produce valid
             results.
+        api_key_file (Path, optional): Full file name of the file where the API key is located. If
+            no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
         filename (str | Path | None): Full file name where the EIA data can either be loaded from
             or should be saved to. If None, then data will be queried and returned with saving
             left to the user.
