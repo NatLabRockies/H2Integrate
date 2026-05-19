@@ -179,7 +179,6 @@ class FeedstockCostModel(CostModelBaseClass):
         )
 
         # TODO: Update to the commodity_capacity input of the FeedstockPerformanceModel
-        # NOTE: Should I set this to rated_capacity if it's available?
         self.add_output(
             f"rated_{self.config.commodity}_production",
             val=0,
