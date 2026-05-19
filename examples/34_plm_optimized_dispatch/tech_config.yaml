@@ -43,17 +43,12 @@ technologies:
         energy_capex: 408  # $/kWh
         power_capex: 379  # $/kW
         opex_fraction: 0.025
-  grid_buy:
+  electricity_feedstock:
     performance_model:
-      model: GridPerformanceModel
-    cost_model:
-      model: GridCostModel
+      model: FeedstockPerformanceModel
     model_inputs:
       shared_parameters:
-        interconnection_size: 100000  # kW
-      cost_parameters:
-        cost_year: 2024
-        fixed_interconnection_cost: 0.0
-        interconnection_capex_per_kw: 0.0
-        interconnection_opex_per_kw: 0.0
-        electricity_buy_price: 0.09  # $/kWh
+        commodity: electricity
+        commodity_rate_units: kW
+      performance_parameters:
+        rated_capacity: 1e6  # 100 MW
