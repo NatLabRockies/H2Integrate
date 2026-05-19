@@ -48,6 +48,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             :py:attr:`state` has been provided.
         longitude (float | None): WGS-84 x-coordinate of the site. Will not be used if
             :py:attr:`state` has been provided.
+        site_name (str, optional): Name of the site from a multi-site private configuration. When
+            provided, the :py:class:`EIANaturalGasFeedstockCostModel` will populate the
+            :py:attr:`latitude` and :py:attr:`longitude` from the plant site configuration.
         filename (str, optional): Filename for where to save the data or where the data may
             already be located. If the file exists, the columns "period", "state", and "price" must
             exist, otherwise the file will not be used. "period" should be of the form YYYY or
@@ -78,6 +81,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     )
     longitude: float | None = field(
         default=None, validator=attrs.validators.optional(range_val(-180.0, 180.0))
+    )
+    site_name: str = field(
+        default=None, validator=attrs.validators.optional(attrs.validators.instance_of(str))
     )
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
@@ -130,12 +136,14 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         :py:attr:`EIANaturalGasFeedstockConfig.price` to an hourly timeseries for the
         ``plant_life``.
         """
-        site_config = self.options["plant_config"].get("site", {})
+        site_config = {}
+        cost_config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+        if (site_name := cost_config.get("site_name")) is not None:
+            site_config = self.options["plant_config"].get("sites", {}).get(site_name, {})
         self.config = EIANaturalGasFeedstockConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost") | site_config,
-            additional_cls_name=self.__class__.__name__,
-            strict=False,
+            cost_config | site_config, additional_cls_name=self.__class__.__name__, strict=False
         )
+
         price = eia.get_eia_ng_data(
             api_key_file=self.config.api_key_file,
             resource_year=self.config.resource_year,
