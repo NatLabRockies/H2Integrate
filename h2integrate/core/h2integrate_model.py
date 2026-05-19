@@ -620,7 +620,7 @@ class H2IntegrateModel:
                             self.finance_models.append(finance_object)
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
-            cost_model = individual_tech_config.get("cost_model", {}).get("model")
+            cost_model = individual_tech_config.get("cost_model", {}).get("model", "")
 
             if "FeedstockCostModel" in cost_model:
                 comp = self.supported_models[cost_model](
@@ -1139,7 +1139,7 @@ class H2IntegrateModel:
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
                 perf_model_name = source_tech_config.get("performance_model", {}).get("model")
-                cost_model_name = source_tech_config.get("cost_model", {}).get("model")
+                cost_model_name = source_tech_config.get("cost_model", {}).get("model", "")
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
