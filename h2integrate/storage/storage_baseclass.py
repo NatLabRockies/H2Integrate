@@ -304,7 +304,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        # rate × dt_amount → commodity_amount_units (works for any commodity_rate_units)
+        # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
         outputs[f"total_{self.commodity}_produced"] = (
             np.sum(storage_commodity_out) * self.dt_amount
         )
