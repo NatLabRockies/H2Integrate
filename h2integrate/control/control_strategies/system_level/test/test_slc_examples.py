@@ -15,10 +15,52 @@ def test_slc_no_battery(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    with subtests.test("Wind set point == rated"):
+        assert np.all(
+            model.prob.get_val("system_level_controller.wind_electricity_set_point", units="kW")
+            == model.prob.get_val("wind.rated_electricity_production", units="kW")
+        )
 
-    with subtests.test("wind farm generates power"):
-        assert wind_out.sum() > 0
+    with subtests.test("Natural gas plant set point"):
+        remaining_demand = model.prob.get_val(
+            "electrical_load_demand.electricity_demand_out", units="kW"
+        ) - model.prob.get_val("wind.electricity_out", units="kW")
+        ng_set_point = model.prob.get_val(
+            "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
+        )
+        expected_ng_set_point = np.clip(
+            remaining_demand,
+            a_min=0.0,
+            a_max=model.prob.get_val("natural_gas_plant.rated_electricity_production", units="kW")[
+                0
+            ],
+        )
+        assert np.allclose(expected_ng_set_point, ng_set_point, rtol=1e-6, atol=1e-8)
+
+    with subtests.test("Total unmet demand"):
+        assert (
+            pytest.approx(0.0, rel=1e-6, abs=1e-8)
+            == model.prob.get_val(
+                "electrical_load_demand.unmet_electricity_demand_out", units="kW"
+            ).sum()
+        )
+
+    with subtests.test("Wind LCOE"):
+        assert pytest.approx(77.07060204, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
+        )
+    with subtests.test("Natural gas LCOE"):
+        assert pytest.approx(85.5774049107076, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"
+        )
+    with subtests.test("Electricity LCOE"):
+        assert pytest.approx(80.79533451532551, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_electricity.LCOE", units="USD/(MW*h)"
+        )
+    with subtests.test("Wind NPV"):
+        assert pytest.approx(-38.5777102298, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
+        )
 
 
 @pytest.mark.unit
@@ -32,18 +74,60 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    with subtests.test("Wind set point == rated"):
+        assert np.all(
+            model.prob.get_val("system_level_controller.wind_electricity_set_point", units="kW")
+            == model.prob.get_val("wind.rated_electricity_production", units="kW")
+        )
 
-    with subtests.test("wind farm generates power"):
-        assert wind_out.sum() > 0
+    with subtests.test("Battery set point"):
+        remaining_demand = model.prob.get_val(
+            "electrical_load_demand.electricity_demand_out", units="kW"
+        ) - model.prob.get_val("wind.electricity_out", units="kW")
+        battery_set_point = model.prob.get_val(
+            "system_level_controller.battery_electricity_set_point", units="kW"
+        )
+        assert np.allclose(remaining_demand, battery_set_point, rtol=1e-6, atol=1e-8)
 
-    with subtests.test("lcoe"):
+    with subtests.test("Natural gas plant set point"):
+        remaining_demand = remaining_demand - model.prob.get_val(
+            "battery.electricity_out", units="kW"
+        )
+        ng_set_point = model.prob.get_val(
+            "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
+        )
+        expected_ng_set_point = np.clip(
+            remaining_demand,
+            a_min=0.0,
+            a_max=model.prob.get_val("natural_gas_plant.rated_electricity_production", units="kW")[
+                0
+            ],
+        )
+        assert np.allclose(expected_ng_set_point, ng_set_point, rtol=1e-6, atol=1e-8)
+
+    with subtests.test("Total unmet demand"):
         assert (
-            pytest.approx(
-                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)"),
-                rel=1e-6,
-            )
-            == 0.10902004
+            pytest.approx(0.0, rel=1e-6, abs=1e-8)
+            == model.prob.get_val(
+                "electrical_load_demand.unmet_electricity_demand_out", units="kW"
+            ).sum()
+        )
+
+    with subtests.test("Wind LCOE"):
+        assert pytest.approx(77.07060204, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
+        )
+    with subtests.test("Natural gas LCOE"):
+        assert pytest.approx(161.0833612618841, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"
+        )
+    with subtests.test("Electricity LCOE"):
+        assert pytest.approx(109.02003689718997, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_electricity.LCOE", units="USD/(MW*h)"
+        )
+    with subtests.test("Wind NPV"):
+        assert pytest.approx(-38.5777102298, rel=1e-6) == model.prob.get_val(
+            "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
         )
 
 
