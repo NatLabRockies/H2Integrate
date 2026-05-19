@@ -190,7 +190,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         self.dt_hr = self.dt / 3600.0
 
         # dt expressed in (commodity_amount_units / commodity_rate_units), i.e. the
-        # timestep width in whatever time unit makes rate × dt_amount = amount.
+        # timestep width in whatever time unit makes rate * dt_amount = amount.
         # Using self.dt (seconds) as the canonical source avoids any /3600 assumption.
         self.dt_amount = om_units.convert_units(
             self.dt,
@@ -305,9 +305,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
         # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
-        outputs[f"total_{self.commodity}_produced"] = (
-            np.sum(storage_commodity_out) * self.dt_amount
-        )
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
