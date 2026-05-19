@@ -5,10 +5,11 @@ import pytest
 from h2integrate.preprocess import geospatial as geo
 
 
+RG_NOT_INSTALLED = importlib.util.find_spec("reverse_geocoder") is None
+
+
 @pytest.mark.unit
-@pytest.mark.skipif(
-    importlib.util.find_spec("reverse_geocoder") is None, reason="reverse_geocoder is not installed"
-)
+@pytest.mark.skipif(RG_NOT_INSTALLED, reason="reverse_geocoder is not installed")
 def test_get_state_from_coords(subtests):
     """Test the reverse geocoding for state data functionality."""
     best_trailer_in_colorado_coords = (39.9140081, -105.2249155)
@@ -50,14 +51,12 @@ def test_get_state_from_coords(subtests):
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(
-    importlib.util.find_spec("reverse_geocoder") is not None, reason="reverse_geocoder is installed"
-)
+@pytest.mark.skipif(not RG_NOT_INSTALLED, reason="reverse_geocoder is installed")
 def test_get_state_from_coords_fail():
     """Tests that the correct error is raised when ``reverse_geocoder` is missing."""
     msg = "`reverse_geocoder` library required."
     with pytest.raises(ModuleNotFoundError, match=msg):
-        geo.get_state_from_coords(0, 0)
+        geo.get_state_from_coords(latitude=0, longitude=0)
 
 
 @pytest.mark.unit
