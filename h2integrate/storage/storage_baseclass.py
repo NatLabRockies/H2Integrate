@@ -47,7 +47,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
+        1,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
@@ -191,7 +191,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # dt expressed in (commodity_amount_units / commodity_rate_units), i.e. the
         # timestep width in whatever time unit makes rate * dt_amount = amount.
-        # Using self.dt (seconds) as the canonical source avoids any /3600 assumption.
         self.dt_amount = om_units.convert_units(
             self.dt,
             "s",
