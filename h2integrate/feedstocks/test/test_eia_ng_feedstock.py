@@ -164,30 +164,32 @@ def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file):
         driver_config={},
     )
 
-    with subtests.test("First site when no inputs"):
-        prob = om.Problem()
-        prob.model.add_subsystem("ng_feedstock_source", perf_model)
-        prob.model.add_subsystem("ng_feedstock", cost_model_site1)
-        # Connect the feedstock performance model output to the cost model input
-        prob.model.connect(
-            "ng_feedstock_source.natural_gas_out",
-            "ng_feedstock.natural_gas_out",
-        )
-        with pytest.raises(ValueError, match=r"'state' must be in(.*?)got 'Alberta'"):
-            prob.setup()
+    if not RG_NOT_INSTALLED:
+        with subtests.test("First site when no inputs"):
+            prob = om.Problem()
+            prob.model.add_subsystem("ng_feedstock_source", perf_model)
+            prob.model.add_subsystem("ng_feedstock", cost_model_site1)
+            # Connect the feedstock performance model output to the cost model input
+            prob.model.connect(
+                "ng_feedstock_source.natural_gas_out",
+                "ng_feedstock.natural_gas_out",
+            )
+            with pytest.raises(ValueError, match=r"'state' must be in(.*?)got 'Alberta'"):
+                prob.setup()
 
-    with subtests.test("Specified site"):
-        prob = om.Problem()
-        prob.model.add_subsystem("ng_feedstock_source", perf_model)
-        prob.model.add_subsystem("ng_feedstock", cost_model_site2)
-        # Connect the feedstock performance model output to the cost model input
-        prob.model.connect(
-            "ng_feedstock_source.natural_gas_out",
-            "ng_feedstock.natural_gas_out",
-        )
-        with pytest.raises(HTTPError):
-            prob.setup()
-            assert prob.get_val("ng_feedstock.config.state") == "CO"
+    if not RG_NOT_INSTALLED:
+        with subtests.test("Specified site"):
+            prob = om.Problem()
+            prob.model.add_subsystem("ng_feedstock_source", perf_model)
+            prob.model.add_subsystem("ng_feedstock", cost_model_site2)
+            # Connect the feedstock performance model output to the cost model input
+            prob.model.connect(
+                "ng_feedstock_source.natural_gas_out",
+                "ng_feedstock.natural_gas_out",
+            )
+            with pytest.raises(HTTPError):
+                prob.setup()
+                assert prob.get_val("ng_feedstock.config.state") == "CO"
 
     with subtests.test("Uses cost configuration's state over site data"):
         prob = om.Problem()
