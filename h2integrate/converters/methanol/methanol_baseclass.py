@@ -34,6 +34,11 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
         - h2o_consumption: h2o consumption in kg/h
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "methanol"
@@ -86,6 +91,11 @@ class MethanolCostBaseClass(CostModelBaseClass):
         - Fixed_OpEx: all methanol plant fixed operating expenses (do NOT vary with production rate)
         - Variable_OpEx: all methanol plant variable operating expenses (vary with production rate)
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]

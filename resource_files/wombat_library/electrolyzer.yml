@@ -1,7 +1,6 @@
 name: Single Turbine Plant with Electrolyzer (Poly Efficiency)
 weather: test_weather_one_year.csv
-service_equipment:
-  - ofs
+service_equipment: [ofs]
 layout: layout_electrolyzer_poly.csv
 port_distance: 20
 inflation_rate: 0
@@ -17,8 +16,7 @@ substations:
     transformer:
       name: transformer
       maintenance:
-        -
-          description: n/a
+        - description: n/a
           time: 0
           materials: 0
           service_equipment: CTV
@@ -42,11 +40,11 @@ turbines:
     electrical_system:
       name: electrical_system
       maintenance:
-      - description: n/a
-        time: 0
-        materials: 0
-        service_equipment: CTV
-        frequency: 0
+        - description: n/a
+          time: 0
+          materials: 0
+          service_equipment: CTV
+          frequency: 0
       failures:
         - scale: 0
           shape: 0
@@ -60,11 +58,11 @@ cables:
   export:
     name: export
     maintenance:
-    - description: na
-      time: 0
-      materials: 0
-      service_equipment: CTV
-      frequency: 0
+      - description: na
+        time: 0
+        materials: 0
+        service_equipment: CTV
+        frequency: 0
     failures:
       - scale: 0
         shape: 0
@@ -111,19 +109,18 @@ electrolyzers:
     power_system:
       name: Power System
       maintenance:
-      - description: DC current transducer
-        time: 40
-        materials: 1200
-        service_equipment: OFS
-        frequency: 5
-        frequency_basis: months
+        - description: DC current transducer
+          time: 40
+          materials: 1200
+          service_equipment: OFS
+          frequency: 5
+          frequency_basis: months
       failures:
-      -
-        scale: 0
-        shape: 0
-        time: 0
-        materials: 0
-        service_equipment: [OFS]
-        operation_reduction: 0
-        level: 1
-        description: n/a
+        - scale: 0
+          shape: 0
+          time: 0
+          materials: 0
+          service_equipment: [OFS]
+          operation_reduction: 0
+          level: 1
+          description: n/a

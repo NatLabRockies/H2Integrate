@@ -30,6 +30,11 @@ class ElectricArcFurnacePerformanceBaseConfig(BaseConfig):
 
 
 class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "steel"
@@ -71,13 +76,13 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
                 desc=f"{feedstock} consumed for steel production",
             )
 
-        # Default the steel demand input as the rated capacity
+        # Default the steel set point input as the rated capacity
         self.add_input(
-            "steel_demand",
+            "steel_set_point",
             val=self.config.steel_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units=self.commodity_rate_units,
-            desc="Steel demand for steel plant",
+            desc="Steel set point for steel plant",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -106,21 +111,21 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 
         # H2 EAF needs natural gas, electricity, carbon, lime, water
         # NG EAF needs natural gas and electricity.
-        # add pig iron feedstock to dataframe
+        # add sponge iron feedstock to dataframe
         steel_plant_capacity = coeff_df[coeff_df["Name"] == "Steel Production"]["Value"].values[0]
         iron_plant_capacity = coeff_df[coeff_df["Name"] == "Pig Iron Production"]["Value"].values[0]
         iron_to_steel_ratio = iron_plant_capacity / steel_plant_capacity  # both in metric tons/year
         # add to dataframe
-        pig_iron_row = pd.DataFrame(
+        sponge_iron_row = pd.DataFrame(
             {
                 "Name": ["Pig Iron"],
                 "Type": ["feed"],
                 "Coeff": ["lin"],
-                "Unit": ["mt pig iron/mt steel"],
+                "Unit": ["mt sponge iron/mt steel"],
                 "Value": [iron_to_steel_ratio],
             }
         )
-        coeff_df = pd.concat([coeff_df, pig_iron_row], ignore_index=True)
+        coeff_df = pd.concat([coeff_df, sponge_iron_row], ignore_index=True)
 
         # capacity units units are mtpy
         unit_rename_mapper = {"mtpy": "t/yr", "%": "unitless"}
@@ -207,7 +212,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             "water": feedstocks[feedstocks["Name"] == "Raw Water Withdrawal"][
                 "Value"
             ].sum(),  # galUS/t
-            "pig_iron": feedstocks[feedstocks["Name"] == "Pig Iron"]["Value"].sum(),  # t/t
+            "sponge_iron": feedstocks[feedstocks["Name"] == "Pig Iron"]["Value"].sum(),  # t/t
             "electricity": feedstocks[feedstocks["Unit"] == "(kW*h)/t"][
                 "Value"
             ].sum(),  # electricity
@@ -225,20 +230,20 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
                 "Value"
             ].sum()  # t/t
 
-        # steel demand, saturated at maximum rated system capacity
-        steel_demand = np.where(
-            inputs["steel_demand"] > inputs["system_capacity"],
+        # steel set point, saturated at maximum rated system capacity
+        steel_set_point = np.where(
+            inputs["steel_set_point"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["steel_demand"],
+            inputs["steel_set_point"],
         )
 
         # initialize an array of how much steel could be produced
-        # from the available feedstocks and the demand
+        # from the available feedstocks and the set point
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["steel_demand"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["steel_set_point"]))
         )
-        # first entry is the steel demand
-        steel_from_feedstocks[0] = steel_demand
+        # first entry is the steel set point
+        steel_from_feedstocks[0] = steel_set_point
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity
@@ -300,6 +305,11 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
         coeff_df (pd.DataFrame): cost coefficient dataframe
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
@@ -332,7 +342,7 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
 
         self.config = ElectricArcFurnaceCostBaseConfig.from_dict(
             config_dict,
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 

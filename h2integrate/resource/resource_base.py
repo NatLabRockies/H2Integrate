@@ -90,6 +90,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.resource_data = None
         self.resource_site = [self.config.latitude, self.config.longitude]
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
 
@@ -175,6 +176,60 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # Update resource data with time information
         data.update(time_start_end_info)
+
+        return data
+
+    def process_leap_day(self, data: dict):
+        """Process leap day data by optionally removing it and validating data length.
+
+        Checks whether the provided resource data contains a leap day (February 29th).
+        If ``include_leap_day`` is set to False in the config and the data contains a
+        leap day, the leap day entries are removed. After processing, validates that
+        the length of the data matches the expected number of timesteps.
+
+        Args:
+            data (dict): DataFrame-like dictionary of resource data containing
+                "Month" and "Day" columns.
+        Returns:
+            dict: Processed resource data with leap day handled according to configuration.
+
+        Raises:
+            ValueError: If the length of the data does not match ``self.n_timesteps``
+                after leap day processing.
+        """
+
+        # Check if data includes leap day
+        data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+
+        # Remove leap day if needed
+        if not self.config.include_leap_day and data_has_leap_day:
+            # Get index of dataframe that includes leap day
+            leap_day_index = (
+                data.reset_index(drop=False)
+                .set_index(keys=["Month", "Day"], drop=True)
+                .loc[(2, 29)]["index"]
+                .to_list()
+            )
+            # Drop the leap day data from the dataframe
+            data = data.drop(index=leap_day_index)
+
+        # Check if data is the same length as the number of timesteps
+        if len(data) != self.n_timesteps:
+            leap_day_msg = ""
+            if data_has_leap_day and len(data) > self.n_timesteps:
+                # Add extra detail to error message if error may be due to leap day
+                leap_day_msg = (
+                    "This may be because the resource data includes a leap day. ",
+                    "To remove data from a leap day from resource data, please set "
+                    "`include_leap_day` to False.",
+                )
+
+            msg = (
+                f"{self.__class__.__name__}: Resource data is not the same length as n_timesteps. "
+                f"Resource data has length {len(data)}, n_timesteps is {self.n_timesteps}. "
+                f"{leap_day_msg}"
+            )
+            raise ValueError(msg)
 
         return data
 

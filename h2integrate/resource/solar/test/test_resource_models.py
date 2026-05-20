@@ -30,7 +30,7 @@ from h2integrate.core.supported_models import supported_models
     ]
 )
 # fmt: on
-def test_nrel_solar_resource_file_downloads(
+def test_nlr_solar_resource_file_downloads(
     subtests,
     plant_simulation,
     site_config,
@@ -195,5 +195,63 @@ def test_solar_resource_h2i_download(
         assert len(data_keys) == 16
     with subtests.test("Start time"):
         assert solar_data["start_time"] == f"{resource_year}/01/01 00:00:00 (+0000)"
+    with subtests.test("Time step"):
+        assert solar_data["dt"] == plant_simulation["simulation"]["dt"]
+
+
+
+# fmt: off
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,resource_year,model_name,timezone",
+    [("OpenMeteoHistoricalSolarResource", "solar",  -28.454864, 114.551749, 2024, "openmeteo_archive_solar", 8)],  # noqa: E501
+    ids=["OpenMeteoHistoricalSolarResource-LeapYear"]
+)
+# fmt: on
+def test_solar_resource_h2i_download_leap_year(
+    plant_simulation,
+    site_config,
+    subtests,
+    model,
+    which,
+    lat,
+    lon,
+    resource_year,
+    model_name,
+):
+    plant_config = {
+        "site": site_config,
+        "plant": plant_simulation,
+    }
+
+    prob = om.Problem()
+    comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"]["resource_parameters"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    prob.run_model()
+    solar_data = prob.get_val("resource.solar_resource_data")
+    name_expected = f"{lat}_{lon}_{resource_year}_{model_name}_60min_local_tz.csv"
+    with subtests.test("filepath for data was found where expected"):
+        assert Path(solar_data["filepath"]).exists()
+        assert Path(solar_data["filepath"]).name == name_expected
+
+    with subtests.test("Data timezone"):
+        assert pytest.approx(solar_data["data_tz"], rel=1e-6) == 8
+    with subtests.test("Site Elevation"):
+        assert pytest.approx(solar_data["elevation"], rel=1e-6) == 71
+
+    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str)]
+    for k in data_keys:
+        with subtests.test(f"{k} resource data is 8760"):
+            assert len(solar_data[k]) == 8760
+
+    with subtests.test("There are 16 timeseries data keys"):
+        assert len(data_keys) == 16
+    with subtests.test("Start time"):
+        assert solar_data["start_time"] == f"{resource_year}/01/01 00:00:00 (+0800)"
     with subtests.test("Time step"):
         assert solar_data["dt"] == plant_simulation["simulation"]["dt"]

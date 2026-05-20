@@ -10,12 +10,11 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ATBResComPVCostModel with costs based on DC capacity.
     Recommended to use with commercial or residential PV models. More information on
     ATB methodology and representative PV technologies can be found
-    `here for commercial PV <https://atb.nrel.gov/electricity/2024/commercial_pv>`_ and
-    `here for residential PV <https://atb.nrel.gov/electricity/2024/residential_pv>`_.
+    `here for commercial PV <https://atb.nlr.gov/electricity/2024/commercial_pv>`_ and
+    `here for residential PV <https://atb.nlr.gov/electricity/2024/residential_pv>`_.
     Reference cost values can be found on the `Solar - PV Dist. Comm` or
     `Solar - PV Dist. Res` sheets of the
-    `NREL ATB workbook <https://atb.nrel.gov/electricity/2024/data>`_.
-
+    `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
     Attributes:
         capex_per_kWdc (float|int): capital cost of solar-PV system in $/kW-DC
         opex_per_kWdc_per_year (float|int): annual operating cost of solar-PV
@@ -30,6 +29,11 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
 
 
 class ATBResComPVCostModel(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = ATBResComPVCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),

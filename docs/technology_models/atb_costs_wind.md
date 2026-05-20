@@ -1,15 +1,15 @@
 # Wind Cost Model based on ATB-Formatted Cost Data
 
-NREL's [Annual Technology Baseline (ATB)](https://atb.nrel.gov) is commonly referenced for technology costs such as overnight capital cost, fixed operations and maintenance costs, and capital expenditures. The `ATBWindPlantCostModel` cost model available in H2I that is intended to be easily used with cost values pulled from [NREL's ATB Excel workbook](https://atb.nrel.gov/electricity/2024/data).
+NLR's [Annual Technology Baseline (ATB)](https://atb.nlr.gov) is commonly referenced for technology costs such as overnight capital cost, fixed operations and maintenance costs, and capital expenditures. The `ATBWindPlantCostModel` cost model available in H2I that is intended to be easily used with cost values pulled from [NLR's ATB Excel workbook](https://atb.nlr.gov/electricity/2024/data).
 
 ```{note}
 The Annual Technology Baseline (ATB) is updated annually. While we do our best to update our documentation regularly, be sure that you're using the most recent version of the ATB in case our links are pointing to an older version.
 ```
 
 There are specific costs and performance specifications in the ATB for:
-- [Land-Based Wind](https://atb.nrel.gov/electricity/2024/land-based_wind)
-- [Offshore Wind](https://atb.nrel.gov/electricity/2024/offshore_wind)
-- [Distributed Wind](https://atb.nrel.gov/electricity/2024/distributed_wind)
+- [Land-Based Wind](https://atb.nlr.gov/electricity/2024/land-based_wind)
+- [Offshore Wind](https://atb.nlr.gov/electricity/2024/offshore_wind)
+- [Distributed Wind](https://atb.nlr.gov/electricity/2024/distributed_wind)
 
 Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#atb-wind-cost-model).
 

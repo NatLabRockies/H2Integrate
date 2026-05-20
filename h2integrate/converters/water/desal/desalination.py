@@ -32,6 +32,11 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
     Takes plantcapacitykgph input and outputs fresh water and electricity required.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         super().setup()
         self.config = ReverseOsmosisPerformanceModelConfig.from_dict(
@@ -132,6 +137,11 @@ class ReverseOsmosisCostModel(DesalinationCostBaseClass):
     An OpenMDAO component that computes the cost of a reverse osmosis desalination system.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = ReverseOsmosisCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
@@ -140,7 +150,7 @@ class ReverseOsmosisCostModel(DesalinationCostBaseClass):
         super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """Cost reference: Table 3 of https://www.nrel.gov/docs/fy16osti/66073.pdf.
+        """Cost reference: Table 3 of https://www.nlr.gov/docs/fy16osti/66073.pdf.
         CapEx includes 2.55% financing factor, numbers based on INL report
         https://doi.org/10.2172/1236837 (in Table 10) which came from this report
         https://www-pub.iaea.org/MTCD/Publications/PDF/te_1561_web.pdf

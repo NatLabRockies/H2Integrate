@@ -41,7 +41,7 @@ def test_iron_mine_performance_outputs(
 
     prob.set_val("comp.electricity_in", [annual_electricity / 8760] * 8760, units="kW")
     prob.set_val("comp.crude_ore_in", [annual_crude_ore / 8760] * 8760, units="t/h")
-    prob.set_val("comp.iron_ore_demand", [ore_rated_capacity] * 8760, units="t/h")
+    prob.set_val("comp.iron_ore_set_point", [ore_rated_capacity] * 8760, units="t/h")
 
     prob.run_model()
     commodity = "iron_ore"
@@ -152,7 +152,7 @@ def test_baseline_iron_ore_costs(plant_config, driver_config, iron_ore_config_ma
 
     prob.set_val("ore_perf.electricity_in", [annual_electricity / 8760] * 8760, units="kW")
     prob.set_val("ore_perf.crude_ore_in", [annual_crude_ore / 8760] * 8760, units="t/h")
-    prob.set_val("ore_perf.iron_ore_demand", [ore_rated_capacity] * 8760, units="t/h")
+    prob.set_val("ore_perf.iron_ore_set_point", [ore_rated_capacity] * 8760, units="t/h")
 
     prob.run_model()
 

@@ -23,6 +23,11 @@ class FeedstockPerformanceConfig(BaseConfig):
 
 
 class FeedstockPerformanceModel(om.ExplicitComponent):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
@@ -62,7 +67,8 @@ class FeedstockCostConfig(CostModelBaseConfig):
         commodity_rate_units (str): feedstock usage rate units (such as "galUS/h", "kg/h" or "kW")
         price (scalar or list):  The cost of the feedstock in USD/`commodity_amount_units`.
             If scalar, cost is assumed to be constant for each timestep and each year.
-            If list, then it can be the cost per timestep of the simulation
+            If list with length n_timesteps, then it is the cost per timestep of the simulation.
+            If list with length plant_life, then it is the cost per year of operation.
         cost_year (int): dollar-year for costs.
         annual_cost (float, optional): fixed cost associated with the feedstock in USD/year
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
@@ -72,10 +78,9 @@ class FeedstockCostConfig(CostModelBaseConfig):
 
     commodity: str = field()
     commodity_rate_units: str = field()
-    price: int | float | list = field()
+    price: int | float | list | np.ndarray = field()
     annual_cost: float = field(default=0.0)
     start_up_cost: float = field(default=0.0)
-
     commodity_amount_units: str | None = field(default=None)
 
     def __attrs_post_init__(self):
@@ -84,33 +89,133 @@ class FeedstockCostConfig(CostModelBaseConfig):
 
 
 class FeedstockCostModel(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = FeedstockCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
+        # Set cost outputs
         super().setup()
 
         self.add_input(
             f"{self.config.commodity}_consumed",
             val=0.0,
-            shape=int(n_timesteps),
+            shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
             desc=f"Consumption profile of {self.config.commodity}",
         )
         self.add_input(
+            f"{self.config.commodity}_out",
+            val=0,
+            shape=self.n_timesteps,
+            units=self.config.commodity_rate_units,
+        )
+
+        # Determine price mode from array length
+        if isinstance(self.config.price, list | np.ndarray):
+            price_len = len(self.config.price)
+            if price_len == plant_life:
+                self._price_mode = "per_year"
+            elif price_len == self.n_timesteps:
+                self._price_mode = "per_timestep"
+            else:
+                raise ValueError(
+                    f"price length ({price_len}) "
+                    f"must match n_timesteps ({self.n_timesteps}) "
+                    f"or plant_life ({plant_life})"
+                )
+        else:
+            self._price_mode = "scalar"
+
+        self.add_input(
             "price",
             val=self.config.price,
             units=f"USD/({self.config.commodity_amount_units})",
-            desc=f"Consumption profile of {self.config.commodity}",
+            desc=f"Price profile of {self.config.commodity}",
         )
 
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        hours_per_year = 8760
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+        self.fraction_of_year_simulated = hours_simulated / hours_per_year
+        # since feedstocks are consumed, some outputs are appended
+        # with 'consumed' rather than 'produced'
+
+        self.add_output(
+            f"total_{self.config.commodity}_consumed",
+            val=0.0,
+            units=self.config.commodity_amount_units,
+        )
+
+        self.add_output(
+            f"annual_{self.config.commodity}_consumed",
+            val=0.0,
+            shape=self.plant_life,
+            units=f"({self.config.commodity_amount_units})/year",
+        )
+
+        # Capacity factor is feedstock_consumed/max_feedstock_available
+        self.add_output(
+            "capacity_factor",
+            val=0.0,
+            shape=self.plant_life,
+            units="unitless",
+            desc="Capacity factor",
+        )
+
+        # The should be equal to the commodity_capacity input of the FeedstockPerformanceModel
+        self.add_output(
+            f"rated_{self.config.commodity}_production",
+            val=0,
+            units=self.config.commodity_rate_units,
+        )
+
+        # lifetime estimate of item replacements, represented as a fraction of the capacity.
+        self.add_output("replacement_schedule", val=0.0, shape=plant_life, units="unitless")
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # Capacity factor is the total amount consumed / the total amount available
+        outputs["capacity_factor"] = (
+            inputs[f"{self.config.commodity}_consumed"].sum()
+            / inputs[f"{self.config.commodity}_out"].sum()
+        )
+
+        # Sum the amount consumed
+        outputs[f"total_{self.config.commodity}_consumed"] = inputs[
+            f"{self.config.commodity}_consumed"
+        ].sum() * (self.dt / 3600)
+
+        # Estimate annual consumption based on consumption over the simulation
+        # NOTE: once we standardize feedstock consumption outputs in models, this should
+        # be updated to handle consumption that varies over years of operation
+        outputs[f"annual_{self.config.commodity}_consumed"] = outputs[
+            f"total_{self.config.commodity}_consumed"
+        ] * (1 / self.fraction_of_year_simulated)
+
+        outputs[f"rated_{self.config.commodity}_production"] = inputs[
+            f"{self.config.commodity}_out"
+        ].max()
+
+        # Calculate costs
         price = inputs["price"]
         hourly_consumption = inputs[f"{self.config.commodity}_consumed"]
-        cost_per_year = sum(price * hourly_consumption)
+
+        if self._price_mode == "per_year":
+            # Per-year price: total consumption * price per year
+            total_consumption = hourly_consumption.sum() * (self.dt / 3600)
+            cost_per_year = total_consumption * price
+        else:
+            # Scalar or per-timestep: same cost each year
+            cost_per_year = sum(price * hourly_consumption) * (self.dt / 3600)
 
         outputs["CapEx"] = self.config.start_up_cost
         outputs["OpEx"] = self.config.annual_cost

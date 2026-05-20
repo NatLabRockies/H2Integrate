@@ -72,6 +72,7 @@ def pysam_performance_model():
         ("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 0, 2e-2, 410211.9419),  # noqa: E501
         pytest.param("MeteosatPrimeMeridianTMYSolarAPI", "solar", -27.3649, 152.67935, "tmy-2022", "himawari_tmy_v3", 0, 1e-3, 510709.633402, marks=pytest.mark.xfail(reason="Longitude mismatch")),  # noqa: E501
         ("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 0, 1e-3, 443558.17053592583),  # noqa: E501
+        ("OpenMeteoHistoricalSolarResource", "solar", -28.454864, 114.551749, 2024, "openmeteo_archive_solar", 8, 2e-2, 192656.49240723),  # noqa: E501
     ],
     ids=[
         "Himawari7SolarAPI",
@@ -80,6 +81,7 @@ def pysam_performance_model():
         "MeteosatPrimeMeridianSolarAPI",
         "MeteosatPrimeMeridianTMYSolarAPI",
         "OpenMeteoHistoricalSolarResource",
+        "OpenMeteoHistoricalSolarResource-LeapYear",
     ]
 )
 # fmt: on

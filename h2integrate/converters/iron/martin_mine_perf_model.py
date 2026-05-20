@@ -31,6 +31,11 @@ class MartinIronMinePerformanceConfig(BaseConfig):
 
 
 class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "iron_ore"
@@ -71,13 +76,13 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
             desc="Crude ore input",
         )
 
-        # Default the ore demand input as the rated capacity
+        # Default the ore set point input as the rated capacity
         self.add_input(
-            "iron_ore_demand",
+            "iron_ore_set_point",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units="t/h",
-            desc="Iron ore demand for iron mine",
+            desc="Iron ore set point for iron mine",
         )
 
         self.add_output(
@@ -197,11 +202,11 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         max_crude_ore_consumption = inputs["system_capacity"] * crude_ore_usage_per_processed_ore
         max_energy_consumption = inputs["system_capacity"] * energy_usage_per_processed_ore
 
-        # iron ore demand, saturated at maximum rated system capacity
-        processed_ore_demand = np.where(
-            inputs["iron_ore_demand"] > inputs["system_capacity"],
+        # iron ore set point, saturated at maximum rated system capacity
+        processed_ore_set_point = np.where(
+            inputs["iron_ore_set_point"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["iron_ore_demand"],
+            inputs["iron_ore_set_point"],
         )
 
         # available feedstocks, saturated at maximum system feedstock consumption
@@ -221,9 +226,9 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         processed_ore_from_electricity = energy_available / energy_usage_per_processed_ore
         processed_ore_from_crude_ore = crude_ore_available / crude_ore_usage_per_processed_ore
 
-        # output is minimum between available feedstocks and output demand
+        # output is minimum between available feedstocks and output set point
         processed_ore_production = np.minimum.reduce(
-            [processed_ore_from_crude_ore, processed_ore_from_electricity, processed_ore_demand]
+            [processed_ore_from_crude_ore, processed_ore_from_electricity, processed_ore_set_point]
         )
 
         # energy consumption

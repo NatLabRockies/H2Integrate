@@ -30,6 +30,11 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
     Computes annual ammonia production based on plant capacity and capacity factor.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "ammonia"
@@ -107,6 +112,11 @@ class SimpleAmmoniaCostModel(CostModelBaseClass):
     An OpenMDAO component for calculating the costs associated with ammonia production.
     Includes CapEx, OpEx, and byproduct credits, and exposes all detailed cost outputs.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
         self.config = AmmoniaCostModelConfig.from_dict(

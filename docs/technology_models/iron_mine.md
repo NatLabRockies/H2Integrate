@@ -27,7 +27,7 @@ These data were compiled from two sources:
     - [Minorca Mine](https://minedocs.com/22/Minorca-TR-12312021.pdf)
     - [Tilden Mine](https://minedocs.com/22/Tilden-TR-12312021.pdf)
 
-To use this model, specify `"iron_mine_performance_martin"` as the performance model and `"iron_mine_cost_martin"` as the cost model.
+To use this model, specify `"MartinIronMinePerformanceComponent"` as the performance model and `"MartinIronMineCostComponent"` as the cost model.
 Currently, no complex calculations occur beyond importing performance and costs.
 In the performance model, the "wet long tons" (wlt) that ore production is typically reported in are converted to dry metric tons for use in H2I.
 In the cost model, the total capex costs for a plant are scaled by the amount of are produced annually.

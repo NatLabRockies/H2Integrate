@@ -3,7 +3,11 @@ import os
 import pytest
 from hopp import TEST_ENV_VAR
 
-from test.conftest import temp_dir, pytest_collection_modifyitems  # noqa: F401
+from test.conftest import (  # noqa: F401
+    temp_dir,
+    temp_copy_of_example,
+    pytest_collection_modifyitems,
+)
 
 
 def pytest_sessionstart(session):
@@ -37,7 +41,7 @@ def plant_config_wtk():
         "longitude": -101.945027,
         "resource": {
             "wind_resource": {
-                "resource_model": "WTKNRELDeveloperAPIWindResource",
+                "resource_model": "WTKNLRDeveloperAPIWindResource",
                 "resource_parameters": {
                     "resource_year": 2012,
                 },

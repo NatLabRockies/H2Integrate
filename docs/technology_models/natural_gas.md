@@ -14,8 +14,8 @@ The performance model requires the following parameters:
   - **NGCT (Combustion Turbine)**: 10-14 MMBtu/MWh (lower efficiency, faster response)
 
 Optional parameter:
-- `electricity_demand` (optional): Defaults to the `system_capacity` but can be set to a particular demand profile.
-  - See example `16_natural_gas` to see how missed load from the battery is set as the electricity demand for the natural gas plant.
+- `electricity_set_point` (optional): Defaults to the `system_capacity` but can be set to a particular set point profile.
+  - See example `16_natural_gas` to see how missed load from the battery is set as the electricity set point for the natural gas plant.
 
 The model implements the relationship:
 

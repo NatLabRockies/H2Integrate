@@ -41,6 +41,7 @@ For [cost models based on user-provided costs](#cost-models-with-user-input-cost
 | `natural_geoh2_cost`    |
 | `WOMBATElectrolyzerModel`                |
 | `CustomElectrolyzerCostModel` |
+| `QuinnNuclearCostModel` |
 
 ### Example tech_config input for user-input cost year
 ```yaml

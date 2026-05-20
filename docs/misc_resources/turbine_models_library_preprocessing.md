@@ -13,9 +13,9 @@ kernelspec:
 
 # Turbine Models Library Pre-Processing Tools
 
-The [turbine-models package](https://github.com/NREL/turbine-models/tree/main) hosts wind turbine data for a variety of wind turbines and has tools that can streamline the process to run new turbines with the [PySAM Windpower model](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) or [FLORIS](https://github.com/NREL/floris/tree/main).
+The [turbine-models package](https://github.com/NatLabRockies/turbine-models/tree/main) hosts wind turbine data for a variety of wind turbines and has tools that can streamline the process to run new turbines with the [PySAM Windpower model](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) or [FLORIS](https://github.com/NatLabRockies/floris/tree/main).
 
-The full list of turbine models available in the turbine-models library can be found [here](https://github.com/NREL/turbine-models/blob/main/turbine_models/supported_turbines.py)
+The full list of turbine models available in the turbine-models library can be found [here](https://github.com/NatLabRockies/turbine-models/blob/main/turbine_models/supported_turbines.py)
 
 H2Integrate has preprocessing tools that leverage the functionality available in the turbine-models library. The function `export_turbine_to_pysam_format()` will save turbine model specifications formatted for the PySAM Windpower model. The PySAM Windpower model is wrapped in H2I and can be utilized with the "pysam_wind_plant_performance" model. Example usage of the `export_turbine_to_pysam_format()` function is demonstrated in the following section using Example 8.
 
@@ -34,14 +34,11 @@ We'll start off by importing the required modules and packages:
 
 ```{code-cell} ipython3
 import os
+
 import numpy as np
 
-
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.utilities import load_yaml
-from h2integrate.core.inputs.validation import load_tech_yaml
+from h2integrate import H2IntegrateModel, EXAMPLE_DIR, load_yaml, write_readable_yaml, load_tech_yaml
 from h2integrate.preprocess.wind_turbine_file_tools import export_turbine_to_pysam_format
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 ```
 
 Load the tech config file that we want to update the turbine model for:
@@ -126,8 +123,6 @@ print(f"LCOH is ${lcoh[0]:.2f}/kg")
 ### Option 2: Save new tech_config to file and run H2I from file
 
 ```{code-cell} ipython3
-from h2integrate.core.utilities import write_readable_yaml
-
 # Define a new filepath for the updated tech config
 tech_config_path_new = EXAMPLE_DIR / "08_wind_electrolyzer" / f"tech_config_{turbine_name}.yaml"
 

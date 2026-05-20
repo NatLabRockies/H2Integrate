@@ -2,7 +2,7 @@ import openmdao.api as om
 import pyomo.environ as pyo
 from attrs import field, define
 
-from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.utilities import BaseConfig
 
 
 @define(kw_only=True)
@@ -22,18 +22,17 @@ class PyomoRuleBaseConfig(BaseConfig):
 
 
 class PyomoRuleBaseClass(om.ExplicitComponent):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = PyomoRuleBaseConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
-            strict=False,
-            additional_cls_name=self.__class__.__name__,
-        )
-
         self.add_discrete_output(
             "dispatch_block_rule_function",
             val=self.dispatch_block_rule_function,
@@ -57,7 +56,7 @@ class PyomoRuleBaseClass(om.ExplicitComponent):
 
         This method sets up all model elements (parameters, variables, constraints,
         and ports) associated with a technology block within the dispatch model.
-        It is typically called in the setup_pyomo() method of the PyomoControllerBaseClass.
+        It is typically called in the setup_pyomo() method of the PyomoStorageControllerBaseClass.
 
         Args:
             pyomo_model (pyo.ConcreteModel): The Pyomo model to which the technology

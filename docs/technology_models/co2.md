@@ -1,14 +1,14 @@
 # Marine Carbon Dioxide Capture Models
 Marine carbon dioxide (CO₂) capture technologies aim to remove CO₂ from the ocean or enhance the ocean’s natural capacity to store atmospheric CO₂. These approaches provide additional pathways for managing carbon in the marine environment and can complement land-based strategies for resource management and ocean health.
 
-This section provides an overview of the marine carbon dioxide capture models integrated into H2Integrate. The models are adapted from and maintained in NREL's [MarineCarbonManagement Repository](https://github.com/Nrel/MarineCarbonManagement) and have been integrated here for ease of scenario analysis and system-level optimization.
+This section provides an overview of the marine carbon dioxide capture models integrated into H2Integrate. The models are adapted from and maintained in NLR's [MarineCarbonManagement Repository](https://github.com/NatLabRockies/MarineCarbonManagement) and have been integrated here for ease of scenario analysis and system-level optimization.
 
 
 ## Direct Ocean Capture (DOC) Model
 
 Direct Ocean Capture extracts dissolved CO₂ directly from seawater using engineered processes. By reducing the concentration of dissolved inorganic carbon, the ocean naturally reabsorbs an equivalent amount of atmospheric CO₂. The resultant CO₂ can then be used for downstream processes and conversion or storage.
 
-The DOC model is built on electrodialysis-based separation and includes both performance and cost components, allowing users to explore a wide range of system configurations, operational scenarios, and infrastructure options. It is designed for process design, optimization, and cost evaluation of marine carbon capture systems and is integrated from NREL's [MarineCarbonManagement Repository](https://github.com/Nrel/MarineCarbonManagement). Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol7030052)
+The DOC models, `DOCPerformanceModel` and `DOCCostModel`, are built on electrodialysis-based separation and includes both performance and cost components, allowing users to explore a wide range of system configurations, operational scenarios, and infrastructure options. It is designed for process design, optimization, and cost evaluation of marine carbon capture systems and is integrated from NLR's [MarineCarbonManagement Repository](https://github.com/NatLabRockies/MarineCarbonManagement). Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol7030052)
 
 ### Why Use This Model
 - Evaluate technology performance — quantify system throughput, process efficiencies, and resource usage under different operating conditions.
@@ -55,7 +55,7 @@ The Ocean Alkalinity Enhancement (OAE) Model simulates the process of increasing
 This model estimates the CO₂ absorption potential of the ocean after the OAE process. CO₂ is not a usable downstream product.
 ```
 
-The OAE model is adapted from NREL’s MarineCarbonManagement Repository and includes both performance and cost components, as well as a financial model enabling users to explore a variety of system designs, operational strategies, and infrastructure setups. Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol8010012)
+The OAE models, `OAEPerformanceModel` and `OAECostModel`, are adapted from NLR’s MarineCarbonManagement Repository and includes both performance and cost components, as well as a financial model enabling users to explore a variety of system designs, operational strategies, and infrastructure setups. Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol8010012)
 
 ### Why Use This Model
 - Assess system performance — determine processing capacity, flow characteristics, and operational profiles.
@@ -95,7 +95,7 @@ Computes capital (CapEx) and operational (OpEx) costs based on plant design and 
 - Annual operating cost (USD/year)
 
 #### OAE Cost and Financial Model
-Extends the cost model to include financial metrics. Allows calculation of net present value (NPV) and determination of credit values required for financial viability.
+The `OAECostAndFinancialModel` extends the cost model to include financial metrics. Allows calculation of net present value (NPV) and determination of credit values required for financial viability.
 
 **Additional inputs include:**
 - Levelized cost of electricity (LCOE)

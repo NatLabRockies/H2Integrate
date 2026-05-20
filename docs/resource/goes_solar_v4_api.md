@@ -1,7 +1,7 @@
 (solar_resource:goes_v4_api)=
 # Solar Resource: GOES PSM v4
 
-There are four datasets that use the [NSRDB GOES PSM v4 API](https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) calls:
+There are four datasets that use the [NSRDB GOES PSM v4 API](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) calls:
 - "GOESAggregatedSolarAPI"
 - "GOESConusSolarAPI"
 - "GOESFullDiscSolarAPI"
@@ -12,10 +12,10 @@ These datasets allow for resource data to be downloaded for **locations** within
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |
 | :--------- | :---------------: | :---------------: | :---------------: | :---------------: | :---------------: |
-| `GOESAggregatedSolarAPI`  | 30, 60 min  | 4 km | 1998-2024  | North America, South America | [GOES Aggregated](https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/) |
-| `GOESConusSolarAPI`  | 5, 15, 30, 60 min  | 2 km | 2018-2024  | Continental United States | [GOES Conus](https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/) |
-| `GOESFullDiscSolarAPI`  | 10, 30, 60 min  | 2 km | 2018-2024  | North America, South America |  [GOES Full disc](https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) |
-| `GOESTMYSolarAPI`  | 60 min  | 4 km | 2022-2024, for tmy, tdy and tgy  | North America, South America |  [GOES TMY](https://developer.nrel.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/) |
+| `GOESAggregatedSolarAPI`  | 30, 60 min  | 4 km | 1998-2024  | North America, South America | [GOES Aggregated](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/) |
+| `GOESConusSolarAPI`  | 5, 15, 30, 60 min  | 2 km | 2018-2024  | Continental United States | [GOES Conus](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/) |
+| `GOESFullDiscSolarAPI`  | 10, 30, 60 min  | 2 km | 2018-2024  | North America, South America |  [GOES Full disc](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) |
+| `GOESTMYSolarAPI`  | 60 min  | 4 km | 2022-2024, for tmy, tdy and tgy  | North America, South America |  [GOES TMY](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/) |
 
 
 ```{note}

@@ -28,6 +28,11 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
     computed results when the same configuration is encountered.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -37,7 +42,7 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
     def setup(self):
         self.config = HOPPComponentModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
-            strict=False,
+            strict=True,
             additional_cls_name=self.__class__.__name__,
         )
 

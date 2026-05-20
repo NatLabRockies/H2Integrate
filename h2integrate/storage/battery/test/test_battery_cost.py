@@ -4,7 +4,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.storage.battery.atb_battery_cost import ATBBatteryCostModel
-from h2integrate.control.control_strategies.storage.demand_openloop_controller import (
+from h2integrate.control.control_strategies.storage.demand_openloop_storage_controller import (
     DemandOpenLoopStorageController,
 )
 
@@ -17,7 +17,7 @@ def electricity_profile_kW():
 @fixture
 def battery_tech_config_kW():
     battery_inputs = {
-        "performance_model": {"model": "SimpleGenericStorage"},
+        "performance_model": {"model": "StoragePerformanceModel"},
         "cost_model": {"model": "ATBBatteryCostModel"},
         "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
@@ -28,9 +28,9 @@ def battery_tech_config_kW():
                 "max_capacity": 30000.0,
             },
             "control_parameters": {
-                "max_charge_percent": 1.0,
-                "min_charge_percent": 0.1,
-                "init_charge_percent": 0.25,
+                "max_soc_fraction": 1.0,
+                "min_soc_fraction": 0.1,
+                "init_soc_fraction": 0.25,
                 "max_discharge_rate": 5000.0,
                 "charge_efficiency": 1.0,
                 "discharge_efficiency": 1.0,
@@ -50,7 +50,7 @@ def battery_tech_config_kW():
 @fixture
 def battery_tech_config_MW():
     battery_inputs = {
-        "performance_model": {"model": "SimpleGenericStorage"},
+        "performance_model": {"model": "StoragePerformanceModel"},
         "cost_model": {"model": "ATBBatteryCostModel"},
         "control_strategy": {"model": "DemandOpenLoopStorageController"},
         "model_inputs": {
@@ -61,9 +61,9 @@ def battery_tech_config_MW():
                 "max_capacity": 30.0,
             },
             "control_parameters": {
-                "max_charge_percent": 1.0,
-                "min_charge_percent": 0.1,
-                "init_charge_percent": 0.25,
+                "max_soc_fraction": 1.0,
+                "min_soc_fraction": 0.1,
+                "init_soc_fraction": 0.25,
                 "max_discharge_rate": 5.0,
                 "charge_efficiency": 1.0,
                 "discharge_efficiency": 1.0,

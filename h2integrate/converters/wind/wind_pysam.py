@@ -182,6 +182,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
     It takes wind parameters as input and outputs power generation data.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         super().setup()
 
@@ -247,7 +252,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         if self.config.create_model_from == "default":
             self.system_model = Windpower.default(self.config.config_name)
         elif self.config.create_model_from == "new":
-            self.system_model = Windpower.new(self.config.config_name)
+            self.system_model = Windpower.new()
 
         design_dict = self.config.create_input_dict()
         if bool(self.config.pysam_options):

@@ -1,6 +1,6 @@
 (profastnpv:profastnpvmodel)=
 # ProFastNPV
-The `ProFastNPV` finance model calculates the net present value (NPV) of a commodity using [ProFAST](https://github.com/NREL/ProFAST).
+The `ProFastNPV` finance model calculates the net present value (NPV) of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
 
 `ProFastNPV` inherits from `ProFastBase` so refer to the [`ProFastBase` documentation](profast:overview) for setting the finance parameters.
 

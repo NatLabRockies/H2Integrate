@@ -1,13 +1,9 @@
 from attrs import field, define
 from mcm.capture import echem_mcc
 
-from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import must_equal
-from h2integrate.converters.co2.marine.marine_carbon_capture_baseclass import (
-    MarineCarbonCaptureCostBaseClass,
-    MarineCarbonCapturePerformanceConfig,
-    MarineCarbonCapturePerformanceBaseClass,
-)
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 def setup_electrodialysis_inputs(config):
@@ -29,10 +25,14 @@ def setup_electrodialysis_inputs(config):
 
 
 @define(kw_only=True)
-class DOCPerformanceConfig(MarineCarbonCapturePerformanceConfig):
+class DOCPerformanceConfig(BaseConfig):
     """Extended configuration for Direct Ocean Capture (DOC) performance model.
 
     Attributes:
+        number_ed_min (int): Minimum number of ED units to operate.
+        number_ed_max (int): Maximum number of ED units available.
+        use_storage_tanks (bool): Flag indicating whether to use storage tanks.
+        store_hours (float): Number of hours of CO₂ storage capacity (hours).
         power_single_ed_w (float): Power requirement of a single electrodialysis (ED) unit (watts).
         flow_rate_single_ed_m3s (float): Flow rate of a single ED unit (cubic meters per second).
         E_HCl (float): Energy required per mole of HCl produced (kWh/mol).
@@ -50,39 +50,42 @@ class DOCPerformanceConfig(MarineCarbonCapturePerformanceConfig):
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
-    power_single_ed_w: float = field()
-    flow_rate_single_ed_m3s: float = field()
-    E_HCl: float = field()
-    E_NaOH: float = field()
-    y_ext: float = field()
-    y_pur: float = field()
-    y_vac: float = field()
-    frac_ed_flow: float = field()
-    temp_C: float = field()
-    sal: float = field()
-    dic_i: float = field()
-    pH_i: float = field()
-    initial_tank_volume_m3: float = field()
+    number_ed_min: int = field(validator=gt_zero)
+    number_ed_max: int = field(validator=gt_zero)
+    use_storage_tanks: bool = field()
+    store_hours: float = field(validator=gte_zero)
+    power_single_ed_w: float = field(validator=gte_zero)
+    flow_rate_single_ed_m3s: float = field(validator=gt_zero)
+    E_HCl: float = field(validator=gte_zero)
+    E_NaOH: float = field(validator=gte_zero)
+    y_ext: float = field(validator=range_val(0, 1))
+    y_pur: float = field(validator=range_val(0, 1))
+    y_vac: float = field(validator=range_val(0, 1))
+    frac_ed_flow: float = field(validator=range_val(0, 1))
+    temp_C: float = field(validator=gte_zero)
+    sal: float = field(validator=gte_zero)
+    dic_i: float = field(validator=gte_zero)
+    pH_i: float = field(validator=gte_zero)
+    initial_tank_volume_m3: float = field(validator=gte_zero)
     save_outputs: bool = field(default=False)
     save_plots: bool = field(default=False)
 
 
-class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
+class DOCPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a Direct Ocean Capture (DOC) plant.
-
-    Extends:
-        MarineCarbonCapturePerformanceBaseClass
-
-    Computes:
-        - co2_out: Hourly CO2 capture rate (kg/h)
-        - co2_capture_mtpy: Annual CO2 capture (t/year)
-        - total_tank_volume_m3: Total tank volume (m^3)
-        - plant_mCC_capacity_mtph: Plant carbon capture capacity (t/h)
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
+        self.commodity = "co2"
+        self.commodity_rate_units = "kg/h"
+        self.commodity_amount_units = "kg"
 
     def setup(self):
         self.config = DOCPerformanceConfig.from_dict(
@@ -90,14 +93,17 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
-        self.add_output(
-            "plant_mCC_capacity_mtph",
+
+        self.add_input(
+            "electricity_in",
             val=0.0,
-            units="t/h",
-            desc="Theoretical maximum CO₂ capture (t/h)",
+            shape=self.n_timesteps,
+            units="W",
+            desc="Hourly input electricity (W)",
         )
+
         self.add_output(
-            "total_tank_volume_m3",
+            "total_tank_volume",
             val=0.0,
             units="m**3",
         )
@@ -123,9 +129,7 @@ class DOCPerformanceModel(MarineCarbonCapturePerformanceBaseClass):
         )
 
         outputs["co2_out"] = ed_outputs.ED_outputs["mCC"] * 1000  # kg/h
-        outputs["co2_capture_mtpy"] = max(ed_outputs.mCC_yr, 1e-6)  # Must be >0 #TODO: remove
-        outputs["total_tank_volume_m3"] = range_outputs.V_aT_max + range_outputs.V_bT_max
-        outputs["plant_mCC_capacity_mtph"] = max(range_outputs.S1["mCC"])  # TODO: remove
+        outputs["total_tank_volume"] = range_outputs.V_aT_max + range_outputs.V_bT_max
 
         outputs["rated_co2_production"] = (ed_outputs.mCC_yr_MaxPwr / 8760) * 1e3
         outputs["total_co2_produced"] = outputs["co2_out"].sum()
@@ -141,22 +145,23 @@ class DOCCostModelConfig(DOCPerformanceConfig):
     """Configuration for the DOC cost model.
 
     Attributes:
-        infrastructure_type (str): Type of infrastructure (e.g., "desal", "swCool", "new"").
+        infrastructure_type (str): Type of infrastructure (e.g., "desal", "swCool", "new").
         cost_year (int): dollar year corresponding to cost values
     """
 
-    infrastructure_type: str = field()
+    infrastructure_type: str = field(validator=contains(["desal", "swCool", "new"]))
     cost_year: int = field(default=2023, converter=int, validator=must_equal(2023))
 
 
-class DOCCostModel(MarineCarbonCaptureCostBaseClass):
+class DOCCostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
-        direct ocean capture (DOC) system.
-
-    Computes:
-        - CapEx (USD)
-        - OpEx (USD/year)
+    direct ocean capture (DOC) system.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def initialize(self):
         super().initialize()
@@ -168,18 +173,27 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
         )
 
         super().setup()
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
-            "total_tank_volume_m3",
+            "total_tank_volume",
             val=0.0,
             units="m**3",
         )
 
         self.add_input(
-            "plant_mCC_capacity_mtph",  # TODO: replace with rated_co2_production
+            "annual_co2_produced",
+            val=0.0,
+            shape=plant_life,
+            units="t/year",
+            desc="Annual co2 captured",
+        )
+
+        self.add_input(
+            "rated_co2_production",
             val=0.0,
             units="t/h",
-            desc="Theoretical plant maximum CO₂ capture (t/h)",
+            desc="Theoretical plant maximum CO₂ capture",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -189,15 +203,13 @@ class DOCCostModel(MarineCarbonCaptureCostBaseClass):
         res = echem_mcc.electrodialysis_cost_model(
             echem_mcc.ElectrodialysisCostInputs(
                 electrodialysis_inputs=ED_inputs,
-                mCC_yr=inputs["co2_capture_mtpy"],  # TODO: replace with annual_co2_produced
-                total_tank_volume=inputs["total_tank_volume_m3"],
+                mCC_yr=inputs["annual_co2_produced"],
+                total_tank_volume=inputs["total_tank_volume"],
                 infrastructure_type=self.config.infrastructure_type,
-                max_theoretical_mCC=inputs[
-                    "plant_mCC_capacity_mtph"
-                ],  # TODO: replaced with rated_co2_production
+                max_theoretical_mCC=inputs["rated_co2_production"],
             )
         )
 
         # Calculate CapEx
         outputs["CapEx"] = res.initial_capital_cost
-        outputs["OpEx"] = res.yearly_operational_cost
+        outputs["OpEx"] = res.yearly_operational_cost[0]

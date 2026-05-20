@@ -98,21 +98,20 @@ class PyomoDispatchPlantModel:
         ##################################
         self._create_hybrid_constraints(hybrid, t)
 
-    def initialize_parameters(
-        self, commodity_in: list, commodity_demand: list, dispatch_params: dict
-    ):
+    def initialize_parameters(self, inputs: dict, dispatch_params: dict):
         """Initialize parameters for optimization model
 
-        Args:
-            commodity_in (list): List of generated commodity in for this time slice.
-            commodity_demand (list): The demanded commodity for this time slice.
-            dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
+        inputs (dict):
+            Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
+                f"{commodity}_in"       : Available generated commodity profile.
+                f"{commodity}_demand"   : Demanded commodity output profile.
+        dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
 
         """
         self.time_weighting_factor = self.time_weighting_factor_input  # Discount factor
         for tech in self.source_techs:
             pyomo_block = self.tech_dispatch_models.__getattribute__(f"{tech}_rule")
-            pyomo_block.initialize_parameters(commodity_in, commodity_demand, dispatch_params)
+            pyomo_block.initialize_parameters(inputs, dispatch_params)
 
     def _create_variables_and_ports(self, hybrid, t):
         """Connect variables and ports from individual technology model

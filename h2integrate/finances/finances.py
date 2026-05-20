@@ -85,3 +85,61 @@ class AdjustedCapexOpexComp(om.ExplicitComponent):
         outputs["total_capex_adjusted"] = total_capex_adjusted
         outputs["total_opex_adjusted"] = total_opex_adjusted
         outputs["total_varopex_adjusted"] = total_varopex_adjusted
+
+
+class AdjustedCapacityFactorComp(om.ExplicitComponent):
+    """OpenMDAO component to compute an adjusted capacity factor for a given commodity.
+
+    This component takes in a timeseries of commodity production values and computes
+    the rated (mean) production and a capacity factor for each year of the plant's
+    lifetime. Currently, the capacity factor is set to 1.0 by default.
+
+    Inputs:
+        {commodity}_produced (array): Timeseries of commodity production values
+            with shape ``(n_timesteps,)``. Units are determined by connection.
+
+    Outputs:
+        rated_{commodity}_production (float): Mean commodity production across all
+            timesteps. Units are copied from the input.
+        capacity_factor (array): Capacity factor for each year of plant life,
+            with shape ``(plant_life,)``. Unitless.
+    """
+
+    def initialize(self):
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("commodity_type", types=str)
+
+    def setup(self):
+        self.commodity = self.options["commodity_type"]
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+
+        self.add_input(
+            f"{self.commodity}_produced",
+            val=0.0,
+            units_by_conn=True,
+            shape=n_timesteps,
+        )
+
+        self.add_output(
+            f"rated_{self.commodity}_production",
+            val=0.0,
+            copy_units=f"{self.commodity}_produced",
+            shape=1,
+        )
+
+        self.add_output(
+            "capacity_factor",
+            val=1.0,
+            units="unitless",
+            shape=plant_life,
+        )
+
+    def compute(self, inputs, outputs):
+        # Take the average of the timeseries profile
+        outputs[f"rated_{self.commodity}_production"] = np.mean(
+            inputs[f"{self.commodity}_produced"]
+        )
+
+        # Set capacity factor equal to one
+        outputs["capacity_factor"] = 1.0

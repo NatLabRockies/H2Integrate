@@ -121,16 +121,98 @@ The `resource_to_tech_connections` section defines how resources (like wind or s
 For more information on how to define and interpret technology interconnections, see the {ref}`connecting_technologies` page.
 ```
 
+## Visualizing the model structure
+There are two basic methods for visualizing the model structure of your H2Integrate system model.
+You can generate a simplified [XDSM diagram](https://openmdao.github.io/PracticalMDO/Notebooks/ModelConstruction/understanding_xdsm_diagrams.html) showing the technologies and connections specified in your config file, or you can generate an interactive [N2 diagram](https://openmdao.org/newdocs/versions/latest/features/model_visualization/n2_details/n2_details.html) of the full OpenMDAO model.
+The XDSM diagram is primarily useful for publications and presentations.
+The N2 diagram is primarily useful for debugging. Details for generating XDSM and N2 diagrams of your H2Integrate model are given below.
+
+### XDSM diagram (static and simplified)
+
+Use the built-in `create_xdsm()` method to generate a static system diagram from the
+`technology_interconnections` section of your plant config.
+
+```python
+import os
+
+from h2integrate import H2IntegrateModel
+
+
+# Change to an example directory
+os.chdir("../../examples/08_wind_electrolyzer/")
+
+# Build the model from the top-level config file
+h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
+
+# Write XDSM output to connections_xdsm.pdf
+h2i_model.create_xdsm(outfile="connections_xdsm")
+```
+
+This creates a PDF named `connections_xdsm.pdf` in your current working directory.
+
+```{figure} figures/example_08_xdsm.png
+:width: 70%
+:align: center
+```
+*Figure: XDSM diagram generated from the technology interconnections.*
+
+### N2 diagram (interactive and complete)
+
+Use OpenMDAO's `n2` utility to generate an interactive HTML diagram of the full model.
+
+```{code-cell} ipython3
+import os
+
+import openmdao.api as om
+
+from h2integrate import H2IntegrateModel
+
+
+# Change to an example directory
+os.chdir("../../examples/08_wind_electrolyzer/")
+
+# Build and set up the model
+h2i_model = H2IntegrateModel("wind_plant_electrolyzer.yaml")
+h2i_model.setup()
+
+# Write interactive N2 HTML diagram
+om.n2(
+    h2i_model.prob,
+    outfile="h2i_n2.html",
+    display_in_notebook=False, # set to True to display in-line in a notebook
+    show_browser=False, # set to True to open in a browser at run time
+)
+```
+
+Open `h2i_n2.html` in a browser to explore model groups, components, and variable connections.
+
+```{code-cell} ipython3
+:tags: [remove-input]
+import html
+from pathlib import Path
+from IPython.display import HTML, display
+
+n2_html = "h2i_n2.html"
+n2_srcdoc = html.escape(Path(n2_html).read_text(encoding="utf-8"))
+display(
+    HTML(
+        f'<div style="width:100%; height:600px; overflow:auto; margin:0; padding:0; border:0;">'
+        f'<iframe srcdoc="{n2_srcdoc}" '
+        'style="display:block; width:200%; height:600px; border:0; margin:0; padding:0; background:transparent;" '
+        'loading="lazy"></iframe>'
+        '</div>'
+    )
+)
+```
+*Figure: Interactive OpenMDAO N2 diagram showing the full model structure and variable connections.*
+
+
 ## Running the analysis
 
 Once you have the config files defined, you can run the analysis using a simple Python script that inputs the top-level config yaml.
 Here, we will show a script that runs one of the example analyses included in the H2Integrate package.
 
 ```{code-cell} ipython3
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-import os
-
-
 # Change the current working directory
 os.chdir("../../examples/08_wind_electrolyzer/")
 
@@ -151,8 +233,12 @@ This will run the analysis defined in the config files and generate the output f
 
 ## Modifying and rerunning the analysis
 
-Once the configs are loaded into H2I, they are stored in the `H2IntegrateModel` instance as dictionaries, so you can modify them and rerun the analysis without having to reload the config files.
-Here is an example of how to modify the config files and rerun the analysis:
+Once the configs are loaded into H2I and the model is instantiated, you can directly modify the underlying OpenMDAO variables within H2I.
+This is an advanced approach that isn't necessarily recommended for basic users, but showcases the level of flexibility possible with H2I.
+
+```{note}
+The same behavior shown here with a manual for-loop can be achieved by using the [design of experiments capability](design_of_experiments_in_h2i.md).
+```
 
 ```{code-cell} ipython3
 # Access the configuration dictionaries
@@ -177,7 +263,7 @@ print(f"Total hydrogen produced by the electrolyzer: {annual_hydrogen:.2f} kg/ye
 This is especially useful when you want to run an H2I model as a script and modify parameters dynamically without changing the original YAML configuration file.
 If you want to do a simple parameter sweep, you can wrap this in a loop and modify the parameters as needed.
 
-In the example below, we modify the electrolyzer end-of-life efficiency drop and plot the impact on the LCOH.
+In the example below, we modify the electrolyzer `n_clusters` and plot the impact on the LCOH.
 
 ```{code-cell} ipython3
 import numpy as np
@@ -200,16 +286,14 @@ for rating in ratings:
     # Calculate the number of clusters from the rating
     n_clusters = int(rating / cluster_size_mw)
 
-    # Update the number of clusters
-    tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_parameters"][
-        "n_clusters"
-    ] = n_clusters
+    # Set the n_clusters value directly
+    h2i_model.model.set_val("electrolyzer.n_clusters", n_clusters)
 
     # Rerun the model with the updated configurations
     h2i_model.run()
 
     # Get the LCOH value
-    lcoh = h2i_model.model.get_val("finance_subgroup_hydrogen.LCOH_produced_profast_model", units="USD/kg")[0]
+    lcoh = h2i_model.model.get_val("finance_subgroup_hydrogen.LCOH_produced_custom_model", units="USD/kg")[0]
 
     # Store the results
     lcoh_results.append(lcoh)
@@ -221,8 +305,4 @@ plt.ylabel("LCOH ($/kg)")
 plt.title("LCOH vs Electrolyzer Rating")
 plt.grid(True)
 plt.show()
-```
-
-```{code-cell} ipython3
-
 ```

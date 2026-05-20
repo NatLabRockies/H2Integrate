@@ -1,4 +1,5 @@
 from attrs import field, define
+from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains, gte_zero, range_val
@@ -26,7 +27,13 @@ class GenericStorageCostConfig(CostModelBaseConfig):
     max_charge_rate: float = field()
     commodity_rate_units: str = field(
         validator=contains(["W", "kW", "MW", "GW", "TW", "g/h", "kg/h", "t/h", "MMBtu/h"])
-    )  # TODO: udpate to commodity_rate_units
+    )
+
+    commodity_amount_units: str = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.commodity_amount_units is None:
+            self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
 class GenericStorageCostModel(CostModelBaseClass):
@@ -43,6 +50,11 @@ class GenericStorageCostModel(CostModelBaseClass):
 
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def setup(self):
         self.config = GenericStorageCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
@@ -54,7 +66,7 @@ class GenericStorageCostModel(CostModelBaseClass):
 
         charge_units = self.config.commodity_rate_units
 
-        capacity_units = f"({self.config.commodity_rate_units})*h"
+        capacity_units = self.config.commodity_amount_units
 
         self.add_input(
             "max_charge_rate",
@@ -63,7 +75,7 @@ class GenericStorageCostModel(CostModelBaseClass):
             desc="Storage charge/discharge rate",
         )
         self.add_input(
-            "max_capacity",
+            "storage_capacity",
             val=self.config.max_capacity,
             units=capacity_units,
             desc="Storage storage capacity",
@@ -91,7 +103,11 @@ class GenericStorageCostModel(CostModelBaseClass):
         storage_duration_hrs = 0.0
 
         if inputs["max_charge_rate"] > 0:
-            storage_duration_hrs = inputs["max_capacity"] / inputs["max_charge_rate"]
+            storage_duration_hrs = units.convert_units(
+                inputs["storage_capacity"] / inputs["max_charge_rate"],
+                f"({self.config.commodity_amount_units})/({self.config.commodity_rate_units})",
+                "h",
+            )
         if inputs["max_charge_rate"] < 0:
             msg = (
                 f"max_charge_rate cannot be less than zero and has value of "

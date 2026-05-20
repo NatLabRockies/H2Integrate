@@ -1,32 +1,27 @@
-name: "driver_config"
-description: "Runs a wind plant and electrolyzer with simple optimization"
-
+name: driver_config
+description: Runs a wind plant and electrolyzer with simple optimization
 general:
   folder_output: wind_h2_plant_run
-
 driver:
   optimization:
-    flag: True
+    flag: true
     solver: COBYLA
     tol: 0.001
     catol: 15000
     max_iter: 100
     rhobeg: 10
-    debug_print: True
-
+    debug_print: true
 design_variables:
   electrolyzer:
     n_clusters:
-      flag: True
+      flag: true
       lower: 2.
       upper: 40.
       units: unitless
-
 objective:
   name: finance_subgroup_hydrogen.LCOH
-
 recorder:
-  flag: True
-  file: "wind_h2_opt.sql"
-  includes: ["*"]
-  excludes: ["wind_resource.wind_resource_data"]
+  flag: true
+  file: wind_h2_opt.sql
+  includes: ['*']
+  excludes: [wind_resource.wind_resource_data]
