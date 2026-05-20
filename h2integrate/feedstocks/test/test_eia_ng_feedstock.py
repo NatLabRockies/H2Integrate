@@ -29,9 +29,12 @@ VALID_API_KEY_EXISTS = os.environ.get("EIA_API_KEY") is not None
 def EIA_API_key_file(temp_dir):
     """Creates a dummy EIA API key configuration file and returns the file path object."""
     good_api_fn = temp_dir / ".eiarc"
+    bad_api_fn = temp_dir / ".badeiarc"
     with good_api_fn.open("w") as f:
         f.write(f"EIA_API_KEY: {DUMMY_KEY}")
-    return good_api_fn
+    with bad_api_fn.open("w") as f:
+        f.write(f"EIA_API: {DUMMY_KEY}")
+    return good_api_fn, bad_api_fn
 
 
 @pytest.mark.unit
@@ -101,7 +104,7 @@ def test_EIANaturalGasFeedstockConfig_with_coordinates():
 @pytest.mark.unit
 def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file):
     """Create a basic feedstock configuration for testing."""
-    api_key_fn = EIA_API_key_file
+    api_key_fn, *_ = EIA_API_key_file
     tech_config = {
         "model_inputs": {
             "shared_parameters": {
