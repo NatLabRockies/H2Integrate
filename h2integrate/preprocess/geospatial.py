@@ -1,6 +1,6 @@
 """Geospatial preprocessing tools. Currently geared towards helping with processing of EIA data."""
 
-STATE_MAP = {
+US_STATE_MAP = {
     "Alabama": "AL",
     "Alaska": "AK",
     "Arizona": "AZ",
@@ -58,7 +58,7 @@ STATE_MAP = {
 
 def convert_state_value(state: str) -> str:
     """Convert potential two-letter state abbreviations to upper case and all else to title
-    casing to align with the ``STATE_MAP`` keys and values.
+    casing to align with the ``US_STATE_MAP`` keys and values.
 
     Args:
         state (str): Either a two-letter state abbreviation or full state name.
@@ -73,6 +73,7 @@ def convert_state_value(state: str) -> str:
 
 def convert_state_to_code(state: str) -> str:
     """Converts the :py:attr:`state` name to a two-letter abbreviation or returns the input value.
+    Currently only supports US state codes.
 
     Args:
         state (str): Full state name in title casing or two-letter state abbreviation in upper case.
@@ -80,7 +81,7 @@ def convert_state_to_code(state: str) -> str:
     Returns:
         str: Two-letter state abbreviation.
     """
-    return STATE_MAP.get(state, state)
+    return US_STATE_MAP.get(state, state)
 
 
 def get_state_from_coords(

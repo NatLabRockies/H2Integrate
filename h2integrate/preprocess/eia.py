@@ -220,7 +220,7 @@ def _validate_state(state: str | list[str]) -> list[str]:
         state = [state]
 
     states = [geospatial.convert_state_to_code(geospatial.convert_state_value(el)) for el in state]
-    invalid = set(states).difference(geospatial.STATE_MAP.values())
+    invalid = set(states).difference(geospatial.US_STATE_MAP.values())
     if invalid:
         raise ValueError(f"{', '.join(invalid)} could not be converted to a 2-letter state code.")
     return states
@@ -409,7 +409,10 @@ def get_eia_ng_data(
     )
     if "state" in keep_cols:
         df.state = (
-            df.state.str.replace("USA-", "").str.title().replace(geospatial.STATE_MAP).str.upper()
+            df.state.str.replace("USA-", "")
+            .str.title()
+            .replace(geospatial.US_STATE_MAP)
+            .str.upper()
         )
     df = df.set_index([el for el in keep_cols if el != "price"], append=True)
     df = convert_to_monthly(df, *resource_year)

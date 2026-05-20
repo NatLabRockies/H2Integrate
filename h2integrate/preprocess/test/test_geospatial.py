@@ -23,7 +23,7 @@ def test_get_state_from_coords(subtests):
 
     with subtests.test("Test invalid US coordinate pair"):
         result = geo.get_state_from_coords(coordinates=definitely_not_the_us_coords)
-        assert result not in geo.STATE_MAP.values()
+        assert result not in geo.US_STATE_MAP.values()
         assert result == "Alberta"
 
     coords = [best_trailer_in_colorado_coords, definitely_not_the_us_coords]

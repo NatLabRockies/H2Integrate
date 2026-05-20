@@ -74,7 +74,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             attrs.converters.pipe(geospatial.convert_state_value, geospatial.convert_state_to_code)
         ),
         validator=attrs.validators.optional(
-            attrs.validators.in_([*geospatial.STATE_MAP, *geospatial.STATE_MAP.values()])
+            attrs.validators.in_([*geospatial.US_STATE_MAP, *geospatial.US_STATE_MAP.values()])
         ),
     )
     latitude: float | None = field(
