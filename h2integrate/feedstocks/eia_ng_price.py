@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from datetime import datetime
 
@@ -163,3 +164,8 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         price = eia.convert_to_hourly(price)
         self.config.price = price
         super().setup()
+
+    def compute(self, inputs, outputs):
+        if not np.isclose(inputs["price"], self.config.price, rtol=1e-6):
+            warnings.warn("price has changed from EIA price", UserWarning)
+        super().compute(inputs, outputs)
