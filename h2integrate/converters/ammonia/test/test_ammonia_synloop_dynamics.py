@@ -85,12 +85,6 @@ def make_production_sequence(min_prod, max_prod, onoff_sequence, n_timesteps, st
     return production
 
 
-@pytest.mark.unit
-def test_ammonia_config(synloop_config, dynamics_config, subtests):
-    # TODO: add tests to check error raising in synloop config
-    pass
-
-
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
 def test_ammonia_subdt_offtime_subdt_delay(
@@ -103,7 +97,9 @@ def test_ammonia_subdt_offtime_subdt_delay(
     dynamics_config["cold_start_delay_hours"] = 0.25
     dynamics_config["turndown_ratio"] = 0.1
 
-    synloop_config["model_inputs"].update({"performance_parameters": dynamics_config})
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
 
     min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
 
@@ -156,6 +152,11 @@ def test_ammonia_subdt_offtime_subdt_delay(
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
+        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
@@ -169,7 +170,9 @@ def test_ammonia_subdt_offtime_multidt_delay(
     dynamics_config["cold_start_delay_hours"] = 3.0  # 3 hours to start-up
     dynamics_config["turndown_ratio"] = 0.1
 
-    synloop_config["model_inputs"].update({"performance_parameters": dynamics_config})
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
 
     min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
 
@@ -206,8 +209,8 @@ def test_ammonia_subdt_offtime_multidt_delay(
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
     # 6 hours with no production (from delay) per on/off sequence
-    # 3 hours of off-time per on/off sequence
     expected_delay_losses_per_sequence = rated_capacity * 6
+    # 3 hours of off-time per on/off sequence
     expected_off_time_losses_per_sequence = (min_nh3 / 2) * 3
     # checking the first timesteps to include starting on
     n_timesteps_test = int(len(on_off_sequence) + 1)
@@ -219,6 +222,14 @@ def test_ammonia_subdt_offtime_multidt_delay(
             expected_delay_losses_per_sequence + expected_off_time_losses_per_sequence
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
+
+    # h2_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
+    # n2_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+
+    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
+        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
 
 @pytest.mark.regression
@@ -233,7 +244,9 @@ def test_ammonia_multidt_offtime_multidt_delay(
     dynamics_config["cold_start_delay_hours"] = 2  # 2 hours to turn on
     dynamics_config["turndown_ratio"] = 0.1
 
-    synloop_config["model_inputs"].update({"performance_parameters": dynamics_config})
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
 
     min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
 
@@ -271,13 +284,12 @@ def test_ammonia_multidt_offtime_multidt_delay(
     prob.run_model()
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    # 6 hours with no production (from delay) per on/off sequence
+    # 4 hours with no production (from delay) per on/off sequence
     # 12 hours of off-time per on/off sequence
-    expected_delay_losses_per_sequence = rated_capacity * 6
+    expected_delay_losses_per_sequence = rated_capacity * 4
     expected_off_time_losses_per_sequence = (min_nh3 / 2) * 12
     # checking the first timesteps to include starting on
     n_timesteps_test = int(len(on_off_sequence) + 1)
-
     with subtests.test(f"Losses for first {n_timesteps_test} timesteps"):
         nh3_produced = nh3_out[:n_timesteps_test].sum()
         nh3_without_losses = nh3_no_dynamics[:n_timesteps_test].sum()
@@ -285,6 +297,11 @@ def test_ammonia_multidt_offtime_multidt_delay(
             expected_delay_losses_per_sequence + expected_off_time_losses_per_sequence
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
+
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
+        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
 
 @pytest.mark.regression
@@ -299,7 +316,9 @@ def test_ammonia_multidt_offtime_subdt_startup(
     dynamics_config["cold_start_delay_hours"] = 0.25  # 1/4 hour to turn on
     dynamics_config["turndown_ratio"] = 0.1
 
-    synloop_config["model_inputs"].update({"performance_parameters": dynamics_config})
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
 
     min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
 
@@ -352,6 +371,11 @@ def test_ammonia_multidt_offtime_subdt_startup(
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
+        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
@@ -380,4 +404,10 @@ def test_ammonia_ramp_constraints(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
     # TODO: add test in
+    pass
+
+
+@pytest.mark.unit
+def test_ammonia_config(synloop_config, dynamics_config, subtests):
+    # TODO: add tests to check error raising in synloop config
     pass
