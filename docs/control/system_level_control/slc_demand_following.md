@@ -30,7 +30,7 @@ from pathlib import Path
 from h2integrate import EXAMPLE_DIR
 from IPython.display import HTML, display
 
-os.chdir("EXAMPLE_DIR/35_system_level_control/battery_with_controller/")
+os.chdir(EXAMPLE_DIR / "35_system_level_control/battery_with_controller/")
 
 h2i_model = H2IntegrateModel("wind_ng_demand.yaml")
 h2i_model.setup()
