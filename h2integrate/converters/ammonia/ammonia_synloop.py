@@ -300,14 +300,14 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
     ):
         """Calculates the production multiplier when the off-time to trigger a delayed
-        start-up event is less than or equal to the timestep and the start-up delay is
-        greater than the timestep.
+        start-up event is greater than the timestep and the start-up delay is
+        less than or equal to the timestep.
 
         Args:
             offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
-                Must be less than or equal to dt.
-            start_up_delay_hrs (float): number of hours to go from "off" to "on".
                 Must be greater than dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be less than dt.
             min_prod_pt (float): The minimum production threshold in the same units of init_prod
             init_prod (np.array): The initial production profile.
 
@@ -330,25 +330,28 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
         off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
 
-        # Get the indices where its off for at least the offtime
+        # Get the indices of off-events (start and stop)
         off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
         # off_index_sets[:,1] is the end of an off-cycle
         # off_index_sets[:,0] is the start of an off-cycle
 
-        # TODO: starting here: remove "hours" or "hrs" from variable names
+        n_dt_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
 
-        n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        # Get the indices of off events that are >= the offtime that delays start-up
         index_set_of_off_events = off_index_sets[
-            np.argwhere(n_hours_off_per_off_event >= offtime).flatten()
+            np.argwhere(n_dt_off_per_off_event >= offtime).flatten()
         ]
         # initialize production multiplier as ones
         prod_multiplier = np.ones(len(init_prod))
-        # set the multiplier to zero for off hours
+        # set the multiplier to zero for timesteps where status is off
         prod_multiplier[off_indx] = 0
-        # set the multiplier to the startup_production_multiplier in hours after off-times
-        # that are at least the defined off-time
+        # set the multiplier to the startup_production_multiplier in the timestep following
+        # an off-event.
+
         for i in index_set_of_off_events[:, 1]:
             if i == len(init_prod):
+                if on_off_status[-1] > startup_production_multiplier:
+                    prod_multiplier[-1] = startup_production_multiplier
                 continue
             prod_multiplier[i] = startup_production_multiplier
 
@@ -382,28 +385,28 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         delay = units.convert_units(start_up_delay_hrs[0], "h", f"{self.dt}*s")
         full_dt_delay = delay // 1  # number of full timesteps in start-up delay
         partial_dt_delay = delay % 1  # fraction of timestep in start-up delay
+
         # on=1, off=0
         on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
         off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
 
-        # TODO: starting here: remove "hours" or "hrs" from variable names
-
-        # Get the indices where its off for at least the offtime
+        # Get the indices of off-events (start and stop)
         # off_index_sets[:,0] is the index where its turned off
         # off_index_sets[:,1] is the index after its turned on
         off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
-        n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        n_dt_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
 
+        # Get the indices of off events that are >= the offtime that delays start-up
         # Only look at the off-events that trigger some delayed start-up
         index_set_of_off_events = off_index_sets[
-            np.argwhere(n_hours_off_per_off_event >= offtime).flatten()
+            np.argwhere(n_dt_off_per_off_event >= offtime).flatten()
         ]
-        # index_set_of_off_events[:,1] is the first on-hour after the offtime that
+        # index_set_of_off_events[:,1] is the first 'on' timestep after the offtime that
         # qualifies a start-up delay
 
         # initialize production multiplier as ones
         prod_multiplier = np.ones(len(init_prod))
-        # set the multiplier to zero for off hours
+        # set the multiplier to zero for off timesteps
         prod_multiplier[off_indx] = 0
 
         # Loop through the indices where its turned on after a period
@@ -414,25 +417,25 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
                 # when turned on at last timestep
                 continue
             # Determine how long until the next shut-off
-            on_hrs_after_delay_subindx_set = (
+            on_dt_after_delay_subindx_set = (
                 np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
                 .nonzero()[0]
                 .reshape(-1, 2)[0]
             )
             # Get the indices from now until the next shutoff
-            on_hrs_after_delay_indx_set = np.array(
-                [int(i_turn_on + ii) for ii in on_hrs_after_delay_subindx_set]
+            on_dt_after_delay_indx_set = np.array(
+                [int(i_turn_on + ii) for ii in on_dt_after_delay_subindx_set]
             )
             # Determine how long until the next shut-off in dt
-            on_hrs_after_delay = on_hrs_after_delay_indx_set[1] - on_hrs_after_delay_indx_set[0]
+            on_dt_after_delay = on_dt_after_delay_indx_set[1] - on_dt_after_delay_indx_set[0]
 
             # check if we're on long enough before the next shut-off
-            if on_hrs_after_delay >= delay:
+            if on_dt_after_delay >= delay:
                 # time on after the shutoff is greater than the start-up delay
                 # start-up delay period ends before next shutoff
-                delay_end = int(on_hrs_after_delay_indx_set[0] + full_dt_delay)
+                delay_end = int(on_dt_after_delay_indx_set[0] + full_dt_delay)
                 # production is zero while starting up
-                prod_multiplier[on_hrs_after_delay_indx_set[0] : delay_end] = 0
+                prod_multiplier[on_dt_after_delay_indx_set[0] : delay_end] = 0
 
                 # apply partial loss for any remaining delay time that is < dt
                 if partial_dt_delay > 0:
@@ -441,16 +444,31 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             else:
                 # interrupted by another shut-off while starting up
                 # TODO: will need to update the amount of off-time for the following start-up (somehow)
-                # like if warming up for 2 hours then shut off, then we could adjust the off-time
-                # for the following on-switch to be 2 hrs less
+                # like if warming up for 2 timesteps then shut off, then we could adjust the
+                # off-time for the following on-switch to be 2 timesteps less
                 # For now, just set it to zero
-                prod_multiplier[on_hrs_after_delay_indx_set[0] : on_hrs_after_delay_indx_set[1]] = 0
+                prod_multiplier[on_dt_after_delay_indx_set[0] : on_dt_after_delay_indx_set[1]] = 0
 
         return prod_multiplier
 
     def subdt_offtime_multidt_startup(
         self, offtime_hrs, start_up_delay_hrs, min_prod_pt, init_prod
     ):
+        """Calculates the production multiplier when the off-time to trigger a delayed
+        start-up event is less than or equal to the timestep and the start-up delay is
+        greater than the timestep.
+
+        Args:
+            offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
+                Must be less than or equal to dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be greater than dt.
+            min_prod_pt (float): The minimum production threshold in the same units of init_prod
+            init_prod (np.array): The initial production profile.
+
+        Returns:
+            np.array: production multiplier to reflect start-up losses.
+        """
         # example: offtime of 1, delay of 5
         # has to be off for multiple timesteps to have some start-up delay
 
@@ -471,37 +489,35 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # set the multiplier to zero for off hours
         prod_multiplier[off_indx] = 0
 
-        # TODO: starting here: remove "hours" or "hrs" from variable names
-
         # on_index_sets[:,0] is the index where its turned on
         # on_index_sets[:,1] is the index after its turned off
         on_index_sets = np.ediff1d(np.r_[0, on_off_status == 1, 0]).nonzero()[0].reshape(-1, 2)
-        n_hours_on_per_on_event = on_index_sets[:, 1] - on_index_sets[:, 0]
+        n_dt_on_per_on_event = on_index_sets[:, 1] - on_index_sets[:, 0]
         index_set_of_on_events = on_index_sets[
-            np.argwhere(n_hours_on_per_on_event >= full_dt_delay).flatten()
+            np.argwhere(n_dt_on_per_on_event >= full_dt_delay).flatten()
         ]
 
         # looping through the indices of the hours when its turned on
         for i_turn_on in index_set_of_on_events[:, 0]:
             # Determine how long until the next shut-off
-            on_hrs_after_delay_subindx_set = (
+            on_dt_after_delay_subindx_set = (
                 np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
                 .nonzero()[0]
                 .reshape(-1, 2)[0]
             )
             # Get the indices from now until the next shutoff
-            on_hrs_after_delay_indx_set = np.array(
-                [int(i_turn_on + ii) for ii in on_hrs_after_delay_subindx_set]
+            on_dt_after_delay_indx_set = np.array(
+                [int(i_turn_on + ii) for ii in on_dt_after_delay_subindx_set]
             )
 
             # Determine how long until the next shut-off in dt
-            on_hrs_after_delay = on_hrs_after_delay_indx_set[1] - on_hrs_after_delay_indx_set[0]
-            if on_hrs_after_delay >= delay:
+            on_dt_after_delay = on_dt_after_delay_indx_set[1] - on_dt_after_delay_indx_set[0]
+            if on_dt_after_delay >= delay:
                 # time on after the shutoff is greater than the start-up delay
                 # start-up delay period ends before next shutoff
-                delay_end = int(on_hrs_after_delay_indx_set[0] + full_dt_delay)
+                delay_end = int(on_dt_after_delay_indx_set[0] + full_dt_delay)
                 # production is zero while starting up
-                prod_multiplier[on_hrs_after_delay_indx_set[0] : delay_end] = 0.0
+                prod_multiplier[on_dt_after_delay_indx_set[0] : delay_end] = 0.0
                 # apply partial loss for any remaining delay time that is < dt
                 if partial_dt_delay > 0:
                     # NOTE this was adjusted to handle fraction of delays, like 4.5 dt delays
@@ -512,13 +528,29 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
                 # like if warming up for 2 hours then shut off, then we could adjust the off-time
                 # for the following on-switch to be 2 hrs less
                 # For now, just set it to zero
-                prod_multiplier[on_hrs_after_delay_indx_set[0] : on_hrs_after_delay_indx_set[1]] = 0
+                prod_multiplier[on_dt_after_delay_indx_set[0] : on_dt_after_delay_indx_set[1]] = 0
 
         return prod_multiplier
 
     def apply_startup_losses(
         self, offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
     ):
+        """Apply losses for a start-up. A start-up is categorized by the number of timesteps
+        that trigger a delayed start-up event (offtime) and the number of timesteps it takes
+        to start-up (delay).
+
+        Args:
+            offtime_hrs (float): number of "off" hours that triggers a delayed start-up.
+                Must be greater than dt.
+            start_up_delay_hrs (float): number of hours to go from "off" to "on".
+                Must be greater than dt.
+            minimum_production (float): The minimum production threshold in the same units of
+                ``nh3_production``
+            nh3_production (np.ndarray): ammonia production profile prior to start-up delays
+
+        Returns:
+            np.ndarray: ammonia production profile with the applied start-up delays and losses
+        """
         dt_hrs = self.dt / 3600
 
         offtime_category = "subdt" if offtime_hrs <= dt_hrs else "multidt"
@@ -550,6 +582,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             return production_mult * nh3_production
 
     def apply_ramping_constraints(self, init_prod, production_bounds, ramp_rate_bounds):
+        # TODO: make this flexible to varying commodity_rate_units and dt
         # TODO: adjust variable naming to not include "demand"
         min_production, rated_production = production_bounds
         ramp_down_rate, ramp_up_rate = ramp_rate_bounds
@@ -609,7 +642,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             inputs["ramp_down_rate"], a_min=0.0, a_max=1.0
         )
 
-        # apply minimum production losses
+        # Check that the production is positive and less than the rated capacity
         nh3_production = np.clip(
             nh3_production, a_min=0.0, a_max=inputs["ammonia_production_capacity"]
         )
