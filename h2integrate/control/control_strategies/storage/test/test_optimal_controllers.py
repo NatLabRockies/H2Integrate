@@ -328,6 +328,11 @@ def test_min_operating_cost_load_following_battery_dispatch(
             rtol=1e-2,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("battery.storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
+
 
 @pytest.mark.regression
 def test_optimal_control_with_generic_storage(
@@ -477,6 +482,11 @@ def test_optimal_control_with_generic_storage(
             rtol=1e-6,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("h2_storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
+
 
 @pytest.mark.regression
 def test_optimal_dispatch_with_autosizing_storage_demand_less_than_avg_in(
@@ -546,6 +556,11 @@ def test_optimal_dispatch_with_autosizing_storage_demand_less_than_avg_in(
             expected_charge,
             rtol=1e-6,
         )
+
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("h2_storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
 
 
 @pytest.mark.regression
@@ -624,3 +639,8 @@ def test_optimal_dispatch_with_autosizing_storage_demand_is_avg_in(
             expected_charge,
             rtol=1e-6,
         )
+
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("h2_storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
