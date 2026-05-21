@@ -48,7 +48,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
     _time_step_bounds = (
         1,
-        3600,
+        36000,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
