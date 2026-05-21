@@ -478,7 +478,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         on_index_sets = np.ediff1d(np.r_[0, on_off_status == 1, 0]).nonzero()[0].reshape(-1, 2)
         n_hours_on_per_on_event = on_index_sets[:, 1] - on_index_sets[:, 0]
         index_set_of_on_events = on_index_sets[
-            np.argwhere(n_hours_on_per_on_event >= delay).flatten()
+            np.argwhere(n_hours_on_per_on_event >= full_dt_delay).flatten()
         ]
 
         # looping through the indices of the hours when its turned on

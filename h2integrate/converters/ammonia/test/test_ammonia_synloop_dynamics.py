@@ -404,12 +404,119 @@ def test_ammonia_moms_cold_soss_warm_start(
 def test_ammonia_multidt_delay_fraction(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
-    # TODO: add test in similar to test_ammonia_multidt_offtime_multidt_delay
+    # Similar test to test_ammonia_multidt_offtime_multidt_delay
     # and test_ammonia_subdt_offtime_multidt_delay but with
-    # cold_start_delay_hours of 3.5
+    # cold_start_delay_hours of 3.25
     # Aka - delay causes full loss for 3 hours and partial loss at hour 4
+    rated_capacity = synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
 
-    pass
+    dynamics_config["include_cold_start"] = True
+    dynamics_config["off_hours_cold_start"] = 2
+    dynamics_config["cold_start_delay_hours"] = 3.25
+    dynamics_config["turndown_ratio"] = 0.1
+
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
+
+    # test when its off and when its on
+    # off for 2 hours, on for 5 hours, off for 2, on for 3, off for 3, on for 4
+    # all shut-offs trigger a start-up delay
+    # first start-up has 3 hours without production, 1 hr with partial, fully on for 1 hr
+    # second start-up has all 3 hours without production
+    # last start-up has 3 hours without production, 1 hr with partial
+    # has 7 hours off, 9 hours with zero production due to delay, 2 hours with partial production
+
+    on_off_sequence = np.concat(
+        [np.zeros(2), np.ones(5), np.zeros(2), np.ones(3), np.zeros(3), np.ones(4)]
+    )
+
+    # starts on
+    nh3_no_dynamics = make_production_sequence(
+        min_nh3, rated_capacity, on_off_sequence, n_timesteps, start_on=True
+    )
+    elec_in = (
+        nh3_no_dynamics * synloop_config["model_inputs"]["performance_parameters"]["energy_demand"]
+    )
+
+    cap_mult = 10.0e3
+    n2 = np.full(n_timesteps, 5.0 * cap_mult)
+    h2 = np.full(n_timesteps, 2.0 * cap_mult)
+
+    # Create model
+    prob = om.Problem()
+
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec_in, units="kW")
+
+    prob.run_model()
+
+    # each sequench has:
+    # 7 hours off
+    expected_off_time_losses_per_sequence = (min_nh3 / 2) * 7
+    # 9 hours with zero production due to delay
+    expected_full_delay_losses_per_sequence = rated_capacity * 9
+    # 2 hours with partial production
+    expected_partial_delay_losses_per_sequence = rated_capacity * 2 * 0.25
+
+    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+
+    # checking the first sequence
+    n_timesteps_test = int(len(on_off_sequence) + 1)
+
+    with subtests.test(f"Losses for first {n_timesteps_test} timesteps (multidt offtime)"):
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        nh3_without_losses = nh3_no_dynamics[:n_timesteps_test].sum()
+        expected_nh3 = nh3_without_losses - (
+            expected_full_delay_losses_per_sequence
+            + expected_partial_delay_losses_per_sequence
+            + expected_off_time_losses_per_sequence
+        )
+        assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
+
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+    with subtests.test(
+        f"Electricity consumption loss for first {n_timesteps_test} timesteps  (multidt offtime)"
+    ):
+        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+
+    # Re-run model but for subdt_offtime_multidt_delay case
+    # Change the offtime to subdt
+    # Then re-run
+    prob.set_val("comp.off_time_cold_start", 0.5, units="h")
+    prob.run_model()
+
+    nh3_out_subdtofftime = prob.get_val("comp.ammonia_out", units="kg/h")
+
+    with subtests.test(f"Losses for first {n_timesteps_test} timesteps (subdt offtime)"):
+        nh3_produced = nh3_out_subdtofftime[:n_timesteps_test].sum()
+        nh3_without_losses = nh3_no_dynamics[:n_timesteps_test].sum()
+        expected_nh3 = nh3_without_losses - (
+            expected_full_delay_losses_per_sequence
+            + expected_partial_delay_losses_per_sequence
+            + expected_off_time_losses_per_sequence
+        )
+        assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
+
+    elec_consumed_subdtofftime = prob.get_val("comp.electricity_consumed", units="kW")
+    with subtests.test(
+        f"Electricity consumption loss for first {n_timesteps_test} timesteps (subdt offtime)"
+    ):
+        elec_losses = (
+            elec_in[:n_timesteps_test] - elec_consumed_subdtofftime[:n_timesteps_test]
+        ).sum()
+        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
 
 @pytest.mark.regression
@@ -419,7 +526,8 @@ def test_ammonia_multidt_offtime_fraction(
 ):
     # TODO: add test in similar to test_ammonia_multidt_offtime_multidt_delay
     # and test_ammonia_multidt_offtime_subdt_delay but with
-    # off_hours_cold_start of 3.5 or 4.5
+    # off_hours_cold_start of 2.5 hrs
+    # should have to be off for 3 hrs to trigger start-up delay
 
     pass
 
@@ -429,7 +537,7 @@ def test_ammonia_multidt_offtime_fraction(
 def test_ammonia_subdt_offtime_start_off(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
-    # TODO: add test in similar to test_ammonia_subdt_offtime_subdt_delay
+    # TODO: add test(s) similar to test_ammonia_subdt_offtime_subdt_delay
     # and test_ammonia_subdt_offtime_multidt_delay but start with off
 
     # nh3_no_dynamics = make_production_sequence(
