@@ -24,6 +24,7 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
 )
+from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
@@ -757,6 +758,7 @@ class H2IntegrateModel:
                 )
 
             # Connect the controller's output back to the technology.
+            classifier = slc_config["tech_control_classifiers"][tech_name]
             if slc_config["storage_techs_to_control"].get(tech_name, False):
                 # Storage tech with its own sub-controller: provide a demand
                 # signal that the sub-controller translates into
@@ -765,9 +767,18 @@ class H2IntegrateModel:
                     f"system_level_controller.{tech_name}_{commodity}_demand",
                     f"{tech_name}.{commodity}_demand",
                 )
+            elif classifier in ("flexible", "dispatchable"):
+                # Flexible / dispatchable techs always have a controller in
+                # their tech group (auto-injected PassthroughController if no
+                # user-defined control_strategy). Route the SLC output to the
+                # controller's demand input.
+                self.plant.connect(
+                    f"system_level_controller.{tech_name}_{commodity}_set_point",
+                    f"{tech_name}.{commodity}_demand",
+                )
             else:
-                # All other techs (or storage without a sub-controller):
-                # provide a set-point directly to the performance model.
+                # Storage without a sub-controller: provide a set-point
+                # directly to the performance model.
                 self.plant.connect(
                     f"system_level_controller.{tech_name}_{commodity}_set_point",
                     f"{tech_name}.{commodity}_set_point",
@@ -936,6 +947,8 @@ class H2IntegrateModel:
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
 
+                    self._maybe_add_passthrough_controller(tech_group, comp, individual_tech_config)
+
                     continue
 
                 # Process the models
@@ -947,6 +960,7 @@ class H2IntegrateModel:
                     "cost_model",
                 ]
 
+                perf_om_object = None
                 for model_type in model_types:
                     if model_type in individual_tech_config:
                         om_model_object = self._process_model(
@@ -958,6 +972,9 @@ class H2IntegrateModel:
                             plural_model_type_name = model_type + "s"
                         getattr(self, plural_model_type_name).append(om_model_object)
 
+                        if model_type == "performance_model":
+                            perf_om_object = om_model_object
+
                         # Collect control classifier for system-level control
                         if model_type == "performance_model" and self.slc:
                             perf_cls = self.supported_models.get(perf_model)
@@ -965,6 +982,11 @@ class H2IntegrateModel:
                                 classifier = getattr(perf_cls, "_control_classifier", None)
                                 if classifier is not None:
                                     self.tech_control_classifiers[tech_name] = classifier
+
+                if perf_om_object is not None:
+                    self._maybe_add_passthrough_controller(
+                        tech_group, perf_om_object, individual_tech_config
+                    )
 
                 # Process the finance models
                 if "finance_model" in individual_tech_config:
@@ -1037,6 +1059,47 @@ class H2IntegrateModel:
         if not hasattr(model_object, "_control_classifier"):
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
+
+    def _maybe_add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
+        """Automatically add a PassthroughController to a tech group if appropriate.
+
+        A controller is auto-inserted only when:
+        - the technology has no user-defined ``control_strategy`` in its config,
+        - the performance model exposes a ``_control_classifier`` of
+          ``"flexible"`` or ``"dispatchable"``,
+        - the performance model has set ``commodity`` and ``commodity_rate_units``
+          attributes (typically set in its ``initialize()``).
+
+        The controller's ``{commodity}_demand`` input becomes the tech group's
+        external demand-input promoted at the tech group level, and its
+        ``{commodity}_set_point`` output is auto-connected (via promotion) to the
+        performance model's ``{commodity}_set_point`` input if one exists.
+        """
+        if "control_strategy" in individual_tech_config:
+            return
+        classifier = getattr(perf_comp, "_control_classifier", None)
+        if classifier not in ("flexible", "dispatchable"):
+            return
+        commodity = getattr(perf_comp, "commodity", None)
+        commodity_rate_units = getattr(perf_comp, "commodity_rate_units", None)
+        if commodity is None or commodity_rate_units is None:
+            return
+        n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+        controller = PassthroughController(
+            commodity=commodity,
+            n_timesteps=n_timesteps,
+            commodity_rate_units=commodity_rate_units,
+        )
+        om_controller = tech_group.add_subsystem("controller", controller, promotes=["*"])
+        self.control_strategies.append(om_controller)
+
+        # Ensure the controller runs before the performance/cost models that
+        # consume its set_point output. Subsystem creation order otherwise
+        # places the controller last in the group's execution order.
+        existing_order = list(tech_group._static_subsystems_allprocs.keys())
+        if "controller" in existing_order:
+            new_order = ["controller"] + [n for n in existing_order if n != "controller"]
+            tech_group.set_order(new_order)
 
     def create_finance_model(self):
         """

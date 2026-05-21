@@ -134,6 +134,7 @@ from h2integrate.resource.solar.nlr_developer_himawari_api_models import (
     Himawari8SolarAPI,
     HimawariTMYSolarAPI,
 )
+from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.converters.hydrogen.geologic.simple_natural_geoh2 import (
     NaturalGeoH2PerformanceModel,
 )
@@ -318,6 +319,7 @@ supported_models = {
     "PeakLoadManagementOptimizedStorageController": (PeakLoadManagementOptimizedStorageController),
     "HeuristicLoadFollowingStorageController": HeuristicLoadFollowingStorageController,
     "OptimizedDispatchStorageController": OptimizedDispatchStorageController,
+    "PassthroughController": PassthroughController,
     "GenericDemandComponent": GenericDemandComponent,
     "FlexibleDemandComponent": FlexibleDemandComponent,
     # System-level control strategies
