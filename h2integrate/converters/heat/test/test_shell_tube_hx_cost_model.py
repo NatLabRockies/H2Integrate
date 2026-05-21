@@ -20,7 +20,15 @@ def shell_tube_hx_cost_model_config():
         }
     }
 
-    plant_config = {"plant": {"plant_life": 30}}
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": 8760,
+                "dt": 3600,
+            },
+        }
+    }
     return tech_config, plant_config
 
 

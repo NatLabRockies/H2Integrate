@@ -8,7 +8,7 @@ from h2integrate.converters.heat.heat_exchanger_model.hx_shell_tube_steady impor
 )
 
 
-@define()
+@define(kw_only=True)
 class ShellTubeHXPerformanceModelConfig(BaseConfig):
     """
     Configuration class for the ShellTubeHXPerformanceModel.
@@ -54,6 +54,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         # Load in user config from input file
         self.config = ShellTubeHXPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            additional_cls_name=self.__class__.__name__,
         )
 
         # Setup OpenMDAO inputs
@@ -94,10 +95,10 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
 
     def compute(self, inputs, outputs):
         params = {
-            "Th_in": inputs["Th_in_C"],
-            "Tc_in": inputs["Tc_in_C"],
-            "m_dot_h": inputs["m_dot_h_kg_s"],
-            "m_dot_c": inputs["m_dot_c_kg_s"],
+            "Th_in": inputs["Th_in_C"][0],
+            "Tc_in": inputs["Tc_in_C"][0],
+            "m_dot_h": inputs["m_dot_h_kg_s"][0],
+            "m_dot_c": inputs["m_dot_c_kg_s"][0],
             "N_tubes": self.config.N_tubes,
             "N_passes": self.config.N_passes,
             "L_tube": self.config.L_tube_m,
