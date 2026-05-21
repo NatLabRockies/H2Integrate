@@ -144,11 +144,13 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         site_config = {}
         sites = self.options["plant_config"].get("sites", {})
         cost_config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+
         if cost_config.get("state") is None:
             if (site_name := cost_config.get("site_name")) is not None and sites:
                 site_config = sites.get(site_name, {})
             if site_name is None and sites:
                 site_config = sites[[*sites][0]]
+
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             cost_config | site_config, additional_cls_name=self.__class__.__name__, strict=False
         )
@@ -167,5 +169,6 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
 
     def compute(self, inputs, outputs):
         if not np.isclose(inputs["price"], self.config.price, rtol=1e-6):
-            warnings.warn("price has changed from EIA price", UserWarning)
+            warn_msg = "The NG price has changed from EIA price. This may be intended."
+            warnings.warn(warn_msg, UserWarning)
         super().compute(inputs, outputs)
