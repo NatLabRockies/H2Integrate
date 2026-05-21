@@ -3,8 +3,10 @@ import importlib.util
 from enum import IntEnum
 
 import numpy as np
+import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
 from h2integrate.core.supported_models import (
@@ -1391,8 +1393,6 @@ class H2IntegrateModel:
         # Check if there are any loops in the technology interconnections
         # If loops are present, add solvers to resolve the coupling
         # Check if there are any cycles (loops) in the technology graph
-        import networkx as nx
-
         if list(nx.simple_cycles(self.technology_graph)):
             # If cycles are found, set solvers for the plant to resolve the coupling
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
@@ -1685,8 +1685,6 @@ class H2IntegrateModel:
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
 
         if len(technology_interconnections) > 0:
-            from h2integrate.core.utilities import create_xdsm_from_config
-
             create_xdsm_from_config(self.plant_config, output_file=outfile)
         else:
             raise ValueError(
@@ -1705,8 +1703,6 @@ class H2IntegrateModel:
             self.technology_graph (nx.DiGraph): A directed graph with
                 technologies as nodes and interconnections as edges.
         """
-        import networkx as nx
-
         self.technology_graph = nx.DiGraph()
 
         for connection in self.plant_config.get("technology_interconnections", {}):
