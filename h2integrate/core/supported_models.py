@@ -16,7 +16,7 @@ class _ModelRegistry(dict):
     _PKG_PREFIX = "h2integrate."
 
     def _resolve(self, key):
-        """Import and cache the class for *key*, returning the resolved class."""
+        """Import and cache the class for :py:attr:`key`, returning the resolved class."""
         value = super().__getitem__(key)
         if isinstance(value, str):
             mod_path, attr_name = value.rsplit(":", 1)
