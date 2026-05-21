@@ -3,6 +3,7 @@ import importlib.util
 from enum import IntEnum
 
 import numpy as np
+import openmdao.api as om
 
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
@@ -32,8 +33,6 @@ class State(IntEnum):
 
 class H2IntegrateModel:
     def __init__(self, config_input):
-        import openmdao.api as om
-
         # read in config file; it's a yaml dict that looks like this:
         self.load_config(config_input)
 
@@ -415,7 +414,6 @@ class H2IntegrateModel:
         Returns:
             om.Group: OpenMDAO group for a site
         """
-        import openmdao.api as om
 
         from h2integrate.core.sites import SiteLocationComponent
 
@@ -456,7 +454,6 @@ class H2IntegrateModel:
         the same for each technology. This includes site information, project parameters,
         control strategy, and finance parameters.
         """
-        import openmdao.api as om
 
         plant_group = om.Group()
 
@@ -464,8 +461,6 @@ class H2IntegrateModel:
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
 
     def create_technology_models(self):
-        import openmdao.api as om
-
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
 
@@ -739,7 +734,6 @@ class H2IntegrateModel:
             # attaches a ProFAST finance model component to the plant.
 
         """
-        import openmdao.api as om
 
         from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
 
@@ -1398,7 +1392,6 @@ class H2IntegrateModel:
         # If loops are present, add solvers to resolve the coupling
         # Check if there are any cycles (loops) in the technology graph
         import networkx as nx
-        import openmdao.api as om
 
         if list(nx.simple_cycles(self.technology_graph)):
             # If cycles are found, set solvers for the plant to resolve the coupling

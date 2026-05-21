@@ -9,12 +9,14 @@ class _ModelRegistry(dict):
     package (the ``h2integrate.`` prefix is prepended automatically).
     On first ``__getitem__``, ``get``, or iteration over values, the class
     is imported, cached, and returned.  This avoids importing every model
-    module (and their heavy transitive dependencies) at package-load time.
+    module (and their heavy transitive dependencies) at package-load time,
+    reducing computational cost of imports and running tests.
     """
 
     _PKG_PREFIX = "h2integrate."
 
     def _resolve(self, key):
+        """Import and cache the class for *key*, returning the resolved class."""
         value = super().__getitem__(key)
         if isinstance(value, str):
             mod_path, attr_name = value.rsplit(":", 1)
@@ -25,18 +27,14 @@ class _ModelRegistry(dict):
         return value
 
     def __getitem__(self, key):
+        """Return the model class for *key*, importing it if needed."""
         return self._resolve(key)
 
     def get(self, key, default=None):
+        """Return the model class for *key*, or *default* if not present."""
         if key in self:
             return self._resolve(key)
         return default
-
-    def values(self):
-        return [self[k] for k in super().keys()]
-
-    def items(self):
-        return [(k, self[k]) for k in super().keys()]
 
     def copy(self):
         """Return a new _ModelRegistry with the same (still-deferred) entries."""
