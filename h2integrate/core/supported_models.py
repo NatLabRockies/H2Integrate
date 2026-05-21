@@ -165,9 +165,9 @@ supported_models = _ModelRegistry(
         "PyomoRuleStorageMinOperatingCosts": "control.control_rules.storage.pyomo_storage_rule_min_operating_cost:PyomoRuleStorageMinOperatingCosts",
         "PyomoDispatchGenericConverterMinOperatingCosts": "control.control_rules.converters.generic_converter_min_operating_cost:PyomoDispatchGenericConverterMinOperatingCosts",
         # Feedstock
-        "FeedstockPerformanceModel": "core.feedstocks:FeedstockPerformanceModel",
-        "FeedstockCostModel": "core.feedstocks:FeedstockCostModel",
-        "EIANaturalGasFeedstockCostModel": "core.feedstocks:eia_natural_gas_feedstock_cost:EIANaturalGasFeedstockCostModel",
+        "FeedstockPerformanceModel": "feedstocks:FeedstockPerformanceModel",
+        "FeedstockCostModel": "feedstocks:FeedstockCostModel",
+        "EIANaturalGasFeedstockCostModel": "feedstocks:EIANaturalGasFeedstockCostModel",
         # Grid
         "GridPerformanceModel": "converters.grid.grid:GridPerformanceModel",
         "GridCostModel": "converters.grid.grid:GridCostModel",
