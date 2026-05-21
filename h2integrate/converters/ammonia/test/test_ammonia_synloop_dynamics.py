@@ -382,6 +382,7 @@ def test_ammonia_multidt_offtime_subdt_startup(
 def test_ammonia_moms_cold_soss_warm_start(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
+    # Test when theres both cold start and warm start
     # TODO: add test in
     # cold start params, off time of 4 hours, delay time of 2
     # cold start is multi_offtime_multi_startup (moms)
@@ -400,10 +401,61 @@ def test_ammonia_moms_cold_soss_warm_start(
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_multidt_delay_fraction(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in similar to test_ammonia_multidt_offtime_multidt_delay
+    # and test_ammonia_subdt_offtime_multidt_delay but with
+    # cold_start_delay_hours of 3.5
+    # Aka - delay causes full loss for 3 hours and partial loss at hour 4
+
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_multidt_offtime_fraction(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in similar to test_ammonia_multidt_offtime_multidt_delay
+    # and test_ammonia_multidt_offtime_subdt_delay but with
+    # off_hours_cold_start of 3.5 or 4.5
+
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_subdt_offtime_start_off(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add test in similar to test_ammonia_subdt_offtime_subdt_delay
+    # and test_ammonia_subdt_offtime_multidt_delay but start with off
+
+    # nh3_no_dynamics = make_production_sequence(
+    #     min_nh3, rated_capacity, on_off_sequence, n_timesteps, start_on=False
+    # )
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
 def test_ammonia_ramp_constraints(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
-    # TODO: add test in
+    # TODO: add test in with ramping constraints
+
+    pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_ammonia_ramping_and_startup_losses(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # TODO: add a test with ramping constraints and start-up losses
+    # bonus points if the ramping constraint would result in additional
+    # start-up delay losses
     pass
 
 
