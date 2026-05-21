@@ -1323,16 +1323,17 @@ def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
             == 50.0
         )
 
+
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [4])
 def test_storage_half_hourly_known_outputs_kg_s(subtests, plant_config_non_hourly):
     """Verify SOC, charge/discharge profiles against hand-calculated values when
     commodity_rate_units='kg/s' and dt=1800s.
 
-    This test verifies that dt_amount is correctly computed via OpenMDAO 
+    This test verifies that dt_amount is correctly computed via OpenMDAO
     that SOC increments are correct for a non-hourly rate unit.
 
-    Scenario 
+    Scenario
         capacity=3600 kg, charge_rate=1 kg/s, init_soc=0.1, min/max_soc=0.1/1.0, eff=1.0
         commodity_in = [1, 1, 0, 0] kg/s
         set_point    = [-1, -1, 1, 1] kg/s  (negative=charge, positive=discharge)
