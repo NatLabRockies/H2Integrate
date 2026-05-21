@@ -443,9 +443,81 @@ def test_ammonia_subdt_offtime_start_off(
 def test_ammonia_ramp_constraints(
     plant_config, synloop_config, dynamics_config, n_timesteps, subtests
 ):
-    # TODO: add test in with ramping constraints
+    rated_capacity = synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
+    # 2 hours to go from 0% to 100%, 1 hr to go from 50% to 100%
+    dynamics_config["ramp_up_rate_fraction"] = 0.50
+    # 4 hours to go from 100% to 0% or 2 hrs to go from 50% to 0%
+    dynamics_config["ramp_down_rate_fraction"] = 0.25
 
-    pass
+    dynamics_config["include_cold_start"] = False
+    dynamics_config["turndown_ratio"] = 0.1
+
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
+    ramp_up_rate_kg = dynamics_config["ramp_up_rate_fraction"] * rated_capacity
+    ramp_down_rate_kg = dynamics_config["ramp_down_rate_fraction"] * rated_capacity
+
+    # Make variable profile
+    slow_ramp_up = np.arange(0, rated_capacity + ramp_up_rate_kg / 2, ramp_up_rate_kg / 2)
+    slow_ramp_down = np.arange(
+        rated_capacity, min_nh3 - ramp_down_rate_kg / 2, -1 * ramp_down_rate_kg / 2
+    )
+    ramp_up = np.arange(0, rated_capacity + ramp_up_rate_kg, ramp_up_rate_kg)
+    ramp_down = np.arange(rated_capacity, min_nh3 - ramp_down_rate_kg, -1 * ramp_down_rate_kg)
+    quick_ramp_up = np.arange(0, rated_capacity + ramp_up_rate_kg, 2 * ramp_up_rate_kg)
+    quick_ramp_down = np.arange(rated_capacity, min_nh3 - ramp_down_rate_kg, -2 * ramp_down_rate_kg)
+    nh3_no_dynamics = np.concat(
+        [
+            slow_ramp_up,
+            slow_ramp_down,
+            quick_ramp_up,
+            quick_ramp_down,
+            ramp_up,
+            ramp_down,
+            quick_ramp_up,
+            quick_ramp_down,
+            slow_ramp_up,
+            quick_ramp_down,
+        ]
+    )
+
+    elec_in = (
+        nh3_no_dynamics * synloop_config["model_inputs"]["performance_parameters"]["energy_demand"]
+    )
+
+    # only electricity is a limiting input
+    cap_mult = 10.0e3
+    n2 = np.full(n_timesteps, 5.0 * cap_mult)
+    h2 = np.full(n_timesteps, 2.0 * cap_mult)
+
+    prob = om.Problem()
+
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec_in, units="kW")
+
+    prob.run_model()
+
+    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+    # check that ramping constraints happen during "quick" ramp-ups and downs
+    ramping_down = np.where(np.diff(nh3_out) < 0, -1 * np.diff(nh3_out), 0)
+    ramping_up = np.where(np.diff(nh3_out) > 0, np.diff(nh3_out), 0)
+
+    with subtests.test("Check ramping down constraint"):
+        assert np.max(ramping_down) == pytest.approx(ramp_down_rate_kg, rel=1e-6)
+
+    with subtests.test("Check ramping up constraint"):  # failed
+        assert np.max(ramping_up) == pytest.approx(ramp_up_rate_kg, rel=1e-6)
 
 
 @pytest.mark.regression

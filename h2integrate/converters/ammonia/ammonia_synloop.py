@@ -323,6 +323,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         offtime = units.convert_units(offtime_hrs[0], "h", f"{self.dt}*s")
         delay = units.convert_units(start_up_delay_hrs[0], "h", "s")
 
+        # Calculate the production multiplier to represent start-up delay losses
         startup_production_multiplier = 1 - (delay / self.dt)
 
         # on=1, off=0
@@ -333,6 +334,9 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
         # off_index_sets[:,1] is the end of an off-cycle
         # off_index_sets[:,0] is the start of an off-cycle
+
+        # TODO: starting here: remove "hours" or "hrs" from variable names
+
         n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
         index_set_of_off_events = off_index_sets[
             np.argwhere(n_hours_off_per_off_event >= offtime).flatten()
@@ -376,11 +380,13 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # the logic for this requires that offtime and delay be converted to the timestep
         offtime = units.convert_units(offtime_hrs[0], "h", f"{self.dt}*s")
         delay = units.convert_units(start_up_delay_hrs[0], "h", f"{self.dt}*s")
-        full_dt_delay = delay // 1
-        partial_dt_delay = delay % 1
+        full_dt_delay = delay // 1  # number of full timesteps in start-up delay
+        partial_dt_delay = delay % 1  # fraction of timestep in start-up delay
         # on=1, off=0
         on_off_status = np.where(init_prod < min_prod_pt, 0, 1)
         off_indx = np.argwhere(init_prod < min_prod_pt).flatten()
+
+        # TODO: starting here: remove "hours" or "hrs" from variable names
 
         # Get the indices where its off for at least the offtime
         # off_index_sets[:,0] is the index where its turned off
@@ -404,7 +410,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # of being off that qualifies a start-up delay
         for i_turn_on in index_set_of_off_events[:, 1]:
             if i_turn_on == len(init_prod):
-                # TODO: update logic when i_turn_on is the last index
+                # TODO: check that this logic is correct
+                # when turned on at last timestep
                 continue
             # Determine how long until the next shut-off
             on_hrs_after_delay_subindx_set = (
@@ -419,7 +426,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             # Determine how long until the next shut-off in dt
             on_hrs_after_delay = on_hrs_after_delay_indx_set[1] - on_hrs_after_delay_indx_set[0]
 
-            # check if we're on long enough
+            # check if we're on long enough before the next shut-off
             if on_hrs_after_delay >= delay:
                 # time on after the shutoff is greater than the start-up delay
                 # start-up delay period ends before next shutoff
@@ -463,6 +470,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         prod_multiplier = np.ones(len(init_prod))
         # set the multiplier to zero for off hours
         prod_multiplier[off_indx] = 0
+
+        # TODO: starting here: remove "hours" or "hrs" from variable names
 
         # on_index_sets[:,0] is the index where its turned on
         # on_index_sets[:,1] is the index after its turned off
@@ -541,6 +550,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             return production_mult * nh3_production
 
     def apply_ramping_constraints(self, init_prod, production_bounds, ramp_rate_bounds):
+        # TODO: adjust variable naming to not include "demand"
         min_production, rated_production = production_bounds
         ramp_down_rate, ramp_up_rate = ramp_rate_bounds
 
@@ -609,8 +619,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # apply ramping constraints
         nh3_production = self.apply_ramping_constraints(
             nh3_production,
-            (minimum_production, inputs["ammonia_production_capacity"]),
-            (ramp_down_rate_kg_per_hr, ramp_up_rate_kg_per_hr),
+            (minimum_production[0], inputs["ammonia_production_capacity"][0]),
+            (ramp_down_rate_kg_per_hr[0], ramp_up_rate_kg_per_hr[0]),
         )
 
         # 2. calculate the consumption multiplier as the on_off_status after
