@@ -463,3 +463,11 @@ def test_ammonia_ramping_and_startup_losses(
 def test_ammonia_config(synloop_config, dynamics_config, subtests):
     # TODO: add tests to check error raising in synloop config
     pass
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
+def test_edge_cases(plant_config, synloop_config, dynamics_config, n_timesteps, subtests):
+    # TODO: add test in with ramping constraints
+
+    pass

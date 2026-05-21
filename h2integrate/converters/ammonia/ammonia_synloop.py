@@ -387,8 +387,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # off_index_sets[:,1] is the index after its turned on
         off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
         n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
-        # TODO: how to handle offtime of like 2.5 dt?
-        # should it be off for 2 dt or 3 dt to cause a delayed start?
+
+        # Only look at the off-events that trigger some delayed start-up
         index_set_of_off_events = off_index_sets[
             np.argwhere(n_hours_off_per_off_event >= offtime).flatten()
         ]
@@ -400,30 +400,35 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # set the multiplier to zero for off hours
         prod_multiplier[off_indx] = 0
 
-        # NOTE: should we be looping as [:,1] or [:1]? I think [:,1]
+        # Loop through the indices where its turned on after a period
+        # of being off that qualifies a start-up delay
         for i_turn_on in index_set_of_off_events[:, 1]:
             if i_turn_on == len(init_prod):
+                # TODO: update logic when i_turn_on is the last index
                 continue
+            # Determine how long until the next shut-off
             on_hrs_after_delay_subindx_set = (
                 np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
                 .nonzero()[0]
                 .reshape(-1, 2)[0]
             )
+            # Get the indices from now until the next shutoff
             on_hrs_after_delay_indx_set = np.array(
                 [int(i_turn_on + ii) for ii in on_hrs_after_delay_subindx_set]
             )
-            # on_hrs_after_delay = (
-            #     on_hrs_after_delay_indx_set[:, 1] - on_hrs_after_delay_indx_set[:, 0]
-            # )
+            # Determine how long until the next shut-off in dt
             on_hrs_after_delay = on_hrs_after_delay_indx_set[1] - on_hrs_after_delay_indx_set[0]
+
+            # check if we're on long enough
             if on_hrs_after_delay >= delay:
-                # delay>on hours after delay
-                # production is zero while starting up
-                # TODO: this should be adjusted to handle fraction of delays, like 4.5 dt delays
+                # time on after the shutoff is greater than the start-up delay
+                # start-up delay period ends before next shutoff
                 delay_end = int(on_hrs_after_delay_indx_set[0] + full_dt_delay)
+                # production is zero while starting up
                 prod_multiplier[on_hrs_after_delay_indx_set[0] : delay_end] = 0
+
+                # apply partial loss for any remaining delay time that is < dt
                 if partial_dt_delay > 0:
-                    # NOTE this was adjusted to handle fraction of delays, like 4.5 dt delays
                     prod_multiplier[delay_end] = 1 - partial_dt_delay
 
             else:
@@ -469,22 +474,26 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         # looping through the indices of the hours when its turned on
         for i_turn_on in index_set_of_on_events[:, 0]:
+            # Determine how long until the next shut-off
             on_hrs_after_delay_subindx_set = (
                 np.ediff1d(np.r_[0, on_off_status[i_turn_on:] == 1, 0])
                 .nonzero()[0]
                 .reshape(-1, 2)[0]
             )
+            # Get the indices from now until the next shutoff
             on_hrs_after_delay_indx_set = np.array(
                 [int(i_turn_on + ii) for ii in on_hrs_after_delay_subindx_set]
             )
 
+            # Determine how long until the next shut-off in dt
             on_hrs_after_delay = on_hrs_after_delay_indx_set[1] - on_hrs_after_delay_indx_set[0]
             if on_hrs_after_delay >= delay:
-                # delay>on hours after delay
-                # production is zero while starting up
-                # TODO: this should be adjusted to handle fraction of delays, like 4.5 dt delays
+                # time on after the shutoff is greater than the start-up delay
+                # start-up delay period ends before next shutoff
                 delay_end = int(on_hrs_after_delay_indx_set[0] + full_dt_delay)
+                # production is zero while starting up
                 prod_multiplier[on_hrs_after_delay_indx_set[0] : delay_end] = 0.0
+                # apply partial loss for any remaining delay time that is < dt
                 if partial_dt_delay > 0:
                     # NOTE this was adjusted to handle fraction of delays, like 4.5 dt delays
                     prod_multiplier[delay_end] = 1 - partial_dt_delay
@@ -502,36 +511,34 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self, offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
     ):
         dt_hrs = self.dt / 3600
-        # TODO: add consumption losses. Feedstocks are consumed during start-up delay
-        on_off_status = np.where(nh3_production < minimum_production, 0, 1)
 
         offtime_category = "subdt" if offtime_hrs <= dt_hrs else "multidt"
         startup_category = "subdt" if start_up_delay_hrs <= dt_hrs else "multidt"
 
         if offtime_category == "subdt" and startup_category == "subdt":
+            # off for <=1 dt to cause a start-up delay that is <=1 dt
             production_mult = self.subdt_offtime_subdt_startup(
                 offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
             )
-
-            return production_mult * nh3_production, on_off_status
+            return production_mult * nh3_production
         if offtime_category == "subdt" and startup_category == "multidt":
+            # off for <=1 dt to cause a start-up delay that is > dt
             production_mult = self.subdt_offtime_multidt_startup(
                 offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
             )
-
-            return production_mult * nh3_production, on_off_status
+            return production_mult * nh3_production
         if offtime_category == "multidt" and startup_category == "subdt":
+            # off for > dt to cause a start-up delay that is <= dt
             production_mult = self.multidt_offtime_subdt_startup(
                 offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
             )
-
-            return production_mult * nh3_production, on_off_status
+            return production_mult * nh3_production
         if offtime_category == "multidt" and startup_category == "multidt":
+            # off for > 1 dt to cause a start-up delay that is > dt
             production_mult = self.multidt_offtime_multidt_startup(
                 offtime_hrs, start_up_delay_hrs, minimum_production, nh3_production
             )
-
-            return production_mult * nh3_production, on_off_status
+            return production_mult * nh3_production
 
     def apply_ramping_constraints(self, init_prod, production_bounds, ramp_rate_bounds):
         min_production, rated_production = production_bounds
@@ -564,7 +571,23 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         return production_profile
 
-    def apply_dynamic_operation(self, inputs, nh3_production, indx_call=0):
+    def apply_dynamic_operation(self, inputs, nh3_production):
+        """Apply ramping constraints and start-up delay losses to the ammonia production profile.
+
+        Args:
+            inputs (om.vectors.default_vector.DefaultVector): OM inputs to `compute()` method
+            nh3_production (np.ndarray): array of ammonia production before dynamic
+                operation constraints are applied
+
+        Returns:
+            2-element tuple containing
+
+            - **nh3_production** (np.ndarray): the ammonia production profile after ramping
+                constraints and start-up delay losses have been applied
+            - **consumption_multiplier** (np.ndarray): the ammonia production profile to
+                calculate input commodity consumption. This is because the input commodities are
+                consumed during start-up delays (when no ammonia is being produced)
+        """
         # calculate operating constraints in terms of kg NH3/hour
         minimum_production = inputs["ammonia_production_capacity"] * np.clip(
             inputs["turndown_ratio"], a_min=0.0, a_max=1.0
@@ -581,25 +604,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             nh3_production, a_min=0.0, a_max=inputs["ammonia_production_capacity"]
         )
 
-        consumption_multiplier = np.ones(self.n_timesteps)
-        # apply start-up delays
-        if "warm_start_delay" in inputs:
-            # TODO: add consumption losses
-            nh3_production, consumption_multiplier = self.apply_startup_losses(
-                inputs["off_time_warm_start"],
-                inputs["warm_start_delay"],
-                minimum_production,
-                nh3_production,
-            )
-
-        if "cold_start_delay" in inputs:
-            # TODO: add consumption losses
-            nh3_production, consumption_multiplier = self.apply_startup_losses(
-                inputs["off_time_cold_start"],
-                inputs["cold_start_delay"],
-                minimum_production,
-                nh3_production,
-            )
+        # 1. first apply ramping constraints, get the nh3_prod
 
         # apply ramping constraints
         nh3_production = self.apply_ramping_constraints(
@@ -608,11 +613,27 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             (ramp_down_rate_kg_per_hr, ramp_up_rate_kg_per_hr),
         )
 
-        # Call this method again to apply an delay losses or ramp constraints
-        # if the ramping constraints would cause more start-up losses
-        if indx_call == 0:
-            nh3_production, consumption_multiplier = self.apply_dynamic_operation(
-                inputs, nh3_production, indx_call=1
+        # 2. calculate the consumption multiplier as the on_off_status after
+        # ramping constraints have been applied multiplied by the production
+        # (prior to start-up losses)
+        on_off_status = np.where(nh3_production < minimum_production, 0, 1)
+        consumption_multiplier = on_off_status * nh3_production
+
+        # 3. apply start-up delays
+        if "warm_start_delay" in inputs:
+            nh3_production = self.apply_startup_losses(
+                inputs["off_time_warm_start"],
+                inputs["warm_start_delay"],
+                minimum_production,
+                nh3_production,
+            )
+
+        if "cold_start_delay" in inputs:
+            nh3_production = self.apply_startup_losses(
+                inputs["off_time_cold_start"],
+                inputs["cold_start_delay"],
+                minimum_production,
+                nh3_production,
             )
 
         return nh3_production, consumption_multiplier
@@ -670,27 +691,24 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         nh3_from_elec = elec_in / energy_demand  # kg nh3 / hr
 
         # Limiting NH3 production per hour by each input
-        nh3_prod_nominal = np.minimum.reduce([nh3_from_n2, nh3_from_h2, nh3_from_elec])
+        nh3_prod = np.minimum.reduce([nh3_from_n2, nh3_from_h2, nh3_from_elec])
         limiters = np.argmin([nh3_from_n2, nh3_from_h2, nh3_from_elec], axis=0)
 
         # Limiting NH3 production per hour by capacity
-        nh3_prod_nominal = np.minimum.reduce(
-            [nh3_prod_nominal, np.full(len(nh3_prod_nominal), nh3_cap)]
-        )
-        cap_lim = 1 - np.argmax(
-            [nh3_prod_nominal, list(np.full(len(nh3_prod_nominal), nh3_cap))], axis=0
-        )
+        nh3_prod = np.minimum.reduce([nh3_prod, np.full(len(nh3_prod), nh3_cap)])
+        cap_lim = 1 - np.argmax([nh3_prod, list(np.full(len(nh3_prod), nh3_cap))], axis=0)
 
         # Determine what the limiting factor is for each hour
         limiters = np.maximum.reduce([cap_lim * 3, limiters])
         outputs["limiting_input"] = limiters
 
-        nh3_prod, consumption_multiplier = self.apply_dynamic_operation(inputs, nh3_prod_nominal)
+        # Apply dynamic operation
+        nh3_prod, consumption_multiplier = self.apply_dynamic_operation(inputs, nh3_prod)
 
-        # Calculate unused inputs
-        used_h2 = nh3_prod_nominal * h2_rate * consumption_multiplier
-        used_n2 = nh3_prod_nominal * n2_rate * consumption_multiplier
-        used_elec = nh3_prod_nominal * energy_demand * consumption_multiplier  # kW
+        # Calculate feedstocks used as consumption_multplier*feedstock_rate
+        used_h2 = consumption_multiplier * h2_rate
+        used_n2 = consumption_multiplier * n2_rate
+        used_elec = consumption_multiplier * energy_demand  # kW
 
         # Calculate output in purge gas
         purge_mw = x_h2_purge * H_MW * 2 + x_n2_purge * N_MW * 2  # g / mol
