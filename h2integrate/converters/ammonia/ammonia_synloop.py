@@ -387,6 +387,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # off_index_sets[:,1] is the index after its turned on
         off_index_sets = np.ediff1d(np.r_[0, on_off_status == 0, 0]).nonzero()[0].reshape(-1, 2)
         n_hours_off_per_off_event = off_index_sets[:, 1] - off_index_sets[:, 0]
+        # TODO: how to handle offtime of like 2.5 dt?
+        # should it be off for 2 dt or 3 dt to cause a delayed start?
         index_set_of_off_events = off_index_sets[
             np.argwhere(n_hours_off_per_off_event >= offtime).flatten()
         ]
@@ -562,7 +564,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         return production_profile
 
-    def apply_dynamic_operation(self, inputs, nh3_production):
+    def apply_dynamic_operation(self, inputs, nh3_production, indx_call=0):
         # calculate operating constraints in terms of kg NH3/hour
         minimum_production = inputs["ammonia_production_capacity"] * np.clip(
             inputs["turndown_ratio"], a_min=0.0, a_max=1.0
@@ -605,6 +607,13 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             (minimum_production, inputs["ammonia_production_capacity"]),
             (ramp_down_rate_kg_per_hr, ramp_up_rate_kg_per_hr),
         )
+
+        # Call this method again to apply an delay losses or ramp constraints
+        # if the ramping constraints would cause more start-up losses
+        if indx_call == 0:
+            nh3_production, consumption_multiplier = self.apply_dynamic_operation(
+                inputs, nh3_production, indx_call=1
+            )
 
         return nh3_production, consumption_multiplier
 
