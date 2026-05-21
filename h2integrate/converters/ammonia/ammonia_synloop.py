@@ -629,6 +629,11 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         on_off_status = np.where(nh3_production < minimum_production, 0, 1)
         consumption_multiplier = on_off_status * nh3_production
 
+        # NOTE: is there any specific considerations when theres both delays?
+        # like should we run cold start first or warm start first
+        # ex: should we run always run the multidt_offtime_multidt_delay before
+        # running a subdt_offtime_subdt_delay case?
+
         # 3. apply start-up delays
         if "warm_start_delay" in inputs:
             nh3_production = self.apply_startup_losses(

@@ -157,6 +157,8 @@ def test_ammonia_subdt_offtime_subdt_delay(
         elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
+    # TODO: Add subtests for results over full 40 timesteps
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
@@ -231,6 +233,8 @@ def test_ammonia_subdt_offtime_multidt_delay(
         elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
+    # TODO: Add subtests for results over full 40 timesteps
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
@@ -302,6 +306,8 @@ def test_ammonia_multidt_offtime_multidt_delay(
     with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
         elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+
+    # TODO: Add subtests for results over full 40 timesteps
 
 
 @pytest.mark.regression
@@ -376,6 +382,8 @@ def test_ammonia_multidt_offtime_subdt_startup(
         elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
+    # TODO: Add subtests for results over full 40 timesteps
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
@@ -385,7 +393,7 @@ def test_ammonia_moms_cold_soss_warm_start(
     # Test when theres both cold start and warm start
     # TODO: add test in
     # cold start params, off time of 4 hours, delay time of 2
-    # cold start is multi_offtime_multi_startup (moms)
+    # cold start is multidt_offtime_multidt_startup (moms)
     dynamics_config["include_cold_start"] = True
     dynamics_config["off_hours_cold_start"] = 4
     dynamics_config["cold_start_delay_hours"] = 2
@@ -396,6 +404,17 @@ def test_ammonia_moms_cold_soss_warm_start(
     dynamics_config["warm_start_delay_hours"] = 0.5
 
     dynamics_config["turndown_ratio"] = 0.1
+
+    # NOTE:
+    # cold start tested with off time of 4+ hours and on-time of 2+ hours
+    # warm start tested with off-time of 1+ hours and on-time of 1+ hours
+    # should these losses be applied in a specific order?
+    # because after a cold start, there will always be an additional warm-start delay
+    # EX: suppose its off for 4 hours then on for 3 hours.
+    # first cold start -> zero production for 2 of the 3 'on' hours, full production for hour 3
+    # then warm start -> makes the 3rd 'on' hour have partial production rather than full because
+    # 2 of the 'on' hours "look" like 'off' because there is zero production from the cold-start
+    # delay so then the warm-start delay is applied to the following hour.
     pass
 
 
@@ -491,9 +510,10 @@ def test_ammonia_multidt_delay_fraction(
         elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
 
+    # TODO: Add subtests for results over full 40 timesteps
+
     # Re-run model but for subdt_offtime_multidt_delay case
     # Change the offtime to subdt
-    # Then re-run
     prob.set_val("comp.off_time_cold_start", 0.5, units="h")
     prob.run_model()
 
@@ -517,6 +537,8 @@ def test_ammonia_multidt_delay_fraction(
             elec_in[:n_timesteps_test] - elec_consumed_subdtofftime[:n_timesteps_test]
         ).sum()
         assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+
+    # TODO: Add subtests for results over full 40 timesteps
 
 
 @pytest.mark.regression
@@ -626,6 +648,8 @@ def test_ammonia_ramp_constraints(
 
     with subtests.test("Check ramping up constraint"):  # failed
         assert np.max(ramping_up) == pytest.approx(ramp_up_rate_kg, rel=1e-6)
+
+    # TODO: Add subtests for results over full 40 timesteps
 
 
 @pytest.mark.regression
