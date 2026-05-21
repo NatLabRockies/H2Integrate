@@ -96,13 +96,14 @@ The feedstock model outputs cost and performance information about the consumed 
 
 ## EIA Natural Gas Pricing
 
-A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` (see
+A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` exists to enable users
+to download data from the EIA API's natural gas price
+portal for a single site (see
 [the relevant API docs](https://h2integrate.readthedocs.io/en/latest/_autosummary/h2integrate.feedstocks.eia_ng_price.html)
-for complete details) exists to enable users to download data from the EIA API's natural gas price
-portal for a single site. Access to the wellhead, import, citygate, residential, commercial,
-industrial, electrical power, and exports price facets are supported for all 50 US states and the US
+for complete details). Access to the wellhead, import, citygate, residential, commercial,
+industrial, electrical power, and exports price facets are supported for the US
 as a whole, though it is best to see which data are
-[availble online in the EIA API documentation](https://www.eia.gov/opendata/browser/natural-gas/pri/sum)
+[available online in the EIA API documentation](https://www.eia.gov/opendata/browser/natural-gas/pri/sum)
 prior to using in an analysis.
 
 Users are expected to get an EIA API key from the

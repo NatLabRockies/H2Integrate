@@ -5,27 +5,18 @@ from enum import IntEnum
 import numpy as np
 import networkx as nx
 import openmdao.api as om
-import matplotlib.pyplot as plt
 
-from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
-from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
     no_replacement_schedule_models,
 )
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
-from h2integrate.core.pose_optimization import PoseOptimization
-from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
 from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     is_electricity_producer,
-)
-from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
-    PyomoStorageControllerBaseClass,
 )
 
 
@@ -192,6 +183,12 @@ class H2IntegrateModel:
         self.system_summary = config.get("system_summary")
 
         # Load and validate each component configuration using the helper method
+        from h2integrate.core.inputs.validation import (
+            load_tech_yaml,
+            load_plant_yaml,
+            load_driver_yaml,
+        )
+
         self.driver_config, self.driver_config_path, _ = self._load_component_config(
             "driver_config", config.get("driver_config"), config_path, load_driver_yaml
         )
@@ -212,17 +209,20 @@ class H2IntegrateModel:
             if "control_strategy" in vals:
                 controller_model_name = vals["control_strategy"]["model"]
                 controller_cls = supported_models.get(controller_model_name)
-                if controller_cls is not None and issubclass(
-                    controller_cls, PyomoStorageControllerBaseClass
-                ):
-                    model_inputs = self.technology_config["technologies"][name]["model_inputs"]
-                    if (
-                        "control_parameters" not in model_inputs
-                        or model_inputs["control_parameters"] is None
-                    ):
-                        model_inputs["control_parameters"] = {"tech_name": name}
-                    else:
-                        model_inputs["control_parameters"]["tech_name"] = name
+                if controller_cls is not None:
+                    from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (  # noqa: E501
+                        PyomoStorageControllerBaseClass,
+                    )
+
+                    if issubclass(controller_cls, PyomoStorageControllerBaseClass):
+                        model_inputs = self.technology_config["technologies"][name]["model_inputs"]
+                        if (
+                            "control_parameters" not in model_inputs
+                            or model_inputs["control_parameters"] is None
+                        ):
+                            model_inputs["control_parameters"] = {"tech_name": name}
+                        else:
+                            model_inputs["control_parameters"]["tech_name"] = name
 
     def create_custom_models(self, model_config, config_parent_path, model_types, prefix=""):
         """This method loads custom models from the specified directory and adds them to the
@@ -416,6 +416,9 @@ class H2IntegrateModel:
         Returns:
             om.Group: OpenMDAO group for a site
         """
+
+        from h2integrate.core.sites import SiteLocationComponent
+
         # Initialize the site group
         site_group = om.Group()
 
@@ -453,6 +456,7 @@ class H2IntegrateModel:
         the same for each technology. This includes site information, project parameters,
         control strategy, and finance parameters.
         """
+
         plant_group = om.Group()
 
         # Create the plant model group and add components
@@ -732,6 +736,9 @@ class H2IntegrateModel:
             # attaches a ProFAST finance model component to the plant.
 
         """
+
+        from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
+
         # if there aren't any finance parameters don't setup a finance model
         if "finance_parameters" not in self.plant_config:
             return
@@ -1420,6 +1427,8 @@ class H2IntegrateModel:
         Add the driver to the OpenMDAO model and add recorder.
         """
 
+        from h2integrate.core.pose_optimization import PoseOptimization
+
         myopt = PoseOptimization(self.driver_config)
         if "driver" in self.driver_config:
             myopt.set_driver(self.prob)
@@ -1479,12 +1488,16 @@ class H2IntegrateModel:
             self.print_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
+            from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+
             convert_sql_to_csv_summary(self.recorder_path, save_to_file=True)
 
         for model in self.performance_models:
             if hasattr(model, "post_process") and callable(model.post_process):
                 model.post_process(show_plots=show_plots)
                 if show_plots:
+                    import matplotlib.pyplot as plt
+
                     plt.show()
         self.state = State.POST_PROCESS
 
