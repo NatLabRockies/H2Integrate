@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -181,8 +182,12 @@ class GridCostModelConfig(CostModelBaseConfig):
     fixed_interconnection_cost: float = field()  # $
     electricity_buy_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
     electricity_sell_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
-    buy_price_mode: str | None = field(default=None)  # 'per_timestep' or 'per_year'
-    sell_price_mode: str | None = field(default=None)  # 'per_timestep' or 'per_year'
+    buy_price_mode: str | None = field(
+        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+    )
+    sell_price_mode: str | None = field(
+        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+    )
 
 
 class GridCostModel(CostModelBaseClass):
@@ -226,13 +231,13 @@ class GridCostModel(CostModelBaseClass):
         # Add buy price input if configured
         if self.config.electricity_buy_price is not None:
             self._buy_price_mode = self.config.buy_price_mode
-            if self._buy_price_mode is None:
-                self._buy_price_mode = "per_timestep"
 
             if self._buy_price_mode == "per_year":
                 buy_price_shape = plant_life
-            else:
+            if self._buy_price_mode == "per_timestep":
                 buy_price_shape = n_timesteps
+            if self._buy_price_mode == "constant":
+                buy_price_shape = 1
 
             self.add_input(
                 "electricity_buy_price",
@@ -265,13 +270,13 @@ class GridCostModel(CostModelBaseClass):
         # Add sell price input if configured
         if self.config.electricity_sell_price is not None:
             self._sell_price_mode = self.config.sell_price_mode
-            if self._sell_price_mode is None:
-                self._sell_price_mode = "per_timestep"
 
             if self._sell_price_mode == "per_year":
                 sell_price_shape = plant_life
-            else:
+            if self._sell_price_mode == "per_timestep":
                 sell_price_shape = n_timesteps
+            if self._sell_price_mode == "constant":
+                sell_price_shape = 1
 
             self.add_input(
                 "electricity_sell_price",
