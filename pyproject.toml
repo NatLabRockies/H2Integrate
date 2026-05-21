@@ -243,6 +243,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["E501", "D104", "F401"]
+"*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
