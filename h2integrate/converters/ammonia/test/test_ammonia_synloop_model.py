@@ -160,6 +160,69 @@ def test_ammonia_synloop_outputs(synloop_config, subtests):
             < prob.get_val("comp.electricity_in", units="kW").max()
         )
 
+    # Test purge gas multivariable stream outputs exist and have correct shape
+    with subtests.test("process_gas_mixture:mass_flow_out shape"):
+        purge_flow = prob.get_val("comp.process_gas_mixture:mass_flow_out", units="kg/h")
+        assert len(purge_flow) == n_timesteps
+
+    with subtests.test("process_gas_mixture:mass_flow_out > 0"):
+        assert np.all(purge_flow > 0)
+
+    with subtests.test("process_gas_mixture:hydrogen_mass_fraction_out shape"):
+        purge_h2_frac = prob.get_val(
+            "comp.process_gas_mixture:hydrogen_mass_fraction_out", units="unitless"
+        )
+        assert len(purge_h2_frac) == n_timesteps
+
+    with subtests.test("process_gas_mixture:hydrogen_mass_fraction_out in [0, 1]"):
+        assert np.all(purge_h2_frac >= 0) and np.all(purge_h2_frac <= 1)
+
+    with subtests.test("process_gas_mixture:nitrogen_mass_fraction_out shape"):
+        purge_n2_frac = prob.get_val(
+            "comp.process_gas_mixture:nitrogen_mass_fraction_out", units="unitless"
+        )
+        assert len(purge_n2_frac) == n_timesteps
+
+    with subtests.test("process_gas_mixture:nitrogen_mass_fraction_out in [0, 1]"):
+        assert np.all(purge_n2_frac >= 0) and np.all(purge_n2_frac <= 1)
+
+    with subtests.test("process_gas_mixture:argon_mass_fraction_out shape"):
+        purge_ar_frac = prob.get_val(
+            "comp.process_gas_mixture:argon_mass_fraction_out", units="unitless"
+        )
+        assert len(purge_ar_frac) == n_timesteps
+
+    with subtests.test("process_gas_mixture:argon_mass_fraction_out in [0, 1]"):
+        assert np.all(purge_ar_frac >= 0) and np.all(purge_ar_frac <= 1)
+
+    with subtests.test("process_gas_mixture:ammonia_mass_fraction_out shape"):
+        purge_nh3_frac = prob.get_val(
+            "comp.process_gas_mixture:ammonia_mass_fraction_out", units="unitless"
+        )
+        assert len(purge_nh3_frac) == n_timesteps
+
+    with subtests.test("process_gas_mixture:ammonia_mass_fraction_out in [0, 1]"):
+        assert np.all(purge_nh3_frac >= 0) and np.all(purge_nh3_frac <= 1)
+
+    with subtests.test("process_gas_mixture:temperature_out shape"):
+        purge_t = prob.get_val("comp.process_gas_mixture:temperature_out", units="K")
+        assert len(purge_t) == n_timesteps
+
+    with subtests.test("process_gas_mixture:pressure_out shape"):
+        purge_p = prob.get_val("comp.process_gas_mixture:pressure_out", units="bar")
+        assert len(purge_p) == n_timesteps
+
+    # hydrogen_out and nitrogen_out should be unused feedstock only (no purge gas)
+    with subtests.test("hydrogen_out == hydrogen_in - hydrogen_consumed"):
+        h2_out = prob.get_val("comp.hydrogen_out", units="kg/h")
+        h2_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
+        assert np.allclose(h2_out, h2 - h2_consumed)
+
+    with subtests.test("nitrogen_out == nitrogen_in - nitrogen_consumed"):
+        n2_out = prob.get_val("comp.nitrogen_out", units="kg/h")
+        n2_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
+        assert np.allclose(n2_out, n2 - n2_consumed)
+
 
 @pytest.mark.regression
 def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
@@ -221,6 +284,44 @@ def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
     # Check total NH3 output
     with subtests.test("Total ammonia"):
         assert np.allclose(total, np.sum(expected_nh3), rtol=1e-6)
+
+    # Check purge gas multivariable stream outputs
+    purge_flow = prob.get_val("synloop.process_gas_mixture:mass_flow_out", units="kg/h")
+    purge_h2_frac = prob.get_val(
+        "synloop.process_gas_mixture:hydrogen_mass_fraction_out", units="unitless"
+    )
+    purge_n2_frac = prob.get_val(
+        "synloop.process_gas_mixture:nitrogen_mass_fraction_out", units="unitless"
+    )
+    purge_temp = prob.get_val("synloop.process_gas_mixture:temperature_out", units="K")
+    purge_pres = prob.get_val("synloop.process_gas_mixture:pressure_out", units="bar")
+
+    with subtests.test("Purge gas mass flow = ratio_purge * nh3_prod"):
+        expected_purge_flow = 0.07 * expected_nh3
+        assert np.allclose(purge_flow, expected_purge_flow, rtol=1e-6)
+
+    with subtests.test("Purge gas H2 fraction constant"):
+        assert np.all(purge_h2_frac == purge_h2_frac[0])
+
+    with subtests.test("Purge gas N2 fraction constant"):
+        assert np.all(purge_n2_frac == purge_n2_frac[0])
+
+    with subtests.test("Purge gas temperature matches config"):
+        assert np.allclose(purge_temp, 7.5)
+
+    with subtests.test("Purge gas pressure matches config"):
+        assert np.allclose(purge_pres, 275.0)
+
+    # Verify hydrogen_out and nitrogen_out no longer include purge gas
+    with subtests.test("hydrogen_out = h2_in - used_h2 (no purge)"):
+        h2_out = prob.get_val("synloop.hydrogen_out", units="kg/h")
+        h2_consumed = prob.get_val("synloop.hydrogen_consumed", units="kg/h")
+        assert np.allclose(h2_out, h2 - h2_consumed)
+
+    with subtests.test("nitrogen_out = n2_in - used_n2 (no purge)"):
+        n2_out = prob.get_val("synloop.nitrogen_out", units="kg/h")
+        n2_consumed = prob.get_val("synloop.nitrogen_consumed", units="kg/h")
+        assert np.allclose(n2_out, n2 - n2_consumed)
 
 
 @pytest.mark.regression

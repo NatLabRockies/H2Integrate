@@ -8,6 +8,7 @@
    :recursive:
 
    core
+   feedstocks
    converters
    control
    finances
