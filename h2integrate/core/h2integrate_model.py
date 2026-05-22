@@ -947,7 +947,7 @@ class H2IntegrateModel:
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
 
-                    self._maybe_add_passthrough_controller(tech_group, comp, individual_tech_config)
+                    self._add_passthrough_controller(tech_group, comp, individual_tech_config)
 
                     continue
 
@@ -984,7 +984,7 @@ class H2IntegrateModel:
                                     self.tech_control_classifiers[tech_name] = classifier
 
                 if perf_om_object is not None:
-                    self._maybe_add_passthrough_controller(
+                    self._add_passthrough_controller(
                         tech_group, perf_om_object, individual_tech_config
                     )
 
@@ -1060,7 +1060,7 @@ class H2IntegrateModel:
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
-    def _maybe_add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
+    def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
 
         A controller is auto-inserted only when:
@@ -1075,27 +1075,48 @@ class H2IntegrateModel:
         ``{commodity}_set_point`` output is auto-connected (via promotion) to the
         performance model's ``{commodity}_set_point`` input if one exists.
         """
+        # Skip if the user has already specified a control strategy for this tech;
+        # their explicit choice takes precedence over the auto-injected passthrough.
         if "control_strategy" in individual_tech_config:
             return
+
+        # Only flexible/dispatchable techs accept an externally provided demand
+        # signal. Fixed, feedstock, connector, and storage techs are handled
+        # elsewhere (storage uses its own sub-controller; fixed/feedstock have
+        # no set-point) and must not get a passthrough.
         classifier = getattr(perf_comp, "_control_classifier", None)
         if classifier not in ("flexible", "dispatchable"):
             return
+
+        # The performance model must declare the commodity it produces and the
+        # units of its set-point so the PassthroughController can size its I/O
+        # consistently. If either is missing we have nothing to wire up.
         commodity = getattr(perf_comp, "commodity", None)
         commodity_rate_units = getattr(perf_comp, "commodity_rate_units", None)
         if commodity is None or commodity_rate_units is None:
             return
+
+        # Build the controller sized to the plant's simulation horizon so its
+        # vector I/O matches the performance model's time-series I/O.
         n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
         controller = PassthroughController(
             commodity=commodity,
             n_timesteps=n_timesteps,
             commodity_rate_units=commodity_rate_units,
         )
+
+        # Promote all controller variables so:
+        #   - `{commodity}_demand` becomes the tech group's external input
+        #     (this is what the system-level controller connects to), and
+        #   - `{commodity}_set_point` is auto-connected by name to the
+        #     performance model's matching input via promotion.
         om_controller = tech_group.add_subsystem("controller", controller, promotes=["*"])
         self.control_strategies.append(om_controller)
 
         # Ensure the controller runs before the performance/cost models that
         # consume its set_point output. Subsystem creation order otherwise
-        # places the controller last in the group's execution order.
+        # places the controller last in the group's execution order, which
+        # would delay the set_point by one solver iteration.
         existing_order = list(tech_group._static_subsystems_allprocs.keys())
         if "controller" in existing_order:
             new_order = ["controller"] + [n for n in existing_order if n != "controller"]
