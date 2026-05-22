@@ -17,7 +17,7 @@ class PassthroughController(om.ExplicitComponent):
     production is unconstrained, making the component a harmless no-op.
     """
 
-    _time_step_bounds = (0, float("inf"))
+    _time_step_bounds = (1, float("inf"))
 
     def initialize(self):
         self.options.declare("commodity", types=str)
@@ -45,7 +45,7 @@ class PassthroughController(om.ExplicitComponent):
         # downstream performance model behaves as if unconstrained (the perf
         # model typically saturates the set-point at its rated capacity).
         # We avoid extreme values (e.g. 1e30) here because they pollute the
-        # NLBGS relative-residual check and cause premature false convergence
+        # solver relative-residual check and cause premature false convergence
         # in cyclic system-level control configurations.
         default_val = 1.0e9
 
