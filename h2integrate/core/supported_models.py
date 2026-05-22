@@ -182,9 +182,9 @@ supported_models = _ModelRegistry(
         "SimpleGasConsumerCost": "converters.natural_gas.dummy_gas_components:SimpleGasConsumerCost",
         "GasStreamCombinerPerformanceModel": "transporters.gas_stream_combiner:GasStreamCombinerPerformanceModel",
         # System-level control strategies
-        "DemandFollowingControl": "control.control_strategies.system_level.demand_following:demand_following_control:DemandFollowingControl",
-        "CostMinimizationControl": "control.control_strategies.system_level.cost_minimization:cost_minimization_control:CostMinimizationControl",
-        "ProfitMaximizationControl": "control.control_strategies.system_level.profit_maximization:profit_maximization_control:ProfitMaximizationControl",
+        "DemandFollowingControl": "control.control_strategies.system_level.demand_following_control:DemandFollowingControl",
+        "CostMinimizationControl": "control.control_strategies.system_level.cost_minimization_control:CostMinimizationControl",
+        "ProfitMaximizationControl": "control.control_strategies.system_level.profit_maximization_control:ProfitMaximizationControl",
     }
 )
 
