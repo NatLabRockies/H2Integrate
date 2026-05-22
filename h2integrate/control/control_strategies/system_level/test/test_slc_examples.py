@@ -270,16 +270,16 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
     model.setup()
 
     model.prob.set_val(
-        "plant.electrical_load_demand.electricity_demand",
+        "electrical_load_demand.electricity_demand",
         demand_profile,
     )
     model.prob.set_val(
-        "plant.system_level_controller.commodity_sell_price",
+        "system_level_controller.commodity_sell_price",
         sell_price,
         units="USD/(kW*h)",
     )
     model.prob.set_val(
-        "plant.grid_buy.electricity_buy_price",
+        "grid_buy.electricity_buy_price",
         grid_buy_price,
         units="USD/(kW*h)",
     )
