@@ -83,12 +83,12 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
     ramp_down_rate_fraction: float = field(default=1.0, validator=range_val(0.0, 1.0))
 
     include_cold_start: bool = field(default=False)
-    off_hours_cold_start: float = field(validator=validators.optional(gt_zero))
-    cold_start_delay_hours: float = field(validator=validators.optional(gt_zero))
+    off_hours_cold_start: float = field(default=None, validator=validators.optional(gt_zero))
+    cold_start_delay_hours: float = field(default=None, validator=validators.optional(gt_zero))
 
     include_warm_start: bool = field(default=False)
-    off_hours_warm_start: float = field(validator=validators.optional(gt_zero))
-    warm_start_delay_hours: float = field(validator=validators.optional(gt_zero))
+    off_hours_warm_start: float = field(default=None, validator=validators.optional(gt_zero))
+    warm_start_delay_hours: float = field(default=None, validator=validators.optional(gt_zero))
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
