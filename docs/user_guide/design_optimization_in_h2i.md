@@ -9,7 +9,7 @@ We will lean on the `05_wind_h2_opt` example in the `examples` folder to illustr
 
 ```{note}
 When we say "driver" in this context, we are referring to the optimizer that is used to solve the optimization problem as detailed in this [OpenMDAO doc page](https://openmdao.org/newdocs/versions/latest/basic_user_guide/single_disciplinary_optimization/first_optimization.html).
-Drivers could also refer to a design of experiments (DOE) or other types of analysis that are not strictly optimizers.
+Drivers could also refer to a parameter sweep (called "Design of Experiments" or DOE in OpenMDAO) or other types of analysis that are not strictly optimizers.
 ```
 
 

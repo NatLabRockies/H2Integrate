@@ -1,10 +1,10 @@
-description: Driver config for CSVGen design of experiments
+description: Driver config for CSVGen parameter sweep
 name: driver_config
 general:
   folder_output: ex_20_out
   create_om_reports: true
 driver:
-  design_of_experiments:
+  parameter_sweep:
     flag: true
     debug_print: true
     generator: csvgen
