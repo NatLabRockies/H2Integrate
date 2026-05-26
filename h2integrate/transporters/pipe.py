@@ -23,6 +23,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "natural_gas",
                 "wellhead_gas",
                 "water",
+                "oxygen",
             ],
         )
         self.options.declare("plant_config", types=dict)

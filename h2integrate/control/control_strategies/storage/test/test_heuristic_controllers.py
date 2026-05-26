@@ -45,7 +45,7 @@ def tech_config_battery():
                     "shared_parameters": {
                         "max_charge_rate": 50000,
                         "max_capacity": 200000,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "n_horizon_window": 48,
                         "init_soc_fraction": 0.5,
                         "max_soc_fraction": 0.9,
@@ -103,7 +103,7 @@ def tech_config_generic():
                     "shared_parameters": {
                         "max_charge_rate": 10.0,
                         "max_capacity": 40.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "init_soc_fraction": 0.1,
                         "max_soc_fraction": 1.0,
                         "min_soc_fraction": 0.1,
@@ -153,7 +153,7 @@ def tech_config_autosizing():
                         "set_demand_as_avg_commodity_in": False,
                     },
                     "control_parameters": {
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "tech_name": "h2_storage",
                         "system_commodity_interface_limit": 10.0,
                         "init_soc_fraction": 0.1,

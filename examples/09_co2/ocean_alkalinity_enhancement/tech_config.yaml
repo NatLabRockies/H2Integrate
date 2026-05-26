@@ -62,7 +62,7 @@ technologies:
         power_capex: 317  # $/kW from 2024 ATB year 2025
         opex_fraction: 0.02536510376633359
       control_parameters:
-        n_control_window: 24
+        n_control_window_hours: 24
         system_commodity_interface_limit: 1e12
   combiner:
     performance_model:

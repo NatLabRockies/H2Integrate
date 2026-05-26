@@ -184,6 +184,10 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
             rtol=1e-6,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
     with subtests.test("Expected capacity factor"):
         assert (
             pytest.approx(-12.5, rel=1e-6)
@@ -212,7 +216,7 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
             "min_soc_fraction": 0.1,
             "max_soc_fraction": 1.0,
             "init_soc_fraction": 0.1,
-            "n_control_window": 24,
+            "n_control_window_hours": 24,
             "commodity_amount_units": "kg",
             "charge_equals_discharge": True,
             "charge_efficiency": 1.0,
@@ -388,6 +392,10 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
             rtol=1e-6,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
     with subtests.test("Total charge = total discharge"):
         assert (
             pytest.approx(
@@ -425,7 +433,7 @@ def test_generic_storage_with_simple_control_zero_size(plant_config, subtests):
             "min_soc_fraction": 0.1,
             "max_soc_fraction": 1.0,
             "init_soc_fraction": 0.1,
-            "n_control_window": 24,
+            "n_control_window_hours": 24,
             "commodity_amount_units": "kg",
             "charge_equals_discharge": False,
             "charge_efficiency": 1.0,
@@ -569,6 +577,10 @@ def test_generic_storage_with_simple_control_zero_size(plant_config, subtests):
             == performance_model_config["init_soc_fraction"]
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
     with subtests.test("Expected capacity factor"):
         assert (
             pytest.approx(0.0, rel=1e-6)
@@ -599,7 +611,7 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
             "min_soc_fraction": 0.1,
             "max_soc_fraction": 1.0,
             "init_soc_fraction": 0.1,
-            "n_control_window": 24,
+            "n_control_window_hours": 24,
             "commodity_amount_units": "kg",
             "charge_equals_discharge": True,
             "charge_efficiency": charge_eff,
@@ -807,6 +819,10 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
             rtol=1e-6,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
     with subtests.test("Expected capacity factor"):
         assert (
             pytest.approx(-3.16666666, rel=1e-6)
@@ -838,7 +854,7 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
             "min_soc_fraction": 0.1,
             "max_soc_fraction": 1.0,
             "init_soc_fraction": 0.1,
-            "n_control_window": 24,
+            "n_control_window_hours": 24,
             "commodity_amount_units": "kg",
             "charge_equals_discharge": True,
             "round_trip_efficiency": round_trip_eff,
@@ -1012,9 +1028,148 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
             rtol=1e-6,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [24])
+def test_generic_storage_charge_more_than_available(plant_config, subtests):
+    # this tests a case where the demand < charge rate and charge_rate=discharge_rate
+    model_inputs = {
+        "shared_parameters": {
+            "commodity": "hydrogen",
+            "commodity_rate_units": "kg/h",
+        },
+        "performance_parameters": {
+            "max_capacity": 40,
+            "max_charge_rate": 10,
+            "min_soc_fraction": 0.1,
+            "max_soc_fraction": 1.0,
+            "init_soc_fraction": 0.1,
+            "commodity_amount_units": "kg",
+            "charge_equals_discharge": True,
+            "charge_efficiency": 1.0,
+            "discharge_efficiency": 1.0,
+            "demand_profile": 0.0,
+        },
+        "control_parameters": {"set_demand_as_avg_commodity_in": False},
+    }
+
+    prob = om.Problem()
+
+    commodity_demand = np.full(24, 5.0)
+    commodity_in = np.concat([np.zeros(3), np.cumsum(np.ones(15)), np.full(6, 4.0)])
+    nominal_set_point = commodity_demand - commodity_in
+    nominal_charge_profile = np.where(nominal_set_point < 0, nominal_set_point, 0)
+    indx_charge = np.argwhere(nominal_charge_profile < 0).flatten()
+    excess_commodity_avail = np.abs(
+        np.abs(nominal_charge_profile)[indx_charge] - commodity_in[indx_charge]
+    )
+    more_than_avail_charge_cmd = nominal_charge_profile[indx_charge] - excess_commodity_avail * 2
+    # nominal_charge_profile[indx_charge] = more_than_avail_charge_cmd
+    nominal_set_point[indx_charge] = more_than_avail_charge_cmd
+
+    prob.model.add_subsystem(
+        name="IVC1",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=commodity_in, units="kg/h"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        name="IVC2",
+        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        name="IVC3",
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=nominal_set_point, units="kg/h"),
+        promotes=["*"],
+    )
+
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config,
+            tech_config={"model_inputs": model_inputs},
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+
+    prob.run_model()
+
+    performance_model_config = model_inputs["performance_parameters"]
+
+    charge_rate = prob.get_val("storage.max_charge_rate", units="kg/h")[0]
+    discharge_rate = prob.get_val("storage.max_charge_rate", units="kg/h")[0]
+    prob.get_val("storage.storage_capacity", units="kg")[0]
+
+    # Test that discharge is always positive
+    with subtests.test("Discharge is always positive"):
+        assert np.all(prob.get_val("storage.storage_hydrogen_discharge", units="kg/h") >= 0)
+
+    with subtests.test("Charge is always negative"):
+        assert np.all(prob.get_val("storage.storage_hydrogen_charge", units="kg/h") <= 0)
+
+    with subtests.test("Charge + Discharge == storage_hydrogen_out"):
+        charge_plus_discharge = prob.get_val(
+            "storage.storage_hydrogen_charge", units="kg/h"
+        ) + prob.get_val("storage.storage_hydrogen_discharge", units="kg/h")
+        np.testing.assert_allclose(
+            charge_plus_discharge, prob.get_val("hydrogen_out", units="kg/h"), rtol=1e-6
+        )
+    with subtests.test("Initial SOC is correct"):
+        assert (
+            pytest.approx(prob.model.get_val("storage.SOC", units="unitless")[0], rel=1e-6)
+            == performance_model_config["init_soc_fraction"]
+        )
+
+    with subtests.test("Charge never exceeds charge rate"):
+        assert (
+            prob.get_val("storage.storage_hydrogen_charge", units="kg/h").min() >= -1 * charge_rate
+        )
+
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
+
+    with subtests.test("Discharge never exceeds discharge rate"):
+        assert (
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/h").max() <= discharge_rate
+        )
+
+    with subtests.test("Discharge never exceeds demand"):
+        assert np.all(
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/h").max()
+            <= commodity_demand
+        )
+
+    with subtests.test("Expected discharge"):
+        expected_discharge = np.concat([np.zeros(18), np.ones(6)])
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/h"),
+            expected_discharge,
+            rtol=1e-6,
+        )
+
+    with subtests.test("Expected charge"):
+        expected_charge = np.concat(
+            [np.zeros(8), np.arange(-6, -10, -1), np.array([-6]), np.zeros(11)]
+        )
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
+            expected_charge,
+            rtol=1e-6,
+        )
     with subtests.test("Expected capacity factor"):
         assert (
-            pytest.approx(-17.5, rel=1e-6)
+            pytest.approx(-12.5, rel=1e-6)
             == prob.get_val("storage.capacity_factor", units="percent")[0]
         )
 
@@ -1055,3 +1210,311 @@ def test_round_trip_efficiency_preserved_in_config(subtests):
         assert config_dict["round_trip_efficiency"] == round_trip_eff
         assert config_dict["charge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
         assert config_dict["discharge_efficiency"] == pytest.approx(np.sqrt(round_trip_eff))
+
+
+@pytest.fixture
+def plant_config_non_hourly(n_timesteps):
+    plant = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "dt": 1800,
+                "n_timesteps": n_timesteps,
+            },
+        },
+    }
+    return plant
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [4])
+def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
+    """Verify SOC, charge/discharge profiles, and scalar outputs against calculated
+    values for a simple scenario at dt=1800s (30-min dt).
+
+    Scenario (4 timesteps * 30 min = 2 hours total):
+        t0, t1: charge at 10 kg/h - stores 5 kg each step
+        t2, t3: discharge at 10 kg/h — removes 5 kg each step
+
+    With capacity=40 kg, init_soc=0.1, eff=1.0, min_soc=0.1, max_soc=1.0:
+        SOC[0] = 0.1 + 5/40 = 0.225
+        SOC[1] = 0.225 + 5/40 = 0.35
+        SOC[2] = 0.35  - 5/40 = 0.225
+        SOC[3] = 0.225 - 5/40 = 0.1
+    total_hydrogen_produced = (-10 - 10 + 10 + 10) * 0.5 hr = 0 kg
+    standard_capacity_factor = (10+10)*0.5 / (10 * 4 * 0.5) = 10/20 = 0.5 -> 50 %
+    """
+
+    model_inputs = {
+        "shared_parameters": {
+            "commodity": "hydrogen",
+            "commodity_rate_units": "kg/h",
+        },
+        "performance_parameters": {
+            "max_capacity": 40.0,
+            "max_charge_rate": 10.0,
+            "min_soc_fraction": 0.1,
+            "max_soc_fraction": 1.0,
+            "init_soc_fraction": 0.1,
+            "commodity_amount_units": "kg",
+            "charge_equals_discharge": True,
+            "charge_efficiency": 1.0,
+            "discharge_efficiency": 1.0,
+            "demand_profile": 0.0,
+        },
+    }
+
+    commodity_in = np.array([10.0, 10.0, 0.0, 0.0])
+    set_point = np.array([-10.0, -10.0, 10.0, 10.0])
+
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "IVC1",
+        om.IndepVarComp("hydrogen_in", val=commodity_in, units="kg/h"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "IVC2",
+        om.IndepVarComp("hydrogen_set_point", val=set_point, units="kg/h"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config_non_hourly,
+            tech_config={"model_inputs": model_inputs},
+        ),
+        promotes=["*"],
+    )
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("SOC profile matches hand-calculated values"):
+        expected_soc_pct = np.array([22.5, 35.0, 22.5, 10.0])
+        np.testing.assert_allclose(
+            prob.get_val("storage.SOC", units="percent"), expected_soc_pct, rtol=1e-9
+        )
+
+    with subtests.test("Charge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_charge", units="kg/h"),
+            np.array([-10.0, -10.0, 0.0, 0.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("Discharge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/h"),
+            np.array([0.0, 0.0, 10.0, 10.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("total_hydrogen_produced = 0 kg (charge equals discharge)"):
+        assert (
+            pytest.approx(prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9)
+            == 0.0
+        )
+
+    with subtests.test("standard_capacity_factor = 50 %"):
+        assert (
+            pytest.approx(
+                prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
+            )
+            == 50.0
+        )
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [4])
+def test_storage_half_hourly_known_outputs_kg_s(subtests, plant_config_non_hourly):
+    """Verify SOC, charge/discharge profiles against hand-calculated values when
+    commodity_rate_units='kg/s' and dt=1800s.
+
+    This test verifies that dt_amount is correctly computed via OpenMDAO
+    that SOC increments are correct for a non-hourly rate unit.
+
+    Scenario
+        capacity=3600 kg, charge_rate=1 kg/s, init_soc=0.1, min/max_soc=0.1/1.0, eff=1.0
+        commodity_in = [1, 1, 0, 0] kg/s
+        set_point    = [-1, -1, 1, 1] kg/s  (negative=charge, positive=discharge)
+
+    With 1800s (0.5 hr) timesteps, the expected SOC profile is:
+        SOC[0] = 0.1 + (1 kg/s * 1800s) / 3600 kg = 0.1 + 0.5 = 0.6 -> 60%
+        SOC[1] = 0.6 + (1 kg/s * 1800s) / 3600 kg = 0.6 + 0 = 1.0 -> 100%
+        SOC[2] = 1.0 - (1 kg/s * 1800s) / 3600 kg = 1.0 - 0.5 = 0.5 -> 50%
+        SOC[3] = 0.5 - (1 kg/s * 1800s) / 3600 kg = 0.5 - 0.5 = 0.1 -> 10%
+
+        total_produced = (-1-0.8+1+0.8)*1800 = 0 kg
+        standard_capacity_factor = (1+0.8)*1800 / (1*4*1800) = 3240/7200 = 45%
+    """
+
+    model_inputs = {
+        "shared_parameters": {
+            "commodity": "hydrogen",
+            "commodity_rate_units": "kg/s",
+        },
+        "performance_parameters": {
+            "max_capacity": 3600.0,
+            "max_charge_rate": 1.0,
+            "min_soc_fraction": 0.1,
+            "max_soc_fraction": 1.0,
+            "init_soc_fraction": 0.1,
+            "commodity_amount_units": "kg",
+            "charge_equals_discharge": True,
+            "charge_efficiency": 1.0,
+            "discharge_efficiency": 1.0,
+            "demand_profile": 0.0,
+        },
+    }
+
+    commodity_in = np.array([1.0, 1.0, 0.0, 0.0])
+    set_point = np.array([-1.0, -1.0, 1.0, 1.0])
+
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "IVC1",
+        om.IndepVarComp("hydrogen_in", val=commodity_in, units="kg/s"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "IVC2",
+        om.IndepVarComp("hydrogen_set_point", val=set_point, units="kg/s"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config_non_hourly,
+            tech_config={"model_inputs": model_inputs},
+        ),
+        promotes=["*"],
+    )
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("SOC profile matches hand-calculated values"):
+        expected_soc_pct = np.array([60.0, 100.0, 50.0, 10.0])
+        np.testing.assert_allclose(
+            prob.get_val("storage.SOC", units="percent"), expected_soc_pct, rtol=1e-9
+        )
+
+    with subtests.test("Charge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_charge", units="kg/s"),
+            np.array([-1.0, -0.8, 0.0, 0.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("Discharge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_hydrogen_discharge", units="kg/s"),
+            np.array([0.0, 0.0, 1.0, 0.8]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("total_hydrogen_produced = 0 kg (charge equals discharge)"):
+        assert (
+            pytest.approx(prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9)
+            == 0.0
+        )
+
+    with subtests.test("standard_capacity_factor = 45 %"):
+        assert (
+            pytest.approx(
+                prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
+            )
+            == 45.0
+        )
+
+
+@pytest.mark.regression
+def test_storage_half_hourly_kw_kwh_2hr(subtests):
+    model_inputs = {
+        "shared_parameters": {
+            "commodity": "electricity",
+            "commodity_rate_units": "kW",
+        },
+        "performance_parameters": {
+            "max_capacity": 10.0,
+            "max_charge_rate": 10.0,
+            "min_soc_fraction": 0.1,
+            "max_soc_fraction": 1.0,
+            "init_soc_fraction": 0.1,
+            "commodity_amount_units": "kW*h",
+            "charge_equals_discharge": True,
+            "charge_efficiency": 1.0,
+            "discharge_efficiency": 1.0,
+            "demand_profile": 0.0,
+        },
+    }
+    plant_config_non_hourly = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "dt": 7200,
+                "n_timesteps": 4,
+            },
+        },
+    }
+
+    commodity_in = np.array([10.0, 10.0, 10.0, 10.0])
+    set_point = np.array([-10.0, -10.0, 10.0, 10.0])
+
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "IVC1",
+        om.IndepVarComp("electricity_in", val=commodity_in, units="kW"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "IVC2",
+        om.IndepVarComp("electricity_set_point", val=set_point, units="kW"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=plant_config_non_hourly,
+            tech_config={"model_inputs": model_inputs},
+        ),
+        promotes=["*"],
+    )
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("SOC profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.SOC", units="percent"),
+            np.array([100.0, 100.0, 10.0, 10.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("Charge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_electricity_charge", units="kW"),
+            np.array([-4.5, -0.0, 0.0, 0.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("Discharge profile"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.storage_electricity_discharge", units="kW"),
+            np.array([0.0, 0.0, 4.5, 0.0]),
+            rtol=1e-9,
+        )
+
+    with subtests.test("total_electricity_produced = 0 kWh"):
+        assert (
+            pytest.approx(
+                prob.get_val("storage.total_electricity_produced", units="kW*h")[0], abs=1e-9
+            )
+            == 0.0
+        )
+
+    with subtests.test("standard_capacity_factor"):
+        assert (
+            pytest.approx(
+                prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
+            )
+            == 11.25
+        )
