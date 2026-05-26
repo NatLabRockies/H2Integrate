@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import range_val
@@ -46,8 +47,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
+        1,
+        36000,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
@@ -185,10 +186,16 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             )
 
         self.using_feedback_control = using_feedback_control
-        # convert from seconds to hours
-        self.dt_hr = int(self.options["plant_config"]["plant"]["simulation"]["dt"]) / (
-            3600
-        )  # convert from seconds to hours
+        # convert from seconds to hours (kept for PySAM and legacy callers)
+        self.dt_hr = self.dt / 3600.0
+
+        # dt expressed in (commodity_amount_units / commodity_rate_units), i.e. the
+        # timestep width in whatever time unit makes rate * dt_amount = amount.
+        self.dt_amount = om_units.convert_units(
+            self.dt,
+            "s",
+            f"({self.commodity_amount_units})/({self.commodity_rate_units})",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage model.
@@ -296,7 +303,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)
+        # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
@@ -306,12 +314,14 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             outputs["standard_capacity_factor"] = 0.0
         else:
             outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
             )
             # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
-            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum()
+            total_commodity_discharged = (
+                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
+            )
             outputs["standard_capacity_factor"] = total_commodity_discharged / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
             )
         return outputs
 
@@ -402,7 +412,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 # --- Charging ---
                 # headroom: how much more commodity the storage can accept,
                 # expressed as a rate (commodity_rate_units).
-                headroom = (soc_max - soc) * storage_capacity / self.dt_hr
+                headroom = (soc_max - soc) * storage_capacity / self.dt_amount
 
                 # charge available based on the available input commodity
                 charge_available = commodity_available[sim_start_index + t]
@@ -418,7 +428,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 )
 
                 # Update SOC (actual_charge is in post-efficiency units)
-                soc += actual_charge / storage_capacity
+                soc += actual_charge * self.dt_amount / storage_capacity
 
                 # Update the amount of commodity used to charge from the input stream
                 # If charge_eff<1, more commodity is pulled from the input stream than
@@ -428,7 +438,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 # --- Discharging ---
                 # headroom: how much commodity can still be drawn before
                 # hitting the minimum SOC, expressed as a rate.
-                headroom = (soc - soc_min) * storage_capacity / self.dt_hr
+                headroom = (soc - soc_min) * storage_capacity / self.dt_amount
 
                 # Clip to the most restrictive limit without applied efficiency.
                 # Efficiency losses occur as energy leaves storage.
@@ -437,7 +447,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 )
 
                 # Update SOC (actual_discharge is before efficiency losses are applied.)
-                soc -= actual_discharge / storage_capacity
+                soc -= actual_discharge * self.dt_amount / storage_capacity
 
                 # If discharge_eff<1, then less commodity is output from the storage
                 # than the commodity discharged from storage

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
@@ -17,12 +18,26 @@
 - Add `{commodity}_set_point` as an input to hydrogen fuel cell model [PR 709](https://github.com/NatLabRockies/H2Integrate/pull/709)
 - Rename `n_control_window` to `n_control_window_hours` for unit clarity [PR 712](https://github.com/NatLabRockies/H2Integrate/pull/712)
 - Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
+- `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks`
+  [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA
+  natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve
+  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly
+  timeseries. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates a series of preprocessing tools for basic state name and abbreviation handling, and for
+  reverse geocoding coordinates to state data. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates a series of preprocessing tools for downloading EIA natural gas prices to monthly and
+  hourly timeseries that could be extended to other EIA API data in the future. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
 - Adds `H2IntegrateModel`, `load_yaml`, `write_yaml`, and `write_readable_yaml` as package-level imports [PR 728](https://github.com/NatLabRockies/H2Integrate/pull/728).
 - Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
 - Added ability to use timeseries for finance calculations [PR 725](https://github.com/NatLabRockies/H2Integrate/pull/725)
+- Reduced import time for `h2integrate_model.py` by deferring imports of heavy dependencies until they are needed [PR 762](https://github.com/NatLabRockies/H2Integrate/pull/762)
+- Added multivariable purge gas stream output to `AmmoniaSynLoopPerformanceModel` [PR 760](https://github.com/NatLabRockies/H2Integrate/pull/760)
+- Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
 
 ## 0.8 [April 15, 2026]
+
 - Updated README and docs intro page with expanded H2I description, reorganized sections, and streamlined installation instructions [PR 677](https://github.com/NatLabRockies/H2Integrate/pull/677)
 - Update energy conversion ratio in H2 SMR model [PR 606](https://github.com/NatLabRockies/H2Integrate/pull/606)
 - Update iron models and examples [PR 601](https://github.com/NatLabRockies/H2Integrate/pull/601)

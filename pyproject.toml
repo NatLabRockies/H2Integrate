@@ -50,6 +50,7 @@ dependencies = [
   "ProFAST",
   "Pyomo>=6.1.2",
   "rainflow",
+  "requests",
   "requests-cache",
   "retry_requests",
   "rich>=13.7.0",
@@ -110,7 +111,8 @@ examples = [
 ]
 gis = [
   "geopandas",
-  "contextily"
+  "contextily",
+  "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
 extras = ["h2integrate[gis,ard]"]
@@ -243,6 +245,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["E501", "D104", "F401"]
+"*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
