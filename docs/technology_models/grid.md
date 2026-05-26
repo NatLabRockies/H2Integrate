@@ -82,6 +82,7 @@ The pricing mode is controlled explicitly via `buy_price_mode` and `sell_price_m
 
 - **`per_timestep`** (default): The price is a scalar or an array of length `n_timesteps`. The cost model uses the timestep-level `electricity_out` / `electricity_sold` inputs (in kW) and converts to energy using `dt`. The resulting `VarOpEx` is a single value applied uniformly across all years.
 - **`per_year`**: The price is an array of length `plant_life`. The cost model uses `annual_electricity_out` / `annual_electricity_sold` inputs (in kWh/yr, shape `plant_life`) directly, producing a per-year `VarOpEx` array with no `dt` conversion needed in the cost model.
+- **`constant`**: The price is a single scalar value applied uniformly to all timesteps. Behaves like `per_timestep` with a scalar price but makes the intent explicit in the configuration.
 
 Example YAML configuration for per-year pricing:
 
@@ -91,4 +92,14 @@ cost_parameters:
   buy_price_mode: per_year
   electricity_sell_price: [0.03, 0.04, 0.05, ...]  # length = plant_life
   sell_price_mode: per_year
+```
+
+Example YAML configuration for constant pricing:
+
+```yaml
+cost_parameters:
+  electricity_buy_price: 0.10
+  buy_price_mode: constant
+  electricity_sell_price: 0.05
+  sell_price_mode: constant
 ```

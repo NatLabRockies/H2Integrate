@@ -1,0 +1,2 @@
+from h2integrate.demand.generic_demand import GenericDemandComponent
+from h2integrate.demand.flexible_demand import FlexibleDemandComponent
