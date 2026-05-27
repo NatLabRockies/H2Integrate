@@ -24,7 +24,11 @@ def download_from_api(url, filename):
             if r:
                 localfile = Path(filename).open("w+")
                 # Use r.content.decode() to avoid charset_normalizer issues
-                txt = r.content.decode('utf-8', errors='replace').replace("(Â°C)", "(C)").replace("(Â°)", "(deg)")
+                txt = (
+                    r.content.decode("utf-8", errors="replace")
+                    .replace("(Â°C)", "(C)")
+                    .replace("(Â°)", "(deg)")
+                )
                 localfile.write(txt)
                 localfile.close()
                 if Path(filename).is_file():
@@ -32,7 +36,7 @@ def download_from_api(url, filename):
                     break
             elif r.status_code == 400 or r.status_code == 403:
                 print(r.url)
-                err = r.content.decode('utf-8', errors='replace')
+                err = r.content.decode("utf-8", errors="replace")
                 try:
                     text_json = json.loads(err)
                     if "errors" in text_json.keys():
