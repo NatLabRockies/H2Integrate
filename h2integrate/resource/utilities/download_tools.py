@@ -23,7 +23,8 @@ def download_from_api(url, filename):
             r = requests.get(url)
             if r:
                 localfile = Path(filename).open("w+")
-                txt = r.text.replace("(Â°C)", "(C)").replace("(Â°)", "(deg)")
+                # Use r.content.decode() to avoid charset_normalizer issues
+                txt = r.content.decode('utf-8', errors='replace').replace("(Â°C)", "(C)").replace("(Â°)", "(deg)")
                 localfile.write(txt)
                 localfile.close()
                 if Path(filename).is_file():
@@ -31,10 +32,13 @@ def download_from_api(url, filename):
                     break
             elif r.status_code == 400 or r.status_code == 403:
                 print(r.url)
-                err = r.text
-                text_json = json.loads(r.text)
-                if "errors" in text_json.keys():
-                    err = text_json["errors"]
+                err = r.content.decode('utf-8', errors='replace')
+                try:
+                    text_json = json.loads(err)
+                    if "errors" in text_json.keys():
+                        err = text_json["errors"]
+                except json.JSONDecodeError:
+                    pass
                 raise requests.exceptions.HTTPError(err)
             elif r.status_code == 404:
                 print(filename)
@@ -43,7 +47,9 @@ def download_from_api(url, filename):
                 raise RuntimeError("Maximum API request rate exceeded!")
             else:
                 n_tries += 1
-        except requests.exceptions.Timeout:
+        except (requests.exceptions.Timeout, TypeError) as e:
+            # Catch Timeout and TypeError (from charset_normalizer issues)
+            print(f"Retry {n_tries + 1}/5 due to: {type(e).__name__}")
             time.sleep(0.2)
             n_tries += 1
 
