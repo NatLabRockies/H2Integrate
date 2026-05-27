@@ -60,8 +60,15 @@ time_plot = time_series[:n_plot]
 fig, ax = plt.subplots(3, 1, sharex=True, figsize=(10, 5))
 ax[0].plot(time_plot, demand_profile_upstream[:n_plot] * 1e-3, label="Upstream demand")
 ax[0].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand")
-ax[0].axhline(demand_profile_peak_cutoff * 1e-3, label="Demand peak cutoff")
-ax[0].axhline(demand_profile_upstream_peak_cutoff * 1e-3, label="Upstream demand peak cutoff")
+ax[0].axhline(
+    demand_profile_peak_cutoff * 1e-3, label="Demand peak cutoff", color="k", linestyle="--"
+)
+ax[0].axhline(
+    demand_profile_upstream_peak_cutoff * 1e-3,
+    label="Upstream demand peak cutoff",
+    color="k",
+    linestyle=":",
+)
 ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[0].legend(frameon=True, ncol=3)
 
