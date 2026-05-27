@@ -36,9 +36,11 @@ technologies:
       control_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        max_discharge_rate: 1000.0  # kW. Defaults to battery power limit when matched to max_charge_rate
+        system_capacity_rate: 1000.0
         demand_profile: !include demand_profiles/demand_profile.yaml
-        peak_start_val: 400.0
+        demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml
+        demand_profile_peak_cutoff: 400.0
+        demand_profile_upstream_peak_cutoff: 1000.0
   electrical_load_demand:
     performance_model:
       model: GenericDemandComponent

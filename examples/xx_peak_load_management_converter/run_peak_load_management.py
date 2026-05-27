@@ -23,10 +23,7 @@ peaks in demand_profile to demonstrate how the peak selection impacts dispatch.
 """
 
 import numpy as np
-import pandas as pd
-import openmdao.api as om
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 
 from h2integrate import H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
@@ -36,11 +33,23 @@ from h2integrate.core.utilities import build_time_series_from_plant_config
 model = H2IntegrateModel("33_peak_load_management.yaml")
 
 model.setup()
-om.n2(model.prob)
+# om.n2(model.prob)
 model.run()
 model.post_process()
 
 demand_profile = model.prob.get_val("fuel_cell.electricity_demand", units="kW")
+# plot the results for the first week
+demand_profile_upstream = np.array(
+    model.technology_config["technologies"]["fuel_cell"]["model_inputs"]["control_parameters"][
+        "demand_profile_upstream"
+    ]
+)
+demand_profile_peak_cutoff = model.technology_config["technologies"]["fuel_cell"]["model_inputs"][
+    "control_parameters"
+]["demand_profile_peak_cutoff"]
+demand_profile_upstream_peak_cutoff = model.technology_config["technologies"]["fuel_cell"][
+    "model_inputs"
+]["control_parameters"]["demand_profile_upstream_peak_cutoff"]
 grid_output = model.prob.get_val("grid_buy.electricity_out", units="MW")
 
 time_series = build_time_series_from_plant_config(model.plant_config)
@@ -48,46 +57,34 @@ time_series = build_time_series_from_plant_config(model.plant_config)
 n_plot = 24 * 7
 time_plot = time_series[:n_plot]
 
-# Shade peak window on every plotted day
-peak_patch = Patch(facecolor="orange", alpha=0.12, label="Expected peak window (12pm to 7pm)")
-
-fig, ax = plt.subplots(4, 1, sharex=True, figsize=(10, 5))
-ax[0].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
+fig, ax = plt.subplots(3, 1, sharex=True, figsize=(10, 5))
+ax[0].plot(time_plot, demand_profile_upstream[:n_plot] * 1e-3, label="Upstream demand")
+ax[0].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand")
+ax[0].axhline(demand_profile_peak_cutoff * 1e-3, label="Demand peak cutoff")
+ax[0].axhline(demand_profile_upstream_peak_cutoff * 1e-3, label="Upstream demand peak cutoff")
 ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
-ax[0].legend(handles=[*ax[0].get_legend_handles_labels()[0], peak_patch], frameon=True, ncol=3)
+ax[0].legend(frameon=True, ncol=3)
+
+ax[1].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[1].plot(
+    time_plot,
+    model.prob.get_val("fuel_cell.electricity_out", units="MW")[:n_plot],
+    label="fuel_cell dispatch",
+)
+ax[1].set(ylabel="Power (MW)", ylim=[-2, 2])
+ax[1].legend(frameon=False, ncol=2)
 
 ax[2].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
 ax[2].plot(
     time_plot,
-    model.prob.get_val("fuel_cell.electricity_out", units="MW")[:n_plot],
-    label="fuel_cell charge/discharge",
-)
-ax[2].set(ylabel="Power (MW)", ylim=[-2, 2])
-ax[2].legend(handles=[*ax[2].get_legend_handles_labels()[0]], frameon=False, ncol=2)
-
-ax[3].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
-ax[3].plot(
-    time_plot,
     model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="MW")[:n_plot],
     label="New demand profile",
 )
-ax[3].plot(time_plot, grid_output[:n_plot], label="Grid purchase (MW)", linestyle=":")
+ax[2].plot(time_plot, grid_output[:n_plot], label="Grid purchase (MW)", linestyle=":")
 
-ax[3].set(ylabel="Power (MW)", ylim=[-2, 2])
-ax[3].legend(handles=[*ax[3].get_legend_handles_labels()[0]], frameon=False, ncol=3)
-ax[3].tick_params(axis="x", labelrotation=90)
-
-days = pd.to_datetime(np.unique(pd.DatetimeIndex(time_plot).normalize()))
-for axis in ax:
-    for day in days:
-        axis.axvspan(
-            day + pd.Timedelta(hours=12),
-            day + pd.Timedelta(hours=19),
-            color="orange",
-            alpha=0.12,
-            linewidth=0,
-            zorder=0,
-        )
+ax[2].set(ylabel="Power (MW)", ylim=[-2, 2])
+ax[2].legend(frameon=False, ncol=3)
+ax[2].tick_params(axis="x", labelrotation=90)
 
 for axis in ax:
     axis.minorticks_on()
