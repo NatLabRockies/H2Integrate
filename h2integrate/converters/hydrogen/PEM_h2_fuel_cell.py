@@ -1,4 +1,6 @@
+import numpy as np
 from attrs import field, define
+from scipy.interpolate import make_interp_spline
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero, range_val
@@ -23,8 +25,76 @@ class PEMH2FuelCellPerformanceConfig(BaseConfig):
     # How does N_cells translate to electricity rating?
 
     system_capacity_kw: float = field(validator=gte_zero)
+    n_stacks = int
     stack_temperature_K: float
+    min_system_power_fraction_kw: float
     fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
+
+
+def calc_current(power_ref, cell_area, stack_number):
+    # Calculates the current and voltage from IV curve based on power reference
+    current_curve = [
+        0.0356,
+        0.05413333,
+        0.0796,
+        0.11366667,
+        0.244,
+        0.454,
+        0.70366667,
+        0.96933333,
+        1.24,
+        1.52666667,
+        1.80333333,
+        2.07,
+        2.32,
+        2.54333333,
+        2.73666667,
+        2.9,
+    ]  # in A
+    voltage_curve = [
+        0.987,
+        0.936,
+        0.884,
+        0.838,
+        0.786,
+        0.736,
+        0.686,
+        0.636,
+        0.586,
+        0.53566667,
+        0.486,
+        0.436,
+        0.386,
+        0.33533333,
+        0.286,
+        0.236,
+    ]  # in V
+    power_curve = [
+        35.16666667,
+        50.53333333,
+        70.33333333,
+        95.46666667,
+        191.66666667,
+        334.33333333,
+        482.66666667,
+        616.66666667,
+        729.0,
+        817.0,
+        875.33333333,
+        902.0,
+        895.0,
+        854.33333333,
+        782.66666667,
+        684.33333333,
+    ] / 1e6  # change from mW to kW
+
+    power_I_curve = make_interp_spline(power_curve, current_curve, k=3)
+    V_I_curve = make_interp_spline(current_curve, voltage_curve, k=5)
+    power_density = power_ref / cell_area / stack_number
+
+    I_cell = power_I_curve(power_density)
+    V_cell = V_I_curve(I_cell)
+    return I_cell, V_cell
 
 
 class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -127,7 +197,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=self.config.system_capacity_kw,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity set point for natural gas plant",
+            desc="Electricity set point for PEM fuel cell",
         )
 
     def compute(self, inputs, outputs):
@@ -162,6 +232,11 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         self.hhv_air = 0  # No higher heating value of air
         self.hhv_water = 0  # ???? Need to check this
 
+        self.n_cells = 100  # number of cells per stack - how to size this??
+        # is n_cells = N_series?
+        self.stack_size = self.config.system_capacity_kw / self.config.n_stacks
+        self.cell_active_area = 1250  # [cm^2]
+
         # PSUEDO CODE:
         """
         1. Receive power setpoint into fuel cell
@@ -172,6 +247,55 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         6. Repeat step 4 if H2 or O2 limit power out
 
         """
+
+        h2_consumed = np.zeros(self.n_timesteps)
+        o2_consumed = np.zeros(self.n_timesteps)
+        commodity_out = np.zeros(self.n_timesteps)
+
+        for i in range(self.n_timesteps):
+            power_reference = inputs[f"{self.commodity}_set_point"][i]
+            H2in = inputs["hydrogen_in"][i]
+            O2in = inputs["oxygen_in"][i]
+
+            # Find current and voltage from IV curve with power setpoint
+            I_cell, V_cell = calc_current(power_reference)
+
+            # Calculate hydrogen and oxygen consumed
+            H2_consumed_rate = (
+                I_cell * self.n_cells / (2.0 * self.f_c) * self.M_H2 * self.dt
+            )  # kg/time step
+            O2_consumed_rate = (
+                I_cell * self.n_cells / (4.0 * self.f_c) * self.M_O2 * self.dt
+            )  # kg/time step
+
+            if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
+                print("Not enough H2 or O2 for this power point")
+                # implement an adjustment based on H2 & O2 available
+
+            # Compute electricity from the system
+            electricity_produced = V_cell * I_cell * self.n_cells * self.config.n_stacks
+
+            # Compute H2O out (is this needed?)
+
+            h2_consumed[i] = H2_consumed_rate
+            o2_consumed[i] = O2_consumed_rate
+            commodity_out[i] = electricity_produced
+
+        # Set Outputs
+        # clip the electricity output to the system capacity
+        outputs["electricity_out"] = np.minimum(commodity_out, self.config.system_capacity_kw)
+        outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
+            self.dt / 3600
+        )
+        outputs["rated_electricity_production"] = self.config.system_capacity_kw
+        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+        outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
+            self.config.system_capacity_kw * self.n_timesteps * (self.dt / 3600)
+        )
+        outputs["hydrogen_consumed"] = h2_consumed
+        outputs["oxygen_consumed"] = o2_consumed
 
         # # conversion factor: kW electricity to kg/h hydrogen, units: (kg/h)/kW
         # kw_to_kgh_h2 = (3600.0 * 0.001) / (fuel_cell_efficiency * HHV_H2_MJ_PER_KG)
