@@ -137,6 +137,12 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = self.config.commodity_amount_units
 
+        self.add_discrete_input(
+            "solar_resource_data",
+            val={},
+            desc="Solar resource data dictionary",
+        )
+
         # TODO degradation: adjustments for degradation
 
         super().setup()
@@ -153,6 +159,7 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         storage_capacity = inputs["storage_capacity"][0]
 
         # TODO degradation: adjust compute method for degradation as needed
+        self.degradation(discrete_inputs["solar_resource_data"])
         outputs = self.run_storage(
             charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
         )
@@ -160,5 +167,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
     # TODO degradation: add degradation method here
     def degradation(
         self,
+        solar_resource_data,
     ):
         return
