@@ -1,1 +1,1 @@
-# TODO degredation: tests for battery performance
+# TODO degradation: tests for battery performance

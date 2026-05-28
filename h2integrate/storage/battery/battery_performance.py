@@ -68,7 +68,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
 
-    # TODO degredation: add additional parameters for degradation here
+    # TODO degradation: add additional parameters for degradation here
 
     def __attrs_post_init__(self):
         """
@@ -137,7 +137,7 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = self.config.commodity_amount_units
 
-        # TODO degredation: adjustments for degradation
+        # TODO degradation: adjustments for degradation
 
         super().setup()
 
@@ -152,12 +152,12 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             discharge_rate = inputs["max_charge_rate"][0]
         storage_capacity = inputs["storage_capacity"][0]
 
-        # TODO degredation: adjust compute method for degradation as needed
+        # TODO degradation: adjust compute method for degradation as needed
         outputs = self.run_storage(
             charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
         )
 
-    # TODO degredation: add degradation method here
+    # TODO degradation: add degradation method here
     def degradation(
         self,
     ):
