@@ -169,4 +169,10 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self,
         solar_resource_data,
     ):
+        """_summary_
+
+        Args:
+            solar_resource_data (_type_): a dictionary of hourly (or by timestep) solar resource
+            information including irradiance and temperature
+        """
         return
