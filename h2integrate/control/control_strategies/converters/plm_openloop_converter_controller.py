@@ -1,0 +1,79 @@
+import numpy as np
+from attrs import field, define
+
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
+    StorageOpenLoopControlBase,
+    StorageOpenLoopControlBaseConfig,
+)
+
+
+@define(kw_only=True)
+class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
+    StorageOpenLoopControlBaseConfig
+):
+    """
+    Configuration class for the PeakLoadManagementHeuristicOpenLoopStorageController.
+
+    Defines peak-selection and dispatch-priority rules used to pre-compute
+    an open-loop discharge and recharge schedule.
+
+    Attributes:
+
+
+    """
+
+    system_capacity_rate: int | float = field()
+    demand_profile_peak_cutoff: int | float = field()
+    demand_profile_upstream: int | float | list | None = field()
+    demand_profile_upstream_peak_cutoff: int | float | None = field()
+
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+
+
+class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopControlBase):
+    def setup(self):
+        self.config = PeakLoadManagementHeuristicOpenLoopConverterControllerConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            strict=False,
+            additional_cls_name=self.__class__.__name__,
+        )
+        super().setup()
+
+        self.add_input(
+            "system_capacity_rate",
+            val=self.config.system_capacity_rate,
+            units=f"{self.config.commodity_rate_units}",
+            desc="Converter control system awareness of the system capacity",
+        )
+
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.set_point_array = np.zeros(self.n_timesteps)
+
+    def compute(self, inputs, outputs):
+        commodity = self.config.commodity
+        demand_profile = inputs[f"{commodity}_demand"]
+        system_capacity_rate = inputs["system_capacity_rate"]
+        demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
+        demand_profile_upstream = self.config.demand_profile_upstream
+        demand_profile_upstream_peak_cutoff = self.config.demand_profile_upstream_peak_cutoff
+
+        for idx, val in enumerate(demand_profile):
+            val_upstream = demand_profile_upstream[idx]
+            if (
+                val > demand_profile_peak_cutoff
+                or val_upstream > demand_profile_upstream_peak_cutoff
+            ):
+                desired_dispatch = val - demand_profile_peak_cutoff
+                desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
+                self.set_point_array[idx] = min(
+                    max(
+                        max(desired_dispatch, 0),
+                        max(desired_dispatch_upstream, 0),
+                    ),
+                    val,
+                    system_capacity_rate,
+                )
+
+        outputs[f"{commodity}_set_point"] = self.set_point_array
