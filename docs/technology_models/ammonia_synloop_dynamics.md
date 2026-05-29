@@ -61,13 +61,14 @@ response. The model parameters mirror the unit-test fixtures in
 `h2integrate/converters/ammonia/test/test_ammonia_synloop_dynamics.py`.
 
 ```{code-cell} ipython3
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import openmdao.api as om
 
 from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
 
-n_timesteps = 24
+n_timesteps = 30
 dt = 3600  # seconds (1 hour)
 
 plant_config = {
@@ -112,10 +113,16 @@ energy_demand = base_synloop_config["model_inputs"]["performance_parameters"][
     "energy_demand"
 ]
 
-# Build an off-on test profile: start on, drop off for 5 hours, then return to full
-# for the rest of the simulation.
+# Build a richer demand profile that exercises every dynamic constraint:
+#   - several on/off transitions (some long, some short)
+#   - a sustained mid-level demand region (visible to turndown)
+#   - sharp step changes (visible to ramping)
 demand_profile = np.full(n_timesteps, rated_capacity)
-demand_profile[1:6] = 0.0
+demand_profile[3:7] = 0.0                    # 4-hr off block (triggers cold start)
+demand_profile[10:11] = 0.0                  # 1-hr off (sub-threshold for cold)
+demand_profile[14:16] = 0.3 * rated_capacity  # 2-hr below-turndown demand
+demand_profile[19:23] = 0.0                  # 4-hr off block (triggers cold start again)
+demand_profile[26:27] = 0.0                  # brief 1-hr dip
 elec_in = demand_profile * energy_demand
 cap_mult = 10.0e3
 n2 = np.full(n_timesteps, 5.0 * cap_mult)
@@ -123,10 +130,8 @@ h2 = np.full(n_timesteps, 2.0 * cap_mult)
 
 
 def run_with(dynamics):
-    cfg = {**base_synloop_config}
-    cfg["model_inputs"]["performance_parameters"] = (
-        base_synloop_config["model_inputs"]["performance_parameters"] | dynamics
-    )
+    cfg = copy.deepcopy(base_synloop_config)
+    cfg["model_inputs"]["performance_parameters"].update(dynamics)
     prob = om.Problem()
     comp = AmmoniaSynLoopPerformanceModel(
         plant_config=plant_config, tech_config=cfg, driver_config={}
@@ -141,11 +146,16 @@ def run_with(dynamics):
 
 
 baseline = run_with({})
-turndown = run_with({"turndown_ratio": 0.2})
 ramping = run_with({
     "turndown_ratio": 0.2,
-    "ramp_up_rate_fraction": 0.25,
-    "ramp_down_rate_fraction": 0.25,
+    "ramp_up_rate_fraction": 0.4,
+    "ramp_down_rate_fraction": 0.4,
+})
+cold_only = run_with({
+    "turndown_ratio": 0.2,
+    "include_cold_start": True,
+    "off_hours_cold_start": 4,
+    "cold_start_delay_hours": 2,
 })
 warm_cold = run_with({
     "turndown_ratio": 0.2,
@@ -160,31 +170,40 @@ warm_cold = run_with({
 
 ```{code-cell} ipython3
 hours = np.arange(n_timesteps)
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.plot(hours, baseline, "k-o", label="No dynamics")
-ax.plot(hours, turndown, "C0--s", label="Turndown 20%")
-ax.plot(hours, ramping, "C1-.^", label="Ramping 25%/hr")
-ax.plot(hours, warm_cold, "C3:D", label="Warm + cold start")
-ax.set_xlabel("Hour")
-ax.set_ylabel("Ammonia production [kg/h]")
-ax.set_title("Effect of dynamic operating constraints on ammonia production")
-ax.legend(loc="best")
-ax.grid(True, alpha=0.3)
+fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True, dpi=150)
+
+cases = [
+    (axes[0], ramping, "C0", "s", "Ramping 40%/hr (with 20% turndown floor)"),
+    (axes[1], cold_only, "C1", "^", "Cold start (with 20% turndown)"),
+    (axes[2], warm_cold, "C3", "D", "Warm + cold start (with 20% turndown)"),
+]
+for ax, profile, color, marker, label in cases:
+    ax.plot(hours, baseline, "-o", color="0.6", label="No dynamics", markersize=4)
+    ax.plot(hours, profile, linestyle="--", marker=marker, color=color, label=label,
+            markersize=4)
+    ax.set_ylabel("NH$_3$ [kg/h]")
+    ax.legend(loc="best", fontsize=9)
+    ax.grid(True, alpha=0.3)
+
+axes[0].set_title("Effect of dynamic operating constraints on ammonia production")
+axes[-1].set_xlabel("Hour")
 plt.tight_layout()
 plt.show()
 ```
 
-The baseline curve simply follows the electricity-limited demand: full production at
-the initial hour, zero during the off-period, and full production once power returns.
-Each dynamic constraint modifies this response:
+The baseline (gray) curve follows the electricity-limited demand directly. Each
+panel overlays one dynamic constraint:
 
-- **Turndown** raises production during the off-period from zero to the minimum
-  production floor while the plant is still "on".
-- **Ramping** caps the per-hour change in production, so the return to full output
-  takes several hours instead of one.
-- **Warm + cold start** introduces a delay between the end of the off-period and the
-  first hour of full production: the first few "on" hours are zeroed (cold delay)
-  and the very first on-hour gets an additional warm-start fractional loss.
+- **Ramping** caps the per-hour change in production, so transitions across the
+  20% turndown floor and step changes in demand are spread over multiple hours.
+  When ramping down, output is held at the turndown floor rather than going below it.
+- **Cold start** introduces a 2-hour delay after every off-block longer than 4
+  hours: the first two "on" hours after the long off-period are zeroed before full
+  production resumes.
+- **Warm + cold start** combines the cold-start behavior with an additional warm-
+  start partial-loss applied to short off-periods (here, 0.5 hr off triggers a 0.5
+  hr warm-start delay), visible as a partial dip on the very first on-hour after
+  each short off-block.
 
 ## Example configuration
 
