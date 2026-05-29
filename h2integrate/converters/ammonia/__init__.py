@@ -4,5 +4,8 @@ from h2integrate.converters.ammonia.simple_ammonia_model import (
 )
 from h2integrate.converters.ammonia.ammonia_synloop import (
     AmmoniaSynLoopPerformanceModel,
+)
+from h2integrate.converters.ammonia.ammonia_synloop_cost import (
     AmmoniaSynLoopCostModel,
+    AmmoniaSynLoopCostConfig,
 )
