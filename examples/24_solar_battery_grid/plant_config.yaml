@@ -34,10 +34,8 @@ technology_interconnections:
   - [solar, combiner, electricity, cable]
   - [grid_buy, combiner, electricity, cable]
 resource_to_tech_connections:
-  # connect the solar resource to the pv solar technology
+  # connect the wind resource to the wind technology
   - [site.solar_resource, solar, solar_resource_data]
-  # connect the solar resource to the battery technology
-  - [site.solar_resource, battery, solar_resource_data]
 plant:
   plant_life: 30
   simulation:

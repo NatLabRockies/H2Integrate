@@ -3,7 +3,7 @@ description: This plant charges a battery from the grid to reduce peak demand
 technologies:
   battery:
     performance_model:
-      model: StoragePerformanceModel
+      model: BatteryPerformanceModel
     cost_model:
       model: ATBBatteryCostModel
     control_strategy:
