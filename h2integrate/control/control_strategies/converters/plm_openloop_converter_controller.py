@@ -23,7 +23,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
 
     """
 
-    system_capacity_rate: int | float = field()
+    system_capacity_kw: int | float = field()
     demand_profile_peak_cutoff: int | float = field()
     demand_profile_upstream: int | float | list | None = field()
     demand_profile_upstream_peak_cutoff: int | float | None = field()
@@ -42,8 +42,8 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         super().setup()
 
         self.add_input(
-            "system_capacity_rate",
-            val=self.config.system_capacity_rate,
+            f"system_capacity_{self.config.commodity_rate_units}",
+            val=self.config.system_capacity_kw,
             units=f"{self.config.commodity_rate_units}",
             desc="Converter control system awareness of the system capacity",
         )
@@ -54,7 +54,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
     def compute(self, inputs, outputs):
         commodity = self.config.commodity
         demand_profile = inputs[f"{commodity}_demand"]
-        system_capacity_rate = inputs["system_capacity_rate"]
+        system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"]
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = self.config.demand_profile_upstream_peak_cutoff
