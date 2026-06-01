@@ -15,7 +15,7 @@ class DemandFollowingControl(SystemLevelControlBase):
     1. **Fixed techs** always produce at their rated capacity and cannot be
        controlled. Their total output is subtracted from the demand.
 
-    2. **Flexible techs** run at their full rated capacity. Their total
+    2. **Flexible techs** run at their available capacity. Their total
        output is subtracted from the demand, which may drive the residual
        demand negative (surplus).
 
@@ -52,8 +52,8 @@ class DemandFollowingControl(SystemLevelControlBase):
                     )
                 else:
                     if f"{flexible_tech}_rated_{tech_commodity}_production" in inputs:
-                        # set the set-point as the rated production
-                        outputs[f"{flexible_tech}_{tech_commodity}_set_point"] = inputs[
+                        # set the per-tech demand as the rated production
+                        outputs[f"{flexible_tech}_{tech_commodity}_demand"] = inputs[
                             f"{flexible_tech}_rated_{tech_commodity}_production"
                         ] * np.ones(self.n_timesteps)
 
@@ -80,6 +80,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         for dispatchable_tech in self.dispatchable_techs:
             commodity_from_tech = self._get_commodity_for_tech(dispatchable_tech)
             if commodity in commodity_from_tech:
-                outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
+                outputs[f"{dispatchable_tech}_{commodity}_demand"] = (
                     remaining_demand / n_dispatchable
                 )

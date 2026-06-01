@@ -21,7 +21,7 @@ Unlike the {ref}`demand following controller <slc-demand-following>`, which spli
 
 The controller follows a three-step dispatch process:
 
-1. **Curtailable technologies** run at their full rated capacity (assumed zero marginal cost). Their output is subtracted from the demand.
+1. **Curtailable technologies** run at their available capacity (assumed zero marginal cost). Their output is subtracted from the demand.
 2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging). Residual demand is split evenly across storage technologies producing the demanded commodity.
 3. **Dispatchable technologies** are dispatched by cheapest marginal cost first, each up to its rated capacity, until the remaining demand is met.
 
@@ -31,7 +31,7 @@ Marginal costs are specified per dispatchable technology in the `cost_per_tech` 
 
 | Value | Description |
 | --- | --- |
-| Numeric (e.g. `0.05`) | Constant marginal cost in `$/(commodity_unit*h)` |
+| Numeric (e.g. `0.05`) | Constant marginal cost in `$/(commodity_amount_units)` |
 | `"buy_price"` | Uses the technology's configured purchase price |
 | `"VarOpEx"` | Derives marginal cost from the technology's variable operating expenditure divided by total production |
 | `"feedstock"` | Sums upstream feedstock `VarOpEx` values and divides by the technology's total production |
@@ -60,7 +60,7 @@ The base inputs for technologies classified as `curtailable`, `dispatchable`, an
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
 
 The outputs for `curtailable`, `dispatchable`, or `storage` technologies *without* a storage controller are:
-- `f"{tech_name}_{tech_output_commodity}_set_point"`
+- `f"{tech_name}_{tech_output_commodity}_demand"`
 
 The outputs for `storage` technologies *with* a storage controller are:
 - `f"{tech_name}_{tech_output_commodity}_demand"`

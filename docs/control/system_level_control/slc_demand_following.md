@@ -58,9 +58,9 @@ display(
 
 The demand is satisfied in a fixed three-step priority order, and each step's shortfall or surplus is passed to the next:
 
-1. **Curtailable techs** run at their full rated capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
+1. **Curtailable techs** run at their available capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
 
-2. **Storage techs** receive the residual demand (which may be positive or negative). When demand is positive the storage is commanded to discharge; when negative it is commanded to charge. If multiple storage techs produce the demanded commodity, the residual demand is
+2. **Storage techs** receive the residual demand (which may be positive or negative). When residual demand is positive the storage is commanded to discharge; when negative it is commanded to charge. If multiple storage techs produce the demanded commodity, the residual demand is
 split **evenly** across them (each receives ``demand / n_storage``).
 
 3. **Dispatchable techs** cover any remaining positive demand after storage. The remaining demand (floored at zero) is split **evenly** across all dispatchable techs that produce the demanded commodity (each receives ``remaining_demand / n_dispatchable``).
@@ -88,7 +88,7 @@ The inputs for technologies classified as `feedstock` are:
 
 
 The outputs for technologies classified as `curtailable`, `dispatchable`, or `storage` and *without a storage controller* are:
-- `f"{tech_name}_{tech_output_commodity}_set_point"`
+- `f"{tech_name}_{tech_output_commodity}_demand"`
 
 The outputs for technologies classified as `storage` that *have a storage controller* are:
 - `f"{tech_name}_{tech_output_commodity}_demand"`

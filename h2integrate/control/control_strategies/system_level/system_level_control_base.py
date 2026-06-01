@@ -12,6 +12,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
 
+    Each technology group is expected to contain a controller (either user-defined or an
+    auto-injected ``PassthroughController``) that consumes a ``{commodity}_demand`` input and
+    produces the ``{commodity}_set_point`` actually fed to the performance/cost models. The
+    system-level controller therefore reasons in terms of *demand* values and emits
+    ``{tech_name}_{commodity}_demand`` outputs for every controlled technology.
+
     Information passed to the controller from H2IntegrateModel is input in the ``slc_config``,
     which must contain:
 
@@ -102,7 +108,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         commodity_units=None,
         commodity_reference_var=None,
         add_in_name=True,
-        initial_set_point=1.0,
+        initial_demand=1.0,
     ):
         """Register OpenMDAO inputs and outputs for a single (tech, commodity) pair.
 
@@ -123,9 +129,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
           (only if ``add_in_name=True``).
         - Input ``"{tech_name}_rated_{commodity}_production"`` - rated production
           capacity of the tech.
-        - Output ``"{tech_name}_{commodity}_set_point"`` (or
-          ``"{tech_name}_{commodity}_demand"`` for storage techs with an attached
-          controller) - control set-point sent to the tech.
+        - Output ``"{tech_name}_{commodity}_demand"`` - demand signal sent to the
+          tech's controller (which translates it into a performance-model set-point).
 
         Args:
             tech_name (str): Name of the technology.
@@ -137,11 +142,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 ``commodity_units``.
             add_in_name (bool, optional): If True, register the
                 ``"{tech_name}_{commodity}_out"`` input. Defaults to True.
-            initial_set_point (float, optional): Initial value for the
-                set-point output. Defaults to 1.0.
+            initial_demand (float, optional): Initial value for the
+                demand output. Defaults to 1.0.
 
         Returns:
-            tuple[str, str, str]: ``(in_name, set_point_name, rated_name)``
+            tuple[str, str, str]: ``(in_name, demand_name, rated_name)``
         """
         # --- Determine unit kwargs for add_input / add_output ---------
         # Either explicit units or copy_units from a reference variable.
@@ -153,13 +158,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
-
-        # Storage techs with an attached controller receive a "demand"
-        # output instead of a "set_point" output.
-        if self.storage_techs_to_control.get(tech_name, False):
-            set_point_name = f"{tech_name}_{commodity}_demand"
-        else:
-            set_point_name = f"{tech_name}_{commodity}_set_point"
+        demand_name = f"{tech_name}_{commodity}_demand"
 
         # --- Register inputs and output -------------------------------
         if add_in_name:
@@ -177,14 +176,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
             **unit_kwargs,
         )
         self.add_output(
-            set_point_name,
-            val=initial_set_point,
+            demand_name,
+            val=initial_demand,
             shape=self.n_timesteps,
-            desc=f"Set point for {tech_name} {commodity} curtailment",
+            desc=f"Demand sent to {tech_name} for {commodity}",
             **unit_kwargs,
         )
 
-        return in_name, set_point_name, rated_name
+        return in_name, demand_name, rated_name
 
     def _setup_tech_category(self, category, tech_list):
         """Create OpenMDAO I/O variables for all technologies in a given category.
@@ -193,16 +192,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
         technologies. The logic is identical for all three categories —
         iterate over each technology's commodities and register the
         appropriate inputs (production output, rated capacity) and output
-        (control set-point).
+        (per-tech demand).
 
-        All initial set-points are ``1.0``; the solver converges from there
+        All initial demand values are ``1.0``; the solver converges from there
         using the connected rated-production inputs at run time.
 
         After this method returns, four lists are stored on ``self`` under
         names produced by the *category* prefix:
 
             ``self.{category}_input_names``
-            ``self.{category}_set_point_names``
+            ``self.{category}_demand_names``
             ``self.{category}_rated_names``
             ``self.{category}_commodity_names``
 
@@ -215,11 +214,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
             tech_list (list[str]): Technology names belonging to this category
                 (e.g. ``self.flexible_techs``).
         """
-        initial_set_point = 1.0
+        initial_demand = 1.0
 
         # --- Initialize the four per-category bookkeeping lists -------
         input_names = []
-        set_point_names = []
+        demand_names = []
         rated_names = []
         commodity_names = []
 
@@ -229,21 +228,21 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for commodity in tech_commodities:
                 if commodity in self.commodities_to_units:
                     # Units are already known explicitly
-                    in_name, set_point_name, rated_name = self._setup_commodity(
+                    in_name, demand_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
                         commodity_units=self.commodities_to_units[commodity],
                         add_in_name=True,
-                        initial_set_point=initial_set_point,
+                        initial_demand=initial_demand,
                     )
                 elif commodity in self.commodities_to_ref_var:
                     # Units are inferred from a previously-registered reference variable
-                    in_name, set_point_name, rated_name = self._setup_commodity(
+                    in_name, demand_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
                         commodity_reference_var=self.commodities_to_ref_var[commodity],
                         add_in_name=True,
-                        initial_set_point=initial_set_point,
+                        initial_demand=initial_demand,
                     )
                 else:
                     # Units are unknown; try to discover them from the connection
@@ -261,22 +260,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         # variable so later techs with this commodity can
                         # copy its units.
                         self.commodities_to_ref_var[commodity] = in_name
-                        in_name, set_point_name, rated_name = self._setup_commodity(
+                        in_name, demand_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
                             commodity_reference_var=self.commodities_to_ref_var[commodity],
                             add_in_name=False,
-                            initial_set_point=initial_set_point,
+                            initial_demand=initial_demand,
                         )
                     else:
                         # Connection provided units — record them for future use
                         self.commodities_to_units[commodity] = meta_data["units"]
-                        in_name, set_point_name, rated_name = self._setup_commodity(
+                        in_name, demand_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
                             commodity_units=self.commodities_to_units[commodity],
                             add_in_name=False,
-                            initial_set_point=initial_set_point,
+                            initial_demand=initial_demand,
                         )
 
                 if category == "storage":
@@ -286,12 +285,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
                 commodity_names.append(commodity)
                 input_names.append(in_name)
-                set_point_names.append(set_point_name)
+                demand_names.append(demand_name)
                 rated_names.append(rated_name)
 
         # --- Store lists as self.<category>_<suffix> attributes -------
         setattr(self, f"{category}_input_names", input_names)
-        setattr(self, f"{category}_set_point_names", set_point_names)
+        setattr(self, f"{category}_demand_names", demand_names)
         setattr(self, f"{category}_rated_names", rated_names)
         setattr(self, f"{category}_commodity_names", commodity_names)
 
@@ -423,7 +422,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return remaining_demand
 
     def _subtract_flexible(self, flexible_tech, remaining_demand, commodity, inputs, outputs):
-        """Apply flexible techs: set_point = rated, subtract output from demand.
+        """Apply flexible techs: demand = rated, subtract output from demand.
 
         Returns the updated demand array.
         """
@@ -433,8 +432,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if f"{flexible_tech}_rated_{commodity}_production" not in inputs:
             return
 
-        # Output the set-point as the rated production of that technology
-        outputs[f"{flexible_tech}_{commodity}_set_point"] = inputs[
+        # Set per-tech demand equal to the rated production of that technology
+        outputs[f"{flexible_tech}_{commodity}_demand"] = inputs[
             f"{flexible_tech}_rated_{commodity}_production"
         ] * np.ones(self.n_timesteps)
         remaining_demand -= inputs[f"{flexible_tech}_{commodity}_out"]
@@ -448,27 +447,28 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if f"{storage_tech}_{commodity}_out" not in inputs:
             return
 
+        demand_name = f"{storage_tech}_{commodity}_demand"
+        if demand_name not in outputs:
+            return
+
         if self.storage_techs_to_control.get(storage_tech, False):
-            # storage tech has a controller, output combined demand (always positive)
-            # demand should be what is input to storage + remaining_demand
-            # get the technologies upstream of the storage that output that commodity
+            # Storage tech has its own sub-controller: emit a combined demand
+            # signal (always positive) equal to the commodity flowing into
+            # storage from upstream techs plus any remaining demand.
             upstream_techs = self.get_upstream_techs_for_commodity(storage_tech, commodity)
             commodity_into_storage = np.zeros(self.n_timesteps)
             for tech_name in upstream_techs:
                 commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
 
-            outputs[f"{storage_tech}_{commodity}_demand"] = (
-                commodity_into_storage + remaining_demand
-            )
-            remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
-            return remaining_demand
+            outputs[demand_name] = commodity_into_storage + remaining_demand
+        else:
+            # Storage without a sub-controller: emit a charge/discharge
+            # command directly. Charge when remaining demand is negative,
+            # discharge when positive.
+            outputs[demand_name] = remaining_demand
 
-        if f"{storage_tech}_{commodity}_set_point" in outputs:
-            # storage tech does not have a controller, output set point (charge/discharge) command
-            # charge when remaining demand is negative, discharge when remaining demand is positive
-            outputs[f"{storage_tech}_{commodity}_set_point"] = remaining_demand
-            remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
-            return remaining_demand
+        remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
+        return remaining_demand
 
     def _get_commodity_for_tech(self, tech_name):
         """Get a list of the commodities produced for a technology.

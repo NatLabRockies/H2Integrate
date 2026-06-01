@@ -628,21 +628,18 @@ class H2IntegrateModel:
 
            - **Feedstock techs**: Only the commodity output
              (``{tech_name}_source.{commodity}_out``) is connected to the controller. Feedstocks
-             have no set-point or rated-production connection.
+             have no demand-input connection.
            - **Fixed techs**: Only the commodity output
              (``{tech_name}.{commodity}_out``) is connected to the controller. Fixed techs
-             always produce and receive no set-point or rated-production connection.
+             always produce and receive no demand-input connection.
            - **Flexible / dispatchable / storage techs**: Both the commodity output
              (``{tech_name}.{commodity}_out``) and rated production
              (``{tech_name}.rated_{commodity}_production``) are connected as controller inputs.
-             The controller's set-point output is connected back to the tech:
-
-             - If the storage tech has its own sub-controller
-               (``storage_techs_to_control[tech_name] == True``), the controller outputs a
-               *demand* signal (``{tech_name}_{commodity}_demand``) that the storage
-               sub-controller consumes.
-             - Otherwise, the controller outputs a *set_point* signal
-               (``{tech_name}_{commodity}_set_point``) directly to the performance model.
+             The controller's per-tech ``{tech_name}_{commodity}_demand`` output is then
+             connected to the tech group's ``{commodity}_demand`` input. Every controlled
+             tech group is expected to expose this input — either via a user-defined
+             ``control_strategy`` or via the auto-injected ``PassthroughController`` — which
+             converts the demand signal into the appropriate performance-model set-point.
 
         4. **Connect marginal-cost inputs for cost-aware strategies** - Only executed when
            ``control_strategy`` is ``"CostMinimizationControl"`` or
@@ -761,32 +758,14 @@ class H2IntegrateModel:
                     f"system_level_controller.{tech_name}_{commodity}_storage_duration",
                 )
 
-            # Connect the controller's output back to the technology.
-            classifier = slc_config["tech_control_classifiers"][tech_name]
-            if slc_config["storage_techs_to_control"].get(tech_name, False):
-                # Storage tech with its own sub-controller: provide a demand
-                # signal that the sub-controller translates into
-                # charge/discharge commands.
-                self.plant.connect(
-                    f"system_level_controller.{tech_name}_{commodity}_demand",
-                    f"{tech_name}.{commodity}_demand",
-                )
-            elif classifier in ("flexible", "dispatchable"):
-                # Flexible / dispatchable techs always have a controller in
-                # their tech group (auto-injected PassthroughController if no
-                # user-defined control_strategy). Route the SLC output to the
-                # controller's demand input.
-                self.plant.connect(
-                    f"system_level_controller.{tech_name}_{commodity}_set_point",
-                    f"{tech_name}.{commodity}_demand",
-                )
-            else:
-                # Storage without a sub-controller: provide a set-point
-                # directly to the performance model.
-                self.plant.connect(
-                    f"system_level_controller.{tech_name}_{commodity}_set_point",
-                    f"{tech_name}.{commodity}_set_point",
-                )
+            # Every controlled tech group exposes a ``{commodity}_demand``
+            # input (provided by either a user-defined control_strategy or an
+            # auto-injected PassthroughController). Route the SLC's per-tech
+            # demand output to that input.
+            self.plant.connect(
+                f"system_level_controller.{tech_name}_{commodity}_demand",
+                f"{tech_name}.{commodity}_demand",
+            )
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
@@ -1070,9 +1049,10 @@ class H2IntegrateModel:
         A controller is auto-inserted only when:
         - the technology has no user-defined ``control_strategy`` in its config,
         - the performance model exposes a ``_control_classifier`` of
-          ``"flexible"`` or ``"dispatchable"``,
+          ``"flexible"``, ``"dispatchable"``, or ``"storage"``,
         - the performance model has set ``commodity`` and ``commodity_rate_units``
-          attributes (typically set in its ``initialize()``).
+          attributes (typically set in its ``initialize()``), or those values
+          can be read from the individual tech config.
 
         The controller's ``{commodity}_demand`` input becomes the tech group's
         external demand-input promoted at the tech group level, and its
@@ -1084,19 +1064,31 @@ class H2IntegrateModel:
         if "control_strategy" in individual_tech_config:
             return
 
-        # Only flexible/dispatchable techs accept an externally provided demand
-        # signal. Fixed, feedstock, connector, and storage techs are handled
-        # elsewhere (storage uses its own sub-controller; fixed/feedstock have
-        # no set-point) and must not get a passthrough.
+        # Only flexible/dispatchable/storage techs accept an externally
+        # provided demand signal. Fixed, feedstock, and connector techs are
+        # handled elsewhere (fixed/feedstock have no demand input) and must
+        # not get a passthrough.
         classifier = getattr(perf_comp, "_control_classifier", None)
-        if classifier not in ("flexible", "dispatchable"):
+        if classifier not in ("flexible", "dispatchable", "storage"):
             return
 
         # The performance model must declare the commodity it produces and the
         # units of its set-point so the PassthroughController can size its I/O
-        # consistently. If either is missing we have nothing to wire up.
+        # consistently. If they aren't yet set on the component (some models
+        # only assign these in ``setup()``), fall back to reading them from the
+        # individual tech config's model_inputs.
         commodity = getattr(perf_comp, "commodity", None)
         commodity_rate_units = getattr(perf_comp, "commodity_rate_units", None)
+        if commodity is None or commodity_rate_units is None:
+            model_inputs = individual_tech_config.get("model_inputs", {})
+            shared = model_inputs.get("shared_parameters", {})
+            perf_inputs = model_inputs.get("performance", {})
+            if commodity is None:
+                commodity = perf_inputs.get("commodity", shared.get("commodity"))
+            if commodity_rate_units is None:
+                commodity_rate_units = perf_inputs.get(
+                    "commodity_rate_units", shared.get("commodity_rate_units")
+                )
         if commodity is None or commodity_rate_units is None:
             return
 

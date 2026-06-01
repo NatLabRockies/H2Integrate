@@ -58,7 +58,7 @@ display(
 
 The controller follows a three-step dispatch process:
 
-1. **Curtailable technologies** run at full rated capacity - they are always profitable to produce (zero marginal cost).
+1. **Curtailable technologies** run at available capacity - they are always profitable to produce (zero marginal cost).
 2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging), split evenly across storage technologies producing the demanded commodity.
 3. **Dispatchable technologies** are dispatched in merit order (cheapest first), but **only at timesteps where their marginal cost is below the sell price**. At each timestep, the dispatch is the minimum of the remaining demand and the rated capacity, gated by the profitability check.
 
@@ -72,7 +72,7 @@ The sell price can be configured in two ways in `system_level_control.control_pa
 
 | Value | Description |
 | --- | --- |
-| Numeric (e.g. `0.06`) | Constant sell price in `$/(commodity_unit*h)` |
+| Numeric (e.g. `0.06`) | Constant sell price in `$/(commodity_amount_units)` |
 | String (e.g. `"profast_npv"`) | Name of a finance group in `finance_parameters.finance_groups` whose `model_inputs.commodity_sell_price` will be used |
 
 ## Marginal Cost Configuration
@@ -81,7 +81,7 @@ Marginal costs are configured identically to the {ref}`cost minimization control
 
 | Value | Description |
 | --- | --- |
-| Numeric (e.g. `0.05`) | Constant marginal cost in `$/(commodity_unit*h)` |
+| Numeric (e.g. `0.05`) | Constant marginal cost in `$/(commodity_amount_units)` |
 | `"buy_price"` | Uses the technology's configured purchase price |
 | `"VarOpEx"` | Derives cost from VarOpEx / total production |
 | `"feedstock"` | Sums upstream feedstock VarOpEx / total production |
@@ -110,7 +110,7 @@ The base inputs for technologies classified as `curtailable`, `dispatchable`, an
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
 
 The outputs for `curtailable`, `dispatchable`, or `storage` technologies *without* a storage controller are:
-- `f"{tech_name}_{tech_output_commodity}_set_point"`
+- `f"{tech_name}_{tech_output_commodity}_demand"`
 
 The outputs for `storage` technologies *with* a storage controller are:
 - `f"{tech_name}_{tech_output_commodity}_demand"`
