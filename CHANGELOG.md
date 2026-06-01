@@ -35,6 +35,7 @@
 - Reduced import time for `h2integrate_model.py` by deferring imports of heavy dependencies until they are needed [PR 762](https://github.com/NatLabRockies/H2Integrate/pull/762)
 - Added multivariable purge gas stream output to `AmmoniaSynLoopPerformanceModel` [PR 760](https://github.com/NatLabRockies/H2Integrate/pull/760)
 - Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
+- Added imports for individual models to the appropriate `__init__.py` files to allow for direct imports of models from the package level and to ensure all models are properly imported and used in `supported_models.py` [PR 769](https://github.com/NatLabRockies/H2Integrate/pull/769)
 
 ## 0.8 [April 15, 2026]
 
