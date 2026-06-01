@@ -2,7 +2,11 @@
 
 System-level control (SLC) within H2I is meant to operate to control the entire plant with performance and cost feedback driving the operation of the plant or system in a closed-loop. It acts as a supervisory controller meaning that it can work to coordinate the entire system and can work with other technology level controllers.
 
-The most basic SLC is shown in the figured below, where the SLC receives a demand. Based on that demand it will output set points for `{commodity}_out` to the individual technology blocks included within the system. Each technology based on it's controller classification will respond to the set point. From each technology block there is `{commodity}_out` (potentially changed by the set point signal) that is connected via feedback to the SLC. The SLC will then attempt to converge the system where it will loop through changing the set points in attempts to meet the demand until the overall system stops changing how much `{commodity}_out` each technology is outputting.
+The most basic SLC is shown in the figure below, where the SLC receives a demand. Based on that demand it emits a per-technology `{tech_name}_{commodity}_demand` signal to each controlled technology. Each technology group contains a controller that converts that demand into the `{commodity}_set_point` actually consumed by the technology's performance model. From each technology block there is `{commodity}_out` (potentially changed by the set-point signal) that is connected via feedback to the SLC. The SLC will then attempt to converge the system where it will loop through changing the demands in attempts to meet the system demand until the overall system stops changing how much `{commodity}_out` each technology is outputting.
+
+```{note}
+Every technology group has an *implicit passthrough controller* that converts `{commodity}_demand` into `{commodity}_set_point`. If a technology defines its own `control_strategy`, that controller is used instead. This convention keeps the framework consistent and makes the demand → set-point hand-off uniform for every technology, regardless of whether an SLC is present.
+```
 
 ```{figure} figures/slc_basic.png
 :width: 70%

@@ -1,5 +1,19 @@
 # Technology-Level Control
 
+Every technology group in H2Integrate contains a controller subsystem. Its job is to translate a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the technology's performance model. This convention keeps the framework consistent: every technology exposes the same demand/set-point interface, regardless of whether a system-level controller (SLC) is present and regardless of how complex the underlying control logic is.
+
+(implicit-passthrough-controller)=
+## Implicit passthrough controller
+
+If a technology does not define its own `control_strategy`, H2Integrate automatically inserts a `PassthroughController` into the technology group. This controller simply copies `{commodity}_demand` to `{commodity}_set_point` so that:
+
+- When an SLC is present, the SLC's per-tech demand is fed straight to the performance model.
+- When no SLC is present, the demand input defaults to a large value so the performance model behaves as if unconstrained (the model typically saturates at its rated capacity).
+
+If you add your own controller via `control_strategy` in the technology config, that controller is used instead of the passthrough. User-defined controllers must produce the same `{commodity}_set_point` output so the rest of the framework can connect to them in a uniform way.
+
+## Control frameworks
+
 There are two different systematic approaches, or frameworks, in H2Integrate for technology-level control: [open-loop](#open-loop-control) and [pyomo](#pyomo-control). These two frameworks are useful in different situations and have different impacts on the system and control strategies that can be implemented. Both control frameworks are focused on technology-level dispatching. The open-loop framework has logic that is applicable to both storage technologies and converter technologies and the pyomo framework is currently applicable to storage technologies. The technology-level storage controllers may curtail/discard commodity amounts exceeding the needs of the storage technology and the specified demand. However, any unused commodity may be connected to another down-stream component to avoid actual curtailment.
 
 (open-loop-control-framework)=

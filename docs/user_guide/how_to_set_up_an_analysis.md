@@ -94,6 +94,10 @@ Each model has its own set of inputs, which are defined in the source code for t
 Because there are no default values for the parameters, we suggest you look at an existing example that uses the model you are interested in to see what inputs are required or look at the source code for the model.
 The different models are defined in the `supported_models.py` file in the `h2integrate` package.
 
+```{note}
+Every technology group also contains a controller that converts a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the performance model. If you do not specify a `control_strategy` for a technology, H2Integrate automatically inserts an implicit passthrough controller that simply maps demand to set-point. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for more details.
+```
+
 ## Plant config file
 
 The plant config file defines the system configuration, any parameters that might be shared across technologies, and how the technologies are connected together.
