@@ -83,7 +83,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             "commodity_sell_price",
             val=commodity_sell_price,
             shape=self.n_timesteps,
-            units=f"USD/({self.commodity_units}*h)",
+            units=f"USD/({self.commodity_rate_units}*h)",
             desc=f"Sell price per unit of {self.commodity}",
         )
 

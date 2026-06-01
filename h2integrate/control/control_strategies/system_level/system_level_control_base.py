@@ -51,7 +51,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         # Read pre-computed classification from plant_config
         self.commodity = slc_config["demand_commodity"]
-        self.commodity_units = slc_config.get("demand_commodity_rate_units", None)
+        self.commodity_rate_units = slc_config.get("demand_commodity_rate_units", None)
         self.demand_tech = slc_config["demand_tech"]
         self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
         self.technology_graph = slc_config["technology_graph"]
@@ -82,7 +82,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self.demand_input_name,
             val=10.0,
             shape=self.n_timesteps,
-            units=self.commodity_units,
+            units=self.commodity_rate_units,
             desc=f"Demand profile of {self.commodity}",
         )
 
@@ -93,7 +93,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
         )
 
-        self.commodities_to_units = {self.commodity: self.commodity_units}
+        self.commodities_to_units = {self.commodity: self.commodity_rate_units}
         self.commodities_to_ref_var = {}
         self._setup_fixed_category(self.fixed_techs)
         self._setup_tech_category("flexible", self.flexible_techs)
@@ -105,7 +105,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self,
         tech_name,
         commodity,
-        commodity_units=None,
+        commodity_rate_units=None,
         commodity_reference_var=None,
         add_in_name=True,
         initial_demand=1.0,
@@ -114,13 +114,13 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         This method handles unit specification in two mutually exclusive ways:
 
-        1. **Explicit units** - pass ``commodity_units`` (e.g. ``"kW"``).
-           Each variable is created with ``units=commodity_units``.
+        1. **Explicit units** - pass ``commodity_rate_units`` (e.g. ``"kW"``).
+           Each variable is created with ``units=commodity_rate_units``.
         2. **Copied units** - pass ``commodity_reference_var`` (the name of an
            already-registered input whose units should be reused).
            Each variable is created with ``units=None, copy_units=commodity_reference_var``.
 
-        Exactly one of ``commodity_units`` or ``commodity_reference_var`` must be
+        Exactly one of ``commodity_rate_units`` or ``commodity_reference_var`` must be
         provided.
 
         The following OpenMDAO variables are created:
@@ -135,11 +135,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Args:
             tech_name (str): Name of the technology.
             commodity (str): Commodity produced by ``tech_name``.
-            commodity_units (str | None): Explicit unit string for the commodity.
+            commodity_rate_units (str | None): Explicit unit string for the commodity.
                 Mutually exclusive with ``commodity_reference_var``.
             commodity_reference_var (str | None): Name of an existing input
                 variable whose units should be copied. Mutually exclusive with
-                ``commodity_units``.
+                ``commodity_rate_units``.
             add_in_name (bool, optional): If True, register the
                 ``"{tech_name}_{commodity}_out"`` input. Defaults to True.
             initial_demand (float, optional): Initial value for the
@@ -150,8 +150,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         """
         # --- Determine unit kwargs for add_input / add_output ---------
         # Either explicit units or copy_units from a reference variable.
-        if commodity_units is not None:
-            unit_kwargs = {"units": commodity_units}
+        if commodity_rate_units is not None:
+            unit_kwargs = {"units": commodity_rate_units}
         else:
             unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
 
@@ -231,7 +231,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     in_name, demand_name, rated_name = self._setup_commodity(
                         tech_name,
                         commodity,
-                        commodity_units=self.commodities_to_units[commodity],
+                        commodity_rate_units=self.commodities_to_units[commodity],
                         add_in_name=True,
                         initial_demand=initial_demand,
                     )
@@ -273,7 +273,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         in_name, demand_name, rated_name = self._setup_commodity(
                             tech_name,
                             commodity,
-                            commodity_units=self.commodities_to_units[commodity],
+                            commodity_rate_units=self.commodities_to_units[commodity],
                             add_in_name=False,
                             initial_demand=initial_demand,
                         )
@@ -301,6 +301,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         receive a set-point from the controller. Only commodity output inputs
         are registered so the controller can read their production and subtract
         it from demand.
+
+        This method is separate from the more general ``_setup_tech_category`` because the logic
+        for fixed techs is dramatically simpler
+        (no demand or rated inputs, only production inputs).
 
         After this method returns, two lists are stored on ``self``:
 
@@ -552,7 +556,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     f"{tech_name}_buy_price",
                     val=default_price,
                     shape=self.n_timesteps,
-                    units=f"USD/({self.commodity_units}*h)",
+                    units=f"USD/({self.commodity_rate_units}*h)",
                     desc=f"Buy price for {tech_name}",
                 )
                 self.dispatchable_marginal_cost_types.append(("buy_price", tech_name))
