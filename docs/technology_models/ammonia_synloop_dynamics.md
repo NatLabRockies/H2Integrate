@@ -15,24 +15,24 @@ kernelspec:
 
 The `AmmoniaSynLoopPerformanceModel` can be configured to enforce dynamic operating
 constraints that approximate the response of a real Haber-Bosch synthesis loop to a
-time-varying electricity supply. Three classes of constraint are available and can be
+time-varying electricity, hydrogen, or nitrogen supply. Three classes of constraint are available and can be
 enabled independently or together:
 
-- **Turndown**: a non-zero minimum production floor (as a fraction of rated capacity)
+- Turndown: a non-zero minimum production floor (as a fraction of rated capacity)
   while the plant remains "on".
-- **Ramping**: upper bounds on how quickly production can increase or decrease between
+- Ramping: upper bounds on how quickly production can increase or decrease between
   consecutive timesteps, expressed as a fraction of rated capacity per hour.
-- **Start-up delays**: production losses applied to the first timesteps after the
+- Start-up delays: production losses applied to the first timesteps after the
   plant comes back online following a long enough off-period. Both warm- and cold-start
   events are supported, with independent off-time triggers and delay durations.
 
-This page walks through each constraint by reusing the synloop fixtures from the
+This doc page walks through each constraint by reusing the synloop fixtures from the
 test suite, plotting the production response for an off-on cycle.
 
 ## Configuration parameters
 
-The following keys are added to the `performance_parameters` block of an ammonia tech
-config to enable dynamic behavior:
+The following keys can be added to the `performance_parameters` block of an ammonia tech
+config to impact dynamic behavior:
 
 | Parameter | Units | Description |
 | --- | --- | --- |
@@ -194,13 +194,13 @@ plt.show()
 The baseline (gray) curve follows the electricity-limited demand directly. Each
 panel overlays one dynamic constraint:
 
-- **Ramping** caps the per-hour change in production, so transitions across the
+- Ramping caps the per-hour change in production, so transitions across the
   20% turndown floor and step changes in demand are spread over multiple hours.
   When ramping down, output is held at the turndown floor rather than going below it.
-- **Cold start** introduces a 2-hour delay after every off-block longer than 4
+- Cold start introduces a 2-hour delay after every off-block longer than 4
   hours: the first two "on" hours after the long off-period are zeroed before full
   production resumes.
-- **Warm + cold start** combines the cold-start behavior with an additional warm-
+- Warm + cold start combines the cold-start behavior with an additional warm-
   start partial-loss applied to short off-periods (here, 0.5 hr off triggers a 0.5
   hr warm-start delay), visible as a partial dip on the very first on-hour after
   each short off-block.

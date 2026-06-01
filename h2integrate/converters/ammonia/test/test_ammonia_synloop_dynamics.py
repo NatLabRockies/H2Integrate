@@ -938,8 +938,23 @@ def test_ammonia_config(synloop_config, dynamics_config, subtests):
             "off_hours_cold_start": None,
             "cold_start_delay_hours": None,
         }
-        with pytest.raises(AttributeError, match="include_cold_start"):
+        with pytest.raises(AttributeError, match="include_cold_start") as excinfo:
             AmmoniaSynLoopPerformanceConfig(**bad)
+        # Both missing param names should appear in the error message so a user knows
+        # exactly what to add to their tech config.
+        assert "off_hours_cold_start" in str(excinfo.value)
+        assert "cold_start_delay_hours" in str(excinfo.value)
+
+    with subtests.test("include_cold_start=True with only one missing param lists only that one"):
+        bad = base | {
+            "include_cold_start": True,
+            "off_hours_cold_start": 4.0,
+            "cold_start_delay_hours": None,
+        }
+        with pytest.raises(AttributeError, match="include_cold_start") as excinfo:
+            AmmoniaSynLoopPerformanceConfig(**bad)
+        assert "cold_start_delay_hours" in str(excinfo.value)
+        assert "off_hours_cold_start" not in str(excinfo.value)
 
     with subtests.test("include_warm_start=True without required params raises"):
         bad = base | {
@@ -947,8 +962,21 @@ def test_ammonia_config(synloop_config, dynamics_config, subtests):
             "off_hours_warm_start": None,
             "warm_start_delay_hours": None,
         }
-        with pytest.raises(AttributeError, match="include_warm_start"):
+        with pytest.raises(AttributeError, match="include_warm_start") as excinfo:
             AmmoniaSynLoopPerformanceConfig(**bad)
+        assert "off_hours_warm_start" in str(excinfo.value)
+        assert "warm_start_delay_hours" in str(excinfo.value)
+
+    with subtests.test("include_warm_start=True with only one missing param lists only that one"):
+        bad = base | {
+            "include_warm_start": True,
+            "off_hours_warm_start": None,
+            "warm_start_delay_hours": 0.5,
+        }
+        with pytest.raises(AttributeError, match="include_warm_start") as excinfo:
+            AmmoniaSynLoopPerformanceConfig(**bad)
+        assert "off_hours_warm_start" in str(excinfo.value)
+        assert "warm_start_delay_hours" not in str(excinfo.value)
 
     with subtests.test("turndown_ratio outside [0, 1] is rejected"):
         bad = base | {"turndown_ratio": 1.5}

@@ -1,9 +1,9 @@
-"""Reusable primitives for applying dynamic operating constraints to a per-timestep
+"""Reusable functions for applying dynamic operating constraints to a per-timestep
 production profile.
 
 These functions are intentionally model-agnostic: they take and return plain numpy
 arrays and a ``dt_seconds`` scalar, with no dependency on OpenMDAO, attrs configs, or
-any specific commodity. They are used by ``AmmoniaSynLoopPerformanceModel`` today and
+any specific commodity. They are currently used by ``AmmoniaSynLoopPerformanceModel`` and
 are designed so that other performance models (electrolyzers, methanol
 synthesis, etc.) can adopt the same constraints by calling them directly.
 

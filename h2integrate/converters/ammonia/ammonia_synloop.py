@@ -91,6 +91,9 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
 
+        # If a user has opted into cold- or warm-start dynamics, both required hour
+        # values must also be supplied -- the underlying multiplier algorithm has no
+        # sensible default for either off-time threshold or the delay duration.
         provided_cold_start_params = all(
             getattr(self, param, None) is not None
             for param in ["off_hours_cold_start", "cold_start_delay_hours"]
@@ -100,19 +103,23 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
             for param in ["off_hours_warm_start", "warm_start_delay_hours"]
         )
 
+        # Raise if cold start was enabled but its companion hour values weren't given.
+        # The error message lists the params that are still ``None`` so the user knows
+        # exactly what to add to their tech config.
         if self.include_cold_start and not provided_cold_start_params:
             missing_params = [
                 param
                 for param in ["off_hours_cold_start", "cold_start_delay_hours"]
-                if getattr(self, param, None) is not None
+                if getattr(self, param, None) is None
             ]
             raise AttributeError(f"`include_cold_start` is True, missing inputs {missing_params}")
 
+        # Same check for warm start.
         if self.include_warm_start and not provided_warm_start_params:
             missing_params = [
                 param
                 for param in ["off_hours_warm_start", "warm_start_delay_hours"]
-                if getattr(self, param, None) is not None
+                if getattr(self, param, None) is None
             ]
             raise AttributeError(f"`include_warm_start` is True, missing inputs {missing_params}")
 
@@ -222,29 +229,17 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         )
 
         # Flexibility inputs
-        self.add_input("turndown_ratio", val=self.config.turndown_ratio, shape=1, units="unitless")
-        self.add_input(
-            "ramp_up_rate", val=self.config.ramp_up_rate_fraction, shape=1, units="unitless"
-        )
-        self.add_input(
-            "ramp_down_rate", val=self.config.ramp_down_rate_fraction, shape=1, units="unitless"
-        )
+        self.add_input("turndown_ratio", val=self.config.turndown_ratio, units="unitless")
+        self.add_input("ramp_up_rate", val=self.config.ramp_up_rate_fraction, units="unitless")
+        self.add_input("ramp_down_rate", val=self.config.ramp_down_rate_fraction, units="unitless")
 
         if self.config.include_warm_start:
-            self.add_input(
-                "off_time_warm_start", val=self.config.off_hours_warm_start, shape=1, units="h"
-            )
-            self.add_input(
-                "warm_start_delay", val=self.config.warm_start_delay_hours, shape=1, units="h"
-            )
+            self.add_input("off_time_warm_start", val=self.config.off_hours_warm_start, units="h")
+            self.add_input("warm_start_delay", val=self.config.warm_start_delay_hours, units="h")
 
         if self.config.include_cold_start:
-            self.add_input(
-                "off_time_cold_start", val=self.config.off_hours_cold_start, shape=1, units="h"
-            )
-            self.add_input(
-                "cold_start_delay", val=self.config.cold_start_delay_hours, shape=1, units="h"
-            )
+            self.add_input("off_time_cold_start", val=self.config.off_hours_cold_start, units="h")
+            self.add_input("cold_start_delay", val=self.config.cold_start_delay_hours, units="h")
 
         # Feedstocks input
         self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
@@ -275,20 +270,20 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     def apply_dynamic_operation(self, inputs, nh3_production):
         """Apply ramping constraints and start-up delay losses to the ammonia production profile.
 
-        Delegates to the model-agnostic helpers in :mod:`h2integrate.core.dynamics`. The
+        Calls the model-agnostic helpers in :mod:`h2integrate.core.dynamics`. The
         ammonia-specific work here is just unpacking OpenMDAO inputs into scalar
         production-rate quantities (kg NH3/hr) and combining warm- and cold-start
         multipliers when both are configured.
 
         Args:
-            inputs (om.vectors.default_vector.DefaultVector): OM inputs to `compute()` method.
+            inputs (dict-like): OM inputs to `compute()` method.
             nh3_production (np.ndarray): pre-constraint ammonia production profile.
 
         Returns:
             tuple:
-                - **nh3_production** (np.ndarray): production profile after ramping and
+                - nh3_production (np.ndarray): production profile after ramping and
                   start-up losses have been applied.
-                - **consumption_multiplier** (np.ndarray): on/off-gated production profile
+                - consumption_multiplier (np.ndarray): on/off-gated production profile
                   used to scale input-commodity consumption. Feedstocks are consumed during
                   start-up delays (when ammonia output is zeroed) so the consumption
                   multiplier is taken *before* start-up losses are applied.
@@ -413,7 +408,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Apply dynamic operation
         nh3_prod, consumption_multiplier = self.apply_dynamic_operation(inputs, nh3_prod)
 
-        # Calculate feedstocks used as consumption_multplier*feedstock_rate
+        # Calculate feedstocks used as consumption_multiplier*feedstock_rate
         used_h2 = consumption_multiplier * h2_rate
         used_n2 = consumption_multiplier * n2_rate
         used_elec = consumption_multiplier * energy_demand  # kW
