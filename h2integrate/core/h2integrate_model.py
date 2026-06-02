@@ -1240,8 +1240,14 @@ class H2IntegrateModel:
                     )
 
             elif len(connection) == 3:
+                # initialize src_indices to allow connections between different shaped variables
+                if isinstance(connection[-1], list):
+                    source_tech, dest_tech, connected_parameter = connection
+                    connected_parameter, src_indices = (
+                        self._split_indices_from_connected_parameter_definition(connected_parameter)
+                    )
+
                 # connect directly from source to dest
-                source_tech, dest_tech, connected_parameter = connection
                 if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
                     # Check if this is a multivariable stream connection
@@ -1255,7 +1261,9 @@ class H2IntegrateModel:
                         )
                     else:
                         self.plant.connect(
-                            f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
+                            f"{source_tech}.{source_parameter}",
+                            f"{dest_tech}.{dest_parameter}",
+                            src_indices=src_indices,
                         )
                 else:
                     # Check if the connected_parameter is a multivariable stream
@@ -1271,6 +1279,7 @@ class H2IntegrateModel:
                         self.plant.connect(
                             f"{source_tech}.{connected_parameter}",
                             f"{dest_tech}.{connected_parameter}",
+                            src_indices=src_indices,
                         )
 
             else:
@@ -1810,3 +1819,62 @@ class H2IntegrateModel:
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
 
         return tech_commodities
+
+    @staticmethod
+    def _split_indices_from_connected_parameter_definition(connected_parameter):
+        """Extract and parse slice indices from connected parameter definitions for OpenMDAO
+        connections.
+
+        This function processes parameter names containing slice patterns in square brackets
+        (e.g., "power[0:8760]") and generates OpenMDAO-compatible src_indices for connections
+        between variables of different shapes.
+
+        Args:
+            connected_parameter (list[str]): A two-element list containing:
+                - [0] source parameter name, optionally with pattern like "var[slice_spec]"
+                - [1] destination parameter name, optionally with pattern like "var[slice_spec]"
+
+                Example: ["power[0:8760]", "demand[:]"]
+
+        Returns:
+            tuple: A two-element tuple containing:
+                - connected_parameter (list[str]): The parameter names with slices removed
+                  (e.g., ["power", "demand"])
+                - src_indices: OpenMDAO slicer object for indexing source outputs to match
+                  destination input shapes. Returns om.slicer[slice] for indexing.
+
+        Note:
+            If the destination has a slice pattern, it must include the length ":N"
+            (e.g., "[0:N]"), the function extracts N as the destination length and
+            multiplies the source slice by this factor to create properly scaled indices.
+            The length is required because the length is not known in the OpenMDAO model
+            until prob.setup() has been called.
+        """
+        source_parameter, dest_parameter = connected_parameter
+
+        # Regex pattern to match anything enclosed in square brackets
+        pattern = re.compile(r"\[.*?\]")
+
+        source_match = pattern.search(source_parameter)
+        dest_match = pattern.search(dest_parameter)
+
+        # Extract the matched slice pattern or None if no pattern found
+        source_slice = source_match if source_match is None else source_match.group()
+        dest_slice = dest_match if dest_match is None else dest_match.group()
+        if source_slice == dest_slice:
+            src_indices = None
+        elif dest_slice is not None and source_slice is not None:
+            pattern = re.compile(r":(\d+)")
+            dest_length = int(pattern.search(dest_slice).group().split(":")[-1])
+
+            # Scale source indices by destination length to handle shape mismatches
+            # Example: source_slice="[0:1]" with dest_length=8760 -> multiply 1 by 8760
+            src_indices = eval(f"om.slicer[{source_slice} * {dest_length}]")
+        else:
+            # No destination slice pattern; use source slice pattern directly
+            src_indices = None if source_slice is None else eval(f"om.slicer{source_slice}")
+
+        # Remove the slice patterns from parameter names to get clean names
+        connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
+
+        return connected_parameter, src_indices
