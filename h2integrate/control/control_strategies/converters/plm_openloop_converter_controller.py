@@ -54,7 +54,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
     def compute(self, inputs, outputs):
         commodity = self.config.commodity
         demand_profile = inputs[f"{commodity}_demand"]
-        system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"]
+        system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"][0]
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = self.config.demand_profile_upstream_peak_cutoff
