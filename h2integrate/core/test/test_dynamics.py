@@ -178,3 +178,40 @@ def test_startup_loss_multiplier(subtests):
             min_production=min_prod,
         )
         assert np.allclose(mult, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+
+    with subtests.test("max_offtime_hours excludes long blocks from the multiplier"):
+        # Profile has two off-blocks: one 1-hr (warm-qualifying) and one 4-hr
+        # (cold-qualifying). With max_offtime_hours=3, the 4-hr block is excluded
+        # so its following on-block is left at 1.0; the 1-hr block still triggers
+        # a 1-hr delay.
+        profile = np.array([rated, 0.0, rated, rated, 0.0, 0.0, 0.0, 0.0, rated, rated])
+        mult = startup_loss_multiplier(
+            profile,
+            dt,
+            offtime_hours=1.0,
+            delay_hours=1.0,
+            min_production=min_prod,
+            max_offtime_hours=3.0,
+        )
+        # t=1 off (zero), t=2 warm delay (zero), t=4..7 off (zero), t=8..9 left
+        # at 1.0 because the 4-hr block was excluded.
+        assert np.allclose(mult, [1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0])
+
+    with subtests.test("max_offtime_hours=None matches no upper bound"):
+        profile = np.array([rated, 0.0, 0.0, 0.0, rated, rated])
+        mult_no_max = startup_loss_multiplier(
+            profile,
+            dt,
+            offtime_hours=1.0,
+            delay_hours=1.0,
+            min_production=min_prod,
+        )
+        mult_with_none = startup_loss_multiplier(
+            profile,
+            dt,
+            offtime_hours=1.0,
+            delay_hours=1.0,
+            min_production=min_prod,
+            max_offtime_hours=None,
+        )
+        assert np.allclose(mult_no_max, mult_with_none)

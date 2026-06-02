@@ -116,6 +116,7 @@ def startup_loss_multiplier(
     offtime_hours: float,
     delay_hours: float,
     min_production: float,
+    max_offtime_hours: float | None = None,
 ) -> np.ndarray:
     """Per-timestep production multiplier representing start-up losses.
 
@@ -124,6 +125,10 @@ def startup_loss_multiplier(
 
     1. ``offtime_steps = max(ceil(offtime_hours / dt_hours), 1)``. An off-block of
        at least this many consecutive off-timesteps qualifies as a start-up event.
+       When ``max_offtime_hours`` is provided, off-blocks at or above
+       ``ceil(max_offtime_hours / dt_hours)`` consecutive off-timesteps are
+       *excluded* -- this lets a caller chain two passes (e.g. warm + cold) so
+       that each off-block triggers at most one start-up event.
     2. The start-up delay is decomposed into ``full_delay_steps`` whole timesteps
        of zero production and an optional trailing partial timestep with multiplier
        ``1 - partial_delay``.
@@ -144,6 +149,11 @@ def startup_loss_multiplier(
         offtime_hours: minimum continuous off-time (in hours) that triggers a start-up.
         delay_hours: duration of the start-up delay in hours.
         min_production: threshold below which a timestep is considered off.
+        max_offtime_hours: optional upper bound on off-block length, in hours. Off-blocks
+            at or above this length are *excluded* from the multiplier (left at 1.0 on the
+            following on-block). Off-steps within those blocks are still zeroed. Use this
+            to make a "warm-start" pass ignore off-blocks that should be classified as
+            cold-start events instead. ``None`` (the default) imposes no upper bound.
 
     Returns:
         Per-timestep multiplier array in ``[0, 1]`` of the same shape as ``profile``.
@@ -174,7 +184,14 @@ def startup_loss_multiplier(
         return multiplier
 
     block_lengths = off_blocks[:, 1] - off_blocks[:, 0]
-    qualifying = off_blocks[block_lengths >= offtime_steps]
+    qualifying_mask = block_lengths >= offtime_steps
+    if max_offtime_hours is not None:
+        # Exclude blocks that are long enough to be handled by a different (more
+        # severe) start-up pass. ``ceil`` matches the threshold convention used
+        # for ``offtime_steps`` so the two passes partition off-blocks cleanly.
+        max_offtime_steps = max(int(np.ceil(max_offtime_hours / dt_hours)), 1)
+        qualifying_mask &= block_lengths < max_offtime_steps
+    qualifying = off_blocks[qualifying_mask]
 
     for off_end in qualifying[:, 1]:
         if off_end >= n:

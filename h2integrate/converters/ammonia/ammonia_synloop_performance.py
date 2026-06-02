@@ -310,19 +310,35 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             max_production=rated_capacity,
         )
 
-        # 2. Compute the consumption multiplier from the post-ramping profile, before
+        # 2. Enforce turndown as a hard rule: any post-ramping step that would land
+        # below the turndown floor is treated as a plant shutdown for that step
+        # (output goes to 0). Without this, sub-turndown demand would pass through
+        # untouched whenever no start-up dynamics were configured, and the docstring
+        # promise that turndown is a "minimum production floor while the plant is on"
+        # would be violated. With ``turndown_ratio == 0`` (the default) this is a
+        # no-op.
+        nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
+
+        # 3. Compute the consumption multiplier from the post-ramping profile, before
         # start-up losses are applied: feedstocks continue to be consumed during a
         # start-up delay even though no product is leaving the plant.
         on_off_status = (nh3_production >= minimum_production).astype(float)
         consumption_multiplier = on_off_status * nh3_production
 
-        # 3. Apply start-up delays. When both warm and cold passes are configured we
+        # 4. Apply start-up delays. When both warm and cold passes are configured we
         # derive each pass's multiplier from the same post-ramping reference profile
         # so that one pass's zeros are not interpreted by the other as new off-events.
-        # Element-wise multiplication of the two multipliers is commutative, so the
-        # order of cold vs. warm does not affect the result.
+        # Each off-block triggers at most one start-up event: if it is long enough to
+        # qualify as a cold start, the warm pass is told to ignore it via
+        # ``max_offtime_hours``. This avoids double-counting a single physical
+        # shutdown when ``warm_start_delay_hours`` would otherwise extend a cold-start
+        # event further downstream.
         reference_profile = nh3_production.copy()
         combined_multiplier = np.ones(len(reference_profile))
+
+        cold_offtime_hours = (
+            float(inputs["off_time_cold_start"][0]) if "cold_start_delay" in inputs else None
+        )
 
         for offtime_key, delay_key in (
             ("off_time_cold_start", "cold_start_delay"),
@@ -330,12 +346,17 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         ):
             if delay_key not in inputs:
                 continue
+            # When both warm and cold are enabled, the warm pass excludes off-blocks
+            # already claimed by cold. The cold pass always sees every off-block.
+            is_warm_pass = delay_key == "warm_start_delay"
+            max_offtime = cold_offtime_hours if is_warm_pass else None
             combined_multiplier *= startup_loss_multiplier(
                 reference_profile,
                 dt_seconds=self.dt,
                 offtime_hours=float(inputs[offtime_key][0]),
                 delay_hours=float(inputs[delay_key][0]),
                 min_production=minimum_production,
+                max_offtime_hours=max_offtime,
             )
 
         nh3_production = combined_multiplier * nh3_production

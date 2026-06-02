@@ -18,8 +18,9 @@ constraints that approximate the response of a real Haber-Bosch synthesis loop t
 time-varying electricity, hydrogen, or nitrogen supply. Three classes of constraint are available and can be
 enabled independently or together:
 
-- Turndown: a non-zero minimum production floor (as a fraction of rated capacity)
-  while the plant remains "on".
+- Turndown: a non-zero minimum production floor (as a fraction of rated
+  capacity) while the plant remains "on". Demand below this floor causes the
+  plant to shut off entirely (output goes to 0) for that timestep.
 - Ramping: upper bounds on how quickly production can increase or decrease between
   consecutive timesteps, expressed as a fraction of rated capacity per hour.
 - Start-up delays: production losses applied to the first timesteps after the
@@ -46,12 +47,12 @@ config to impact dynamic behavior:
 | `off_hours_warm_start` | hours | Minimum continuous off-time that triggers a warm-start delay. |
 | `warm_start_delay_hours` | hours | Duration of zero (or partial) production after a warm start. |
 
-If both warm and cold start are enabled and the same off-period is long enough to
-trigger both, their multipliers are derived from the *same* pre-startup reference
-profile and combined via element-wise multiplication. This means the order in which
-the two passes are evaluated has no effect on the result, and a long cold-start delay
-will not "fake" a second off-event that triggers an additional warm-start delay
-further downstream.
+If both warm and cold start are enabled, each off-block triggers at most one
+start-up event: an off-block long enough to qualify as a cold start is excluded
+from the warm-start pass, so a single shutdown event is never penalized by both
+delays. The cold and warm multipliers are otherwise derived from the same
+post-ramping reference profile, and the order in which they are evaluated has
+no effect on the result.
 
 ## Worked example
 
@@ -66,7 +67,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import openmdao.api as om
 
-from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
+from h2integrate.converters.ammonia.ammonia_synloop_performance import (
+    AmmoniaSynLoopPerformanceModel,
+)
 
 n_timesteps = 30
 dt = 3600  # seconds (1 hour)
@@ -115,12 +118,12 @@ energy_demand = base_synloop_config["model_inputs"]["performance_parameters"][
 
 # Build a richer demand profile that exercises every dynamic constraint:
 #   - several on/off transitions (some long, some short)
-#   - a sustained mid-level demand region (visible to turndown)
+#   - a sub-turndown demand region (visible to turndown)
 #   - sharp step changes (visible to ramping)
 demand_profile = np.full(n_timesteps, rated_capacity)
 demand_profile[3:7] = 0.0                    # 4-hr off block (triggers cold start)
 demand_profile[10:11] = 0.0                  # 1-hr off (sub-threshold for cold)
-demand_profile[14:16] = 0.3 * rated_capacity  # 2-hr below-turndown demand
+demand_profile[14:16] = 0.1 * rated_capacity  # 2-hr sub-turndown demand
 demand_profile[19:23] = 0.0                  # 4-hr off block (triggers cold start again)
 demand_profile[26:27] = 0.0                  # brief 1-hr dip
 elec_in = demand_profile * energy_demand
@@ -191,19 +194,27 @@ plt.tight_layout()
 plt.show()
 ```
 
-The baseline (gray) curve follows the electricity-limited demand directly. Each
-panel overlays one dynamic constraint:
+The baseline (gray) curve follows the electricity-limited demand directly,
+including the sub-turndown dip at hours 14-15 where the model would run
+at 10% of rated. Each panel overlays one dynamic constraint:
 
-- Ramping caps the per-hour change in production, so transitions across the
-  20% turndown floor and step changes in demand are spread over multiple hours.
-  When ramping down, output is held at the turndown floor rather than going below it.
-- Cold start introduces a 2-hour delay after every off-block longer than 4
-  hours: the first two "on" hours after the long off-period are zeroed before full
-  production resumes.
-- Warm + cold start combines the cold-start behavior with an additional warm-
-  start partial-loss applied to short off-periods (here, 0.5 hr off triggers a 0.5
-  hr warm-start delay), visible as a partial dip on the very first on-hour after
-  each short off-block.
+- Ramping caps the per-hour change in production, so step changes in demand
+  are spread out over multiple hours. The 20% turndown floor interacts with
+  ramping: when ramping down toward an off-state, output is held at the floor
+  rather than continuing below it. The brief sub-turndown demand at hours
+  14-15 is masked here because ramping cannot descend that quickly.
+- Cold start runs with full ramp authority, so output can step directly
+  down. The turndown floor is now visible as a true shutoff: the sub-turndown
+  demand at hours 14-15 forces output to 0. A 2-hour delay also follows every
+  off-block longer than 4 hours -- the first two on-hours after each long
+  off-period are zeroed before full production resumes.
+- Warm + cold start combines the cold-start behavior with an additional
+  warm-start partial-loss applied to short off-periods (here, 0.5 hr off
+  triggers a 0.5 hr warm-start delay), visible as a partial dip on the very
+  first on-hour after each short off-block. Note that the long off-blocks are
+  *only* penalized by the cold-start delay -- the warm-start pass is told to
+  ignore any off-block long enough to qualify as a cold start, so a single
+  shutdown event never triggers both delays.
 
 ## Example configuration
 

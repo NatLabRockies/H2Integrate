@@ -3,7 +3,9 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
+from h2integrate.converters.ammonia.ammonia_synloop_performance import (
+    AmmoniaSynLoopPerformanceModel,
+)
 
 
 @pytest.fixture
@@ -925,7 +927,9 @@ def test_ammonia_ramping_and_startup_losses(
 
 @pytest.mark.unit
 def test_ammonia_config(synloop_config, dynamics_config, subtests):
-    from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceConfig
+    from h2integrate.converters.ammonia.ammonia_synloop_performance import (
+        AmmoniaSynLoopPerformanceConfig,
+    )
 
     base = {
         **synloop_config["model_inputs"]["shared_parameters"],
@@ -1087,3 +1091,180 @@ def test_ammonia_ramping_dt_flexibility(
 
     with subtests.test("Per-timestep ramp delta scales with dt (dt=1800s -> half hourly rate)"):
         assert np.max(step_changes) <= ramp_rate_per_step + 1e-6
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 20)])
+def test_ammonia_turndown_enforced_without_startup(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # Turndown should function as a hard "minimum production while on" floor even
+    # when no start-up dynamics are configured: any demand below the floor must
+    # cause the plant to shut off (output=0) rather than passing through as
+    # sub-turndown production.
+    rated_capacity = synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
+
+    dynamics_config["turndown_ratio"] = 0.3
+    dynamics_config["ramp_up_rate_fraction"] = 1.0
+    dynamics_config["ramp_down_rate_fraction"] = 1.0
+    # Explicitly leave include_cold_start / include_warm_start False.
+
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    dynamics_config["turndown_ratio"] * rated_capacity
+
+    # Build a profile that holds steady at a sub-turndown level for several hours,
+    # bracketed by full-rated production.
+    sub_floor = 0.1 * rated_capacity  # below the 0.3 turndown floor
+    demand = np.concat(
+        [
+            np.full(3, rated_capacity),
+            np.full(4, sub_floor),
+            np.full(n_timesteps - 7, rated_capacity),
+        ]
+    )
+    elec_in = demand * synloop_config["model_inputs"]["performance_parameters"]["energy_demand"]
+    cap_mult = 10.0e3
+    n2 = np.full(n_timesteps, 5.0 * cap_mult)
+    h2 = np.full(n_timesteps, 2.0 * cap_mult)
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config, tech_config=synloop_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec_in, units="kW")
+    prob.run_model()
+
+    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+
+    with subtests.test("Sub-turndown demand is forced to 0 (plant shuts off)"):
+        assert np.all(nh3_out[3:7] == pytest.approx(0.0, abs=1e-9))
+
+    with subtests.test("Above-turndown demand passes through unchanged"):
+        assert np.all(nh3_out[:3] == pytest.approx(rated_capacity, abs=1e-9))
+        assert np.all(nh3_out[7:] == pytest.approx(rated_capacity, abs=1e-9))
+
+    with subtests.test("Feedstock consumption is also zero during sub-turndown shutoff"):
+        elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+        assert np.all(elec_consumed[3:7] == pytest.approx(0.0, abs=1e-9))
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 20)])
+def test_ammonia_warm_cold_mutual_exclusion(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # When both warm and cold are configured and a single off-block qualifies for
+    # both, only the cold-start delay should apply -- the warm-start pass must not
+    # extend the penalty downstream when its delay is longer than cold's.
+    rated_capacity = synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
+
+    # Cold delay (1 hr) is shorter than the warm delay (3 hrs) here, so the bug
+    # before mutual exclusion would cause the long off-block to be penalized for
+    # the longer warm delay (max(cold, warm) = 3 hrs of zero) instead of the
+    # cold-start-only delay (1 hr of zero).
+    dynamics_config["include_cold_start"] = True
+    dynamics_config["off_hours_cold_start"] = 4
+    dynamics_config["cold_start_delay_hours"] = 1
+    dynamics_config["include_warm_start"] = True
+    dynamics_config["off_hours_warm_start"] = 0.5
+    dynamics_config["warm_start_delay_hours"] = 3
+    dynamics_config["turndown_ratio"] = 0.1
+
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    # 5-hr off block (qualifies as cold), then 8-hr on. With mutual exclusion the
+    # off-block is claimed by cold so only the 1-hr cold delay applies.
+    on_off_sequence = np.concat([np.zeros(5), np.ones(8)])
+    min_nh3 = dynamics_config["turndown_ratio"] * rated_capacity
+    nh3_no_dynamics = make_production_sequence(
+        min_nh3, rated_capacity, on_off_sequence, n_timesteps, start_on=True
+    )
+    elec_in = (
+        nh3_no_dynamics * synloop_config["model_inputs"]["performance_parameters"]["energy_demand"]
+    )
+    cap_mult = 10.0e3
+    n2 = np.full(n_timesteps, 5.0 * cap_mult)
+    h2 = np.full(n_timesteps, 2.0 * cap_mult)
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config, tech_config=synloop_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec_in, units="kW")
+    prob.run_model()
+
+    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+
+    # Layout: t=0 rated (initial on), t=1..5 off (zero), t=6 cold delay (zero),
+    # t=7..13 rated. If the warm pass had also claimed the long off-block, we would
+    # see zeros at t=6,7,8 instead of just t=6.
+    with subtests.test("Long off-block is penalized only by cold delay (1 hr zero)"):
+        assert nh3_out[6] == pytest.approx(0.0, abs=1e-9)
+        assert nh3_out[7] == pytest.approx(rated_capacity, abs=1e-9)
+        assert nh3_out[8] == pytest.approx(rated_capacity, abs=1e-9)
+
+    with subtests.test("Off-steps stay zero"):
+        assert np.all(nh3_out[1:6] == pytest.approx(0.0, abs=1e-9))
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 20)])
+def test_ammonia_warm_start_still_applies_to_short_off_blocks(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    # Mutual exclusion should not silence the warm-start pass for off-blocks that
+    # are shorter than the cold-start threshold. A 1-hr off-block should still
+    # trigger the warm-start delay when warm is configured.
+    rated_capacity = synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
+
+    dynamics_config["include_cold_start"] = True
+    dynamics_config["off_hours_cold_start"] = 4
+    dynamics_config["cold_start_delay_hours"] = 2
+    dynamics_config["include_warm_start"] = True
+    dynamics_config["off_hours_warm_start"] = 0.5
+    dynamics_config["warm_start_delay_hours"] = 1
+    dynamics_config["turndown_ratio"] = 0.1
+
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    # Single 1-hr off-block (warm-qualifying, sub-cold-threshold) embedded in a
+    # mostly-on profile.
+    demand = np.full(n_timesteps, rated_capacity)
+    demand[5] = 0.0
+    elec_in = demand * synloop_config["model_inputs"]["performance_parameters"]["energy_demand"]
+    cap_mult = 10.0e3
+    n2 = np.full(n_timesteps, 5.0 * cap_mult)
+    h2 = np.full(n_timesteps, 2.0 * cap_mult)
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config, tech_config=synloop_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", h2, units="kg/h")
+    prob.set_val("comp.nitrogen_in", n2, units="kg/h")
+    prob.set_val("comp.electricity_in", elec_in, units="kW")
+    prob.run_model()
+
+    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+
+    with subtests.test("Short off-block triggers warm-start delay (1 hr zero)"):
+        assert nh3_out[5] == pytest.approx(0.0, abs=1e-9)
+        assert nh3_out[6] == pytest.approx(0.0, abs=1e-9)
+        assert nh3_out[7] == pytest.approx(rated_capacity, abs=1e-9)
