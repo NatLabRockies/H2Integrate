@@ -22,6 +22,8 @@ The three constraint families exposed are:
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 
@@ -89,8 +91,19 @@ def apply_ramping_limits(
         delta = profile[i] - out[i - 1]
         if delta > max_up_per_step:
             out[i] = np.clip(out[i - 1] + max_up_per_step, min_production, max_production)
+
         elif delta < -max_down_per_step:
-            out[i] = np.clip(out[i - 1] - max_down_per_step, min_production, max_production)
+            # delta divided by max_up_per_step.
+            timeback = math.ceil(delta / -max_down_per_step)
+            # need to start adjustment at timeback steps back, and adjust forward until i.
+            if timeback <= 1:
+                out[i] = np.clip(out[i - 1] - max_down_per_step, min_production, max_production)
+            else:
+                # If timeback > 1, we need to adjust the previous timeback steps to
+                # ensure we don't exceed the max ramp down rate.
+                for j in range(max([1, i - timeback]), i):
+                    out[j] = np.clip(out[j - 1] - max_down_per_step, min_production, max_production)
+
         else:
             out[i] = profile[i]
     return out
