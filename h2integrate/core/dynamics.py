@@ -85,10 +85,12 @@ def apply_ramping_limits(
     max_up_per_step = max_ramp_up_per_hr * dt_hours
     max_down_per_step = max_ramp_down_per_hr * dt_hours
 
-    out = np.empty_like(profile, dtype=float)
+    out = np.zeros_like(profile, dtype=float)
     out[0] = profile[0]
     for i in range(1, len(profile)):
         delta = profile[i] - out[i - 1]
+
+        # ramp-up constraint
         if delta > max_up_per_step:
             out[i] = np.clip(out[i - 1] + max_up_per_step, min_production, max_production)
 
@@ -102,10 +104,22 @@ def apply_ramping_limits(
                 # If timeback > 1, we need to adjust the previous timeback steps to
                 # ensure we don't exceed the max ramp down rate.
                 for j in range(max([1, i - timeback]), i):
-                    out[j] = np.clip(out[j - 1] - max_down_per_step, min_production, max_production)
+                    # see if can ramp up
+                    max_out_at_j = np.clip(
+                        out[j - 1] + max_up_per_step, min_production, max_production
+                    )
+                    min_out_at_j = np.clip(
+                        out[j - 1] - max_down_per_step, min_production, max_production
+                    )
+                    n_dt_left = i - j
+                    if ((max_out_at_j - profile[i]) / max_down_per_step) > n_dt_left:
+                        # should not increase, would take too long to decrease
+                        out[j] = min_out_at_j
+                    else:
+                        out[j] = max_out_at_j
 
         else:
-            out[i] = profile[i]
+            out[i] = np.clip(profile[i], min_production, max_production)
     return out
 
 
