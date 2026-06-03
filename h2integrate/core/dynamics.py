@@ -152,11 +152,6 @@ def _on_block_length(is_on: np.ndarray, start_idx: int) -> int:
 
     return int(offindx - onindx)
 
-    # end = start_idx + 1
-    # while end < n and bool(is_on[end]):
-    #     end += 1
-    # return end - start_idx
-
 
 def startup_loss_multiplier(
     profile: np.ndarray,
@@ -208,7 +203,7 @@ def startup_loss_multiplier(
     Returns:
         np.ndarray: Per-timestep multiplier array in ``[0, 1]`` of the same shape as ``profile``.
     """
-    n = len(profile)
+    # set the multiplier to 1 when profile>min_production
     multiplier = np.where(profile < min_production, 0.0, 1.0)
 
     if delay_hours <= 0:
@@ -240,7 +235,7 @@ def startup_loss_multiplier(
     qualifying = off_blocks[qualifying_mask]
 
     for off_end in qualifying[:, 1]:
-        if off_end >= n:
+        if off_end >= len(profile):
             # Off-block extends through the end of the simulation; no on-step exists.
             continue
         on_len = _on_block_length(multiplier, int(off_end))
