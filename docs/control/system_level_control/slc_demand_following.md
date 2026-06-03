@@ -82,16 +82,10 @@ The inputs for technologies classified as `curtailable`, `dispatchable`, and `st
 
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
+- `f"{tech_name}_{tech_output_commodity}_demand"`
 
 The inputs for technologies classified as `feedstock` are:
 - `f"{tech_name}_{commodity}_out"`
-
-
-The outputs for technologies classified as `curtailable`, `dispatchable`, or `storage` and *without a storage controller* are:
-- `f"{tech_name}_{tech_output_commodity}_demand"`
-
-The outputs for technologies classified as `storage` that *have a storage controller* are:
-- `f"{tech_name}_{tech_output_commodity}_demand"`
 
 ## Systems with Heterogeneous Commodities
 

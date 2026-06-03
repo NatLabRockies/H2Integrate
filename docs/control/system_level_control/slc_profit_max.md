@@ -108,11 +108,6 @@ The base inputs for technologies classified as `curtailable`, `dispatchable`, an
 
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
-
-The outputs for `curtailable`, `dispatchable`, or `storage` technologies *without* a storage controller are:
-- `f"{tech_name}_{tech_output_commodity}_demand"`
-
-The outputs for `storage` technologies *with* a storage controller are:
 - `f"{tech_name}_{tech_output_commodity}_demand"`
 
 ## Limitations
