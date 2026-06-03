@@ -15,7 +15,7 @@ parts:
       - file: user_guide/connecting_technologies
       - file: user_guide/defining_sites_and_resources
       - file: user_guide/design_optimization_in_h2i
-      - file: user_guide/design_of_experiments_in_h2i
+      - file: user_guide/parameter_sweep_in_h2i
       - file: user_guide/postprocessing_results
       - file: user_guide/recording_and_loading_data
       - file: user_guide/how_to_interface_with_user_defined_model
