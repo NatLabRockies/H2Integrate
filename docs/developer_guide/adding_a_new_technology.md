@@ -289,9 +289,6 @@ for tech_name, individual_tech_config in self.technology_config['technologies'].
     else:
         tech_group = self.plant.add_subsystem(tech_name, om.Group())
         self.tech_names.append(tech_name)
-
-        # Special HOPP handling for short-term
-        if tech_name in combined_performance_and_cost_model_technologies:
 ```
 
 There are also situations where the models are still related but can be treated separately.
