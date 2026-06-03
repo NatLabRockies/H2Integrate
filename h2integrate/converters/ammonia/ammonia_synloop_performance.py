@@ -300,10 +300,10 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Clamp pre-constraint production into the physically allowed range.
         nh3_production = np.clip(nh3_production, a_min=0.0, a_max=rated_capacity)
 
-        # Set production to zero when its less than the min operating point
-        nh3_production = np.where(nh3_production < minimum_production, 0, nh3_production)
+        # 1. Set production to zero when producing less than the min operating point
+        nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
 
-        # 1. Apply ramping limits on the per-timestep change in production.
+        # 2. Apply ramping limits on the per-timestep change in production.
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
@@ -312,15 +312,6 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             min_production=0.0,
             max_production=rated_capacity,
         )
-
-        # 2. Enforce turndown as a hard rule: any post-ramping step that would land
-        # below the turndown floor is treated as a plant shutdown for that step
-        # (output goes to 0). Without this, sub-turndown demand would pass through
-        # untouched whenever no start-up dynamics were configured, and the docstring
-        # promise that turndown is a "minimum production floor while the plant is on"
-        # would be violated. With ``turndown_ratio == 0`` (the default) this is a
-        # no-op.
-        nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
 
         # 3. Compute the consumption multiplier from the post-ramping profile, before
         # start-up losses are applied: feedstocks continue to be consumed during a
