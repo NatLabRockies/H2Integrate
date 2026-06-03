@@ -145,7 +145,7 @@ def run_with(dynamics):
     prob.set_val("comp.nitrogen_in", n2, units="kg/h")
     prob.set_val("comp.electricity_in", elec_in, units="kW")
     prob.run_model()
-    return prob.get_val("comp.ammonia_out", units="kg/h")
+    return prob
 
 
 baseline = run_with({})
@@ -178,9 +178,12 @@ fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True, dpi=150)
 cases = [
     (axes[0], ramping, "C0", "s", "Ramping 40%/hr (with 20% turndown floor)"),
     (axes[1], cold_only, "C1", "^", "Cold start (with 20% turndown)"),
-    (axes[2], warm_cold, "C3", "D", "Warm + cold start (with 20% turndown)"),
+    (axes[2], warm_cold, "C4", "D", "Warm + cold start (with 20% turndown)"),
 ]
-for ax, profile, color, marker, label in cases:
+for ax, om_prob, color, marker, label in cases:
+    profile = om_prob.get_val("comp.ammonia_out", units="kg/h")
+    turndown = om_prob.get_val("comp.turndown_ratio", units="unitless")*rated_capacity
+    ax.hlines(y=[turndown[0], rated_capacity], xmin=hours[0], xmax=hours[-1], color="tab:red", alpha=0.6, lw=1.0, ls="-.", label="Operating Bounds")
     ax.plot(hours, baseline, "-o", color="0.6", label="No dynamics", markersize=4)
     ax.plot(hours, profile, linestyle="--", marker=marker, color=color, label=label,
             markersize=4)
