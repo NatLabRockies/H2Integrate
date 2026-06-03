@@ -66,7 +66,6 @@ def _build_slc_config(
     demand_tech: str = "demand",
     demand_commodity: str = "electricity",
     demand_commodity_rate_units: str = "kW",
-    storage_techs_with_control: list = [],
 ):
     sources_to_commodities = {
         (e[0], e[-1]) for e in technology_graph.edges(data="commodity") if e[-1] is not None
@@ -76,17 +75,11 @@ def _build_slc_config(
         (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers
     }
 
-    storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
-    storage_techs_to_control = {
-        k: True if k in storage_techs_with_control else False for k in storage_techs
-    }
-
     slc_config = {
         "demand_commodity": demand_commodity,
         "demand_commodity_rate_units": demand_commodity_rate_units,
         "demand_tech": demand_tech,
         "tech_to_commodity": tech_to_commodities,
-        "storage_techs_to_control": storage_techs_to_control,
         "technology_graph": technology_graph,
         "tech_control_classifiers": tech_control_classifiers,
     }

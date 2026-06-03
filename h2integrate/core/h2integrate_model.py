@@ -486,13 +486,26 @@ class H2IntegrateModel:
         Returns:
             dict: Classification dictionary (``slc_config``) with keys:
 
-                - ``"demand_tech"`` (str)
-                - ``"demand_commodity"`` (str)
-                - ``"demand_commodity_rate_units"`` (str | None)
-                - ``"tech_to_commodity"`` (set[tuple[str, str]])
-                - ``"storage_techs_to_control"`` (dict[str, bool])
-                - ``"technology_graph"`` (nx.DiGraph)
-                - ``"tech_control_classifiers"`` (dict[str, str])
+                - ``"demand_tech"`` (str): Name of the demand technology (the tech whose
+                  performance model is a ``DemandComponent``).
+                - ``"demand_commodity"`` (str): Commodity the demand technology consumes
+                  (e.g. ``"electricity"``, ``"hydrogen"``).
+                - ``"demand_commodity_rate_units"`` (str | None): Units string for the
+                  demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
+                  specified in the demand tech config.
+                - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
+                  ``(tech_name, commodity)`` pairs for every technology that the SLC
+                  controls or reads from. Built from outgoing edges of the technology
+                  graph and filtered to fixed, flexible, dispatchable, storage, and
+                  feedstock classifiers.
+                - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
+                  interconnections, with edge attribute ``commodity`` indicating the
+                  commodity carried on each edge. Used by cost-aware controllers to
+                  trace upstream feedstocks.
+                - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name
+                  to its ``_control_classifier`` (one of ``"fixed"``, ``"flexible"``,
+                  ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
+                  the SLC interacts with each tech.
         """
         slc_config = {}
         technologies = self.technology_config.get("technologies", {})
@@ -558,21 +571,6 @@ class H2IntegrateModel:
             if e[-1] is not None
         }
 
-        # Check if storage models have a controller
-        storage_tech_to_control = {}
-        for tech, classifier in self.tech_control_classifiers.items():
-            if classifier == "storage":
-                control_model = (
-                    self.technology_config["technologies"][tech]
-                    .get("control_strategy", {})
-                    .get("model", None)
-                )
-                if control_model is None:
-                    storage_tech_to_control[tech] = False
-                else:
-                    # storage model does use a controller
-                    storage_tech_to_control[tech] = True
-
         # Remove feedstocks and connectors
         control_classifiers_to_connect = [
             "fixed",
@@ -592,7 +590,6 @@ class H2IntegrateModel:
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodity
-        slc_config["storage_techs_to_control"] = storage_tech_to_control
         slc_config["technology_graph"] = self.technology_graph
 
         slc_config["tech_control_classifiers"] = self.tech_control_classifiers
@@ -673,8 +670,6 @@ class H2IntegrateModel:
                 - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name to
                   classifier (``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``,
                   ``"feedstock"``).
-                - ``"storage_techs_to_control"`` (dict[str, bool]): Whether each storage tech
-                  has its own sub-controller.
                 - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
                   interconnections.
 

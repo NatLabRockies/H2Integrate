@@ -24,14 +24,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
     - ``demand_commodity``: the commodity being controlled (e.g. "electricity")
     - ``demand_commodity_rate_units``: units string (or None) of the demand commodity
     - ``demand_tech``: name of the demand technology
-    - ``storage_techs_to_control``: dictionary with keys of the technology names. The value is True
-        if the technology is classified as "storage" and has an attached controller.
-        Otherwise the value is False.
     - ``technology_graph``: directional graph object representation of the
         technology_interconnections found in the ``plant_config``
     - ``tech_to_commodity``: set of tuples formatted as (tech_name, tech_output_commodity)
-    - ``tech_control_classifiers``: dictionary of technologies with keys as the technology names the
-        value as the corresponding control classifier
+    - ``tech_control_classifiers``: dictionary of technologies with key-value pairs of each
+        technology name and its corresponding control classifier.
 
     Controller-specific configuration parameters may be read from
     ``plant_config["system_level_control"]["control_parameters"]``
@@ -53,7 +50,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.commodity = slc_config["demand_commodity"]
         self.commodity_rate_units = slc_config.get("demand_commodity_rate_units", None)
         self.demand_tech = slc_config["demand_tech"]
-        self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
         self.technology_graph = slc_config["technology_graph"]
 
         self.fixed_techs = [
@@ -455,21 +451,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if demand_name not in outputs:
             return
 
-        if self.storage_techs_to_control.get(storage_tech, False):
-            # Storage tech has its own sub-controller: emit a combined demand
-            # signal (always positive) equal to the commodity flowing into
-            # storage from upstream techs plus any remaining demand.
-            upstream_techs = self.get_upstream_techs_for_commodity(storage_tech, commodity)
-            commodity_into_storage = np.zeros(self.n_timesteps)
-            for tech_name in upstream_techs:
-                commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
-
-            outputs[demand_name] = commodity_into_storage + remaining_demand
-        else:
-            # Storage without a sub-controller: emit a charge/discharge
-            # command directly. Charge when remaining demand is negative,
-            # discharge when positive.
-            outputs[demand_name] = remaining_demand
+        # Emit a signed charge/discharge demand signal: charge when remaining
+        # demand is negative, discharge when positive. The storage tech's
+        # controller (passthrough by default) forwards this to the performance
+        # model, which interprets the sign as charge or discharge.
+        outputs[demand_name] = remaining_demand
 
         remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
         return remaining_demand
