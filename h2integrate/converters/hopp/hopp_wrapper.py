@@ -204,5 +204,10 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
 
         outputs["power_capacity_to_interconnect_ratio"] = total_power_capacity / interconnect_kw
 
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. Done before caching so cached outputs already
+        # reflect the post-curtailment values for this set point.
+        self.apply_curtailment(outputs)
+
         # Cache the results for future use if enabled
         self.cache_outputs(inputs, outputs, discrete_inputs)

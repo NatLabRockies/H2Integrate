@@ -86,6 +86,10 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         outputs["rated_electricity_production"] = self.plant_rating_kw
         outputs["capacity_factor"] = aep / self.plant_capacity
 
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
+
 
 class WindArdCostCompatibilityComponent(CostModelBaseClass):
     """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.

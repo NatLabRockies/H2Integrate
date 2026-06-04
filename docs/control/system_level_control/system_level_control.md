@@ -2,6 +2,10 @@
 
 System-level control (SLC) within H2I is meant to operate to control the entire plant with performance and cost feedback driving the operation of the plant or system in a closed-loop. It acts as a supervisory controller meaning that it can work to coordinate the entire system and can work with other technology level controllers.
 
+```{note}
+The SLC framework is *technology-agnostic* and works with any H2I technology (converters, storage, feedstocks, demand components, etc.). It only cares about a technology's [`_control_classifier`](control_classifier.md) and the commodity it produces. To opt a technology in, set `_control_classifier` on its performance model; for `flexible` models, also call `self.apply_curtailment(outputs)` at the end of `compute()`. See the [developer guide on adding a new technology](../../developer_guide/adding_a_new_technology.md) for the full checklist.
+```
+
 The most basic SLC is shown in the figure below, where the SLC receives a demand. Based on that demand it emits a per-technology `{tech_name}_{commodity}_demand` signal to each controlled technology. Each technology group contains a controller that converts that demand into the `{commodity}_set_point` actually consumed by the technology's performance model. From each technology block there is `{commodity}_out` (potentially changed by the set-point signal) that is connected via feedback to the SLC. The SLC will then attempt to converge the system where it will loop through changing the demands in attempts to meet the system demand until the overall system stops changing how much `{commodity}_out` each technology is outputting.
 
 ```{note}

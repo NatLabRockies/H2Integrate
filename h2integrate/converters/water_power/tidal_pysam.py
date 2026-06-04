@@ -229,3 +229,7 @@ class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
         outputs["capacity_factor"] = (
             self.system_model.Outputs.capacity_factor / 100
         )  # divide by 100 to make it unitless
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)

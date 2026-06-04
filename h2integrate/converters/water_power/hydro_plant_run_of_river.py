@@ -86,6 +86,10 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         max_production = plant_capacity_kw * self.n_timesteps * (self.dt / 3600)
         outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
 
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
+
 
 @define(kw_only=True)
 class RunOfRiverHydroCostConfig(CostModelBaseConfig):
