@@ -47,6 +47,11 @@ config to impact dynamic behavior:
 | `off_hours_warm_start` | hours | Minimum continuous off-time that triggers a warm-start delay. |
 | `warm_start_delay_hours` | hours | Duration of zero (or partial) production after a warm start. |
 
+### Order of Operations
+1. Cold start
+2. Warm start
+3. Ramping limits
+
 If both warm and cold start are enabled, each off-block triggers at most one
 start-up event: an off-block long enough to qualify as a cold start is excluded
 from the warm-start pass, so a single shutdown event is never penalized by both
@@ -231,7 +236,7 @@ at 10% of rated. Each panel overlays one dynamic constraint:
   *only* penalized by the cold-start delay -- the warm-start pass is told to
   ignore any off-block long enough to qualify as a cold start, so a single
   shutdown event never triggers both delays.
-- Full dynamics combines the ramping behavior with the cold and warm start behavior. The initial hours 0-3 mirror the ramping behavior plot. The next portion of the behavior is dominated by the cold start constraint hours 3-8. We then see that the ramping constraint limits how much ammonia is output in hour 9 (capped at the 40% ramping per hour). From hour 10 to 11 we see that the ramping constraint impacts the warm start allowing it to ramp up to 20 kg/h output (**SOMETHING WEIRD IS HAPPENING NEED TO FIX, only outputting 10kg/h**). The behavior hours 15-22 mirror the ramping dynamics plot, at hour 22 we can see the cold start delaying the output of the ammonia until hour 25 and then the ramping dynamics again constrain the rest of the ammonia output behavior.
+- The full dynamics combine ramping with cold and warm start effects. Hours 0–3 follow the ramping profile. From hours 3–8, the cold-start constraint dominates. In hour 9, the ramping limit caps ammonia output at 40% per hour. During hours 10–11, the warm start is ramp-limited, reaching 20 kg/h. Hours 15–22 again mirror the ramping dynamics. At hour 22, a cold start delays output until hour 25, after which ramping constraints govern the remaining output behavior.
 
 ## Example configuration
 
