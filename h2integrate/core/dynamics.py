@@ -54,6 +54,20 @@ def check_ramping_at_t0(
     profile,
     max_down_per_step,
 ):
+    """Check that ramp-down constraints are applied at the start of the production profile.
+
+    Args:
+        profile (np.ndarray): 1-D requested production profile.
+        max_down_per_step (float | int): maximum downward ramp rate in
+            production-units / timestep
+
+    Returns:
+        2-element tuple containing
+
+        - **out0** (float | np.ndarray): production profile with applied ramp-down
+            constraints at indices of ``i0``
+        - **i0** (int | slice): indices of production profile that were already modified
+    """
     # if not ramping down at t=0, no special handling required
     delta = profile[1] - profile[0]
     if delta > 0:
