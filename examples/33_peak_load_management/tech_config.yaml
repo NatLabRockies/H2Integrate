@@ -22,6 +22,9 @@ technologies:
         charge_efficiency: 1.0  # percent as decimal
         discharge_efficiency: 1.0  # percent as decimal
         demand_profile: !include demand_profiles/demand_profile.yaml
+      performance_parameters:
+        cop: 0.3
+        # TODO: add remaining performance parameters here
       control_parameters:
         demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml  # demand used to define when the supervisor commands battery dispatch. This may represent an upstream load.
         dispatch_priority_demand_profile: demand_profile_upstream  # demand profile the controller prioritizes when deciding dispatch

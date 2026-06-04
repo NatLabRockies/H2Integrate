@@ -69,6 +69,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
 
     # TODO degradation: add additional parameters for degradation here
+    cop: float = field(validator=gt_zero)
 
     def __attrs_post_init__(self):
         """
