@@ -300,13 +300,26 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Clamp pre-constraint production into the physically allowed range.
         nh3_production = np.clip(nh3_production, a_min=0.0, a_max=rated_capacity)
 
-        # 1. Compute the consumption multiplier from the post-ramping profile, before
+        # 1. Set production to zero when producing less than the min operating point
+        nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
+
+        # 2. Apply ramping limits on the per-timestep change in production.
+        nh3_production = apply_ramping_limits(
+            nh3_production,
+            dt_seconds=self.dt,
+            max_ramp_up_per_hr=max_ramp_up_per_hr,
+            max_ramp_down_per_hr=max_ramp_down_per_hr,
+            min_production=0.0,
+            max_production=rated_capacity,
+        )
+
+        # 3. Compute the consumption multiplier from the post-ramping profile, before
         # start-up losses are applied: feedstocks continue to be consumed during a
         # start-up delay even though no product is leaving the plant.
         on_off_status = (nh3_production >= minimum_production).astype(float)
         consumption_multiplier = on_off_status * nh3_production
 
-        # 2. Apply start-up delays. When both warm and cold passes are configured we
+        # 4. Apply start-up delays. When both warm and cold passes are configured we
         # derive each pass's multiplier from the same post-ramping reference profile
         # so that one pass's zeros are not interpreted by the other as new off-events.
         # Each off-block triggers at most one start-up event: if it is long enough to
@@ -342,10 +355,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         nh3_production = combined_multiplier * nh3_production
 
-        # 3. Set production to zero when producing less than the min operating point
-        nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
-
-        # 4. Apply ramping limits on the per-timestep change in production.
+        # 5. Reinforce ramping constraints after warm start delays.
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
