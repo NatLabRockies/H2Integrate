@@ -58,6 +58,14 @@ def test_apply_ramping_limits(subtests):
 
         assert np.allclose(out, [1.0, 0.0, 0.0])
 
+    with subtests.test("Down-ramp at start clipped to max rate per step and is <= profile"):
+        profile = np.array([10.0, 5.0, 0.0, 0.0])
+        out = apply_ramping_limits(
+            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+        )
+
+        assert np.allclose(out, [2.0, 1.0, 0.0, 0.0])
+
     with subtests.test("Per-step delta scales with dt"):
         profile = np.array([0.0, 10.0, 10.0])
         out = apply_ramping_limits(
