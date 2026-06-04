@@ -10,7 +10,7 @@ technologies:
       shared_parameters:
         system_capacity_kw: 30000
       performance_parameters:
-        n_stacks: 30
+        n_stacks: 1200
         stack_temperature_K: 278  # Not used yet
       cost_parameters:
         capex_per_kw: 150
@@ -34,7 +34,7 @@ technologies:
         commodity: hydrogen
         commodity_rate_units: kg/h
       performance_parameters:
-        rated_capacity: 50.0  # kg/h of hydrogen
+        rated_capacity: 10.0  # kg/h of hydrogen
       cost_parameters:
         cost_year: 2022
         price: 5.0
@@ -50,7 +50,7 @@ technologies:
         commodity: oxygen
         commodity_rate_units: kg/h
       performance_parameters:
-        rated_capacity: 50.0  # kg/h of oxygen
+        rated_capacity: 100.0  # kg/h of oxygen
       cost_parameters:
         cost_year: 2022
         price: 0.5  # $5/kg of oxygen. price is extremely variable

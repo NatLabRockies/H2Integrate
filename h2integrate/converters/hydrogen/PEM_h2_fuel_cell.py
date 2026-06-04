@@ -40,12 +40,12 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
         0.11366667,
         0.244,
         0.454,
-        0.70366667,
-        0.96933333,
-        1.24,
-        1.52666667,
-        1.80333333,
-        2.07,
+        # 0.70366667,
+        # 0.96933333,
+        # 1.24,
+        # 1.52666667,
+        # 1.80333333,
+        # 2.07,
         # 2.32,
         # 2.54333333,
         # 2.73666667,
@@ -58,12 +58,12 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
         0.838,
         0.786,
         0.736,
-        0.686,
-        0.636,
-        0.586,
-        0.53566667,
-        0.486,
-        0.436,
+        # 0.686,
+        # 0.636,
+        # 0.586,
+        # 0.53566667,
+        # 0.486,
+        # 0.436,
         # 0.386,
         # 0.33533333,
         # 0.286,
@@ -76,12 +76,12 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
         95.46666667,
         191.66666667,
         334.33333333,
-        482.66666667,
-        616.66666667,
-        729.0,
-        817.0,
-        875.33333333,
-        902.0,
+        # 482.66666667,
+        # 616.66666667,
+        # 729.0,
+        # 817.0,
+        # 875.33333333,
+        # 902.0,
         # 895.0,
         # 854.33333333,
         # 782.66666667,
@@ -89,16 +89,19 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
     ]
 
     # Change power from mW to kW
-    power_curve = [x / 1e6 for x in power_curve]
-    print(power_curve)
+    power_curve = [x / 1e3 for x in power_curve]
 
     power_I_curve = make_interp_spline(power_curve, current_curve, k=3)
     V_I_curve = make_interp_spline(current_curve, voltage_curve, k=5)
+
+    # convert power_ref to Watts
+    power_ref = power_ref * 1e3
     power_density = power_ref / cell_area / stack_number / n_cells
     print("Power density", power_density)
 
     I_cell = power_I_curve(power_density)
     V_cell = V_I_curve(I_cell)
+    I_cell = I_cell * cell_area
     return I_cell, V_cell
 
 
@@ -237,11 +240,14 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         self.hhv_air = 0  # No higher heating value of air
         self.hhv_water = 0  # ???? Need to check this
 
-        self.n_cells = 100  # number of cells per stack - how to size this??
+        self.max_cell_power_density = 0.000334
         # is n_cells = N_series?
         self.N_series = 1
         self.stack_size = self.config.system_capacity_kw / self.config.n_stacks
-        self.cell_active_area = 1250  # [cm^2]
+        self.cell_active_area = 400  # [cm^2] from Battelle (https://www.energy.gov/sites/prod/files/2018/02/f49/fcto_battelle_mfg_cost_analysis_1%20_to_25kw_pp_chp_fc_systems_jan2017_0.pdf)
+        self.n_cells = round(
+            self.stack_size / (self.cell_active_area * self.max_cell_power_density)
+        )
 
         # PSUEDO CODE:
         """
@@ -269,25 +275,34 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             )
 
             # Calculate hydrogen and oxygen consumed
-            print("I_cell", I_cell)
-            print("f_c", self.f_c)
-            print("M_H2", self.M_H2)
-            print("self.dt", self.dt)
-            H2_consumed_rate = (
-                (I_cell * self.N_series) / (2.0 * self.f_c) * self.M_H2 * self.dt
+            # print("I_cell", I_cell)
+            # print("f_c", self.f_c)
+            # print("M_H2", self.M_H2)
+            H2_consumed_rate = ((I_cell * self.N_series * self.M_H2) / (2.0 * self.f_c)) * (
+                self.dt * self.config.n_stacks
             )  # kg/time step
-            O2_consumed_rate = (
-                (I_cell * self.N_series) / (4.0 * self.f_c) * self.M_O2 * self.dt
+            O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
+                self.dt * self.config.n_stacks
             )  # kg/time step
 
-            print("H2 and O2 consumed per second", H2_consumed_rate, O2_consumed_rate)
+            print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
 
             if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
                 print("Not enough H2 or O2 for this power point")
                 # implement an adjustment based on H2 & O2 available
 
             # Compute electricity from the system
-            electricity_produced = V_cell * I_cell * self.n_cells * self.config.n_stacks
+            electricity_produced = (
+                V_cell * I_cell * self.n_cells * self.config.n_stacks / 1e3
+            )  # Calculated in watts, convert to kW
+            print(
+                "electricity produced:",
+                V_cell,
+                I_cell,
+                self.n_cells,
+                self.config.n_stacks,
+                electricity_produced,
+            )
 
             # Compute H2O out (is this needed?)
 

@@ -15,7 +15,7 @@ technology_interconnections:
   # connect fuel cell to demand component
   - [h2_fuel_cell, electricity_load_demand, electricity, cable]
 plant:
-  plant_life: 1
+  plant_life: 2
 finance_parameters:
   finance_groups:
     finance_model: ProFastLCO
