@@ -23,21 +23,27 @@ wind_out = h2i.prob.get_val("plant.wind.electricity_out")[:n_hours]
 ng_out = h2i.prob.get_val("plant.natural_gas_plant.electricity_out", units="kW")[:n_hours]
 curtailed = h2i.prob.get_val("plant.electrical_load_demand.unused_electricity_out")[:n_hours]
 
-fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
+fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
 
-axes[0].plot(hours, demand, color="black")
-axes[0].set_ylabel("Demand (kW)")
+# Stacked bar chart of supply per hour with demand overlay
+axes[0].bar(hours, wind_out, width=1.0, color="tab:blue", label="Wind", align="edge")
+axes[0].bar(
+    hours,
+    ng_out,
+    width=1.0,
+    bottom=wind_out,
+    color="tab:orange",
+    label="Natural Gas",
+    align="edge",
+)
+axes[0].plot(hours, demand, color="black", linewidth=1.5, linestyle="--", label="Demand")
+axes[0].set_ylabel("Power (kW)")
 axes[0].set_title("System-Level Control: First 100 Hours")
+axes[0].legend(loc="upper right")
 
-axes[1].plot(hours, wind_out, color="tab:blue")
-axes[1].set_ylabel("Wind (kW)")
-
-axes[2].plot(hours, ng_out, color="tab:orange")
-axes[2].set_ylabel("Natural Gas (kW)")
-
-axes[3].plot(hours, curtailed, color="tab:red")
-axes[3].set_ylabel("Curtailed (kW)")
-axes[3].set_xlabel("Hour")
+axes[1].bar(hours, curtailed, width=1.0, color="tab:red", align="edge")
+axes[1].set_ylabel("Curtailed (kW)")
+axes[1].set_xlabel("Hour")
 
 for ax in axes:
     ax.grid(True, alpha=0.3)

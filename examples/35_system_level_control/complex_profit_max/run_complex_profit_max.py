@@ -117,39 +117,43 @@ price = sell_price[:n_hours]
 # ---------------------------------------------------------------------------
 fig, axes = plt.subplots(5, 1, figsize=(16, 16), sharex=True)
 
-# Panel 1: stacked supply vs demand
-axes[0].fill_between(hours, 0, wind_out, alpha=0.7, color="tab:blue", label="Wind")
-axes[0].fill_between(
+# Panel 1: stacked bar supply vs demand
+axes[0].bar(hours, wind_out, width=1.0, color="tab:blue", label="Wind", align="edge")
+axes[0].bar(
     hours,
-    wind_out,
-    wind_out + solar_out,
-    alpha=0.7,
+    solar_out,
+    width=1.0,
+    bottom=wind_out,
     color="gold",
     label="Solar",
+    align="edge",
 )
-axes[0].fill_between(
+axes[0].bar(
     hours,
-    wind_out + solar_out,
-    wind_out + solar_out + batt_discharge,
-    alpha=0.7,
+    batt_discharge,
+    width=1.0,
+    bottom=wind_out + solar_out,
     color="tab:purple",
     label="Battery",
+    align="edge",
 )
-axes[0].fill_between(
+axes[0].bar(
     hours,
-    wind_out + solar_out + batt_discharge,
-    wind_out + solar_out + batt_discharge + ng_out,
-    alpha=0.7,
+    ng_out,
+    width=1.0,
+    bottom=wind_out + solar_out + batt_discharge,
     color="tab:orange",
     label="Natural Gas",
+    align="edge",
 )
-axes[0].fill_between(
+axes[0].bar(
     hours,
-    wind_out + solar_out + batt_discharge + ng_out,
-    wind_out + solar_out + batt_discharge + ng_out + grid_out,
-    alpha=0.7,
+    grid_out,
+    width=1.0,
+    bottom=wind_out + solar_out + batt_discharge + ng_out,
     color="tab:gray",
     label="Grid Buy",
+    align="edge",
 )
 axes[0].plot(hours, demand, "k--", linewidth=1.5, label="Demand")
 axes[0].set_ylabel("Power (kW)")

@@ -36,23 +36,25 @@ price = h2i.prob.get_val("system_level_controller.commodity_sell_price")[:n_hour
 # -- Plot --
 fig, axes = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
 
-# Panel 1: stacked supply vs demand
-axes[0].fill_between(hours, 0, ng_out, alpha=0.7, color="tab:orange", label="Natural Gas")
-axes[0].fill_between(
+# Panel 1: stacked bar supply vs demand
+axes[0].bar(hours, ng_out, width=1.0, color="tab:orange", label="Natural Gas", align="edge")
+axes[0].bar(
     hours,
-    ng_out,
-    ng_out + batt_discharge,
-    alpha=0.7,
+    batt_discharge,
+    width=1.0,
+    bottom=ng_out,
     color="tab:purple",
     label="Battery Discharge",
+    align="edge",
 )
-axes[0].fill_between(
+axes[0].bar(
     hours,
-    ng_out + batt_discharge,
-    ng_out + batt_discharge + wind_out,
-    alpha=0.7,
+    wind_out,
+    width=1.0,
+    bottom=ng_out + batt_discharge,
     color="tab:blue",
     label="Wind",
+    align="edge",
 )
 axes[0].plot(hours, demand, "k--", linewidth=1.5, label="Demand")
 axes[0].set_ylabel("Power (kW)")
@@ -72,7 +74,7 @@ axes[2].set_title("Electricity Sell Price vs NG Marginal Cost")
 axes[2].legend(loc="upper right")
 
 # Panel 4: curtailed energy
-axes[3].plot(hours, curtailed, color="tab:gray")
+axes[3].bar(hours, curtailed, width=1.0, color="tab:gray", align="edge")
 axes[3].set_ylabel("Curtailed (kW)")
 axes[3].set_xlabel("Hour")
 axes[3].set_title("Curtailed Electricity")

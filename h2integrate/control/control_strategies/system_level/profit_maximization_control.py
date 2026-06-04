@@ -28,18 +28,28 @@ class ProfitMaximizationControl(SystemLevelControlBase):
        Demand may go unmet if dispatch is unprofitable.
 
     Configuration:
-        ``plant_config["system_level_control"]["commodity_sell_price"]``
-        must be set as either a numeric value ($/(commodity_rate_unit*h),
-        e.g. $/kWh) or the name of a finance group (e.g. ``"profast_npv"``)
+        ``plant_config["system_level_control"]["control_parameters"]["commodity_sell_price"]``
+        must be set as either a numeric value (``$/(commodity_rate_unit*h)``,
+        e.g. ``$/kWh``) or the name of a finance group (e.g. ``"profast_npv"``)
         whose ``model_inputs.commodity_sell_price`` will be used.
 
     Marginal costs are configured via ``cost_per_tech`` in the
     ``system_level_control["control_parameters"]`` section of ``plant_config``.  Each
     dispatchable technology's entry can be:
 
-    - A numeric value ($/commodity_unit, e.g. 0.05 for $0.05/kWh)
-    - ``"buy_price"`` — use the technology's purchase price
-    - ``"VarOpEx"``   — derive from VarOpEx / total production
+    - A numeric value (``$/(commodity_rate_unit*h)``, e.g. ``0.05`` for
+      ``$0.05/kWh``) used directly as a constant marginal cost.
+    - ``"buy_price"`` — use the technology's own purchase price input
+      (e.g. ``electricity_buy_price`` for a Grid tech, ``price`` for a
+      Feedstock tech). The default is read from the tech's cost config
+      and may be overridden at runtime via ``prob.set_val()``.
+    - ``"VarOpEx"`` — derive the marginal cost from the technology's own
+      ``VarOpEx`` output divided by its annualized total production.
+    - ``"feedstock"`` — sum the ``VarOpEx`` of all feedstock technologies
+      that are upstream of the dispatchable tech in
+      ``technology_interconnections`` (using graph ancestors, so feedstocks
+      behind intermediate components like combiners are included), and
+      divide by the dispatchable tech's annualized total production.
     """
 
     def _resolve_sell_price(self, config):

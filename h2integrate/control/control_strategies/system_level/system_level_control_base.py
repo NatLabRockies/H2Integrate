@@ -7,8 +7,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
     """Base class for system-level controllers.
 
     Provides common setup logic shared by all system-level control strategies:
-    demand input, fixed/flexible/dispatchable/storage technology I/O creation,
-    and technology classification reading from ``plant_config`` and ``slc_config``
+    demand input, fixed/flexible/dispatchable/storage/feedstock technology I/O
+    creation, and technology classification reading from ``plant_config`` and
+    ``slc_config``.
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
 
@@ -28,10 +29,26 @@ class SystemLevelControlBase(om.ExplicitComponent):
         technology_interconnections found in the ``plant_config``
     - ``tech_to_commodity``: set of tuples formatted as (tech_name, tech_output_commodity)
     - ``tech_control_classifiers``: dictionary of technologies with key-value pairs of each
-        technology name and its corresponding control classifier.
+        technology name and its corresponding control classifier (one of
+        ``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``, or
+        ``"feedstock"``).
 
     Controller-specific configuration parameters may be read from
-    ``plant_config["system_level_control"]["control_parameters"]``
+    ``plant_config["system_level_control"]["control_parameters"]``.
+
+    Cost-aware subclasses (e.g. ``CostMinimizationControl``,
+    ``ProfitMaximizationControl``) call ``_setup_marginal_costs()`` to register
+    marginal-cost inputs for each dispatchable technology based on the
+    ``cost_per_tech`` mapping. Supported values per dispatchable tech are:
+
+    - A numeric value (constant marginal cost in ``$/(commodity_rate_unit*h)``).
+    - ``"buy_price"`` — use the technology's own purchase price input.
+    - ``"VarOpEx"`` — derive marginal cost from the tech's own ``VarOpEx``
+      divided by its annualized total production.
+    - ``"feedstock"`` — sum ``VarOpEx`` from all feedstock technologies
+      upstream of the tech in ``technology_interconnections`` (graph
+      ancestors, so feedstocks behind intermediate components are included)
+      and divide by the dispatchable tech's annualized total production.
     """
 
     def initialize(self):

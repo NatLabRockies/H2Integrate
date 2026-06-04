@@ -27,23 +27,25 @@ curtailed = h2i.prob.get_val("plant.electrical_load_demand.unused_electricity_ou
 
 fig, axes = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
-# Stacked area: wind + battery discharge + NG = total supply
-axes[0].fill_between(hours, 0, wind_out, alpha=0.7, color="tab:blue", label="Wind")
-axes[0].fill_between(
+# Stacked bar chart: wind + battery discharge + NG = total supply
+axes[0].bar(hours, wind_out, width=1.0, color="tab:blue", label="Wind", align="edge")
+axes[0].bar(
     hours,
-    wind_out,
-    wind_out + batt_discharge,
-    alpha=0.7,
+    batt_discharge,
+    width=1.0,
+    bottom=wind_out,
     color="tab:purple",
     label="Battery Discharge",
+    align="edge",
 )
-axes[0].fill_between(
+axes[0].bar(
     hours,
-    wind_out + batt_discharge,
-    wind_out + batt_discharge + ng_out,
-    alpha=0.7,
+    ng_out,
+    width=1.0,
+    bottom=wind_out + batt_discharge,
     color="tab:orange",
     label="Natural Gas",
+    align="edge",
 )
 axes[0].plot(hours, demand, color="black", linewidth=1.5, linestyle="--", label="Demand")
 axes[0].set_ylabel("Power (kW)")
@@ -53,7 +55,7 @@ axes[0].legend()
 axes[1].plot(hours, batt_soc, color="tab:cyan")
 axes[1].set_ylabel("Battery SOC (%)")
 
-axes[2].plot(hours, curtailed, color="tab:red")
+axes[2].bar(hours, curtailed, width=1.0, color="tab:red", align="edge")
 axes[2].set_ylabel("Curtailed (kW)")
 axes[2].set_xlabel("Hour")
 
