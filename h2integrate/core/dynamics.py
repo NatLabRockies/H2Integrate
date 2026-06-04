@@ -50,6 +50,34 @@ def find_off_blocks(profile: np.ndarray, min_production: float) -> np.ndarray:
     return edges.reshape(-1, 2)
 
 
+def check_ramping_at_t0(
+    profile,
+    max_down_per_step,
+):
+    # if not ramping down at t=0, no special handling required
+    delta = profile[1] - profile[0]
+    if delta >= 0:
+        return profile[0]
+
+    # get the indices where we're consistently ramping down
+    # ramp_down_indices = np.argwhere(np.diff(profile)<0).flatten()
+    # first_ramp_down_event_end = np.ediff1d(
+    # np.r_[0, np.diff(profile) < 0, 0]).nonzero()[0].reshape(-1, 2)[0][-1]
+
+    # if ramp constraint is never violated, then no special hnadling
+    # if not any(k<max_down_per_step for k in np.diff(profile)[:first_ramp_down_event_end]):
+    #     return profile[0]
+
+    # # if we have enough time to ramp down, then no special handling required
+    # max_ramp_down_indx = np.argmin(np.diff(profile)[:first_ramp_down_event_end])
+    # denom = first_ramp_down_event_end - max_ramp_down_indx
+    # time_for_max_rampdown = math.ceil(np.diff(profile)[max_ramp_down_indx] / denom)
+    # if time_for_max_rampdown>(first_ramp_down_event_end - max_ramp_down_indx):
+    #     return profile[0], 0
+
+    return np.min([profile[1] + max_down_per_step, profile[0]])
+
+
 def apply_ramping_limits(
     profile: np.ndarray,
     dt_seconds: float,
@@ -85,8 +113,10 @@ def apply_ramping_limits(
     max_up_per_step = max_ramp_up_per_hr * dt_hours
     max_down_per_step = max_ramp_down_per_hr * dt_hours
 
+    out0 = check_ramping_at_t0(profile, max_down_per_step)
+
     out = np.zeros_like(profile, dtype=float)
-    out[0] = profile[0]
+    out[0] = out0
     for i in range(1, len(profile)):
         # get the change over time of the actual production and
         # constrained production
