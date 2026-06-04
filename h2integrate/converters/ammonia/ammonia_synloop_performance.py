@@ -354,6 +354,17 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             )
 
         nh3_production = combined_multiplier * nh3_production
+
+        # 5. Reinforce ramping constraints after warm start delays.
+        nh3_production = apply_ramping_limits(
+            nh3_production,
+            dt_seconds=self.dt,
+            max_ramp_up_per_hr=max_ramp_up_per_hr,
+            max_ramp_down_per_hr=max_ramp_down_per_hr,
+            min_production=0.0,
+            max_production=rated_capacity,
+        )
+
         return nh3_production, consumption_multiplier
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
