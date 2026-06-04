@@ -8,9 +8,9 @@ technologies:
       model: H2FuelCellCostModel
     model_inputs:
       shared_parameters:
-        system_capacity_kw: 30000
+        system_capacity_kw: 1500
       performance_parameters:
-        n_stacks: 1200
+        n_stacks: 60
         stack_temperature_K: 278  # Not used yet
       cost_parameters:
         capex_per_kw: 150
@@ -23,7 +23,7 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        demand_profile: 20000
+        demand_profile: 1000
   h2_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

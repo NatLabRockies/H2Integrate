@@ -10,7 +10,7 @@ model = H2IntegrateModel("37_pem_fc.yaml")
 model.setup()
 
 # Set fuel cell demand profile
-demand_profile = np.ones(8760) * 20000
+demand_profile = np.ones(8760) * 1000
 model.prob.set_val("h2_fuel_cell.electricity_set_point", demand_profile, units="kW")
 
 # Run model

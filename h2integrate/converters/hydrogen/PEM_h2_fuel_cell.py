@@ -88,7 +88,7 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
         # 684.33333333,
     ]
 
-    # Change power from mW to kW
+    # Change power from mW to W
     power_curve = [x / 1e3 for x in power_curve]
 
     power_I_curve = make_interp_spline(power_curve, current_curve, k=3)
@@ -96,6 +96,7 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
     # convert power_ref to Watts
     power_ref = power_ref * 1e3
+    print(power_ref, cell_area, stack_number, n_cells)
     power_density = power_ref / cell_area / stack_number / n_cells
     print("Power density", power_density)
 
@@ -279,13 +280,14 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             # print("f_c", self.f_c)
             # print("M_H2", self.M_H2)
             H2_consumed_rate = ((I_cell * self.N_series * self.M_H2) / (2.0 * self.f_c)) * (
-                self.dt * self.config.n_stacks
+                self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
             O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
-                self.dt * self.config.n_stacks
+                self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
             print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
+            print(self.stack_size, self.n_cells)
 
             if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
                 print("Not enough H2 or O2 for this power point")
