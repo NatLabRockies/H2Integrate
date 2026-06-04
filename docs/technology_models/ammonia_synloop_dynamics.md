@@ -184,7 +184,7 @@ for ax, om_prob, color, marker, label in cases:
     profile = om_prob.get_val("comp.ammonia_out", units="kg/h")
     turndown = om_prob.get_val("comp.turndown_ratio", units="unitless")*rated_capacity
     ax.hlines(y=[turndown[0], rated_capacity], xmin=hours[0], xmax=hours[-1], color="tab:red", alpha=0.6, lw=1.0, ls="-.", label="Operating Bounds")
-    ax.plot(hours, baseline, "-o", color="0.6", label="No dynamics", markersize=4)
+    ax.plot(hours, baseline.get_val("comp.ammonia_out",units="kg/h"), "-o", color="0.6", label="No dynamics", markersize=4)
     ax.plot(hours, profile, linestyle="--", marker=marker, color=color, label=label,
             markersize=4)
     ax.set_ylabel("NH$_3$ [kg/h]")
