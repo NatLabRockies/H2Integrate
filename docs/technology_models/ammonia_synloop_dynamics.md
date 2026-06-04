@@ -37,7 +37,7 @@ config to impact dynamic behavior:
 
 | Parameter | Units | Description |
 | --- | --- | --- |
-| `turndown_ratio` | fraction in [0, 1] | Minimum production while the plant is "on", as a fraction of rated capacity. |
+| `turndown_ratio` | fraction in [0, 1] | Minimum production while the plant is "on", as a fraction of rated capacity. Below this value the plant is "off". |
 | `ramp_up_rate_fraction` | fraction in [0, 1] | Maximum hourly ramp-up rate, as a fraction of rated capacity per hour. |
 | `ramp_down_rate_fraction` | fraction in [0, 1] | Maximum hourly ramp-down rate, as a fraction of rated capacity per hour. |
 | `include_cold_start` | bool | Enable cold-start delay losses. |
@@ -51,8 +51,9 @@ If both warm and cold start are enabled, each off-block triggers at most one
 start-up event: an off-block long enough to qualify as a cold start is excluded
 from the warm-start pass, so a single shutdown event is never penalized by both
 delays. The cold and warm multipliers are otherwise derived from the same
-post-ramping reference profile, and the order in which they are evaluated has
-no effect on the result.
+pre-ramping reference profile, and the order in which they are evaluated has
+no effect on the result. After the cold and warm start multipliers are applied
+to the profile the ramping dynamics are evaluated on the profile.
 
 ## Worked example
 
@@ -169,16 +170,28 @@ warm_cold = run_with({
     "off_hours_warm_start": 0.5,
     "warm_start_delay_hours": 0.5,
 })
+full_dynamics = run_with({
+    "turndown_ratio": 0.2,
+    "ramp_up_rate_fraction": 0.4,
+    "ramp_down_rate_fraction": 0.4,
+    "include_cold_start": True,
+    "off_hours_cold_start": 4,
+    "cold_start_delay_hours": 2,
+    "include_warm_start": True,
+    "off_hours_warm_start": 0.5,
+    "warm_start_delay_hours": 0.5,
+})
 ```
 
 ```{code-cell} ipython3
 hours = np.arange(n_timesteps)
-fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True, dpi=150)
+fig, axes = plt.subplots(4, 1, figsize=(8, 11), sharex=True, dpi=150)
 
 cases = [
     (axes[0], ramping, "C0", "s", "Ramping 40%/hr (with 20% turndown floor)"),
     (axes[1], cold_only, "C1", "^", "Cold start (with 20% turndown)"),
     (axes[2], warm_cold, "C4", "D", "Warm + cold start (with 20% turndown)"),
+    (axes[3], full_dynamics, "C5", "s", "Full dynamics (Ramping + Warm + Cold Start)"),
 ]
 for ax, om_prob, color, marker, label in cases:
     profile = om_prob.get_val("comp.ammonia_out", units="kg/h")
@@ -197,18 +210,18 @@ plt.tight_layout()
 plt.show()
 ```
 
-The baseline (gray) curve follows the electricity-limited demand directly,
+The baseline (gray) curve follows the electricity-limited ammonia output directly,
 including the sub-turndown dip at hours 14-15 where the model would run
 at 10% of rated. Each panel overlays one dynamic constraint:
 
-- Ramping caps the per-hour change in production, so step changes in demand
+- Ramping caps the per-hour change in production, so step changes in ammonia output
   are spread out over multiple hours. The 20% turndown floor interacts with
   ramping: when ramping down toward an off-state, output is held at the floor
-  rather than continuing below it. The brief sub-turndown demand at hours
-  14-15 is masked here because ramping cannot descend that quickly.
+  rather than continuing below it. At hours 14-15 the ammonia output goes to zero
+  because the operating point is below the turndown floor (minimum operating point while on).
 - Cold start runs with full ramp authority, so output can step directly
   down. The turndown floor is now visible as a true shutoff: the sub-turndown
-  demand at hours 14-15 forces output to 0. A 2-hour delay also follows every
+  at hours 14-15 forces output to zero. A 2-hour delay also follows every
   off-block longer than 4 hours -- the first two on-hours after each long
   off-period are zeroed before full production resumes.
 - Warm + cold start combines the cold-start behavior with an additional
@@ -218,6 +231,7 @@ at 10% of rated. Each panel overlays one dynamic constraint:
   *only* penalized by the cold-start delay -- the warm-start pass is told to
   ignore any off-block long enough to qualify as a cold start, so a single
   shutdown event never triggers both delays.
+- Full dynamics combines the ramping behavior with the cold and warm start behavior. The initial hours 0-3 mirror the ramping behavior plot. The next portion of the behavior is dominated by the cold start constraint hours 3-8. We then see that the ramping constraint limits how much ammonia is output in hour 9 (capped at the 40% ramping per hour). From hour 10 to 11 we see that the ramping constraint impacts the warm start allowing it to ramp up to 20 kg/h output (**SOMETHING WEIRD IS HAPPENING NEED TO FIX, only outputting 10kg/h**). The behavior hours 15-22 mirror the ramping dynamics plot, at hour 22 we can see the cold start delaying the output of the ammonia until hour 25 and then the ramping dynamics again constrain the rest of the ammonia output behavior.
 
 ## Example configuration
 
