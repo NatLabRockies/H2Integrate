@@ -76,6 +76,7 @@ from h2integrate.converters.water.desal.desalination import (
 from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.hydrogen.basic_cost_model import BasicElectrolyzerCostModel
 from h2integrate.converters.hydrogen.pem_electrolyzer import ECOElectrolyzerPerformanceModel
+from h2integrate.converters.hydrogen.PEM_h2_fuel_cell import PEMH2FuelCellPerformanceModel
 from h2integrate.converters.solar.atb_res_com_pv_cost import ATBResComPVCostModel
 from h2integrate.converters.solar.atb_utility_pv_cost import ATBUtilityPVCostModel
 from h2integrate.converters.iron.martin_mine_cost_model import MartinIronMineCostComponent
@@ -224,6 +225,7 @@ supported_models = {
     "WOMBATElectrolyzerModel": WOMBATElectrolyzerModel,
     "LinearH2FuelCellPerformanceModel": LinearH2FuelCellPerformanceModel,
     "H2FuelCellCostModel": H2FuelCellCostModel,
+    "PEMH2FuelCellPerformanceModel": PEMH2FuelCellPerformanceModel,
     "SteamMethaneReformerPerformanceModel": SteamMethaneReformerPerformanceModel,
     "SteamMethaneReformerCostModel": SteamMethaneReformerCostModel,
     "SimpleASUCostModel": SimpleASUCostModel,
