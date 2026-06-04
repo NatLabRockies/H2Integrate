@@ -237,7 +237,7 @@ Once the configs are loaded into H2I and the model is instantiated, you can dire
 This is an advanced approach that isn't necessarily recommended for basic users, but showcases the level of flexibility possible with H2I.
 
 ```{note}
-The same behavior shown here with a manual for-loop can be achieved by using the [design of experiments capability](design_of_experiments_in_h2i.md).
+The same behavior shown here with a manual for-loop can be achieved more easily by using the [parameter sweep capability](parameter_sweep_in_h2i.md), which is the recommended approach for most users.
 ```
 
 ```{code-cell} ipython3
