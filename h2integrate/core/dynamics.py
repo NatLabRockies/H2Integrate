@@ -106,7 +106,7 @@ def apply_ramping_limits(
     min_production_rate: float,
     max_production_rate: float,
     commodity_rate_units: str,
-    commodity_amount_units: str,
+    commodity_amount_units: str | None,
 ) -> np.ndarray:
     """Clip each step in ``profile`` to a maximum per-timestep ramp rate.
 
@@ -200,7 +200,14 @@ def apply_ramping_limits(
         # No constraint on ramping
         else:
             out[i] = np.clip(profile[i], min_production, max_production)
-    return out
+
+    # convert units back to rate units
+    out_rate = units.convert_units(
+        out,
+        f"({commodity_amount_units})/({dt_seconds}*s)",
+        commodity_rate_units,
+    )
+    return out_rate
 
 
 def _on_block_length(is_on: np.ndarray, start_idx: int) -> int:

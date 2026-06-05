@@ -53,14 +53,28 @@ def test_apply_ramping_limits(subtests):
     with subtests.test("In-bounds steps pass through unchanged"):
         profile = np.array([0.0, 1.0, 2.0, 1.5])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, profile)
 
     with subtests.test("Up-ramp clipped to max rate per step"):
         profile = np.array([0.0, 10.0, 10.0])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         # Step 1: 0 -> requested 10, capped at +2 -> 2. Step 2: 2 -> requested 10, capped -> 4.
         assert np.allclose(out, [0.0, 2.0, 4.0])
@@ -68,7 +82,14 @@ def test_apply_ramping_limits(subtests):
     with subtests.test("Down-ramp clipped to max rate per step and is <= profile"):
         profile = np.array([10.0, 0.0, 0.0])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
 
         assert np.allclose(out, [1.0, 0.0, 0.0])
@@ -76,7 +97,14 @@ def test_apply_ramping_limits(subtests):
     with subtests.test("Down-ramp at start clipped to max rate per step and is <= profile"):
         profile = np.array([10.0, 5.0, 0.0, 0.0])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
 
         assert np.allclose(out, [2.0, 1.0, 0.0, 0.0])
@@ -86,13 +114,16 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt_seconds=1800.0,
-            max_ramp_up_per_hr=rate_up,
-            max_ramp_down_per_hr=rate_down,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=rate_up,
+            max_ramp_down_rate=rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
-        # dt_hours = 0.5, max_up_per_step = 1.0
-        assert np.allclose(out, [0.0, 1.0, 2.0])
+        # dt_hours = 0.5, max_up_per_step = 1.0 kg/timestep = 2.0 kg/h
+        # out is in kg/h
+        assert np.allclose(out, [0.0, 2.0, 4.0])
 
     with subtests.test("Ramp-limited steps are clipped to [min, max]"):
         # Down-ramping toward 0 below min_production=2: steps clipped to min.
@@ -100,10 +131,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=10.0,
-            max_ramp_down_per_hr=1.0,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=10.0,
+            max_ramp_down_rate=1.0,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
 
         assert np.allclose(out, [1.0, 0.0, 0.0, 0.0])
@@ -111,7 +144,14 @@ def test_apply_ramping_limits(subtests):
     with subtests.test("First timestep is taken from input unchanged"):
         profile = np.array([7.5, 7.5])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert out[0] == 7.5
 
@@ -121,10 +161,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=5.0,
-            max_ramp_down_per_hr=5.0,
-            min_production=0.0,
-            max_production=8.0,
+            max_ramp_up_rate=5.0,
+            max_ramp_down_rate=5.0,
+            min_production_rate=0.0,
+            max_production_rate=8.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, [5.0, 7.0, 8.0, 8.0])
 
@@ -134,24 +176,40 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=1.0,
-            max_ramp_down_per_hr=5.0,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=1.0,
+            max_ramp_down_rate=5.0,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, [0.0, 1.0, 2.0, 0.0, 0.0, 0.0])
 
     with subtests.test("All zeros pass through unchanged"):
         profile = np.zeros(5)
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, np.zeros(5))
 
     with subtests.test("Sustained max production passes through unchanged"):
         profile = np.full(5, 10.0)
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, np.full(5, 10.0))
 
@@ -159,7 +217,14 @@ def test_apply_ramping_limits(subtests):
         # Last timestep requests a steep drop; rate-limit clips it to one step's worth.
         profile = np.array([5.0, 5.0, 5.0, 0.0])
         out = apply_ramping_limits(
-            profile, dt, rate_up, rate_down, min_production=0.0, max_production=10.0
+            profile,
+            dt,
+            rate_up,
+            rate_down,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         # Steady run -> single down-step. Initial value is back-propagated by
         # check_ramping_at_t0 because the leading down-event spans the whole array.
@@ -172,10 +237,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=1.0,
-            max_ramp_down_per_hr=1.0,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=1.0,
+            max_ramp_down_rate=1.0,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         # The very last in-bounds step is clipped to max_down=1, but here the
         # request is exactly at the rate limit so it falls through and the final
@@ -184,16 +251,18 @@ def test_apply_ramping_limits(subtests):
 
     with subtests.test("Sub-hour dt scales the per-step ramp limit"):
         # dt=900s -> 0.25 h; rate=4/hr -> 1 unit per step.
-        profile = np.array([0.0, 4.0, 4.0, 4.0])
+        profile = np.array([0.0, 16.0, 16.0, 16.0])  # kg/h
         out = apply_ramping_limits(
             profile,
-            dt_seconds=900.0,
-            max_ramp_up_per_hr=4.0,
-            max_ramp_down_per_hr=4.0,
-            min_production=0.0,
-            max_production=10.0,
+            dt_seconds=900.0,  # 15 min
+            max_ramp_up_rate=4.0,  # 4 kg/h, 1 kg/dt
+            max_ramp_down_rate=4.0,  # kg/h, 1 kg/dt
+            min_production_rate=0.0,
+            max_production_rate=16.0,  #
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
-        assert np.allclose(out, [0.0, 1.0, 2.0, 3.0])
+        assert np.allclose(out, [0.0, 4.0, 8.0, 12.0])
 
     with subtests.test("Turndown floor (min_production>0) raises ramp-limited steps to floor"):
         # min_production acts as a hard floor for any step that goes through the
@@ -203,10 +272,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=1.0,
-            max_ramp_down_per_hr=1.0,
-            min_production=2.0,
-            max_production=10.0,
+            max_ramp_up_rate=1.0,
+            max_ramp_down_rate=1.0,
+            min_production_rate=2.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, [1.0, 2.0, 2.0, 0.0, 2.0])
 
@@ -218,10 +289,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=5.0,
-            max_ramp_down_per_hr=1.0,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=5.0,
+            max_ramp_down_rate=1.0,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, np.zeros(6))
 
@@ -232,10 +305,12 @@ def test_apply_ramping_limits(subtests):
         out = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=6.0,
-            max_ramp_down_per_hr=6.0,
-            min_production=0.0,
-            max_production=10.0,
+            max_ramp_up_rate=6.0,
+            max_ramp_down_rate=6.0,
+            min_production_rate=0.0,
+            max_production_rate=10.0,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(out, profile)
 
@@ -497,10 +572,12 @@ def test_dynamics_stacking(subtests):
         ramp1 = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=10.0,
-            max_ramp_down_per_hr=10.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=10.0,
+            max_ramp_down_rate=10.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(ramp1, [10.0, 10.0, 0.0, 0.0, 0.0, 10.0, 10.0, 10.0, 10.0])
 
@@ -513,10 +590,12 @@ def test_dynamics_stacking(subtests):
         ramp2 = apply_ramping_limits(
             post_startup,
             dt,
-            max_ramp_up_per_hr=2.0,
-            max_ramp_down_per_hr=2.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=2.0,
+            max_ramp_down_rate=2.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         # The leading 10 -> 0 transition is rate-limited backward through
         # check_ramping_at_t0; the post-delay 0 -> 10 transition is forward-
@@ -531,10 +610,12 @@ def test_dynamics_stacking(subtests):
         ramp1 = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=10.0,
-            max_ramp_down_per_hr=10.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=10.0,
+            max_ramp_down_rate=10.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         mult = startup_loss_multiplier(
             ramp1, dt, offtime_hours=1.0, delay_hours=0.5, min_production=min_prod
@@ -543,10 +624,12 @@ def test_dynamics_stacking(subtests):
         ramp2 = apply_ramping_limits(
             post_startup,
             dt,
-            max_ramp_up_per_hr=10.0,
-            max_ramp_down_per_hr=10.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=10.0,
+            max_ramp_down_rate=10.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(mult, [1.0, 1.0, 0.0, 0.0, 0.5, 1.0])
         assert np.allclose(post_startup, [10.0, 10.0, 0.0, 0.0, 5.0, 10.0])
@@ -562,10 +645,12 @@ def test_dynamics_stacking(subtests):
         out = apply_ramping_limits(
             preprocessed,
             dt,
-            max_ramp_up_per_hr=10.0,
-            max_ramp_down_per_hr=10.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=10.0,
+            max_ramp_down_rate=10.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(preprocessed, [10.0, 5.0, 0.0, 5.0, 10.0])
         assert np.allclose(out, preprocessed)
@@ -578,10 +663,12 @@ def test_dynamics_stacking(subtests):
         ramp1 = apply_ramping_limits(
             profile,
             dt,
-            max_ramp_up_per_hr=5.0,
-            max_ramp_down_per_hr=5.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=5.0,
+            max_ramp_down_rate=5.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         mult = startup_loss_multiplier(
             ramp1, dt, offtime_hours=1.0, delay_hours=1.0, min_production=min_prod
@@ -590,10 +677,12 @@ def test_dynamics_stacking(subtests):
         ramp2 = apply_ramping_limits(
             post_startup,
             dt,
-            max_ramp_up_per_hr=5.0,
-            max_ramp_down_per_hr=5.0,
-            min_production=0.0,
-            max_production=rated,
+            max_ramp_up_rate=5.0,
+            max_ramp_down_rate=5.0,
+            min_production_rate=0.0,
+            max_production_rate=rated,
+            commodity_rate_units="kg/h",
+            commodity_amount_units="kg",
         )
         assert np.allclose(ramp1, [10.0, 5.0, 0.0, 0.0, 0.0, 5.0, 10.0, 10.0, 10.0])
         assert np.allclose(mult, [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0])

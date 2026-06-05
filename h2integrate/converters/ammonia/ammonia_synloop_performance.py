@@ -307,10 +307,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
-            max_ramp_up_per_hr=max_ramp_up_per_hr,
-            max_ramp_down_per_hr=max_ramp_down_per_hr,
-            min_production=0.0,
-            max_production=rated_capacity,
+            max_ramp_up_rate=max_ramp_up_per_hr,
+            max_ramp_down_rate=max_ramp_down_per_hr,
+            min_production_rate=0.0,
+            max_production_rate=rated_capacity,
+            commodity_rate_units=self.commodity_rate_units,
+            commodity_amount_units=self.commodity_amount_units,
         )
 
         # 3. Compute the consumption multiplier from the post-ramping profile, before
@@ -359,10 +361,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
-            max_ramp_up_per_hr=max_ramp_up_per_hr,
-            max_ramp_down_per_hr=max_ramp_down_per_hr,
-            min_production=0.0,
-            max_production=rated_capacity,
+            max_ramp_up_rate=max_ramp_up_per_hr,
+            max_ramp_down_rate=max_ramp_down_per_hr,
+            min_production_rate=0.0,
+            max_production_rate=rated_capacity,
+            commodity_rate_units=self.commodity_rate_units,
+            commodity_amount_units=self.commodity_amount_units,
         )
 
         return nh3_production, consumption_multiplier
