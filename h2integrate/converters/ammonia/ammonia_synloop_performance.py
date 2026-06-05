@@ -316,8 +316,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # 3. Compute the consumption multiplier from the post-ramping profile, before
         # start-up losses are applied: feedstocks continue to be consumed during a
         # start-up delay even though no product is leaving the plant.
-        on_off_status = (nh3_production >= minimum_production).astype(float)
-        consumption_multiplier = on_off_status * nh3_production
+        consumption_multiplier = np.where(nh3_production >= minimum_production, nh3_production, 0)
 
         # 4. Apply start-up delays. When both warm and cold passes are configured we
         # derive each pass's multiplier from the same post-ramping reference profile
