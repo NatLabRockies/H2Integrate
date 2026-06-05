@@ -103,7 +103,6 @@ def apply_ramping_limits(
     dt_seconds: float,
     max_ramp_up_rate: float,
     max_ramp_down_rate: float,
-    min_production_rate: float,
     max_production_rate: float,
     commodity_rate_units: str,
     commodity_amount_units: str | None,
@@ -125,8 +124,6 @@ def apply_ramping_limits(
         dt_seconds (int): simulation timestep length in seconds.
         max_ramp_up_rate (float | int): maximum upward ramp rate in ``commodity_rate_units``
         max_ramp_down_rate (float | int): maximum downward ramp rate in ``commodity_rate_units``
-        min_production_rate (float | int): lower bound applied when a step in
-            ``commodity_rate_units``
         max_production_rate (float | int): upper bound applied when a step in
             ``commodity_rate_units``
         commodity_rate_units (str): the rate units of the ``profile_rate`` (such as kW or kg/h)
@@ -145,9 +142,6 @@ def apply_ramping_limits(
     )
     max_up_per_step = units.convert_units(
         max_ramp_up_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
-    )
-    min_production = units.convert_units(
-        min_production_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
     )
     max_production = units.convert_units(
         max_production_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
@@ -169,7 +163,7 @@ def apply_ramping_limits(
 
         # Ramping-up: apply ramp-up constraint
         if delta > max_up_per_step:
-            out[i] = np.clip(out[i - 1] + max_up_per_step, min_production, max_production)
+            out[i] = np.clip(out[i - 1] + max_up_per_step, 0.0, max_production)
 
         # Ramping-down: apply ramp-down constraint
         elif delta < -max_down_per_step:
@@ -177,18 +171,14 @@ def apply_ramping_limits(
             timeback = math.ceil(delta / -max_down_per_step)
             # need to start adjustment at timeback steps back, and adjust forward until i.
             if timeback <= 1:
-                out[i] = np.clip(out[i - 1] - max_down_per_step, min_production, max_production)
+                out[i] = np.clip(out[i - 1] - max_down_per_step, 0.0, max_production)
             else:
                 # If timeback > 1, we need to adjust the previous timeback steps to
                 # ensure we don't exceed the max ramp down rate.
                 for j in range(max([1, i - timeback]), i):
                     # Determine that max and minimum production at j
-                    max_out_at_j = np.clip(
-                        out[j - 1] + max_up_per_step, min_production, max_production
-                    )
-                    min_out_at_j = np.clip(
-                        out[j - 1] - max_down_per_step, min_production, max_production
-                    )
+                    max_out_at_j = np.clip(out[j - 1] + max_up_per_step, 0.0, max_production)
+                    min_out_at_j = np.clip(out[j - 1] - max_down_per_step, 0.0, max_production)
                     n_dt_left = i - j
                     # See if we can ramp-up more between times j and i
                     if ((max_out_at_j - profile[i]) / max_down_per_step) > n_dt_left:
@@ -199,7 +189,7 @@ def apply_ramping_limits(
                         out[j] = max_out_at_j
         # No constraint on ramping
         else:
-            out[i] = np.clip(profile[i], min_production, max_production)
+            out[i] = np.clip(profile[i], 0.0, max_production)
 
     # convert units back to rate units
     out_rate = units.convert_units(
