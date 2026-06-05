@@ -57,7 +57,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -70,7 +69,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -84,7 +82,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -98,7 +95,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -112,7 +108,6 @@ def test_apply_ramping_limits(subtests):
             dt_seconds=1800.0,
             max_ramp_up_rate=rate_up,
             max_ramp_down_rate=rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -128,7 +123,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=10.0,
             max_ramp_down_rate=1.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -142,13 +136,12 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
         assert out[0] == 7.5
 
-    with subtests.test("Up-ramp clipped at max_production cap"):
+    with subtests.test("Up-ramp clipped at profile"):
         # In-bounds delta but request exceeds max_production -> clipped to max.
         profile = np.array([5.0, 7.0, 9.0, 11.0])
         out = apply_ramping_limits(
@@ -156,11 +149,10 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=5.0,
             max_ramp_down_rate=5.0,
-            max_production_rate=8.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
-        assert np.allclose(out, [5.0, 7.0, 8.0, 8.0])
+        assert np.allclose(out, [5.0, 7.0, 9.0, 11.0])
 
     with subtests.test("Asymmetric rates: slow up, fast down"):
         # max_up=1/hr, max_down=5/hr. Up-ramp from 0 is the binding constraint.
@@ -170,7 +162,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=1.0,
             max_ramp_down_rate=5.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -183,7 +174,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -196,7 +186,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -210,7 +199,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             rate_up,
             rate_down,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -227,7 +215,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=1.0,
             max_ramp_down_rate=1.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -244,7 +231,6 @@ def test_apply_ramping_limits(subtests):
             dt_seconds=900.0,  # 15 min
             max_ramp_up_rate=4.0,  # 4 kg/h, 1 kg/dt
             max_ramp_down_rate=4.0,  # kg/h, 1 kg/dt
-            max_production_rate=16.0,  #
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -260,7 +246,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=1.0,
             max_ramp_down_rate=1.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -276,7 +261,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=5.0,
             max_ramp_down_rate=1.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -291,7 +275,6 @@ def test_apply_ramping_limits(subtests):
             dt,
             max_ramp_up_rate=6.0,
             max_ramp_down_rate=6.0,
-            max_production_rate=10.0,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -557,7 +540,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=10.0,
             max_ramp_down_rate=10.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -574,7 +556,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=2.0,
             max_ramp_down_rate=2.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -593,7 +574,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=10.0,
             max_ramp_down_rate=10.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -606,7 +586,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=10.0,
             max_ramp_down_rate=10.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -626,7 +605,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=10.0,
             max_ramp_down_rate=10.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -643,7 +621,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=5.0,
             max_ramp_down_rate=5.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )
@@ -656,7 +633,6 @@ def test_dynamics_stacking(subtests):
             dt,
             max_ramp_up_rate=5.0,
             max_ramp_down_rate=5.0,
-            max_production_rate=rated,
             commodity_rate_units="kg/h",
             commodity_amount_units="kg",
         )

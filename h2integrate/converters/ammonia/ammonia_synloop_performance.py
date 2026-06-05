@@ -309,7 +309,6 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             dt_seconds=self.dt,
             max_ramp_up_rate=max_ramp_up_per_hr,
             max_ramp_down_rate=max_ramp_down_per_hr,
-            max_production_rate=rated_capacity,
             commodity_rate_units=self.commodity_rate_units,
             commodity_amount_units=self.commodity_amount_units,
         )
@@ -362,7 +361,6 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             dt_seconds=self.dt,
             max_ramp_up_rate=max_ramp_up_per_hr,
             max_ramp_down_rate=max_ramp_down_per_hr,
-            max_production_rate=rated_capacity,
             commodity_rate_units=self.commodity_rate_units,
             commodity_amount_units=self.commodity_amount_units,
         )
