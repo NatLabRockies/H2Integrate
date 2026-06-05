@@ -275,49 +275,54 @@ class PoseOptimization:
                     "totals",
                 ]
 
-        elif self.config["driver"].get("design_of_experiments", False):
-            if self.config["driver"]["design_of_experiments"]["flag"]:
-                doe_options = self.config["driver"]["design_of_experiments"]
-                if doe_options["generator"].lower() == "uniform":
+        elif self.config["driver"].get("parameter_sweep", False) or self.config["driver"].get(
+            "design_of_experiments", False
+        ):
+            # Support both "parameter_sweep" (preferred) and legacy "design_of_experiments" key
+            sweep_options = self.config["driver"].get(
+                "parameter_sweep", self.config["driver"].get("design_of_experiments", {})
+            )
+            if sweep_options["flag"]:
+                if sweep_options["generator"].lower() == "uniform":
                     generator = om.UniformGenerator(
-                        num_samples=int(doe_options["num_samples"]),
-                        seed=doe_options["seed"],
+                        num_samples=int(sweep_options["num_samples"]),
+                        seed=sweep_options["seed"],
                     )
-                elif doe_options["generator"].lower() == "fullfact":
-                    generator = om.FullFactorialGenerator(levels=int(doe_options["levels"]))
-                elif doe_options["generator"].lower() == "plackettburman":
+                elif sweep_options["generator"].lower() == "fullfact":
+                    generator = om.FullFactorialGenerator(levels=int(sweep_options["levels"]))
+                elif sweep_options["generator"].lower() == "plackettburman":
                     generator = om.PlackettBurmanGenerator()
-                elif doe_options["generator"].lower() == "boxbehnken":
+                elif sweep_options["generator"].lower() == "boxbehnken":
                     generator = om.BoxBehnkenGenerator()
-                elif doe_options["generator"].lower() == "latinhypercube":
+                elif sweep_options["generator"].lower() == "latinhypercube":
                     generator = om.LatinHypercubeGenerator(
-                        samples=int(doe_options["num_samples"]),
-                        criterion=doe_options["criterion"],
-                        seed=doe_options["seed"],
+                        samples=int(sweep_options["num_samples"]),
+                        criterion=sweep_options["criterion"],
+                        seed=sweep_options["seed"],
                     )
-                elif doe_options["generator"].lower() == "csvgen":
+                elif sweep_options["generator"].lower() == "csvgen":
                     valid_file = check_file_format_for_csv_generator(
-                        doe_options["filename"], self.config, check_only=True
+                        sweep_options["filename"], self.config, check_only=True
                     )
                     if not valid_file:
                         raise UserWarning(
-                            f"There may be issues with the csv file {doe_options['filename']}, "
+                            f"There may be issues with the csv file {sweep_options['filename']}, "
                             f"which may cause errors within OpenMDAO. "
                             "To check this csv file or create a new one, run the function "
                             "h2integrate.core.utilities.check_file_format_for_csv_generator()."
                         )
                     generator = om.CSVGenerator(
-                        filename=doe_options["filename"],
+                        filename=sweep_options["filename"],
                     )
                 else:
                     raise Exception(
-                        "The generator type {} is unsupported.".format(doe_options["generator"])
+                        "The generator type {} is unsupported.".format(sweep_options["generator"])
                     )
 
-                # Initialize driver
+                # Initialize driver (OpenMDAO calls this DOEDriver / "Design of Experiments")
                 opt_prob.driver = om.DOEDriver(generator)
 
-                if doe_options["debug_print"]:
+                if sweep_options["debug_print"]:
                     opt_prob.driver.options["debug_print"] = [
                         "desvars",
                         "ln_cons",
@@ -326,8 +331,8 @@ class PoseOptimization:
                     ]
 
                 # options
-                if "run_parallel" in doe_options:
-                    opt_prob.driver.options["run_parallel"] = doe_options["run_parallel"]
+                if "run_parallel" in sweep_options:
+                    opt_prob.driver.options["run_parallel"] = sweep_options["run_parallel"]
 
         else:
             warnings.warn(
@@ -449,7 +454,8 @@ class PoseOptimization:
                 msg = (
                     f"Invalid recorder attachment '{recorder_attachment}'. "
                     f"Currently supported options are {allowed_attachments}. "
-                    "We recommend using 'driver' if running an optimization or DOE in parallel."
+                    "We recommend using 'driver' if running an optimization "
+                    "or parameter sweep in parallel."
                 )
                 raise ValueError(msg)
 

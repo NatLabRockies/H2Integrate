@@ -7,6 +7,9 @@ plant:
     dt: 3600  # 1-hour timesteps
     timezone: -6  # MDT (UTC-6)
     start_time: 2025/01/01 00:00:00
+technology_interconnections:
+  # supply the battery with electricity feedstock
+  - [electricity_feedstock, battery, electricity, cable]
 tech_to_dispatch_connections:
-  - [grid_buy, battery]
+  - [electricity_feedstock, battery]
   - [battery, battery]

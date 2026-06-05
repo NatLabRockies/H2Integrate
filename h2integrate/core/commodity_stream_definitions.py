@@ -31,7 +31,36 @@ multivariable_streams = {
             "desc": "Pressure of the gas stream",
         },
     },
-    # Future multivariable stream definitions can be added here
+    "process_gas_mixture": {
+        "mass_flow": {
+            "units": "kg/h",
+            "desc": "Total gas mass flow rate",
+        },
+        "hydrogen_mass_fraction": {
+            "units": "unitless",
+            "desc": "Mass fraction of hydrogen in the gas stream",
+        },
+        "nitrogen_mass_fraction": {
+            "units": "unitless",
+            "desc": "Mass fraction of nitrogen in the gas stream",
+        },
+        "argon_mass_fraction": {
+            "units": "unitless",
+            "desc": "Mass fraction of argon in the gas stream",
+        },
+        "ammonia_mass_fraction": {
+            "units": "unitless",
+            "desc": "Mass fraction of ammonia in the gas stream",
+        },
+        "temperature": {
+            "units": "K",
+            "desc": "Gas stream temperature",
+        },
+        "pressure": {
+            "units": "bar",
+            "desc": "Gas stream pressure",
+        },
+    },
 }
 
 
