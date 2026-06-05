@@ -25,6 +25,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from openmdao.utils import units
 
 
 def find_off_blocks(profile: np.ndarray, min_production: float) -> np.ndarray:
@@ -98,19 +99,21 @@ def check_ramping_at_t0(
 
 
 def apply_ramping_limits(
-    profile: np.ndarray,
+    profile_rate: np.ndarray,
     dt_seconds: float,
-    max_ramp_up_per_hr: float,
-    max_ramp_down_per_hr: float,
-    min_production: float,
-    max_production: float,
+    max_ramp_up_rate: float,
+    max_ramp_down_rate: float,
+    min_production_rate: float,
+    max_production_rate: float,
+    commodity_rate_units: str,
+    commodity_amount_units: str,
 ) -> np.ndarray:
     """Clip each step in ``profile`` to a maximum per-timestep ramp rate.
 
     The first timestep is taken from ``profile`` unchanged. Each subsequent
     timestep ``i`` is constrained so that
-    ``out[i] - out[i-1]`` lies within ``[-max_ramp_down_per_hr * dt_hours,
-    +max_ramp_up_per_hr * dt_hours]``. When the requested change exceeds the
+    ``out[i] - out[i-1]`` lies within ``[-max_ramp_down_rate,
+    +max_ramp_up_rate]``. When the requested change exceeds the
     allowed ramp, the new value is set to ``out[i-1] ± max_ramp_per_step`` and
     additionally clipped to ``[min_production, max_production]``. When the
     requested change is within bounds the input value is taken through unchanged
@@ -118,19 +121,40 @@ def apply_ramping_limits(
     ammonia-synloop semantics).
 
     Args:
-        profile (np.ndarray): 1-D requested production profile.
+        profile_rate (np.ndarray): commodity profile in units of ``commodity_rate_units``
         dt_seconds (int): simulation timestep length in seconds.
-        max_ramp_up_per_hr (float | int): maximum upward ramp rate in production-units / hour.
-        max_ramp_down_per_hr (float | int): maximum downward ramp rate in production-units / hour.
-        min_production (float | int): lower bound applied when a step is ramp-limited.
-        max_production (float | int): upper bound applied when a step is ramp-limited.
-
+        max_ramp_up_rate (float | int): maximum upward ramp rate in ``commodity_rate_units``
+        max_ramp_down_rate (float | int): maximum downward ramp rate in ``commodity_rate_units``
+        min_production_rate (float | int): lower bound applied when a step in
+            ``commodity_rate_units``
+        max_production_rate (float | int): upper bound applied when a step in
+            ``commodity_rate_units``
+        commodity_rate_units (str): the rate units of the ``profile_rate`` (such as kW or kg/h)
+        commodity_amount_units (str): the corresponding amount units of the commodity
+            (such as kW*h or kg)
     Returns:
-        np.ndarray: Ramp-limited production profile of the same shape as ``profile``.
+        np.ndarray: Ramp-limited production profile of the same shape as ``profile_rate``
+            in ``commodity_rate_units``
     """
-    dt_hours = dt_seconds / 3600.0
-    max_up_per_step = max_ramp_up_per_hr * dt_hours
-    max_down_per_step = max_ramp_down_per_hr * dt_hours
+    if commodity_amount_units is None:
+        commodity_amount_units = f"({commodity_rate_units})*h"
+
+    # convert the input rates to be on a per-timestep basis
+    max_down_per_step = units.convert_units(
+        max_ramp_down_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
+    )
+    max_up_per_step = units.convert_units(
+        max_ramp_up_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
+    )
+    min_production = units.convert_units(
+        min_production_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
+    )
+    max_production = units.convert_units(
+        max_production_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
+    )
+    profile = units.convert_units(
+        profile_rate, commodity_rate_units, f"({commodity_amount_units})/({dt_seconds}*s)"
+    )
 
     out0, i0 = check_ramping_at_t0(profile, max_down_per_step)
 
