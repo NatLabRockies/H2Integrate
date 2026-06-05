@@ -8,12 +8,13 @@ sites:
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
-technology_interconnections:
-  # connect feedstocks to fuel cell
-  - [h2_feedstock, h2_fuel_cell, hydrogen, pipe]
-  - [o2_feedstock, h2_fuel_cell, oxygen, pipe]
-  # connect fuel cell to demand component
-  - [h2_fuel_cell, electricity_load_demand, electricity, cable]
+# technology_interconnections: []
+  # - []
+  #  # connect feedstocks to fuel cell
+  # - [h2_feedstock, h2_fuel_cell, hydrogen, pipe]
+  # - [o2_feedstock, h2_fuel_cell, oxygen, pipe]
+  #  # connect fuel cell to demand component
+  # - [h2_fuel_cell, electricity_load_demand, electricity, cable]
 plant:
   plant_life: 2
 finance_parameters:

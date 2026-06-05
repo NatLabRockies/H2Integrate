@@ -96,9 +96,9 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
     # convert power_ref to Watts
     power_ref = power_ref * 1e3
-    print(power_ref, cell_area, stack_number, n_cells)
+    # print(power_ref, cell_area, stack_number, n_cells)
     power_density = power_ref / cell_area / stack_number / n_cells
-    print("Power density", power_density)
+    # print("Power density", power_density)
 
     I_cell = power_I_curve(power_density)
     V_cell = V_I_curve(I_cell)
@@ -267,8 +267,8 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         for i in range(self.n_timesteps):
             power_reference = inputs[f"{self.commodity}_set_point"][i]
-            H2in = inputs["hydrogen_in"][i]
-            O2in = inputs["oxygen_in"][i]
+            inputs["hydrogen_in"][i]
+            inputs["oxygen_in"][i]
 
             # Find current and voltage from IV curve with power setpoint
             I_cell, V_cell = calc_current(
@@ -286,25 +286,25 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
-            print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
-            print(self.stack_size, self.n_cells)
+            # print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
+            # print(self.stack_size, self.n_cells)
 
-            if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
-                print("Not enough H2 or O2 for this power point")
-                # implement an adjustment based on H2 & O2 available
+            # if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
+            # print("Not enough H2 or O2 for this power point")
+            # implement an adjustment based on H2 & O2 available
 
             # Compute electricity from the system
             electricity_produced = (
                 V_cell * I_cell * self.n_cells * self.config.n_stacks / 1e3
             )  # Calculated in watts, convert to kW
-            print(
-                "electricity produced:",
-                V_cell,
-                I_cell,
-                self.n_cells,
-                self.config.n_stacks,
-                electricity_produced,
-            )
+            # print(
+            #     "electricity produced:",
+            #     V_cell,
+            #     I_cell,
+            #     self.n_cells,
+            #     self.config.n_stacks,
+            #     electricity_produced,
+            # )
 
             # Compute H2O out (is this needed?)
 
