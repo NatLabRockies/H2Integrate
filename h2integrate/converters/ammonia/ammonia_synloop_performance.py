@@ -359,8 +359,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
                 continue
             # When both warm and cold are enabled, the warm pass excludes off-blocks
             # already claimed by cold. The cold pass always sees every off-block.
-            is_warm_pass = delay_key == "warm_start_delay"
-            max_offtime = cold_offtime_hours if is_warm_pass else None
+            max_offtime = cold_offtime_hours if delay_key == "warm_start_delay" else None
             combined_multiplier *= startup_loss_multiplier(
                 reference_profile,
                 dt_seconds=self.dt,
