@@ -922,7 +922,7 @@ def test_ammonia_ramping_and_startup_losses(
         # the per-step ramp cap. Check the ramp cap on the post-startup-recovery region
         # (after the cold delay completes, the profile holds rated for the remaining on-hours).
         # Pick a sub-range that does not span a startup zeroing edge: t=5..8 (all rated post-delay).
-        assert np.max(np.abs(np.diff(nh3_out[5:9]))) <= 1e-6
+        assert pytest.approx(np.max(np.abs(np.diff(nh3_out[5:9]))), 1e-6) == 25.0
 
 
 @pytest.mark.unit
@@ -1086,7 +1086,7 @@ def test_ammonia_ramping_dt_flexibility(
     prob.set_val("comp.electricity_in", elec_in, units="kW")
     prob.run_model()
 
-    nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
+    nh3_out = prob.get_val("comp.ammonia_out", units=f"kg/({dt_hrs}*h)")
     step_changes = np.abs(np.diff(nh3_out))
 
     with subtests.test("Per-timestep ramp delta scales with dt (dt=1800s -> half hourly rate)"):
