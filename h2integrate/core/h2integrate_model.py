@@ -483,6 +483,10 @@ class H2IntegrateModel:
         to partition technologies into fixed, flexible, dispatchable, and storage lists.
         Also identifies the single demand technology and its commodity.
 
+        SLC demand is supplied by a demand component (for example,
+        ``GenericDemandComponent``). When SLC is enabled, only one demand
+        component is currently supported.
+
         Returns:
             dict: Classification dictionary (``slc_config``) with keys:
 
@@ -528,9 +532,10 @@ class H2IntegrateModel:
                 # NOTE: this error should only be raised if two demand components
                 # are in the tech connections
                 raise ValueError(
-                    "DemandFollowingControl currently supports only one demand "
-                    f"stream, but found demands for both '{demand_commodity}' "
-                    f"and '{all_params.get('commodity', tech_name)}'."
+                    "System-level control currently supports only one demand "
+                    "component, but multiple demand components were found "
+                    f"for '{demand_commodity}' and "
+                    f"'{all_params.get('commodity', tech_name)}'."
                 )
 
             demand_commodity = all_params["commodity"]
@@ -657,7 +662,8 @@ class H2IntegrateModel:
 
         5. **Connect the demand profile** - Connects the demand technology's output
            (``{demand_tech}.{demand_commodity}_demand_out``) to the controller's demand input
-           (``system_level_controller.{demand_commodity}_demand``).
+              (``system_level_controller.{demand_commodity}_demand``). This relies on the
+              current SLC constraint that exactly one demand component is defined.
 
         Args:
             slc_config (dict): Pre-computed dictionary produced by

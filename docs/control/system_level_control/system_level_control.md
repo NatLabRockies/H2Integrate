@@ -12,6 +12,10 @@ The most basic SLC is shown in the figure below, where the SLC receives a demand
 Every technology group has an *implicit passthrough controller* that converts `{commodity}_demand` into `{commodity}_set_point`. If a technology defines its own `control_strategy`, that controller is used instead. This convention keeps the framework consistent and makes the demand → set-point hand-off uniform for every technology, regardless of whether an SLC is present.
 ```
 
+```{important}
+SLC demand is set by connecting a demand component (for example, `GenericDemandComponent`) to the system. When SLC is enabled, only one demand component is currently supported.
+```
+
 ```{figure} figures/slc_basic.png
 :width: 70%
 :align: center
@@ -28,7 +32,7 @@ system_level_control:
     convergence_tolerance: 1.0e-6
 ```
 
-To set the demand for the SLC that is configured in the `tech_config.yaml` using a demand block/component. For example:
+To set the demand for SLC, define exactly one demand block/component in `tech_config.yaml`. For example:
 
 ```yaml
 electrical_load_demand:

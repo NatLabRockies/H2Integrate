@@ -19,6 +19,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
     system-level controller therefore reasons in terms of *demand* values and emits
     ``{tech_name}_{commodity}_demand`` outputs for every controlled technology.
 
+    The SLC demand signal is provided by a demand component (for example,
+    ``GenericDemandComponent``) connected by ``H2IntegrateModel``. When SLC is
+    enabled, only one demand component is currently supported.
+
     Information passed to the controller from H2IntegrateModel is input in the ``slc_config``,
     which must contain:
 

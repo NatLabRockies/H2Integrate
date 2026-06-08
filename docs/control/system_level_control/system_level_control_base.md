@@ -3,6 +3,10 @@
 
 The system-level control base class provides a common framework that all controllers (advanced control strategies) can use to configure required inputs and outputs for both the controllers and the components they control or track. This generalization is necessary to implement system-level control in H2I. If the technologies and controllers in a given system were fully specified, this base class would not be needed.
 
+```{important}
+SLC demand is supplied by a demand component. When SLC is enabled, only one demand component is currently supported.
+```
+
 The base class also abstracts logic that may be shared across different controller types. It includes methods that could be useful, but not all methods will be relevant to every controller you implement.
 
 There are several methods that are already used in the simple controllers that inherit these system.
