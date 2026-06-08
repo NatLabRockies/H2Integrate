@@ -171,4 +171,4 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         if not np.isclose(inputs["price"], self.config.price, rtol=1e-6):
             warn_msg = "The NG price has changed from EIA price. This may be intended."
             warnings.warn(warn_msg, UserWarning)
-        super().compute(inputs, outputs)
+        super().compute(inputs, outputs, discrete_inputs, discrete_outputs)
