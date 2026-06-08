@@ -372,7 +372,8 @@ def get_eia_ng_data(
         if filename.exists():
             df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
             df = df.loc[
-                (df.index.year >= start)(df.index.year <= end)
+                (df.index.year >= start)
+                & (df.index.year <= end)
                 & df.category.isin(price_category)
                 & df.state.isin(state),
                 keep_cols,
