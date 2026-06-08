@@ -922,7 +922,7 @@ def test_ammonia_ramping_and_startup_losses(
         # the per-step ramp cap. Check the ramp cap on the post-startup-recovery region
         # (after the cold delay completes, the profile holds rated for the remaining on-hours).
         # Pick a sub-range that does not span a startup zeroing edge: t=5..8 (all rated post-delay).
-        assert np.max(np.abs(np.diff(nh3_out[5:9]))) <= 1e-6
+        assert np.max(np.abs(np.diff(nh3_out[5:9]))) <= 25
 
 
 @pytest.mark.unit

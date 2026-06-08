@@ -60,6 +60,12 @@ delays. The cold and warm multipliers are otherwise derived from the same
 post-ramping reference profile, and the order in which they are evaluated has
 no effect on the result.
 
+```{note}
+Currently, feedstocks are consumed based on the output ammonia (NH3) profile. This means
+that during warm and cold starts that there is not feedstock consumed (electricity or
+otherwise).
+```
+
 ## Worked example
 
 The following snippet builds a small `AmmoniaSynLoopPerformanceModel` with one

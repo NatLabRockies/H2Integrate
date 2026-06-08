@@ -83,7 +83,7 @@ def check_ramping_at_t0(
         np.ediff1d(np.r_[0, np.diff(profile) < 0, 0]).nonzero()[0].reshape(-1, 2)[0][-1]
     )
 
-    # if ramp constraint is never violated, then no special hnadling
+    # if ramp constraint is never violated, then no special handling
     if not any(k < max_down_per_step for k in np.diff(profile)[:first_ramp_down_event_end]):
         return profile[0], 0
 
@@ -108,8 +108,7 @@ def apply_ramping_limits(
 ) -> np.ndarray:
     """Clip each step in ``profile`` to a maximum per-timestep ramp rate.
 
-    The first timestep is taken from ``profile`` unchanged. Each subsequent
-    timestep ``i`` is constrained so that
+    Each timestep ``i`` is constrained so that
     ``out[i] - out[i-1]`` lies within ``[-max_ramp_down_rate,
     +max_ramp_up_rate]``. When the requested change exceeds the
     allowed ramp, the new value is set to ``out[i-1] ± max_ramp_per_step`` and
