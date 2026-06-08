@@ -168,7 +168,7 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if not np.isclose(inputs["price"], self.config.price, rtol=1e-6):
+        if not np.isclose(inputs["price"], self.config.price, rtol=1e-6).all():
             warn_msg = "The NG price has changed from EIA price. This may be intended."
             warnings.warn(warn_msg, UserWarning)
         super().compute(inputs, outputs, discrete_inputs, discrete_outputs)
