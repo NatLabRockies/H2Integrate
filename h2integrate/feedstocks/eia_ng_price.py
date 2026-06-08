@@ -4,7 +4,6 @@ from datetime import datetime
 
 import attrs
 import numpy as np
-import pandas as pd
 from attrs import field, define
 
 from h2integrate.preprocess import eia, geospatial
@@ -19,11 +18,7 @@ HOURS_PER_YEAR = 8760
 SECONDS_PER_HOUR = 3600
 CURRENT_YEAR = datetime.now().year
 
-default_price = pd.DataFrame(
-    np.zeros(8760, dtype=float).reshape(-1, 1),
-    columns=["price"],
-    index=pd.date_range("2001-01-01", "2001-12-31 23:00:00", freq="h"),
-)
+default_price = np.zeros(8760, dtype=float)
 
 
 @define
@@ -94,8 +89,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     commodity: str = field(default="natural_gas", init=False)
     commodity_rate_units: str = field(default="MMBtu/h", init=False)
     commodity_amount_units: str = field(default="MMBtu", init=False)
-    price: pd.DataFrame = field(
-        default=default_price, init=False, validator=attrs.validators.instance_of(pd.DataFrame)
+    price: np.ndarray = field(
+        default=default_price, init=False, validator=attrs.validators.instance_of(np.ndarray)
     )
 
     def __attrs_post_init__(self):
@@ -164,7 +159,7 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
             filename=self.config.filename,
         )
         price = eia.convert_to_hourly(price)
-        self.config.price = price
+        self.config.price = price.price.to_numpy()
         super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
