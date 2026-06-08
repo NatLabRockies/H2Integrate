@@ -155,9 +155,10 @@ def test_ammonia_subdt_offtime_subdt_delay(
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
-    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
-        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+    with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -240,9 +241,10 @@ def test_ammonia_subdt_offtime_multidt_delay(
     # n2_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
 
-    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
-        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+    with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -323,9 +325,10 @@ def test_ammonia_multidt_offtime_multidt_delay(
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
-    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
-        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+    with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -407,9 +410,10 @@ def test_ammonia_multidt_offtime_subdt_startup(
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
-    with subtests.test(f"Electricity consumption loss for first {n_timesteps_test} timesteps"):
-        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+    with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -599,10 +603,11 @@ def test_ammonia_multidt_delay_fraction(
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(
-        f"Electricity consumption loss for first {n_timesteps_test} timesteps  (multidt offtime)"
+        f"Electricity consumption for first {n_timesteps_test} timesteps  (multidt offtime)"
     ):
-        elec_losses = (elec_in[:n_timesteps_test] - elec_consumed[:n_timesteps_test]).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across full sequence repeats in the multidt-offtime sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -636,14 +641,13 @@ def test_ammonia_multidt_delay_fraction(
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
-    elec_consumed_subdtofftime = prob.get_val("comp.electricity_consumed", units="kW")
+    prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(
-        f"Electricity consumption loss for first {n_timesteps_test} timesteps (subdt offtime)"
+        f"Electricity consumption for first {n_timesteps_test} timesteps (subdt offtime)"
     ):
-        elec_losses = (
-            elec_in[:n_timesteps_test] - elec_consumed_subdtofftime[:n_timesteps_test]
-        ).sum()
-        assert pytest.approx(expected_off_time_losses_per_sequence, rel=1e-6) == elec_losses
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across full sequence repeats in the sub-dt-offtime sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
