@@ -378,7 +378,7 @@ def get_eia_ng_data(
                 & df.state.isin(state),
                 keep_cols,
             ]
-            df = convert_to_monthly(df)
+            df = convert_to_monthly(df, start, end)
             if df is not None:
                 return df
 
