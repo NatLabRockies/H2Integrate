@@ -18,8 +18,6 @@ HOURS_PER_YEAR = 8760
 SECONDS_PER_HOUR = 3600
 CURRENT_YEAR = datetime.now().year
 
-default_price = np.zeros(8760, dtype=float)
-
 
 @define
 class EIANaturalGasFeedstockConfig(BaseConfig):
@@ -90,7 +88,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     commodity_rate_units: str = field(default="MMBtu/h", init=False)
     commodity_amount_units: str = field(default="MMBtu", init=False)
     price: np.ndarray = field(
-        default=default_price, init=False, validator=attrs.validators.instance_of(np.ndarray)
+        default=np.zeros(8760, dtype=float),
+        init=False,
+        validator=attrs.validators.instance_of(np.ndarray),
     )
 
     def __attrs_post_init__(self):
