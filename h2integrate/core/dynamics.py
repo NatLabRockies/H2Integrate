@@ -69,22 +69,21 @@ def check_ramping_at_t0(
             constraints at indices of ``i0``
         - **i0** (int | slice): indices of production profile that were already modified
     """
+    diff = np.diff(profile)
+
     # if not ramping down at t=0, no special handling required
-    delta = profile[1] - profile[0]
-    if delta > 0:
+    if diff[0] > 0:
         return profile[0], 0
 
     # get the indices where we're consistently ramping down
-    ramp_down_indices = np.argwhere(np.diff(profile) < 0).flatten()
-    if len(ramp_down_indices) == 0:
+    ramp_down_indices = np.flatnonzero(diff < 0)
+    if ramp_down_indices.size == 0:
         return profile[0], 0
 
-    first_ramp_down_event_end = (
-        np.ediff1d(np.r_[0, np.diff(profile) < 0, 0]).nonzero()[0].reshape(-1, 2)[0][-1]
-    )
+    first_ramp_down_event_end = np.ediff1d(np.r_[0, diff < 0, 0]).nonzero()[0].reshape(-1, 2)[0][-1]
 
-    # if ramp constraint is never violated, then no special handling
-    if not any(k < max_down_per_step for k in np.diff(profile)[:first_ramp_down_event_end]):
+    # if we're not ramping down faster than the max down per step, no special handling required
+    if not np.any(diff[:first_ramp_down_event_end] < max_down_per_step):
         return profile[0], 0
 
     # flip the profile to go backward

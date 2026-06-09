@@ -14,8 +14,9 @@ kernelspec:
 # Ammonia synloop dynamic operating constraints
 
 The `AmmoniaSynLoopPerformanceModel` can be configured to enforce dynamic operating
-constraints that approximate the response of a real Haber-Bosch synthesis loop to a
-time-varying electricity, hydrogen, or nitrogen supply. Three classes of constraint are available and can be
+constraints that approximate the response of a real synthesis loop to a
+time-varying electricity, hydrogen, or nitrogen supply.
+Three classes of constraint are available and can be
 enabled independently or together:
 
 - Turndown: a non-zero minimum production floor (as a fraction of rated
@@ -48,22 +49,21 @@ config to impact dynamic behavior:
 | `warm_start_delay_hours` | hours | Duration of zero (or partial) production after a warm start. |
 
 ### Order of Operations
-1. Ramping limits
-2. Cold start
-3. Warm start
+1. Apply the turndown floor
+2. Apply ramping limits
+3. Apply startup delays using the same post-ramp reference profile for cold and warm passes
 4. Re-check ramping limits
 
 If both warm and cold start are enabled, each off-block triggers at most one
 start-up event: an off-block long enough to qualify as a cold start is excluded
 from the warm-start pass, so a single shutdown event is never penalized by both
-delays. The cold and warm multipliers are otherwise derived from the same
-post-ramping reference profile, and the order in which they are evaluated has
-no effect on the result.
+delays. The cold and warm multipliers are derived from the same post-ramping
+reference profile, so the pass order does not change the result.
 
 ```{note}
-Currently, feedstocks are consumed based on the output ammonia (NH3) profile. This means
-that during warm and cold starts that there is not feedstock consumed (electricity or
-otherwise).
+Feedstocks are consumed from the post-dynamic NH3 output profile. Zero-production
+startup-delay hours consume nothing, while partial warm-start hours consume in
+proportion to the partial NH3 output.
 ```
 
 ## Worked example
