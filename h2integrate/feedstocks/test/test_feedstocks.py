@@ -164,10 +164,11 @@ def test_single_feedstock_natural_gas(plant_config):
     tech_config, driver_config = create_basic_feedstock_config()
 
     # Test performance model
-    perf_model = FeedstockPerformanceModel()
-    perf_model.options["tech_config"] = tech_config
-    perf_model.options["plant_config"] = plant_config
-    perf_model.options["driver_config"] = driver_config
+    perf_model = FeedstockPerformanceModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_perf", perf_model)
@@ -180,10 +181,11 @@ def test_single_feedstock_natural_gas(plant_config):
     assert np.all(ng_output == 100.0)
 
     # Test cost model
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob_cost = om.Problem()
     prob_cost.model.add_subsystem("feedstock_cost", cost_model)
@@ -211,10 +213,10 @@ def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
 
     # Test performance model
     perf_model = FeedstockPerformanceModel(
-       tech_config = tech_config, 
-       plant_config = plant_config, 
-       driver_config = {}
-       )
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config={},
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_perf", perf_model)
@@ -228,10 +230,10 @@ def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
 
     # Test cost model
     cost_model = EIANaturalGasFeedstockCostModel(
-       tech_config = tech_config,
-       plant_config = plant_config,
-       driver_config = {}
-       )
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config={},
+    )
 
     prob_cost = om.Problem()
     prob_cost.model.add_subsystem("feedstock_cost", cost_model)
@@ -287,22 +289,16 @@ def test_multiple_same_type_feedstocks(plant_config):
     )
 
     # Test both feedstocks can coexist and have different outputs
-    perf_model1 = FeedstockPerformanceModel()
-    perf_model1.options.update(
-        {
-            "tech_config": tech_config1,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_model1 = FeedstockPerformanceModel(
+        tech_config=tech_config1,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_model2 = FeedstockPerformanceModel()
-    perf_model2.options.update(
-        {
-            "tech_config": tech_config2,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_model2 = FeedstockPerformanceModel(
+        tech_config=tech_config2,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
     prob = om.Problem()
@@ -340,27 +336,22 @@ def test_multiple_different_type_feedstocks(plant_config):
     )
 
     # Test all three feedstock types
-    perf_ng = FeedstockPerformanceModel()
-    perf_ng.options.update(
-        {"tech_config": ng_config, "plant_config": plant_config, "driver_config": driver_config}
+    perf_ng = FeedstockPerformanceModel(
+        tech_config=ng_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_elec = FeedstockPerformanceModel()
-    perf_elec.options.update(
-        {
-            "tech_config": elec_config,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_elec = FeedstockPerformanceModel(
+        tech_config=elec_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_water = FeedstockPerformanceModel()
-    perf_water.options.update(
-        {
-            "tech_config": water_config,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_water = FeedstockPerformanceModel(
+        tech_config=water_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
     prob = om.Problem()
@@ -395,10 +386,11 @@ def test_variable_pricing(plant_config):
 
     tech_config, driver_config = create_basic_feedstock_config(price=hourly_prices.tolist())
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -426,10 +418,11 @@ def test_zero_cost_feedstock(plant_config):
         price=0.0, annual_cost=0.0, start_up_cost=0.0
     )
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -459,10 +452,11 @@ def test_per_year_pricing(plant_config):
         price=yearly_prices, start_up_cost=0.0
     )
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -487,10 +481,11 @@ def test_per_year_pricing_invalid_length(plant_config):
 
     tech_config, driver_config = create_basic_feedstock_config(price=bad_prices)
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
