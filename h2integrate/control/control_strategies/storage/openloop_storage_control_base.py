@@ -141,7 +141,7 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
 class StorageOpenLoopControlBase(om.ExplicitComponent):
     """Base OpenMDAO component for open-loop demand tracking.
 
-    This component defines the interfaces required for open-loop demand
+    This component defines the interfaces required for open-loop
     controllers, including inputs for demand, available commodity, and outputs
     dispatch command profile.
     """
@@ -164,11 +164,11 @@ class StorageOpenLoopControlBase(om.ExplicitComponent):
         demand_data = self.config.demand_profile
 
         self.add_input(
-            f"{commodity}_demand",
+            f"{commodity}_set_point",
             val=demand_data if not isinstance(demand_data, dict) else demand_data["demand"],
             shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
-            desc=f"Demand profile of {commodity}",
+            desc=f"Set-point profile of {commodity}",
         )
 
         self.add_input(
@@ -180,7 +180,7 @@ class StorageOpenLoopControlBase(om.ExplicitComponent):
         )
 
         self.add_output(
-            f"{commodity}_set_point",
+            f"{commodity}_command_value",
             val=0.0,
             shape=self.n_timesteps,
             units=self.config.commodity_rate_units,
@@ -197,7 +197,7 @@ class StorageOpenLoopControlBase(om.ExplicitComponent):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def common_checks_needed_in_compute(self, inputs):
-        if np.all(inputs[f"{self.config.commodity}_demand"] == 0.0):
+        if np.all(inputs[f"{self.config.commodity}_set_point"] == 0.0):
             msg = "Demand profile is zero, check that demand profile is input"
             raise UserWarning(msg)
         if inputs["max_charge_rate"][0] < 0:

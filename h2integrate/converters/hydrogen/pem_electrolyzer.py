@@ -225,6 +225,6 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
 
         # Apply set_point from system-level controller if present
         if "system_level_control" in self.options["plant_config"]:
-            set_point = inputs[f"{self.commodity}_set_point"]
+            set_point = inputs[f"{self.commodity}_command_value"]
             commodity_out_key = f"{self.commodity}_out"
             outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], set_point)

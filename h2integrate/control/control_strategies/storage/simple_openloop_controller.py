@@ -72,7 +72,7 @@ class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
 
     def compute(self, inputs, outputs):
         """
-        Simple controller that outputs `commodity_set_point`,
+        Simple controller that outputs `commodity_command_value`,
         the dispatch set-points for each timestep in `commodity_rate_units`.
         Negative values command charging, positive values command discharging.
 
@@ -80,7 +80,7 @@ class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
 
         if (
             self.config.set_demand_as_avg_commodity_in
-            and inputs[f"{self.config.commodity}_demand"].sum() > 0
+            and inputs[f"{self.config.commodity}_set_point"].sum() > 0
         ):
             msg = (
                 "A non-zero demand profile was input but set_demand_as_avg_commodity_in is True."
@@ -95,11 +95,11 @@ class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
                 self.n_timesteps
             )
         else:
-            commodity_demand = inputs[f"{self.config.commodity}_demand"]
+            commodity_demand = inputs[f"{self.config.commodity}_set_point"]
 
         # Assign the set point as the difference between the demand and the input commodity
         # when demand > input, the set point is positive to command discharging
         # when demand < input, the set point is negative to command charging
-        outputs[f"{self.config.commodity}_set_point"] = (
+        outputs[f"{self.config.commodity}_command_value"] = (
             commodity_demand - inputs[f"{self.config.commodity}_in"]
         )

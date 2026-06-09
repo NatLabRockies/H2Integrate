@@ -247,7 +247,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
             * ``max_capacity``: Maximum total storage capacity.
 
         Outputs populated:
-            * ``<commodity>_set_point``: Dispatch command to storage,
+            * ``<commodity>_command_value``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
         Raises:
@@ -279,7 +279,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
 
         # Build timestamped demand dictionaries from simulation timeline.
         demand_profile = self._build_demand_profile_dict(
-            inputs[f"{commodity}_demand"],
+            inputs[f"{commodity}_set_point"],
             self.time_index,
         )
 
@@ -381,7 +381,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
             if soc >= soc_max:
                 charging = False
 
-        outputs[f"{commodity}_set_point"] = set_point_array
+        outputs[f"{commodity}_command_value"] = set_point_array
 
         # insert warning message if for any time step the magnitude of
         # any negative entry in set_point_array is greater than inputs[f"{commodity}_in"]

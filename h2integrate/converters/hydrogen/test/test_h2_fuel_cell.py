@@ -148,10 +148,10 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
 
     prob.set_val("fuel_cell.hydrogen_in", hydrogen_input, units="kg/h")
 
-    elec_set_point = np.ones(n_timesteps) * 1000.0  # kW
+    elec_command_value = np.ones(n_timesteps) * 1000.0  # kW
 
     # Set first 6 timesteps to test edge cases for set point
-    elec_set_point[:6] = (
+    elec_command_value[:6] = (
         1000.0,  # test case with set point equal to system capacity
         500.0,  # test case with set point below system capacity
         1000.0,  # test case with set point equal to system capacity
@@ -160,7 +160,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
         0.0,  # test case with set point equal to zero
     )
 
-    prob.set_val("fuel_cell.electricity_set_point", elec_set_point, units="kW")
+    prob.set_val("fuel_cell.electricity_command_value", elec_command_value, units="kW")
 
     prob.run_model()
 

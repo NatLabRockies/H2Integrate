@@ -79,16 +79,16 @@ class CostMinimizationControl(SystemLevelControlBase):
         mean_costs = np.array([mc.mean() for mc in marginal_costs])
         dispatch_order = np.argsort(mean_costs)
 
-        # Initialize all dispatchable demand outputs to zero
-        for demand_name in self.dispatchable_demand_names:
-            outputs[demand_name] = np.zeros(self.n_timesteps)
+        # Initialize all dispatchable set-point outputs to zero.
+        for set_point_name in self.dispatchable_set_point_names:
+            outputs[set_point_name] = np.zeros(self.n_timesteps)
 
         # Dispatch in merit order
         for idx in dispatch_order:
-            demand_name = self.dispatchable_demand_names[idx]
+            set_point_name = self.dispatchable_set_point_names[idx]
             rated_name = self.dispatchable_rated_names[idx]
             rated = inputs[rated_name]
 
             dispatch = np.minimum(remaining, rated)
-            outputs[demand_name] = dispatch
+            outputs[set_point_name] = dispatch
             remaining -= dispatch

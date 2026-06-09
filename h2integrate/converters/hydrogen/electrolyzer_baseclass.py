@@ -26,7 +26,7 @@ class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
         # Dispatchable models receive a set_point from the system-level controller
         if "system_level_control" in self.options["plant_config"]:
             self.add_input(
-                f"{self.commodity}_set_point",
+                f"{self.commodity}_command_value",
                 val=0.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,

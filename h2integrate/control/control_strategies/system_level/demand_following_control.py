@@ -52,8 +52,8 @@ class DemandFollowingControl(SystemLevelControlBase):
                     )
                 else:
                     if f"{flexible_tech}_rated_{tech_commodity}_production" in inputs:
-                        # set the per-tech demand as the rated production
-                        outputs[f"{flexible_tech}_{tech_commodity}_demand"] = inputs[
+                        # set the per-tech set-point as the rated production
+                        outputs[f"{flexible_tech}_{tech_commodity}_set_point"] = inputs[
                             f"{flexible_tech}_rated_{tech_commodity}_production"
                         ] * np.ones(self.n_timesteps)
 
@@ -80,6 +80,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         for dispatchable_tech in self.dispatchable_techs:
             commodity_from_tech = self._get_commodity_for_tech(dispatchable_tech)
             if commodity in commodity_from_tech:
-                outputs[f"{dispatchable_tech}_{commodity}_demand"] = (
+                outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
                     remaining_demand / n_dispatchable
                 )

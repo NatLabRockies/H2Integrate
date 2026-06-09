@@ -637,11 +637,11 @@ class H2IntegrateModel:
            - **Flexible / dispatchable / storage techs**: Both the commodity output
              (``{tech_name}.{commodity}_out``) and rated production
              (``{tech_name}.rated_{commodity}_production``) are connected as controller inputs.
-             The controller's per-tech ``{tech_name}_{commodity}_demand`` output is then
-             connected to the tech group's ``{commodity}_demand`` input. Every controlled
+             The controller's per-tech ``{tech_name}_{commodity}_set_point`` output is
+             connected to the tech group's ``{commodity}_set_point`` input. Every controlled
              tech group is expected to expose this input — either via a user-defined
              ``control_strategy`` or via the auto-injected ``PassthroughController`` — which
-             converts the demand signal into the appropriate performance-model set-point.
+             converts the set-point signal into the appropriate performance-model command value.
 
         4. **Connect marginal-cost inputs for cost-aware strategies** - Only executed when
            ``control_strategy`` is ``"CostMinimizationControl"`` or
@@ -759,13 +759,19 @@ class H2IntegrateModel:
                     f"system_level_controller.{tech_name}_{commodity}_storage_duration",
                 )
 
-            # Every controlled tech group exposes a ``{commodity}_demand``
-            # input (provided by either a user-defined control_strategy or an
-            # auto-injected PassthroughController). Route the SLC's per-tech
-            # demand output to that input.
+            # Route SLC per-tech set-point to the technology controller input.
+            # User-defined controllers generally promote ``{commodity}_set_point``
+            # at the tech-group level, while auto-injected passthrough
+            # controllers expose it at ``controller.{commodity}_set_point``.
+            tech_cfg = self.technology_config["technologies"][tech_name]
+            if "control_strategy" in tech_cfg:
+                tech_set_point_target = f"{tech_name}.{commodity}_set_point"
+            else:
+                tech_set_point_target = f"{tech_name}.controller.{commodity}_set_point"
+
             self.plant.connect(
-                f"system_level_controller.{tech_name}_{commodity}_demand",
-                f"{tech_name}.{commodity}_demand",
+                f"system_level_controller.{tech_name}_{commodity}_set_point",
+                tech_set_point_target,
             )
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
@@ -931,7 +937,12 @@ class H2IntegrateModel:
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
 
-                    self._add_passthrough_controller(tech_group, comp, individual_tech_config)
+                    self._add_passthrough_controller(
+                        tech_group,
+                        comp,
+                        individual_tech_config,
+                        perf_model,
+                    )
 
                     continue
 
@@ -969,7 +980,10 @@ class H2IntegrateModel:
 
                 if perf_om_object is not None:
                     self._add_passthrough_controller(
-                        tech_group, perf_om_object, individual_tech_config
+                        tech_group,
+                        perf_om_object,
+                        individual_tech_config,
+                        individual_tech_config["performance_model"]["model"],
                     )
 
                 # Process the finance models
@@ -1044,7 +1058,13 @@ class H2IntegrateModel:
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
-    def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
+    def _add_passthrough_controller(
+        self,
+        tech_group,
+        perf_comp,
+        individual_tech_config,
+        _perf_model_name,
+    ):
         """Automatically add a PassthroughController to a tech group if appropriate.
 
         A controller is auto-inserted only when:
@@ -1055,10 +1075,10 @@ class H2IntegrateModel:
           attributes (typically set in its ``initialize()``), or those values
           can be read from the individual tech config.
 
-        The controller's ``{commodity}_demand`` input becomes the tech group's
-        external demand-input promoted at the tech group level, and its
-        ``{commodity}_set_point`` output is auto-connected (via promotion) to the
-        performance model's ``{commodity}_set_point`` input if one exists.
+        The controller consumes ``controller.{commodity}_set_point`` and emits
+        ``controller.{commodity}_command_value``. The command value is
+        explicitly connected to the technology group's promoted
+        ``{commodity}_command_value`` input consumed by the performance model.
         """
         # Skip if the user has already specified a control strategy for this tech;
         # their explicit choice takes precedence over the auto-injected passthrough.
@@ -1102,18 +1122,19 @@ class H2IntegrateModel:
             commodity_rate_units=commodity_rate_units,
         )
 
-        # Promote all controller variables so:
-        #   - `{commodity}_demand` becomes the tech group's external input
-        #     (this is what the system-level controller connects to), and
-        #   - `{commodity}_set_point` is auto-connected by name to the
-        #     performance model's matching input via promotion.
-        om_controller = tech_group.add_subsystem("controller", controller, promotes=["*"])
+        # Keep controller I/O unpromoted to avoid promoted-name collisions
+        # with performance-model ``{commodity}_command_value`` inputs.
+        om_controller = tech_group.add_subsystem("controller", controller)
+        tech_group.connect(
+            f"controller.{commodity}_command_value",
+            f"{commodity}_command_value",
+        )
         self.control_strategies.append(om_controller)
 
         # Ensure the controller runs before the performance/cost models that
-        # consume its set_point output. Subsystem creation order otherwise
+        # consume its command_value output. Subsystem creation order otherwise
         # places the controller last in the group's execution order, which
-        # would delay the set_point by one solver iteration.
+        # would delay the control signal by one solver iteration.
         existing_order = list(tech_group._static_subsystems_allprocs.keys())
         if "controller" in existing_order:
             new_order = ["controller"] + [n for n in existing_order if n != "controller"]

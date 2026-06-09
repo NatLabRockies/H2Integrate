@@ -64,7 +64,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     prob.model.add_subsystem(
         name="IVC4",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -351,7 +351,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -419,7 +419,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
