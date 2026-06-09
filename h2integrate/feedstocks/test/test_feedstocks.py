@@ -210,10 +210,11 @@ def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
     _, driver_config = create_basic_feedstock_config()
 
     # Test performance model
-    perf_model = FeedstockPerformanceModel()
-    perf_model.options["tech_config"] = tech_config
-    perf_model.options["plant_config"] = plant_config
-    perf_model.options["driver_config"] = driver_config
+    perf_model = FeedstockPerformanceModel(
+       tech_config = tech_config, 
+       plant_config = plant_config, 
+       driver_config = {}
+       )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_perf", perf_model)
