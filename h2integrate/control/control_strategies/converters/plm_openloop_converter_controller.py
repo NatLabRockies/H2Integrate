@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.validators import contains
 from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
     StorageOpenLoopControlBase,
     StorageOpenLoopControlBaseConfig,
@@ -27,6 +28,9 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
     demand_profile_peak_cutoff: int | float = field()
     demand_profile_upstream: int | float | list | None = field()
     demand_profile_upstream_peak_cutoff: int | float | None = field()
+    demand_profile_upstream_kind: str = field(
+        default="electricity", validator=contains(["electricity", "price"])
+    )
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
@@ -66,14 +70,30 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
                 or val_upstream > demand_profile_upstream_peak_cutoff
             ):
                 desired_dispatch = val - demand_profile_peak_cutoff
-                desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
-                self.set_point_array[idx] = min(
-                    max(
-                        max(desired_dispatch, 0),
-                        max(desired_dispatch_upstream, 0),
-                    ),
-                    val,
-                    system_capacity_rate,
-                )
+
+                if self.config.demand_profile_upstream_kind == "electricity":
+                    desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
+                    self.set_point_array[idx] = min(
+                        max(
+                            max(desired_dispatch, 0),
+                            max(desired_dispatch_upstream, 0),
+                        ),
+                        val,
+                        system_capacity_rate,
+                    )
+                elif self.config.demand_profile_upstream_kind == "price":
+                    if val_upstream > demand_profile_upstream_peak_cutoff:
+                        self.set_point_array[idx] = min(
+                            max(desired_dispatch, 0),
+                            val,
+                            system_capacity_rate,
+                        )
+                else:
+                    raise (
+                        ValueError(
+                            f"Invalid demand_profile_upstream_kind \
+                            '{self.config.demand_profile_upstream_kind}'"
+                        )
+                    )
 
         outputs[f"{commodity}_set_point"] = self.set_point_array
