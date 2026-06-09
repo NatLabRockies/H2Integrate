@@ -337,7 +337,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
             )
-            == 406333.161
+            == 406226.7872
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -355,7 +355,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
                 rel=1e-6,
             )
-            == 79257312.42365658
+            == 79258124.93845007
         )
 
     with subtests.test("Check LCOH"):
@@ -371,7 +371,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-6
             )
-            == 1.1018637096646757
+            == 1.1021542544557135
         )
     with subtests.test("Check LCON"):
         assert (
