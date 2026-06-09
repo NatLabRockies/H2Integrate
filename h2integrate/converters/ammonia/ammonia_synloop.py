@@ -189,6 +189,18 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
+        # Dispatchable models receive a command value from a tech-level controller.
+        # Auto-injected ``PassthroughController`` or a user-defined control strategy
+        # supplies this input. The default is a large value so an unconnected run
+        # leaves raw production uncurtailed.
+        self.add_input(
+            f"{self.commodity}_command_value",
+            val=1.0e9,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Command value for {self.commodity} production from tech controller",
+        )
+
         self.add_output("nitrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("hydrogen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("electricity_out", val=0.0, shape=self.n_timesteps, units="kW")
@@ -311,6 +323,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         cat_mass = np.sum(cat_rate) * cat_replace  # kg
 
         outputs["ammonia_out"] = nh3_prod
+        # Apply the command value supplied by the tech-level controller as an upper
+        # bound on production. Default value is large enough that unconnected runs
+        # leave the raw production untouched.
+        outputs[f"{self.commodity}_out"] = np.minimum(
+            outputs[f"{self.commodity}_out"], inputs[f"{self.commodity}_command_value"]
+        )
         # Unused feedstock only (purge gas now in separate stream)
         outputs["hydrogen_out"] = h2_in - used_h2
         outputs["nitrogen_out"] = n2_in - used_n2
