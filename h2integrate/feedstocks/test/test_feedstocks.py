@@ -227,10 +227,11 @@ def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
     assert np.all(ng_output == 100.0)
 
     # Test cost model
-    cost_model = EIANaturalGasFeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = EIANaturalGasFeedstockCostModel(
+       tech_config = tech_config,
+       plant_config = plant_config,
+       driver_config = {}
+       )
 
     prob_cost = om.Problem()
     prob_cost.model.add_subsystem("feedstock_cost", cost_model)
