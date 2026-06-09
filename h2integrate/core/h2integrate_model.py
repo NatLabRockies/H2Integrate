@@ -941,7 +941,6 @@ class H2IntegrateModel:
                         tech_group,
                         comp,
                         individual_tech_config,
-                        perf_model,
                     )
 
                     continue
@@ -983,7 +982,6 @@ class H2IntegrateModel:
                         tech_group,
                         perf_om_object,
                         individual_tech_config,
-                        individual_tech_config["performance_model"]["model"],
                     )
 
                 # Process the finance models
@@ -1063,7 +1061,6 @@ class H2IntegrateModel:
         tech_group,
         perf_comp,
         individual_tech_config,
-        _perf_model_name,
     ):
         """Automatically add a PassthroughController to a tech group if appropriate.
 

@@ -223,8 +223,9 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "Annual O2 Production [kg/year]"
         ]
 
-        # Apply set_point from system-level controller if present
-        if "system_level_control" in self.options["plant_config"]:
-            set_point = inputs[f"{self.commodity}_command_value"]
-            commodity_out_key = f"{self.commodity}_out"
-            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], set_point)
+        # Apply the command value supplied by the tech-level controller as an upper
+        # bound on production. Default value is large enough that unconnected runs
+        # leave the raw production untouched.
+        outputs[f"{self.commodity}_out"] = np.minimum(
+            outputs[f"{self.commodity}_out"], inputs[f"{self.commodity}_command_value"]
+        )
