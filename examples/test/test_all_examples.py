@@ -1746,7 +1746,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
 )
-def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
+def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     with pytest.raises(UserWarning) as excinfo:
@@ -1760,7 +1760,7 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
     # load the driver config file
     driver_config = load_driver_yaml("driver_config.yaml")
     # specify the filepath to the csv file
-    csv_fpath = Path(driver_config["driver"]["design_of_experiments"]["filename"]).absolute()
+    csv_fpath = Path(driver_config["driver"]["parameter_sweep"]["filename"]).absolute()
     # run the csv checker method, we want it to write the csv file to a new filepath so
     # set overwrite_file=False
     new_csv_filename = check_file_format_for_csv_generator(
