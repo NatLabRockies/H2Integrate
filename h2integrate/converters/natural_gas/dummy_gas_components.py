@@ -82,6 +82,14 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
         # Add all wellhead_gas_mixture stream outputs
         add_multivariable_output(self, "wellhead_gas_mixture", self.n_timesteps)
 
+        self.add_input(
+            f"{self.commodity}_command_value",
+            val=1.0e9,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Upper-bound dispatch command for {self.commodity} production.",
+        )
+
     def compute(self, inputs, outputs):
         # Set random seed for reproducibility if specified
         rng = np.random.default_rng(self.config.random_seed)
@@ -132,6 +140,10 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
             rated_production * self.n_timesteps * (self.dt / 3600)
         )
 
+        outputs[f"{self.commodity}_out"] = np.minimum(
+            outputs[f"{self.commodity}_out"], inputs[f"{self.commodity}_command_value"]
+        )
+
 
 class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     """
@@ -162,6 +174,14 @@ class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
 
         # Add all wellhead_gas_mixture stream inputs
         add_multivariable_input(self, "wellhead_gas_mixture", self.n_timesteps)
+
+        self.add_input(
+            f"{self.commodity}_command_value",
+            val=1.0e9,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc=f"Upper-bound dispatch command for {self.commodity} production.",
+        )
 
         # Add some derived outputs
         self.add_output(
@@ -197,6 +217,10 @@ class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
         max_possible = np.max(hydrogen_mass_flow) * self.n_timesteps * (self.dt / 3600)
         outputs["capacity_factor"] = (
             outputs["total_hydrogen_produced"] / max_possible if max_possible > 0 else 0.0
+        )
+
+        outputs[f"{self.commodity}_out"] = np.minimum(
+            outputs[f"{self.commodity}_out"], inputs[f"{self.commodity}_command_value"]
         )
 
 
