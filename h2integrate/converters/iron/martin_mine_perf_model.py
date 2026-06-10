@@ -79,7 +79,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
         # Default the ore set point input as the rated capacity
         self.add_input(
-            "iron_ore_command_value",
+            "iron_ore_set_point",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units="t/h",
@@ -204,10 +204,10 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         max_energy_consumption = inputs["system_capacity"] * energy_usage_per_processed_ore
 
         # iron ore set point, saturated at maximum rated system capacity
-        processed_ore_command_value = np.where(
-            inputs["iron_ore_command_value"] > inputs["system_capacity"],
+        processed_ore_set_point = np.where(
+            inputs["iron_ore_set_point"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["iron_ore_command_value"],
+            inputs["iron_ore_set_point"],
         )
 
         # available feedstocks, saturated at maximum system feedstock consumption
@@ -229,11 +229,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
         # output is minimum between available feedstocks and output set point
         processed_ore_production = np.minimum.reduce(
-            [
-                processed_ore_from_crude_ore,
-                processed_ore_from_electricity,
-                processed_ore_command_value,
-            ]
+            [processed_ore_from_crude_ore, processed_ore_from_electricity, processed_ore_set_point]
         )
 
         # energy consumption

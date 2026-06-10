@@ -1,4 +1,3 @@
-import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
@@ -51,13 +50,6 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_input(
-            f"{self.commodity}_command_value",
-            val=1.0e9,
-            shape=n_timesteps,
-            units=self.commodity_rate_units,
-            desc=f"Upper-bound dispatch command for {self.commodity} production.",
-        )
 
     def compute(self, inputs, outputs):
         ammonia_production_kgpy = (
@@ -71,10 +63,6 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
             1 / self.fraction_of_year_simulated
         )
         outputs["rated_ammonia_production"] = self.config.plant_capacity_kgpy / 8760
-
-        outputs[f"{self.commodity}_out"] = np.minimum(
-            outputs[f"{self.commodity}_out"], inputs[f"{self.commodity}_command_value"]
-        )
 
 
 @define(kw_only=True)

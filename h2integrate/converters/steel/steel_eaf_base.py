@@ -79,7 +79,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 
         # Default the steel set point input as the rated capacity
         self.add_input(
-            "steel_command_value",
+            "steel_set_point",
             val=self.config.steel_production_rate_tonnes_per_hr,
             shape=n_timesteps,
             units=self.commodity_rate_units,
@@ -232,19 +232,19 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             ].sum()  # t/t
 
         # steel set point, saturated at maximum rated system capacity
-        steel_command_value = np.where(
-            inputs["steel_command_value"] > inputs["system_capacity"],
+        steel_set_point = np.where(
+            inputs["steel_set_point"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["steel_command_value"],
+            inputs["steel_set_point"],
         )
 
         # initialize an array of how much steel could be produced
         # from the available feedstocks and the set point
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["steel_command_value"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["steel_set_point"]))
         )
         # first entry is the steel set point
-        steel_from_feedstocks[0] = steel_command_value
+        steel_from_feedstocks[0] = steel_set_point
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity

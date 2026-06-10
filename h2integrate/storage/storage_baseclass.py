@@ -180,7 +180,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         if not using_feedback_control:
             # using an open-loop storage controller
             self.add_input(
-                f"{commodity}_command_value",
+                f"{commodity}_set_point",
                 val=0.0,
                 shape=n_timesteps,
                 units=commodity_rate_units,
@@ -274,7 +274,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         else:
             storage_commodity_out, soc = self.simulate(
-                storage_dispatch_commands=inputs[f"{self.commodity}_command_value"],
+                storage_dispatch_commands=inputs[f"{self.commodity}_set_point"],
                 charge_rate=charge_rate,
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,

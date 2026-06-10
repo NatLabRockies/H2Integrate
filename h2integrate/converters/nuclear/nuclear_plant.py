@@ -61,7 +61,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
             desc="Nuclear plant rated capacity",
         )
         self.add_input(
-            f"{self.commodity}_command_value",
+            f"{self.commodity}_set_point",
             val=self.config.system_capacity_kw,
             shape=n_timesteps,
             units=self.commodity_rate_units,
@@ -70,9 +70,9 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
 
     def compute(self, inputs, outputs):
         system_capacity = inputs["system_capacity"]
-        electricity_command_value = inputs[f"{self.commodity}_command_value"]
+        electricity_set_point = inputs[f"{self.commodity}_set_point"]
 
-        electricity_out = np.minimum(electricity_command_value, system_capacity)
+        electricity_out = np.minimum(electricity_set_point, system_capacity)
         electricity_out = np.clip(electricity_out, 0.0, system_capacity)
 
         outputs["electricity_out"] = electricity_out

@@ -153,7 +153,7 @@ class TestSystemLevelControlBase:
         # _var_rel2meta uses relative names (no "slc." prefix)
         assert "wind_electricity_out" in prob.model.slc._var_rel2meta
         assert "wind_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "wind_electricity_set_point" in prob.model.slc._var_rel2meta
+        assert "wind_electricity_demand" in prob.model.slc._var_rel2meta
 
     def test_base_creates_dispatchable_io(self):
         tech_connections = [["ng", "demand", "electricity", "cable"]]
@@ -164,7 +164,7 @@ class TestSystemLevelControlBase:
         prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
         assert "ng_electricity_out" in prob.model.slc._var_rel2meta
         assert "ng_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "ng_electricity_set_point" in prob.model.slc._var_rel2meta
+        assert "ng_electricity_demand" in prob.model.slc._var_rel2meta
 
     def test_base_creates_storage_io(self):
         tech_connections = [["battery", "demand", "electricity", "cable"]]
@@ -176,7 +176,7 @@ class TestSystemLevelControlBase:
 
         assert "battery_electricity_out" in prob.model.slc._var_rel2meta
         assert "battery_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "battery_electricity_set_point" in prob.model.slc._var_rel2meta
+        assert "battery_electricity_demand" in prob.model.slc._var_rel2meta
 
     def test_base_creates_demand_input(self):
         plant_config = _build_plant_config([])
@@ -215,8 +215,8 @@ class TestDemandFollowingControl:
         prob.set_val("slc.ng2_rated_electricity_production", 40000)
         prob.run_model()
 
-        sp1 = prob.get_val("slc.ng1_electricity_set_point")
-        sp2 = prob.get_val("slc.ng2_electricity_set_point")
+        sp1 = prob.get_val("slc.ng1_electricity_demand")
+        sp2 = prob.get_val("slc.ng2_electricity_demand")
         np.testing.assert_allclose(sp1, 25000)
         np.testing.assert_allclose(sp2, 25000)
 
@@ -239,7 +239,7 @@ class TestDemandFollowingControl:
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # demand=50k, wind outputs [30k,60k,50k,10k] → remaining = max(0, demand-wind)
         expected = np.maximum(50000 - np.array([30000, 60000, 50000, 10000]), 0)
         np.testing.assert_allclose(ng_sp, expected)
@@ -267,7 +267,7 @@ class TestDemandFollowingControl:
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         prob.run_model()
 
-        batt_sp = prob.get_val("slc.battery_electricity_set_point")
+        batt_sp = prob.get_val("slc.battery_electricity_demand")
         # demand - wind = [50k-70k, 50k-30k, 0, 0] = [-20k, 20k, 0, 0]
         expected = np.array([-20000, 20000, 0, 0])
         np.testing.assert_allclose(batt_sp, expected)
@@ -310,8 +310,8 @@ class TestCostMinimizationControl:
         prob.set_val("slc.expensive_rated_electricity_production", 40000)
         prob.run_model()
 
-        cheap_sp = prob.get_val("slc.cheap_electricity_set_point")
-        expensive_sp = prob.get_val("slc.expensive_electricity_set_point")
+        cheap_sp = prob.get_val("slc.cheap_electricity_demand")
+        expensive_sp = prob.get_val("slc.expensive_electricity_demand")
         # Cheap can handle all 50k (rated 80k), so expensive gets 0
         np.testing.assert_allclose(cheap_sp, 50000)
         np.testing.assert_allclose(expensive_sp, 0)
@@ -336,8 +336,8 @@ class TestCostMinimizationControl:
         prob.set_val("slc.expensive_rated_electricity_production", 40000)
         prob.run_model()
 
-        cheap_sp = prob.get_val("slc.cheap_electricity_set_point")
-        expensive_sp = prob.get_val("slc.expensive_electricity_set_point")
+        cheap_sp = prob.get_val("slc.cheap_electricity_demand")
+        expensive_sp = prob.get_val("slc.expensive_electricity_demand")
         # Cheap maxes at 30k, expensive picks up remaining 20k
         np.testing.assert_allclose(cheap_sp, 30000)
         np.testing.assert_allclose(expensive_sp, 20000)
@@ -361,7 +361,7 @@ class TestCostMinimizationControl:
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # demand 50k - wind 40k = 10k remaining
         np.testing.assert_allclose(ng_sp, 10000)
 
@@ -394,8 +394,8 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", 0.06)
         prob.run_model()
 
-        cheap_sp = prob.get_val("slc.cheap_electricity_set_point")
-        expensive_sp = prob.get_val("slc.expensive_electricity_set_point")
+        cheap_sp = prob.get_val("slc.cheap_electricity_demand")
+        expensive_sp = prob.get_val("slc.expensive_electricity_demand")
         # Cheap (0.03 < 0.06) dispatched up to rated 30k
         # Expensive (0.08 >= 0.06) NOT dispatched, demand unmet
         np.testing.assert_allclose(cheap_sp, 30000)
@@ -420,8 +420,8 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", 0.10)
         prob.run_model()
 
-        a_sp = prob.get_val("slc.a_electricity_set_point")
-        b_sp = prob.get_val("slc.b_electricity_set_point")
+        a_sp = prob.get_val("slc.a_electricity_demand")
+        b_sp = prob.get_val("slc.b_electricity_demand")
         # Both profitable, cheapest first: a gets 50k (rated 80k), b gets 0
         np.testing.assert_allclose(a_sp, 50000)
         np.testing.assert_allclose(b_sp, 0)
@@ -442,7 +442,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", 0.01)
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # NG cost (0.05) >= sell price (0.01), not dispatched
         np.testing.assert_allclose(ng_sp, 0)
 
@@ -462,7 +462,7 @@ class TestProfitMaximizationControl:
         # Don't set sell_price explicitly — should use config default 0.10
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # Config sell_price=0.10 > marginal 0.03 → dispatched
         np.testing.assert_allclose(ng_sp, 50000)
 
@@ -483,7 +483,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", [0.08, 0.03, 0.10, 0.02])
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # mc=0.05: profitable when sell>0.05 (hours 0,2), not when sell<0.05 (hours 1,3)
         np.testing.assert_allclose(ng_sp, [50000, 0, 50000, 0])
 
@@ -521,7 +521,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", 0.10)
         prob.run_model()
 
-        grid_sp = prob.get_val("slc.grid_electricity_set_point")
+        grid_sp = prob.get_val("slc.grid_electricity_demand")
         # buy_price=0.04 < sell_price=0.10 → dispatched
         np.testing.assert_allclose(grid_sp, 50000)
 
@@ -561,7 +561,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.grid_buy_price", [0.03, 0.08, 0.04, 0.09])
         prob.run_model()
 
-        grid_sp = prob.get_val("slc.grid_electricity_set_point")
+        grid_sp = prob.get_val("slc.grid_electricity_demand")
         np.testing.assert_allclose(grid_sp, [50000, 0, 50000, 0])
 
     def test_varopex_mode(self):
@@ -584,7 +584,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.gen_electricity_out", np.full(4, 100000.0))
         prob.run_model()
 
-        gen_sp = prob.get_val("slc.gen_electricity_set_point")
+        gen_sp = prob.get_val("slc.gen_electricity_demand")
         # VarOpEx=500k $/yr, production=100MW*4h=400MWh over 4h
         # Annual production = 400 MWh / (4/8760) = 876,000 MWh
         # mc = 500k / 876k ≈ 0.571 $/MWh ≈ 0.000571 $/kWh
@@ -607,7 +607,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.commodity_sell_price", 0.10)
         prob.run_model()
 
-        ng_sp = prob.get_val("slc.ng_electricity_set_point")
+        ng_sp = prob.get_val("slc.ng_electricity_demand")
         # mc=0.0 < sell_price=0.10 → dispatched
         np.testing.assert_allclose(ng_sp, 50000)
 
@@ -634,7 +634,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.ng_plant_electricity_out", np.full(4, 100000.0))
         prob.run_model()
 
-        sp = prob.get_val("slc.ng_plant_electricity_set_point")
+        sp = prob.get_val("slc.ng_plant_electricity_demand")
         # Annual production = 400 MWh / (4/8760) = 876,000 MWh
         # mc = 1M / 876k ≈ 1.14 $/MWh ≈ 0.00114 $/kWh → very cheap
         np.testing.assert_allclose(sp, 50000)
@@ -665,7 +665,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.plant_electricity_out", np.full(4, 100000.0))
         prob.run_model()
 
-        sp = prob.get_val("slc.plant_electricity_set_point")
+        sp = prob.get_val("slc.plant_electricity_demand")
         # Total VarOpEx = 800k, annual production = 876,000 MWh
         # mc ≈ 0.913 $/MWh ≈ 0.000913 $/kWh → very cheap
         np.testing.assert_allclose(sp, 50000)
@@ -695,7 +695,7 @@ class TestProfitMaximizationControl:
         prob.set_val("slc.ng_plant_electricity_out", np.full(4, 100000.0))
         prob.run_model()
 
-        sp = prob.get_val("slc.ng_plant_electricity_set_point")
+        sp = prob.get_val("slc.ng_plant_electricity_demand")
         # mc = 100M / 876k ≈ 114 $/MWh ≈ 0.114 $/kWh > sell 0.01 → NOT dispatched
         np.testing.assert_allclose(sp, 0)
 

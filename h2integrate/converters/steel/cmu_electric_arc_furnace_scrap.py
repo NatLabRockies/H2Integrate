@@ -142,7 +142,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
 
         # Default the steel demand input as the production rate
         self.add_input(
-            "steel_command_value",
+            "steel_set_point",
             val=units.convert_units(
                 self.config.steel_production_rate_tonnes_per_year, "t/year", "t/h"
             ),
@@ -260,19 +260,19 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         }
 
         # steel demand, saturated at maximum rated system capacity
-        steel_command_value = np.where(
-            inputs["steel_command_value"] > system_production,
+        steel_set_point = np.where(
+            inputs["steel_set_point"] > system_production,
             system_production,
-            inputs["steel_command_value"],
+            inputs["steel_set_point"],
         )
 
         # initialize an array of how much steel could be produced
         # from the available feedstocks and the demand
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_command_value"]))
+            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_set_point"]))
         )
         # first entry is the steel demand
-        steel_from_feedstocks[0] = steel_command_value
+        steel_from_feedstocks[0] = steel_set_point
         ii = 1
 
         for feedstock_type, consumption_rate in feedstocks_usage_per_tonne_steel.items():

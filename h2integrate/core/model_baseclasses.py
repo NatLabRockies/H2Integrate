@@ -102,7 +102,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # Flexible models get additional I/O for set_point-based curtailment
         if getattr(self, "_control_classifier", None) == "flexible":
             self.add_input(
-                f"{self.commodity}_command_value",
+                f"{self.commodity}_set_point",
                 val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
@@ -117,7 +117,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             )
 
     def apply_curtailment(self, outputs):
-        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_set_point``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
         then clips ``{commodity}_out`` to ``min(uncurtailed, set_point)`` element-wise.
@@ -132,7 +132,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
             commodity_out_key = f"{self.commodity}_out"
             uncurtailed_key = f"uncurtailed_{self.commodity}_out"
-            set_point_key = f"{self.commodity}_command_value"
+            set_point_key = f"{self.commodity}_set_point"
 
             uncurtailed = np.array(outputs[commodity_out_key])
             outputs[uncurtailed_key] = uncurtailed
