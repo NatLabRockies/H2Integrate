@@ -390,7 +390,7 @@ def test_grid_integration_dt_1800(subtests, tmp_path):
     h2i.setup()
 
     demand = np.full(n_timesteps, demand_kw)
-    h2i.prob.set_val("grid.controller.electricity_set_point", demand, units="kW")
+    h2i.prob.set_val("grid.electricity_set_point", demand, units="kW")
     h2i.prob.run_model()
 
     expected_out = np.full(n_timesteps, demand_kw)

@@ -763,11 +763,8 @@ class H2IntegrateModel:
             # User-defined controllers generally promote ``{commodity}_set_point``
             # at the tech-group level, while auto-injected passthrough
             # controllers expose it at ``controller.{commodity}_set_point``.
-            tech_cfg = self.technology_config["technologies"][tech_name]
-            if "control_strategy" in tech_cfg:
-                tech_set_point_target = f"{tech_name}.{commodity}_set_point"
-            else:
-                tech_set_point_target = f"{tech_name}.controller.{commodity}_set_point"
+            self.technology_config["technologies"][tech_name]
+            tech_set_point_target = f"{tech_name}.{commodity}_set_point"
 
             self.plant.connect(
                 f"system_level_controller.{tech_name}_{commodity}_set_point",
@@ -1119,13 +1116,7 @@ class H2IntegrateModel:
             commodity_rate_units=commodity_rate_units,
         )
 
-        # Keep controller I/O unpromoted to avoid promoted-name collisions
-        # with performance-model ``{commodity}_command_value`` inputs.
-        om_controller = tech_group.add_subsystem("controller", controller)
-        tech_group.connect(
-            f"controller.{commodity}_command_value",
-            f"{commodity}_command_value",
-        )
+        om_controller = tech_group.add_subsystem("controller", controller, promotes=["*"])
         self.control_strategies.append(om_controller)
 
         # Ensure the controller runs before the performance/cost models that
