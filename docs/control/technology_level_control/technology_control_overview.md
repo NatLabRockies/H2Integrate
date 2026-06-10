@@ -1,16 +1,16 @@
 # Technology-Level Control
 
-Every technology group in H2Integrate contains a controller subsystem. Its job is to translate a `{commodity}_set_point` signal into the `{commodity}_command_value` consumed by the technology's performance model. This convention keeps the framework consistent: every technology exposes the same set-point/command-value interface, regardless of whether a system-level controller (SLC) is present and regardless of how complex the underlying control logic is.
+Every technology group in H2Integrate contains a controller subsystem. Its job is to translate a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the technology's performance model. This convention keeps the framework consistent: every technology exposes the same demand/set-point interface, regardless of whether a system-level controller (SLC) is present and regardless of how complex the underlying control logic is.
 
 (implicit-passthrough-controller)=
 ## Implicit passthrough controller
 
-If a technology does not define its own `control_strategy`, H2Integrate automatically inserts a `PassthroughController` into the technology group. This controller simply copies `{commodity}_set_point` to `{commodity}_command_value` so that:
+If a technology does not define its own `control_strategy`, H2Integrate automatically inserts a `PassthroughController` into the technology group. This controller simply copies `{commodity}_demand` to `{commodity}_set_point` so that:
 
-- When an SLC is present, the SLC's per-tech set-point is fed straight through to the performance model command value.
-- When no SLC is present, the set-point input defaults to a large value so the performance model behaves as if unconstrained (the model typically saturates at its rated capacity).
+- When an SLC is present, the SLC's per-tech demand is fed straight to the performance model.
+- When no SLC is present, the demand input defaults to a large value so the performance model behaves as if unconstrained (the model typically saturates at its rated capacity).
 
-If you add your own controller via `control_strategy` in the technology config, that controller is used instead of the passthrough. User-defined controllers must produce the same `{commodity}_command_value` output so the rest of the framework can connect to them in a uniform way.
+If you add your own controller via `control_strategy` in the technology config, that controller is used instead of the passthrough. User-defined controllers must produce the same `{commodity}_set_point` output so the rest of the framework can connect to them in a uniform way.
 
 ## Control frameworks
 

@@ -186,7 +186,7 @@ end_hour = 1000
 x = list(range(start_hour, end_hour))
 
 generation = h2i.prob.get_val("battery.electricity_in", units="MW")
-battery_demand = h2i.prob.get_val("battery.electricity_command_value", units="MW")
+battery_demand = h2i.prob.get_val("battery.electricity_demand", units="MW")
 battery_charge_discharge = h2i.prob.get_val("battery.electricity_out", units="MW")
 
 where_charge =  [True if d<0 else False for d in battery_charge_discharge[start_hour:end_hour]]
@@ -243,7 +243,7 @@ If we re-run H2I and set the battery demand equal to the electrolyzer capacity i
 ```{code-cell} ipython3
 
 # Set the battery demand equal to the rated electrical capacity of the electrolyzer
-h2i.prob.set_val("battery.electricity_command_value", electrolyzer_capacity_MW, units="MW")
+h2i.prob.set_val("battery.electricity_demand",electrolyzer_capacity_MW, units="MW")
 
 # Set the demand of the demand component equal to the rated electrical capacity of the electrolyzer
 h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
