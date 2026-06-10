@@ -37,8 +37,9 @@ def find_off_blocks(profile: np.ndarray, min_production: float) -> np.ndarray:
     before and after the block (when they exist) are on.
 
     Args:
-        profile (np.ndarray): 1-D production profile.
+        profile (np.ndarray): 1-D timeseries production profile.
         min_production (float): threshold below which a timestep is considered off.
+            Must be in the same units as ``profile``.
 
     Returns:
         np.ndarray: Integer array of shape ``(n_blocks, 2)``. May have ``n_blocks == 0``.
@@ -58,9 +59,8 @@ def check_ramping_at_t0(
     """Check that ramp-down constraints are applied at the start of the production profile.
 
     Args:
-        profile (np.ndarray): 1-D requested production profile.
-        max_down_per_step (float | int): maximum downward ramp rate in
-            production-units / timestep
+        profile (np.ndarray): 1-D production profile timeserie in amount_units/timestep.
+        max_down_per_step (float | int): maximum downward ramp rate in amount units / timestep
 
     Returns:
         2-element tuple containing
