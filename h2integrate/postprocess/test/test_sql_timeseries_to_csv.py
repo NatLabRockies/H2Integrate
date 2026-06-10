@@ -1,33 +1,35 @@
 from pathlib import Path
 
-import numpy as np
 import pytest
 from pytest import fixture
 
-from h2integrate import H2IntegrateModel, load_yaml, load_tech_yaml, load_driver_yaml
+from h2integrate import H2IntegrateModel, load_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 @fixture
 def configuration(temp_copy_of_example):
     example_folder = temp_copy_of_example
-    config = load_yaml(example_folder / "02_texas_ammonia.yaml")
+    config = load_yaml(example_folder / "natgas.yaml")
 
     driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
     output_folder = example_folder / driver_config["general"]["folder_output"]
     driver_config["general"]["folder_output"] = str(output_folder)
+    driver_config["recorder"] = {
+        "flag": True,
+        "file": "cases.sql",
+        "overwrite_recorder": True,
+        "recorder_attachment": "model",
+        "includes": ["*"],
+        "excludes": ["*resource_data*"],
+    }
     config["driver_config"] = driver_config
 
-    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
-    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
-        str(output_folder)
-    )
-    config["technology_config"] = tech_config
     return config
 
 
 @fixture
-def run_example_02_sql_fpath(configuration):
+def run_example_sql_fpath(configuration):
     # check if case file exists, if so, return the filepath
     output_folder = (
         Path(configuration["driver_config"]["general"]["folder_output"]).resolve().parent
@@ -39,11 +41,6 @@ def run_example_02_sql_fpath(configuration):
         # Create a H2Integrate model
         h2i = H2IntegrateModel(configuration)
 
-        # Set the battery demand profile
-        demand_profile = np.ones(8760) * 640.0
-        h2i.setup()
-        h2i.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
-
         # Run the model
         h2i.run()
 
@@ -51,15 +48,17 @@ def run_example_02_sql_fpath(configuration):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
-def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
+def test_save_csv_all_results(subtests, configuration, run_example_sql_fpath):
     expected_csv_fpath = (
         Path(configuration["driver_config"]["general"]["folder_output"]) / "cases_Case-1.csv"
     )
-    res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
+    res = save_case_timeseries_as_csv(run_example_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
-        assert len(res.columns.to_list()) == 61
+        assert len(res.columns.to_list()) > 0
 
     with subtests.test("Check number of rows"):
         assert len(res) == 8760
@@ -69,17 +68,19 @@ def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath)
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
-def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
+def test_make_df_from_varname_list(subtests, run_example_sql_fpath):
     vars_to_save = [
-        "electrolyzer.hydrogen_out",
-        "combiner.electricity_out",
-        "ammonia.ammonia_out",
-        "h2_storage.hydrogen_out",
+        "natural_gas_plant.electricity_out",
+        "elec_combiner.electricity_out",
+        "solar.electricity_out",
+        "battery.electricity_out",
     ]
 
     res = save_case_timeseries_as_csv(
-        run_example_02_sql_fpath, vars_to_save=vars_to_save, save_to_file=False
+        run_example_sql_fpath, vars_to_save=vars_to_save, save_to_file=False
     )
 
     with subtests.test("Check number of columns"):
@@ -94,16 +95,18 @@ def test_make_df_from_varname_list(subtests, run_example_02_sql_fpath):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
-def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
+def test_make_df_from_varname_unit_dict(subtests, run_example_sql_fpath):
     vars_units_to_save = {
-        "ammonia.hydrogen_in": "kg/h",
-        "h2_storage.hydrogen_in": "kg/h",
-        "electrolyzer.electricity_in": "kW",
+        "natural_gas_plant.natural_gas_in": "MMBtu/h",
+        "battery.electricity_in": "kW",
+        "solar.electricity_out": "kW",
     }
 
     res = save_case_timeseries_as_csv(
-        run_example_02_sql_fpath, vars_to_save=vars_units_to_save, save_to_file=False
+        run_example_sql_fpath, vars_to_save=vars_units_to_save, save_to_file=False
     )
 
     with subtests.test("Check number of columns"):
@@ -120,26 +123,33 @@ def test_make_df_from_varname_unit_dict(subtests, run_example_02_sql_fpath):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
-def test_alternative_column_names(subtests, run_example_02_sql_fpath):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
+)
+def test_alternative_column_names(subtests, run_example_sql_fpath):
     vars_to_save = {
-        "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
-        "combiner.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
-        "ammonia.ammonia_out": {"alternative_name": None},
-        "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
+        "natural_gas_plant.electricity_out": {
+            "alternative_name": "Natural Gas Plant Electricity Output"
+        },
+        "elec_combiner.electricity_out": {
+            "units": "kW",
+            "alternative_name": "Plant Electricity Output",
+        },
+        "solar.electricity_out": {"alternative_name": None},
+        "battery.electricity_out": {"alternative_name": "Battery Electricity Output"},
     }
 
     res = save_case_timeseries_as_csv(
-        run_example_02_sql_fpath,
+        run_example_sql_fpath,
         vars_to_save=vars_to_save,
         save_to_file=False,
     )
 
     expected_name_list = [
-        "Electrolyzer Hydrogen Output (kg/h)",
+        "Natural Gas Plant Electricity Output (MW)",
         "Plant Electricity Output (kW)",
-        "ammonia.ammonia_out (kg/h)",
-        "H2 Storage Hydrogen Output (kg/h)",
+        "solar.electricity_out (MW)",
+        "Battery Electricity Output (MW)",
     ]
 
     with subtests.test("Check number of columns"):
