@@ -37,7 +37,7 @@ def test_curtailable_component(plant_config_base, subtests):
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_set_point", val=10, shape=8760, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_command_value", val=10, shape=8760, units="kg/h"),
         promotes=["*"],
     )
 

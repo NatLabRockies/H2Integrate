@@ -42,7 +42,7 @@ def run_example_02_sql_fpath(configuration):
         # Set the battery demand profile
         demand_profile = np.ones(8760) * 640.0
         h2i.setup()
-        h2i.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+        h2i.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
         # Run the model
         h2i.run()

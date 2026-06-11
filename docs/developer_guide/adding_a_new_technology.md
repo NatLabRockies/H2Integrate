@@ -37,7 +37,7 @@ class SolarPerformanceBaseClass(PerformanceModelBaseClass):
         # `annual_{commodity}_produced`, `rated_{commodity}_production`,
         # `replacement_schedule`, `capacity_factor`, `operational_life`.
         # When `_control_classifier == "flexible"`, it also registers the
-        # `{commodity}_set_point` input and `uncurtailed_{commodity}_out`
+        # `{commodity}_command_value` input and `uncurtailed_{commodity}_out`
         # output used by `apply_curtailment()`.
         super().setup()
 
@@ -56,7 +56,7 @@ Note that the baseclass inherits from `PerformanceModelBaseClass` (defined in `h
 - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
 - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
 - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
-- Adds set-point input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+- Adds command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
 
 Every performance model must therefore define three class attributes and three commodity attributes; see the [Required class attributes](#required-class-attributes) section below for details.
 
@@ -88,11 +88,11 @@ class PYSAMSolarPlantPerformanceComponent(SolarPerformanceBaseClass):
         self.system_model.execute(0)
         outputs['electricity_out'] = self.system_model.Outputs.gen
 
-        # Flexible models must apply curtailment from the system-level
-        # controller's set-point at the end of compute(). This clips
-        # `{commodity}_out` to `min(uncurtailed, set_point)` and copies the
+        # Flexible models must apply curtailment from the upstream
+        # controller's command value at the end of compute(). This clips
+        # `{commodity}_out` to `min(uncurtailed, command_value)` and copies the
         # raw output into `uncurtailed_{commodity}_out`. It is a no-op when
-        # no system-level controller is configured.
+        # no upstream controller is configured.
         self.apply_curtailment(outputs)
 ```
 
@@ -111,7 +111,7 @@ Every performance model (whether it inherits from a category-specific baseclass 
 - `_time_step_bounds` (tuple[int, int]): `(min, max)` simulation time-step lengths (in seconds) the model can run at. Use `(3600, 3600)` for hourly-only models and a wider range (e.g. `(300, 3600)`) for models that support sub-hourly time steps. The plant simulation `dt` must lie within every model's bounds.
 - `commodity` (str), `commodity_rate_units` (str), `commodity_amount_units` (str): set in `initialize()` (or before calling `super().setup()`). These define the commodity produced by the model and the units used for its rate (e.g. `"kW"`, `"kg/h"`) and cumulative amount (e.g. `"kW*h"`, `"kg"`). `PerformanceModelBaseClass.setup()` uses them to register all of the standard outputs and will raise `NotImplementedError` if any are missing.
 
-For `flexible` models specifically, the baseclass automatically registers the `{commodity}_set_point` input and `uncurtailed_{commodity}_out` output, and the `compute()` method must call `self.apply_curtailment(outputs)` after writing the raw production to `outputs[f"{commodity}_out"]`. For `dispatchable` models the set-point is consumed by the model's own internal logic; no curtailment helper is needed. `fixed` and `feedstock` models do not receive a set-point at all.
+For `flexible` models specifically, the baseclass automatically registers the `{commodity}_command_value` input and `uncurtailed_{commodity}_out` output, and the `compute()` method must call `self.apply_curtailment(outputs)` after writing the raw production to `outputs[f"{commodity}_out"]`. For `dispatchable` models the command value is consumed by the model's own internal logic; no curtailment helper is needed. `fixed` and `feedstock` models do not receive a command value at all.
 
 3. **Write the cost model for your technology.**
 The process for writing a cost model is similar to the performance model, with the required inputs and outputs defined in the technology cost model baseclass. The technology cost model baseclass should inherit the main cost model baseclass (`CostModelBaseClass`) with additional inputs, outputs, and setup added as necessary. The `CostModelBaseClass` has no predefined inputs, but all cost models must output `CapEx`, `OpEx`, and `cost_year`.
@@ -196,9 +196,9 @@ class ATBUtilityPVCostModel(CostModelBaseClass):
 ```
 
 4. **Write the control model for your technology (optional).**
-Every technology group in H2Integrate contains a controller subsystem that converts a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the performance model. If you do not specify a `control_strategy` for your technology, H2Integrate automatically inserts a `PassthroughController` that simply copies demand to set-point, so most new performance models do not need a custom controller.
+Every technology group in H2Integrate contains a controller subsystem that converts a `{commodity}_set_point` signal into the `{commodity}_command_value` consumed by the performance model. If you do not specify a `control_strategy` for your technology, H2Integrate automatically inserts a `PassthroughController` that simply copies set-point to command value, so most new performance models do not need a custom controller.
 
-You only need to write a control model if you want to override that default — for example, to implement a heuristic or optimized dispatch strategy for a storage technology. The process is similar to the performance model: the controller's required inputs and outputs (`{commodity}_demand` in, `{commodity}_set_point` out) are defined in the relevant control baseclass. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for available frameworks and supported controllers.
+You only need to write a control model if you want to override that default — for example, to implement a heuristic or optimized dispatch strategy for a storage technology. The process is similar to the performance model: the controller's required inputs and outputs (`{commodity}_set_point` in, `{commodity}_command_value` out) are defined in the relevant control baseclass. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for available frameworks and supported controllers.
 
 5. **Next, add the new technology to the `supported_models.py` file.**
 This file contains a dictionary of all the available technologies in H2Integrate.

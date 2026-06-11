@@ -17,7 +17,7 @@ class CurtailableComponentModel(om.ExplicitComponent):
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         self.add_input(f"{self.commodity}_out", shape=n_timesteps, units=None, units_by_conn=True)
         self.add_input(
-            f"{self.commodity}_set_point",
+            f"{self.commodity}_command_value",
             shape=n_timesteps,
             units=None,
             copy_units=f"{self.commodity}_out",
@@ -38,7 +38,7 @@ class CurtailableComponentModel(om.ExplicitComponent):
 
     def compute(self, inputs, outputs):
         set_point_difference = (
-            inputs[f"{self.commodity}_out"] - inputs[f"{self.commodity}_set_point"]
+            inputs[f"{self.commodity}_out"] - inputs[f"{self.commodity}_command_value"]
         )
         # commodity_out exceeds setpoint
         excess_commodity = np.where(set_point_difference > 0, set_point_difference, 0)

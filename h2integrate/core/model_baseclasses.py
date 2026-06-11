@@ -99,14 +99,14 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # operational life of the technology if the technology cannot be replaced
         self.add_output("operational_life", val=self.plant_life, units="yr")
 
-        # Flexible models get additional I/O for set_point-based curtailment
+        # Flexible models get additional I/O for command-value-based curtailment
         if getattr(self, "_control_classifier", None) == "flexible":
             self.add_input(
-                f"{self.commodity}_set_point",
+                f"{self.commodity}_command_value",
                 val=1.0,
                 shape=self.n_timesteps,
                 units=self.commodity_rate_units,
-                desc=f"Set point for {self.commodity} production (curtailment limit)",
+                desc=f"Command value for {self.commodity} production (curtailment limit)",
             )
             self.add_output(
                 f"uncurtailed_{self.commodity}_out",
@@ -117,10 +117,10 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             )
 
     def apply_curtailment(self, outputs):
-        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_set_point``.
+        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
-        then clips ``{commodity}_out`` to ``min(uncurtailed, set_point)`` element-wise.
+        then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
 
         Only operates when the model has ``_control_classifier == "flexible"``.
         Should be called at the end of each flexible model's ``compute()`` method
@@ -132,13 +132,13 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
             commodity_out_key = f"{self.commodity}_out"
             uncurtailed_key = f"uncurtailed_{self.commodity}_out"
-            set_point_key = f"{self.commodity}_set_point"
+            command_value_key = f"{self.commodity}_command_value"
 
             uncurtailed = np.array(outputs[commodity_out_key])
             outputs[uncurtailed_key] = uncurtailed
 
-            set_point = self._inputs[set_point_key]
-            outputs[commodity_out_key] = np.minimum(uncurtailed, set_point)
+            command_value = self._inputs[command_value_key]
+            outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """

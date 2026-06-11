@@ -17,7 +17,7 @@ def test_slc_no_battery(subtests, temp_copy_of_example):
 
     with subtests.test("Wind set point == rated"):
         assert np.all(
-            model.prob.get_val("system_level_controller.wind_electricity_demand", units="kW")
+            model.prob.get_val("system_level_controller.wind_electricity_set_point", units="kW")
             == model.prob.get_val("wind.rated_electricity_production", units="kW")
         )
 
@@ -26,7 +26,7 @@ def test_slc_no_battery(subtests, temp_copy_of_example):
             "electrical_load_demand.electricity_demand_out", units="kW"
         ) - model.prob.get_val("wind.electricity_out", units="kW")
         ng_set_point = model.prob.get_val(
-            "system_level_controller.natural_gas_plant_electricity_demand", units="kW"
+            "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
         )
         expected_ng_set_point = np.clip(
             remaining_demand,
@@ -76,7 +76,7 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
 
     with subtests.test("Wind set point == rated"):
         assert np.all(
-            model.prob.get_val("system_level_controller.wind_electricity_demand", units="kW")
+            model.prob.get_val("system_level_controller.wind_electricity_set_point", units="kW")
             == model.prob.get_val("wind.rated_electricity_production", units="kW")
         )
 
@@ -85,7 +85,7 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
             "electrical_load_demand.electricity_demand_out", units="kW"
         ) - model.prob.get_val("wind.electricity_out", units="kW")
         battery_set_point = model.prob.get_val(
-            "system_level_controller.battery_electricity_demand", units="kW"
+            "system_level_controller.battery_electricity_set_point", units="kW"
         )
         assert np.allclose(remaining_demand, battery_set_point, rtol=1e-6, atol=1e-8)
 
@@ -94,7 +94,7 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
             "battery.electricity_out", units="kW"
         )
         ng_set_point = model.prob.get_val(
-            "system_level_controller.natural_gas_plant_electricity_demand", units="kW"
+            "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
         )
         expected_ng_set_point = np.clip(
             remaining_demand,
