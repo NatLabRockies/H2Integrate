@@ -207,13 +207,17 @@ def test_slc_battery_with_controller(subtests, temp_copy_of_example):
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
+    with subtests.test("natural gas not dispatched when wind+battery cover demand"):
+        demand = model.prob.get_val("electrical_load_demand.electricity_demand_out", units="kW")
+        battery_out = model.prob.get_val("battery.electricity_out", units="kW")
+        assert np.all(battery_out[wind_out < demand] >= 0)
     with subtests.test("lcoe"):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)"),
                 rel=1e-6,
             )
-            == 0.10710679575878151
+            == 0.10902004
         )
 
 

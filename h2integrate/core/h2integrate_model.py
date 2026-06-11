@@ -576,6 +576,21 @@ class H2IntegrateModel:
             if e[-1] is not None
         }
 
+        # Check if storage models have a controller
+        storage_tech_to_control = {}
+        for tech, classifier in self.tech_control_classifiers.items():
+            if classifier == "storage":
+                control_model = (
+                    self.technology_config["technologies"][tech]
+                    .get("control_strategy", {})
+                    .get("model", None)
+                )
+                if control_model is None:
+                    storage_tech_to_control[tech] = False
+                else:
+                    # storage model does use a controller
+                    storage_tech_to_control[tech] = True
+
         # Remove feedstocks and connectors
         control_classifiers_to_connect = [
             "fixed",
@@ -595,6 +610,7 @@ class H2IntegrateModel:
         slc_config["demand_commodity"] = demand_commodity
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodity
+        slc_config["storage_techs_to_control"] = storage_tech_to_control
         slc_config["technology_graph"] = self.technology_graph
 
         slc_config["tech_control_classifiers"] = self.tech_control_classifiers
@@ -676,6 +692,8 @@ class H2IntegrateModel:
                 - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name to
                   classifier (``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``,
                   ``"feedstock"``).
+                - ``"storage_techs_to_control"`` (dict[str, bool]): Whether each storage tech
+                  has its own sub-controller.
                 - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
                   interconnections.
 
