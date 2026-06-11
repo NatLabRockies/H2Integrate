@@ -2,7 +2,7 @@
 Complex profit-maximization example with wind, solar, battery, NG, and grid.
 
 This example demonstrates profit-driven dispatch with:
-  - Wind + solar (curtailable) combined into a single renewable stream
+  - Wind + solar (flexible) combined into a single renewable stream
   - Battery storage (200 MWh) for renewable energy shifting
   - Natural gas turbine with marginal cost of $0.05/kWh (dispatchable)
   - Grid buying with time-varying marginal cost (dispatchable)
@@ -189,7 +189,7 @@ axes[4].plot(hours, wind_out / 1000, color="tab:blue", label="Wind (MW)")
 axes[4].plot(hours, solar_out / 1000, color="gold", label="Solar (MW)")
 axes[4].set_ylabel("Power (MW)")
 axes[4].set_xlabel("Hour")
-axes[4].set_title("Curtailable Renewable Generation")
+axes[4].set_title("Flexible Renewable Generation")
 axes[4].legend(loc="upper right")
 
 for ax in axes:

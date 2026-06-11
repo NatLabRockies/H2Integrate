@@ -58,7 +58,7 @@ display(
 
 The controller follows a three-step dispatch process:
 
-1. **Curtailable technologies** run at available capacity - they are always profitable to produce (zero marginal cost).
+1. **Flexible technologies** run at available capacity - they are always profitable to produce (zero marginal cost).
 2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging), split evenly across storage technologies producing the demanded commodity.
 3. **Dispatchable technologies** are dispatched in merit order (cheapest first), but **only at timesteps where their marginal cost is below the sell price**. At each timestep, the dispatch is the minimum of the remaining demand and the rated capacity, gated by the profitability check.
 
@@ -104,7 +104,7 @@ In addition to the standard inputs inherited from `SystemLevelControlBase`, this
 - `commodity_sell_price` - the sell price per unit of the demanded commodity, shape `(n_timesteps,)`
 - Marginal cost inputs per dispatchable technology based on `cost_per_tech` configuration
 
-The base inputs for technologies classified as `curtailable`, `dispatchable`, and `storage` are:
+The base inputs for technologies classified as `flexible`, `dispatchable`, and `storage` are:
 
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`

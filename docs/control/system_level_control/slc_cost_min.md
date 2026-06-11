@@ -21,7 +21,7 @@ Unlike the {ref}`demand following controller <slc-demand-following>`, which spli
 
 The controller follows a three-step dispatch process:
 
-1. **Curtailable technologies** run at their available capacity (assumed zero marginal cost). Their output is subtracted from the demand.
+1. **Flexible technologies** run at their available capacity (assumed zero marginal cost). Their output is subtracted from the demand.
 2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging). Residual demand is split evenly across storage technologies producing the demanded commodity.
 3. **Dispatchable technologies** are dispatched by cheapest marginal cost first, each up to its rated capacity, until the remaining demand is met.
 
@@ -54,7 +54,7 @@ system_level_control:
 
 In addition to the standard inputs inherited from `SystemLevelControlBase`, the cost minimization controller adds marginal cost inputs based on the `cost_per_tech` configuration (see above).
 
-The base inputs for technologies classified as `curtailable`, `dispatchable`, and `storage` are:
+The base inputs for technologies classified as `flexible`, `dispatchable`, and `storage` are:
 
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
