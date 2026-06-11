@@ -217,7 +217,7 @@ def test_slc_battery_with_controller(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(kW*h)"),
                 rel=1e-6,
             )
-            == 0.10902004
+            == 0.109020041
         )
 
 
