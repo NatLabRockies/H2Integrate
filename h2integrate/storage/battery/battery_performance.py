@@ -144,6 +144,12 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             desc="Solar resource data dictionary",
         )
 
+        self.add_output(
+            f"{self.commodity}_auxiliary_demand",
+            shape=self.n_timesteps,
+            desc="Electricity demand for running battery auxiliary systems",
+        )
+
         # TODO degradation: adjustments for degradation
 
         super().setup()
