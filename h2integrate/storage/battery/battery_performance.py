@@ -167,6 +167,7 @@ class BatteryPerformanceModel(StoragePerformanceBase):
 
         # TODO degradation: adjust compute method for degradation as needed
         self.degradation(discrete_inputs["solar_resource_data"])
+        # outputs[f"{self.commodity}_auxiliary_demand"] =
         outputs = self.run_storage(
             charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
         )
