@@ -111,16 +111,17 @@ tech_to_dispatch_connections: [
 ]
 ```
 
-# Optimized Demand Response Controller
+## Optimized Demand Response Controller
 
-This controller optimizes the dispatch of a Battery Energy Storage System (BESS) based on a pre-defined supervisory signal. This signal could be the Locational Marginal Price (LMP), a demand profile, or an $LMP\times demand$ product depending on the application. The objective is to maximize incentive payments to the battery, subject to constraints on the maximum number of dispatch events per month and on the battery state of charge.
+This controller optimizes the dispatch of a Battery Energy Storage System (BESS). It is demonstrated for a scenario in which a Generation and Transmission cooperative (G&T) is connected to a Distribution Co-operative (Co-op). The battery is owned and operated by the Co-op, primarily to reduce its electricity cost; in addition, the G&T can request battery dispatch a limited number of times during peak LMP periods, in exchange for incentive payments. Using a pre-defined Locational Marginal Price (LMP) profile and consumer power demand profile as inputs, the controller maximizes the incentive payments earned from G&T-requested dispatches while minimizing the Co-op's electricity cost, subject to constraints on the maximum number of dispatch events per month and the battery's state of charge. The result demonstrates peak load management and demand response from a single coordinated controller.
 
 The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
 
-## Definitions
+### Definitions
 
 **Given:**
-- $\lambda_t$ := `supervisory_signal`: price, demand, or price $\times$ demand time series at timestep $t$
+- $\lambda_t$ := `lmp_signal`: electricity price time series at timestep $t$
+- $\delta_t$ := `demand_signal`: consumer demand time series at timestep $t$
 - $\Delta t$ := simulation timestep duration (hours), derived from `dt` in the plant config
 - $\mathcal{W}$ := `peak_window`: set of timesteps eligible for dispatch (e.g., 12:00-20:00 each day)
 - $\lambda_*$ := signal threshold = `signal_threshold_percentile`-th percentile of $\lambda_t$ over $\mathcal{W}$
@@ -140,7 +141,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is `null`)
 - $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
 
-## Dispatch Window Construction
+### Dispatch Window Construction
 
 Before the MILP is solved, the dispatch window $\mathcal{D}$ is built in two steps:
 
@@ -148,25 +149,29 @@ Before the MILP is solved, the dispatch window $\mathcal{D}$ is built in two ste
 
 **Step 2 : Event window expansion:** If `event_duration` is specified, each peak in $\mathcal{E}$ is expanded by $\pm$ `event_duration`/2 timesteps to form $\mathcal{D}$. If `event_duration` is `null`, $\mathcal{D} = \mathcal{E}$.
 
-## Decision Variables
+### Decision Variables
 
-
-- $u_t \in \{0, 1\}$ := discharge binary: 1 if a discharge event is active at timestep $t$; used for event counting and window feasibility constraints only
+- $u_{gt,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at G&T's command is active at timestep $t$; used for event counting and window feasibility constraints only
+- $u_{coop,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at Co-op's command is active at timestep $t$; used for event counting and window feasibility constraints only
 - $v_t \in \{0, 1\}$ := charge binary: 1 if a charge event is active at timestep $t$
-- $p_{d,t} \in [0,\, P_{\max}]$ := discharge power (kW) actually dispatched at timestep $t$
-- $p_{c,t} \in [0,\, P_{\max}]$ := charge power (kW) actually consumed at timestep $t$
+- $p^d_{gt,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at G&Ts command at timestep $t$
+- $p^d_{coop,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at Co-op's command timestep $t$
+- $pc_{t} \in [0,\, P_{\max}]$ := charge power (kW) consumed at timestep $t$
+- $p_{gt2coop,t}$  := Energy supplied by the G&T to Co-op at timestep $t$
 - $\text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}]$ := state of charge (fraction) at timestep $t$
 
-## Optimization Problem
+### Optimization Problem
 
 This optimization is executed for each rolling window. At each window boundary the terminal SoC is carried forward as the initial condition for the next window.
 
-### Objective
+#### Objective
 
-Maximize total incentive revenue over the window:
+Minimize Co-op's cost and maximize total incentive revenue over the optimization window:
 
 $$
-\max_{u_t, v_t,p_{d,t}, p_{c,t}} \quad \gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p_{d,t}
+\min_{u_{gt,t},u_{coop,t},v_t,p^d_{gt,t},p^d_{coop,t},pc_t,\text{SOC}_t,p_{gt2coop,t}} \quad
+\Delta t \cdot \sum(f(\lambda_t) \cdot p_{gt2coop,t})
+-\gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p^d_{gt,t}
 $$
 
 The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled at any timestep resolution.
@@ -176,21 +181,25 @@ The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is c
 - Dispatch only within the event window $\mathcal{D}$:
 
 $$
-u_t = 0 \qquad \forall\, t \notin \mathcal{D}
+u_{gt,t} = 0 \qquad \forall\, t \notin \mathcal{D}
 $$
 
 - Maximum $N_{\max}$ discharge events per month. Because `event_duration` fixes each event to exactly $\tau$ timesteps, the event cap translates directly into a timestep cap:
 
 $$
-\sum_{t \in \mathcal{M}_m \cap \mathcal{T}} u_t \leq B_m \cdot \tau \qquad \forall\, m
+\sum_{t \in \mathcal{M}_m \cap \mathcal{T}} u_{gt,t} \leq B_m \cdot \tau \qquad \forall\, m
 $$
 
-After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_t = 1$ and $u_{t-1} = 0$) and $B_m$ is decremented accordingly for subsequent windows.
+After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_{gt,t} = 1$ and $u_{gt,t-1} = 0$) and $B_m$ is decremented accordingly for subsequent windows.
 
 - Power is zero when the binary is 0, and at most $P_{\max}$ when it is 1:
 
 $$
-p_{d,t} \leq P_{\max} \cdot u_t \qquad \forall\, t \in \mathcal{T}
+p^d_{gt,t} \leq P_{\max} \cdot u_{gt,t} \qquad \forall\, t \in \mathcal{T}
+$$
+
+$$
+p^d_{coop,t} \leq P_{\max} \cdot u_{coop,t} \qquad \forall\, t \in \mathcal{T}
 $$
 
 $$
@@ -200,7 +209,7 @@ $$
 - SoC evolution with continuous charge and discharge power:
 
 $$
-\text{SoC}_{t} = \text{SoC}_{t-1} + \frac{\eta_c \cdot p_{c,t} \cdot \Delta t}{E_{\max}} - \frac{p_{d,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} \qquad \forall\, t \in \mathcal{T},\, t > 0
+\text{SoC}_{t} = \text{SoC}_{t-1} + \frac{\eta_c \cdot p_{c,t}\cdot \Delta t }{E_{\max}} - \frac{p^d_{gt,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} - \frac{p^d_{coop,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} \qquad \forall\, t \in \mathcal{T},\, t > 0
 $$
 
 - SoC bounds:
@@ -212,7 +221,7 @@ $$
 - No simultaneous charge and discharge:
 
 $$
-u_t + v_t \leq 1 \qquad \forall\, t \in \mathcal{T}
+u_{gt,t} + u_{coop,t} + v_t \leq 1 \qquad \forall\, t \in \mathcal{T}
 $$
 
 - No charging during the dispatch window (battery reserved for discharge):
@@ -224,10 +233,24 @@ $$
 - Variable domains:
 
 $$
-u_t \in \{0, 1\}, \quad v_t \in \{0, 1\}, \quad p_{d,t},\, p_{c,t} \in [0,\, P_{\max}], \quad \text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}] \qquad \forall\, t
+u_{gt,t} \in \{0, 1\}, u_{coop,t} \in \{0, 1\}, \quad v_t \in \{0, 1\} \qquad \forall\, t
+$$
+
+$$
+p^d_{gt,t},\,p^d_{coop,t},\, p_{c,t} \in [0,\, P_{\max}] \qquad \forall\, t
+$$
+
+$$
+\quad \text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}] \qquad \forall\, t
+$$
+
+- Energy balance at Co-Op level
+
+$$
+\delta_t = p_{gt2coop,t} + p^d_{gt,t} + p^d_{coop,t} - p_{c,t}
 $$
 
 
-Example 34 performs the optimization with a synthetic LMP signal. The look-ahead horizon (`n_control_window_hours`) controls how many hours are optimized at once. Larger values improve solution quality but increase solve time. See the figure below for results.
+Example 34 performs the optimization with a synthetic LMP signal and demand signal. The look-ahead horizon (`n_control_window_hours`) controls how many hours are optimized at once. Larger values improve solution quality but increase solve time. See the figure below for results.
 
 ![](./figures/plm_optimized_dispatch.png)

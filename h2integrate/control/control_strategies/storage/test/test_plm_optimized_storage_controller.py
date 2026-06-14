@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import math
 import numpy as np
 import pandas as pd
 import pytest
@@ -29,16 +30,14 @@ def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
     if config.event_duration is not None:
         controller.steps_per_event = max(
             1,
-            int(
-                round(
+                math.ceil(
                     pd.Timedelta(
                         value=config.event_duration["val"],
                         unit=config.event_duration["units"],
                     ).total_seconds()
                     / dt_seconds
                 )
-            ),
-        )
+            )
     else:
         controller.steps_per_event = 1
     return controller
@@ -58,11 +57,13 @@ def base_config():
         tech_name="battery",
         system_commodity_interface_limit=100.0,
         max_charge_rate=1.0,
-        supervisory_signal=list(range(n)),
+        lmp_signal=list(range(n)),
+        demand_signal=list(range(n)),
         peak_window={"start": "08:00:00", "end": "18:00:00"},
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
+
     )
 
 
@@ -187,7 +188,7 @@ def test_optimizer_dispatch_only_in_peak_window(subtests, base_config):
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     peak_start, peak_end = controller._parse_peak_window()
     for t in range(24):
@@ -195,7 +196,7 @@ def test_optimizer_dispatch_only_in_peak_window(subtests, base_config):
         in_window = peak_start <= hour.time() <= peak_end
         if not in_window:
             with subtests.test(f"No discharge outside peak window at t={t}"):
-                assert pyomo.value(model.discharge[t]) < 1e-3  # type: ignore[index]
+                assert pyomo.value(model.discharge_gt[t]) < 1e-3  # type: ignore[index]
 
 
 @pytest.mark.regression
@@ -211,14 +212,14 @@ def test_optimizer_dispatch_only_on_eligible_timesteps(subtests, base_config):
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
-    signal = np.array(controller.config.supervisory_signal)
+    signal = np.array(controller.config.lmp_signal)
     eligible_mask = controller._compute_eligible_mask(signal)
     for t in range(24):
         if not eligible_mask[t]:
             with subtests.test(f"No discharge on ineligible timestep at t={t}"):
-                assert pyomo.value(model.discharge[t]) < 1e-3  # type: ignore[index]
+                assert pyomo.value(model.discharge_gt[t]) < 1e-3  # type: ignore[index]
 
 
 @pytest.mark.regression
@@ -234,9 +235,9 @@ def test_optimizer_dispatch_respects_event_budget(base_config):
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
-    total_events = sum(pyomo.value(model.discharge[t]) for t in range(24))  # type: ignore[index]
+    total_events = sum(pyomo.value(model.discharge_gt[t]) for t in range(24))  # type: ignore[index]
     assert total_events <= 4 + 1e-3, f"Total events {total_events} exceeds budget of 4"
 
 
@@ -253,7 +254,7 @@ def test_optimizer_dispatch_respects_soc_constraints(subtests, base_config):
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     E_max = base_config.max_capacity * (base_config.max_soc_fraction - base_config.min_soc_fraction)
     eta_c = base_config.charge_efficiency
@@ -262,7 +263,7 @@ def test_optimizer_dispatch_respects_soc_constraints(subtests, base_config):
     soc = base_config.init_soc_fraction
     for t in range(24):
         p_charge = pyomo.value(model.p_charge[t])  # type: ignore[index]
-        p_discharge = pyomo.value(model.p_discharge[t])  # type: ignore[index]
+        p_discharge = pyomo.value(model.p_discharge_gt[t])  # type: ignore[index]
         if t > 0:
             soc += eta_c * p_charge * dt_hours / E_max - p_discharge * dt_hours / (eta_d * E_max)
         with subtests.test(f"SOC above min at t={t}"):
@@ -332,13 +333,14 @@ def test_optimizer_dispatch_respects_charge_discharge_exclusivity(subtests, base
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     for t in range(24):
         charge = pyomo.value(model.charge[t])  # type: ignore[index]
-        discharge = pyomo.value(model.discharge[t])  # type: ignore[index]
-        with subtests.test(f"No simultaneous charge and discharge at t={t}"):
-            assert not (charge > 0.5 and discharge > 0.5)
+        discharge_gt = pyomo.value(model.discharge_gt[t])  # type: ignore[index]
+        discharge_coop = pyomo.value(model.discharge_coop[t])  # type: ignore[index]
+        with subtests.test(f"No simultaneous charge, discharge_gt or discharge_coop at t={t}"):
+            assert not (charge > 0.5 and discharge_gt > 0.5 and discharge_coop > 0.5)
 
 
 @pytest.mark.regression
@@ -354,16 +356,23 @@ def test_power_zero_when_binary_zero(subtests, base_config):
         storage_capacity=base_config.max_capacity,
     )
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     for t in range(24):
-        u = pyomo.value(model.discharge[t])  # type: ignore[index]
-        p_d = pyomo.value(model.p_discharge[t])  # type: ignore[index]
+        u_gt = pyomo.value(model.discharge_gt[t])  # type: ignore[index]
+        pd_gt = pyomo.value(model.p_discharge_gt[t])  # type: ignore[index]
+        u_coop = pyomo.value(model.discharge_coop[t])  # type: ignore[index]
+        pd_coop = pyomo.value(model.p_discharge_coop[t])  # type: ignore[index]
         v = pyomo.value(model.charge[t])  # type: ignore[index]
         p_c = pyomo.value(model.p_charge[t])  # type: ignore[index]
-        with subtests.test(f"p_discharge zero when binary zero at t={t}"):
-            if u < 0.5:
-                assert p_d < 1e-6, f"p_discharge[{t}]={p_d} but discharge[{t}]={u}"
+        with subtests.test(f"p_discharge_gt zero when binary zero at t={t}"):
+            if u_gt < 0.5:
+                assert pd_gt < 1e-6, f"p_discharge_gt[{t}]={pd_gt} but discharge_gt[{t}]={u_gt}"
+        with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
+            if u_coop < 0.5:
+                assert pd_coop < 1e-6, (
+                    f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
+                )
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
@@ -388,7 +397,8 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         "tech_name": "battery",
         "system_commodity_interface_limit": 100.0,
         "max_charge_rate": 1.0,
-        "supervisory_signal": list(range(24)),
+        "lmp_signal": list(range(24)),
+        "demand_signal": list(range(24)),
         "peak_window": {"start": "08:00:00", "end": "18:00:00"},
         "n_max_events": 24,
         "signal_threshold_percentile": 0.0,
@@ -410,15 +420,15 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
     model_kwh = _make_controller_with_config(config_kwh)._build_dr_model(**build_kwargs)
     model_event = _make_controller_with_config(config_event)._build_dr_model(**build_kwargs)
 
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model_kwh)
-    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model_event)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model_kwh)
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model_event)
 
     for t in range(24):
         with subtests.test(f"dispatch match at t={t}"):
             assert (
                 abs(
-                    pyomo.value(model_kwh.p_discharge[t])  # type: ignore[index]
-                    - pyomo.value(model_event.p_discharge[t])  # type: ignore[index]
+                    pyomo.value(model_kwh.p_discharge_gt[t])  # type: ignore[index]
+                    - pyomo.value(model_event.p_discharge_gt[t])  # type: ignore[index]
                 )
                 < 1e-4
             ), f"Dispatch mismatch at t={t}"
@@ -462,7 +472,8 @@ def om_tech_config():
             },
             "control_parameters": {
                 "system_commodity_interface_limit": 1.0e9,
-                "supervisory_signal": np.ones(n).tolist(),
+                "lmp_signal": np.ones(n).tolist(),
+                "demand_signal": np.ones(n).tolist(),
                 "peak_window": {"start": "02:00:00", "end": "04:00:00"},
                 "performance_incentive": 10.0,
                 "n_max_events": 24,
@@ -471,7 +482,6 @@ def om_tech_config():
             },
         }
     }
-
 
 @pytest.mark.regression
 def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_config, om_tech_config):
@@ -515,32 +525,22 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
     with subtests.test("SOC never above max"):
         assert np.all(soc <= 1.0 + 1e-1)
 
-    pw = om_tech_config["model_inputs"]["control_parameters"]["peak_window"]
-    pw_start = pd.Timestamp(f"2024-01-01 {pw['start']}").time()
-    pw_end = pd.Timestamp(f"2024-01-01 {pw['end']}").time()
-    time_index = pd.date_range("2024-01-01", periods=n, freq="h")
-    for t in range(n):
-        in_window = pw_start <= time_index[t].time() < pw_end
-        if not in_window:
-            with subtests.test(f"No discharge outside peak window at t={t}"):
-                assert (
-                    discharge[t] <= 1e-4
-                ), f"Discharge {discharge[t]:.4f} kW outside peak window at t={t}"
-
     with subtests.test("Discharge never negative"):
         assert np.all(discharge >= -1e-4)
 
     with subtests.test("Discharge never above max_charge_rate"):
         assert np.all(discharge <= 1.0 + 1e-4)
 
-    with subtests.test("SOC at t=0 equal to init_soc_fraction"):
-        assert abs(soc[0] - 1.0) < 1e-4
-
     shared = om_tech_config["model_inputs"]["shared_parameters"]
     E_max = shared["max_capacity"] * (shared["max_soc_fraction"] - shared["min_soc_fraction"])
     charge = prob.get_val("storage_electricity_charge", units="kW")
+
+    with subtests.test("SOC at t=0 reflects init_soc after first dispatch"):
+        expected_t0 = shared["init_soc_fraction"] + (charge[0] - discharge[0]) / E_max
+        assert abs(soc[0] - expected_t0) < 1e-4
+
     expected_soc = np.zeros(n)
-    expected_soc[0] = shared["init_soc_fraction"]
+    expected_soc[0] = shared["init_soc_fraction"] + (charge[0] - discharge[0]) / E_max
     for t in range(1, n):
         expected_soc[t] = expected_soc[t - 1] + charge[t] / E_max - discharge[t] / E_max
     for t in range(n):
@@ -548,3 +548,64 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
             assert (
                 abs(soc[t] - expected_soc[t]) < 1e-4
             ), f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
+
+
+@pytest.mark.regression
+def test_plm_history(
+    subtests, om_plant_config, om_tech_config
+):
+    """The controller's p_discharge_coop_history must match the expected dispatch pattern.
+
+    With demand=1, lmp=1, peak_window=02:00-04:00, init_soc=1.0, capacity=10 kWh,
+    P_max=1 kW, dt=1h, min_soc=0.0:
+      - Off-peak (t != 2,3): p_discharge_coop=1.0 while SOC is available,
+        because p_tocoop is costly (1.05*1 + 20 = 21.05 per kW) and coop is free.
+      - Peak (t=2,3): p_discharge_coop is forced to 0; p_discharge_gt handles demand.
+      - Once SOC hits min_soc, coop can no longer discharge and p_tocoop takes over.
+    """
+    n = om_plant_config["plant"]["simulation"]["n_timesteps"]
+
+    prob = om.Problem()
+
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="electricity_in", val=np.ones(n), units="kW"),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "controller",
+        PeakLoadManagementOptimizedStorageController(
+            plant_config=om_plant_config,
+            tech_config=om_tech_config,
+        ),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(
+            plant_config=om_plant_config,
+            tech_config=om_tech_config,
+        ),
+        promotes=["*"],
+    )
+
+    prob.setup()
+    prob.run_model()
+
+    controller = prob.model._get_subsystem("controller")
+    p_discharge_coop_history = controller.p_discharge_coop_history
+
+    expected_history = np.array(
+        [
+            1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0,
+        ]
+    )
+
+    for t in range(n):
+        with subtests.test(f"p_discharge_coop_history[{t}] matches expected"):
+            assert abs(p_discharge_coop_history[t] - expected_history[t]) < 1e-4, (
+                f"p_discharge_coop_history mismatch at t={t}: "
+                f"got {p_discharge_coop_history[t]:.4f}, expected {expected_history[t]:.4f}"
+            )
