@@ -7,15 +7,13 @@ any specific commodity. They are currently used by ``AmmoniaSynLoopPerformanceMo
 are designed so that other performance models (electrolyzers, methanol
 synthesis, etc.) can adopt the same constraints by calling them directly.
 
-The three constraint families exposed are:
+The two constraint families exposed are:
 
 - :func:`apply_ramping_limits`: per-timestep upper bound on the change in production
   between consecutive timesteps, expressed as an hourly rate that is scaled to the
   simulation timestep length.
-- :func:`find_off_blocks`: low-level helper that returns the start/end indices of
-  contiguous "off" segments in a production profile.
 - :func:`startup_loss_multiplier`: per-timestep production multiplier representing
-  the loss incurred when a plant must restart after being off for a configurable
+  the loss incurred when a plant must restart after being off for some
   minimum off-time. Sub-timestep and multi-timestep off-times and start-up delays
   are handled by a single unified algorithm.
 """
