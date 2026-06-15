@@ -19,14 +19,12 @@ time-varying electricity, hydrogen, or nitrogen supply.
 Three classes of constraint are available and can be
 enabled independently or together:
 
-- Turndown: a non-zero minimum production floor (as a fraction of rated
-  capacity) while the plant remains "on". Demand below this floor causes the
+- Turndown: a non-zero minimum production threshold defined as a fraction of rated
+  capacity. Above this threshold, the plant is operational. Demand below this floor causes the
   plant to shut off entirely (output goes to 0) for that timestep.
 - Ramping: upper bounds on how quickly production can increase or decrease between
   consecutive timesteps, expressed as a fraction of rated capacity per hour.
-- Start-up delays: production losses applied to the first timesteps after the
-  plant comes back online following a long enough off-period. Both warm- and cold-start
-  events are supported, with independent off-time triggers and delay durations.
+- Start-up delays: result in production losses as the plant goes from an off-state to an on-state. The start-up delay is defined by an off-period that triggers a delayed start-up event, and the amount of time it takes for the plant to go from off to on during a start-up devent. The losses resulting from a start-up delay are applied to the first timesteps after the plant comes back online following a long enough off-period. Both warm- and cold-start events are supported, with independent off-time triggers and delay durations.
 
 This doc page walks through each constraint by reusing the synloop fixtures from the
 test suite, plotting the production response for an off-on cycle.
@@ -35,6 +33,15 @@ test suite, plotting the production response for an off-on cycle.
 
 The following keys can be added to the `performance_parameters` block of an ammonia tech
 config to impact dynamic behavior:
+
+
+```{note}
+If none of these parameters are specified in the configuration for the ammonia technology, the default behavior is to include no dynamic constraints:
+- `turndown_ratio` defaults to 0.0
+- `ramp_up_rate_fraction` and `ramp_down_rate_fraction` both default to 1.0
+- `include_cold_start` and `include_warm_start` both default to False and the corresponding start-up delay parameters default to None.
+```
+
 
 | Parameter | Units | Description |
 | --- | --- | --- |
@@ -221,15 +228,10 @@ plt.tight_layout()
 plt.show()
 ```
 
-The baseline (gray) curve follows the electricity-limited ammonia output directly,
-including the sub-turndown dip at hours 14-15 where the model would run
-at 10% of rated. Each panel overlays one dynamic constraint:
+The baseline (gray) curve follows the electricity-limited ammonia output directly, without any dynamic operating constraints. For all dynamic cases, the minimum operating point (defined by the 20% turndown) and the maximum operating point (defined as the rated capacity) are shown with red dashed lines. First, the turndown limit is applied. Any production below the minumum threshold of 10 kg/h (or 20% of rated capacity) is set to zero. This is seen at at hours 14-15, where the ammonia output with applied dynamics goes to zero because the operating point (5 kg/h) is below the turndown threshold (minimum operating point). Each panel overlays one dynamic constraint:
 
 - Ramping caps the per-hour change in production, so step changes in ammonia output
-  are spread out over multiple hours. The 20% turndown floor interacts with
-  ramping: when ramping down toward an off-state, output is held at the floor
-  rather than continuing below it. At hours 14-15 the ammonia output goes to zero
-  because the operating point is below the turndown floor (minimum operating point while on).
+  are spread out over multiple hours. The ramp-up and ramp-down limits are 20 kg/h. The ramping is applied such that the difference in ammonia production between two consecutive hours never exceeds 20 kg/h.
 - Cold start runs with full ramp authority, so output can step directly
   down. The turndown floor is now visible as a true shutoff: the sub-turndown
   at hours 14-15 forces output to zero. A 2-hour delay also follows every

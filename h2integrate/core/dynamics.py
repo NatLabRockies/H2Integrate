@@ -31,10 +31,13 @@ from openmdao.utils import units
 def find_off_blocks(profile: np.ndarray, min_production: float) -> np.ndarray:
     """Return an ``(N, 2)`` array of off-block index pairs ``(start, end_exclusive)``.
 
+    This is a helper-function for the ``startup_loss_multiplier()`` function.
+
     A timestep is considered "off" when ``profile[i] < min_production``. Each row
     of the returned array describes a maximal run of consecutive off-timesteps:
     ``profile[start:end_exclusive]`` is fully off, and the timesteps immediately
-    before and after the block (when they exist) are on.
+    before and after the block (when they exist) are on. ``profile`` and
+    ``min_production`` must be in the same units (such as `kg/h` or `kg/dt` or `kW`).
 
     Args:
         profile (np.ndarray): 1-D timeseries production profile.
@@ -58,8 +61,15 @@ def check_ramping_at_t0(
 ):
     """Check that ramp-down constraints are applied at the start of the production profile.
 
+    This method is used in cases where the ``profile`` at t=0 has to be modified so
+    that ramping constraint violations don't occur at the start of the simulation.
+    This is a helper-function to ``apply_ramping_limits``. This is primarily used
+    in the case were a ramp-down event at the start of the production profile that
+    violates ramping constraints requires that the starting point (``profile[0]``)
+    be reduced.
+
     Args:
-        profile (np.ndarray): 1-D production profile timeserie in amount_units/timestep.
+        profile (np.ndarray): 1-D production profile timeseries in amount_units / timestep.
         max_down_per_step (float | int): maximum downward ramp rate in amount units / timestep
 
     Returns:
@@ -181,7 +191,7 @@ def apply_ramping_limits(
                         out[j] = max_out_at_j
         # No constraint on ramping
         else:
-            out[i] = np.clip(profile[i], 0.0, profile[i])
+            out[i] = np.max([profile[i], 0.0])
 
     # convert units back to rate units
     out_rate = units.convert_units(
