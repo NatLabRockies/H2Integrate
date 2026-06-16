@@ -53,7 +53,7 @@ def download_from_api(url, filename):
                 n_tries += 1
         except (requests.exceptions.Timeout, TypeError) as e:
             # Catch Timeout and TypeError (from charset_normalizer issues)
-            print(f"Retry {n_tries + 1}/5 due to: {type(e).__name__}")
+            warnings.warn(f"Retry {n_tries + 1}/5 due to: {type(e).__name__}", UserWarning)
             time.sleep(0.2)
             n_tries += 1
 
