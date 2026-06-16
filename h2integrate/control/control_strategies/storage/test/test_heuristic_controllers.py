@@ -223,7 +223,7 @@ def test_heuristic_load_following_battery_dispatch(
     # Setup the system and required values
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -399,7 +399,7 @@ def test_heuristic_load_following_battery_dispatch(
     prob.setup()
 
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -449,7 +449,7 @@ def test_heuristic_load_following_battery_dispatch(
     # Setup the system and required values
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -586,7 +586,7 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
     prob.set_val("IVC2.storage_capacity", 200000, units="kW*h")
 
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -806,7 +806,7 @@ def test_heuristic_load_following_dispatch_with_generic_storage(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()
@@ -954,7 +954,7 @@ def test_heuristic_dispatch_with_autosizing_storage_demand_less_than_avg_in(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()

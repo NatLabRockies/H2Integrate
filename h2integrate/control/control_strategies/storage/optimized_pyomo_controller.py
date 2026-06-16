@@ -201,7 +201,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                 inputs (dict):
                     Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
                         f"{commodity}_in"          : available generated commodity profile.
-                        f"{commodity}_demand"   : demanded commodity output profile.
+                        f"{commodity}_set_point"   : set-point commodity output profile.
                 commodity (str, optional):
                     Base commodity name (e.g. "electricity", "hydrogen"). Default:
                     self.config.commodity.
@@ -239,7 +239,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                 commodity_in = inputs[f"{self.config.commodity}_in"][
                     t : t + self.config.n_control_window_hours
                 ]
-                demand_in = inputs[f"{commodity_name}_demand"][
+                demand_in = inputs[f"{commodity_name}_set_point"][
                     t : t + self.config.n_control_window_hours
                 ]
 
@@ -290,7 +290,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             inputs (dict):
                 Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
                     f"{commodity}_in"       : Available generated commodity profile.
-                    f"{commodity}_demand"   : Demanded commodity output profile.
+                    f"{commodity}_set_point"   : Set-point commodity output profile.
 
         """
         # Where pyomo model communicates with the rest of the controller

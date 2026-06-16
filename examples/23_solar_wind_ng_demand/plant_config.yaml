@@ -21,14 +21,14 @@ sites:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [wind, combiner, electricity, cable]
-                                                # source_tech, dest_tech, transport_item, transport_type = connection
+  # source_tech, dest_tech, transport_item, transport_type = connection
   - [solar, combiner, electricity, cable]
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
-                                                                # connect NG feedstock to NG plant
-  - [combiner, electrical_load_demand, [electricity_out, electricity_in]]
-                                                                                 # subtract wind and solar from demand
+  # connect NG feedstock to NG plant
+  - [combiner, electrical_load_demand, electricity, cable]
+  # subtract wind and solar from demand
   - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
-                                                                                                       # give remaining load demand to natural gas plant
+  # give remaining load demand to natural gas plant
   - [combiner, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]
 resource_to_tech_connections:

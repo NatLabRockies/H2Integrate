@@ -28,7 +28,7 @@ The following example is an expanded form of `examples/14_wind_hydrogen_dispatch
 Here, we're highlighting the dispatch controller setup from
 `examples/14_wind_hydrogen_dispatch/inputs/tech_config.yaml`. Please note some sections are removed simply to highlight the controller sections
 
-```{literalinclude} ../../examples/14_wind_hydrogen_dispatch/inputs/tech_config.yaml
+```{literalinclude} ../../../examples/14_wind_hydrogen_dispatch/inputs/tech_config.yaml
 :language: yaml
 :lineno-start: 52
 :linenos: true
@@ -37,7 +37,7 @@ Here, we're highlighting the dispatch controller setup from
 
 We also include a demand technology to calculate how much demand is met, how much commodity is unused to meet the demand, and how much demand is remaining:
 
-```{literalinclude} ../../examples/14_wind_hydrogen_dispatch/inputs/tech_config.yaml
+```{literalinclude} ../../../examples/14_wind_hydrogen_dispatch/inputs/tech_config.yaml
 :language: yaml
 :lineno-start: 79
 :linenos: true
