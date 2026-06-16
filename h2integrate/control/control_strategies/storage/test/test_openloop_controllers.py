@@ -83,7 +83,7 @@ def test_pass_through_controller(subtests):
     with subtests.test("Check output"):
         expected_set_point = np.mean(np.arange(10)) - np.arange(10)
         assert expected_set_point == (
-            pytest.approx(prob.get_val("hydrogen_set_point", units="kg/h"), rel=1e-3)
+            pytest.approx(prob.get_val("hydrogen_command_value", units="kg/h"), rel=1e-3)
         )
 
 
@@ -254,14 +254,14 @@ def test_storage_demand_controller_round_trip_efficiency(subtests):
         calculate_combined_outputs(
             prob_rte.get_val("hydrogen_out", units="kg/h"),
             prob_rte.get_val("hydrogen_in", units="kg/h"),
-            prob_rte.get_val("hydrogen_demand", units="kg/h"),
+            prob_rte.get_val("hydrogen_set_point", units="kg/h"),
         )
     )
     unmet_demand_ioe, unused_commodity_ioe, combined_out_for_demand_ioe = (
         calculate_combined_outputs(
             prob_ioe.get_val("hydrogen_out", units="kg/h"),
             prob_ioe.get_val("hydrogen_in", units="kg/h"),
-            prob_ioe.get_val("hydrogen_demand", units="kg/h"),
+            prob_ioe.get_val("hydrogen_set_point", units="kg/h"),
         )
     )
 
@@ -396,14 +396,14 @@ def test_storage_demand_controller_round_trip_with_non_one_efficiencies(subtests
         calculate_combined_outputs(
             prob_rte.get_val("hydrogen_out", units="kg/h"),
             prob_rte.get_val("hydrogen_in", units="kg/h"),
-            prob_rte.get_val("hydrogen_demand", units="kg/h"),
+            prob_rte.get_val("hydrogen_set_point", units="kg/h"),
         )
     )
     unmet_demand_ioe, unused_commodity_ioe, combined_out_for_demand_ioe = (
         calculate_combined_outputs(
             prob_ioe.get_val("hydrogen_out", units="kg/h"),
             prob_ioe.get_val("hydrogen_in", units="kg/h"),
-            prob_ioe.get_val("hydrogen_demand", units="kg/h"),
+            prob_ioe.get_val("hydrogen_set_point", units="kg/h"),
         )
     )
 
@@ -516,7 +516,7 @@ def test_generic_storage_demand_controller(subtests):
     unmet_demand, unused_commodity, combined_out_for_demand = calculate_combined_outputs(
         prob.get_val("hydrogen_out", units="kg/h"),
         prob.get_val("hydrogen_in", units="kg/h"),
-        prob.get_val("hydrogen_demand", units="kg/h"),
+        prob.get_val("hydrogen_set_point", units="kg/h"),
     )
 
     # # Run the test

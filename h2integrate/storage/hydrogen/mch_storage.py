@@ -24,6 +24,7 @@ class MCHTOLStorageCostModelConfig(BaseConfig):
     commodity_units: str = field(default="kg/h", validator=contains(["kg/h", "g/h", "t/h"]))
 
     cost_year: int = field(default=2024, converter=int, validator=contains([2024]))
+    marginal_cost: float = field(default=0.0)
 
     def __attrs_post_init__(self):
         if self.charge_equals_discharge:

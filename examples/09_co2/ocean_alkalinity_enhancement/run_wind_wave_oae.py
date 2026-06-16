@@ -10,7 +10,7 @@ h2i_model = H2IntegrateModel("offshore_plant_oae.yaml")
 # TODO: Update with demand module once it is developed
 demand_profile = np.ones(8760) * 330.0
 h2i_model.setup()
-h2i_model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+h2i_model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
 # Run the model
 h2i_model.run()

@@ -70,10 +70,20 @@ parts:
           - file: resource/tidal_resource
   - caption: Control
     chapters:
-      - file: control/control_overview
-      - file: control/open-loop_controllers
-      - file: control/pyomo_controllers
-      - file: control/controller_demonstrations
+      - file: control/system_level_control/system_level_control
+        sections:
+          - file: control/system_level_control/system_level_control_base
+          - file: control/system_level_control/control_classifier
+          - file: control/system_level_control/controllers
+            sections:
+              - file: control/system_level_control/slc_demand_following
+              - file: control/system_level_control/slc_profit_max
+              - file: control/system_level_control/slc_cost_min
+      - file: control/technology_level_control/technology_control_overview
+        sections:
+          - file: control/technology_level_control/open-loop_controllers
+          - file: control/technology_level_control/pyomo_controllers
+          - file: control/technology_level_control/controller_demonstrations
   - caption: Demand
     chapters:
       - file: demand/demand_components

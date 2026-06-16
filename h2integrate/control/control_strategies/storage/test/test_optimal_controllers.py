@@ -216,7 +216,7 @@ def test_min_operating_cost_load_following_battery_dispatch(
     # Setup the system and required values
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -365,7 +365,7 @@ def test_optimal_control_with_generic_storage(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()
@@ -518,7 +518,7 @@ def test_optimal_dispatch_with_autosizing_storage_demand_less_than_avg_in(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()
