@@ -52,20 +52,19 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
             desc="Converter control system awareness of the system capacity",
         )
 
-        # if self.config.demand_profile_upstream_kind == "price":
-        #     peak_cutoff_units = f"USD/({self.config.commodity_amount_units})"
-        # else:
-        #     peak_cutoff_units = self.config.
+        if self.config.demand_profile_upstream_kind == "price":
+            peak_cutoff_units = f"USD/({self.config.commodity_amount_units})"
+        else:
+            peak_cutoff_units = self.config.commodity_amount_units
 
         self.add_input(
             "demand_profile_upstream_peak_cutoff",
             val=self.config.demand_profile_upstream_peak_cutoff,
-            # units=peak_cutoff_units,
+            units=peak_cutoff_units,
             desc="demand_profile_upstream_peak_cutoff",
         )
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.set_point_array = np.zeros(self.n_timesteps)
 
     def compute(self, inputs, outputs):
         commodity = self.config.commodity
@@ -74,6 +73,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"]
+        self.set_point_array = np.zeros(self.n_timesteps)
 
         for idx, val in enumerate(demand_profile):
             val_upstream = demand_profile_upstream[idx]
