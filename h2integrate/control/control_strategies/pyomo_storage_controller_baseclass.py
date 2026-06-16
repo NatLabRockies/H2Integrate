@@ -171,7 +171,7 @@ class PyomoStorageControllerBaseClass(om.ExplicitComponent):
                 inputs (dict):
                     Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
                         f"{commodity}_in"          : available generated commodity profile.
-                        f"{commodity}_demand"   : demanded commodity output profile.
+                        f"{commodity}_set_point"   : set-point commodity output profile.
                 commodity (str, optional):
                     Base commodity name (e.g. "electricity", "hydrogen"). Default:
                     self.config.commodity.

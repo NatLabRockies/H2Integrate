@@ -45,7 +45,7 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
@@ -239,7 +239,7 @@ def test_generic_storage_with_simple_control_charge_rate_lessthan_demand(plant_c
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
@@ -456,7 +456,7 @@ def test_generic_storage_with_simple_control_zero_size(plant_config, subtests):
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
@@ -637,7 +637,7 @@ def test_generic_storage_with_simple_control_with_losses(plant_config, subtests)
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
@@ -876,7 +876,7 @@ def test_generic_storage_with_simple_control_with_losses_round_trip(plant_config
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
@@ -1080,13 +1080,13 @@ def test_generic_storage_charge_more_than_available(plant_config, subtests):
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="hydrogen_demand", val=commodity_demand, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_set_point", val=commodity_demand, units="kg/h"),
         promotes=["*"],
     )
 
     prob.model.add_subsystem(
         name="IVC3",
-        subsys=om.IndepVarComp(name="hydrogen_set_point", val=nominal_set_point, units="kg/h"),
+        subsys=om.IndepVarComp(name="hydrogen_command_value", val=nominal_set_point, units="kg/h"),
         promotes=["*"],
     )
 
@@ -1275,7 +1275,7 @@ def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
     )
     prob.model.add_subsystem(
         "IVC2",
-        om.IndepVarComp("hydrogen_set_point", val=set_point, units="kg/h"),
+        om.IndepVarComp("hydrogen_command_value", val=set_point, units="kg/h"),
         promotes=["*"],
     )
     prob.model.add_subsystem(
@@ -1378,7 +1378,7 @@ def test_storage_half_hourly_known_outputs_kg_s(subtests, plant_config_non_hourl
     )
     prob.model.add_subsystem(
         "IVC2",
-        om.IndepVarComp("hydrogen_set_point", val=set_point, units="kg/s"),
+        om.IndepVarComp("hydrogen_command_value", val=set_point, units="kg/s"),
         promotes=["*"],
     )
     prob.model.add_subsystem(
@@ -1468,7 +1468,7 @@ def test_storage_half_hourly_kw_kwh_2hr(subtests):
     )
     prob.model.add_subsystem(
         "IVC2",
-        om.IndepVarComp("electricity_set_point", val=set_point, units="kW"),
+        om.IndepVarComp("electricity_command_value", val=set_point, units="kW"),
         promotes=["*"],
     )
     prob.model.add_subsystem(

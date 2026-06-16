@@ -40,6 +40,7 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -84,6 +85,10 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         # Calculate capacity factor
         max_production = plant_capacity_kw * self.n_timesteps * (self.dt / 3600)
         outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
 
 
 @define(kw_only=True)

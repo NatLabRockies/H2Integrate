@@ -1,0 +1,103 @@
+name: technology_config
+description: >
+  Wind farm, battery, NG plant with marginal cost for profit-maximization dispatch,
+  and a fixed electrical demand.
+technologies:
+  wind:
+    performance_model:
+      model: PYSAMWindPlantPerformanceModel
+    cost_model:
+      model: ATBWindPlantCostModel
+    model_inputs:
+      performance_parameters:
+        num_turbines: 20
+        turbine_rating_kw: 6000
+        hub_height: 115
+        rotor_diameter: 170
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        pysam_options:
+          Farm:
+            wind_farm_wake_model: 0
+          Losses:
+            ops_strategies_loss: 10.0
+        layout:
+          layout_mode: basicgrid
+          layout_options:
+            row_D_spacing: 5.0
+            turbine_D_spacing: 5.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: square
+      cost_parameters:
+        capex_per_kW: 1300
+        opex_per_kW_per_year: 39
+        cost_year: 2022
+  ng_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
+      performance_parameters:
+        rated_capacity: 750.
+      cost_parameters:
+        cost_year: 2023
+        price: 4.2
+        annual_cost: 0.
+        start_up_cost: 0.
+  natural_gas_plant:
+    performance_model:
+      model: NaturalGasPerformanceModel
+    cost_model:
+      model: NaturalGasCostModel
+    model_inputs:
+      shared_parameters:
+        heat_rate_mmbtu_per_mwh: 7.5
+        system_capacity_mw: 100.
+      cost_parameters:
+        capex_per_kw: 1000
+        fixed_opex_per_kw_per_year: 10.0
+        variable_opex_per_mwh: 0.0
+        cost_year: 2023
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 30000
+  battery:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: GenericStorageCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 20000
+        max_capacity: 80000
+        init_soc_fraction: 0.5
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.1
+      performance_parameters:
+        round_trip_efficiency: 0.90
+        demand_profile: 20000
+      cost_parameters:
+        cost_year: 2022
+        capacity_capex: 310
+        charge_capex: 311
+        opex_fraction: 0.025
+  fin_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        in_streams: 3

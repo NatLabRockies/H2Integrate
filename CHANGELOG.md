@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Controller signal naming overhaul**: Standardized controller input/output names across the codebase. SLC outputs are now `{tech}_{commodity}_set_point` (was `{tech}_{commodity}_demand`); technology-level controllers take `{commodity}_set_point` as input and emit `{commodity}_command_value` as output (was `{commodity}_demand`/`{commodity}_set_point`). Storage performance models in feedback mode receive `{commodity}_set_point`; in open-loop mode they receive `{commodity}_command_value`. The SLC's own input (`{commodity}_demand`) and demand component I/O remain unchanged.
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
