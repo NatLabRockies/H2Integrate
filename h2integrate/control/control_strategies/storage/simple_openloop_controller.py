@@ -72,19 +72,19 @@ class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
 
     def compute(self, inputs, outputs):
         """
-        Simple controller that outputs `commodity_set_point`,
-        the dispatch set-points for each timestep in `commodity_rate_units`.
+        Simple controller that outputs `commodity_command_value`,
+        the dispatch command values for each timestep in `commodity_rate_units`.
         Negative values command charging, positive values command discharging.
 
         """
 
         if (
             self.config.set_demand_as_avg_commodity_in
-            and inputs[f"{self.config.commodity}_demand"].sum() > 0
+            and inputs[f"{self.config.commodity}_set_point"].sum() > 0
         ):
             msg = (
-                "A non-zero demand profile was input but set_demand_as_avg_commodity_in is True."
-                " The input demand profile will not be used, the demand profile will be "
+                "A non-zero set-point profile was input but set_demand_as_avg_commodity_in is True."
+                " The input set-point profile will not be used, the set-point profile will be "
                 f"calculated as the mean of ``{self.config.commodity}_in``. "
             )
             raise ValueError(msg)
@@ -95,11 +95,11 @@ class SimpleStorageOpenLoopController(StorageOpenLoopControlBase):
                 self.n_timesteps
             )
         else:
-            commodity_demand = inputs[f"{self.config.commodity}_demand"]
+            commodity_demand = inputs[f"{self.config.commodity}_set_point"]
 
-        # Assign the set point as the difference between the demand and the input commodity
-        # when demand > input, the set point is positive to command discharging
-        # when demand < input, the set point is negative to command charging
-        outputs[f"{self.config.commodity}_set_point"] = (
+        # Assign the command value as the difference between the set-point and the input commodity
+        # when set-point > input, the command value is positive to command discharging
+        # when set-point < input, the command value is negative to command charging
+        outputs[f"{self.config.commodity}_command_value"] = (
             commodity_demand - inputs[f"{self.config.commodity}_in"]
         )

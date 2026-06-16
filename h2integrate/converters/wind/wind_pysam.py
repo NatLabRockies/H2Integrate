@@ -478,6 +478,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)
+
     def post_process(self, show_plots=False):
         def plot_turbine_points(
             ax: plt.Axes = None,

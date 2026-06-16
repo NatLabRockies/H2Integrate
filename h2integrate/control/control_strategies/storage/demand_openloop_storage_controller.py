@@ -96,12 +96,12 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
 
         Expected input keys:
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
-            * ``<commodity>_demand``: Timeseries demand profile.
+            * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
             * ``max_capacity``: Maximum total storage capacity.
 
         Outputs populated:
-            * ``<commodity>_set_point``: Dispatch command to storage,
+            * ``<commodity>_command_value``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
         Control logic includes:
@@ -111,7 +111,7 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
             * Tracking energy shortfalls and excesses at each time step.
 
         Raises:
-            UserWarning: If the demand profile is entirely zero.
+            UserWarning: If the set-point profile is entirely zero.
             UserWarning: If ``max_charge_rate`` or ``max_capacity`` is negative.
 
         Returns:
@@ -140,7 +140,7 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
         # the previous time step's value
         soc = deepcopy(init_soc_fraction)
 
-        demand_profile = inputs[f"{commodity}_demand"]
+        demand_profile = inputs[f"{commodity}_set_point"]
 
         # initialize outputs
         soc_array = np.zeros(self.n_timesteps)
@@ -192,4 +192,4 @@ class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
             # Record the SOC for the current time step
             soc_array[t] = deepcopy(soc)
 
-        outputs[f"{commodity}_set_point"] = set_point_array
+        outputs[f"{commodity}_command_value"] = set_point_array
