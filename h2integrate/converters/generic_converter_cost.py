@@ -61,7 +61,6 @@ class GenericConverterCostModel(CostModelBaseClass):
             strict=True,
             additional_cls_name=self.__class__.__name__,
         )
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         super().setup()
 
@@ -74,7 +73,7 @@ class GenericConverterCostModel(CostModelBaseClass):
         self.add_input(
             f"annual_{self.config.commodity}_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units=f"({self.config.commodity_amount_units})/year",
         )
 

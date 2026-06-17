@@ -177,14 +177,26 @@ class CostModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        # n_timesteps is number of timesteps in a simulation
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # dt is seconds per timestep
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        # plant_life is number of years the plant is expected to operate for
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
+        # fraction_of_year_simulated is the ratio of simulation length to length of year
+        # and may be used to estimate annual performance from simulation performance
+        hours_per_year = 8760
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+        self.fraction_of_year_simulated = hours_simulated / hours_per_year
+
         # Define outputs: CapEx and OpEx costs
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
         self.add_output(
             "VarOpEx",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="USD/year",
             desc="Variable operational expenditure",
         )
@@ -204,9 +216,6 @@ class CostModelBaseClass(om.ExplicitComponent):
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
-
-        # dt is seconds per timestep
-        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """

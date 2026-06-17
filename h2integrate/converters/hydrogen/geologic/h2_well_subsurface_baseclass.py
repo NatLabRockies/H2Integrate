@@ -183,15 +183,14 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # inputs
         self.add_input("borehole_depth", units="m", val=self.config.borehole_depth)
         self.add_input(
             "wellhead_gas_out",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/h",
-            desc=f"Hydrogen production rate in kg/h over {n_timesteps} hours.",
+            desc=f"Hydrogen production rate in kg/h over {self.n_timesteps} hours.",
         )
         self.add_input("total_wellhead_gas_produced", val=0.0, units="kg/year")
 

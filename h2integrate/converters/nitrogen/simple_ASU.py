@@ -80,19 +80,18 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleASUPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
         if self.config.size_from_N2_demand:
-            self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-            self.add_output("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+            self.add_output("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
         else:
-            self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
-        self.add_output("air_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_output("air_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("ASU_capacity_kW", val=0.0, units="kW", desc="ASU rated capacity in kW")
 
         self.add_output(
@@ -102,8 +101,8 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
             desc="ASU annual electricity consumption in kWh/year",
         )
 
-        self.add_output("oxygen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("argon_out", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_output("oxygen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("argon_out", val=0.0, shape=self.n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         """Calculate the amount of N2 that can be produced and the amount of feedstocks required
