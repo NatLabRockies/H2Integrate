@@ -18,7 +18,7 @@ technologies:
         create_model_from: default
         config_name: WindPowerSingleOwner
         pysam_options: !include "pysam_options_6MW.yaml"
-        run_recalculate_power_curve: false
+        run_recalculate_power_curve: true
         layout:
           layout_mode: basicgrid
           layout_options:
