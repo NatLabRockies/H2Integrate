@@ -533,7 +533,7 @@ class H2IntegrateModel:
         model_name = technologies[demand_tech].get("performance_model", {}).get("model", "")
         if "DemandComponent" not in model_name:
             msg = (
-                f"Demand component {model_name} is not a supported model for the system level "
+                f"Demand component ``{model_name}`` is not a supported model for the system level "
                 "control demand technology. Supported demand component performance models include "
                 "``DemandComponent`` in the class name."
             )
