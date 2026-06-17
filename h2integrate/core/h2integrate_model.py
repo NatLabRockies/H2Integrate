@@ -49,7 +49,9 @@ class H2IntegrateModel:
 
         # create technology connection graph based on technology interconnections
         # defined in plant config
-        self.create_technology_graph()
+        self.technology_graph = self.create_technology_graph(
+            self.plant_config.get("technology_interconnections", {})
+        )
 
         # load in supported models
         self.supported_models = supported_models.copy()
@@ -514,51 +516,81 @@ class H2IntegrateModel:
         slc_config = {}
         technologies = self.technology_config.get("technologies", {})
 
+        if not (
+            demand_tech := self.plant_config["system_level_control"].get("demand_component", False)
+        ):
+            msg = (
+                "Please specify the technology name for the demand component in "
+                "the plant configuration file under ``system_level_control['demand_component']``"
+            )
+            raise ValueError(msg)
+        if demand_tech not in technologies:
+            msg = (
+                f"Demand technology specified for system level controller, ``{demand_tech}``,"
+                "not defined in the tech configuration file."
+            )
+            raise ValueError(msg)
+        model_name = technologies[demand_tech].get("performance_model", {}).get("model", "")
+        if "DemandComponent" not in model_name:
+            msg = (
+                f"Demand component {model_name} is not a supported model for the system level "
+                "control demand technology. Supported demand component performance models include "
+                "``DemandComponent`` in the class name."
+            )
+            raise ValueError(msg)
+
+        model_inputs = technologies[demand_tech].get("model_inputs", {})
+        perf_params = model_inputs.get("performance_parameters", {})
+        shared_params = model_inputs.get("shared_parameters", {})
+        all_params = {**shared_params, **perf_params}
+        demand_commodity = all_params["commodity"]
+        demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
+
         # Identify the (single) demand technology
         demand_tech = None
         demand_commodity = None
         demand_commodity_rate_units = None
-        for tech_name, tech_def in technologies.items():
-            model_name = tech_def.get("performance_model", {}).get("model", "")
-            if "DemandComponent" not in model_name:
-                continue
+        # for tech_name, tech_def in technologies.items():
+        #     model_name = tech_def.get("performance_model", {}).get("model", "")
+        #     if "DemandComponent" not in model_name:
+        #         continue
 
-            model_inputs = tech_def.get("model_inputs", {})
-            perf_params = model_inputs.get("performance_parameters", {})
-            shared_params = model_inputs.get("shared_parameters", {})
-            all_params = {**shared_params, **perf_params}
+        #     model_inputs = tech_def.get("model_inputs", {})
+        #     perf_params = model_inputs.get("performance_parameters", {})
+        #     shared_params = model_inputs.get("shared_parameters", {})
+        #     all_params = {**shared_params, **perf_params}
 
-            if demand_commodity is not None:
-                # NOTE: this error should only be raised if two demand components
-                # are in the tech connections
-                raise ValueError(
-                    "System-level control currently supports only one demand "
-                    "component, but multiple demand components were found "
-                    f"for '{demand_commodity}' and "
-                    f"'{all_params.get('commodity', tech_name)}'."
-                )
+        #     if demand_commodity is not None:
+        #         # NOTE: this error should only be raised if two demand components
+        #         # are in the tech connections
+        #         raise ValueError(
+        #             "System-level control currently supports only one demand "
+        #             "component, but multiple demand components were found "
+        #             f"for '{demand_commodity}' and "
+        #             f"'{all_params.get('commodity', tech_name)}'."
+        #         )
 
-            demand_commodity = all_params["commodity"]
-            demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
-            demand_tech = tech_name
-            # Check that the demand tech is in the technology_interconnections
-            tech_interconnections = self.plant_config["technology_interconnections"]
-            demand_is_source_connection = [
-                tech_connection
-                for tech_connection in tech_interconnections
-                if tech_connection[0] == demand_tech
-            ]
-            demand_is_destination_connection = [
-                tech_connection
-                for tech_connection in tech_interconnections
-                if tech_connection[1] == demand_tech
-            ]
-            if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
-                # demand is not in tech interconnections
-                demand_tech = None
-                demand_commodity = None
+        #     demand_commodity = all_params["commodity"]
+        #     demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
+        #     demand_tech = tech_name
+        # Check that the demand tech is in the technology_interconnections
+        tech_interconnections = self.plant_config["technology_interconnections"]
+        demand_is_source_connection = [
+            tech_connection
+            for tech_connection in tech_interconnections
+            if tech_connection[0] == demand_tech
+        ]
+        demand_is_destination_connection = [
+            tech_connection
+            for tech_connection in tech_interconnections
+            if tech_connection[1] == demand_tech
+        ]
+        if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
+            # demand is not in tech interconnections
+            demand_tech = None
+            demand_commodity = None
 
-                demand_commodity_rate_units = None
+            demand_commodity_rate_units = None
 
         # Raise error if no demand commodity was defined
         if demand_tech is None:
@@ -570,12 +602,26 @@ class H2IntegrateModel:
 
         # Classify technologies based on their output commodity (or commodities)
         # Use a set to remove duplicates (in case one tech produces multiple commodities)
+        # get list of technologies upstream of the demand technology
+        upstream_techs = nx.ancestors(self.technology_graph, demand_tech)
+        # only connect the technologies that are connected to the demand tech
+        upstream_controllable_techs = {
+            tech for tech in upstream_techs if nx.has_path(self.technology_graph, tech, demand_tech)
+        }
+
         sources_to_commodities = {
             (e[0], e[-1])
             for e in self.technology_graph.edges(data="commodity")
-            if e[-1] is not None
+            if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
         }
 
+        # re-make technology interconnections
+        upstream_interconnections = [
+            connection
+            for connection in tech_interconnections
+            if connection[0] in upstream_controllable_techs
+        ]
+        tech_graph = self.create_technology_graph(upstream_interconnections)
         # Check if storage models have a controller
         storage_tech_to_control = {}
         for tech, classifier in self.tech_control_classifiers.items():
@@ -611,7 +657,7 @@ class H2IntegrateModel:
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodity
         slc_config["storage_techs_to_control"] = storage_tech_to_control
-        slc_config["technology_graph"] = self.technology_graph
+        slc_config["technology_graph"] = tech_graph
 
         slc_config["tech_control_classifiers"] = self.tech_control_classifiers
 
@@ -2161,26 +2207,31 @@ class H2IntegrateModel:
                 "but none were found."
             )
 
-    def create_technology_graph(self):
+    def create_technology_graph(self, tech_interconnections: list | set):
         """Create a directed graph of the technology interconnections.
 
         Builds a NetworkX directed graph where nodes represent technologies
         and edges represent connections between them. If a connection includes
         a commodity (length-4 entry), it is stored as an edge attribute.
 
-        Sets:
-            self.technology_graph (nx.DiGraph): A directed graph with
-                technologies as nodes and interconnections as edges.
-        """
-        self.technology_graph = nx.DiGraph()
+        Args:
+            tech_interconections (list): list of technology interconnections
 
-        for connection in self.plant_config.get("technology_interconnections", {}):
+        Returns:
+            nx.DiGraph: A directed graph with technologies as nodes and
+                interconnections as edges.
+        """
+        technology_graph = nx.DiGraph()
+
+        for connection in tech_interconnections:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
-                self.technology_graph.add_edge(source, destination, commodity=connection[2])
+                technology_graph.add_edge(source, destination, commodity=connection[2])
             else:
-                self.technology_graph.add_edge(source, destination)
+                technology_graph.add_edge(source, destination)
+
+        return technology_graph
 
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.

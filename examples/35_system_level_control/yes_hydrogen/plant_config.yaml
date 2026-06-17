@@ -43,6 +43,7 @@ plant:
     dt: 3600
 system_level_control:
   control_strategy: DemandFollowingControl
+  demand_component: h2_load_demand
   solver_options:
     solver_name: gauss_seidel
     max_iter: 20
