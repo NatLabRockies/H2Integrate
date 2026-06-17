@@ -546,33 +546,6 @@ class H2IntegrateModel:
         demand_commodity = all_params["commodity"]
         demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
 
-        # Identify the (single) demand technology
-        demand_tech = None
-        demand_commodity = None
-        demand_commodity_rate_units = None
-        # for tech_name, tech_def in technologies.items():
-        #     model_name = tech_def.get("performance_model", {}).get("model", "")
-        #     if "DemandComponent" not in model_name:
-        #         continue
-
-        #     model_inputs = tech_def.get("model_inputs", {})
-        #     perf_params = model_inputs.get("performance_parameters", {})
-        #     shared_params = model_inputs.get("shared_parameters", {})
-        #     all_params = {**shared_params, **perf_params}
-
-        #     if demand_commodity is not None:
-        #         # NOTE: this error should only be raised if two demand components
-        #         # are in the tech connections
-        #         raise ValueError(
-        #             "System-level control currently supports only one demand "
-        #             "component, but multiple demand components were found "
-        #             f"for '{demand_commodity}' and "
-        #             f"'{all_params.get('commodity', tech_name)}'."
-        #         )
-
-        #     demand_commodity = all_params["commodity"]
-        #     demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
-        #     demand_tech = tech_name
         # Check that the demand tech is in the technology_interconnections
         tech_interconnections = self.plant_config["technology_interconnections"]
         demand_is_source_connection = [
@@ -586,17 +559,11 @@ class H2IntegrateModel:
             if tech_connection[1] == demand_tech
         ]
         if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
-            # demand is not in tech interconnections
-            demand_tech = None
-            demand_commodity = None
-
-            demand_commodity_rate_units = None
-
-        # Raise error if no demand commodity was defined
-        if demand_tech is None:
+            # Raise error if demand technology is not connected
             msg = (
                 "No demand commodity was found in the technology interconnections. "
-                "Please define a demand component."
+                f"Please ensure that the demand technology ``{demand_tech}`` "
+                "is connected in the technology_interconnections"
             )
             raise ValueError(msg)
 
