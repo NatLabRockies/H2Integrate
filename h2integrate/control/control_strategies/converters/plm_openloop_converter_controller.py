@@ -68,12 +68,12 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
     def compute(self, inputs, outputs):
         commodity = self.config.commodity
-        demand_profile = inputs[f"{commodity}_demand"]
+        demand_profile = inputs[f"{commodity}_set_point"]
         system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"][0]
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"]
-        self.set_point_array = np.zeros(self.n_timesteps)
+        self.command_value = np.zeros(self.n_timesteps)
 
         for idx, val in enumerate(demand_profile):
             val_upstream = demand_profile_upstream[idx]
@@ -85,7 +85,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
                 if self.config.demand_profile_upstream_kind == "electricity":
                     desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
-                    self.set_point_array[idx] = min(
+                    self.command_value[idx] = min(
                         max(
                             max(desired_dispatch, 0),
                             max(desired_dispatch_upstream, 0),
@@ -95,7 +95,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
                     )
                 elif self.config.demand_profile_upstream_kind == "price":
                     if val_upstream > demand_profile_upstream_peak_cutoff:
-                        self.set_point_array[idx] = min(
+                        self.command_value[idx] = min(
                             max(desired_dispatch, 0),
                             val,
                             system_capacity_rate,
@@ -108,4 +108,4 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
                         )
                     )
 
-        outputs[f"{commodity}_set_point"] = self.set_point_array
+        outputs[f"{commodity}_command_value"] = self.command_value
