@@ -50,7 +50,6 @@ class ElectrolyzerCostBaseClass(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         super().setup()
         self.add_input("total_hydrogen_produced", val=0.0, units="kg")
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+        self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")

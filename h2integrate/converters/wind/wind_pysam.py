@@ -319,10 +319,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         field_number_to_data = {v: k for k, v in self.data_to_field_number.items()}
         # fields is a list of numbers representing the data type
         fields = np.tile(list(field_number_to_data.keys()), len(bounding_heights))
-        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         # initialize resource data array
-        resource_data = np.zeros((n_timesteps, len(fields)))
+        resource_data = np.zeros((self.n_timesteps, len(fields)))
         cnt = 0
         for height, field_num in zip(heights, fields):
             # get the rounding precision for the field

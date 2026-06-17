@@ -48,7 +48,6 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SMRPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
@@ -67,20 +66,20 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
         # Set up feedstock supply inputs - can be replaced by connections
         meoh_cap = self.config.plant_capacity_kgpy
-        meoh_max_out = np.ones(n_timesteps) * meoh_cap / n_timesteps
+        meoh_max_out = np.ones(self.n_timesteps) * meoh_cap / self.n_timesteps
         self.add_input("meoh_syn_cat_in", units="ft**3/yr", val=syn_ratio * np.sum(meoh_max_out))
         self.add_input("meoh_atr_cat_in", units="ft**3/yr", val=atr_ratio * np.sum(meoh_max_out))
         self.add_input(
-            "ng_in", shape=n_timesteps, units="kg/h", val=ng_ratio * np.sum(meoh_max_out)
+            "ng_in", shape=self.n_timesteps, units="kg/h", val=ng_ratio * np.sum(meoh_max_out)
         )
 
         # Set up feedstock consumption outputs
         self.add_output("meoh_syn_cat_consume", units="ft**3/yr")
         self.add_output("meoh_atr_cat_consume", units="ft**3/yr")
-        self.add_output("ng_consume", shape=n_timesteps, units="kg/h")
+        self.add_output("ng_consume", shape=self.n_timesteps, units="kg/h")
 
         # Set up electricity production output
-        self.add_output("electricity_out", shape=n_timesteps, units="kW*h/h")
+        self.add_output("electricity_out", shape=self.n_timesteps, units="kW*h/h")
 
     def compute(self, inputs, outputs):
         n_timesteps = len(inputs["ng_in"])
@@ -161,13 +160,12 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.add_input("ng_lhv", units="MJ/kg", val=self.config.ng_lhv)
         self.add_input("meoh_syn_cat_consume", units="ft**3/yr")
         self.add_input("meoh_atr_cat_consume", units="ft**3/yr")
-        self.add_input("ng_consume", shape=n_timesteps, units="kg/h")
-        self.add_input("electricity_out", shape=n_timesteps, units="kW*h/h")
+        self.add_input("ng_consume", shape=self.n_timesteps, units="kg/h")
+        self.add_input("electricity_out", shape=self.n_timesteps, units="kW*h/h")
         self.add_input("meoh_syn_cat_price", units="USD/ft**3", val=self.config.meoh_syn_cat_price)
         self.add_input("meoh_atr_cat_price", units="USD/ft**3", val=self.config.meoh_atr_cat_price)
         self.add_input(

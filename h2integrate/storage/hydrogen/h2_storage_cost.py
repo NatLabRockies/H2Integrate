@@ -107,8 +107,6 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         super().setup()
 
         self.add_input(
@@ -128,7 +126,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         self.add_input(
             "hydrogen_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=f"{self.config.commodity_rate_units}",
             desc="Hydrogen input timeseries for average flow rate calculation",
         )

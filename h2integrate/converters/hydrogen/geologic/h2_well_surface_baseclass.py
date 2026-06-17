@@ -81,9 +81,8 @@ class GeoH2SurfacePerformanceBaseClass(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # inputs
-        self.add_input("wellhead_gas_in", units="kg/h", val=-1.0, shape=(n_timesteps,))
+        self.add_input("wellhead_gas_in", units="kg/h", val=-1.0, shape=(self.n_timesteps,))
         self.add_input("max_flow_in", units="kg/h", val=self.config.max_flow_in)
         self.add_input("wellhead_h2_concentration_mol", units="mol/mol", val=-1.0)
 
@@ -161,17 +160,16 @@ class GeoH2SurfaceCostBaseClass(CostModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # inputs
-        self.add_input("wellhead_gas_in", units="kg/h", val=-1.0, shape=(n_timesteps,))
+        self.add_input("wellhead_gas_in", units="kg/h", val=-1.0, shape=(self.n_timesteps,))
         self.add_input("max_flow_size", units="kg/h", val=-1.0)
         self.add_input("wellhead_hydrogen_concentration", units="mol/mol", val=-1.0)
         self.add_input(
             "hydrogen_out",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/h",
-            desc=f"Hydrogen production rate in kg/h over {n_timesteps} hours.",
+            desc=f"Hydrogen production rate in kg/h over {self.n_timesteps} hours.",
         )
         self.add_input("total_hydrogen_produced", val=0.0, units="kg")
         self.add_input("custom_capex", val=self.config.custom_capex, units="USD")

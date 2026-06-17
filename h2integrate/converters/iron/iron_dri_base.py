@@ -44,7 +44,6 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = IronReductionPerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -64,14 +63,14 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for iron reduction",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for iron reduction",
             )
@@ -80,7 +79,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "sponge_iron_command_value",
             val=self.config.sponge_iron_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Pig iron command value for iron plant",
         )
@@ -307,8 +306,6 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
 
         if "cost_year" in config_dict:
@@ -353,7 +350,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
         self.add_input(
             "sponge_iron_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Pig iron produced",
         )
