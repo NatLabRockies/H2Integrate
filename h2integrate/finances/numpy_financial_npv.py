@@ -74,6 +74,27 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
         self.options.declare("commodity_type", types=str)
         self.options.declare("description", types=str, default="")
+        self.options.declare(
+            "commodity_rate_units",
+            types=str,
+            default="kg/h",
+            desc="Units of the rated commodity production input (e.g., 'kg/h', 'kW').",
+        )
+        self.options.declare(
+            "commodity_amount_units",
+            types=str,
+            default="kg",
+            desc=(
+                "Units of the cumulative commodity (e.g., 'kg', 'kWh'). Accepted for API "
+                "symmetry with other finance components; not used in NPV calculations."
+            ),
+        )
+        self.options.declare(
+            "price_units",
+            types=str,
+            default="USD/kg",
+            desc="Units of commodity sell price (e.g., 'USD/kg', 'USD/(kW*h)').",
+        )
 
     def setup(self):
         commodity_type = self.options["commodity_type"]
@@ -86,13 +107,8 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.NPV_str = f"NPV_{commodity_type}{suffix}"
         self.output_txt = f"{commodity_type}{suffix}"
 
-        # TODO: update below with standardized naming
-        if self.options["commodity_type"] == "electricity":
-            commodity_price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-        else:
-            commodity_price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
+        commodity_price_units = self.options["price_units"]
+        commodity_rate_units = self.options["commodity_rate_units"]
 
         self.add_output(self.NPV_str, val=0.0, units="USD")
 

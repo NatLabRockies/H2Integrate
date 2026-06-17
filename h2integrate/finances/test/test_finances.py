@@ -129,6 +129,9 @@ def test_modified_lcoe_calc():
         tech_config=tech_config["technologies"],
         driver_config=driver_config,
         commodity_type="electricity",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
     ivc = om.IndepVarComp()
 
@@ -187,6 +190,9 @@ def test_lcoe_with_selected_technologies():
         tech_config=tech_config["technologies"],
         driver_config=driver_config,
         commodity_type="electricity",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
     ivc = om.IndepVarComp()
 

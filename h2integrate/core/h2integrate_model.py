@@ -14,20 +14,11 @@ from h2integrate.core.supported_models import (
     supported_models,
     no_replacement_schedule_models,
 )
-from h2integrate.core.commodity_stream_definitions import (
-    multivariable_streams,
-    is_electricity_producer,
-)
+from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-
-
-try:
-    import pyxdsm
-except ImportError:
-    pyxdsm = None
 
 
 class State(IntEnum):
@@ -841,12 +832,17 @@ class H2IntegrateModel:
             raise ValueError(msg)
 
         self.tech_names = []
-        self.performance_models = []
         self.control_strategies = []
         self.dispatch_rule_sets = []
         self.cost_models = []
         self.finance_models = []
         self.tech_control_classifiers = {}  # for system-level control
+        # Mapping from tech_name to its performance model component instance.
+        # Populated as each tech group is built so other model-build steps
+        # (e.g. ``create_finance_model``) can introspect attributes such as
+        # ``commodity`` and ``_control_classifier`` without relying on
+        # tech-name conventions.
+        self.tech_perf_models = {}
 
         combined_performance_and_cost_models = [
             "HOPPComponent",
@@ -945,9 +941,9 @@ class H2IntegrateModel:
                     self.tech_control_classifiers.update({tech_name: comp._control_classifier})
                     self._check_time_step(perf_model, comp)
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
-                    self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
+                    self.tech_perf_models[tech_name] = om_model_object
 
                     self._add_passthrough_controller(tech_group, comp, individual_tech_config)
 
@@ -968,14 +964,18 @@ class H2IntegrateModel:
                         om_model_object = self._process_model(
                             model_type, individual_tech_config, tech_group
                         )
-                        if "control_strategy" in model_type:
-                            plural_model_type_name = "control_strategies"
-                        else:
-                            plural_model_type_name = model_type + "s"
-                        getattr(self, plural_model_type_name).append(om_model_object)
-
                         if model_type == "performance_model":
+                            # Performance models are tracked in the
+                            # ``tech_perf_models`` dict keyed by tech_name
+                            # rather than appended to a flat list.
                             perf_om_object = om_model_object
+                            self.tech_perf_models[tech_name] = om_model_object
+                        else:
+                            if "control_strategy" in model_type:
+                                plural_model_type_name = "control_strategies"
+                            else:
+                                plural_model_type_name = model_type + "s"
+                            getattr(self, plural_model_type_name).append(om_model_object)
 
                         # Collect control classifier for system-level control
                         if model_type == "performance_model" and self.slc:
@@ -1339,51 +1339,36 @@ class H2IntegrateModel:
 
             # Default logic for handling cases without specified commodity streams
             if commodity_stream is None:
-                if commodity == "electricity":
-                    elec_tech_names = [
-                        tech for tech in tech_configs if is_electricity_producer(tech)
-                    ]
-                    if len(elec_tech_names) < 1:
-                        msg = (
-                            "Commodity 'electricity' was specified, but no electricity "
-                            "producing techs were found."
-                        )
-                        raise ValueError(msg)
+                # Identify candidate commodity-stream technologies by introspecting
+                # each performance model's ``commodity`` attribute. This avoids
+                # baking technology naming conventions into the finance setup and
+                # lets any model declare what it produces. Storage and feedstock
+                # classifiers are excluded because they are not commodity producers
+                # in the finance sense.
+                non_producer_classifiers = {"storage", "feedstock"}
+                matching_techs = []
+                for tech_name in tech_names:
+                    perf_comp = self.tech_perf_models.get(tech_name)
+                    if perf_comp is None:
+                        continue
+                    tech_commodity = getattr(perf_comp, "commodity", None)
+                    if tech_commodity != commodity:
+                        continue
+                    classifier = getattr(perf_comp, "_control_classifier", None)
+                    if classifier in non_producer_classifiers:
+                        continue
+                    matching_techs.append(tech_name)
 
-                    elif len(elec_tech_names) > 1:
-                        msg = (
-                            f"Multiple electricity producing technologies found in finance subgroup"
-                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
-                            f"finance subgroup {subgroup_name}."
-                        )
-                        raise ValueError(msg)
-                    else:
-                        finance_subgroups[subgroup_name].update(
-                            {"commodity_stream": elec_tech_names[0]}
-                        )
-
-                else:
-                    # Default logic for tech-names and the primary commodity streams
-                    default_techs_to_commodities = {
-                        "electrolyzer": "hydrogen",
-                        "geoh2": "hydrogen",
-                        "ammonia": "ammonia",
-                        "doc": "co2",
-                        "oae": "co2",
-                        "methanol": "methanol",
-                        "air_separator": "nitrogen",
-                    }
-
-                    for default_tech, tech_commodity in default_techs_to_commodities.items():
-                        if commodity == tech_commodity and any(
-                            default_tech in tech_name for tech_name in tech_names
-                        ):
-                            commodity_stream_tech_name = [
-                                tech_name for tech_name in tech_names if default_tech in tech_name
-                            ]
-                            finance_subgroups[subgroup_name].update(
-                                {"commodity_stream": commodity_stream_tech_name[0]}
-                            )
+                if len(matching_techs) > 1:
+                    msg = (
+                        f"Multiple potential commodity stream technologies found for "
+                        f"commodity '{commodity}' in finance subgroup '{subgroup_name}': "
+                        f"{matching_techs}. Please specify the `commodity_stream` for the "
+                        f"finance subgroup '{subgroup_name}'."
+                    )
+                    raise ValueError(msg)
+                elif len(matching_techs) == 1:
+                    finance_subgroups[subgroup_name].update({"commodity_stream": matching_techs[0]})
 
                 # Check if a default commodity_stream was found, throw error if not
                 missing_commodity_stream = (
@@ -1396,7 +1381,7 @@ class H2IntegrateModel:
                         "Please specify the `commodity_stream` for finance subgroup "
                         f"{subgroup_name}."
                     )
-                    raise UserWarning(msg)
+                    raise ValueError(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
@@ -1513,13 +1498,36 @@ class H2IntegrateModel:
                     )
                     finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
 
-                # create the finance component
+                # create the finance component. Unit options are taken from the subgroup
+                # config when provided; otherwise sensible defaults based on the commodity
+                # are used. The finance component itself is commodity-agnostic.
+                default_commodity_units = {
+                    "electricity": {
+                        "commodity_rate_units": "kW",
+                        "commodity_amount_units": "kWh",
+                        "price_units": "USD/(kW*h)",
+                    },
+                }
+                commodity_unit_defaults = default_commodity_units.get(
+                    commodity,
+                    {
+                        "commodity_rate_units": "kg/h",
+                        "commodity_amount_units": "kg",
+                        "price_units": "USD/kg",
+                    },
+                )
+                fin_unit_kwargs = {
+                    key: subgroup_params.get(key, default)
+                    for key, default in commodity_unit_defaults.items()
+                }
+
                 fin_comp = fin_model(
                     driver_config=self.driver_config,
                     tech_config=tech_configs,
                     plant_config=filtered_plant_config,
                     commodity_type=commodity,
                     description=commodity_output_desc,
+                    **fin_unit_kwargs,
                 )
 
                 # name the finance component based on the commodity and description
@@ -1961,7 +1969,7 @@ class H2IntegrateModel:
 
             convert_sql_to_csv_summary(self.recorder_path, save_to_file=True)
 
-        for model in self.performance_models:
+        for model in self.tech_perf_models.values():
             if hasattr(model, "post_process") and callable(model.post_process):
                 model.post_process(show_plots=show_plots)
                 if show_plots:

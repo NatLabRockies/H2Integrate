@@ -108,6 +108,9 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
     ivc = om.IndepVarComp()
 
@@ -156,6 +159,9 @@ def test_profast_npv_no1_change_sell_price(
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
 
     pf2 = ProFastNPV(
@@ -164,6 +170,9 @@ def test_profast_npv_no1_change_sell_price(
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1_expensive",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
 
     ivc = om.IndepVarComp()
@@ -245,6 +254,9 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no2",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
 
     ivc = om.IndepVarComp()

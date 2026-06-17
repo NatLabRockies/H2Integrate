@@ -19,14 +19,28 @@ class SimpleLCOFinance(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
         self.options.declare("commodity_type", types=str)
         self.options.declare("description", types=str, default="")
+        self.options.declare(
+            "commodity_rate_units",
+            types=str,
+            default="kg/h",
+            desc="Units for the rated commodity production input.",
+        )
+        self.options.declare(
+            "commodity_amount_units",
+            types=str,
+            default="kg",
+            desc="Units for the commodity amount used to derive price units.",
+        )
+        self.options.declare(
+            "price_units",
+            types=str,
+            default="USD/kg",
+            desc="Units for the levelized cost output.",
+        )
 
     def setup(self):
-        if self.options["commodity_type"] == "electricity":
-            lco_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-        else:
-            lco_units = "USD/kg"
-            commodity_rate_units = "kg/h"
+        lco_units = self.options["price_units"]
+        commodity_rate_units = self.options["commodity_rate_units"]
 
         # Make unique names for outputs
         LCO_base_str = f"LCO{self.options['commodity_type'][0].upper()}"

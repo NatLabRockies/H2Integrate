@@ -455,8 +455,9 @@ class ProFastBase(om.ExplicitComponent):
             financial calculation.
         plant_config (dict): Plant configuration and financial parameter settings.
         driver_config (dict): Driver configuration parameters (not directly used in calculations).
-        commodity_type (str): Type of commodity analyzed. Supports electricity and mass-based
-            commodities.
+        commodity_type (str): Type of commodity analyzed. Commodity-agnostic; units for the
+            rated production, cumulative amount, and price are controlled via the
+            ``commodity_rate_units``, ``commodity_amount_units``, and ``price_units`` options.
         params (BasicProFASTParameterConfig): Financial parameters used in the ProFAST analysis.
         capital_item_settings (ProFASTDefaultCapitalItem): Default capital cost parameters.
         fixed_cost_settings (ProFASTDefaultFixedCost): Default fixed operating cost parameters.
@@ -493,6 +494,24 @@ class ProFastBase(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
         self.options.declare("commodity_type", types=str)
         self.options.declare("description", types=str, default="")
+        self.options.declare(
+            "commodity_rate_units",
+            types=str,
+            default="kg/h",
+            desc="Units of the rated commodity production input (e.g., 'kg/h', 'kW').",
+        )
+        self.options.declare(
+            "commodity_amount_units",
+            types=str,
+            default="kg",
+            desc="Units of the cumulative commodity (e.g., 'kg', 'kWh'). Used as a label.",
+        )
+        self.options.declare(
+            "price_units",
+            types=str,
+            default="USD/kg",
+            desc="Units of commodity price (e.g., 'USD/kg', 'USD/(kW*h)').",
+        )
 
     def add_model_specific_outputs(self):
         """Placeholder for subclass-defined outputs."""
@@ -500,15 +519,10 @@ class ProFastBase(om.ExplicitComponent):
 
     def setup(self):
         """Set up component inputs and outputs based on plant and technology configurations."""
-        # Determine commodity units
-        if self.options["commodity_type"] == "electricity":
-            self.price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-            self.commodity_amount_units = "kWh"
-        else:
-            self.price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-            self.commodity_amount_units = "kg"
+        # Commodity-agnostic units are taken from explicit options
+        self.price_units = self.options["price_units"]
+        commodity_rate_units = self.options["commodity_rate_units"]
+        self.commodity_amount_units = self.options["commodity_amount_units"]
 
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups

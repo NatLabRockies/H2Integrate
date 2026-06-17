@@ -63,6 +63,9 @@ def test_simple_npv(npv_finance_inputs, fake_filtered_tech_config, fake_cost_dic
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
 
     ivc = om.IndepVarComp()
@@ -117,6 +120,9 @@ def test_simple_npv_positive(
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
 
     ivc = om.IndepVarComp()

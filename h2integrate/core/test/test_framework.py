@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
@@ -711,11 +712,13 @@ def test_finance_subgroup_electricity_without_electricity_producer_raises(subtes
     }
 
     expected_msg = (
-        "Commodity 'electricity' was specified, but no electricity producing techs were found."
+        "Could not find a default technology to use as the commodity stream "
+        "for commodity electricity. Please specify the `commodity_stream` for finance "
+        "subgroup electricity."
     )
 
     with subtests.test("Raises when subgroup has no electricity-producing technologies"):
-        with pytest.raises(ValueError, match=expected_msg):
+        with pytest.raises(ValueError, match=re.escape(expected_msg)):
             H2IntegrateModel(h2i_config)
 
 
@@ -744,12 +747,13 @@ def test_finance_subgroup_electricity_with_multiple_producers_raises(subtests):
     }
 
     expected_msg = (
-        "Multiple electricity producing technologies found in finance subgroup 'electricity'. "
-        "Please specify the commodity_stream for the finance subgroup electricity."
+        "Multiple potential commodity stream technologies found for commodity 'electricity' "
+        "in finance subgroup 'electricity': ['wind', 'solar']. Please specify the "
+        "`commodity_stream` for the finance subgroup 'electricity'."
     )
 
     with subtests.test("Raises when subgroup has multiple electricity-producing technologies"):
-        with pytest.raises(ValueError, match=expected_msg):
+        with pytest.raises(ValueError, match=re.escape(expected_msg)):
             H2IntegrateModel(h2i_config)
 
 

@@ -75,6 +75,9 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
     ivc = om.IndepVarComp()
 
@@ -148,6 +151,9 @@ def test_profast_comp_coproduct(
         tech_config=fake_filtered_tech_config,
         commodity_type="electricity",
         description="no1",
+        commodity_rate_units="kW",
+        commodity_amount_units="kWh",
+        price_units="USD/(kW*h)",
     )
     ivc = om.IndepVarComp()
     ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
