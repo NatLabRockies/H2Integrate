@@ -39,6 +39,7 @@
 - Added imports for individual models to the appropriate `__init__.py` files to allow for direct imports of models from the package level and to ensure all models are properly imported and used in `supported_models.py` [PR 769](https://github.com/NatLabRockies/H2Integrate/pull/769)
 - Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
 - Removed the electricity-specific `is_electricity_producer` helper and made the finance components (`ProFastBase`, `NumpyFinancialNPV`) commodity-agnostic by accepting explicit `commodity_rate_units`, `commodity_amount_units`, and `price_units` options. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
+- Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
 
 ## 0.8 [April 15, 2026]
 

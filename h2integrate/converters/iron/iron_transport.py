@@ -180,8 +180,6 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         target_dollar_year = self.options["plant_config"]["finance_parameters"][
             "cost_adjustment_parameters"
         ]["target_dollar_year"]
@@ -201,9 +199,9 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.add_input("land_transport_distance", val=0.0, units="mi")
         self.add_input("water_transport_distance", val=0.0, units="mi")
         self.add_input("total_transport_distance", val=0.0, units="mi")
-        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
+        self.add_input("iron_ore_in", val=0.0, shape=self.n_timesteps, units="t/h")
 
-        self.add_output("iron_ore_out", val=0.0, shape=n_timesteps, units="t/h")
+        self.add_output("iron_ore_out", val=0.0, shape=self.n_timesteps, units="t/h")
         self.add_output("iron_transport_cost", val=0.0, units="USD/t")
         self.add_output("ore_profit_margin", val=0.0, units="USD/t")
 

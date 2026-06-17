@@ -47,7 +47,6 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = NuclearPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -63,7 +62,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             f"{self.commodity}_command_value",
             val=self.config.system_capacity_kw,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Electricity command value for nuclear plant",
         )
@@ -140,8 +139,6 @@ class QuinnNuclearCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         super().setup()
 
@@ -154,7 +151,7 @@ class QuinnNuclearCostModel(CostModelBaseClass):
         self.add_input(
             "electricity_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Hourly electricity output from performance model",
         )
@@ -173,8 +170,7 @@ class QuinnNuclearCostModel(CostModelBaseClass):
         capex = scaled_capex_per_kw * system_capacity_kw
 
         electricity_out = inputs["electricity_out"]
-        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        delivered_electricity_mwh = electricity_out.sum() * dt / 3600 / 1000.0
+        delivered_electricity_mwh = electricity_out.sum() * self.dt / 3600 / 1000.0
 
         fixed_om = fixed_opex_per_kw_year * system_capacity_kw
         variable_om = variable_opex_per_mwh * delivered_electricity_mwh

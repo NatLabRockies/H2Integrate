@@ -75,13 +75,12 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add natural gas consumed output
         self.add_output(
             "natural_gas_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas consumed by the plant",
         )
@@ -106,7 +105,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             f"{self.commodity}_command_value",
             val=self.config.system_capacity_mw,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Electricity command value for natural gas plant",
         )
@@ -115,7 +114,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "natural_gas_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas input energy",
         )
@@ -123,7 +122,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_output(
             "unmet_electricity_demand",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Unmet electricity demand for natural gas plant",
         )
@@ -262,7 +261,6 @@ class NaturalGasCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         super().setup()
 
@@ -276,7 +274,7 @@ class NaturalGasCostModel(CostModelBaseClass):
         self.add_input(
             "electricity_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MW",
             desc="Hourly electricity output from performance model",
         )
@@ -317,9 +315,8 @@ class NaturalGasCostModel(CostModelBaseClass):
 
         # Sum hourly electricity output to get annual generation
         # electricity_out is in MW, so sum gives MWh for hourly data
-        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         delivered_electricity_MWdt = electricity_out.sum()
-        delivered_electricity_MWh = delivered_electricity_MWdt * dt / 3600
+        delivered_electricity_MWh = delivered_electricity_MWdt * self.dt / 3600
 
         # Calculate capital expenditure
         capex = capex_per_kw * plant_capacity_kw
