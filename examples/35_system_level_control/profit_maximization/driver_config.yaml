@@ -1,0 +1,4 @@
+name: driver_config
+description: Profit-maximization dispatch with diurnal pricing
+general:
+  folder_output: outputs

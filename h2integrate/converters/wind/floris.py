@@ -287,6 +287,9 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
             1 / self.fraction_of_year_simulated
         )
 
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)
+
         # 3. Cache the results for future use if enabled
         self.cache_outputs(
             inputs, outputs, discrete_inputs, discrete_outputs={}, config_dict=config_dict

@@ -16,6 +16,7 @@ class HOPPComponentModelConfig(CacheBaseConfig):
     hopp_config: dict = field()
     cost_year: int = field(converter=int)
     electrolyzer_rating: int | float | None = field(default=None)
+    marginal_cost: float = field(default=0.0)
 
 
 class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
@@ -32,6 +33,7 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -201,6 +203,11 @@ class HOPPComponent(PerformanceModelBaseClass, CacheBaseClass):
                 total_power_capacity += tech_conf.get("system_capacity_kw", 0.0)
 
         outputs["power_capacity_to_interconnect_ratio"] = total_power_capacity / interconnect_kw
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. Done before caching so cached outputs already
+        # reflect the post-curtailment values for this set point.
+        self.apply_curtailment(outputs)
 
         # Cache the results for future use if enabled
         self.cache_outputs(inputs, outputs, discrete_inputs)

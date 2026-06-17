@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Controller signal naming overhaul**: Standardized controller input/output names across the codebase. SLC outputs are now `{tech}_{commodity}_set_point` (was `{tech}_{commodity}_demand`); technology-level controllers take `{commodity}_set_point` as input and emit `{commodity}_command_value` as output (was `{commodity}_demand`/`{commodity}_set_point`). Storage performance models in feedback mode receive `{commodity}_set_point`; in open-loop mode they receive `{commodity}_command_value`. The SLC's own input (`{commodity}_demand`) and demand component I/O remain unchanged.
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
@@ -35,6 +36,7 @@
 - Reduced import time for `h2integrate_model.py` by deferring imports of heavy dependencies until they are needed [PR 762](https://github.com/NatLabRockies/H2Integrate/pull/762)
 - Added multivariable purge gas stream output to `AmmoniaSynLoopPerformanceModel` [PR 760](https://github.com/NatLabRockies/H2Integrate/pull/760)
 - Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
+- Renamed `design_of_experiments` to `parameter_sweep` throughout the codebase to avoid confusion with "Department of Energy" (DOE) in the energy domain. The core code supports both the new `parameter_sweep` and legacy `design_of_experiments` YAML keys for backward compatibility. Updated all driver configs, examples, tests, and documentation. Added generator type descriptions to the parameter sweep docs page and updated the run-cases docs to recommend parameter sweeps over manual for-loops. [PR 768](https://github.com/NatLabRockies/H2Integrate/pull/768)
 - Added imports for individual models to the appropriate `__init__.py` files to allow for direct imports of models from the package level and to ensure all models are properly imported and used in `supported_models.py` [PR 769](https://github.com/NatLabRockies/H2Integrate/pull/769)
 
 ## 0.8 [April 15, 2026]

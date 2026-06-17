@@ -25,7 +25,7 @@ def test_steel_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 720.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -137,7 +137,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -270,7 +270,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -612,7 +612,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
     # Set battery demand profile
     demand_profile = np.ones(8760) * 340.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     # Run the model
     model.run()
 
@@ -874,7 +874,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     electrolyzer_capacity_MW = 60
 
     # Set the battery demand as 10% of the electrolyzer capacity
-    h2i.prob.set_val("battery.electricity_demand", 0.1 * electrolyzer_capacity_MW, units="MW")
+    h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
     h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
     h2i.run()
@@ -911,7 +911,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
         assert pytest.approx(127705.51498100, rel=1e-6) == electricity_to_electrolyzer
     # Re-run where we set the battery demand equal to the electrolyzer capacity
 
-    h2i.prob.set_val("battery.electricity_demand", electrolyzer_capacity_MW, units="MW")
+    h2i.prob.set_val("battery.electricity_set_point", electrolyzer_capacity_MW, units="MW")
     h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
     h2i.run()
@@ -1041,7 +1041,7 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
     # Set battery demand profile
     demand_profile = np.ones(8760) * 330.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -1155,7 +1155,7 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
         "electrical_load_demand.unmet_electricity_demand_out", units="kW"
     )
     ng_electricity_set_point = model.prob.get_val(
-        "natural_gas_plant.electricity_set_point", units="kW"
+        "natural_gas_plant.electricity_command_value", units="kW"
     )
     ng_electricity_production = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
     bat_init_charge = 200000.0 * 0.1  # max capacity in kW and initial charge rate percentage
@@ -1408,7 +1408,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
 
     # TODO: Update with demand module once it is developed
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -1695,7 +1695,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
         # Demand should be met for the last part of the year
         assert np.allclose(
             dispatched_electricity[8700:],
-            model.prob.get_val("battery.electricity_demand", units="MW")[8700:],
+            model.prob.get_val("battery.electricity_set_point", units="MW")[8700:],
         )
 
     # Subtest for LCOE
@@ -1746,7 +1746,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
 )
-def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
+def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     with pytest.raises(UserWarning) as excinfo:
@@ -1760,7 +1760,7 @@ def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
     # load the driver config file
     driver_config = load_driver_yaml("driver_config.yaml")
     # specify the filepath to the csv file
-    csv_fpath = Path(driver_config["driver"]["design_of_experiments"]["filename"]).absolute()
+    csv_fpath = Path(driver_config["driver"]["parameter_sweep"]["filename"]).absolute()
     # run the csv checker method, we want it to write the csv file to a new filepath so
     # set overwrite_file=False
     new_csv_filename = check_file_format_for_csv_generator(
@@ -2694,7 +2694,7 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
 
     # TODO: Update with demand module once it is developed
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     model.prob.set_val("electrical_load_demand.electricity_demand", demand_profile, units="MW")
 
     # Run the model
@@ -2958,7 +2958,7 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         assert soc.min() >= 10.0 - 1e-3
 
     with subtests.test("Battery set point sum"):
-        set_point = model.prob.get_val("battery.electricity_set_point", units="kW")
+        set_point = model.prob.get_val("battery.electricity_command_value", units="kW")
         assert set_point.sum() == pytest.approx(60.0, rel=1e-3)
 
     with subtests.test("Battery electricity out sum"):
@@ -3039,11 +3039,10 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     model = H2IntegrateModel(example_folder / "nuclear_reactor_thermal_htse.yaml")
     model.run()
-    model.post_process()
-
     annual_nuclear_electricity = model.prob.get_val(
         "nuclear.annual_electricity_produced", units="TW*h/year"
     )[0]
+    model.prob.get_val("htse.electricity_demand", units="TW*h/year")[0]
     annual_htse_electricity = model.prob.get_val("htse.electricity_demand", units="TW*h/year")[0]
     annual_grid_sell = model.prob.get_val("grid_sell.annual_electricity_sold", units="TW*h/year")[0]
     annual_hydrogen = model.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
@@ -3053,6 +3052,7 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)
+        assert annual_hydrogen == pytest.approx(6.18913043478261)
 
     with subtests.test("Grid annual electricity sold is non-negative"):
         assert annual_grid_sell == pytest.approx(8.509745843478264)

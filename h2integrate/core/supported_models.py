@@ -75,6 +75,8 @@ supported_models = _ModelRegistry(
         "RunOfRiverHydroPerformanceModel": "converters.water_power:RunOfRiverHydroPerformanceModel",
         "RunOfRiverHydroCostModel": "converters.water_power:RunOfRiverHydroCostModel",
         "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
+        "HTSEPerformanceModel": "converters.hydrogen:HTSEPerformanceModel",
+        "HTSECostModel": "converters.hydrogen:HTSECostModel",
         "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
         "BasicElectrolyzerCostModel": "converters.hydrogen:BasicElectrolyzerCostModel",
         "CustomElectrolyzerCostModel": "converters.hydrogen:CustomElectrolyzerCostModel",
@@ -128,10 +130,8 @@ supported_models = _ModelRegistry(
         "NaturalGasPerformanceModel": "converters.natural_gas:NaturalGasPerformanceModel",
         "QuinnNuclearPerformanceModel": "converters.nuclear:QuinnNuclearPerformanceModel",
         "QuinnNuclearCostModel": "converters.nuclear:QuinnNuclearCostModel",
-        "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
-        "HTSEPerformanceModel": "converters.hydrogen:HTSEPerformanceModel",
-        "HTSECostModel": "converters.hydrogen:HTSECostModel",
+        "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
@@ -185,6 +185,10 @@ supported_models = _ModelRegistry(
         "SimpleGasConsumerPerformance": "converters.natural_gas:SimpleGasConsumerPerformance",
         "SimpleGasConsumerCost": "converters.natural_gas:SimpleGasConsumerCost",
         "GasStreamCombinerPerformanceModel": "transporters:GasStreamCombinerPerformanceModel",
+        # System-level control strategies
+        "DemandFollowingControl": "control.control_strategies.system_level.demand_following_control:DemandFollowingControl",
+        "CostMinimizationControl": "control.control_strategies.system_level.cost_minimization_control:CostMinimizationControl",
+        "ProfitMaximizationControl": "control.control_strategies.system_level.profit_maximization_control:ProfitMaximizationControl",
     }
 )
 

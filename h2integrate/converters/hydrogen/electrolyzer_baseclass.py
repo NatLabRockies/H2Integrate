@@ -9,6 +9,7 @@ class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -21,6 +22,16 @@ class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):
 
         # Define inputs for electricity
         self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
+
+        # Dispatchable models receive a command value from the system-level controller
+        if "system_level_control" in self.options["plant_config"]:
+            self.add_input(
+                f"{self.commodity}_command_value",
+                val=0.0,
+                shape=self.n_timesteps,
+                units=self.commodity_rate_units,
+                desc=f"Command value for {self.commodity} production from SLC",
+            )
 
     def compute(self, inputs, outputs):
         """

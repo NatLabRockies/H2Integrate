@@ -42,7 +42,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     Inputs
         interconnection_size (float): Maximum power capacity for grid connection (kW).
         electricity_in (array): Power flowing into the grid (selling) (kW).
-        electricity_set_point (array): Downstream electricity set point (kW).
+        electricity_command_value (array): Downstream electricity command value (kW).
 
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
@@ -52,6 +52,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         300,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -85,13 +86,13 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             desc="Electricity flowing into grid interconnection point (selling to grid)",
         )
 
-        # Electricity set point from downstream (for buying from grid)
+        # Electricity command value from downstream (for buying from grid)
         self.add_input(
-            "electricity_set_point",
+            "electricity_command_value",
             val=0.0,
             shape=n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity set point from downstream technologies",
+            desc="Electricity command value from downstream technologies",
         )
 
         # electricity_out is electricity flowing OUT OF the grid (buying from grid)
@@ -135,12 +136,14 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         electricity_sold = np.clip(inputs["electricity_in"], 0, interconnection_size)
         outputs["electricity_sold"] = electricity_sold
 
-        # Buying: electricity flows out of grid to meet set point, limited by interconnection
-        electricity_bought = np.clip(inputs["electricity_set_point"], 0, interconnection_size)
+        # Buying: electricity flows out of grid to meet command value, limited by interconnection
+        electricity_bought = np.clip(inputs["electricity_command_value"], 0, interconnection_size)
         outputs["electricity_out"] = electricity_bought
 
-        # Unmet demand if set point exceeds interconnection size
-        outputs["electricity_unmet_demand"] = inputs["electricity_set_point"] - electricity_bought
+        # Unmet demand if command value exceeds interconnection size
+        outputs["electricity_unmet_demand"] = (
+            inputs["electricity_command_value"] - electricity_bought
+        )
 
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold

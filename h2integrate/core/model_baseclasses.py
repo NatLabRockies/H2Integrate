@@ -3,6 +3,7 @@ import hashlib
 from pathlib import Path
 
 import dill
+import numpy as np
 import openmdao.api as om
 from attrs import field, define
 
@@ -98,6 +99,47 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # operational life of the technology if the technology cannot be replaced
         self.add_output("operational_life", val=self.plant_life, units="yr")
 
+        # Flexible models get additional I/O for command-value-based curtailment
+        if getattr(self, "_control_classifier", None) == "flexible":
+            self.add_input(
+                f"{self.commodity}_command_value",
+                val=1.0,
+                shape=self.n_timesteps,
+                units=self.commodity_rate_units,
+                desc=f"Command value for {self.commodity} production (curtailment limit)",
+            )
+            self.add_output(
+                f"uncurtailed_{self.commodity}_out",
+                val=1.0,
+                shape=self.n_timesteps,
+                units=self.commodity_rate_units,
+                desc=f"Full (uncurtailed) {self.commodity} output",
+            )
+
+    def apply_curtailment(self, outputs):
+        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+
+        Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
+        then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
+
+        Only operates when the model has ``_control_classifier == "flexible"``.
+        Should be called at the end of each flexible model's ``compute()`` method
+        after the raw production has been written to ``outputs[f"{commodity}_out"]``.
+        """
+        if "system_level_control" in self.options["plant_config"]:
+            if getattr(self, "_control_classifier", None) != "flexible":
+                return
+
+            commodity_out_key = f"{self.commodity}_out"
+            uncurtailed_key = f"uncurtailed_{self.commodity}_out"
+            command_value_key = f"{self.commodity}_command_value"
+
+            uncurtailed = np.array(outputs[commodity_out_key])
+            outputs[uncurtailed_key] = uncurtailed
+
+            command_value = self._inputs[command_value_key]
+            outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Computation for the OM component.
@@ -149,6 +191,18 @@ class CostModelBaseClass(om.ExplicitComponent):
         # Define discrete outputs: cost_year
         self.add_discrete_output(
             "cost_year", val=self.config.cost_year, desc="Dollar year for costs"
+        )
+
+        # Marginal cost output for dispatch decisions
+        model_inputs = self.options["tech_config"].get("model_inputs", {})
+        shared = model_inputs.get("shared_parameters", {})
+        commodity_rate_units = shared.get("commodity_rate_units", "kW")
+
+        self.add_output(
+            "marginal_cost",
+            val=getattr(self.config, "marginal_cost", 0.0),
+            units=f"USD/({commodity_rate_units}*h)",
+            desc="Marginal cost of production for dispatch decisions",
         )
 
         # dt is seconds per timestep

@@ -45,7 +45,7 @@ supervisor_demand = np.array(
     ]
 )
 
-secondary_demand = model.prob.get_val("battery.electricity_demand", units="kW")
+secondary_demand = model.prob.get_val("battery.electricity_set_point", units="kW")
 grid_output = model.prob.get_val("grid_buy.electricity_out", units="MW")
 
 time_series = build_time_series_from_plant_config(model.plant_config)
