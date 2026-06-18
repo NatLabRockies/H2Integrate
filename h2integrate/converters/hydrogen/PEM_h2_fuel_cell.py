@@ -231,16 +231,18 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # Set calculation constants:
         self.f_c = 96485.33  # Faraday's constant in A/mol
         self.M_H2 = 0.002016  # Molar mass of H2 in kg/mol
-        self.M_O2 = 0.32  # Molar mass of O2 in kg/mol
+        self.M_O2 = 0.032  # Molar mass of O2 in kg/mol
         self.Tref = 298.15  # Standard room temperature in K [25 deg Celsius]
         self.cp_H2 = 14300  # Specific heat of H2 in J/(kg*K)
         self.cp_air = 1005  # Specific heat of air in J/(kg*K)
-        self.cp_water = 4184  # Specific heat of water in J/(kg*K)
+        self.cp_H2O = 4184  # Specific heat of water in J/(kg*K)
         self.cp_N2 = 1040  # Specific heat of nitrogen in J/(kg*K)
+        self.cp_O2 = 918  # Specific heat of oxygen in J/(kg*K)
         self.hhv_h2 = 141.8 * 1e6  # Higher heating value of hydrogen in J/kg
         self.hhv_air = 0  # No higher heating value of air
-        self.hhv_water = 0  # ???? Need to check this
+        self.hhv_H2O = 2260  # Higher heating value of water in J/kg
 
+        # Sizing the cells
         self.max_cell_power_density = 0.000334
         # is n_cells = N_series?
         self.N_series = 1
@@ -286,8 +288,8 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
-            # print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
-            # print(self.stack_size, self.n_cells)
+            print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
+            print(self.stack_size, self.n_cells)
 
             # if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
             # print("Not enough H2 or O2 for this power point")
@@ -297,14 +299,9 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             electricity_produced = (
                 V_cell * I_cell * self.n_cells * self.config.n_stacks / 1e3
             )  # Calculated in watts, convert to kW
-            # print(
-            #     "electricity produced:",
-            #     V_cell,
-            #     I_cell,
-            #     self.n_cells,
-            #     self.config.n_stacks,
-            #     electricity_produced,
-            # )
+
+            # Need to implement this function
+            # self.calculate_water_production(H2_consumed_rate, O2_consumed_rate)
 
             # Compute H2O out (is this needed?)
 
@@ -373,9 +370,64 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # )
         # outputs["hydrogen_consumed"] = outputs["electricity_out"] * kw_to_kgh_h2
 
+        # ##############################################################################
+        # # Helper functions for energy balance and water production calculations
+
         # def enthalpy_flow(self, m, cp, T, Tref, h0):
         #     """Mass-specific enthalpy flow: Hdot = m * (cp*(T - Tref) + h0)"""
         #     return m * (cp * (T - Tref) + h0)
+
+        # def calculate_water_production(self, h2_consumed_rate, o2_consumed_rate):
+        #     # Calculate water production based on stoichiometry of the reaction
+        #     # 2H2 + O2 --> 2H2O
+        #     # For every 2 moles of H2 consumed, 2 moles of H2O are produced
+        #     # For every 1 mole of O2 consumed, 2 moles of H2O are produced
+
+        #     # Calculuate the energy balance of the reaction to find the water production
+        #     # Enthalpy change of the reaction:
+        #           ΔH = (m_H2 * hhv_h2) + (m_O2 * hhv_o2) - (m_H2O * hhv_water)
+        #     # Assuming hhv_o2 and hhv_water are 0, we can simplify to:
+        #     # ΔH = (m_H2 * hhv_h2) - (m_H2O * hhv_water)
+        #     # Since hhv_water is 0, we can further simplify to:
+        #     # ΔH = m_H2 * hhv_h2
+        #     # The energy released by the reaction is equal to the energy produced by the fuel cell
+        #   which is the power output (electricity produced) plus the heat produced (which we can
+        #   assume is a certain percentage of the energy released by the reaction, say 50% for a PEM
+        #   fuel cell).
+        #     # Therefore, we can calculate the water production based on the energy balance of the
+        #       reaction and the power output of the fuel cell.
+        #     H_H2_in  = self.enthalpy_flow(mH2_in,  self.cp_H2,  T_H2_in,  self.Tref, self.hhv_h2)
+        #     H_H2_out = self.enthalpy_flow(mH2_out, self.cp_H2,  T_H2_out, self.Tref, self.hhv_h2)
+
+        #     H_air_in = self.enthalpy_flow(mO2_in,  self.cp_air, T_air_in,  self.Tref, 0.0)
+        #     H_air_out = (
+        #         self.enthalpy_flow(mO2_out, self.cp_O2, T_air_out, self.Tref, 0.0) +
+        #         self.enthalpy_flow(mN2_out, self.cp_N2, T_air_out, self.Tref, 0.0)
+        #     ) # consider just oxygen for a first pass
+
+        #     H_H2O_in  = self.enthalpy_flow(mH2O_in,
+        #                   self.cp_H2O, T_H2O_in, self.Tref, self.hhv_H2O)
+        #     H_H2O_out = self.enthalpy_flow(mH2O_out,
+        #                   self.cp_H2O, T_H2O_out, self.Tref, self.hhv_H2O)
+
+        #     return (H_H2_in + H_air_in + H_H2O_in
+        #            - H_H2_out - H_air_out - H_H2O_out
+        #            - Wel - Q)
+
+        # ##############################################################################
+
+        # # Convert mass flow rates to molar flow rates
+        # h2_molar_flow = h2_consumed_rate / self.M_H2  # mol/time step
+        # o2_molar_flow = o2_consumed_rate / self.M_O2  # mol/time step
+
+        # # Calculate water production based on limiting reactant
+        # h2o_from_h2 = h2_molar_flow * (self.M_H2O / 1)  # kg/time step
+        # h2o_from_o2 = o2_molar_flow * (self.M_H2O / 0.5)  # kg/time step
+
+        # # The actual water produced is the minimum of the two calculations
+        # water_produced = np.minimum(h2o_from_h2, h2o_from_o2)
+
+        # return water_produced
 
 
 @define(kw_only=True)
