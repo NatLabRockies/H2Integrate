@@ -1,6 +1,5 @@
 import json
 import time
-import warnings
 from pathlib import Path
 
 import requests
