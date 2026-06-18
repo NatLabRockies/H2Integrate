@@ -1,7 +1,10 @@
+import re
+
 import attrs
 import numpy as np
 import openmdao.api as om
 from attrs import field, define
+from openmdao.utils.units import _find_unit
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
@@ -22,6 +25,17 @@ finance_to_pf_param_mapper = {
     "installation time": "installation months",
     "inflation rate": "general inflation rate",
 }
+
+
+def compute_price_units(outputs):
+    rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"rated_\w+_production", k)]
+    if len(rate_units) == 0:
+        raise ValueError("Cannot find rate units")
+    commodity_amount_units = f"({rate_units[0]})*h"
+    price_units = f"USD/({commodity_amount_units})"
+    # valid_units(price_units)
+    # simplify_unit(price_units)
+    return _find_unit(price_units)
 
 
 def format_params_for_profast_config(param_dict):
@@ -500,11 +514,6 @@ class ProFastBase(om.ExplicitComponent):
 
     def setup(self):
         """Set up component inputs and outputs based on plant and technology configurations."""
-        # Determine commodity units
-        # if self.options["commodity_type"] == "electricity":
-        #     self.price_units = "USD/(kW*h)"
-        # else:
-        #     self.price_units = "USD/kg"
 
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups
@@ -515,23 +524,25 @@ class ProFastBase(om.ExplicitComponent):
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
 
-        # Add model-specific outputs defined by subclass
-        self.add_model_specific_outputs()
-
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Add rated capacity and capacity factor inputs
-        meta_inputs = self.add_input(
+        self.add_input(
             f"rated_{self.options['commodity_type']}_production",
             val=0.0,
-            units=None,
+            # units=None,
             units_by_conn=True,
             shape=1,
             require_connection=True,
         )
 
-        self.commodity_amount_units = f"({meta_inputs['units']})*h"
+        self.commodity_amount_units = "kW*h"  # "f"({meta_inputs['units']})*h"
         self.price_units = f"USD/({self.commodity_amount_units})"
+
+        # Add model-specific outputs defined by subclass
+
+        self.add_model_specific_outputs()
+
         self.add_input(
             "capacity_factor",
             val=0.0,
