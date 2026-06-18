@@ -217,6 +217,20 @@ technologies:
         purge_gas_x_ar: 0.02
         purge_gas_x_nh3: 0.04
         purge_gas_mass_ratio: 0.07
+        # --- Dynamic operating constraints (optional) ---
+        # Turndown ratio: minimum production as a fraction of rated capacity.
+        turndown_ratio: 0.2
+        # Per-hour ramp limits as a fraction of rated capacity.
+        ramp_up_rate_fraction: 0.5
+        ramp_down_rate_fraction: 0.5
+        # Cold start: triggered after a long off-period; introduces a multi-hour delay.
+        include_cold_start: true
+        off_hours_cold_start: 6
+        cold_start_delay_hours: 4
+        # Warm start: triggered after any short off-period; introduces a sub-hour delay.
+        include_warm_start: true
+        off_hours_warm_start: 0.5
+        warm_start_delay_hours: 0.5
       cost_parameters:
         baseline_capacity: 52777.6
         base_cost_year: 2016

@@ -44,12 +44,11 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         ammonia_production_kgpy = (
