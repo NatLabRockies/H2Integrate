@@ -4,15 +4,54 @@ This doc page describes the steps to add a new technology to the new H2Integrate
 In broad strokes, this involves writing performance and cost wrappers for your technology in the format that H2Integrate expects, then adding those to the list of available technologies in the H2Integrate codebase.
 We'll first walk through a relatively straightforward example of adding a new technology, then discuss some of the more complex cases you might encounter.
 
+## Choosing baseclasses for your model
+
+Every model in H2Integrate inherits from a small set of baseclasses that wire it
+into the rest of the framework. Before writing code, pick the appropriate base
+class and configuration class for each piece of your technology:
+
+| Piece               | Baseclass                                                | Config baseclass                |
+| ------------------- | -------------------------------------------------------- | ------------------------------- |
+| Performance model   | `PerformanceModelBaseClass`                              | `BaseConfig`                    |
+| Cost model          | `CostModelBaseClass`                                     | `CostModelBaseConfig`           |
+| Controller (opt.)   | A `PassthroughController` is inserted automatically      | n/a                             |
+
+These are defined in `h2integrate/core/model_baseclasses.py` (model baseclasses
+and `CostModelBaseConfig`) and `h2integrate/core/utilities.py` (`BaseConfig`).
+
+- **Adding a brand-new technology?** Inherit directly from
+  `PerformanceModelBaseClass` and `CostModelBaseClass`, and use `BaseConfig` /
+  `CostModelBaseConfig` for the corresponding configuration classes.
+- **Adding a technology that already has a category-specific baseclass?** Inherit
+  from that instead. Existing examples include `SolarPerformanceBaseClass`,
+  `WindPerformanceBaseClass`, and `ElectrolyzerPerformanceBaseClass`. These set
+  the commodity attributes and any shared I/O for you.
+
+```{note}
+Category-specific baseclasses are only worth creating when **multiple models
+share inputs, outputs, or methods**. The wind module is the canonical example:
+both `FlorisWindPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel`
+inherit from `WindPerformanceBaseClass` so they share the same wind-resource
+discrete input and turbine-rating output. If you are writing a technology model
+that doesn't fit into an existing category, skip the intermediate baseclass and
+inherit directly from `PerformanceModelBaseClass`.
+```
+
+Configuration classes use the [`attrs`](https://www.attrs.org) library and the
+`BaseConfig.from_dict` constructor, which validates user-supplied entries from
+`tech_config['model_inputs']` against the declared fields. This pattern is now
+standard for both performance and cost models in H2Integrate.
+
 ## Adding a new technology
 
-We'll start by walking through the process to add a simple solar performance model to H2Integrate.
+We'll walk through the process of adding a solar PV performance model to
+H2Integrate. Solar already has a category-specific baseclass, so we'll inherit
+from that.
 
-1. **Determine what type of technology you're adding** and if it fits into an existing H2Integrate bucket.
-In this case, we're adding a solar technology, which has an existing set of baseclasses that we will use.
-These baseclasses are defined in `h2integrate/converters/solar/solar_baseclass.py`.
-They provide the basic structure for a solar technology, including the required class attributes, inputs, and outputs for the models.
-Here's what that baseclass looks like:
+1. **Identify (or write) the relevant baseclass.**
+For a solar technology, the category baseclass is
+`SolarPerformanceBaseClass`, defined in
+`h2integrate/converters/solar/solar_baseclass.py`:
 
 ```python
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
@@ -32,13 +71,6 @@ class SolarPerformanceBaseClass(PerformanceModelBaseClass):
         self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        # PerformanceModelBaseClass.setup() registers the standard outputs:
-        # `{commodity}_out`, `total_{commodity}_produced`,
-        # `annual_{commodity}_produced`, `rated_{commodity}_production`,
-        # `replacement_schedule`, `capacity_factor`, `operational_life`.
-        # When `_control_classifier == "flexible"`, it also registers the
-        # `{commodity}_command_value` input and `uncurtailed_{commodity}_out`
-        # output used by `apply_curtailment()`.
         super().setup()
 
         self.add_discrete_input(
@@ -51,55 +83,118 @@ class SolarPerformanceBaseClass(PerformanceModelBaseClass):
         raise NotImplementedError("This method should be implemented in a subclass.")
 ```
 
-Note that the baseclass inherits from `PerformanceModelBaseClass` (defined in `h2integrate/core/model_baseclasses.py`) rather than `om.ExplicitComponent` directly. This baseclass:
+Inheriting from `PerformanceModelBaseClass` (rather than `om.ExplicitComponent`
+directly) means the baseclass:
 
 - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
 - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
 - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
-- Adds command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+- Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
 
-Every performance model must therefore define three class attributes and three commodity attributes; see the [Required class attributes](#required-class-attributes) section below for details.
+Every performance model must therefore define three class attributes and three commodity attributes; see [Required class attributes](#required-class-attributes) below.
 
 2. **Write the performance model for your technology.**
-We'll be wrapping a PySAM model for this example.
-We inherit from the baseclass and implement the `setup` and `compute` methods.
-The baseclass describes the required inputs and outputs that the model should have, and the `compute` method is where the actual computation happens.
-In this case, we only need to compute the electricity output from the solar plant.
-Here's what the performance model looks like:
+We'll wrap a PySAM PV model. Two things happen in `setup`: we build a
+`BaseConfig`-derived configuration class from `tech_config['model_inputs']`,
+and we register any additional I/O the wrapped model needs. The `compute`
+method then runs the model and writes the standard outputs declared by the
+baseclass.
 
 ```python
-class PYSAMSolarPlantPerformanceComponent(SolarPerformanceBaseClass):
+import PySAM.Pvwattsv8 as Pvwatts
+from attrs import field, define
+
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import contains, range_val_or_none
+from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
+
+
+@define(kw_only=True)
+class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+    """Performance-model configuration for ``PYSAMSolarPlantPerformanceModel``.
+
+    Fields declared here are validated against the user inputs supplied in
+    ``tech_config['model_inputs']['performance_parameters']`` (or the shared
+    block) when ``from_dict`` is called in ``setup``.
     """
-    An OpenMDAO component that wraps a SolarPlant model.
-    It takes wind parameters as input and outputs power generation data.
-    """
+
+    pv_capacity_kWdc: float = field()
+    dc_ac_ratio: float = field(default=None, validator=range_val_or_none(0.0, 2.0))
+    tilt: float = field(default=None, validator=range_val_or_none(0.0, 90.0))
+    config_name: str = field(
+        default="PVWattsSingleOwner",
+        validator=contains(["PVWattsSingleOwner", "PVWattsCommercial"]),  # truncated
+    )
+
+
+class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
+    """OpenMDAO component wrapping PySAM's PVWatts v8 model."""
+
     def setup(self):
         super().setup()
-        self.config_name = "PVWattsSingleOwner"
-        self.system_model = Pvwatts.default(self.config_name)
 
-        lat = self.options['plant_config']['site']['latitude']
-        lon = self.options['plant_config']['site']['longitude']
-        year = self.options['plant_config']['site']['year']
-        solar_resource = SolarResource(lat, lon, year)
-        self.system_model.value("solar_resource_data", solar_resource.data)
+        # Build a validated configuration object from user inputs.
+        self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
+            strict=True,
+            additional_cls_name=self.__class__.__name__,
+        )
+
+        # Register any extra I/O beyond what the baseclass already provides.
+        self.add_input(
+            "system_capacity_DC",
+            val=self.design_config.pv_capacity_kWdc,
+            units="kW",
+            desc="PV rated capacity in DC",
+        )
+        self.add_output("system_capacity_AC", val=0.0, units="kW")
+
+        self.system_model = Pvwatts.new(self.design_config.config_name)
+        # ...assign design parameters to ``self.system_model``...
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # ...push inputs and solar resource into the PySAM model...
+        self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])
+        self.system_model.value("solar_resource_data", discrete_inputs["solar_resource_data"])
         self.system_model.execute(0)
-        outputs['electricity_out'] = self.system_model.Outputs.gen
 
-        # Flexible models must apply curtailment from the upstream
-        # controller's command value at the end of compute(). This clips
-        # `{commodity}_out` to `min(uncurtailed, command_value)` and copies the
-        # raw output into `uncurtailed_{commodity}_out`. It is a no-op when
-        # no upstream controller is configured.
+        # Write the standard production outputs declared by SolarPerformanceBaseClass.
+        outputs["electricity_out"] = self.system_model.Outputs.gen
+        outputs["system_capacity_AC"] = (
+            self.system_model.value("system_capacity")
+            / self.system_model.value("dc_ac_ratio")
+        )
+        outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
+        outputs["total_electricity_produced"] = (
+            outputs["electricity_out"].sum() * (self.dt / 3600)
+        )
+        outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+
+        # Flexible models must apply curtailment at the end of compute(). This
+        # clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` and
+        # copies the raw output into ``uncurtailed_{commodity}_out``. It is a
+        # no-op when no upstream controller is configured.
         self.apply_curtailment(outputs)
 ```
 
+See `h2integrate/converters/solar/solar_pysam.py` for the full implementation,
+including tilt-angle and resource-data handling.
+
 ```{note}
-The `setup` method is where we initialize the PySAM model and set the solar resource data.
-We call the baseclass's `setup` method using the `super()` function, then added additional setup steps for the PySAM model.
-The `compute` signature is `compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because performance models may use discrete I/O (e.g. resource data dictionaries).
+`setup` is where the configuration object is built and where any additional I/O
+is registered. Always call `super().setup()` first so that the baseclass can
+register the standard production outputs (and, for flexible models, the
+command-value input). The `compute` signature is
+`compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because
+performance models may use discrete I/O (e.g. resource data dictionaries).
+```
+
+```{tip}
+`merge_shared_inputs(model_inputs, kind)` combines
+`model_inputs['{kind}_parameters']` and `model_inputs['shared_parameters']`
+into a single dictionary, and raises if a key is defined in both. Pair it with
+`BaseConfig.from_dict(..., strict=True)` so that unknown keys in `tech_config`
+are flagged immediately.
 ```
 
 (required-class-attributes)=
@@ -114,85 +209,85 @@ Every performance model (whether it inherits from a category-specific baseclass 
 For `flexible` models specifically, the baseclass automatically registers the `{commodity}_command_value` input and `uncurtailed_{commodity}_out` output, and the `compute()` method must call `self.apply_curtailment(outputs)` after writing the raw production to `outputs[f"{commodity}_out"]`. For `dispatchable` models the command value is consumed by the model's own internal logic; no curtailment helper is needed. `fixed` and `feedstock` models do not receive a command value at all.
 
 3. **Write the cost model for your technology.**
-The process for writing a cost model is similar to the performance model, with the required inputs and outputs defined in the technology cost model baseclass. The technology cost model baseclass should inherit the main cost model baseclass (`CostModelBaseClass`) with additional inputs, outputs, and setup added as necessary. The `CostModelBaseClass` has no predefined inputs, but all cost models must output `CapEx`, `OpEx`, and `cost_year`.
+Cost models follow the same pattern as performance models, but inherit from
+`CostModelBaseClass` and use a `CostModelBaseConfig` (or `BaseConfig`)
+configuration class. `CostModelBaseClass` registers the required `CapEx`,
+`OpEx`, `VarOpEx`, and `cost_year` outputs; no inputs are predefined.
 
-If the dollar-year for the costs (capex and opex) are **inherent to the cost model**, e.g. costs are always output with a certain associated dollar-year, a cost model may look like this:
+If the dollar-year for the costs is **inherent to the cost model** (i.e. the
+model always reports costs in a fixed dollar-year), inherit the config from
+`BaseConfig` and pin `cost_year` to a constant:
 
 ```python
 from attrs import field, define
-from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, must_equal
-from h2integrate.core.model_base import CostModelBaseConfig, CostModelBaseClass
 
-# make a cost config input to get user-provided inputs that won't be passed from other models
+from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import gt_zero, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseClass
+
+
 @define(kw_only=True)
 class ReverseOsmosisCostModelConfig(BaseConfig):
-    # the config variables for the cost model would be provided in the tech_config[tech]['model_inputs']['cost_parameters'] or tech_config[tech]['model_inputs']['shared_parameters']
+    # Config values come from tech_config['model_inputs']['cost_parameters']
+    # or tech_config['model_inputs']['shared_parameters'].
     freshwater_kg_per_hour: float = field(validator=gt_zero)
     freshwater_density: float = field(validator=gt_zero)
-    # if the dollar-year for the costs are inherent to the model, set the cost year in the cost config as a set value
-    cost_year: int = field(default = 2013, converter=int, validator=must_equal(2013))
+    # cost_year is fixed because this model always reports 2013 USD.
+    cost_year: int = field(default=2013, converter=int, validator=must_equal(2013))
 
-# make the cost model
+
 class ReverseOsmosisCostModel(CostModelBaseClass):
     def setup(self):
-
         self.config = ReverseOsmosisCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
-
         super().setup()
 
-        # add extra inputs or outputs for the cost model
         self.add_input(
             "plant_capacity_kgph", val=0.0, units="kg/h", desc="Desired freshwater flow rate"
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # calculate CapEx and OpEx in USD
-        desal_capex = 32894 * (self.config.freshwater_kg_per_hour / 3600)  # [USD]
-
-        desal_opex = 4841 * (self.config.freshwater_kg_per_hour / 3600)  # [USD/yr]
-
+        capex = 32894 * (self.config.freshwater_kg_per_hour / 3600)  # USD
+        opex = 4841 * (self.config.freshwater_kg_per_hour / 3600)    # USD/yr
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex
-
 ```
 
-If the dollar-year for the costs (capex and opex) **depend on the user cost inputs within the `tech_config` file**, a cost model may look like below:
+If the dollar-year for the costs **depends on user inputs in `tech_config`**,
+inherit the config from `CostModelBaseConfig` instead. `CostModelBaseConfig`
+adds a required `cost_year` field, forcing the user to supply it:
 
 ```python
 from attrs import field, define
-from h2integrate.core.utilities import BaseConfig, CostModelBaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
-from h2integrate.core.model_base import CostModelBaseConfig, CostModelBaseClass
+
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.validators import gt_zero
+from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+
 
 @define(kw_only=True)
 class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
     capex_per_kWac: float | int = field(validator=gt_zero)
     opex_per_kWac_per_year: float | int = field(validator=gt_zero)
-    # if the dollar-year for the costs is based on the user input costs, the cost year must be user-input and is a required input to the CostModelBaseConfig
+    # ``cost_year`` is inherited from CostModelBaseConfig and is user-provided.
 
 
 class ATBUtilityPVCostModel(CostModelBaseClass):
     def setup(self):
-
         self.config = ATBUtilityPVCostModelConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            additional_cls_name=self.__class__.__name__,
         )
-
         super().setup()
 
-        # add extra inputs or outputs for the cost model
         self.add_input("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # calculate CapEx and OpEx in USD
         capacity = inputs["system_capacity_AC"][0]
-        capex = self.config.capex_per_kWac * capacity
-        opex = self.config.opex_per_kWac_per_year * capacity
-        outputs["CapEx"] = capex
-        outputs["OpEx"] = opex
+        outputs["CapEx"] = self.config.capex_per_kWac * capacity
+        outputs["OpEx"] = self.config.opex_per_kWac_per_year * capacity
 ```
 
 4. **Write the control model for your technology (optional).**
@@ -201,33 +296,36 @@ Every technology group in H2Integrate contains a controller subsystem that conve
 You only need to write a control model if you want to override that default — for example, to implement a heuristic or optimized dispatch strategy for a storage technology. The process is similar to the performance model: the controller's required inputs and outputs (`{commodity}_set_point` in, `{commodity}_command_value` out) are defined in the relevant control baseclass. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for available frameworks and supported controllers.
 
 5. **Next, add the new technology to the `supported_models.py` file.**
-This file contains a dictionary of all the available technologies in H2Integrate.
-Add your new technology to the dictionary with the appropriate keys depending on if it a performance, cost, or financial model.
+This file contains the registry of every technology available in H2Integrate.
+Add your new technology with the appropriate key depending on whether it is a
+performance, cost, or financial model.
 
 ```{important}
-When adding a new technology use a string version of the class name as the dictionary key mapping
-to the class. This greatly simplifies debugging configuration issues and model findability within the
+Use a string version of the class name as the dictionary key. This greatly
+simplifies debugging configuration issues and improves model findability in the
 documentation and code.
 ```
 
-Here's what the updated `supported_models.py` file looks like with our new solar technology added as the first entry:
+The registry uses lazy imports: each value is a
+`"relative.module.path:ClassName"` string relative to the `h2integrate`
+package, and the class is imported the first time it is accessed. Here's what
+the updated `supported_models.py` looks like with the new solar entries:
 
 ```python
-from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceComponent
-
-supported_models = {
-    "PYSAMSolarPlantPerformanceModel" : PYSAMSolarPlantPerformanceComponent,
-
-    "RunOfRiverHydroPerformanceModel": RunOfRiverHydroPerformanceModel,
-    "RunOfRiverHydroCostModel": RunOfRiverHydroCostModel,
-    "ECOElectrolyzerPerformanceModel": ECOElectrolyzerPerformanceModel,
-    "SingliticoCostModel": SingliticoCostModel,
-    "BasicElectrolyzerCostModel": BasicElectrolyzerCostModel,
-    "CustomElectrolyzerCostModel": CustomElectrolyzerCostModel,
-
-    ...
-}
+supported_models = _ModelRegistry(
+    {
+        # ...
+        "PYSAMSolarPlantPerformanceModel": "converters.solar:PYSAMSolarPlantPerformanceModel",
+        "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
+        "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
+        "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
+        # ...
+    }
+)
 ```
+
+For the import to resolve, also export your class from the relevant subpackage
+`__init__.py` (for example, `h2integrate/converters/solar/__init__.py`).
 
 6. **Finally, you can now use your new technology in H2Integrate.**
 You can create a new case that uses this technology in the `tech_config.yaml` level or add it to an existing scenario and run the model to see the results.
@@ -241,11 +339,22 @@ Let's briefly discuss these cases and how to handle them.
 
 ### Adding a new technology type
 
-Take the case where you're adding a new technology that doesn't fit into an existing bucket, e.g. a nuclear power plant.
-If you're adding multiple models that will exist in that new space, it would make sense to create a new baseclass that defines the required inputs and outputs for your technology.
-You can then inherit from that baseclass in your performance and cost models.
-If you're only making a single model, a baseclass isn't necessary, and you can define the required inputs and outputs directly in your models.
-This shouldn't be a prohibitively challenging step, but it's generally easier to add technologies that fit into existing buckets as you can draw from those examples.
+If you're adding a technology that doesn't fit into an existing category — e.g.
+a nuclear power plant — you have two options:
+
+- **Single model in the new category.** Inherit directly from
+  `PerformanceModelBaseClass` (and `CostModelBaseClass`). Set the
+  `commodity`, `commodity_rate_units`, `commodity_amount_units`,
+  `_control_classifier`, and `_time_step_bounds` attributes on your model class
+  itself. No category baseclass is needed.
+- **Multiple models that share I/O or methods in the new category.** Create a
+  category-specific baseclass that subclasses `PerformanceModelBaseClass`,
+  sets the commodity attributes, and registers any shared inputs/outputs (the
+  way `WindPerformanceBaseClass` does for FLORIS and PySAM wind models). Your
+  individual models then inherit from this category baseclass.
+
+It's generally easier to add technologies that fit into existing buckets, since
+you can draw from those examples.
 
 ### Adding additional inputs or outputs
 
