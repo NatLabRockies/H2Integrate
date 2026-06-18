@@ -536,7 +536,8 @@ class ProFastBase(om.ExplicitComponent):
             require_connection=True,
         )
 
-        self.commodity_amount_units = "kW*h"  # "f"({meta_inputs['units']})*h"
+        # Placeholders
+        self.commodity_amount_units = "unit_amount"  # "f"({meta_inputs['units']})*h"
         self.price_units = f"USD/({self.commodity_amount_units})"
 
         # Add model-specific outputs defined by subclass
@@ -613,6 +614,9 @@ class ProFastBase(om.ExplicitComponent):
         Returns:
             ProFAST: A fully configured ProFAST financial model object ready for execution.
         """
+
+        self.variable_cost_settings.__setattr__("unit", self.price_units.replace("USD", "$"))
+        self.coproduct_cost_settings.__setattr__("unit", self.price_units.replace("USD", "$"))
 
         # create years of operation list
         years_of_operation = create_years_of_operation(

@@ -123,7 +123,7 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe
 
 
 @pytest.mark.regression
@@ -195,4 +195,4 @@ def test_profast_comp_coproduct(
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe

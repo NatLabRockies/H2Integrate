@@ -133,6 +133,7 @@ class ProFastLCO(ProFastBase):
         # populate outputs
         # Output names based on naming convention for finance subgroups
         outputs[self.LCO_str] = sol["lco"]
+        outputs[f"price_{self.output_txt}"] = sol["price"]
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
             if isinstance(val, np.ndarray | list | tuple):  # only for IRR
