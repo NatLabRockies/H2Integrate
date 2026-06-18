@@ -11,29 +11,54 @@ We'll start by walking through the process to add a simple solar performance mod
 1. **Determine what type of technology you're adding** and if it fits into an existing H2Integrate bucket.
 In this case, we're adding a solar technology, which has an existing set of baseclasses that we will use.
 These baseclasses are defined in `h2integrate/converters/solar/solar_baseclass.py`.
-They provide the basic structure for a solar technology, including the required inputs and outputs for the models.
+They provide the basic structure for a solar technology, including the required class attributes, inputs, and outputs for the models.
 Here's what that baseclass looks like:
 
 ```python
-class SolarPerformanceBaseClass(om.ExplicitComponent):
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+
+
+class SolarPerformanceBaseClass(PerformanceModelBaseClass):
+    # (min, max) time step lengths (in seconds) compatible with this model
+    _time_step_bounds = (3600, 3600)
+    # System-level control classifier; see the control classifier docs.
+    _control_classifier = "flexible"
 
     def initialize(self):
-        self.options.declare('plant_config', types=dict)
-        self.options.declare('tech_config', types=dict)
-        self.options.declare('driver_config', types=dict)
+        super().initialize()
+        # Commodity attributes are required by PerformanceModelBaseClass.setup()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        self.add_output('electricity_out', val=0.0, shape=n_timesteps, units='kW', desc='Power output from SolarPlant')
+        # PerformanceModelBaseClass.setup() registers the standard outputs:
+        # `{commodity}_out`, `total_{commodity}_produced`,
+        # `annual_{commodity}_produced`, `rated_{commodity}_production`,
+        # `replacement_schedule`, `capacity_factor`, `operational_life`.
+        # When `_control_classifier == "flexible"`, it also registers the
+        # `{commodity}_command_value` input and `uncurtailed_{commodity}_out`
+        # output used by `apply_curtailment()`.
+        super().setup()
 
-    def compute(self, inputs, outputs):
-        """
-        Computation for the OM component.
+        self.add_discrete_input(
+            "solar_resource_data",
+            val={},
+            desc="Solar resource data dictionary",
+        )
 
-        For a template class this is not implement and raises an error.
-        """
-
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         raise NotImplementedError("This method should be implemented in a subclass.")
 ```
+
+Note that the baseclass inherits from `PerformanceModelBaseClass` (defined in `h2integrate/core/model_baseclasses.py`) rather than `om.ExplicitComponent` directly. This baseclass:
+
+- Declares the standard `driver_config` / `plant_config` / `tech_config` options.
+- Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
+- Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
+- Adds command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+
+Every performance model must therefore define three class attributes and three commodity attributes; see the [Required class attributes](#required-class-attributes) section below for details.
 
 2. **Write the performance model for your technology.**
 We'll be wrapping a PySAM model for this example.
@@ -59,15 +84,34 @@ class PYSAMSolarPlantPerformanceComponent(SolarPerformanceBaseClass):
         solar_resource = SolarResource(lat, lon, year)
         self.system_model.value("solar_resource_data", solar_resource.data)
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         self.system_model.execute(0)
         outputs['electricity_out'] = self.system_model.Outputs.gen
+
+        # Flexible models must apply curtailment from the upstream
+        # controller's command value at the end of compute(). This clips
+        # `{commodity}_out` to `min(uncurtailed, command_value)` and copies the
+        # raw output into `uncurtailed_{commodity}_out`. It is a no-op when
+        # no upstream controller is configured.
+        self.apply_curtailment(outputs)
 ```
 
 ```{note}
 The `setup` method is where we initialize the PySAM model and set the solar resource data.
 We call the baseclass's `setup` method using the `super()` function, then added additional setup steps for the PySAM model.
+The `compute` signature is `compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because performance models may use discrete I/O (e.g. resource data dictionaries).
 ```
+
+(required-class-attributes)=
+#### Required class attributes
+
+Every performance model (whether it inherits from a category-specific baseclass like `SolarPerformanceBaseClass` or directly from `PerformanceModelBaseClass`) must define the following class attributes. These are typically set on the category baseclass so that all subclasses inherit them, but they can also be set or overridden on individual model classes.
+
+- `_control_classifier` (str): How the system-level controller (SLC) should treat this model. One of `"fixed"`, `"flexible"`, `"dispatchable"`, `"storage"`, or `"feedstock"`. The classifier determines whether the SLC sends a set-point to the model and how its output is folded into the dispatch logic. See the {ref}`control classifier docs <system-level-control>` (`docs/control/system_level_control/control_classifier.md`) for details.
+- `_time_step_bounds` (tuple[int, int]): `(min, max)` simulation time-step lengths (in seconds) the model can run at. Use `(3600, 3600)` for hourly-only models and a wider range (e.g. `(300, 3600)`) for models that support sub-hourly time steps. The plant simulation `dt` must lie within every model's bounds.
+- `commodity` (str), `commodity_rate_units` (str), `commodity_amount_units` (str): set in `initialize()` (or before calling `super().setup()`). These define the commodity produced by the model and the units used for its rate (e.g. `"kW"`, `"kg/h"`) and cumulative amount (e.g. `"kW*h"`, `"kg"`). `PerformanceModelBaseClass.setup()` uses them to register all of the standard outputs and will raise `NotImplementedError` if any are missing.
+
+For `flexible` models specifically, the baseclass automatically registers the `{commodity}_command_value` input and `uncurtailed_{commodity}_out` output, and the `compute()` method must call `self.apply_curtailment(outputs)` after writing the raw production to `outputs[f"{commodity}_out"]`. For `dispatchable` models the command value is consumed by the model's own internal logic; no curtailment helper is needed. `fixed` and `feedstock` models do not receive a command value at all.
 
 3. **Write the cost model for your technology.**
 The process for writing a cost model is similar to the performance model, with the required inputs and outputs defined in the technology cost model baseclass. The technology cost model baseclass should inherit the main cost model baseclass (`CostModelBaseClass`) with additional inputs, outputs, and setup added as necessary. The `CostModelBaseClass` has no predefined inputs, but all cost models must output `CapEx`, `OpEx`, and `cost_year`.
@@ -151,10 +195,10 @@ class ATBUtilityPVCostModel(CostModelBaseClass):
         outputs["OpEx"] = opex
 ```
 
-4. **Write the control model for your technology.**
-For this simplistic case, we will skip the control model because controls models can currently only be added to
-storage technologies. The process for writing a control model is similar to the performance model, with the
-required inputs and outputs defined in the baseclass.
+4. **Write the control model for your technology (optional).**
+Every technology group in H2Integrate contains a controller subsystem that converts a `{commodity}_set_point` signal into the `{commodity}_command_value` consumed by the performance model. If you do not specify a `control_strategy` for your technology, H2Integrate automatically inserts a `PassthroughController` that simply copies set-point to command value, so most new performance models do not need a custom controller.
+
+You only need to write a control model if you want to override that default — for example, to implement a heuristic or optimized dispatch strategy for a storage technology. The process is similar to the performance model: the controller's required inputs and outputs (`{commodity}_set_point` in, `{commodity}_command_value` out) are defined in the relevant control baseclass. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for available frameworks and supported controllers.
 
 5. **Next, add the new technology to the `supported_models.py` file.**
 This file contains a dictionary of all the available technologies in H2Integrate.
@@ -245,9 +289,6 @@ for tech_name, individual_tech_config in self.technology_config['technologies'].
     else:
         tech_group = self.plant.add_subsystem(tech_name, om.Group())
         self.tech_names.append(tech_name)
-
-        # Special HOPP handling for short-term
-        if tech_name in combined_performance_and_cost_model_technologies:
 ```
 
 There are also situations where the models are still related but can be treated separately.
@@ -259,7 +300,8 @@ This would require additional logic to first check if the cached object exists a
 There is an example of this in the `hopp_wrapper.py` file.
 
 ### Specifying allowable time step for your model
-If you want your model to run with time steps other than 1 hour (3600 s), then you must specify the `_time_step_bounds` as a class attribute in each of your model classes. To run a simulation with a given time step, all models in the plant must be compatible with the desired time step.
+
+`_time_step_bounds` is a required class attribute (see [Required class attributes](#required-class-attributes)). The default category baseclasses use `(3600, 3600)` (hourly timestep only). If your underlying model supports sub-hourly or multi-hour simulation, set `_time_step_bounds` on your subclass:
 
 ```python
 class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
@@ -271,6 +313,8 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
     # (min, max) time step lengths (in seconds) compatible with this model
     _time_step_bounds = (300, 3600) # (5-min, 1-hour)
 ```
+
+To run a simulation with a given time step, every model in the plant must be compatible with the desired `dt` set in `plant_config`.
 
 ### Other cases
 

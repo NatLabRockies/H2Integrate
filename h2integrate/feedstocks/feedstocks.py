@@ -101,10 +101,9 @@ class FeedstockCostModel(CostModelBaseClass):
                 merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
                 additional_cls_name=self.__class__.__name__,
             )
-        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
-        # Set cost outputs
+        # Set cost outputs (also sets self.n_timesteps, self.dt, self.plant_life,
+        # and self.fraction_of_year_simulated)
         super().setup()
 
         self.add_input(
@@ -124,7 +123,7 @@ class FeedstockCostModel(CostModelBaseClass):
         # Determine price mode from array length
         if isinstance(self.config.price, list | np.ndarray):
             price_len = len(self.config.price)
-            if price_len == plant_life:
+            if price_len == self.plant_life:
                 self._price_mode = "per_year"
             elif price_len == self.n_timesteps:
                 self._price_mode = "per_timestep"
@@ -132,7 +131,7 @@ class FeedstockCostModel(CostModelBaseClass):
                 raise ValueError(
                     f"price length ({price_len}) "
                     f"must match n_timesteps ({self.n_timesteps}) "
-                    f"or plant_life ({plant_life})"
+                    f"or plant_life ({self.plant_life})"
                 )
         else:
             self._price_mode = "scalar"
@@ -144,11 +143,6 @@ class FeedstockCostModel(CostModelBaseClass):
             desc=f"Price profile of {self.config.commodity}",
         )
 
-        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
-        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
-        hours_per_year = 8760
-        hours_simulated = (self.dt / 3600) * self.n_timesteps
-        self.fraction_of_year_simulated = hours_simulated / hours_per_year
         # since feedstocks are consumed, some outputs are appended
         # with 'consumed' rather than 'produced'
 

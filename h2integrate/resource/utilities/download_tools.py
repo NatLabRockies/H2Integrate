@@ -23,7 +23,12 @@ def download_from_api(url, filename):
             r = requests.get(url)
             if r:
                 localfile = Path(filename).open("w+")
-                txt = r.text.replace("(Â°C)", "(C)").replace("(Â°)", "(deg)")
+                # Use r.content.decode() to avoid charset_normalizer issues
+                txt = (
+                    r.content.decode("utf-8", errors="replace")
+                    .replace("(Â°C)", "(C)")
+                    .replace("(Â°)", "(deg)")
+                )
                 localfile.write(txt)
                 localfile.close()
                 if Path(filename).is_file():

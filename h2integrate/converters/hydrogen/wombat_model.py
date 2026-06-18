@@ -46,13 +46,12 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Operational expenditure")
         self.add_output(
             "VarOpEx",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="USD/year",
             desc="Variable operational expenditure",
         )
