@@ -49,7 +49,7 @@ from pathlib import Path
 from IPython.display import HTML, display
 
 # Change to an example directory
-os.chdir("../../examples/14_wind_hydrogen_dispatch/")
+os.chdir("../../../examples/14_wind_hydrogen_dispatch/")
 
 # Build and set up the model
 h2i_model = H2IntegrateModel("inputs/h2i_wind_to_h2_storage.yaml")
