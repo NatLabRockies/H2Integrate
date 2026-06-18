@@ -19,10 +19,13 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
         fuel_cell_efficiency_hhv (float): The higher heating value efficiency of the
             fuel cell (0 <= efficiency <= 1).
+        uptime_hours_until_eol (int): Number of "on" hours until the electrolyzer reaches
+            end-of-life (EOL).
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
     fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
+    uptime_hours_until_eol: int = field(validator=gte_zero)
 
 
 class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -146,6 +149,42 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # calculate electricity output in kW
         electricity_out_kw = hydrogen_in / kw_to_kgh_h2
 
+        # calculate replacement schedule based on cumulative "on" hours, where "on" hours
+        # are timesteps where electricity output is greater than zero
+        n_hours_eol = self.config.uptime_hours_until_eol
+        on_off_status = np.where(electricity_out_kw > 0, 1, 0)
+
+        # Calculate cumulative hours and find all crossings of n_hours_eol multiples
+        cumsum_hours = np.cumsum(np.tile(on_off_status, self.plant_life))
+
+        # Find all replacement thresholds (n_hours_eol, 2*n_hours_eol, 3*n_hours_eol, ...)
+        max_hours = np.max(cumsum_hours)
+        n_replacements = int(max_hours / n_hours_eol)
+
+        # For each replacement threshold, find the first index where cumsum >= threshold
+        i_replace = []
+        for k in range(1, n_replacements + 1):
+            threshold = k * n_hours_eol
+            # Find first index where cumsum >= threshold
+            idx = np.searchsorted(cumsum_hours, threshold, side="left")
+            if idx < len(cumsum_hours):
+                i_replace.append(idx)
+
+        i_replace = np.array(i_replace) if i_replace else np.array([], dtype=int)
+
+        # Convert indices to years and count replacements per year
+        refurb_schedule = np.zeros(self.plant_life)
+        for idx in i_replace:
+            year = int(np.floor(idx / self.n_timesteps))
+            if 0 <= year < self.plant_life:
+                refurb_schedule[year] += 1
+
+        # The replacement_schedule is the fraction of the total capacity that is replaced per year
+        # The replacement_schedule may be used in the finance model if the replacement_cost_percent
+        # is specified in the tech_config under
+        # ['model_inputs']['finance_parameters']['capital_items']['replacement_cost_percent']
+        outputs["replacement_schedule"] = refurb_schedule
+
         # clip the electricity output to the system capacity
         outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity)
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
@@ -165,13 +204,19 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 class H2FuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the hydrogen fuel cell cost model.
 
-    Fields include `system_capacity_kw`, `capex_per_kw`, and `fixed_opex_per_kw_per_year`.
-    The `cost_year` field is inherited from `CostModelBaseConfig`.
+    Attributes:
+        system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
+        capex_per_kw (float): Capital cost per unit of capacity in USD/kW.
+        fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit of capacity per year
+            in USD/(kW*year).
+variable_opex_per_kwh (float): Variable operating expenses per unit of production per year in
+            USD/(kWh).
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
     capex_per_kw: float = field(validator=gte_zero)
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
+    variable_opex_per_kwh: float = field(validator=gte_zero)
 
 
 class H2FuelCellCostModel(CostModelBaseClass):
@@ -216,6 +261,20 @@ class H2FuelCellCostModel(CostModelBaseClass):
             desc="Fixed operating expenses per unit capacity per year",
         )
 
+        self.add_input(
+            "unit_varopex",
+            val=self.config.variable_opex_per_kwh,
+            units="USD/(kW*h)",
+            desc="Variable operating expenses per unit of electricity produced",
+        )
+
+        self.add_input(
+            "annual_electricity_produced",
+            val=0.0,
+            shape=self.plant_life,
+            units="(kW*h)/year",
+        )
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Compute capital and fixed operating costs for the fuel cell system.
@@ -232,3 +291,6 @@ class H2FuelCellCostModel(CostModelBaseClass):
 
         # Calculate fixed operating cost per year
         outputs["OpEx"] = system_capacity_kw * inputs["fixed_opex_per_year"]
+
+        # Calculate variable operating cost per year
+        outputs["VarOpEx"] = inputs["annual_electricity_produced"] * inputs["unit_varopex"]

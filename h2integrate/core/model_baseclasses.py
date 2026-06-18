@@ -177,14 +177,14 @@ class CostModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         # Define outputs: CapEx and OpEx costs
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
         self.add_output(
             "VarOpEx",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="USD/year",
             desc="Variable operational expenditure",
         )
