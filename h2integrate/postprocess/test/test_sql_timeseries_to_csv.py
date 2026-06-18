@@ -9,8 +9,8 @@ from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_a
 
 
 @fixture
-def configuration(temp_copy_of_example):
-    example_folder = temp_copy_of_example
+def configuration(temp_copy_of_example_module_scope):
+    example_folder = temp_copy_of_example_module_scope
     config = load_yaml(example_folder / "02_texas_ammonia.yaml")
 
     driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
@@ -19,9 +19,6 @@ def configuration(temp_copy_of_example):
     config["driver_config"] = driver_config
 
     tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
-    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
-        str(output_folder)
-    )
     config["technology_config"] = tech_config
     return config
 
@@ -29,9 +26,7 @@ def configuration(temp_copy_of_example):
 @fixture
 def run_example_02_sql_fpath(configuration):
     # check if case file exists, if so, return the filepath
-    output_folder = (
-        Path(configuration["driver_config"]["general"]["folder_output"]).resolve().parent
-    )
+    output_folder = Path(configuration["driver_config"]["general"]["folder_output"]).resolve()
     sql_fpath = output_folder / "cases.sql"
     if sql_fpath.exists():
         return sql_fpath
