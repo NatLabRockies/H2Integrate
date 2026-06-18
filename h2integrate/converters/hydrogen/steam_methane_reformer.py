@@ -63,7 +63,6 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add natural_gas_usage_mmbtu_per_kg as an OpenMDAO input with config value as default
         self.add_input(
@@ -93,7 +92,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             f"{self.commodity}_command_value",
             val=self.config.system_capacity_tonnes_per_day * (1000 / 24),  # convert t/d to kg/h
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Hydrogen command value for SMR plant",
         )
@@ -102,7 +101,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "natural_gas_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas input energy",
         )
@@ -111,7 +110,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "electricity_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity input energy",
         )
@@ -120,7 +119,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_output(
             "natural_gas_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas consumed by the plant",
         )
@@ -129,7 +128,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_output(
             "electricity_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity consumed by the plant",
         )
@@ -145,7 +144,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
         self.add_output(
             "unmet_hydrogen_demand",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Unmet hydrogen demand for SMR plant",
         )
@@ -287,15 +286,13 @@ class SteamMethaneReformerCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
-        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        plant_life = self.options["plant_config"]["plant"]["plant_life"]
 
         super().setup()
 
         self.add_input(
             "annual_hydrogen_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="kg/year",
             desc="Annual hydrogen output from performance model",
         )

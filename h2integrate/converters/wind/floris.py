@@ -110,8 +110,6 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-
         performance_inputs = self.options["tech_config"]["model_inputs"]["performance_parameters"]
 
         # initialize layout config

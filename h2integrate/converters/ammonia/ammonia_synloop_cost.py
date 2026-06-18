@@ -154,9 +154,8 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
-        self.add_input("annual_ammonia_produced", val=0.0, shape=plant_life, units="kg/year")
+        self.add_input("annual_ammonia_produced", val=0.0, shape=self.plant_life, units="kg/year")
         self.add_input(
             "rated_ammonia_production", val=self.config.production_capacity, units="kg/h"
         )

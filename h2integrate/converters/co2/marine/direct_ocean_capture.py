@@ -174,7 +174,6 @@ class DOCCostModel(CostModelBaseClass):
         )
 
         super().setup()
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
             "total_tank_volume",
@@ -185,7 +184,7 @@ class DOCCostModel(CostModelBaseClass):
         self.add_input(
             "annual_co2_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="t/year",
             desc="Annual co2 captured",
         )
