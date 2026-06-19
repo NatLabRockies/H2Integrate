@@ -10,7 +10,7 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase, compute_price_units
+from h2integrate.finances.profast_base import ProFastBase, _compute_price_units
 from h2integrate.core.inputs.validation import write_yaml
 
 
@@ -73,9 +73,8 @@ class ProFastLCO(ProFastBase):
         base = f"LCO{self.options['commodity_type'][0].upper()}"
         self.LCO_str = f"{base}_{desc}" if desc else base
 
-        # self.add_output(self.LCO_str, val=0.0, units=self.price_units)
-        self.add_output(self.LCO_str, val=0.0, compute_units=compute_price_units)
-        self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=compute_price_units)
+        self.add_output(self.LCO_str, val=0.0, compute_units=_compute_price_units)
+        self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=_compute_price_units)
 
         self.outputs_to_units = {
             "wacc": "percent",
@@ -83,7 +82,6 @@ class ProFastLCO(ProFastBase):
             "irr": "percent",
             "profit_index": "unitless",
             "investor_payback_period": "yr",
-            # "price": self.price_units,
         }
         for output_var, units in self.outputs_to_units.items():
             self.add_output(f"{output_var}_{self.output_txt}", val=0.0, units=units)

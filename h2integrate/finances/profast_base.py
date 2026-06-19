@@ -27,7 +27,7 @@ finance_to_pf_param_mapper = {
 }
 
 
-def compute_price_units(outputs):
+def _compute_price_units(outputs):
     rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"rated_\w+_production", k)]
     if len(rate_units) == 0:
         rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"placeholder_\w+", k)]

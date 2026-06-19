@@ -1,4 +1,4 @@
-from h2integrate.finances.profast_base import ProFastBase, compute_price_units
+from h2integrate.finances.profast_base import ProFastBase, _compute_price_units
 
 
 class ProFastNPV(ProFastBase):
@@ -65,7 +65,7 @@ class ProFastNPV(ProFastBase):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.commodity_sell_price,
-            compute_units=compute_price_units,
+            compute_units=_compute_price_units,
         )
 
     def compute(self, inputs, outputs):
