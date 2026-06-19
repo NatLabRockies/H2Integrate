@@ -9,6 +9,7 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
+from h2integrate.finances.profast_base import _compute_price_units
 
 
 @define(kw_only=True)
@@ -86,20 +87,12 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.NPV_str = f"NPV_{commodity_type}{suffix}"
         self.output_txt = f"{commodity_type}{suffix}"
 
-        # TODO: update below with standardized naming
-        if self.options["commodity_type"] == "electricity":
-            commodity_price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-        else:
-            commodity_price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-
         self.add_output(self.NPV_str, val=0.0, units="USD")
 
         self.add_input(
             f"rated_{self.options['commodity_type']}_production",
             val=0.0,
-            units=commodity_rate_units,
+            units_by_conn=True,
             shape=1,
             require_connection=True,
         )
@@ -109,6 +102,14 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             units="unitless",
             shape=plant_life,
             require_connection=True,
+        )
+
+        # Below is used so that commodity sell price units will be compatible
+        # with the units of rated_commodity_production
+        self.add_output(
+            f"placeholder_{self.output_txt}",
+            val=0.0,
+            copy_units=f"rated_{self.options['commodity_type']}_production",
         )
 
         plant_config = self.options["plant_config"]
@@ -141,7 +142,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.config.commodity_sell_price,
-            units=commodity_price_units,
+            compute_units=_compute_price_units,
         )
 
     def compute(self, inputs, outputs):
@@ -176,6 +177,10 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             FileNotFoundError: If the specified output directory cannot be created.
             ValueError: If refurbishment schedules cannot be derived from inputs.
         """
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+
         # By convention in NPV calculations, investments (capex, opex, refurbishment) are
         # negative cash flows while revenues are positive. This follows the numpy_financial
         # convention where money going out is negative and money coming in is positive.

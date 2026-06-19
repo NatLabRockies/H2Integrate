@@ -530,14 +530,13 @@ class ProFastBase(om.ExplicitComponent):
         self.add_input(
             f"rated_{self.options['commodity_type']}_production",
             val=0.0,
-            # units=None,
             units_by_conn=True,
             shape=1,
             require_connection=True,
         )
 
         # Placeholders
-        self.commodity_amount_units = "unit_amount"  # "f"({meta_inputs['units']})*h"
+        self.commodity_amount_units = "unit_amount"
         self.price_units = f"USD/({self.commodity_amount_units})"
 
         # Add model-specific outputs defined by subclass

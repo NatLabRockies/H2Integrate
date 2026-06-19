@@ -78,6 +78,10 @@ class ProFastNPV(ProFastBase):
         Returns:
             None
         """
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+
         pf = self.populate_profast(inputs)
 
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(
