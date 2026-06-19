@@ -1,4 +1,4 @@
-from h2integrate.finances.profast_base import ProFastBase
+from h2integrate.finances.profast_base import ProFastBase, compute_price_units
 
 
 class ProFastNPV(ProFastBase):
@@ -30,6 +30,14 @@ class ProFastNPV(ProFastBase):
             units="USD",
         )
 
+        # Below is used so that commodity sell price units will be compatible
+        # with the units of rated_commodity_production
+        self.add_output(
+            f"placeholder_{self.output_txt}",
+            val=0.0,
+            copy_units=f"rated_{self.options['commodity_type']}_production",
+        )
+
         return
 
     def setup(self):
@@ -57,7 +65,7 @@ class ProFastNPV(ProFastBase):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.commodity_sell_price,
-            units=self.price_units,
+            compute_units=compute_price_units,
         )
 
     def compute(self, inputs, outputs):

@@ -30,11 +30,11 @@ finance_to_pf_param_mapper = {
 def compute_price_units(outputs):
     rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"rated_\w+_production", k)]
     if len(rate_units) == 0:
-        raise ValueError("Cannot find rate units")
+        rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"placeholder_\w+", k)]
+        if len(rate_units) == 0:
+            raise ValueError("Cannot find rate units")
     commodity_amount_units = f"({rate_units[0]})*h"
     price_units = f"USD/({commodity_amount_units})"
-    # valid_units(price_units)
-    # simplify_unit(price_units)
     return _find_unit(price_units)
 
 
