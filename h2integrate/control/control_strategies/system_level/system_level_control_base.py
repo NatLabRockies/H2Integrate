@@ -641,6 +641,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 marginal_cost = np.zeros(self.n_timesteps)
 
             marginal_costs.append(marginal_cost)
+            print(
+                f"Marginal cost for {marginal_cost_type}: {marginal_cost}"
+            )  # TODO: remove debug print
 
         return marginal_costs
 

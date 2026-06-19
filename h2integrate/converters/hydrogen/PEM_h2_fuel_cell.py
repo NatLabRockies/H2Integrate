@@ -96,11 +96,10 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
     # convert power_ref to Watts
     power_ref = power_ref * 1e3
-    # print(power_ref, cell_area, stack_number, n_cells)
     power_density = power_ref / cell_area / stack_number / n_cells
     # print("Power density", power_density)
 
-    I_cell = power_I_curve(power_density)
+    I_cell = max(power_I_curve(power_density), 0)
     V_cell = V_I_curve(I_cell)
     I_cell = I_cell * cell_area
     return I_cell, V_cell
@@ -123,6 +122,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -200,13 +200,13 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             desc="Mass flow rate of water consumed by the fuel cell",
         )
 
-        # Default the electricity set point input as the rated capacity
+        # Default the electricity command value input as the rated capacity
         self.add_input(
-            f"{self.commodity}_set_point",
+            f"{self.commodity}_command_value",
             val=self.config.system_capacity_kw,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity set point for PEM fuel cell",
+            desc="Electricity command value for natural gas plant",
         )
 
     def compute(self, inputs, outputs):
@@ -216,7 +216,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         Args:
             inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
-                HHV efficiency, electricity_set_point, and system_capacity.
+                HHV efficiency, electricity_command_value, and system_capacity.
             outputs: OpenMDAO outputs object for electricity_out,
                 hydrogen_consumed.
         """
@@ -232,6 +232,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         self.f_c = 96485.33  # Faraday's constant in A/mol
         self.M_H2 = 0.002016  # Molar mass of H2 in kg/mol
         self.M_O2 = 0.032  # Molar mass of O2 in kg/mol
+        self.M_H2O = 0.018  # Molar mass of H2O in kg/mol
         self.Tref = 298.15  # Standard room temperature in K [25 deg Celsius]
         self.cp_H2 = 14300  # Specific heat of H2 in J/(kg*K)
         self.cp_air = 1005  # Specific heat of air in J/(kg*K)
@@ -265,10 +266,11 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         h2_consumed = np.zeros(self.n_timesteps)
         o2_consumed = np.zeros(self.n_timesteps)
+        h2o_generated = np.zeros(self.n_timesteps)
         commodity_out = np.zeros(self.n_timesteps)
 
         for i in range(self.n_timesteps):
-            power_reference = inputs[f"{self.commodity}_set_point"][i]
+            power_reference = inputs[f"{self.commodity}_command_value"][i]
             inputs["hydrogen_in"][i]
             inputs["oxygen_in"][i]
 
@@ -278,9 +280,6 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             )
 
             # Calculate hydrogen and oxygen consumed
-            # print("I_cell", I_cell)
-            # print("f_c", self.f_c)
-            # print("M_H2", self.M_H2)
             H2_consumed_rate = ((I_cell * self.N_series * self.M_H2) / (2.0 * self.f_c)) * (
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
@@ -288,10 +287,10 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
-            print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
-            print(self.stack_size, self.n_cells)
+            # print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
+            # print(self.stack_size, self.n_cells)
 
-            # if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
+            # TODO: if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
             # print("Not enough H2 or O2 for this power point")
             # implement an adjustment based on H2 & O2 available
 
@@ -300,13 +299,16 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 V_cell * I_cell * self.n_cells * self.config.n_stacks / 1e3
             )  # Calculated in watts, convert to kW
 
-            # Need to implement this function
-            # self.calculate_water_production(H2_consumed_rate, O2_consumed_rate)
-
-            # Compute H2O out (is this needed?)
+            # Compute H2O out
+            H2O_generated = (
+                (I_cell * self.N_series / (2 * self.f_c))
+                * self.M_H2O
+                * (self.dt * self.config.n_stacks * self.n_cells)
+            )  # in kg/time step
 
             h2_consumed[i] = H2_consumed_rate
             o2_consumed[i] = O2_consumed_rate
+            h2o_generated[i] = H2O_generated
             commodity_out[i] = electricity_produced
 
         # Set Outputs
@@ -324,21 +326,10 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         )
         outputs["hydrogen_consumed"] = h2_consumed
         outputs["oxygen_consumed"] = o2_consumed
+        outputs["water_out"] = h2o_generated
 
         # # conversion factor: kW electricity to kg/h hydrogen, units: (kg/h)/kW
         # kw_to_kgh_h2 = (3600.0 * 0.001) / (fuel_cell_efficiency * HHV_H2_MJ_PER_KG)
-
-        # # TODO: Calculate max H2 and O2 consumption of the stacks
-        # max_h2_consumption = system_capacity * kw_to_kgh_h2
-
-        # # electrical set point, saturated at maximum rated system capacity
-        # electricity_set_point = np.where(
-        #     inputs["electricity_set_point"] > system_capacity,
-        #     system_capacity,
-        #     inputs["electricity_set_point"],
-        # )
-
-        # h2_demand = electricity_set_point * kw_to_kgh_h2
 
         # # available feedstock, saturated at maximum system feedstock consumption
         # h2_available = np.where(
@@ -370,80 +361,30 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # )
         # outputs["hydrogen_consumed"] = outputs["electricity_out"] * kw_to_kgh_h2
 
-        # ##############################################################################
-        # # Helper functions for energy balance and water production calculations
-
-        # def enthalpy_flow(self, m, cp, T, Tref, h0):
-        #     """Mass-specific enthalpy flow: Hdot = m * (cp*(T - Tref) + h0)"""
-        #     return m * (cp * (T - Tref) + h0)
-
-        # def calculate_water_production(self, h2_consumed_rate, o2_consumed_rate):
-        #     # Calculate water production based on stoichiometry of the reaction
-        #     # 2H2 + O2 --> 2H2O
-        #     # For every 2 moles of H2 consumed, 2 moles of H2O are produced
-        #     # For every 1 mole of O2 consumed, 2 moles of H2O are produced
-
-        #     # Calculuate the energy balance of the reaction to find the water production
-        #     # Enthalpy change of the reaction:
-        #           ΔH = (m_H2 * hhv_h2) + (m_O2 * hhv_o2) - (m_H2O * hhv_water)
-        #     # Assuming hhv_o2 and hhv_water are 0, we can simplify to:
-        #     # ΔH = (m_H2 * hhv_h2) - (m_H2O * hhv_water)
-        #     # Since hhv_water is 0, we can further simplify to:
-        #     # ΔH = m_H2 * hhv_h2
-        #     # The energy released by the reaction is equal to the energy produced by the fuel cell
-        #   which is the power output (electricity produced) plus the heat produced (which we can
-        #   assume is a certain percentage of the energy released by the reaction, say 50% for a PEM
-        #   fuel cell).
-        #     # Therefore, we can calculate the water production based on the energy balance of the
-        #       reaction and the power output of the fuel cell.
-        #     H_H2_in  = self.enthalpy_flow(mH2_in,  self.cp_H2,  T_H2_in,  self.Tref, self.hhv_h2)
-        #     H_H2_out = self.enthalpy_flow(mH2_out, self.cp_H2,  T_H2_out, self.Tref, self.hhv_h2)
-
-        #     H_air_in = self.enthalpy_flow(mO2_in,  self.cp_air, T_air_in,  self.Tref, 0.0)
-        #     H_air_out = (
-        #         self.enthalpy_flow(mO2_out, self.cp_O2, T_air_out, self.Tref, 0.0) +
-        #         self.enthalpy_flow(mN2_out, self.cp_N2, T_air_out, self.Tref, 0.0)
-        #     ) # consider just oxygen for a first pass
-
-        #     H_H2O_in  = self.enthalpy_flow(mH2O_in,
-        #                   self.cp_H2O, T_H2O_in, self.Tref, self.hhv_H2O)
-        #     H_H2O_out = self.enthalpy_flow(mH2O_out,
-        #                   self.cp_H2O, T_H2O_out, self.Tref, self.hhv_H2O)
-
-        #     return (H_H2_in + H_air_in + H_H2O_in
-        #            - H_H2_out - H_air_out - H_H2O_out
-        #            - Wel - Q)
-
-        # ##############################################################################
-
-        # # Convert mass flow rates to molar flow rates
-        # h2_molar_flow = h2_consumed_rate / self.M_H2  # mol/time step
-        # o2_molar_flow = o2_consumed_rate / self.M_O2  # mol/time step
-
-        # # Calculate water production based on limiting reactant
-        # h2o_from_h2 = h2_molar_flow * (self.M_H2O / 1)  # kg/time step
-        # h2o_from_o2 = o2_molar_flow * (self.M_H2O / 0.5)  # kg/time step
-
-        # # The actual water produced is the minimum of the two calculations
-        # water_produced = np.minimum(h2o_from_h2, h2o_from_o2)
-
-        # return water_produced
-
 
 @define(kw_only=True)
-class H2FuelCellCostConfig(CostModelBaseConfig):
+class PEMH2FuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the hydrogen fuel cell cost model.
 
-    Fields include `system_capacity_kw`, `capex_per_kw`, and `fixed_opex_per_kw_per_year`.
-    The `cost_year` field is inherited from `CostModelBaseConfig`.
+    Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_hydrogen_supply_per_kw`,
+    `capex_air_supply_per_kw`, `capex_cooling_per_kw`, `capex_controls_instrumentation_per_kw`,
+    `capex_electrical_per_kw`, `capex_assembly_per_kw`, `capex_additional_labor_per_kw`,
+    and `fixed_opex_per_kw_per_year`. The `cost_year` field is inherited from `CostModelBaseConfig`.
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
-    capex_per_kw: float = field(validator=gte_zero)
+    capex_stack_per_kw: float = field(validator=gte_zero)
+    capex_hydrogen_supply_per_kw: float = field(validator=gte_zero)
+    capex_air_supply_per_kw: float = field(validator=gte_zero)
+    capex_cooling_per_kw: float = field(validator=gte_zero)
+    capex_controls_instrumentation_per_kw: float = field(validator=gte_zero)
+    capex_electrical_per_kw: float = field(validator=gte_zero)
+    capex_assembly_per_kw: float = field(validator=gte_zero)
+    capex_additional_labor_per_kw: float = field(validator=gte_zero)
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
 
 
-class H2FuelCellCostModel(CostModelBaseClass):
+class PEMH2FuelCellCostModel(CostModelBaseClass):
     """
     Cost model for a hydrogen fuel cell system.
 
@@ -457,7 +398,7 @@ class H2FuelCellCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = H2FuelCellCostConfig.from_dict(
+        self.config = PEMH2FuelCellCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -473,7 +414,14 @@ class H2FuelCellCostModel(CostModelBaseClass):
 
         self.add_input(
             "unit_capex",
-            val=self.config.capex_per_kw,
+            val=self.config.capex_stack_per_kw
+            + self.config.capex_hydrogen_supply_per_kw
+            + self.config.capex_air_supply_per_kw
+            + self.config.capex_cooling_per_kw
+            + self.config.capex_controls_instrumentation_per_kw
+            + self.config.capex_electrical_per_kw
+            + self.config.capex_assembly_per_kw
+            + self.config.capex_additional_labor_per_kw,
             units="USD/kW",
             desc="Capital cost per unit capacity",
         )

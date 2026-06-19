@@ -74,11 +74,13 @@ class CostMinimizationControl(SystemLevelControlBase):
         remaining = np.maximum(demand, 0.0)
 
         marginal_costs = self._compute_marginal_costs(inputs)
+        print(f"Marginal costs: {marginal_costs}")  # TODO: remove debug print
 
         # Merit order: sort by mean marginal cost (cheapest first)
         mean_costs = np.array([mc.mean() for mc in marginal_costs])
         dispatch_order = np.argsort(mean_costs)
 
+        # jkjk
         # Initialize all dispatchable set-point outputs to zero
         for set_point_name in self.dispatchable_set_point_names:
             outputs[set_point_name] = np.zeros(self.n_timesteps)

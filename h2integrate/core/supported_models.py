@@ -81,6 +81,7 @@ supported_models = _ModelRegistry(
         "WOMBATElectrolyzerModel": "converters.hydrogen:WOMBATElectrolyzerModel",
         "LinearH2FuelCellPerformanceModel": "converters.hydrogen:LinearH2FuelCellPerformanceModel",
         "PEMH2FuelCellPerformanceModel": "converters.hydrogen:PEMH2FuelCellPerformanceModel",
+        "PEMH2FuelCellCostModel": "converters.hydrogen:PEMH2FuelCellCostModel",
         "H2FuelCellCostModel": "converters.hydrogen:H2FuelCellCostModel",
         "SteamMethaneReformerPerformanceModel": "converters.hydrogen:SteamMethaneReformerPerformanceModel",
         "SteamMethaneReformerCostModel": "converters.hydrogen:SteamMethaneReformerCostModel",
