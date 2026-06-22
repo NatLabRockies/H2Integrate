@@ -75,6 +75,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: electricity
+      commodity_stream: wind
       finance_groups: [lcoe_financials]
       technologies: [wind]
     hydrogen:

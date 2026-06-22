@@ -58,6 +58,7 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: electricity
+      commodity_stream: wind
       technologies: [wind, battery]
     co2:
       commodity: co2

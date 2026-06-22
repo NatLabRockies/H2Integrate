@@ -14,10 +14,7 @@ from h2integrate.core.supported_models import (
     supported_models,
     no_replacement_schedule_models,
 )
-from h2integrate.core.commodity_stream_definitions import (
-    multivariable_streams,
-    is_electricity_producer,
-)
+from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
@@ -1339,51 +1336,27 @@ class H2IntegrateModel:
 
             # Default logic for handling cases without specified commodity streams
             if commodity_stream is None:
-                if commodity == "electricity":
-                    elec_tech_names = [
-                        tech for tech in tech_configs if is_electricity_producer(tech)
-                    ]
-                    if len(elec_tech_names) < 1:
-                        msg = (
-                            "Commodity 'electricity' was specified, but no electricity "
-                            "producing techs were found."
-                        )
-                        raise ValueError(msg)
+                # Default logic for tech-names and the primary commodity streams
+                default_techs_to_commodities = {
+                    "electrolyzer": "hydrogen",
+                    "geoh2": "hydrogen",
+                    "ammonia": "ammonia",
+                    "doc": "co2",
+                    "oae": "co2",
+                    "methanol": "methanol",
+                    "air_separator": "nitrogen",
+                }
 
-                    elif len(elec_tech_names) > 1:
-                        msg = (
-                            f"Multiple electricity producing technologies found in finance subgroup"
-                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
-                            f"finance subgroup {subgroup_name}."
-                        )
-                        raise ValueError(msg)
-                    else:
+                for default_tech, tech_commodity in default_techs_to_commodities.items():
+                    if commodity == tech_commodity and any(
+                        default_tech in tech_name for tech_name in tech_names
+                    ):
+                        commodity_stream_tech_name = [
+                            tech_name for tech_name in tech_names if default_tech in tech_name
+                        ]
                         finance_subgroups[subgroup_name].update(
-                            {"commodity_stream": elec_tech_names[0]}
+                            {"commodity_stream": commodity_stream_tech_name[0]}
                         )
-
-                else:
-                    # Default logic for tech-names and the primary commodity streams
-                    default_techs_to_commodities = {
-                        "electrolyzer": "hydrogen",
-                        "geoh2": "hydrogen",
-                        "ammonia": "ammonia",
-                        "doc": "co2",
-                        "oae": "co2",
-                        "methanol": "methanol",
-                        "air_separator": "nitrogen",
-                    }
-
-                    for default_tech, tech_commodity in default_techs_to_commodities.items():
-                        if commodity == tech_commodity and any(
-                            default_tech in tech_name for tech_name in tech_names
-                        ):
-                            commodity_stream_tech_name = [
-                                tech_name for tech_name in tech_names if default_tech in tech_name
-                            ]
-                            finance_subgroups[subgroup_name].update(
-                                {"commodity_stream": commodity_stream_tech_name[0]}
-                            )
 
                 # Check if a default commodity_stream was found, throw error if not
                 missing_commodity_stream = (
