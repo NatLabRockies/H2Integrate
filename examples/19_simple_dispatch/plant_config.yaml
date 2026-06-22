@@ -99,10 +99,7 @@ finance_parameters:
       technologies: [wind, battery]
     electricity:
       commodity: electricity
-      # since commodity_stream is not specified, the default behavior is to
-      # use the electricity produced from all electricity producing technologies
-      # included in 'technologies'. In this case, it will use the electricity
-      # produced by the wind technology as the commodity stream.
+      commodity_stream: wind
       finance_groups: [profast, npv, profast_npv]
       commodity_desc: all_electricity
       technologies: [wind, battery]

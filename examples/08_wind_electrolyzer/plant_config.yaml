@@ -45,12 +45,12 @@ finance_parameters:
   finance_subgroups:
     electricity_profast:
       commodity: electricity
-      # commodity_stream: "wind"
+      commodity_stream: wind
       finance_groups: [profast_model]
       technologies: [wind]
     electricity_custom:
       commodity: electricity
-      # commodity_stream: "wind"
+      commodity_stream: wind
       finance_groups: [custom_model]
       technologies: [wind]
     hydrogen:
