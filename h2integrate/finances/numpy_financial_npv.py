@@ -15,9 +15,30 @@ from h2integrate.core.validators import gte_zero, range_val
 class NumpyFinancialNPVFinanceConfig(BaseConfig):
     """Configuration for NumpyFinancialNPVFinance.
 
+    The effective rate used to discount future cash flows combines
+    ``discount_rate`` and ``inflation_rate`` via the Fisher equation:
+
+        (1 + effective_rate) = (1 + discount_rate) * (1 + inflation_rate)
+
+    This lets the user provide either a nominal discount rate (with
+    ``inflation_rate`` left at 0) or a real discount rate together with an
+    explicit ``inflation_rate``, depending on whether inflation is already
+    baked into ``discount_rate``. The multiplicative (Fisher) form is the
+    exact relationship between real and nominal rates and matches how
+    ProFAST combines its real discount rate and ``general_inflation`` inputs,
+    keeping the two finance backends consistent.
+
     Attributes:
         plant_life (int): operating life of plant in years
         discount_rate (float): discount rate, expressed as a fraction between 0 and 1.
+            Can be either a real or nominal rate depending on how ``inflation_rate``
+            is specified.
+        inflation_rate (float, optional): inflation rate, expressed as a fraction
+            between 0 and 1. Combined with ``discount_rate`` via the Fisher
+            equation to form the effective discount rate used by
+            ``numpy_financial.npv``. Defaults to 0.0, in which case
+            ``discount_rate`` is used as-is (and should be a nominal rate if
+            inflation effects are desired).
         commodity_sell_price (int | float, optional): sell price of commodity in
             USD/unit of commodity. Defaults to 0.0
         save_cost_breakdown (bool, optional): whether to save the cost breakdown per year.
@@ -31,6 +52,7 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
 
     plant_life: int = field(converter=int, validator=gte_zero)
     discount_rate: float = field(validator=range_val(0, 1))
+    inflation_rate: float = field(default=0.0, validator=range_val(0, 1))
     commodity_sell_price: int | float = field(default=0.0)
     save_cost_breakdown: bool = field(default=False)
     save_npv_breakdown: bool = field(default=False)
@@ -260,11 +282,23 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
         # Calculate NPV for each cost category and sum to get total NPV
         # This iterative approach also builds npv_cost_breakdown for optional reporting
+        # Effective rate combines discount_rate and inflation_rate via the Fisher
+        # equation: (1 + effective) = (1 + discount_rate) * (1 + inflation_rate).
+        # This is the exact relationship between real and nominal rates (rather
+        # than the additive approximation r_nominal ~= r_real + inflation) and matches how
+        # ProFAST combines its real discount rate and general inflation inputs,
+        # keeping the two finance backends consistent. When inflation_rate is 0
+        # (the default), this reduces to discount_rate, so the user can either
+        # supply a nominal discount rate alone or a real discount rate together
+        # with an explicit inflation rate.
+        effective_rate = (1.0 + self.config.discount_rate) * (
+            1.0 + self.config.inflation_rate
+        ) - 1.0
         npv_item_check = 0
         npv_cost_breakdown = {}
         for cost_type, cost_vals in cost_breakdown.items():
-            # Apply NPV formula: NPV = sum(cash_flow[t] / (1 + discount_rate)^t) for all t
-            npv_item = npf.npv(self.config.discount_rate, cost_vals)
+            # Apply NPV formula: NPV = sum(cash_flow[t] / (1 + effective_rate)^t) for all t
+            npv_item = npf.npv(effective_rate, cost_vals)
             npv_item_check += float(npv_item)
             npv_cost_breakdown[cost_type] = float(npv_item)
 
