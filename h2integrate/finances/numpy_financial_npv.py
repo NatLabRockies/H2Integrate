@@ -7,9 +7,8 @@ import numpy_financial as npf
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.finances.tools import check_plant_config_and_profast_params
+from h2integrate.finances.tools import _compute_price_units, check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
-from h2integrate.finances.profast_base import _compute_price_units
 
 
 @define(kw_only=True)

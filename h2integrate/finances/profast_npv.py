@@ -1,4 +1,5 @@
-from h2integrate.finances.profast_base import ProFastBase, _compute_price_units
+from h2integrate.finances.tools import _compute_price_units
+from h2integrate.finances.profast_base import ProFastBase
 
 
 class ProFastNPV(ProFastBase):
@@ -30,8 +31,15 @@ class ProFastNPV(ProFastBase):
             units="USD",
         )
 
-        # Below is used so that commodity sell price units will be compatible
-        # with the units of rated_commodity_production
+        # OpenMDAO's dynamic-units graph wires a `compute_units` variable only to
+        # variables on the *opposite* I/O side of the same component
+        # (see ``openmdao.core.group.Group._setup_dynamic_*`` -> the
+        # ``elif getattr(node_meta, compute_prop):`` branch). Because
+        # ``sell_price_<commodity>`` is an *input* with ``compute_units``, its
+        # predecessor dict will only contain this component's *outputs*. We
+        # therefore expose this placeholder output whose units are copied from
+        # ``rated_<commodity>_production`` so the rate units are available to
+        # ``_compute_price_units`` when it resolves the sell-price units.
         self.add_output(
             f"placeholder_{self.output_txt}",
             val=0.0,

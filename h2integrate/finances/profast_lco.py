@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
@@ -10,7 +11,7 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase, _compute_price_units
+from h2integrate.finances.profast_base import ProFastBase
 from h2integrate.core.inputs.validation import write_yaml
 
 

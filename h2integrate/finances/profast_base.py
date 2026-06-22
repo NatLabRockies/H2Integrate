@@ -1,10 +1,7 @@
-import re
-
 import attrs
 import numpy as np
 import openmdao.api as om
 from attrs import field, define
-from openmdao.utils.units import _find_unit
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
@@ -25,17 +22,6 @@ finance_to_pf_param_mapper = {
     "installation time": "installation months",
     "inflation rate": "general inflation rate",
 }
-
-
-def _compute_price_units(outputs):
-    rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"rated_\w+_production", k)]
-    if len(rate_units) == 0:
-        rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"placeholder_\w+", k)]
-        if len(rate_units) == 0:
-            raise ValueError("Cannot find rate units")
-    commodity_amount_units = f"({rate_units[0]})*h"
-    price_units = f"USD/({commodity_amount_units})"
-    return _find_unit(price_units)
 
 
 def format_params_for_profast_config(param_dict):
@@ -94,7 +80,7 @@ def check_parameter_inputs(finance_params, plant_config):
         # NOTE: not an issue if both values are the same,
         # but better to inform users earlier on to prevent accidents
         err_info = "\n".join(
-            f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
+            f"{d}: both `{d}` and `{d.replace('_', '')}` map to {d}" for d in duplicated_entries
         )
 
         msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
