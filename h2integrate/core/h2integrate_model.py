@@ -1256,6 +1256,9 @@ class H2IntegrateModel:
                 .get(default_finance_group_name, {})
                 .get("finance_model")
             )
+            commodity_stream = self.plant_config["finance_parameters"]["finance_groups"].get(
+                "commodity_stream"
+            )
 
             if not commodity or not finance_model_name:
                 raise ValueError(
@@ -1271,6 +1274,8 @@ class H2IntegrateModel:
                 "finance_groups": [default_finance_group_name],
                 "technologies": all_techs,
             }
+            if commodity_stream is not None:
+                subgroup["commodity_stream"] = commodity_stream
             subgroups = {default_finance_group_name: subgroup}
 
         # --- Normal subgroup handling ---
@@ -1358,18 +1363,22 @@ class H2IntegrateModel:
                             {"commodity_stream": commodity_stream_tech_name[0]}
                         )
 
-                # Check if a default commodity_stream was found, throw error if not
+                # Check if a default commodity_stream was found, throw error if not.
+                # The framework would otherwise attempt to connect from
+                # ``None.rated_<commodity>_production`` downstream, producing a
+                # confusing error from OpenMDAO. Raise here with a clear, fully
+                # commodity-agnostic message instead.
                 missing_commodity_stream = (
                     finance_subgroups[subgroup_name].get("commodity_stream", None) is None
                 )
-                if missing_commodity_stream and len(tech_names) > 1:
+                if missing_commodity_stream:
                     msg = (
                         "Could not find a default technology to use as the commodity stream "
-                        f"for commodity {finance_subgroups[subgroup_name]['commodity']}. "
-                        "Please specify the `commodity_stream` for finance subgroup "
-                        f"{subgroup_name}."
+                        f"for commodity '{finance_subgroups[subgroup_name]['commodity']}' "
+                        f"in finance subgroup '{subgroup_name}'. Please specify "
+                        f"`commodity_stream` for finance subgroup '{subgroup_name}'."
                     )
-                    raise UserWarning(msg)
+                    raise ValueError(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
