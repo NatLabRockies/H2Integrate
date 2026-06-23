@@ -7,7 +7,7 @@ import numpy_financial as npf
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.finances.tools import _compute_price_units, check_plant_config_and_profast_params
+from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
 
 
@@ -20,6 +20,8 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
         discount_rate (float): discount rate, expressed as a fraction between 0 and 1.
         commodity_sell_price (int | float, optional): sell price of commodity in
             USD/unit of commodity. Defaults to 0.0
+        commodity_sell_price_units (str): OpenMDAO unit string for ``commodity_sell_price``
+            (e.g. ``"USD/(kW*h)"`` for electricity or ``"USD/kg"`` for hydrogen). Required.
         save_cost_breakdown (bool, optional): whether to save the cost breakdown per year.
             Defaults to False.
         save_npv_breakdown (bool, optional): whether to save the npv breakdown per technology.
@@ -32,6 +34,7 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
     plant_life: int = field(converter=int, validator=gte_zero)
     discount_rate: float = field(validator=range_val(0, 1))
     commodity_sell_price: int | float = field(default=0.0)
+    commodity_sell_price_units: str = field()
     save_cost_breakdown: bool = field(default=False)
     save_npv_breakdown: bool = field(default=False)
     cost_breakdown_file_description: str = field(default="default")
@@ -103,14 +106,6 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             require_connection=True,
         )
 
-        # Below is used so that commodity sell price units will be compatible
-        # with the units of rated_commodity_production
-        self.add_output(
-            f"placeholder_{self.output_txt}",
-            val=0.0,
-            copy_units=f"rated_{self.options['commodity_type']}_production",
-        )
-
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]
         if "plant_life" in finance_params:
@@ -141,7 +136,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.config.commodity_sell_price,
-            compute_units=_compute_price_units,
+            units=self.config.commodity_sell_price_units,
         )
 
     def compute(self, inputs, outputs):

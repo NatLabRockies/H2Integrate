@@ -10,6 +10,7 @@ def npv_finance_inputs():
     npv_dict = {
         "discount_rate": 0.09,
         "commodity_sell_price": 0.04,
+        "commodity_sell_price_units": "USD/(kW*h)",
         "save_cost_breakdown": False,
         "save_npv_breakdown": False,
         "cost_breakdown_file_description": False,

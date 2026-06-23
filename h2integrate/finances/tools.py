@@ -49,10 +49,8 @@ def _compute_price_units(outputs):
 
     The function searches ``outputs`` for the first key matching the regex
     ``rated_\\w+_production`` (e.g. ``rated_hydrogen_production``,
-    ``rated_electricity_production``). If no such key is found, it falls back to keys
-    matching ``placeholder_\\w+`` so that components can declare a placeholder
-    production output before the real one is connected. The unit string of the
-    matched output is then used as ``rate_unit``, and the resulting price unit
+    ``rated_electricity_production``). The unit string of the matched output is
+    then used as ``rate_unit``, and the resulting price unit
     ``USD/(rate_unit*h)`` is resolved into an OpenMDAO unit object via
     ``openmdao.utils.units._find_unit``.
 
@@ -72,21 +70,12 @@ def _compute_price_units(outputs):
         for use as the unit of a price-valued output.
 
     Raises:
-        ValueError: If no ``rated_*_production`` or ``placeholder_*`` output is
-            present in ``outputs`` to derive the rate unit from.
+        ValueError: If no ``rated_*_production`` output is present in ``outputs``
+            to derive the rate unit from.
     """
     rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"rated_\w+_production", k)]
     if len(rate_units) == 0:
-        # Fallback for components that attach ``compute_units`` to a *sell price
-        # input*. OpenMDAO's dynamic-units graph only wires a ``compute_units``
-        # variable to variables on the opposite I/O side of the same component,
-        # so an input's predecessor dict contains the component's outputs -- not
-        # its sibling ``rated_<commodity>_production`` input. Those components
-        # expose a ``placeholder_<commodity>`` output whose units are copied
-        # from the rated input expressly so the rate units land in this dict.
-        rate_units = [v.name() for k, v in outputs.items() if re.fullmatch(r"placeholder_\w+", k)]
-        if len(rate_units) == 0:
-            raise ValueError("Cannot find rate units")
+        raise ValueError("Cannot find rate units")
     commodity_amount_units = f"({rate_units[0]})*h"
     price_units = f"USD/({commodity_amount_units})"
     return _find_unit(price_units)

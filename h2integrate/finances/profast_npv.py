@@ -1,4 +1,3 @@
-from h2integrate.finances.tools import _compute_price_units
 from h2integrate.finances.profast_base import ProFastBase
 
 
@@ -31,49 +30,42 @@ class ProFastNPV(ProFastBase):
             units="USD",
         )
 
-        # OpenMDAO's dynamic-units graph wires a `compute_units` variable only to
-        # variables on the *opposite* I/O side of the same component
-        # (see ``openmdao.core.group.Group._setup_dynamic_*`` -> the
-        # ``elif getattr(node_meta, compute_prop):`` branch). Because
-        # ``sell_price_<commodity>`` is an *input* with ``compute_units``, its
-        # predecessor dict will only contain this component's *outputs*. We
-        # therefore expose this placeholder output whose units are copied from
-        # ``rated_<commodity>_production`` so the rate units are available to
-        # ``_compute_price_units`` when it resolves the sell-price units.
-        self.add_output(
-            f"placeholder_{self.output_txt}",
-            val=0.0,
-            copy_units=f"rated_{self.options['commodity_type']}_production",
-        )
-
         return
 
     def setup(self):
         """Set up inputs for the NPV calculation.
 
-        Retrieves the commodity sell price from the plant configuration and registers it
-        as an input for the component. Calls the base `setup()` method to initialize
-        other ProFAST inputs and outputs.
+        Retrieves the commodity sell price and its units from the plant configuration
+        and registers it as an input for the component. Calls the base `setup()` method
+        to initialize other ProFAST inputs and outputs.
 
         Raises:
-            ValueError: If `commodity_sell_price` is not provided in the configuration.
+            ValueError: If `commodity_sell_price` or `commodity_sell_price_units` is not
+                provided in the configuration.
 
         Returns:
             None
         """
-        self.commodity_sell_price = self.options["plant_config"]["finance_parameters"][
-            "model_inputs"
-        ].get("commodity_sell_price", None)
+        model_inputs = self.options["plant_config"]["finance_parameters"]["model_inputs"]
+        self.commodity_sell_price = model_inputs.get("commodity_sell_price", None)
+        self.commodity_sell_price_units = model_inputs.get("commodity_sell_price_units", None)
 
         if self.commodity_sell_price is None:
             raise ValueError("commodity_sell_price is missing as an input")
+        if self.commodity_sell_price_units is None:
+            raise ValueError(
+                "commodity_sell_price_units is missing as an input. "
+                "ProFastNPV requires the user to specify the units of "
+                "commodity_sell_price explicitly in "
+                "plant_config['finance_parameters']['model_inputs']."
+            )
 
         super().setup()
 
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.commodity_sell_price,
-            compute_units=_compute_price_units,
+            units=self.commodity_sell_price_units,
         )
 
     def compute(self, inputs, outputs):

@@ -26,6 +26,7 @@ def profast_inputs_no1():
     cap_items = {"depr_type": "MACRS", "depr_period": 5, "refurb": [0.0]}
     model_inputs = {
         "commodity_sell_price": 0.04,  # USD/kWh for electricity
+        "commodity_sell_price_units": "USD/(kW*h)",
         "params": params,
         "capital_items": cap_items,
     }
@@ -55,6 +56,7 @@ def profast_inputs_no2():
 
     model_inputs = {
         "commodity_sell_price": 0.07,  # USD/kWh for electricity
+        "commodity_sell_price_units": "USD/(kW*h)",
         "params": params,
         "capital_items": cap_items,
     }
