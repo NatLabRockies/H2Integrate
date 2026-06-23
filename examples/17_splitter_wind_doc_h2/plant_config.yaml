@@ -71,4 +71,5 @@ finance_parameters:
       technologies: [wind, electrolyzer]
     co2:
       commodity: co2
+      commodity_stream: doc
       technologies: [wind, doc]

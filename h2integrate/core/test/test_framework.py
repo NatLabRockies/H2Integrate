@@ -689,21 +689,21 @@ def test_invalid_finance_group_combination(subtests):
 
 @pytest.mark.unit
 def test_finance_subgroup_missing_commodity_stream_raises(subtests):
-    """A finance subgroup whose ``commodity_stream`` cannot be resolved must raise.
+    """A finance subgroup missing ``commodity_stream`` must raise a clear error.
 
-    When ``commodity_stream`` is not specified and no default tech-to-commodity
-    mapping applies, the framework should raise ``ValueError`` with a
-    commodity-agnostic message rather than silently letting ``commodity_stream``
-    remain ``None`` (which would later produce ``None.rated_*_production``
-    connection errors from OpenMDAO).
+    ``commodity_stream`` is a required field on every finance subgroup; if it
+    is omitted the framework must raise ``ValueError`` with a clear message
+    rather than letting ``commodity_stream`` remain ``None`` (which would later
+    produce ``None.rated_*_production`` connection errors from OpenMDAO).
     """
     driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
 
     expected_msg = (
-        r"Could not find a default technology to use as the commodity stream "
-        r"for commodity 'electricity' in finance subgroup 'electricity'\. "
-        r"Please specify `commodity_stream` for finance subgroup 'electricity'\."
+        r"Finance subgroup 'electricity' \(commodity 'electricity'\) is "
+        r"missing the required `commodity_stream` field\. Please specify "
+        r"which technology's output should be used as the commodity stream "
+        r"for this subgroup\."
     )
 
     scenarios = {

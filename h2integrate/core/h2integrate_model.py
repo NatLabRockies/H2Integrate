@@ -21,12 +21,6 @@ from h2integrate.control.control_strategies.system_level.solver_options import (
 )
 
 
-try:
-    import pyxdsm
-except ImportError:
-    pyxdsm = None
-
-
 class State(IntEnum):
     INITIALIZED = 0
     SETUP = 1
@@ -1339,46 +1333,18 @@ class H2IntegrateModel:
 
             finance_subgroup = om.Group()
 
-            # Default logic for handling cases without specified commodity streams
+            # ``commodity_stream`` identifies the technology whose output is used as
+            # the commodity-production signal for this subgroup's finance model. It
+            # must be supplied explicitly by the user — there is no default mapping
+            # from commodity to tech name.
             if commodity_stream is None:
-                # Default logic for tech-names and the primary commodity streams
-                default_techs_to_commodities = {
-                    "electrolyzer": "hydrogen",
-                    "geoh2": "hydrogen",
-                    "ammonia": "ammonia",
-                    "doc": "co2",
-                    "oae": "co2",
-                    "methanol": "methanol",
-                    "air_separator": "nitrogen",
-                }
-
-                for default_tech, tech_commodity in default_techs_to_commodities.items():
-                    if commodity == tech_commodity and any(
-                        default_tech in tech_name for tech_name in tech_names
-                    ):
-                        commodity_stream_tech_name = [
-                            tech_name for tech_name in tech_names if default_tech in tech_name
-                        ]
-                        finance_subgroups[subgroup_name].update(
-                            {"commodity_stream": commodity_stream_tech_name[0]}
-                        )
-
-                # Check if a default commodity_stream was found, throw error if not.
-                # The framework would otherwise attempt to connect from
-                # ``None.rated_<commodity>_production`` downstream, producing a
-                # confusing error from OpenMDAO. Raise here with a clear, fully
-                # commodity-agnostic message instead.
-                missing_commodity_stream = (
-                    finance_subgroups[subgroup_name].get("commodity_stream", None) is None
+                msg = (
+                    f"Finance subgroup '{subgroup_name}' (commodity '{commodity}') is "
+                    "missing the required `commodity_stream` field. Please specify "
+                    "which technology's output should be used as the commodity stream "
+                    "for this subgroup."
                 )
-                if missing_commodity_stream:
-                    msg = (
-                        "Could not find a default technology to use as the commodity stream "
-                        f"for commodity '{finance_subgroups[subgroup_name]['commodity']}' "
-                        f"in finance subgroup '{subgroup_name}'. Please specify "
-                        f"`commodity_stream` for finance subgroup '{subgroup_name}'."
-                    )
-                    raise ValueError(msg)
+                raise ValueError(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(

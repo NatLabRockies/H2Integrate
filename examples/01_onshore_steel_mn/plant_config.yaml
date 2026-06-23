@@ -76,6 +76,7 @@ finance_parameters:
       technologies: [wind, solar, battery]
     hydrogen:
       commodity: hydrogen
+      commodity_stream: electrolyzer
       commodity_desc: delivered
       finance_groups: [profast_model]
       technologies: [wind, solar, battery, electrolyzer, h2_storage]

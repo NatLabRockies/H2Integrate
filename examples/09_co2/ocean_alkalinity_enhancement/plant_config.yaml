@@ -62,4 +62,5 @@ finance_parameters:
       technologies: [wind, battery]
     co2:
       commodity: co2
+      commodity_stream: oae
       technologies: [wind, battery, oae]
