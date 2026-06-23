@@ -101,7 +101,6 @@ class MCHTOLStorageCostModel(CostModelBaseClass):
             desc="Hydrogen storage capacity",
         )
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input(
             "hydrogen_soc",
             units="unitless",

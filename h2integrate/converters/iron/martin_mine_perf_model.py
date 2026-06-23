@@ -45,7 +45,6 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MartinIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -63,7 +62,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "electricity_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity available for iron ore processing",
         )
@@ -72,7 +71,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "crude_ore_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Crude ore input",
         )
@@ -81,7 +80,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "iron_ore_command_value",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Iron ore command value for iron mine",
         )
@@ -89,7 +88,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "crude_ore_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Crude ore consumed",
         )
@@ -97,7 +96,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "electricity_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity consumed",
         )

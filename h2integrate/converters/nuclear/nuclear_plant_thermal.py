@@ -13,7 +13,7 @@ from h2integrate.core.model_baseclasses import (
 @define(kw_only=True)
 class SimpleThermalNuclearReactorConfig(BaseConfig):
     operating_mode: str = field(validator=contains(["heat", "electricity"]))
-    hourly_power_production: float = field(validator=gt_zero)
+    electricity_command_value: float = field(validator=gt_zero)
     high_pressure_electrical_efficiency: float = field(validator=gt_zero)
     low_pressure_electrical_efficiency: float = field(validator=gt_zero)
     rated_capacity: float = field(validator=gt_zero)
@@ -41,15 +41,16 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 
         self.add_discrete_input("operating_mode", val=self.config.operating_mode)
         self.add_input(
-            "hourly_power_production",
-            val=self.config.hourly_power_production,
-            units="MW",
+            f"{self.commodity}_command_value",
+            val=self.config.electricity_command_value,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
             desc="Requested electric power setpoint",
         )
         self.add_input(
             "rated_capacity",
             val=self.config.rated_capacity,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Available reactor thermal capacity",
         )
         self.add_input(
@@ -87,7 +88,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         lp_eff = float(inputs["low_pressure_electrical_efficiency"][0])
         electric_capacity_mw = float(inputs["rated_capacity"][0]) * 1e-3  # convert kW to MW
         minimum_heat_extract_mw = max(float(inputs["minimum_heat_extract"][0]), 0.0)
-        requested_power_mw = max(float(inputs["hourly_power_production"][0]), 0.0)
+        requested_power_mw = np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3
         external_heat_demand_mw = np.maximum(
             np.asarray(inputs["external_heat_demand"], dtype=float), 0.0
         )

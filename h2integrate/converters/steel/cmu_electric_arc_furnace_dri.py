@@ -154,8 +154,6 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.config = CMUElectricArcFurnaceDRIPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -184,7 +182,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             val=units.convert_units(
                 self.config.steel_production_rate_tonnes_per_year, "t/year", "t/h"
             ),
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Steel command value for steel plant",
         )
@@ -241,14 +239,14 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
@@ -257,7 +255,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "slag_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of slag",
         )
@@ -265,7 +263,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_MgO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of MgO in slag",
         )
@@ -273,7 +271,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_FeO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of FeO in slag",
         )
@@ -281,7 +279,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_Fe_to_FeO",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of Fe consumed to produce FeO",
         )
@@ -289,7 +287,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_steel_per_unit_dri",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/t",
             desc="Total unit of steel formed from EAF fed with dri + scrap per unit of dri",
         )

@@ -54,7 +54,7 @@ finance_parameters:
       commodity: electricity
       finance_groups: [profast_model]
       technologies: [nuclear]
-    hydrogen_produced:
+    hydrogen:
       commodity: hydrogen
       commodity_stream: htse
       finance_groups: [profast_model]

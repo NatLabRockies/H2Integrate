@@ -12,7 +12,9 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
-from h2integrate.converters.ammonia.ammonia_synloop import AmmoniaSynLoopPerformanceModel
+from h2integrate.converters.ammonia.ammonia_synloop_performance import (
+    AmmoniaSynLoopPerformanceModel,
+)
 
 
 @fixture

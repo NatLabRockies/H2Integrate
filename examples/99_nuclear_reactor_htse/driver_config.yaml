@@ -11,7 +11,7 @@ general:
 #     debug_print: true
 driver:
   optimization:
-    flag: true
+    flag: false
     solver: COBYLA
     tol: 0.1
     catol: 100000
@@ -21,7 +21,7 @@ driver:
     debug_print: true
 design_variables:
   nuclear:
-    hourly_power_production:
+    electricity_command_value:
       flag: true
       lower: 1
       upper: 500
@@ -49,4 +49,4 @@ design_variables:
   #     lower: 60500000.
   #     units: kg/year
 objective:
-  name: finance_subgroup_hydrogen_produced.LCOH
+  name: finance_subgroup_hydrogen.LCOH

@@ -45,8 +45,6 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
     def setup(self):
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.config = ElectricArcFurnacePerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -65,14 +63,14 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
@@ -81,7 +79,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
         self.add_input(
             "steel_command_value",
             val=self.config.steel_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Steel command value for steel plant",
         )
@@ -312,8 +310,6 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
 
         if "cost_year" in config_dict:
@@ -358,7 +354,7 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
         self.add_input(
             "steel_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Steel produced",
         )

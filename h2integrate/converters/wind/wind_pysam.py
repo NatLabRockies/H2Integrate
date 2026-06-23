@@ -319,10 +319,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         field_number_to_data = {v: k for k, v in self.data_to_field_number.items()}
         # fields is a list of numbers representing the data type
         fields = np.tile(list(field_number_to_data.keys()), len(bounding_heights))
-        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         # initialize resource data array
-        resource_data = np.zeros((n_timesteps, len(fields)))
+        resource_data = np.zeros((self.n_timesteps, len(fields)))
         cnt = 0
         for height, field_num in zip(heights, fields):
             # get the rounding precision for the field
@@ -404,6 +403,15 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         Returns:
             bool: True if the new power curve has a maximum value equal to `turbine_rating_kw`
         """
+        # Capture the existing windspeeds / CT curve before PySAM regenerates the power
+        # curve. ``calculate_powercurve`` only updates ``wind_turbine_powercurve_windspeeds``
+        # and ``wind_turbine_powercurve_powerout``; the CT curve length must equal the new
+        # windspeed length, otherwise PySAM Windpower fails to execute. Neither the
+        # ``new`` nor ``default`` model paths populate a CT curve on their own, so the
+        # only source is ``pysam_options["Turbine"]``.
+        turbine_opts = self.config.pysam_options.get("Turbine", {})
+        old_ct_curve = list(turbine_opts.get("wind_turbine_ct_curve", []))
+        old_windspeeds = list(turbine_opts.get("wind_turbine_powercurve_windspeeds", []))
 
         self.system_model.Turbine.calculate_powercurve(
             turbine_rating_kw,
@@ -416,6 +424,22 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             self.power_curve_config.wind_default_cut_out_speed,
             self.power_curve_config.wind_default_drive_train,
         )
+
+        # Resample the CT curve (if one was provided) onto the regenerated windspeeds so
+        # the two arrays remain length-aligned for PySAM execution.
+        new_windspeeds = list(self.system_model.value("wind_turbine_powercurve_windspeeds"))
+        if (
+            len(old_ct_curve) > 0
+            and len(old_windspeeds) == len(old_ct_curve)
+            and len(new_windspeeds) != len(old_ct_curve)
+        ):
+            resampled_ct = np.interp(
+                np.asarray(new_windspeeds, dtype=float),
+                np.asarray(old_windspeeds, dtype=float),
+                np.asarray(old_ct_curve, dtype=float),
+            )
+            self.system_model.value("wind_turbine_ct_curve", tuple(resampled_ct.tolist()))
+
         success = False
         if max(self.system_model.value("wind_turbine_powercurve_powerout")) == float(
             turbine_rating_kw

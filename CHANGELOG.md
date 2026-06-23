@@ -2,7 +2,6 @@
 
 ## Unreleased
 
-- **Controller signal naming overhaul**: Standardized controller input/output names across the codebase. SLC outputs are now `{tech}_{commodity}_set_point` (was `{tech}_{commodity}_demand`); technology-level controllers take `{commodity}_set_point` as input and emit `{commodity}_command_value` as output (was `{commodity}_demand`/`{commodity}_set_point`). Storage performance models in feedback mode receive `{commodity}_set_point`; in open-loop mode they receive `{commodity}_command_value`. The SLC's own input (`{commodity}_demand`) and demand component I/O remain unchanged.
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
@@ -38,6 +37,9 @@
 - Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
 - Renamed `design_of_experiments` to `parameter_sweep` throughout the codebase to avoid confusion with "Department of Energy" (DOE) in the energy domain. The core code supports both the new `parameter_sweep` and legacy `design_of_experiments` YAML keys for backward compatibility. Updated all driver configs, examples, tests, and documentation. Added generator type descriptions to the parameter sweep docs page and updated the run-cases docs to recommend parameter sweeps over manual for-loops. [PR 768](https://github.com/NatLabRockies/H2Integrate/pull/768)
 - Added imports for individual models to the appropriate `__init__.py` files to allow for direct imports of models from the package level and to ensure all models are properly imported and used in `supported_models.py` [PR 769](https://github.com/NatLabRockies/H2Integrate/pull/769)
+- Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
+- Speed up the slowest tests in the suite by swapping the Floris wind model for `PYSAMWindPlantPerformanceModel` in examples 01 (`01_onshore_steel_mn`) and 02 (`02_texas_ammonia`), updating the affected `test_steel_example`/`test_simple_ammonia_example` expected values, fixing a pre-existing `cases.sql` cache-path bug and module-scoping the fixtures in `h2integrate/postprocess/test/test_sql_timeseries_to_csv.py` so the example only runs once for all four tests. [PR 782](https://github.com/NatLabRockies/H2Integrate/pull/782)
+- Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
 
 ## 0.8 [April 15, 2026]
 
