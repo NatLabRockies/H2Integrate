@@ -42,7 +42,7 @@
 - Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
 - Moves `h2integrate/resource/utilities/file_tools.py::check_resource_dir` to a general function
   `h2integrate/core/utilities/file_utils.py::check_data_dir` with a wrapped version for resource
-  data (`check_resource_dir`) and feedstock data (`check_feedstock_data`).
+  data (`check_resource_dir`) and feedstock data (`check_feedstock_data`). [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
 
 ## 0.8 [April 15, 2026]
 
