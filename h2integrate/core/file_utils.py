@@ -495,7 +495,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
         raise TypeError(f"`data_type` should be one of: {', '.join(data_type_map)}.")
 
     data_type = data_type.lower()
-    if (default_dir := data_type.get(data_type)) is None:
+    if (default_dir := data_type_map.get(data_type)) is None:
         raise ValueError(f"`data_type` should be one of: {', '.join(data_type_map)}.")
 
     # check for user-provided resource data_dir
@@ -505,7 +505,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir
-        full_dir = check_data_dir(data_dir=full_dir)
+        full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
         return full_dir.absolute()
 
     # Check for user-defined environment variable with resource data_subdir
@@ -516,14 +516,14 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir
-        full_dir = check_data_dir(data_dir=full_dir)
+        full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
         return full_dir.absolute()
 
     # use default resource directory
     if data_subdir is None:
         return default_dir
     full_dir = default_dir / data_subdir
-    full_dir = check_data_dir(data_dir=full_dir)
+    full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
     return full_dir.absolute()
 
 
@@ -531,4 +531,4 @@ check_resource_dir = partial(check_data_dir, data_type="resource")
 update_wrapper(check_resource_dir, check_data_dir)
 
 check_feedstock_dir = partial(check_data_dir, data_type="feedstock")
-update_wrapper(check_resource_dir, check_data_dir)
+update_wrapper(check_feedstock_dir, check_data_dir)
