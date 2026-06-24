@@ -637,9 +637,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 marginal_cost = self._varopex_marginal_cost(inputs, marginal_cost_data)
             elif marginal_cost_type == "feedstock":
                 marginal_cost = self._feedstock_marginal_cost(inputs, marginal_cost_data)
-                # print(
-                #     f"Marginal cost for {marginal_cost_type}: {marginal_cost}"
-                # )  # TODO: remove debug print
             else:
                 marginal_cost = np.zeros(self.n_timesteps)
 
