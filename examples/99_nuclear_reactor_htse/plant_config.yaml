@@ -12,10 +12,11 @@ plant:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [nuclear, htse, electricity, cable]
-  # - [nuclear, heat_load_demand, [heat_out, heat_in]]
+  - [nuclear, htse, [heat_out, heat_in]]
   - [nuclear, electrical_load_demand, [electricity_out, electricity_in]]
-  - [htse, nuclear, [heat_demand, external_heat_demand]]
+  - [htse, nuclear, [heat_demand, heat_command_value]]
   - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]
+  - [htse, h2_storage, hydrogen, pipe]
   # - [htse, heat_load_demand, [heat_demand, heat_demand]]
 
   # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]

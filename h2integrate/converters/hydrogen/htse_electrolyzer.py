@@ -62,7 +62,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "heat_in",
             val=0.0,
             shape=self.n_timesteps,
-            units="MW",
+            units="kW",
             desc="Thermal energy supplied to the HTSE system",
         )
         self.add_output(
@@ -123,8 +123,8 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         electrolyzer_size_mw = n_clusters * self.config.cluster_rating_MW
         electrolyzer_size_kw = electrolyzer_size_mw * 1000.0
 
-        heat_available_kw = np.asarray(inputs["heat_in"], dtype=float) * 1000.0
-        electricity_available_kw = np.asarray(inputs["electricity_in"], dtype=float)
+        heat_available_kw = inputs["heat_in"]
+        electricity_available_kw =inputs["electricity_in"]
         total_specific_energy = (
             self.config.nominal_heat_required + self.config.nominal_electricity_required
         )
@@ -142,7 +142,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
 
         outputs["hydrogen_out"] = hydrogen_out
-        outputs["heat_demand"] = actual_heat_kw
+        outputs["heat_demand"] = self.config.nominal_heat_required*electrolyzer_size_kw
         outputs["electricity_demand"] = electricity_demand_kw
         outputs["water_demand"] = hydrogen_out * 18.015 / 2.016
         outputs["rated_hydrogen_production"] = rated_hydrogen_production

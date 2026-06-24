@@ -31,6 +31,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
 
+
     def setup(self):
         self.config = SimpleThermalNuclearReactorConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -66,14 +67,14 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.add_input(
             "minimum_heat_extract",
             val=self.config.minimum_heat_extract,
-            units="MW",
+            units="kW",
             desc="Minimum thermal output reserved for process heat extraction",
         )
         self.add_input(
-            "external_heat_demand",
+            "heat_command_value",
             val=0.0,
             shape=self.n_timesteps,
-            units="MW",
+            units="kW",
             desc="Requested process heat demand from downstream technologies",
         )
 
@@ -87,11 +88,11 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         hp_eff = float(inputs["high_pressure_electrical_efficiency"][0])
         lp_eff = float(inputs["low_pressure_electrical_efficiency"][0])
         electric_capacity_mw = float(inputs["rated_capacity"][0]) * 1e-3  # convert kW to MW
-        minimum_heat_extract_mw = max(float(inputs["minimum_heat_extract"][0]), 0.0)
-        requested_power_mw = np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3
-        external_heat_demand_mw = np.maximum(
-            np.asarray(inputs["external_heat_demand"], dtype=float), 0.0
-        )
+
+        minimum_heat_extract_mw = np.maximum(inputs["minimum_heat_extract"], 0.0) * 1e-3 #convert kW to MW, fix >0
+        requested_power_mw = np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3 #convert kW to MW, fix >0
+        external_heat_demand_mw = np.maximum(inputs["heat_command_value"], 0.0) * 1e-3 #convert kW to MW, fix >0
+
 
         combined_efficiency = hp_eff + (1.0 - hp_eff) * lp_eff
         if combined_efficiency <= 0.0:
@@ -110,7 +111,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
                 high_pressure_electricity_mw + (available_process_heat_mw - heat_out_mw) * lp_eff
             )
         elif operating_mode == "electricity":
-            electricity_out_mw = min(requested_power_mw, electric_capacity_mw)
+            electricity_out_mw = np.minimum(requested_power_mw, electric_capacity_mw)
             heat_out_mw = (
                 available_process_heat_mw
                 - (electricity_out_mw - high_pressure_electricity_mw) / lp_eff
@@ -121,15 +122,13 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
                 "The nuclear operating_mode must be either 'heat' or 'electricity'"
             )
 
-        electricity_out_mw = np.clip(
-            np.asarray(electricity_out_mw, dtype=float), 0.0, electric_capacity_mw
-        )
+        electricity_out_mw = np.clip(electricity_out_mw, 0.0, electric_capacity_mw)
         low_pressure_heat_remaining_mw = available_process_heat_mw - heat_out_mw
 
         high_pressure_heat_kw = np.full(self.n_timesteps, available_process_heat_mw * 1000.0)
-        low_pressure_heat_kw = np.asarray(low_pressure_heat_remaining_mw, dtype=float) * 1000.0
+        low_pressure_heat_kw = low_pressure_heat_remaining_mw * 1000.0
         electricity_out_kw = electricity_out_mw * 1000.0
-        heat_out_kw = np.asarray(heat_out_mw, dtype=float) * 1000.0
+        heat_out_kw = heat_out_mw * 1000.0
 
         outputs["high_pressure_heat_demanded"] = heat_demand_mw * 1000.0
         outputs["high_pressure_heat"] = high_pressure_heat_kw

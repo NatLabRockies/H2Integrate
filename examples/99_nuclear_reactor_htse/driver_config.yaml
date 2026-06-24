@@ -23,9 +23,9 @@ design_variables:
   nuclear:
     electricity_command_value:
       flag: true
-      lower: 1
-      upper: 500
-      units: MW
+      lower: 1000
+      upper: 500000
+      units: kW
   htse:
     n_clusters:
       flag: true

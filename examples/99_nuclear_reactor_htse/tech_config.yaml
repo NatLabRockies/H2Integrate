@@ -14,7 +14,7 @@ technologies:
         electricity_command_value: 500000  # kW
         high_pressure_electrical_efficiency: 0.12
         low_pressure_electrical_efficiency: 0.22
-        minimum_heat_extract: 1  # MW
+        minimum_heat_extract: 1000  # kW
       cost_parameters:
         nuclear_reactor_rated_capacity: 5000000.0
         nuclear_reactor_upfront_cost: 5750.0
