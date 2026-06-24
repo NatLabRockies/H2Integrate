@@ -52,11 +52,11 @@ def _build_technology_graph(technology_interconnections):
 def _build_tech_control_classifiers(
     fixed=None, flexible=None, dispatchable=None, storage=None, feedstock=None
 ):
-    tech_control_classifiers = {k: "fixed" for k in (fixed or [])}
-    tech_control_classifiers |= {k: "flexible" for k in (flexible or [])}
-    tech_control_classifiers |= {k: "dispatchable" for k in (dispatchable or [])}
-    tech_control_classifiers |= {k: "storage" for k in (storage or [])}
-    tech_control_classifiers |= {k: "feedstock" for k in (feedstock or [])}
+    tech_control_classifiers = dict.fromkeys(fixed or [], "fixed")
+    tech_control_classifiers |= dict.fromkeys(flexible or [], "flexible")
+    tech_control_classifiers |= dict.fromkeys(dispatchable or [], "dispatchable")
+    tech_control_classifiers |= dict.fromkeys(storage or [], "storage")
+    tech_control_classifiers |= dict.fromkeys(feedstock or [], "feedstock")
     return tech_control_classifiers
 
 
@@ -722,3 +722,114 @@ class TestProfitMaximizationControl:
 
         with pytest.raises(ValueError, match="at least one feedstock"):
             _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+
+    def test_feedstock_fuel_cell_h2_o2(self):
+        """feedstock mode with a fuel cell consuming both hydrogen and oxygen feedstocks.
+
+        Mirrors the scenario from issue #789: a fuel cell with two distinct
+        feedstock streams (H2 and O2) feeding the same dispatchable tech. Both
+        feedstock VarOpEx values must be summed to drive the marginal-cost
+        decision.
+        """
+        tech_connections = [
+            ["h2_feed", "fuel_cell", "hydrogen", "pipe"],
+            ["o2_feed", "fuel_cell", "oxygen", "pipe"],
+            ["fuel_cell", "demand", "electricity", "cable"],
+        ]
+        plant_config = _build_plant_config(
+            tech_connections, sell_price=0.10, cost_per_tech={"fuel_cell": "feedstock"}
+        )
+        tech_graph = _build_technology_graph(tech_connections)
+        tech_control_classifiers = _build_tech_control_classifiers(
+            dispatchable=["fuel_cell"], feedstock=["h2_feed", "o2_feed"]
+        )
+        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+
+        prob.set_val("slc.fuel_cell_rated_electricity_production", 100000)
+        # Hydrogen is the expensive feedstock; oxygen is small but non-zero
+        prob.set_val("slc.h2_feed_VarOpEx", np.full(30, 600_000.0))
+        prob.set_val("slc.o2_feed_VarOpEx", np.full(30, 200_000.0))
+        prob.set_val("slc.fuel_cell_electricity_out", np.full(4, 100000.0))
+        prob.run_model()
+
+        sp = prob.get_val("slc.fuel_cell_electricity_set_point")
+        # Combined VarOpEx = 800k $/yr; annual production = 400 MWh / (4/8760) = 876k MWh
+        # mc ≈ 0.913 $/MWh ≈ 0.000913 $/kWh → very cheap → fully dispatched
+        np.testing.assert_allclose(sp, 50000)
+
+    def test_feedstock_multiple_sum_not_average(self):
+        """Verify multi-feedstock marginal cost is the sum, not the mean.
+
+        Picks VarOpEx values such that the *sum* lands just above the sell
+        price (so the tech should not be dispatched), but the *mean* would
+        land just below it (so an averaging bug would incorrectly dispatch).
+        Uses ProfitMaximizationControl, where the dispatch decision is
+        directly driven by ``marginal_cost`` vs ``sell_price``.
+        """
+        tech_connections = [
+            ["h2_feed", "fuel_cell", "hydrogen", "pipe"],
+            ["o2_feed", "fuel_cell", "oxygen", "pipe"],
+            ["fuel_cell", "demand", "electricity", "cable"],
+        ]
+        # sell price set just below the *summed* marginal cost
+        sell_price = 0.07
+        plant_config = _build_plant_config(
+            tech_connections, sell_price=sell_price, cost_per_tech={"fuel_cell": "feedstock"}
+        )
+        tech_graph = _build_technology_graph(tech_connections)
+        tech_control_classifiers = _build_tech_control_classifiers(
+            dispatchable=["fuel_cell"], feedstock=["h2_feed", "o2_feed"]
+        )
+        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+
+        prob.set_val("slc.fuel_cell_rated_electricity_production", 100000)
+        # Each feedstock costs $35M/yr; sum = $70M/yr.
+        # Annual production = 100 MW * 4 h / (4/8760) = 876,000 MWh = 8.76e8 kWh
+        # Summed mc = 70e6 / 8.76e8 ≈ 0.0799 $/kWh   (> sell 0.07 → NOT dispatched)
+        # Averaged mc = 35e6 / 8.76e8 ≈ 0.0400 $/kWh ( < sell 0.07 → would be dispatched)
+        prob.set_val("slc.h2_feed_VarOpEx", np.full(30, 35_000_000.0))
+        prob.set_val("slc.o2_feed_VarOpEx", np.full(30, 35_000_000.0))
+        prob.set_val("slc.fuel_cell_electricity_out", np.full(4, 100000.0))
+        prob.set_val("slc.commodity_sell_price", sell_price)
+        prob.run_model()
+
+        sp = prob.get_val("slc.fuel_cell_electricity_set_point")
+        np.testing.assert_allclose(sp, 0)
+
+    def test_feedstock_indirect_upstream(self):
+        """feedstock mode finds feedstocks at any graph depth via ancestors.
+
+        One feedstock connects directly to the dispatchable tech; the other
+        connects via an intermediate combiner. Both must be discovered and
+        their VarOpEx summed.
+        """
+        tech_connections = [
+            ["h2_feed", "h2_combiner", "hydrogen", "pipe"],
+            ["h2_combiner", "fuel_cell", "hydrogen", "pipe"],
+            ["o2_feed", "fuel_cell", "oxygen", "pipe"],
+            ["fuel_cell", "demand", "electricity", "cable"],
+        ]
+        plant_config = _build_plant_config(
+            tech_connections, sell_price=0.10, cost_per_tech={"fuel_cell": "feedstock"}
+        )
+        tech_graph = _build_technology_graph(tech_connections)
+        tech_control_classifiers = _build_tech_control_classifiers(
+            dispatchable=["fuel_cell"], feedstock=["h2_feed", "o2_feed"]
+        )
+        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+
+        # If the indirect ancestor is missed, setup will fail because the
+        # `slc.h2_feed_VarOpEx` input would not be registered and the test
+        # would error out when set_val is called.
+        prob.set_val("slc.fuel_cell_rated_electricity_production", 100000)
+        prob.set_val("slc.h2_feed_VarOpEx", np.full(30, 400_000.0))
+        prob.set_val("slc.o2_feed_VarOpEx", np.full(30, 400_000.0))
+        prob.set_val("slc.fuel_cell_electricity_out", np.full(4, 100000.0))
+        prob.run_model()
+
+        sp = prob.get_val("slc.fuel_cell_electricity_set_point")
+        # Combined VarOpEx = 800k $/yr → very cheap, fully dispatched
+        np.testing.assert_allclose(sp, 50000)
