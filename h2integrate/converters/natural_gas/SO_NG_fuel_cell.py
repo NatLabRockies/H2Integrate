@@ -11,7 +11,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class SO_NG_FuelCellPerformanceConfig(BaseConfig):
+class SONGFuelCellPerformanceConfig(BaseConfig):
     """Configuration class for the solid oxide natural gas fuel cell performance model.
 
     Attributes:
@@ -106,7 +106,7 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
     return I_cell, V_cell
 
 
-class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
+class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a solid oxide natural gas fuel cell.
 
@@ -136,7 +136,7 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = SO_NG_FuelCellPerformanceConfig.from_dict(
+        self.config = SONGFuelCellPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -356,7 +356,7 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
+class SONGFuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the solid oxide natural gas fuel cell cost model.
 
     Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_fuel_supply_per_kw`,
@@ -377,7 +377,7 @@ class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
 
 
-class SO_NG_FuelCellCostModel(CostModelBaseClass):
+class SONGFuelCellCostModel(CostModelBaseClass):
     """
     Cost model for a solid oxide natural gas fuel cell system.
 
@@ -391,7 +391,7 @@ class SO_NG_FuelCellCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = SO_NG_FuelCellCostConfig.from_dict(
+        self.config = SONGFuelCellCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
