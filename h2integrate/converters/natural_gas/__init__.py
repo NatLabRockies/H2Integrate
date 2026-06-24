@@ -8,3 +8,7 @@ from h2integrate.converters.natural_gas.dummy_gas_components import (
     SimpleGasConsumerPerformance,
     SimpleGasConsumerCost,
 )
+from h2integrate.converters.natural_gas.SO_NG_fuel_cell import (
+    SO_NG_FuelCellPerformanceModel,
+    SO_NG_FuelCellCostModel,
+)

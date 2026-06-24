@@ -11,7 +11,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class PEMH2FuelCellPerformanceConfig(BaseConfig):
+class SO_NG_FuelCellPerformanceConfig(BaseConfig):
     """Configuration class for the hydrogen fuel cell performance model.
 
     Attributes:
@@ -106,7 +106,7 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
     return I_cell, V_cell
 
 
-class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
+class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a hydrogen fuel cell.
 
@@ -134,7 +134,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = PEMH2FuelCellPerformanceConfig.from_dict(
+        self.config = SO_NG_FuelCellPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -142,7 +142,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # Add natural gas input, default to 0 --> set using feedstock component
         # or upstream hydrogen converter component
         self.add_input(
-            "hydrogen_in",
+            "natural_gas_in",
             val=0.0,
             shape=self.n_timesteps,
             units="kg/h",
@@ -178,11 +178,11 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            "hydrogen_consumed",
+            "natural_gas_consumed",
             val=0.0,
             shape=self.n_timesteps,
             units="kg/h",
-            desc="Mass flow rate of hydrogen consumed by the fuel cell",
+            desc="Mass flow rate of natural gas consumed by the fuel cell",
         )
 
         self.add_output(
@@ -198,7 +198,15 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=self.n_timesteps,
             units="kg/h",
-            desc="Mass flow rate of water consumed by the fuel cell",
+            desc="Mass flow rate of water produced by the fuel cell",
+        )
+
+        self.add_output(
+            "carbon_dioxide_out",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="kg/h",
+            desc="Mass flow rate of carbon dioxide produced by the fuel cell",
         )
 
         # Default the electricity command value input as the rated capacity
@@ -207,7 +215,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=self.config.system_capacity_kw,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity command value for natural gas plant",
+            desc="Electricity command value for SOFC plant",
         )
 
     def compute(self, inputs, outputs):
@@ -216,15 +224,15 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             and fuel cell HHV efficiency.
 
         Args:
-            inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
+            inputs: OpenMDAO inputs object containing natural_gas_in, fuel cell
                 HHV efficiency, electricity_command_value, and system_capacity.
             outputs: OpenMDAO outputs object for electricity_out,
-                hydrogen_consumed.
+                natural_gas_consumed.
         """
 
         # calculate max input and output
         inputs["system_capacity"]  # plant capacity in kW
-        inputs["hydrogen_in"]  # kg/h
+        inputs["natural_gas_in"]  # kg/h
         inputs["oxygen_in"]  # kg/h
         inputs["stack_temperature"]
         # fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
@@ -234,6 +242,8 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         self.M_H2 = 0.002016  # Molar mass of H2 in kg/mol
         self.M_O2 = 0.032  # Molar mass of O2 in kg/mol
         self.M_H2O = 0.018  # Molar mass of H2O in kg/mol
+        self.M_CO2 = 0.044  # Molar mass of CO2 in kg/mol
+        self.M_CH4 = 0.01604  # Molar mass of CH4 (methane) in kg/mol
         self.Tref = 298.15  # Standard room temperature in K [25 deg Celsius]
         self.cp_H2 = 14300  # Specific heat of H2 in J/(kg*K)
         self.cp_air = 1005  # Specific heat of air in J/(kg*K)
@@ -265,14 +275,15 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         """
 
-        h2_consumed = np.zeros(self.n_timesteps)
+        ng_consumed = np.zeros(self.n_timesteps)
         o2_consumed = np.zeros(self.n_timesteps)
+        co2_generated = np.zeros(self.n_timesteps)
         h2o_generated = np.zeros(self.n_timesteps)
         commodity_out = np.zeros(self.n_timesteps)
 
         for i in range(self.n_timesteps):
             power_reference = inputs[f"{self.commodity}_command_value"][i]
-            inputs["hydrogen_in"][i]
+            inputs["natural_gas_in"][i]
             inputs["oxygen_in"][i]
 
             # Find current and voltage from IV curve with power setpoint
@@ -280,19 +291,19 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 power_reference, self.cell_active_area, self.n_cells, self.config.n_stacks
             )
 
-            # Calculate hydrogen and oxygen consumed
-            H2_consumed_rate = ((I_cell * self.N_series * self.M_H2) / (2.0 * self.f_c)) * (
+            # Calculate natural gas and oxygen consumed
+            NG_consumed_rate = ((I_cell * self.N_series * self.M_CH4) / (8.0 * self.f_c)) * (
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
             O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
-            # print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
+            # print("NG and O2 consumed per hour", NG_consumed_rate, O2_consumed_rate)
             # print(self.stack_size, self.n_cells)
 
-            # TODO: if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
-            # print("Not enough H2 or O2 for this power point")
+            # TODO: if NG_consumed_rate > NGin or O2_consumed_rate > O2in:
+            # print("Not enough NG or O2 for this power point")
             # implement an adjustment based on H2 & O2 available
 
             # Compute electricity from the system
@@ -306,10 +317,18 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 * self.M_H2O
                 * (self.dt * self.config.n_stacks * self.n_cells)
             )  # in kg/time step
+            # TODO: check electron numbers in these calculations
+            # Compute CO2 out
+            CO2_generated = (
+                (I_cell * self.N_series / (8 * self.f_c))
+                * self.M_CO2
+                * (self.dt * self.config.n_stacks * self.n_cells)
+            )  # in kg/time step
 
-            h2_consumed[i] = H2_consumed_rate
+            ng_consumed[i] = NG_consumed_rate
             o2_consumed[i] = O2_consumed_rate
             h2o_generated[i] = H2O_generated
+            co2_generated[i] = CO2_generated
             commodity_out[i] = electricity_produced
 
         # Set Outputs
@@ -325,9 +344,10 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
             self.config.system_capacity_kw * self.n_timesteps * (self.dt / 3600)
         )
-        outputs["hydrogen_consumed"] = h2_consumed
+        outputs["natural_gas_consumed"] = ng_consumed
         outputs["oxygen_consumed"] = o2_consumed
         outputs["water_out"] = h2o_generated
+        outputs["carbon_dioxide_out"] = co2_generated
 
         # # conversion factor: kW electricity to kg/h hydrogen, units: (kg/h)/kW
         # kw_to_kgh_h2 = (3600.0 * 0.001) / (fuel_cell_efficiency * HHV_H2_MJ_PER_KG)
@@ -364,7 +384,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class PEMH2FuelCellCostConfig(CostModelBaseConfig):
+class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the hydrogen fuel cell cost model.
 
     Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_hydrogen_supply_per_kw`,
@@ -385,7 +405,7 @@ class PEMH2FuelCellCostConfig(CostModelBaseConfig):
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
 
 
-class PEMH2FuelCellCostModel(CostModelBaseClass):
+class SO_NG_FuelCellCostModel(CostModelBaseClass):
     """
     Cost model for a hydrogen fuel cell system.
 
@@ -399,7 +419,7 @@ class PEMH2FuelCellCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = PEMH2FuelCellCostConfig.from_dict(
+        self.config = SO_NG_FuelCellCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )

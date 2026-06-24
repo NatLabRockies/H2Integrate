@@ -85,6 +85,8 @@ supported_models = _ModelRegistry(
         "H2FuelCellCostModel": "converters.hydrogen:H2FuelCellCostModel",
         "SteamMethaneReformerPerformanceModel": "converters.hydrogen:SteamMethaneReformerPerformanceModel",
         "SteamMethaneReformerCostModel": "converters.hydrogen:SteamMethaneReformerCostModel",
+        "SO_NG_FuelCellPerformanceModel": "converters.natural_gas:SO_NG_FuelCellPerformanceModel",
+        "SO_NG_FuelCellCostModel": "converters.natural_gas:SO_NG_FuelCellCostModel",
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
         "HOPPComponent": "converters.hopp:HOPPComponent",
