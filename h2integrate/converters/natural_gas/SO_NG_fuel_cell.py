@@ -12,12 +12,12 @@ from h2integrate.core.model_baseclasses import (
 
 @define(kw_only=True)
 class SO_NG_FuelCellPerformanceConfig(BaseConfig):
-    """Configuration class for the hydrogen fuel cell performance model.
+    """Configuration class for the solid oxide natural gas fuel cell performance model.
 
     Attributes:
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
-        fuel_cell_efficiency_hhv (float): The higher heating value efficiency of the
-            fuel cell (0 <= efficiency <= 1).
+        n_stacks (int): The number of stacks in the fuel cell system.
+        stack_temperature_K (float): The operating temperature of the fuel cell stack in Kelvin (K).
     """
 
     # TODO: how to size the fuel cell? N_cells + N_stacks?
@@ -108,15 +108,17 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
 class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
-    Performance model for a hydrogen fuel cell.
+    Performance model for a solid oxide natural gas fuel cell.
 
-    The model implements the relationship:
-    electricity_out = hydrogen_in * fuel_cell_efficiency_hhv * HHV_hydrogen
+    The model calculates electricity output based on natural gas and oxygen inputs,
+    with current and voltage determined from power density using IV curves.
+    Produces water and carbon dioxide as byproducts.
 
     where:
-    - hydrogen_in is the mass flow rate of hydrogen in kg/hr
-    - fuel_cell_efficiency is the efficiency of the fuel cell (0 <= efficiency <= 1)
-    - HHV_hydrogen is the higher heating value of hydrogen (approximately 142 MJ/kg)
+    - natural_gas_in is the mass flow rate of natural gas in kg/hr
+    - oxygen_in is the mass flow rate of oxygen in kg/hr
+    - water_out is the mass flow rate of water produced in kg/hr
+    - carbon_dioxide_out is the mass flow rate of carbon dioxide produced in kg/hr
     """
 
     _time_step_bounds = (
@@ -220,14 +222,14 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
 
     def compute(self, inputs, outputs):
         """
-        Compute electricity output from the fuel cell based on hydrogen input
-            and fuel cell HHV efficiency.
+        Compute electricity output from the SOFC based on natural gas input,
+            oxygen availability, and fuel cell electrochemical reactions.
 
         Args:
-            inputs: OpenMDAO inputs object containing natural_gas_in, fuel cell
-                HHV efficiency, electricity_command_value, and system_capacity.
-            outputs: OpenMDAO outputs object for electricity_out,
-                natural_gas_consumed.
+            inputs: OpenMDAO inputs object containing natural_gas_in, oxygen_in,
+                stack_temperature, electricity_command_value, and system_capacity.
+            outputs: OpenMDAO outputs object for electricity_out, natural_gas_consumed,
+                oxygen_consumed, water_out, and carbon_dioxide_out.
         """
 
         # calculate max input and output
@@ -253,7 +255,7 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
         self.hhv_h2 = 141.8 * 1e6  # Higher heating value of hydrogen in J/kg
         self.hhv_air = 0  # No higher heating value of air
         self.hhv_H2O = 2260  # Higher heating value of water in J/kg
-
+        self.hhv_CO2 = 0  # No higher heating value of CO2
         # Sizing the cells
         self.max_cell_power_density = 0.000334
         # is n_cells = N_series?
@@ -267,11 +269,11 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
         # PSUEDO CODE:
         """
         1. Receive power setpoint into fuel cell
-        2. Find current with I-V curve - NEED THIS
-        3. Calculate power out with current - NEED TO FIND CELL ELECTRICITY CALC
-        4. Calculate H2 consumed, O2 consumed, water out
-        5. See if H2 in and O2 in can provide this
-        6. Repeat step 4 if H2 or O2 limit power out
+        2. Find current and voltage from I-V curve based on power setpoint
+        3. Calculate natural gas (CH4) and oxygen consumed based on Faraday's law
+        4. Calculate electricity produced from cell voltage and current
+        5. Calculate H2O and CO2 generated from the reaction
+        6. Output electricity clipped to system capacity and other metrics
 
         """
 
@@ -349,45 +351,15 @@ class SO_NG_FuelCellPerformanceModel(PerformanceModelBaseClass):
         outputs["water_out"] = h2o_generated
         outputs["carbon_dioxide_out"] = co2_generated
 
-        # # conversion factor: kW electricity to kg/h hydrogen, units: (kg/h)/kW
-        # kw_to_kgh_h2 = (3600.0 * 0.001) / (fuel_cell_efficiency * HHV_H2_MJ_PER_KG)
-
-        # # available feedstock, saturated at maximum system feedstock consumption
-        # h2_available = np.where(
-        #     inputs["hydrogen_in"] > max_h2_consumption,
-        #     max_h2_consumption,
-        #     inputs["hydrogen_in"],
-        # )
-
-        # # h2 consumed is minimum between available feedstock and output demand
-        # hydrogen_in = np.minimum(h2_available, h2_demand)
-
-        # # make any negative hydrogen input zero
-        # hydrogen_in = np.maximum(hydrogen_in, 0.0)
-
-        # # calculate electricity output in kW
-        # electricity_out_kw = hydrogen_in / kw_to_kgh_h2
-
-        # # clip the electricity output to the system capacity
-        # outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity)
-        # outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
-        #     self.dt / 3600
-        # )
-        # outputs["rated_electricity_production"] = system_capacity
-        # outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
-        #     1 / self.fraction_of_year_simulated
-        # )
-        # outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
-        #     system_capacity * self.n_timesteps * (self.dt / 3600)
-        # )
-        # outputs["hydrogen_consumed"] = outputs["electricity_out"] * kw_to_kgh_h2
+        # TODO: implement a natural gas and oxygen conversion efficiency based on stack
+        #   temperature and other factors
 
 
 @define(kw_only=True)
 class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
-    """Configuration class for the hydrogen fuel cell cost model.
+    """Configuration class for the solid oxide natural gas fuel cell cost model.
 
-    Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_hydrogen_supply_per_kw`,
+    Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_fuel_supply_per_kw`,
     `capex_air_supply_per_kw`, `capex_cooling_per_kw`, `capex_controls_instrumentation_per_kw`,
     `capex_electrical_per_kw`, `capex_assembly_per_kw`, `capex_additional_labor_per_kw`,
     and `fixed_opex_per_kw_per_year`. The `cost_year` field is inherited from `CostModelBaseConfig`.
@@ -395,7 +367,7 @@ class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
 
     system_capacity_kw: float = field(validator=gte_zero)
     capex_stack_per_kw: float = field(validator=gte_zero)
-    capex_hydrogen_supply_per_kw: float = field(validator=gte_zero)
+    capex_fuel_supply_per_kw: float = field(validator=gte_zero)
     capex_air_supply_per_kw: float = field(validator=gte_zero)
     capex_cooling_per_kw: float = field(validator=gte_zero)
     capex_controls_instrumentation_per_kw: float = field(validator=gte_zero)
@@ -407,7 +379,7 @@ class SO_NG_FuelCellCostConfig(CostModelBaseConfig):
 
 class SO_NG_FuelCellCostModel(CostModelBaseClass):
     """
-    Cost model for a hydrogen fuel cell system.
+    Cost model for a solid oxide natural gas fuel cell system.
 
     The model calculates capital and fixed operating costs based on system capacity and
     specified cost parameters.
@@ -430,13 +402,13 @@ class SO_NG_FuelCellCostModel(CostModelBaseClass):
             "system_capacity",
             val=self.config.system_capacity_kw,
             units="kW",
-            desc="Capacity of the h2 fuel cell system",
+            desc="Capacity of the solid oxide natural gas fuel cell system",
         )
 
         self.add_input(
             "unit_capex",
             val=self.config.capex_stack_per_kw
-            + self.config.capex_hydrogen_supply_per_kw
+            + self.config.capex_fuel_supply_per_kw
             + self.config.capex_air_supply_per_kw
             + self.config.capex_cooling_per_kw
             + self.config.capex_controls_instrumentation_per_kw
@@ -456,7 +428,7 @@ class SO_NG_FuelCellCostModel(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
-        Compute capital and fixed operating costs for the fuel cell system.
+        Compute capital and fixed operating costs for the solid oxide natural gas fuel cell system.
 
         Args:
             inputs: OpenMDAO inputs object containing system_capacity.

@@ -16,8 +16,8 @@ class PEMH2FuelCellPerformanceConfig(BaseConfig):
 
     Attributes:
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
-        fuel_cell_efficiency_hhv (float): The higher heating value efficiency of the
-            fuel cell (0 <= efficiency <= 1).
+        n_stacks (int): The number of stacks in the fuel cell system.
+        stack_temperature_K (float): The operating temperature of the fuel cell stack in Kelvin (K).
     """
 
     # TODO: how to size the fuel cell? N_cells + N_stacks?
@@ -108,15 +108,25 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
 class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
-    Performance model for a hydrogen fuel cell.
+    Performance model for a PEM hydrogen fuel cell.
 
-    The model implements the relationship:
-    electricity_out = hydrogen_in * fuel_cell_efficiency_hhv * HHV_hydrogen
+    The model simulates electrochemical conversion of hydrogen and oxygen into electricity
+    and water. It calculates:
+    - hydrogen and oxygen consumption based on electrochemical reactions
+    - water production as a byproduct
+    - electricity output based on system capacity and operational conditions
 
-    where:
-    - hydrogen_in is the mass flow rate of hydrogen in kg/hr
-    - fuel_cell_efficiency is the efficiency of the fuel cell (0 <= efficiency <= 1)
-    - HHV_hydrogen is the higher heating value of hydrogen (approximately 142 MJ/kg)
+    Inputs:
+    - hydrogen_in: mass flow rate of hydrogen (kg/h)
+    - oxygen_in: mass flow rate of oxygen (kg/h)
+    - stack_temperature: operating temperature of the fuel cell stack (K)
+    - system_capacity: rated capacity of the fuel cell system (kW)
+
+    Outputs:
+    - hydrogen_consumed: hydrogen consumption rate (kg/h)
+    - oxygen_consumed: oxygen consumption rate (kg/h)
+    - water_out: water production rate (kg/h)
+    - electricity_out: electricity output (kW)
     """
 
     _time_step_bounds = (
@@ -139,8 +149,6 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        # Add natural gas input, default to 0 --> set using feedstock component
-        # or upstream hydrogen converter component
         self.add_input(
             "hydrogen_in",
             val=0.0,
@@ -198,7 +206,7 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=self.n_timesteps,
             units="kg/h",
-            desc="Mass flow rate of water consumed by the fuel cell",
+            desc="Mass flow rate of water produced by the fuel cell",
         )
 
         # Default the electricity command value input as the rated capacity
@@ -207,19 +215,22 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             val=self.config.system_capacity_kw,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity command value for natural gas plant",
+            desc="Electricity command value for PEM fuel cell",
         )
 
     def compute(self, inputs, outputs):
         """
-        Compute electricity output from the fuel cell based on hydrogen input
-            and fuel cell HHV efficiency.
+        Compute electricity output from the fuel cell based on hydrogen and oxygen input.
+
+        Uses I-V curve characteristics to calculate fuel cell current and voltage,
+        then computes hydrogen consumed, oxygen consumed, and water generated for
+        each timestep based on electrochemical reactions.
 
         Args:
-            inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
-                HHV efficiency, electricity_command_value, and system_capacity.
-            outputs: OpenMDAO outputs object for electricity_out,
-                hydrogen_consumed.
+            inputs: OpenMDAO inputs object containing hydrogen_in, oxygen_in,
+                stack_temperature, electricity_command_value, and system_capacity.
+            outputs: OpenMDAO outputs object for electricity_out, hydrogen_consumed,
+                oxygen_consumed, water_out, and various electricity production quantities.
         """
 
         # calculate max input and output
@@ -257,11 +268,12 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # PSUEDO CODE:
         """
         1. Receive power setpoint into fuel cell
-        2. Find current with I-V curve - NEED THIS
-        3. Calculate power out with current - NEED TO FIND CELL ELECTRICITY CALC
-        4. Calculate H2 consumed, O2 consumed, water out
-        5. See if H2 in and O2 in can provide this
-        6. Repeat step 4 if H2 or O2 limit power out
+        2. Find current with I-V curve
+        3. Calculate H2 consumed and O2 consumed
+        4. Check if provided H2 and O2 can meet the demand
+        5. If not, adjust current
+        6. Calculate power out with current and voltage
+        7. Calculate the water produced from the reaction
 
         """
 
@@ -272,8 +284,8 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         for i in range(self.n_timesteps):
             power_reference = inputs[f"{self.commodity}_command_value"][i]
-            inputs["hydrogen_in"][i]
-            inputs["oxygen_in"][i]
+            H2in = inputs["hydrogen_in"][i]
+            O2in = inputs["oxygen_in"][i]
 
             # Find current and voltage from IV curve with power setpoint
             I_cell, V_cell = calc_current(
@@ -291,9 +303,24 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             # print("H2 and O2 consumed per hour", H2_consumed_rate, O2_consumed_rate)
             # print(self.stack_size, self.n_cells)
 
-            # TODO: if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
-            # print("Not enough H2 or O2 for this power point")
-            # implement an adjustment based on H2 & O2 available
+            # TODO:
+            if H2_consumed_rate > H2in or O2_consumed_rate > O2in:
+                # implement an adjustment based on H2 & O2 available
+                new_i_h2 = (
+                    H2in
+                    / (self.dt * self.config.n_stacks * self.n_cells)
+                    * (2.0 * self.f_c)
+                    / (self.N_series * self.M_H2)
+                )
+                new_i_o2 = (
+                    O2in
+                    / (self.dt * self.config.n_stacks * self.n_cells)
+                    * (4.0 * self.f_c)
+                    / (self.N_series * self.M_O2)
+                )
+                I_cell = min(new_i_h2, new_i_o2)
+                # TODO: recalc voltage based on new current
+                print("Not enough H2 or O2 for this power point")
 
             # Compute electricity from the system
             electricity_produced = (
@@ -329,38 +356,8 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         outputs["oxygen_consumed"] = o2_consumed
         outputs["water_out"] = h2o_generated
 
-        # # conversion factor: kW electricity to kg/h hydrogen, units: (kg/h)/kW
-        # kw_to_kgh_h2 = (3600.0 * 0.001) / (fuel_cell_efficiency * HHV_H2_MJ_PER_KG)
-
-        # # available feedstock, saturated at maximum system feedstock consumption
-        # h2_available = np.where(
-        #     inputs["hydrogen_in"] > max_h2_consumption,
-        #     max_h2_consumption,
-        #     inputs["hydrogen_in"],
-        # )
-
-        # # h2 consumed is minimum between available feedstock and output demand
-        # hydrogen_in = np.minimum(h2_available, h2_demand)
-
-        # # make any negative hydrogen input zero
-        # hydrogen_in = np.maximum(hydrogen_in, 0.0)
-
-        # # calculate electricity output in kW
-        # electricity_out_kw = hydrogen_in / kw_to_kgh_h2
-
-        # # clip the electricity output to the system capacity
-        # outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity)
-        # outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
-        #     self.dt / 3600
-        # )
-        # outputs["rated_electricity_production"] = system_capacity
-        # outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
-        #     1 / self.fraction_of_year_simulated
-        # )
-        # outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
-        #     system_capacity * self.n_timesteps * (self.dt / 3600)
-        # )
-        # outputs["hydrogen_consumed"] = outputs["electricity_out"] * kw_to_kgh_h2
+        # TODO: implement a hydrogen and oxygen conversion efficiency based on stack
+        #   temperature and other factors
 
 
 @define(kw_only=True)
