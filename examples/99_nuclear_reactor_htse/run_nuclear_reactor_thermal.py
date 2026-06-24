@@ -1,4 +1,5 @@
 import numpy as np
+import openmdao.api as om
 import matplotlib.pyplot as plt
 
 from h2integrate.core.h2integrate_model import H2IntegrateModel
@@ -8,7 +9,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 h2i = H2IntegrateModel("nuclear_reactor_thermal_htse.yaml")
 
 # generate N2 diagram
-# om.n2(h2i.prob)
+om.n2(h2i.prob)
 
 # Run and process the model
 h2i.run()

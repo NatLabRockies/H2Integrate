@@ -39,6 +39,22 @@ technologies:
       cost_parameters:
         unit_capex: 1295  # $/kW
         fixed_capex: 0.0
+  heat_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: heat
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW
+  htse_electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW
   electrical_load_demand:
     performance_model:
       model: GenericDemandComponent

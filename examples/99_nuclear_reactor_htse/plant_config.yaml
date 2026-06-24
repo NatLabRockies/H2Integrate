@@ -12,13 +12,18 @@ plant:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [nuclear, htse, electricity, cable]
-  - [nuclear, htse, [heat_out, heat_in]]
-  - [htse, nuclear, [heat_demand, external_heat_demand]]
-  - [finance_subgroup_electricity, grid_sell, [LCOE, electricity_sell_price]]
-  - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]
+  - [nuclear, heat_load_demand, [heat_out, heat_in]]
   - [nuclear, electrical_load_demand, [electricity_out, electricity_in]]
+  - [htse, nuclear, [heat_demand, external_heat_demand]]
+  - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]
+  # - [htse, heat_load_demand, [heat_demand, heat_demand]]
+
+  # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
+  # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
+  - [finance_subgroup_electricity, grid_sell, [LCOE, electricity_sell_price]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_set_point]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
+  # - [electrical_load_demand, nuclear, [electricity_demand_out, electricity]]
 tech_to_dispatch_connections: []
 resource_to_tech_connections: []
 finance_parameters:
