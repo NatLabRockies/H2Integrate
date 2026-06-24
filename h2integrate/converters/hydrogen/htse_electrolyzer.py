@@ -1,16 +1,19 @@
 import math
 
 import numpy as np
-from attrs import define, field
+from attrs import field, define
 
+from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.model_baseclasses import (
+    CostModelBaseConfig,
+    ResizeablePerformanceModelBaseConfig,
+)
+from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
     ElectrolyzerCostBaseClass,
     ElectrolyzerPerformanceBaseClass,
 )
-from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
-from h2integrate.core.model_baseclasses import CostModelBaseConfig, ResizeablePerformanceModelBaseConfig
-from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, gt_zero
 
 
 @define(kw_only=True)
@@ -122,15 +125,19 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         n_clusters = max(1, int(math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW)))
         electrolyzer_size_mw = n_clusters * self.config.cluster_rating_MW
         electrolyzer_size_kw = electrolyzer_size_mw * 1000.0
+        import pdb
 
+        pdb.set_trace()
         heat_available_kw = inputs["heat_in"]
-        electricity_available_kw =inputs["electricity_in"]
+        electricity_available_kw = inputs["electricity_in"]
         total_specific_energy = (
             self.config.nominal_heat_required + self.config.nominal_electricity_required
         )
         rated_hydrogen_production = electrolyzer_size_kw / self.config.nominal_electricity_required
 
-        hydrogen_from_energy = (electricity_available_kw + heat_available_kw) / total_specific_energy
+        hydrogen_from_energy = (
+            electricity_available_kw + heat_available_kw
+        ) / total_specific_energy
         hydrogen_out = np.minimum(hydrogen_from_energy, rated_hydrogen_production)
 
         min_turn_down = self.config.turndown_ratio * rated_hydrogen_production
@@ -142,7 +149,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
 
         outputs["hydrogen_out"] = hydrogen_out
-        outputs["heat_demand"] = self.config.nominal_heat_required*electrolyzer_size_kw
+        outputs["heat_demand"] = self.config.nominal_heat_required * electrolyzer_size_kw
         outputs["electricity_demand"] = electricity_demand_kw
         outputs["water_demand"] = hydrogen_out * 18.015 / 2.016
         outputs["rated_hydrogen_production"] = rated_hydrogen_production

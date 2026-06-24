@@ -40,6 +40,23 @@ technologies:
         unit_capex: 1295  # $/kW
         fixed_capex: 0.0
       # finance_parameters:
+  h2_storage:
+    performance_model:
+      model: StorageAutoSizingModel
+    control_strategy:
+      model: SimpleStorageOpenLoopController
+    cost_model:
+      model: LinedRockCavernStorageCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+        max_soc_fraction: 0.9
+        min_soc_fraction: 0.1
+        set_demand_as_avg_commodity_in: true
+        round_trip_efficiency: 1.0
+      cost_parameters:
+        sizing_mode: auto
   # heat_load_demand:
   #   performance_model:
   #     model: GenericDemandComponent
