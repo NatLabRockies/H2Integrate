@@ -25,7 +25,7 @@ technology_interconnections:
   - [solar, elec_combiner, electricity, cable]
   # subtract the combined generation from the demand profile
   - [elec_combiner, electrical_load_demand, electricity, cable]
-  # connect the remaining electricity demand to the NG plant
+  # connect the remaining electricity demand to the NG plant's passthrough controller
   - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
   # connect NG feedstock to NG plant
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]

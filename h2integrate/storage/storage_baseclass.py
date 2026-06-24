@@ -50,6 +50,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         1,
         36000,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "storage"
 
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
@@ -165,21 +166,21 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             ]:
                 if any(intended_dispatch_tech == name for name in self.tech_group_name):
                     self.add_input(
-                        f"{commodity}_demand",
+                        f"{commodity}_set_point",
                         val=self.config.demand_profile,
                         shape=n_timesteps,
                         units=commodity_rate_units,
-                        desc=f"{commodity} demand profile",
+                        desc=f"{commodity} set-point profile",
                     )
                     self.add_discrete_input("pyomo_dispatch_solver", val=lambda: None)
-                    # the controller gets demand from the storage model
+                    # the controller gets set-point from the storage model
                     # set the using feedback control variable to True
                     using_feedback_control = True
                     break
         if not using_feedback_control:
             # using an open-loop storage controller
             self.add_input(
-                f"{commodity}_set_point",
+                f"{commodity}_command_value",
                 val=0.0,
                 shape=n_timesteps,
                 units=commodity_rate_units,
@@ -273,7 +274,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         else:
             storage_commodity_out, soc = self.simulate(
-                storage_dispatch_commands=inputs[f"{self.commodity}_set_point"],
+                storage_dispatch_commands=inputs[f"{self.commodity}_command_value"],
                 charge_rate=charge_rate,
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,

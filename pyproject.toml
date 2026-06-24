@@ -44,7 +44,7 @@ dependencies = [
   "matplotlib",
   "numpy",
   "numpy-financial",
-  "openmdao",
+  "openmdao>=3.44.0",
   "openmeteo-requests",
   "pandas>=2.0.3",
   "ProFAST",

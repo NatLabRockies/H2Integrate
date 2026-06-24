@@ -38,6 +38,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -84,6 +85,10 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         outputs["annual_electricity_produced"] = aep
         outputs["rated_electricity_production"] = self.plant_rating_kw
         outputs["capacity_factor"] = aep / self.plant_capacity
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
 
 
 class WindArdCostCompatibilityComponent(CostModelBaseClass):
@@ -148,11 +153,16 @@ class ArdWindPlantModel(om.Group):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
+
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
         if set_up_ard_model is None:
             msg = (
