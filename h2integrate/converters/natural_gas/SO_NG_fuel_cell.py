@@ -239,6 +239,8 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
         inputs["stack_temperature"]
         # fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
 
+        # Add consumption of water for steam reforming of natural gas to hydrogen
+
         # Set calculation constants:
         self.f_c = 96485.33  # Faraday's constant in A/mol
         self.M_H2 = 0.002016  # Molar mass of H2 in kg/mol
