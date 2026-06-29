@@ -321,6 +321,13 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
                 I_cell = min(new_i_h2, new_i_o2)
                 # TODO: recalc voltage based on new current
                 print("Not enough H2 or O2 for this power point")
+                # Calculate hydrogen and oxygen consumed
+                H2_consumed_rate = ((I_cell * self.N_series * self.M_H2) / (2.0 * self.f_c)) * (
+                    self.dt * self.config.n_stacks * self.n_cells
+                )  # kg/time step
+                O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
+                    self.dt * self.config.n_stacks * self.n_cells
+                )  # kg/time step
 
             # Compute electricity from the system
             electricity_produced = (
