@@ -72,7 +72,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         )
         self.add_input(
             "heat_command_value",
-            val=0.0,
+            val=6400,
             shape=self.n_timesteps,
             units="kW",
             desc="Requested process heat demand from downstream technologies",
@@ -82,18 +82,16 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.add_output("high_pressure_heat", val=0.0, shape=self.n_timesteps, units="kW")
         self.add_output("low_pressure_heat", val=0.0, shape=self.n_timesteps, units="kW")
         self.add_output("heat_out", val=0.0, shape=self.n_timesteps, units="kW")
-
+ 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         operating_mode = discrete_inputs["operating_mode"]
         hp_eff = float(inputs["high_pressure_electrical_efficiency"][0])
         lp_eff = float(inputs["low_pressure_electrical_efficiency"][0])
         electric_capacity_mw = float(inputs["rated_capacity"][0]) * 1e-3  # convert kW to MW
-
-        minimum_heat_extract_mw = np.maximum(inputs["minimum_heat_extract"], 0.0) * 1e-3 #convert kW to MW, fix >0
+        minimum_heat_extract_kw = np.maximum(inputs["minimum_heat_extract"], 0.0)  #maintain kW rating
         requested_power_mw = np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3 #convert kW to MW, fix >0
-        external_heat_demand_mw = np.maximum(inputs["heat_command_value"], 0.0) * 1e-3 #convert kW to MW, fix >0
-
-
+        external_heat_demand_kw = np.maximum(inputs["heat_command_value"], 0.0) #maintaining kW rating
+      
         combined_efficiency = hp_eff + (1.0 - hp_eff) * lp_eff
         if combined_efficiency <= 0.0:
             raise ValueError("Combined nuclear electric efficiency must be greater than zero")
@@ -103,8 +101,8 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         thermal_capacity_mw = electric_capacity_mw / combined_efficiency
         high_pressure_electricity_mw = thermal_capacity_mw * hp_eff
         available_process_heat_mw = thermal_capacity_mw * (1.0 - hp_eff)
-        heat_demand_mw = np.maximum(external_heat_demand_mw, minimum_heat_extract_mw)
-
+        heat_demand_mw = np.maximum(external_heat_demand_kw, minimum_heat_extract_kw) * 1e-3 #convert to MW from kW
+        
         if operating_mode == "heat":
             heat_out_mw = np.minimum(heat_demand_mw, available_process_heat_mw)
             electricity_out_mw = (

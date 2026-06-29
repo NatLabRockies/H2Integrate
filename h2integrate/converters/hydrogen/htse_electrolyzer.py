@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 from attrs import field, define
 
@@ -74,7 +72,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
             units="MW",
             desc="Installed HTSE nameplate capacity",
         )
-        self.add_input("cluster_size", val=-1.0, units="MW")
+        self.add_input("cluster_size", val=1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
 
         self.add_output(
@@ -86,17 +84,28 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         )
         self.add_output(
             "heat_demand",
-            val=0.0,
+            val=self.config.n_clusters
+            * self.config.cluster_rating_MW
+            * 1000
+            * self.config.nominal_heat_required
+            / self.config.nominal_electricity_required,
             shape=self.n_timesteps,
             units="kW",
-            desc="Thermal energy used by the HTSE system",
+            desc="Thermal demanded by the HTSE system",
         )
         self.add_output(
             "electricity_demand",
             val=0.0,
             shape=self.n_timesteps,
             units="kW",
-            desc="Electric energy used by the HTSE system",
+            desc="Electric demand by the HTSE system",
+        )
+        self.add_output(
+            "electricity_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="kW",
+            desc="Electricity consumed by the HTSE",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -122,40 +131,67 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
             else:
                 raise NotImplementedError(f"Sizing mode '{size_mode}' not implemented")
 
-        n_clusters = max(1, int(math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW)))
+        n_clusters = inputs["n_clusters"]
         electrolyzer_size_mw = n_clusters * self.config.cluster_rating_MW
         electrolyzer_size_kw = electrolyzer_size_mw * 1000.0
-        import pdb
 
-        pdb.set_trace()
+        if "system_level_control" in self.options["plant_config"]:
+            hydrogen_demand = inputs["hydrogen_command_value"]  # kg/hr?
+        else:
+            hydrogen_demand = (
+                electrolyzer_size_kw / self.config.nominal_electricity_required
+            )  # kW/(kWh/kg) = kg/hr
+        ratio_heat_elec_nom = (
+            self.config.nominal_heat_required / self.config.nominal_electricity_required
+        )
+
         heat_available_kw = inputs["heat_in"]
         electricity_available_kw = inputs["electricity_in"]
+        # hydrogen_demand = inputs["hydrogen_command_value"]
+
         total_specific_energy = (
             self.config.nominal_heat_required + self.config.nominal_electricity_required
         )
         rated_hydrogen_production = electrolyzer_size_kw / self.config.nominal_electricity_required
 
-        hydrogen_from_energy = (
-            electricity_available_kw + heat_available_kw
-        ) / total_specific_energy
-        hydrogen_out = np.minimum(hydrogen_from_energy, rated_hydrogen_production)
+        # note here that the RATED production is based purely on the electrical requirement.
+        # The heat input is a bonus amount. Units here are kg/hr
+        heat_demand_kw = hydrogen_demand * self.config.nominal_heat_required
 
-        min_turn_down = self.config.turndown_ratio * rated_hydrogen_production
-        hydrogen_out = np.where(hydrogen_out >= min_turn_down, hydrogen_out, 0.0)
-
-        heat_demand_kw = hydrogen_out * self.config.nominal_heat_required
         actual_heat_kw = np.minimum(heat_demand_kw, heat_available_kw)
-        electricity_demand_kw = hydrogen_out * total_specific_energy - actual_heat_kw
-        electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
+        electricity_demand_kw = total_specific_energy * hydrogen_demand - actual_heat_kw
+        ratio_in = heat_available_kw / electricity_available_kw
+        hydrogen_produced = np.where(
+            electricity_available_kw < electricity_demand_kw,
+            np.where(
+                ratio_in > ratio_heat_elec_nom,
+                electricity_available_kw / self.config.nominal_electricity_required,
+                (heat_available_kw + electricity_available_kw) / total_specific_energy,
+            ),
+            (actual_heat_kw + electricity_demand_kw) / total_specific_energy,
+        )
 
-        outputs["hydrogen_out"] = hydrogen_out
-        outputs["heat_demand"] = self.config.nominal_heat_required * electrolyzer_size_kw
-        outputs["electricity_demand"] = electricity_demand_kw
-        outputs["water_demand"] = hydrogen_out * 18.015 / 2.016
+        actual_heat_kw / ratio_heat_elec_nom
+
+        # in this case, the electricity is insufficient compared to the heat, so we'll use
+        # actual_electricity_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
+        min_turn_down = self.config.turndown_ratio * rated_hydrogen_production
+        hydrogen_produced = np.where(hydrogen_produced >= min_turn_down, hydrogen_produced, 0.0)
+
+        # heat_demand_kw = hydrogen_out * self.config.nominal_heat_required
+        # electricity_demand_kw = hydrogen_out * total_specific_energy - actual_heat_kw
+        # electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
+        outputs["electricity_consumed"] = electricity_demand_kw
+        outputs["hydrogen_out"] = hydrogen_produced
+        # outputs["heat_demand"] = np.minimum(rated_hydrogen_production,
+        # inputs["hydrogen_command_value"]) * self.config.nominal_heat_required
+        outputs["heat_demand"] = hydrogen_demand * self.config.nominal_heat_required
+        outputs["electricity_demand"] = electrolyzer_size_kw
+        outputs["water_demand"] = hydrogen_produced * 18.015 / 2.016
         outputs["rated_hydrogen_production"] = rated_hydrogen_production
         outputs["electrolyzer_size_mw"] = electrolyzer_size_mw
 
-        total_hydrogen_produced = np.sum(hydrogen_out) * (self.dt / 3600.0)
+        total_hydrogen_produced = np.sum(hydrogen_produced) * (self.dt / 3600.0)
         outputs["total_hydrogen_produced"] = total_hydrogen_produced
         annual_hydrogen = total_hydrogen_produced / self.fraction_of_year_simulated
         outputs["annual_hydrogen_produced"] = np.full(self.plant_life, annual_hydrogen)

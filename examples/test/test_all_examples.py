@@ -3048,7 +3048,7 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     annual_hydrogen = model.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
 
     with subtests.test("Nuclear annual electricity is positive"):
-        assert annual_nuclear_electricity == pytest.approx(8.758072800000003)
+        assert annual_nuclear_electricity == pytest.approx(8.75162086757)
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)
