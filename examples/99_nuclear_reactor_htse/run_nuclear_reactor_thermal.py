@@ -2,11 +2,23 @@ import numpy as np
 import openmdao.api as om
 import matplotlib.pyplot as plt
 
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
+# load config and update htse refurb profile
+config = load_yaml("nuclear_reactor_thermal_htse.yaml")
+plant_config = load_yaml(config["plant_config"])
+plant_life = plant_config["plant"]["plant_life"]
+tech_config = load_yaml(config["technology_config"])
+
+refurb = np.zeros(plant_life)
+refurb[6::7] = 1
+tech_config["technologies"]["htse"]["model_inputs"]["capital_items"]["refurb"] = refurb
+
+config["technology_config"] = tech_config
 # Create a GreenHEART model
-h2i = H2IntegrateModel("nuclear_reactor_thermal_htse.yaml")
+h2i = H2IntegrateModel(config)
 
 # generate N2 diagram
 om.n2(h2i.prob)

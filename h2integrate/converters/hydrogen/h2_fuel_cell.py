@@ -146,6 +146,10 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         # calculate electricity output in kW
         electricity_out_kw = hydrogen_in / kw_to_kgh_h2
 
+        refurb_schedule = np.zeros(self.plant_life)
+        refurb_schedule[6::7] = 1
+        outputs["replacement_schedule"] = refurb_schedule
+
         # clip the electricity output to the system capacity
         outputs["electricity_out"] = np.minimum(electricity_out_kw, system_capacity)
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (

@@ -39,7 +39,10 @@ technologies:
       cost_parameters:
         unit_capex: 1295  # $/kW
         fixed_capex: 0.0
-      # finance_parameters:
+      capital_items:
+        depr_type: MACRS     # can be "MACRS" or "Straight line"
+        depr_period: 7
+        refurb: null  # to be assigned at run rime
   h2_storage:
     performance_model:
       model: StorageAutoSizingModel
@@ -55,6 +58,8 @@ technologies:
         min_soc_fraction: 0.1
         set_demand_as_avg_commodity_in: true
         round_trip_efficiency: 1.0
+      control_parameters:
+        init_soc_fraction: 0.5
       cost_parameters:
         sizing_mode: auto
   # heat_load_demand:
