@@ -184,17 +184,13 @@ def test_profast_npv_no1_change_sell_price(
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf.{variable}", cost, units=units)
 
-    for variable, cost in fake_cost_dict.items():
-        units = "USD" if "capex" in variable else "USD/year"
-        prob.set_val(f"pf2.{variable}", cost, units=units)
-
-    # This `run_model` call is necessary before we set the sell price for 'pf2' because OpenMDAO
-    # requires an initial model run to establish the variable connections and units.
-    prob.run_model()
-
     # set inputs for 'pf2' with commodity sell price of 0.07 USD/(kW*h)
     new_sell_price = 0.07
     prob.set_val("pf2.sell_price_electricity_no1_expensive", new_sell_price, units="USD/(kW*h)")
+
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf2.{variable}", cost, units=units)
 
     prob.run_model()
 
