@@ -7,7 +7,7 @@ import numpy_financial as npf
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.finances.tools import check_plant_config_and_profast_params
+from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
 
 
@@ -91,21 +91,6 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
         self.add_output(self.NPV_str, val=0.0, units="USD")
 
-        self.add_input(
-            f"rated_{self.options['commodity_type']}_production",
-            val=0.0,
-            units_by_conn=True,
-            shape=1,
-            require_connection=True,
-        )
-        self.add_input(
-            "capacity_factor",
-            val=0.0,
-            units="unitless",
-            shape=plant_life,
-            require_connection=True,
-        )
-
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]
         if "plant_life" in finance_params:
@@ -117,6 +102,25 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.config = NumpyFinancialNPVFinanceConfig.from_dict(
             finance_params,
             additional_cls_name=self.__class__.__name__,
+        )
+
+        rate_units = _compute_rate_units(
+            self.config.commodity_sell_price_units, check_conversion=True
+        )
+
+        self.add_input(
+            f"rated_{self.options['commodity_type']}_production",
+            val=0.0,
+            units=rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            shape=plant_life,
+            require_connection=True,
         )
 
         tech_config = self.tech_config = self.options["tech_config"]

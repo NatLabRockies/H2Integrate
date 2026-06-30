@@ -1,6 +1,12 @@
 import re
 
-from openmdao.utils.units import _find_unit
+from openmdao.utils.units import (
+    PhysicalUnit,
+    _find_unit,
+    convert_units,
+    is_compatible,
+    simplify_unit,
+)
 
 
 def check_plant_config_and_profast_params(
@@ -79,3 +85,61 @@ def _compute_price_units(outputs):
     commodity_amount_units = f"({rate_units[0]})*h"
     price_units = f"USD/({commodity_amount_units})"
     return _find_unit(price_units)
+
+
+def _compute_rate_units(price_units: str, check_conversion: bool):
+    """Estimate rate units from price units.
+
+    Args:
+        price_units (str): Price units. Should be defined as USD per some commodity amount.
+        check_conversion (bool): Whether to check for a conversion factor of 1.0 from price_units
+            to price units re-calculated from the estimated rate_units
+
+
+    Raises:
+        ValueError: if the `rate_units` cannot be easily estimated from the `price_units`
+
+    Returns:
+        str: rate units extrapolated from `price_units`.
+    """
+
+    # 9 base units that make-up `_powers` attribute are:
+    # [m, kg, s, A, K, mol, cd, rad, str, USD, pax, byte, unitless]
+
+    # kg has powers[:3] of [0,1,0],
+    # kg/s has powers[:3] of [0, 1, -1]
+    # kW*h has powers[:3] of [2, 1, -2]
+    # kW has powers[:3] of [2, 1, -3]
+
+    price_unit_cls = _find_unit(price_units)
+    usd_units = _find_unit("USD")
+
+    names = price_unit_cls._names - usd_units._names
+    factor = usd_units._factor * price_unit_cls._factor
+    amount_units_powers = [a - b for a, b in zip(price_unit_cls._powers, usd_units._powers)]
+    denom_amount_unit_cls = PhysicalUnit(names, factor, amount_units_powers)
+    amount_units = simplify_unit(f"1/({denom_amount_unit_cls.name()})")
+
+    # amount -> rate means subtract 1 from 3rd element of ``_powers``
+    amount_unit_cls = _find_unit(amount_units)
+    # subtract away 1 hr
+    hr_units = _find_unit("h")
+    rate_names = amount_unit_cls._names - hr_units._names
+    rate_factor = hr_units._factor * amount_unit_cls._factor
+    rate_units_powers = [a - b for a, b in zip(amount_unit_cls._powers, hr_units._powers)]
+    rate_unit_cls = PhysicalUnit(rate_names, rate_factor, rate_units_powers)
+    rate_units = rate_unit_cls.name()
+
+    if not check_conversion:
+        return rate_units
+    equivalent_price_units = simplify_unit(f"USD/(({rate_units})*h)")
+
+    conversion = convert_units(1, price_units, equivalent_price_units)
+    if is_compatible(price_units, equivalent_price_units) and float(conversion) == 1.0:
+        return rate_units
+
+    msg = (
+        f"Estimated rate units of '{rate_units}' from price units of '{price_units}'."
+        f"Try to use price units of '{equivalent_price_units}' instead."
+    )
+    raise ValueError(msg)

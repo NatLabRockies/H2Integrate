@@ -1,3 +1,6 @@
+from openmdao.utils.units import convert_units
+
+from h2integrate.finances.tools import _compute_rate_units
 from h2integrate.finances.profast_base import ProFastBase
 
 
@@ -80,9 +83,34 @@ class ProFastNPV(ProFastBase):
         """
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
-        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        self.commodity_amount_units = self.commodity_sell_price_units.replace("USD/", "").strip(
+            "()"
+        )
 
-        pf = self.populate_profast(inputs)
+        # compute rate_units from the price
+        rate_units_from_price = _compute_rate_units(
+            self.commodity_sell_price_units, check_conversion=False
+        )
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
+
+        # ensure that sell price units are compatible with the rate units
+        if float(conversion_ratio) != 1.0:
+            # convert rate units to units compatible with the price_units
+            inputs_adjusted = dict(inputs.items())
+            capacity_converted = convert_units(
+                inputs[f"rated_{self.options['commodity_type']}_production"],
+                rate_units_capacity,
+                rate_units_from_price,
+            )
+            inputs_adjusted[f"rated_{self.options['commodity_type']}_production"] = (
+                capacity_converted
+            )
+            pf = self.populate_profast(inputs_adjusted)
+        else:
+            pf = self.populate_profast(inputs)
 
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(
             price=inputs[f"sell_price_{self.output_txt}"][0]
