@@ -43,6 +43,7 @@
 - Moves `h2integrate/resource/utilities/file_tools.py::check_resource_dir` to a general function
   `h2integrate/core/utilities/file_utils.py::check_data_dir` with a wrapped version for resource
   data (`check_resource_dir`) and feedstock data (`check_feedstock_data`). [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
+- Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
 
 ## 0.8 [April 15, 2026]
 
