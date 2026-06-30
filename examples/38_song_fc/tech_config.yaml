@@ -1,20 +1,20 @@
 name: technology_config
 description: This hybrid plant produces ammonia
 technologies:
-  PEM_fuel_cell:
+  SONG_fuel_cell:
     performance_model:
-      model: PEMH2FuelCellPerformanceModel
+      model: SONGFuelCellPerformanceModel
     cost_model:
-      model: PEMH2FuelCellCostModel
+      model: SONGFuelCellCostModel
     model_inputs:
       shared_parameters:
         system_capacity_kw: 1500
       performance_parameters:
         n_stacks: 60
-        stack_temperature_K: 278  # Not used yet
+        stack_temperature_K: 1073  # Not used yet
       cost_parameters:
         capex_stack_per_kw: 800
-        capex_hydrogen_supply_per_kw: 140.67
+        capex_fuel_supply_per_kw: 140.67
         capex_air_supply_per_kw: 138.79
         capex_cooling_per_kw: 64.14
         capex_controls_instrumentation_per_kw: 106.52
@@ -31,20 +31,20 @@ technologies:
         commodity: electricity
         commodity_rate_units: kW
         demand_profile: 1000
-  h2_feedstock:
+  ng_feedstock:
     performance_model:
       model: FeedstockPerformanceModel
     cost_model:
       model: FeedstockCostModel
     model_inputs:
       shared_parameters:
-        commodity: hydrogen
-        commodity_rate_units: kg/h
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
       performance_parameters:
-        rated_capacity: 50.0  # kg/h of hydrogen
+        rated_capacity: 20.0  # MMBtu/h of natural gas
       cost_parameters:
         cost_year: 2022
-        price: 5.0
+        price: 0.1
         annual_cost: 0.
         start_up_cost: 0.0
   o2_feedstock:
@@ -60,6 +60,6 @@ technologies:
         rated_capacity: 400.0  # kg/h of oxygen
       cost_parameters:
         cost_year: 2022
-        price: 0.5  # $5/kg of oxygen. price is extremely variable
+        price: 0.5  # $0.5/kg of oxygen. price is extremely variable
         annual_cost: 0.
         start_up_cost: 0.0

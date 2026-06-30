@@ -97,10 +97,11 @@ def calc_current(power_ref, cell_area, n_cells, stack_number):
 
     # convert power_ref to Watts
     power_ref = power_ref * 1e3
+    # clip very high power_ref to max power in curve
     power_density = power_ref / cell_area / stack_number / n_cells
-    # print("Power density", power_density)
+    power_density_clip = min(power_density, max(power_curve))
 
-    I_cell = max(power_I_curve(power_density), 0)
+    I_cell = max(power_I_curve(power_density_clip), 0)
     V_cell = V_I_curve(I_cell)
     I_cell = I_cell * cell_area
     return I_cell, V_cell
@@ -113,6 +114,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
     The model calculates electricity output based on natural gas and oxygen inputs,
     with current and voltage determined from power density using IV curves.
     Produces water and carbon dioxide as byproducts.
+    Possible source: https://www.pnnl.gov/main/publications/external/technical_reports/PNNL-18338.pdf
 
     where:
     - natural_gas_in is the mass flow rate of natural gas in kg/hr
@@ -147,7 +149,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
             "natural_gas_in",
             val=0.0,
             shape=self.n_timesteps,
-            units="kg/h",
+            units="MMBtu/h",
         )
 
         self.add_input(
@@ -183,7 +185,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
             "natural_gas_consumed",
             val=0.0,
             shape=self.n_timesteps,
-            units="kg/h",
+            units="MMBtu/h",
             desc="Mass flow rate of natural gas consumed by the fuel cell",
         )
 
@@ -234,10 +236,22 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
 
         # calculate max input and output
         inputs["system_capacity"]  # plant capacity in kW
-        inputs["natural_gas_in"]  # kg/h
-        inputs["oxygen_in"]  # kg/h
-        inputs["stack_temperature"]
+        natural_gas_in = inputs["natural_gas_in"]  # MMBtu/h
+        oxygen_in = inputs["oxygen_in"]  # kg/h
+        stack_temperature = inputs["stack_temperature"]
         # fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
+
+        # Convert natural gas input from MMBtu/h to kg/h for CH4
+        # Assume 1 MMBtu ~ 1 MCF
+        # Use ideal gas law to account for temperature difference
+        stack_temperature = inputs["stack_temperature"]
+        ng_density_cold = 0.717  # kg/m^3 at 25 deg C and 1 atm
+        ng_density_hot = ng_density_cold * (298.15 / stack_temperature)  # kg/m^3 at stack temp
+
+        # Use Mass = volume * density, and 1 MCF = 1000 ft^3 = 28.3168 m^3
+        mcf_to_kg = 28.3168 * ng_density_hot  # kg
+        print(natural_gas_in, mcf_to_kg)
+        natural_gas_kg_hr = natural_gas_in * mcf_to_kg  # Convert MMBtu/h to kg/h for CH4
 
         # Add consumption of water for steam reforming of natural gas to hydrogen
 
@@ -287,8 +301,8 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
 
         for i in range(self.n_timesteps):
             power_reference = inputs[f"{self.commodity}_command_value"][i]
-            inputs["natural_gas_in"][i]
-            inputs["oxygen_in"][i]
+            natural_gas_in_loop = natural_gas_kg_hr[i]
+            oxygen_in_loop = oxygen_in[i]
 
             # Find current and voltage from IV curve with power setpoint
             I_cell, V_cell = calc_current(
@@ -303,12 +317,30 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
                 self.dt * self.config.n_stacks * self.n_cells
             )  # kg/time step
 
-            # print("NG and O2 consumed per hour", NG_consumed_rate, O2_consumed_rate)
-            # print(self.stack_size, self.n_cells)
-
-            # TODO: if NG_consumed_rate > NGin or O2_consumed_rate > O2in:
-            # print("Not enough NG or O2 for this power point")
-            # implement an adjustment based on H2 & O2 available
+            if NG_consumed_rate > natural_gas_in_loop or O2_consumed_rate > oxygen_in_loop:
+                # implement an adjustment based on H2 & O2 available
+                new_i_ng = (
+                    natural_gas_in_loop
+                    / (self.dt * self.config.n_stacks * self.n_cells)
+                    * (8.0 * self.f_c)
+                    / (self.N_series * self.M_CH4)
+                )
+                new_i_o2 = (
+                    oxygen_in_loop
+                    / (self.dt * self.config.n_stacks * self.n_cells)
+                    * (4.0 * self.f_c)
+                    / (self.N_series * self.M_O2)
+                )
+                I_cell = min(new_i_ng, new_i_o2)
+                # TODO: recalc voltage based on new current
+                print("Not enough NG or O2 for this power point")
+                # Calculate natural gas and oxygen consumed
+                NG_consumed_rate = ((I_cell * self.N_series * self.M_CH4) / (8.0 * self.f_c)) * (
+                    self.dt * self.config.n_stacks * self.n_cells
+                )  # kg/time step
+                O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
+                    self.dt * self.config.n_stacks * self.n_cells
+                )  # kg/time step
 
             # Compute electricity from the system
             electricity_produced = (
@@ -348,7 +380,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / (
             self.config.system_capacity_kw * self.n_timesteps * (self.dt / 3600)
         )
-        outputs["natural_gas_consumed"] = ng_consumed
+        outputs["natural_gas_consumed"] = ng_consumed / mcf_to_kg  # Convert back to MMBtu/h
         outputs["oxygen_consumed"] = o2_consumed
         outputs["water_out"] = h2o_generated
         outputs["carbon_dioxide_out"] = co2_generated

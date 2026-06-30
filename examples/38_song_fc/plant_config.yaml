@@ -10,10 +10,10 @@ sites:
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
    # connect feedstocks to fuel cell
-  - [h2_feedstock, PEM_fuel_cell, hydrogen, pipe]
-  - [o2_feedstock, PEM_fuel_cell, oxygen, pipe]
+  - [ng_feedstock, SONG_fuel_cell, natural_gas, pipe]
+  - [o2_feedstock, SONG_fuel_cell, oxygen, pipe]
    # connect fuel cell to demand component
-  - [PEM_fuel_cell, electricity_load_demand, electricity, cable]
+  - [SONG_fuel_cell, electricity_load_demand, electricity, cable]
 plant:
   plant_life: 2
 finance_parameters:
@@ -43,18 +43,18 @@ finance_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022
   finance_subgroups:
-    h2:
-      commodity: hydrogen
-      commodity_stream: h2_feedstock
-      technologies: [h2_feedstock]
-    o2:
-      commodity: oxygen
-      commodity_stream: o2_feedstock
-      technologies: [o2_feedstock]
+    # h2:
+    #   commodity: hydrogen
+    #   commodity_stream: h2_feedstock
+    #   technologies: [h2_feedstock]
+    # o2:
+    #   commodity: oxygen
+    #   commodity_stream: o2_feedstock
+    #   technologies: [o2_feedstock]
     electricity:
       commodity: electricity
-      commodity_stream: PEM_fuel_cell
+      commodity_stream: SONG_fuel_cell
       technologies:
-        - PEM_fuel_cell
-        - h2_feedstock
+        - SONG_fuel_cell
+        - ng_feedstock
         - o2_feedstock
