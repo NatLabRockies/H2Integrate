@@ -103,27 +103,31 @@ def _compute_rate_units(price_units: str, check_conversion: bool):
         str: rate units extrapolated from `price_units`.
     """
 
-    # 9 base units that make-up `_powers` attribute are:
+    # 9 base units that make-up ``_powers`` attribute of a ``PhysicalUnit`` are:
     # [m, kg, s, A, K, mol, cd, rad, str, USD, pax, byte, unitless]
+    # All base units have a ``_factor`` attribute of 1.0
+    # ``_factor`` is the amount to multiply a number by to convert from the base units
+    # to the other units. For example, 'g' has a factor of 0.001
 
-    # kg has powers[:3] of [0,1,0],
-    # kg/s has powers[:3] of [0, 1, -1]
-    # kW*h has powers[:3] of [2, 1, -2]
-    # kW has powers[:3] of [2, 1, -3]
+    # 1. convert price units to amount units
 
+    # Create ``PhysicalUnit`` objects for the price units and for units of USD
     price_unit_cls = _find_unit(price_units)
     usd_units = _find_unit("USD")
 
+    # Remove the USD component from the numerator (divide by USD)
     names = price_unit_cls._names - usd_units._names
     factor = usd_units._factor * price_unit_cls._factor
     amount_units_powers = [a - b for a, b in zip(price_unit_cls._powers, usd_units._powers)]
     denom_amount_unit_cls = PhysicalUnit(names, factor, amount_units_powers)
     amount_units = simplify_unit(f"1/({denom_amount_unit_cls.name()})")
 
-    # amount -> rate means subtract 1 from 3rd element of ``_powers``
+    # 2. convert amount units to rate units
+    # Create ``PhysicalUnit`` objects for the amount units and for units of h
     amount_unit_cls = _find_unit(amount_units)
-    # subtract away 1 hr
     hr_units = _find_unit("h")
+
+    # Add in a time component to the denominator (divide by hours)
     rate_names = amount_unit_cls._names - hr_units._names
     rate_factor = hr_units._factor * amount_unit_cls._factor
     rate_units_powers = [a - b for a, b in zip(amount_unit_cls._powers, hr_units._powers)]
