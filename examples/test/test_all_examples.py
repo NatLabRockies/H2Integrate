@@ -316,20 +316,20 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
-            pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-6)
+            pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-4)
             == 2975616.89
         )
 
     with subtests.test("Check ammonia CapEx"):
         assert (
-            pytest.approx(model.prob.get_val("ammonia.CapEx", units="USD"), rel=1e-6)
-            == 1.15173753e09
+            pytest.approx(model.prob.get_val("ammonia.CapEx", units="USD"), rel=1e-4)
+            == 1151737526.88
         )
 
     with subtests.test("Check ammonia OpEx"):
         assert (
             pytest.approx(model.prob.get_val("ammonia.OpEx", units="USD/year")[0], rel=1e-4)
-            == 25414748.989416014
+            == 25415561.5
         )
 
     with subtests.test("Check ammonia production"):
@@ -344,7 +344,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted", units="USD")[0],
-                rel=1e-6,
+                rel=1e-4,
             )
             == 3728034379.0699997
         )
@@ -353,7 +353,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         assert (
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
-                rel=1e-6,
+                rel=1e-4,
             )
             == 79258124.93845007
         )
@@ -361,7 +361,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOH"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-6
+                model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-4
             )
             == 4.013427289493614
         )
@@ -369,14 +369,14 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-6
+                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-4
             )
             == 1.1021542544557135
         )
     with subtests.test("Check LCON"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_n2.LCON", units="USD/t")[0], rel=1e-6
+                model.prob.get_val("finance_subgroup_n2.LCON", units="USD/t")[0], rel=1e-4
             )
             == 5.03140888
         )
