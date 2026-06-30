@@ -272,6 +272,7 @@ class IronTransportCostConfig(BaseConfig):
     cost_year: int = field(converter=int, validator=range_val(2010, 2024))
     land_shipping_cost: float = field()
     water_shipping_cost: float = field()
+    marginal_cost: float = field(default=0.0)
 
 
 class IronTransportCostComponent(CostModelBaseClass):
@@ -286,8 +287,6 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         target_dollar_year = self.options["plant_config"]["finance_parameters"][
             "cost_adjustment_parameters"
         ]["target_dollar_year"]
@@ -307,9 +306,9 @@ class IronTransportCostComponent(CostModelBaseClass):
         self.add_input("land_transport_distance_great_lakes", val=0.0, units="mi")
         self.add_input("water_transport_distance_great_lakes", val=0.0, units="mi")
         self.add_input("land_transport_distance_overland", val=0.0, units="mi")
-        self.add_input("iron_ore_in", val=0.0, shape=n_timesteps, units="t/h")
+        self.add_input("iron_ore_in", val=0.0, shape=self.n_timesteps, units="t/h")
 
-        self.add_output("iron_ore_out", val=0.0, shape=n_timesteps, units="t/h")
+        self.add_output("iron_ore_out", val=0.0, shape=self.n_timesteps, units="t/h")
         self.add_output("iron_transport_cost", val=0.0, units="USD/t")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

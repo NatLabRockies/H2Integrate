@@ -104,7 +104,7 @@ class PyomoDispatchPlantModel:
         inputs (dict):
             Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
                 f"{commodity}_in"       : Available generated commodity profile.
-                f"{commodity}_demand"   : Demanded commodity output profile.
+                f"{commodity}_set_point"   : Demanded commodity output profile.
         dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
 
         """

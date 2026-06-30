@@ -4,14 +4,13 @@ import numpy as np
 import pytest
 from pytest import fixture
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_yaml, load_tech_yaml, load_driver_yaml
+from h2integrate import H2IntegrateModel, load_yaml, load_tech_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 @fixture
-def configuration(temp_copy_of_example):
-    example_folder = temp_copy_of_example
+def configuration(temp_copy_of_example_module_scope):
+    example_folder = temp_copy_of_example_module_scope
     config = load_yaml(example_folder / "02_texas_ammonia.yaml")
 
     driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
@@ -20,9 +19,6 @@ def configuration(temp_copy_of_example):
     config["driver_config"] = driver_config
 
     tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
-    tech_config["technologies"]["wind"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
-        str(output_folder)
-    )
     config["technology_config"] = tech_config
     return config
 
@@ -30,9 +26,7 @@ def configuration(temp_copy_of_example):
 @fixture
 def run_example_02_sql_fpath(configuration):
     # check if case file exists, if so, return the filepath
-    output_folder = (
-        Path(configuration["driver_config"]["general"]["folder_output"]).resolve().parent
-    )
+    output_folder = Path(configuration["driver_config"]["general"]["folder_output"]).resolve()
     sql_fpath = output_folder / "cases.sql"
     if sql_fpath.exists():
         return sql_fpath
@@ -43,7 +37,7 @@ def run_example_02_sql_fpath(configuration):
         # Set the battery demand profile
         demand_profile = np.ones(8760) * 640.0
         h2i.setup()
-        h2i.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+        h2i.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
         # Run the model
         h2i.run()
@@ -60,7 +54,7 @@ def test_save_csv_all_results(subtests, configuration, run_example_02_sql_fpath)
     res = save_case_timeseries_as_csv(run_example_02_sql_fpath, save_to_file=True)
 
     with subtests.test("Check number of columns"):
-        assert len(res.columns.to_list()) == 51
+        assert len(res.columns.to_list()) == 61
 
     with subtests.test("Check number of rows"):
         assert len(res) == 8760

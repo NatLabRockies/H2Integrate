@@ -7,9 +7,7 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR
-from h2integrate.core.file_utils import load_yaml
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import ROOT_DIR, H2IntegrateModel, load_yaml, load_plant_yaml
 
 
 ROOT = Path(__file__).parents[1]
@@ -27,7 +25,7 @@ def test_steel_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 720.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -40,7 +38,7 @@ def test_steel_example(subtests, temp_copy_of_example):
                 model.prob.get_val("combiner.electricity_out", units="MW").sum(),
                 rel=1e-3,
             )
-            == 5901098.278035271
+            == 5751758.8188888505
         )
 
     with subtests.test("Check total adjusted CapEx (electricity)"):
@@ -70,13 +68,13 @@ def test_steel_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
                 rel=1e-3,
             )
-            == 90.8231905486079
+            == 93.1813363926128
         )
 
     with subtests.test("Check H2 Storage capacity"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.storage_capacity", units="kg"), rel=1e-3)
-            == 2559669.7759292
+            == 2277716.528289855
         )
 
     with subtests.test("Check LCOH"):
@@ -85,13 +83,13 @@ def test_steel_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 8.235313509720276
+            == 8.293500241229578
         )
 
     with subtests.test("Check LCOS"):
         assert (
             pytest.approx(model.prob.get_val("steel.LCOS", units="USD/t")[0], rel=1e-3)
-            == 1264.2821232584045
+            == 1268.1622609902959
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -102,7 +100,7 @@ def test_steel_example(subtests, temp_copy_of_example):
                 ],
                 rel=1e-3,
             )
-            == 5129491338.670795
+            == 5117176607.057962
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -113,7 +111,7 @@ def test_steel_example(subtests, temp_copy_of_example):
                 )[0],
                 rel=1e-3,
             )
-            == 97887982.86294547
+            == 97500209.68817
         )
 
     with subtests.test("Check steel CapEx"):
@@ -139,7 +137,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -176,13 +174,13 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage CapEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.CapEx", units="USD")[0], rel=1e-3)
-            == 64599012.73829915
+            == 69619932.33579609
         )
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year")[0], rel=1e-3)
-            == 2975616.8932987223
+            == 3112736.4523414522
         )
 
     with subtests.test("Check ammonia CapEx"):
@@ -205,7 +203,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 ],
                 rel=1e-3,
             )
-            == 2577162708.3
+            == 2581889781.7210965
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -216,7 +214,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 )[0],
                 rel=1e-3,
             )
-            == 53842563.43404999
+            == 53993917.770878166
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -226,7 +224,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.0155433
+            == 4.205885041540039
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -235,7 +233,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.0155433
+            == 4.205885041540039
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -245,7 +243,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 1.027395
+            == 1.0286292128939685
         )
 
     # Check that the expected output files exist
@@ -272,7 +270,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     # Set battery demand profile to electrolyzer capacity
     demand_profile = np.ones(8760) * 640.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -339,7 +337,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
             )
-            == 406333.161
+            == 406226.7872
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -357,7 +355,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
                 rel=1e-6,
             )
-            == 79257312.42365658
+            == 79258124.93845007
         )
 
     with subtests.test("Check LCOH"):
@@ -373,7 +371,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-6
             )
-            == 1.1018637096646757
+            == 1.1021542544557135
         )
     with subtests.test("Check LCON"):
         assert (
@@ -614,7 +612,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
     # Set battery demand profile
     demand_profile = np.ones(8760) * 340.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     # Run the model
     model.run()
 
@@ -646,8 +644,38 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
 def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
+    new_finance_subgroup_h2 = {
+        "hydrogen_ts": {
+            "commodity": "hydrogen",
+            "commodity_stream": "electrolyzer",
+            "use_commodity_stream_timeseries": True,
+            "commodity_stream_output": "hydrogen_out",
+            "technologies": ["wind", "electrolyzer"],
+        }
+    }
+
+    new_finance_subgroup_wind = {
+        "electricity_ts": {
+            "commodity": "electricity",
+            "commodity_stream": "wind",
+            "use_commodity_stream_timeseries": True,
+            "commodity_stream_output": "electricity_out",
+            "technologies": ["wind"],
+        }
+    }
+
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+
+    plant_config["finance_parameters"]["finance_subgroups"].update(new_finance_subgroup_h2)
+    plant_config["finance_parameters"]["finance_subgroups"].update(new_finance_subgroup_wind)
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": example_folder / "tech_config.yaml",
+        "driver_config": example_folder / "driver_config.yaml",
+    }
     # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "offshore_plant_splitter_doc_h2.yaml")
+    model = H2IntegrateModel(top_level_config)
 
     # Run the model
     model.run()
@@ -679,6 +707,23 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
             == 9.8059083
         )
 
+    with subtests.test(
+        "Check LCOH (using timeseries) is less than LCOH using lifetime performance"
+    ):
+        assert (
+            model.prob.get_val("finance_subgroup_hydrogen_ts.LCOH", units="USD/kg")[0]
+            < model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
+        )
+
+    with subtests.test("Check LCOH (using timeseries)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_ts.LCOH", units="USD/kg")[0],
+                rel=1e-3,
+            )
+            == 9.34595395123
+        )
+
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(
@@ -694,6 +739,58 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
                 rel=1e-3,
             )
             == 132.395036462
+        )
+
+    with subtests.test("Check LCOE (using timeseries)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity_ts.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+        )
+
+    with subtests.test("Check LCOE (doc)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity_doc.LCOE", units="USD/(MW*h)")[0],
+                rel=1e-3,
+            )
+            == 674.2414136935529
+        )
+
+    with subtests.test("Check finance_subgroup_electricity_doc electricity inputs"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_doc.rated_electricity_production", units="kW"
+                ),
+                rel=1e-6,
+            )
+            == model.prob.get_val("doc.electricity_in", units="kW").mean()
+        )
+
+    with subtests.test("Check LCOE (electrolyzer)"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_electrolyzer.LCOE", units="USD/(MW*h)"
+                )[0],
+                rel=1e-3,
+            )
+            == 182.8942790183688
+        )
+
+    with subtests.test("Check finance_subgroup_electricity_electrolyzer electricity inputs"):
+        assert (
+            pytest.approx(
+                model.prob.get_val(
+                    "finance_subgroup_electricity_electrolyzer.rated_electricity_production",
+                    units="kW",
+                ),
+                rel=1e-6,
+            )
+            == model.prob.get_val("electrolyzer.electricity_in", units="kW").mean()
         )
 
 
@@ -750,7 +847,7 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     "example_folder,resource_example_folder", [("13_dispatch_for_electrolyzer", None)]
 )
 def test_electrolyzer_demand(subtests, temp_copy_of_example):
-    from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+    from h2integrate import load_tech_yaml, load_plant_yaml, load_driver_yaml
 
     example_folder = temp_copy_of_example
 
@@ -777,7 +874,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     electrolyzer_capacity_MW = 60
 
     # Set the battery demand as 10% of the electrolyzer capacity
-    h2i.prob.set_val("battery.electricity_demand", 0.1 * electrolyzer_capacity_MW, units="MW")
+    h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
     h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
     h2i.run()
@@ -814,7 +911,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
         assert pytest.approx(127705.51498100, rel=1e-6) == electricity_to_electrolyzer
     # Re-run where we set the battery demand equal to the electrolyzer capacity
 
-    h2i.prob.set_val("battery.electricity_demand", electrolyzer_capacity_MW, units="MW")
+    h2i.prob.set_val("battery.electricity_set_point", electrolyzer_capacity_MW, units="MW")
     h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
     h2i.run()
@@ -944,7 +1041,7 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
     # Set battery demand profile
     demand_profile = np.ones(8760) * 330.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -1057,7 +1154,9 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
     pre_ng_missed_load = model.prob.get_val(
         "electrical_load_demand.unmet_electricity_demand_out", units="kW"
     )
-    ng_electricity_demand = model.prob.get_val("natural_gas_plant.electricity_demand", units="kW")
+    ng_electricity_set_point = model.prob.get_val(
+        "natural_gas_plant.electricity_command_value", units="kW"
+    )
     ng_electricity_production = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
     bat_init_charge = 200000.0 * 0.1  # max capacity in kW and initial charge rate percentage
 
@@ -1091,11 +1190,11 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
             == sum(ng_electricity_production) + solar_aep
         )
 
-    with subtests.test("Check missed load is natural gas plant electricity demand"):
-        assert pytest.approx(ng_electricity_demand, rel=1e-6) == pre_ng_missed_load
+    with subtests.test("Check missed load is natural gas plant electricity set point"):
+        assert pytest.approx(ng_electricity_set_point, rel=1e-6) == pre_ng_missed_load
 
-    with subtests.test("Check natural_gas_plant electricity out equals demand"):
-        assert pytest.approx(ng_electricity_demand, rel=1e-6) == ng_electricity_production
+    with subtests.test("Check natural_gas_plant electricity out equals set point"):
+        assert pytest.approx(ng_electricity_set_point, rel=1e-6) == ng_electricity_production
 
     # Subtests for checking specific values
     with subtests.test("Check Natural Gas CapEx"):
@@ -1309,7 +1408,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
 
     # TODO: Update with demand module once it is developed
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
     # Run the model
     model.run()
@@ -1596,7 +1695,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
         # Demand should be met for the last part of the year
         assert np.allclose(
             dispatched_electricity[8700:],
-            model.prob.get_val("battery.electricity_demand", units="MW")[8700:],
+            model.prob.get_val("battery.electricity_set_point", units="MW")[8700:],
         )
 
     # Subtest for LCOE
@@ -1647,21 +1746,21 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
 )
-def test_csvgen_design_of_experiments(subtests, temp_copy_of_example):
+def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     with pytest.raises(UserWarning) as excinfo:
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
         assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
+    from h2integrate import write_yaml, load_driver_yaml
     from h2integrate.core.dict_utils import update_defaults
     from h2integrate.core.file_utils import check_file_format_for_csv_generator
-    from h2integrate.core.inputs.validation import write_yaml, load_driver_yaml
 
     # load the driver config file
     driver_config = load_driver_yaml("driver_config.yaml")
     # specify the filepath to the csv file
-    csv_fpath = Path(driver_config["driver"]["design_of_experiments"]["filename"]).absolute()
+    csv_fpath = Path(driver_config["driver"]["parameter_sweep"]["filename"]).absolute()
     # run the csv checker method, we want it to write the csv file to a new filepath so
     # set overwrite_file=False
     new_csv_filename = check_file_format_for_csv_generator(
@@ -2595,7 +2694,7 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
 
     # TODO: Update with demand module once it is developed
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     model.prob.set_val("electrical_load_demand.electricity_demand", demand_profile, units="MW")
 
     # Run the model
@@ -2859,7 +2958,7 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         assert soc.min() >= 10.0 - 1e-3
 
     with subtests.test("Battery set point sum"):
-        set_point = model.prob.get_val("battery.electricity_set_point", units="kW")
+        set_point = model.prob.get_val("battery.electricity_command_value", units="kW")
         assert set_point.sum() == pytest.approx(60.0, rel=1e-3)
 
     with subtests.test("Battery electricity out sum"):
@@ -2882,3 +2981,50 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         )
         grid_purchase = model.prob.get_val("grid_buy.electricity_out", units="kW")
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("34_plm_optimized_dispatch", None)]
+)
+def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    # Create a H2Integrate model
+    model = H2IntegrateModel(example_folder / "34_plm_optimized_dispatch.yaml")
+    model.setup()
+
+    # Run the model
+    model.run()
+
+    battery_power = model.prob.get_val("battery.storage_electricity_discharge", units="kW")
+    soc_pct = model.prob.get_val("battery.SOC", units="percent")
+
+    with subtests.test("Check battery power is discharging at some point"):
+        assert (battery_power >= 0).all()
+
+    with subtests.test("Check SOC is between 10 and 90%"):
+        assert (soc_pct >= 10 - 1e-2).all()
+        assert (soc_pct <= 90 + 1e-2).all()
+
+    with subtests.test("Check battery CAPEX"):
+        battery_capex = model.prob.get_val("battery.CapEx", units="USD")[0]
+        assert pytest.approx(battery_capex, rel=1e-6) == 929700.0
+
+    with subtests.test("Check battery OPEX"):
+        battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
+        assert pytest.approx(battery_opex, rel=1e-1) == 23242.5
+
+    with subtests.test("Check number of discharge events"):
+        # With the given demand profile and battery size, there should be 2 discharge events
+        num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
+        assert num_discharge_events == 588
+
+    with subtests.test("Check total energy discharged"):
+        total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 2428.0
+
+    with subtests.test("Check total energy charged"):
+        battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
+        total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0

@@ -27,8 +27,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
+from h2integrate import H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create, setup, and run the H2Integrate model
@@ -45,7 +45,7 @@ supervisor_demand = np.array(
     ]
 )
 
-secondary_demand = model.prob.get_val("battery.electricity_demand", units="kW")
+secondary_demand = model.prob.get_val("battery.electricity_set_point", units="kW")
 grid_output = model.prob.get_val("grid_buy.electricity_out", units="MW")
 
 time_series = build_time_series_from_plant_config(model.plant_config)

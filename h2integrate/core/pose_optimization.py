@@ -3,13 +3,12 @@ This file is based on the WISDEM file of the same name: https://github.com/NLRWi
 and also based off of the H2Integrate file of the same name originally adapted by Jared Thomas.
 """
 
-import re
 import warnings
 from pathlib import Path
 
 import openmdao.api as om
 
-from h2integrate.core.file_utils import check_file_format_for_csv_generator
+from h2integrate.core.file_utils import make_unique_case_name, check_file_format_for_csv_generator
 
 
 class PoseOptimization:
@@ -39,37 +38,6 @@ class PoseOptimization:
             "CONMIN",
             "NSGA2",
         ]
-
-    def get_number_design_variables(self):
-        """
-        This method counts the number of design variables required given
-        the provided set up and returns the result
-
-        Returns:
-            int: number of design variables
-        """
-        # Determine the number of design variables
-        n_DV = 0
-
-        if self.config["design_variables"]["electrolyzer_rating_kw"]["flag"]:
-            n_DV += 1
-        if self.config["design_variables"]["pv_capacity_kw"]["flag"]:
-            n_DV += 1
-        if self.config["design_variables"]["wave_capacity_kw"]["flag"]:
-            n_DV += 1
-        if self.config["design_variables"]["battery_capacity_kw"]["flag"]:
-            n_DV += 1
-        if self.config["design_variables"]["battery_capacity_kwh"]["flag"]:
-            n_DV += 1
-
-        # Wrap-up at end with multiplier for finite differencing
-        if "form" in self.config["driver"]["optimization"].keys():
-            if (
-                self.config["driver"]["optimization"]["form"] == "central"
-            ):  # TODO this should probably be handled at the MPI point to avoid confusion with n_DV being double what would be expected
-                n_DV *= 2
-
-        return n_DV
 
     def _get_step_size(self):
         """
@@ -307,49 +275,54 @@ class PoseOptimization:
                     "totals",
                 ]
 
-        elif self.config["driver"].get("design_of_experiments", False):
-            if self.config["driver"]["design_of_experiments"]["flag"]:
-                doe_options = self.config["driver"]["design_of_experiments"]
-                if doe_options["generator"].lower() == "uniform":
+        elif self.config["driver"].get("parameter_sweep", False) or self.config["driver"].get(
+            "design_of_experiments", False
+        ):
+            # Support both "parameter_sweep" (preferred) and legacy "design_of_experiments" key
+            sweep_options = self.config["driver"].get(
+                "parameter_sweep", self.config["driver"].get("design_of_experiments", {})
+            )
+            if sweep_options["flag"]:
+                if sweep_options["generator"].lower() == "uniform":
                     generator = om.UniformGenerator(
-                        num_samples=int(doe_options["num_samples"]),
-                        seed=doe_options["seed"],
+                        num_samples=int(sweep_options["num_samples"]),
+                        seed=sweep_options["seed"],
                     )
-                elif doe_options["generator"].lower() == "fullfact":
-                    generator = om.FullFactorialGenerator(levels=int(doe_options["levels"]))
-                elif doe_options["generator"].lower() == "plackettburman":
+                elif sweep_options["generator"].lower() == "fullfact":
+                    generator = om.FullFactorialGenerator(levels=int(sweep_options["levels"]))
+                elif sweep_options["generator"].lower() == "plackettburman":
                     generator = om.PlackettBurmanGenerator()
-                elif doe_options["generator"].lower() == "boxbehnken":
+                elif sweep_options["generator"].lower() == "boxbehnken":
                     generator = om.BoxBehnkenGenerator()
-                elif doe_options["generator"].lower() == "latinhypercube":
+                elif sweep_options["generator"].lower() == "latinhypercube":
                     generator = om.LatinHypercubeGenerator(
-                        samples=int(doe_options["num_samples"]),
-                        criterion=doe_options["criterion"],
-                        seed=doe_options["seed"],
+                        samples=int(sweep_options["num_samples"]),
+                        criterion=sweep_options["criterion"],
+                        seed=sweep_options["seed"],
                     )
-                elif doe_options["generator"].lower() == "csvgen":
+                elif sweep_options["generator"].lower() == "csvgen":
                     valid_file = check_file_format_for_csv_generator(
-                        doe_options["filename"], self.config, check_only=True
+                        sweep_options["filename"], self.config, check_only=True
                     )
                     if not valid_file:
                         raise UserWarning(
-                            f"There may be issues with the csv file {doe_options['filename']}, "
+                            f"There may be issues with the csv file {sweep_options['filename']}, "
                             f"which may cause errors within OpenMDAO. "
                             "To check this csv file or create a new one, run the function "
                             "h2integrate.core.utilities.check_file_format_for_csv_generator()."
                         )
                     generator = om.CSVGenerator(
-                        filename=doe_options["filename"],
+                        filename=sweep_options["filename"],
                     )
                 else:
                     raise Exception(
-                        "The generator type {} is unsupported.".format(doe_options["generator"])
+                        "The generator type {} is unsupported.".format(sweep_options["generator"])
                     )
 
-                # Initialize driver
+                # Initialize driver (OpenMDAO calls this DOEDriver / "Design of Experiments")
                 opt_prob.driver = om.DOEDriver(generator)
 
-                if doe_options["debug_print"]:
+                if sweep_options["debug_print"]:
                     opt_prob.driver.options["debug_print"] = [
                         "desvars",
                         "ln_cons",
@@ -358,8 +331,8 @@ class PoseOptimization:
                     ]
 
                 # options
-                if "run_parallel" in doe_options:
-                    opt_prob.driver.options["run_parallel"] = doe_options["run_parallel"]
+                if "run_parallel" in sweep_options:
+                    opt_prob.driver.options["run_parallel"] = sweep_options["run_parallel"]
 
         else:
             warnings.warn(
@@ -467,28 +440,11 @@ class PoseOptimization:
                 # make a unique filename with the same base as self.config["recorder"]["file"]
                 # separate out the filename without the extension
                 file_base = self.config["recorder"]["file"].split(".sql")[0]
-                # get all the files in the output folder that start with file_base
-                existing_files = list(Path(folder_output).glob(f"{file_base}*"))
-                if len(existing_files) > 0:
-                    # if file(s) exist with the same base name, make a new unique filename
 
-                    # get past numbers that were used to make unique files by matching
-                    # filenames against the file base name followed by a number
-                    past_numbers = [
-                        int(re.findall(f"{file_base}[0-9]+", str(fname))[0].split(file_base)[-1])
-                        for fname in existing_files
-                        if len(re.findall(f"{file_base}[0-9]+", str(fname))) > 0
-                    ]
-
-                    if len(past_numbers) > 0:
-                        # if multiple files have the same basename followed by a number,
-                        # take the maximum unique number and add one
-                        unique_number = int(max(past_numbers) + 1)
-                        recorder_path = Path(folder_output) / f"{file_base}{unique_number}.sql"
-                    else:
-                        # if no files have the same basename followed by a number,
-                        # but do have the same basename, then add a zero to the file basename
-                        recorder_path = Path(folder_output) / f"{file_base}0.sql"
+                recorder_fname = make_unique_case_name(
+                    Path(folder_output), f"{file_base}.sql", ".sql"
+                )
+                recorder_path = Path(folder_output) / recorder_fname
 
             recorder_attachment = (
                 self.config["recorder"].get("recorder_attachment", "driver").lower()
@@ -498,7 +454,8 @@ class PoseOptimization:
                 msg = (
                     f"Invalid recorder attachment '{recorder_attachment}'. "
                     f"Currently supported options are {allowed_attachments}. "
-                    "We recommend using 'driver' if running an optimization or DOE in parallel."
+                    "We recommend using 'driver' if running an optimization "
+                    "or parameter sweep in parallel."
                 )
                 raise ValueError(msg)
 

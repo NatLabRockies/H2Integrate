@@ -1,8 +1,12 @@
 from pathlib import Path
 
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate import (
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
 
 
 this_dir = EXAMPLE_DIR / "13_dispatch_for_electrolyzer"
@@ -27,7 +31,7 @@ h2i = H2IntegrateModel(input_config)
 h2i.setup()
 
 electrolyzer_capacity_MW = 60
-h2i.prob.set_val("battery.electricity_demand", 0.1 * electrolyzer_capacity_MW, units="MW")
+h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
 h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
 h2i.run()

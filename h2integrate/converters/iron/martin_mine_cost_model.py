@@ -85,8 +85,6 @@ class MartinIronMineCostComponent(CostModelBaseClass):
 
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.add_input(
             "system_capacity",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
@@ -97,7 +95,7 @@ class MartinIronMineCostComponent(CostModelBaseClass):
         self.add_input(
             "iron_ore_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Iron ore pellets produced",
         )

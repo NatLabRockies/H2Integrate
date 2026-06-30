@@ -45,7 +45,7 @@ def tech_config_battery():
                     "shared_parameters": {
                         "max_charge_rate": 50000,
                         "max_capacity": 200000,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "n_horizon_window": 48,
                         "init_soc_fraction": 0.5,
                         "max_soc_fraction": 0.9,
@@ -103,7 +103,7 @@ def tech_config_generic():
                     "shared_parameters": {
                         "max_charge_rate": 10.0,
                         "max_capacity": 40.0,
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "init_soc_fraction": 0.1,
                         "max_soc_fraction": 1.0,
                         "min_soc_fraction": 0.1,
@@ -153,7 +153,7 @@ def tech_config_autosizing():
                         "set_demand_as_avg_commodity_in": False,
                     },
                     "control_parameters": {
-                        "n_control_window": 24,
+                        "n_control_window_hours": 24,
                         "tech_name": "h2_storage",
                         "system_commodity_interface_limit": 10.0,
                         "init_soc_fraction": 0.1,
@@ -223,7 +223,7 @@ def test_heuristic_load_following_battery_dispatch(
     # Setup the system and required values
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -399,7 +399,7 @@ def test_heuristic_load_following_battery_dispatch(
     prob.setup()
 
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -449,7 +449,7 @@ def test_heuristic_load_following_battery_dispatch(
     # Setup the system and required values
     prob.setup()
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -586,7 +586,7 @@ def test_heuristic_load_following_battery_dispatch_change_capacities(
     prob.set_val("IVC2.storage_capacity", 200000, units="kW*h")
 
     prob.set_val("battery.electricity_in", electricity_in)
-    prob.set_val("battery.electricity_demand", demand_in)
+    prob.set_val("battery.electricity_set_point", demand_in)
 
     # Run the model
     prob.run_model()
@@ -806,7 +806,7 @@ def test_heuristic_load_following_dispatch_with_generic_storage(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()
@@ -954,7 +954,7 @@ def test_heuristic_dispatch_with_autosizing_storage_demand_less_than_avg_in(
     # Setup the system and required values
     prob.setup()
     prob.set_val("h2_storage.hydrogen_in", commodity_in)
-    prob.set_val("h2_storage.hydrogen_demand", commodity_demand)
+    prob.set_val("h2_storage.hydrogen_set_point", commodity_demand)
 
     # Run the model
     prob.run_model()

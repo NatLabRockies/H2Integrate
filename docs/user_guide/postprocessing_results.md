@@ -71,7 +71,9 @@ The keys in the object are the names of the variables in the model, and the valu
 Here is an example of how to access the results from the `prob` object:
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
+from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
+from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
 
 
 # Create a H2Integrate model
@@ -102,9 +104,6 @@ The `vars_to_save` argument supports three different input formats:
 #### Example 1: Save all timeseries data
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
-
 # Create and run a H2Integrate model
 model = H2IntegrateModel("top_level_config.yaml")
 model.run()
@@ -176,7 +175,7 @@ The `electricity_base_unit` argument (default: `"MW"`) controls the units used f
 ### Summarizing scalar results to CSV
 
 While `save_case_timeseries_as_csv` exports time-series data, the `convert_sql_to_csv_summary` function extracts **scalar** results from one or more SQL recorder files and writes them to a single CSV summary.
-This is especially useful when running parameter sweeps or DOE studies, where each row in the output corresponds to a different case.
+This is especially useful when running parameter sweeps, where each row in the output corresponds to a different case.
 
 The function:
 
@@ -205,9 +204,6 @@ print(df.head())
 #### Postprocessing the results of a completed H2Integrate model run
 
 ```python
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
-
 model = H2IntegrateModel("top_level_config.yaml")
 model.run()
 model.post_process()
@@ -216,9 +212,9 @@ model.post_process()
 summary_df = convert_sql_to_csv_summary(model.recorder_path)
 ```
 
-#### Summarizing parallel DOE results
+#### Summarizing parallel parameter sweep results
 
-When a DOE or parallel study is executed, H2Integrate writes one SQL file per process (e.g. `cases.sql_0`, `cases.sql_1`).
+When a parameter sweep or parallel study is executed, H2Integrate writes one SQL file per process (e.g. `cases.sql_0`, `cases.sql_1`).
 Pass the base name and the function handles the rest:
 
 ```python

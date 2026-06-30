@@ -35,6 +35,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -44,7 +45,6 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MartinIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -62,7 +62,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "electricity_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity available for iron ore processing",
         )
@@ -71,24 +71,24 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_input(
             "crude_ore_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Crude ore input",
         )
 
-        # Default the ore demand input as the rated capacity
+        # Default the ore command value input as the rated capacity
         self.add_input(
-            "iron_ore_demand",
+            "iron_ore_command_value",
             val=self.config.max_ore_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
-            desc="Iron ore demand for iron mine",
+            desc="Iron ore command value for iron mine",
         )
 
         self.add_output(
             "crude_ore_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Crude ore consumed",
         )
@@ -96,7 +96,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "electricity_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Electricity consumed",
         )
@@ -202,11 +202,11 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         max_crude_ore_consumption = inputs["system_capacity"] * crude_ore_usage_per_processed_ore
         max_energy_consumption = inputs["system_capacity"] * energy_usage_per_processed_ore
 
-        # iron ore demand, saturated at maximum rated system capacity
-        processed_ore_demand = np.where(
-            inputs["iron_ore_demand"] > inputs["system_capacity"],
+        # iron ore command value, saturated at maximum rated system capacity
+        processed_ore_command_value = np.where(
+            inputs["iron_ore_command_value"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["iron_ore_demand"],
+            inputs["iron_ore_command_value"],
         )
 
         # available feedstocks, saturated at maximum system feedstock consumption
@@ -226,9 +226,13 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
         processed_ore_from_electricity = energy_available / energy_usage_per_processed_ore
         processed_ore_from_crude_ore = crude_ore_available / crude_ore_usage_per_processed_ore
 
-        # output is minimum between available feedstocks and output demand
+        # output is minimum between available feedstocks and output command value
         processed_ore_production = np.minimum.reduce(
-            [processed_ore_from_crude_ore, processed_ore_from_electricity, processed_ore_demand]
+            [
+                processed_ore_from_crude_ore,
+                processed_ore_from_electricity,
+                processed_ore_command_value,
+            ]
         )
 
         # energy consumption

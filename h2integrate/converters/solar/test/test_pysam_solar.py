@@ -323,7 +323,7 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
     """
 
     driver_config = {
-        "driver": {"design_of_experiments": {"flag": True}},
+        "driver": {"parameter_sweep": {"flag": True}},
         "design_variables": {
             "site": {
                 "latitude": {},

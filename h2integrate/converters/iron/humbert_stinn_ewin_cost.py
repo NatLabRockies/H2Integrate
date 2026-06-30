@@ -128,7 +128,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = HumbertStinnEwinCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=True,

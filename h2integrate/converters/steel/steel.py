@@ -303,7 +303,6 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         analysis_start = int([*self.config.grid_prices][0]) - int(
             self.config.installation_time / 12
         )
-        plant_life = self.options["plant_config"]["plant"]["plant_life"]
 
         # Fill these in - can have most of them as 0 also
         pf.set_params(
@@ -318,7 +317,7 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         pf.set_params("capacity", self.config.plant_capacity_mtpy / 365)  # units/day
         pf.set_params("maintenance", {"value": 0, "escalation": self.config.inflation_rate})
         pf.set_params("analysis start year", analysis_start)
-        pf.set_params("operating life", plant_life)
+        pf.set_params("operating life", self.plant_life)
         pf.set_params("installation months", self.config.installation_time)
         pf.set_params(
             "installation cost",
@@ -332,7 +331,7 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         pf.set_params("non depr assets", land_cost)
         pf.set_params(
             "end of proj sale non depr assets",
-            land_cost * (1 + self.config.inflation_rate) ** plant_life,
+            land_cost * (1 + self.config.inflation_rate) ** self.plant_life,
         )
         pf.set_params("demand rampup", 5.3)
         pf.set_params("long term utilization", self.config.capacity_factor)

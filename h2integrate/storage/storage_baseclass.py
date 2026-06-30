@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import range_val
@@ -46,9 +47,10 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
+        1,
+        36000,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "storage"
 
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
@@ -162,33 +164,39 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             for _source_tech, intended_dispatch_tech in self.options["plant_config"][
                 "tech_to_dispatch_connections"
             ]:
-                if any(intended_dispatch_tech in name for name in self.tech_group_name):
+                if any(intended_dispatch_tech == name for name in self.tech_group_name):
                     self.add_input(
-                        f"{commodity}_demand",
+                        f"{commodity}_set_point",
                         val=self.config.demand_profile,
                         shape=n_timesteps,
                         units=commodity_rate_units,
-                        desc=f"{commodity} demand profile",
+                        desc=f"{commodity} set-point profile",
                     )
                     self.add_discrete_input("pyomo_dispatch_solver", val=lambda: None)
-                    # the controller gets demand from the storage model
+                    # the controller gets set-point from the storage model
                     # set the using feedback control variable to True
                     using_feedback_control = True
                     break
         if not using_feedback_control:
             # using an open-loop storage controller
             self.add_input(
-                f"{commodity}_set_point",
+                f"{commodity}_command_value",
                 val=0.0,
                 shape=n_timesteps,
                 units=commodity_rate_units,
             )
 
         self.using_feedback_control = using_feedback_control
-        # convert from seconds to hours
-        self.dt_hr = int(self.options["plant_config"]["plant"]["simulation"]["dt"]) / (
-            3600
-        )  # convert from seconds to hours
+        # convert from seconds to hours (kept for PySAM and legacy callers)
+        self.dt_hr = self.dt / 3600.0
+
+        # dt expressed in (commodity_amount_units / commodity_rate_units), i.e. the
+        # timestep width in whatever time unit makes rate * dt_amount = amount.
+        self.dt_amount = om_units.convert_units(
+            self.dt,
+            "s",
+            f"({self.commodity_amount_units})/({self.commodity_rate_units})",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage model.
@@ -260,15 +268,17 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 "charge_rate": charge_rate,
                 "discharge_rate": discharge_rate,
                 "storage_capacity": storage_capacity,
+                "commodity_available": inputs[f"{self.commodity}_in"],
             }
             storage_commodity_out, soc = dispatch(self.simulate, kwargs, inputs)
 
         else:
             storage_commodity_out, soc = self.simulate(
-                storage_dispatch_commands=inputs[f"{self.commodity}_set_point"],
+                storage_dispatch_commands=inputs[f"{self.commodity}_command_value"],
                 charge_rate=charge_rate,
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,
+                commodity_available=inputs[f"{self.commodity}_in"],
             )
 
         # determine storage charge and discharge
@@ -294,7 +304,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
-        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out)
+        # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
+        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
@@ -304,12 +315,14 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             outputs["standard_capacity_factor"] = 0.0
         else:
             outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
             )
             # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
-            total_commodity_discharged = outputs[f"storage_{self.commodity}_discharge"].sum()
+            total_commodity_discharged = (
+                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
+            )
             outputs["standard_capacity_factor"] = total_commodity_discharged / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps
+                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
             )
         return outputs
 
@@ -319,9 +332,10 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         charge_rate: float,
         discharge_rate: float,
         storage_capacity: float,
+        commodity_available: list | np.ndarray,
         sim_start_index: int = 0,
     ):
-        """Run the storage model over a control window of ``n_control_window`` timesteps.
+        """Run the storage model over a control window of ``n_control_window_hours`` length of time.
 
         Iterates through ``storage_dispatch_commands`` one timestep at a time.
         A negative command requests charging; a positive command requests
@@ -348,7 +362,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             storage_dispatch_commands (array_like[float]):
                 Dispatch set-points for each timestep in ``commodity_rate_units``.
                 Negative values command charging; positive values command
-                discharging.  Length must equal ``config.n_control_window``.
+                discharging.  Length must equal ``config.n_control_window_hours``.
             charge_rate (float):
                 Maximum commodity input rate to storage in
                 ``commodity_rate_units`` (before charge efficiency is applied).
@@ -357,6 +371,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 ``commodity_rate_units`` (before discharge efficiency is applied).
             storage_capacity (float):
                 Rated storage capacity in ``commodity_amount_units``.
+            commodity_available (list | np.ndarray): the input commodity available
+                to charge storage.
             sim_start_index (int, optional):
                 Starting index for writing into persistent output arrays.
                 Defaults to 0.
@@ -397,16 +413,23 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 # --- Charging ---
                 # headroom: how much more commodity the storage can accept,
                 # expressed as a rate (commodity_rate_units).
-                headroom = (soc_max - soc) * storage_capacity / self.dt_hr
+                headroom = (soc_max - soc) * storage_capacity / self.dt_amount
+
+                # charge available based on the available input commodity
+                charge_available = commodity_available[sim_start_index + t]
 
                 # Clip to the most restrictive limit, then apply efficiency.
                 # max(0, ...) guards against negative headroom when SOC
                 # slightly exceeds soc_max.
                 # correct headroom to not include charge_eff.
-                actual_charge = max(0.0, min(headroom / charge_eff, charge_rate, -cmd)) * charge_eff
+
+                actual_charge = (
+                    max(0.0, min(headroom / charge_eff, charge_rate, -cmd, charge_available))
+                    * charge_eff
+                )
 
                 # Update SOC (actual_charge is in post-efficiency units)
-                soc += actual_charge / storage_capacity
+                soc += actual_charge * self.dt_amount / storage_capacity
 
                 # Update the amount of commodity used to charge from the input stream
                 # If charge_eff<1, more commodity is pulled from the input stream than
@@ -416,7 +439,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 # --- Discharging ---
                 # headroom: how much commodity can still be drawn before
                 # hitting the minimum SOC, expressed as a rate.
-                headroom = (soc - soc_min) * storage_capacity / self.dt_hr
+                headroom = (soc - soc_min) * storage_capacity / self.dt_amount
 
                 # Clip to the most restrictive limit without applied efficiency.
                 # Efficiency losses occur as energy leaves storage.
@@ -425,7 +448,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 )
 
                 # Update SOC (actual_discharge is before efficiency losses are applied.)
-                soc -= actual_discharge / storage_capacity
+                soc -= actual_discharge * self.dt_amount / storage_capacity
 
                 # If discharge_eff<1, then less commodity is output from the storage
                 # than the commodity discharged from storage

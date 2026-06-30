@@ -41,7 +41,7 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )
@@ -192,6 +192,11 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
         unused_commodity_out = combined_out - commodity_demand
         assert pytest.approx(unused_commodity_out.sum(), rel=1e-6) == 5.0
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
@@ -223,7 +228,7 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )
@@ -292,6 +297,10 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
             rtol=1e-6,
             atol=1e-10,
         )
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
 
 
 @pytest.mark.regression
@@ -326,7 +335,7 @@ def test_storage_autosizing_losses(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )
@@ -423,6 +432,11 @@ def test_storage_autosizing_losses(plant_config, subtests):
             atol=1e-10,
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])
+
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
@@ -514,3 +528,7 @@ def test_storage_autosizing_with_passthrough_controller(plant_config, subtests):
             rtol=1e-6,
             atol=1e-10,
         )
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage.storage_hydrogen_charge", units="kg/h")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= commodity_in[indx_charging])

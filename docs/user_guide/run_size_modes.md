@@ -63,10 +63,10 @@ Then, any `feedstock_sizing_function` or `feedstock_sizing_function` that the co
 from pathlib import Path
 
 import numpy as np
+
+from h2integrate import H2IntegrateModel, load_tech_yaml, load_driver_yaml, load_plant_yaml
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseClass, ResizeablePerformanceModelBaseConfig
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_driver_yaml, load_plant_yaml
 
 
 # Set a root directory for file loading

@@ -48,7 +48,7 @@ IMPORTANT NOTES
 - [ ] Describe the feature that will be added
 - [ ] Fill out TODO list steps
 - [ ] Describe requested feedback from reviewers on draft PR
-- [ ] Complete Section 7: New Model Checklist (if applicable)
+- [ ] Complete Section 8: New Model Checklist (if applicable)
 <!-- Describe the feature in this PR and outline next steps -->
 ### TODO:
 - [ ] Step 1
@@ -113,6 +113,7 @@ failing test cases.
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method
     - [ ] If applicable: inherit from `CostModelBaseClass`
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
+  - [ ] Add the new model to the appropriate `__init__.py` file to ensure it is properly imported and used in `supported_models.py`
   - [ ] Added to `supported_models.py`
   - [ ] If a new commodity_type is added, update `create_financial_model` in `h2integrate_model.py`
 - [ ] **Tests**: Unit tests have been added for the new model

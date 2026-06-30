@@ -4,7 +4,7 @@ import openmdao.api as om
 import matplotlib.pyplot as plt
 from ard.viz.layout import plot_layout  # a plotting tool!
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 if not importlib.util.find_spec("ard"):
