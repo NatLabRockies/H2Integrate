@@ -582,13 +582,14 @@ class H2IntegrateModel:
             if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
         }
 
-        # re-make technology interconnections
+        # re-make technology interconnections using only technologies
+        # upstream of the demand component
         upstream_interconnections = [
             connection
             for connection in tech_interconnections
             if connection[0] in upstream_controllable_techs
         ]
-        tech_graph = self.create_technology_graph(upstream_interconnections)
+        upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
         # Check if storage models have a controller
         storage_tech_to_control = {}
         for tech, classifier in self.tech_control_classifiers.items():
@@ -624,7 +625,7 @@ class H2IntegrateModel:
         slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
         slc_config["tech_to_commodity"] = tech_to_commodity
         slc_config["storage_techs_to_control"] = storage_tech_to_control
-        slc_config["technology_graph"] = tech_graph
+        slc_config["technology_graph"] = upstream_tech_graph
 
         slc_config["tech_control_classifiers"] = self.tech_control_classifiers
 
