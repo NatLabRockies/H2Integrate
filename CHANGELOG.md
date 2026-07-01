@@ -40,6 +40,7 @@
 - Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
 - Speed up the slowest tests in the suite by swapping the Floris wind model for `PYSAMWindPlantPerformanceModel` in examples 01 (`01_onshore_steel_mn`) and 02 (`02_texas_ammonia`), updating the affected `test_steel_example`/`test_simple_ammonia_example` expected values, fixing a pre-existing `cases.sql` cache-path bug and module-scoping the fixtures in `h2integrate/postprocess/test/test_sql_timeseries_to_csv.py` so the example only runs once for all four tests. [PR 782](https://github.com/NatLabRockies/H2Integrate/pull/782)
 - Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
+- Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
 
 ## 0.8 [April 15, 2026]
 
