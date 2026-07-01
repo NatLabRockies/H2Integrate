@@ -177,7 +177,7 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
@@ -203,7 +203,7 @@ def test_slc_battery_with_controller(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
@@ -273,10 +273,7 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
 
     model.setup()
 
-    model.prob.set_val(
-        "electrical_load_demand.electricity_demand",
-        demand_profile,
-    )
+    model.prob.set_val("electrical_load_demand.electricity_demand", demand_profile, units="kW")
     model.prob.set_val(
         "system_level_controller.commodity_sell_price",
         sell_price,
@@ -290,16 +287,16 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
-    solar_out = model.prob.get_val("solar.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
+    solar_out = model.prob.get_val("solar.electricity_out", units="kW")
     ng_out = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
-    grid_out = model.prob.get_val("grid_buy.electricity_out")
+    grid_out = model.prob.get_val("grid_buy.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
 
     with subtests.test("solar farm generates power"):
-        assert solar_out.sum() > 0
+        assert solar_out.sum() > 200 * 1e6
 
     with subtests.test("natural gas dispatched"):
         assert ng_out.sum() > 0
