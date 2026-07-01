@@ -104,7 +104,7 @@ def _compute_rate_units(price_units: str, check_conversion: bool):
     """
 
     # 9 base units that make-up ``_powers`` attribute of a ``PhysicalUnit`` are:
-    # [m, kg, s, A, K, mol, cd, rad, str, USD, pax, byte, unitless]
+    # [m, kg, s, A, K, mol, cd, rad, sr, USD, pax, byte, unitless]
     # All base units have a ``_factor`` attribute of 1.0
     # ``_factor`` is the amount to multiply a number by to convert from the base units
     # to the other units. For example, 'g' has a factor of 0.001
