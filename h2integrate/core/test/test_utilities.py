@@ -25,11 +25,14 @@ from h2integrate.core.supported_models import supported_models
 
 @pytest.fixture(scope="function")
 def temp_resource_dir_env():
+    """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
     resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
+    original = os.environ.get("RESOURCE_DIR")
     os.environ["RESOURCE_DIR"] = resource_dir
     yield resource_dir
     os.environ.pop("RESOURCE_DIR", None)
     assert os.getenv("RESOURCE_DIR") is None
+    os.environ["RESOURCE_DIR"] = original
 
 
 @pytest.mark.unit
