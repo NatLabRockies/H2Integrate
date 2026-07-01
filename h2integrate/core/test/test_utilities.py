@@ -188,8 +188,8 @@ def test_check_resource_dir_environment_var(subtests):
         assert str(output_dir) == str(Path(data_dir) / "wind")
 
     # unset environment variable for other tests
-    os.environ.pop("data_dir", None)
-    assert os.getenv("data_dir") is None
+    os.environ.pop("RESOURCE_DIR", None)
+    assert os.getenv("RESOURCE_DIR") is None
 
 
 @pytest.mark.unit
