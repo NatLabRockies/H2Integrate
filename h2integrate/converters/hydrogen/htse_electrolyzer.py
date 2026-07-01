@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, contains
@@ -75,11 +76,19 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_input("cluster_size", val=1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
 
-        self.add_output(
-            "water_demand",
+        self.add_input(
+            "water_in",
             val=0.0,
             shape=self.n_timesteps,
-            units="kg/h",
+            units="galUS/h",
+            desc="Water supply",
+        )
+
+        self.add_output(
+            "water_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="galUS/h",
             desc="Water consumption",
         )
         self.add_output(
@@ -178,6 +187,15 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         min_turn_down = self.config.turndown_ratio * rated_hydrogen_production
         hydrogen_produced = np.where(hydrogen_produced >= min_turn_down, hydrogen_produced, 0.0)
 
+        # Density of liquid water at 20°C (293.15 K) and 1 atm (101325 Pa)
+        PropsSI("D", "T", 293.15, "P", 101325, "Water")
+        kg_per_liter_water = 1.0
+        water_demand_kg_per_h = hydrogen_produced * 18.015 / 2.016
+        liters_per_galUS = 3.785411
+        water_demand_gal_per_h = (
+            water_demand_kg_per_h * (1.0 / kg_per_liter_water) * (1.0 / liters_per_galUS)
+        )
+
         # heat_demand_kw = hydrogen_out * self.config.nominal_heat_required
         # electricity_demand_kw = hydrogen_out * total_specific_energy - actual_heat_kw
         # electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
@@ -187,7 +205,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         # inputs["hydrogen_command_value"]) * self.config.nominal_heat_required
         outputs["heat_demand"] = hydrogen_demand * self.config.nominal_heat_required
         outputs["electricity_demand"] = electrolyzer_size_kw
-        outputs["water_demand"] = hydrogen_produced * 18.015 / 2.016
+        outputs["water_consumed"] = water_demand_gal_per_h
         outputs["rated_hydrogen_production"] = rated_hydrogen_production
         outputs["electrolyzer_size_mw"] = electrolyzer_size_mw
 

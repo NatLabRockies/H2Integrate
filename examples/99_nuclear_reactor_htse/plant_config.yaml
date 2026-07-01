@@ -11,17 +11,20 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [nuclear, htse, electricity, cable]
+  # - [nuclear, htse, electricity, cable]
   - [nuclear, htse, [heat_out, heat_in]]
-  - [nuclear, electrical_load_demand, [electricity_out, electricity_in]]
+  - [nuclear, electrical_load_demand, electricity, cable]
   - [htse, nuclear, [heat_demand, heat_command_value]]
   - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]
-  - [htse, h2_storage, hydrogen, pipe]
+  # - [htse, h2_storage, hydrogen, pipe]
+  - [water_feedstock, htse, water, pipe]
+  - [htse_electricity_feedstock, htse, electricity, cable]
   # - [htse, heat_load_demand, [heat_demand, heat_demand]]
 
   # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
   # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
   - [finance_subgroup_electricity, grid_sell, [LCOE, electricity_sell_price]]
+  - [finance_subgroup_electricity, htse_electricity_feedstock, [LCOE, price]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_set_point]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
   # - [electrical_load_demand, nuclear, [electricity_demand_out, electricity]]
@@ -29,35 +32,12 @@ tech_to_dispatch_connections: []
 resource_to_tech_connections: []
 finance_parameters:
   finance_groups:
-    profast_model:
-      commodity: electricity
-      finance_model: ProFastLCO
-      model_inputs:
-        params:
-          analysis_start_year: 2032
-          installation_time: 84  # months - estimating 7 years for construction
-          inflation_rate: 0.0  # 0 for nominal analysis
-          discount_rate: 0.105  # nominal equity return based on 2024 ATB baseline workbook for nuclear
-          debt_equity_ratio: 2.26  # 2024 ATB uses 69.4% debt for nuclear
-          property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf  https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
-          total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
-          capital_gains_tax_rate: 0.15  # H2FAST default
-          sales_tax_rate: 0.07375  # total state and local sales tax in St. Louis County https://taxmaps.state.mn.us/salestax/
-          debt_interest_rate: 0.08  # based on 2024 ATB nominal interest rate for nuclear
-          debt_type: Revolving debt  # can be "Revolving debt" or "One time loan". Revolving debt is H2FAST default and leads to much lower LCOH
-          loan_period_if_used: 0  # H2FAST default, not used for revolving debt
-          cash_onhand_months: 1  # H2FAST default
-          admin_expense: 0.00  # percent of sales H2FAST default
-        capital_items:
-          depr_type: MACRS   # can be "MACRS" or "Straight line"
-          depr_period: 15  # 15 years is typical, some advanced nuclear facilities may be eligible for a 5 year MACRS
-          refurb: [0.]
     nuclear_finance:
       commodity: electricity
       finance_model: ProFastLCO
       model_inputs:
         params:
-          analysis_start_year: 2032
+          analysis_start_year: 2030
           installation_time: 84  # months - estimating 7 years for construction
           inflation_rate: 0.0  # 0 for nominal analysis
           discount_rate: 0.105  # nominal equity return based on 2024 ATB baseline workbook for nuclear
@@ -80,10 +60,10 @@ finance_parameters:
       finance_model: ProFastLCO
       model_inputs:
         params:
-          analysis_start_year: 2032
-          installation_time: 84  # months - estimating 7 years for construction
+          analysis_start_year: 2036
+          installation_time: 12  # months - estimating 1 year for construction
           inflation_rate: 0.0  # 0 for nominal analysis
-          discount_rate: 0.105  # nominal equity return based on 2024 ATB baseline workbook for nuclear
+          discount_rate: 0.15  # nominal equity return based on 2024 ATB baseline workbook for nuclear
           debt_equity_ratio: 2.26  # 2024 ATB uses 69.4% debt for nuclear
           property_tax_and_insurance: 0.03  # percent of CAPEX estimated based on https://www.nrel.gov/docs/fy25osti/91775.pdf  https://www.house.mn.gov/hrd/issinfo/clsrates.aspx
           total_income_tax_rate: 0.257  # 0.257 tax rate in 2024 atb baseline workbook, value here is based on federal (21%) and state in MN (9.8)
@@ -96,7 +76,7 @@ finance_parameters:
           admin_expense: 0.00  # percent of sales H2FAST default
         capital_items:
           depr_type: MACRS   # can be "MACRS" or "Straight line"
-          depr_period: 15  # 15 years is typical, some advanced nuclear facilities may be eligible for a 5 year MACRS
+          depr_period: 7  # 15 years is typical, some advanced nuclear facilities may be eligible for a 5 year MACRS
           refurb: [0.]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
@@ -104,10 +84,16 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: electricity
-      finance_groups: [profast_model]
+      commodity_stream: nuclear
+      finance_groups: [nuclear_finance]
       technologies: [nuclear]
+    nuclear:
+      commodity: electricity
+      commodity_stream: nuclear
+      finance_groups: [nuclear_finance]
+      technologies: [nuclear, grid_sell]
     hydrogen:
       commodity: hydrogen
       commodity_stream: htse
-      finance_groups: [profast_model]
-      technologies: [nuclear, htse, grid_sell]
+      finance_groups: [htse_finance]
+      technologies: [htse_electricity_feedstock, water_feedstock, htse]

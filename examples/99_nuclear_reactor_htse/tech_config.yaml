@@ -3,6 +3,23 @@ description: This is a nuclear plant generating electricity and can also provide
 general:
   folder_output: nuclear_htse
 technologies:
+  water_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: water
+        commodity_rate_units: galUS/h
+      performance_parameters:
+        rated_capacity: 2000.0  # gal water per hour
+      cost_parameters:
+        cost_year: 2021
+        commodity_amount_units: galUS
+        price: 0.0035  # 3.5 USD/kgal
+        annual_cost: 0.
+        start_up_cost: 0.0
   nuclear:
     performance_model:
       model: SimpleThermalNuclearReactorPerformanceModel
@@ -24,6 +41,23 @@ technologies:
         # slightly adjusted away from 93% capacity factor
       shared_parameters:
         rated_capacity: 1000000.0
+  htse_electricity_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+      performance_parameters:
+        rated_capacity: 25000.0  # kW
+      cost_parameters:
+        cost_year: 2022
+        commodity_amount_units: kW*h
+        price: 0.0  # USD/(kW*h)
+        annual_cost: 0.
+        start_up_cost: 0.0
   htse:
     performance_model:
       model: HTSEPerformanceModel
@@ -36,32 +70,35 @@ technologies:
         cluster_rating_MW: 1  # Electric-only sizing component, so capacity = rating*clusters/nom_elec
         n_clusters: 25
         turndown_ratio: 0.1  # minimum operating power
+        uptime_hours_until_eol: 35040  # 4 years as per  Diaz et al. 2023
       cost_parameters:
-        unit_capex: 1295  # $/kW
+        cost_year: 2022
+        unit_capex: 1417  # $/kW based on Diaz et al. 2023: Technical Economic Assessment of LWR-Supported Hydrogen Markets in Gulf Coast Regions
         fixed_capex: 0.0
       capital_items:
         depr_type: MACRS     # can be "MACRS" or "Straight line"
         depr_period: 7
         refurb: null  # to be assigned at run rime
-  h2_storage:
-    performance_model:
-      model: StorageAutoSizingModel
-    control_strategy:
-      model: SimpleStorageOpenLoopController
-    cost_model:
-      model: LinedRockCavernStorageCostModel
-    model_inputs:
-      shared_parameters:
-        commodity: hydrogen
-        commodity_rate_units: kg/h
-        max_soc_fraction: 0.9
-        min_soc_fraction: 0.1
-        set_demand_as_avg_commodity_in: true
-        round_trip_efficiency: 1.0
-      control_parameters:
-        init_soc_fraction: 0.5
-      cost_parameters:
-        sizing_mode: auto
+        replacement_cost_percent: 0.1077  # based on table 2 in Diaz et al. 2023
+  # h2_storage:
+  #   performance_model:
+  #     model: StorageAutoSizingModel
+  #   control_strategy:
+  #     model: SimpleStorageOpenLoopController
+  #   cost_model:
+  #     model: LinedRockCavernStorageCostModel
+  #   model_inputs:
+  #     shared_parameters:
+  #       commodity: hydrogen
+  #       commodity_rate_units: kg/h
+  #       max_soc_fraction: 0.9
+  #       min_soc_fraction: 0.1
+  #       set_demand_as_avg_commodity_in: true
+  #       round_trip_efficiency: 1.0
+  #     control_parameters:
+  #       init_soc_fraction: 0.5
+  #     cost_parameters:
+  #       sizing_mode: auto
   # heat_load_demand:
   #   performance_model:
   #     model: GenericDemandComponent

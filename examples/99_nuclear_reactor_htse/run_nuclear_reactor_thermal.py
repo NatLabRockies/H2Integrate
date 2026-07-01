@@ -1,5 +1,4 @@
 import numpy as np
-import openmdao.api as om
 import matplotlib.pyplot as plt
 
 from h2integrate.core.file_utils import load_yaml
@@ -13,20 +12,23 @@ plant_life = plant_config["plant"]["plant_life"]
 tech_config = load_yaml(config["technology_config"])
 
 refurb = np.zeros(plant_life)
-refurb[6::7] = 1
+refurb[3::4] = 1
 tech_config["technologies"]["htse"]["model_inputs"]["capital_items"]["refurb"] = refurb
 
 config["technology_config"] = tech_config
+
 # Create a GreenHEART model
 h2i = H2IntegrateModel(config)
 
 # generate N2 diagram
-om.n2(h2i.prob)
+# om.n2(h2i.prob)
 
 # Run and process the model
 h2i.run()
-h2i.post_process()
 
+h2i.create_xdsm()
+h2i.post_process()
+# expected water kg/h 4,347.8261
 # generate plots of the output
 
 e_nuclear = h2i.prob.get_val("nuclear.annual_electricity_produced", units="TW*h/year")[0]
@@ -50,7 +52,6 @@ h2_labels = ["HTSE Plant"]
 h2 = [h2_htse]
 
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
-
 
 # Electricity bar chart: Nuclear Generation (left), Stacked HTSE+Grid (right)
 bar_width = 0.6
