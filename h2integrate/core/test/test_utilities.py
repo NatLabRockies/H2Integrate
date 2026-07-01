@@ -32,7 +32,8 @@ def temp_resource_dir_env():
     yield resource_dir
     os.environ.pop("RESOURCE_DIR", None)
     assert os.getenv("RESOURCE_DIR") is None
-    os.environ["RESOURCE_DIR"] = original
+    if original is not None:
+        os.environ["RESOURCE_DIR"] = original
 
 
 @pytest.mark.unit
