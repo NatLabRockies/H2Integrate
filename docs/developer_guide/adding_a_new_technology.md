@@ -25,7 +25,6 @@ and `CostModelBaseConfig`) and `h2integrate/core/utilities.py` (`BaseConfig`).
 - **Adding a technology that already has a category-specific baseclass?** Inherit
   from that instead. Existing examples include `SolarPerformanceBaseClass`,
   `WindPerformanceBaseClass`, and `ElectrolyzerPerformanceBaseClass`. These set
-  the commodity attributes and any shared I/O for you.
 
 ```{note}
 Category-specific baseclasses are only worth creating when **multiple models
