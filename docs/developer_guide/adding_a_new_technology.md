@@ -20,9 +20,9 @@ General model baseclasses and configs baseclasses are defined in:
 - `h2integrate/core/model_baseclasses.py` 
 - `h2integrate/core/utilities.py`
 
-- **Adding a brand-new technology?** Inherit directly from
-  `PerformanceModelBaseClass` and `CostModelBaseClass`, and use `BaseConfig` /
-  `CostModelBaseConfig` for the corresponding configuration classes.
+- **Adding a brand-new technology?** Inherit directly from existing baseclasses and configuration baseclasses
+       - Performance models use: `PerformanceModelBaseClass` and `BaseConfig`
+       - Cost models use: `CostModelBaseClass` and `CostModelBaseConfig`
 - **Adding a technology that already has a category-specific baseclass?** Inherit
   from that instead. Existing examples include `SolarPerformanceBaseClass`,
   `WindPerformanceBaseClass`, and `ElectrolyzerPerformanceBaseClass`. These set
