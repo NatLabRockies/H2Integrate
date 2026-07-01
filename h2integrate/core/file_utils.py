@@ -527,6 +527,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
     return full_dir.absolute()
 
 
+# Convenience wrappers to support existing default data directories
 check_resource_dir = partial(check_data_dir, data_type="resource")
 update_wrapper(check_resource_dir, check_data_dir)
 
