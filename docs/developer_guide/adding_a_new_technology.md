@@ -16,8 +16,9 @@ class and configuration class for each piece of your technology:
 | Cost model          | `CostModelBaseClass`                                     | `CostModelBaseConfig`           |
 | Controller (opt.)   | A `PassthroughController` is inserted automatically      | n/a                             |
 
-These are defined in `h2integrate/core/model_baseclasses.py` (model baseclasses
-and `CostModelBaseConfig`) and `h2integrate/core/utilities.py` (`BaseConfig`).
+General model baseclasses and configs baseclasses are defined in:
+- `h2integrate/core/model_baseclasses.py` 
+- `h2integrate/core/utilities.py`
 
 - **Adding a brand-new technology?** Inherit directly from
   `PerformanceModelBaseClass` and `CostModelBaseClass`, and use `BaseConfig` /
