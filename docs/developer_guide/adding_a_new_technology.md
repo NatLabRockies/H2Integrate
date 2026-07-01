@@ -24,8 +24,10 @@ General model baseclasses and configs baseclasses are defined in:
        - Performance models use: `PerformanceModelBaseClass` and `BaseConfig`
        - Cost models use: `CostModelBaseClass` and `CostModelBaseConfig`
 - **Adding a technology that already has a category-specific baseclass?** Inherit
-  from that instead. Existing examples include `SolarPerformanceBaseClass`,
-  `WindPerformanceBaseClass`, and `ElectrolyzerPerformanceBaseClass`. These set
+  from a category-specific baseclass instead to easily set up shared I/O and commodity attributes for that technology. Existing examples include:
+      - `SolarPerformanceBaseClass`,
+      - `WindPerformanceBaseClass`
+      - `ElectrolyzerPerformanceBaseClass`
 
 ```{note}
 Category-specific baseclasses are only worth creating when **multiple models
