@@ -23,6 +23,15 @@ from h2integrate.core.file_utils import (
 from h2integrate.core.supported_models import supported_models
 
 
+@pytest.fixture(scope="function")
+def temp_resource_dir_env():
+    resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
+    os.environ["RESOURCE_DIR"] = resource_dir
+    yield resource_dir
+    os.environ.pop("RESOURCE_DIR", None)
+    assert os.getenv("RESOURCE_DIR") is None
+
+
 @pytest.mark.unit
 def test_get_path(subtests):
     current_cwd = Path.cwd()
@@ -176,9 +185,8 @@ def test_check_data_dir_full_dir_exists(subtests):
 
 
 @pytest.mark.unit
-def test_check_resource_dir_environment_var(subtests):
-    data_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
-    os.environ["RESOURCE_DIR"] = data_dir
+def test_check_resource_dir_environment_var(subtests, temp_resource_dir_env):
+    data_dir = temp_resource_dir_env
     output_dir = check_resource_dir()
     with subtests.test("Environment variable data_dir, no data_subdir"):
         assert str(output_dir) == data_dir
@@ -186,10 +194,6 @@ def test_check_resource_dir_environment_var(subtests):
     output_dir = check_resource_dir(data_subdir="wind")
     with subtests.test("Environment variable data_dir, with data_subdir"):
         assert str(output_dir) == str(Path(data_dir) / "wind")
-
-    # unset environment variable for other tests
-    os.environ.pop("RESOURCE_DIR", None)
-    assert os.getenv("RESOURCE_DIR") is None
 
 
 @pytest.mark.unit
