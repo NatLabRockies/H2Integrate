@@ -31,6 +31,8 @@ def pytest_sessionstart(session):
     os.environ["TEST_RECORDER_OUTPUT_FILE1"] = "testingtesting_filename0.sql"
     os.environ["TEST_RECORDER_OUTPUT_FILE2"] = "testingtesting_filename1.sql"
 
+    # NOTE: the rest of this function is required so that test_utilities.py
+    # does not mess with a user's environment
     # Set a dummy API key
     os.environ["NLR_API_KEY"] = "a" * 40
     set_nlr_key_dot_env()
@@ -52,6 +54,8 @@ def pytest_sessionfinish(session, exitstatus):
     if (user_dir := os.getenv("TEMP_RESOURCE_DIR")) is not None:
         os.environ["RESOURCE_DIR"] = user_dir
     os.environ.pop("TEMP_RESOURCE_DIR", None)
+    # NOTE: the above code is required so that test_utilities.py does
+    # not mess with a user's environment
 
     initial_om_report_setting = os.getenv("TMP_OPENMDAO_REPORTS")
     if initial_om_report_setting is not None:
