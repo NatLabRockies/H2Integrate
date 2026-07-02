@@ -52,64 +52,50 @@ def set_environment_var(global_varname: str, var_value: str):
     return globals()[global_varname]
 
 
-def load_file_with_variables(setter_method, fpath, variables: str | list[str]):
-    """Load environment variables from a text file.
+def load_file_with_variables(
+    setter_method, fpath, varname_new: str, varname_old: str | None = None
+):
+    """Load an environment variable from a text file.
 
-    Supports both the new ``NLR_API_*`` and the deprecated ``NREL_API_*`` variable
-    names.  If only the old names are found in the file a deprecation warning is
+    Supports both the new ``varname_new`` and deprecated ``varname_old`` variable
+    names.  If only the old name is found in the file, a deprecation warning is
     emitted.
 
     Args:
         fpath (str | Path): filepath to a text file with the extension '.env' that
-            may contain the environment variable(s) in `variables`.
-        variables (list | str, optional): environment variable(s) to load from file.
-            Defaults to ["NLR_API_KEY", "NLR_API_EMAIL"].
+            may contain the environment variable in `variables`.
+        varname_new (str): environment variable to load from file.
 
     Raises:
         ValueError: If an environment variable is not found or found multiple times in the file.
     """
 
-    # TODO: make it so it can take in alternative names, but variables should be a string
-    # Mapping from new names to old (deprecated) names for file lookups
-    _new_to_old = {
-        "NLR_API_KEY": "NREL_API_KEY",
-        "NLR_API_EMAIL": "NREL_API_EMAIL",
-    }
-
     # open the file and read the lines
     with Path(fpath).open("r") as f:
         lines = f.readlines()
-    if isinstance(variables, str):
-        variables = [variables]
 
-    old_variables = [_new_to_old(v) for v in variables if v in _new_to_old]
-
-    # iterate through each variable
-    for var in variables:
-        # find a line containing the environment variable (try new name first, then old)
-        line_w_var = [line for line in lines if var in line]
-        if len(line_w_var) == 0 and var in _new_to_old:
-            old_var = _new_to_old[var]
-            line_w_var = [line for line in lines if old_var in line]
-            if len(line_w_var) > 0:
-                warnings.warn(
-                    _DEPRECATION_MSG.format(old=old_var, new=var),
-                    FutureWarning,
-                    stacklevel=2,
-                )
-                var = old_var  # use old name for parsing
-        if len(line_w_var) != 1:
-            raise ValueError(
-                f"{var} variable in found in {fpath} file {len(line_w_var)} times. "
-                "Please specify this variable once."
+    # find a line containing the environment variable (try new name first, then old)
+    line_w_var = [line for line in lines if varname_new in line]
+    var = varname_new
+    if len(line_w_var) == 0 and varname_old is not None:
+        line_w_var = [line for line in lines if varname_old in line]
+        if len(line_w_var) > 0:
+            warnings.warn(
+                _DEPRECATION_MSG.format(old=varname_old, new=varname_new),
+                FutureWarning,
+                stacklevel=2,
             )
-        # grab the line containing the variable,
-        # assumes the line containing the variable is formatted as "variable=variable_value"
-        val = line_w_var[0].split(f"{var}=").strip()
-        # if var is an API key, set it as a global variable
-        in_old = True if len(old_variables) > 0 and var in old_variables else False
-        if var in variables or in_old:
-            setter_method(var_value=val)
+            var = varname_old  # use old name for parsing
+    if len(line_w_var) != 1:
+        raise ValueError(
+            f"{var} variable in found in {fpath} file {len(line_w_var)} times. "
+            "Please specify this variable once."
+        )
+    # grab the line containing the variable,
+    # assumes the line containing the variable is formatted as "variable=variable_value"
+    val = line_w_var[0].split(f"{var}=").strip()
+    # set variable as a global variable
+    setter_method(var_value=val)
     return
 
 
@@ -142,14 +128,13 @@ def set_env_var_dot_env(setter_method, varname_new: str, varname_old: str | None
         path (Path | str, optional): Path to environment file.
             Defaults to None.
     """
-    # generalized version of set_nlr_key_dot_env
-    # varname_new is like _ENV_KEY_NEW
-    # varname_old is like _ENV_KEY_OLD
     if path and Path(path).exists():
         if Path(path).name == ".env":
             load_dotenv(path)
         if Path(path).suffix == ".env":
-            load_file_with_variables(setter_method, path, variables=varname_new)
+            load_file_with_variables(
+                setter_method, path, varname_new=varname_new, varname_old=varname_old
+            )
     else:
         possible_locs = [Path.cwd() / ".env", ROOT_DIR / ".env", ROOT_DIR.parent / ".env"]
         for r in possible_locs:
