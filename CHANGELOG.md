@@ -44,6 +44,9 @@
   `h2integrate/core/utilities/file_utils.py::check_data_dir` with a wrapped version for resource
   data (`check_resource_dir`) and feedstock data (`check_feedstock_data`). [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
 - Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
+- Removed hard-coded logic of price units in finance models to be flexible to any type of commodity. Created helper functions `_compute_price_units` and `_compute_rate_units` in `h2integrate.finances.tools` and integrated usage of these functions into all finance models  (`numpy_financial_npv`, `profast_npv`, `profast_lco`) accordingly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
+- Removed the `is_electricity_producer` helper from `h2integrate.core.commodity_stream_definitions` and the electricity-specific auto-detection branch in `H2IntegrateModel`, making finance-subgroup `commodity_stream` resolution fully commodity-agnostic; updated example `plant_config.yaml` files that previously relied on the auto-detection to set `commodity_stream` explicitly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
+
 
 ## 0.8 [April 15, 2026]
 

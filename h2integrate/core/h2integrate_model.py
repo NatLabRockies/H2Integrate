@@ -14,20 +14,11 @@ from h2integrate.core.supported_models import (
     supported_models,
     no_replacement_schedule_models,
 )
-from h2integrate.core.commodity_stream_definitions import (
-    multivariable_streams,
-    is_electricity_producer,
-)
+from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-
-
-try:
-    import pyxdsm
-except ImportError:
-    pyxdsm = None
 
 
 class State(IntEnum):
@@ -1259,6 +1250,9 @@ class H2IntegrateModel:
                 .get(default_finance_group_name, {})
                 .get("finance_model")
             )
+            commodity_stream = self.plant_config["finance_parameters"]["finance_groups"].get(
+                "commodity_stream"
+            )
 
             if not commodity or not finance_model_name:
                 raise ValueError(
@@ -1274,6 +1268,8 @@ class H2IntegrateModel:
                 "finance_groups": [default_finance_group_name],
                 "technologies": all_techs,
             }
+            if commodity_stream is not None:
+                subgroup["commodity_stream"] = commodity_stream
             subgroups = {default_finance_group_name: subgroup}
 
         # --- Normal subgroup handling ---
@@ -1337,66 +1333,18 @@ class H2IntegrateModel:
 
             finance_subgroup = om.Group()
 
-            # Default logic for handling cases without specified commodity streams
+            # ``commodity_stream`` identifies the technology whose output is used as
+            # the commodity-production signal for this subgroup's finance model. It
+            # must be supplied explicitly by the user — there is no default mapping
+            # from commodity to tech name.
             if commodity_stream is None:
-                if commodity == "electricity":
-                    elec_tech_names = [
-                        tech for tech in tech_configs if is_electricity_producer(tech)
-                    ]
-                    if len(elec_tech_names) < 1:
-                        msg = (
-                            "Commodity 'electricity' was specified, but no electricity "
-                            "producing techs were found."
-                        )
-                        raise ValueError(msg)
-
-                    elif len(elec_tech_names) > 1:
-                        msg = (
-                            f"Multiple electricity producing technologies found in finance subgroup"
-                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
-                            f"finance subgroup {subgroup_name}."
-                        )
-                        raise ValueError(msg)
-                    else:
-                        finance_subgroups[subgroup_name].update(
-                            {"commodity_stream": elec_tech_names[0]}
-                        )
-
-                else:
-                    # Default logic for tech-names and the primary commodity streams
-                    default_techs_to_commodities = {
-                        "electrolyzer": "hydrogen",
-                        "geoh2": "hydrogen",
-                        "ammonia": "ammonia",
-                        "doc": "co2",
-                        "oae": "co2",
-                        "methanol": "methanol",
-                        "air_separator": "nitrogen",
-                    }
-
-                    for default_tech, tech_commodity in default_techs_to_commodities.items():
-                        if commodity == tech_commodity and any(
-                            default_tech in tech_name for tech_name in tech_names
-                        ):
-                            commodity_stream_tech_name = [
-                                tech_name for tech_name in tech_names if default_tech in tech_name
-                            ]
-                            finance_subgroups[subgroup_name].update(
-                                {"commodity_stream": commodity_stream_tech_name[0]}
-                            )
-
-                # Check if a default commodity_stream was found, throw error if not
-                missing_commodity_stream = (
-                    finance_subgroups[subgroup_name].get("commodity_stream", None) is None
+                msg = (
+                    f"Finance subgroup '{subgroup_name}' (commodity '{commodity}') is "
+                    "missing the required `commodity_stream` field. Please specify "
+                    "which technology's output should be used as the commodity stream "
+                    "for this subgroup."
                 )
-                if missing_commodity_stream and len(tech_names) > 1:
-                    msg = (
-                        "Could not find a default technology to use as the commodity stream "
-                        f"for commodity {finance_subgroups[subgroup_name]['commodity']}. "
-                        "Please specify the `commodity_stream` for finance subgroup "
-                        f"{subgroup_name}."
-                    )
-                    raise UserWarning(msg)
+                raise ValueError(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
