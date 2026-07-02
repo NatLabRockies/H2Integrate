@@ -7,7 +7,7 @@ from attrs import field, define
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
-from h2integrate.resource.utilities.nlr_developer_api_keys import (
+from h2integrate.resource.utilities.env_var_api_tools import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
 )

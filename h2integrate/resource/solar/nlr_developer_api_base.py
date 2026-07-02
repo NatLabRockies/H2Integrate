@@ -3,7 +3,7 @@ import urllib.parse
 import pandas as pd
 
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
-from h2integrate.resource.utilities.nlr_developer_api_keys import (
+from h2integrate.resource.utilities.env_var_api_tools import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
 )
