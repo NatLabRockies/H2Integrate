@@ -1,22 +1,31 @@
 from functools import partial, update_wrapper
 
-from h2integrate.core.env_tools import get_environment_var, set_env_var_dot_env, set_environment_var
+from h2integrate.core.env_tools import get_environment_var, set_env_var_dot_env
 
 
 # global variables
 developer_nlr_gov_key = ""
 developer_nlr_gov_email = ""
 
+
 # Setter methods for each NLR API variable
-set_developer_nlr_gov_key = partial(set_environment_var, global_varname="developer_nlr_gov_key")
-update_wrapper(set_developer_nlr_gov_key, set_environment_var)
-set_developer_nlr_gov_email = partial(set_environment_var, global_varname="developer_nlr_gov_email")
-update_wrapper(set_developer_nlr_gov_email, set_environment_var)
+def set_developer_nlr_gov_key(var_value):
+    global developer_nlr_gov_key
+    if var_value is not None:
+        developer_nlr_gov_key = var_value
+    return developer_nlr_gov_key
+
+
+def set_developer_nlr_gov_email(var_value):
+    global developer_nlr_gov_email
+    if var_value is not None:
+        developer_nlr_gov_email = var_value
+    return developer_nlr_gov_email
+
 
 # Getter methods called by NLR API resource models
 get_nlr_developer_api_key = partial(
     get_environment_var,
-    global_varname="developer_nlr_gov_key",
     setter_method=set_developer_nlr_gov_key,
     varname_new="NLR_API_KEY",
     varname_old="NREL_API_KEY",
@@ -25,7 +34,6 @@ update_wrapper(get_nlr_developer_api_key, get_environment_var)
 
 get_nlr_developer_api_email = partial(
     get_environment_var,
-    global_varname="developer_nlr_gov_email",
     setter_method=set_developer_nlr_gov_email,
     varname_new="NLR_API_EMAIL",
     varname_old="NREL_API_EMAIL",

@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 from h2integrate import ROOT_DIR
 
 
+# global xx_test_env_var_xx
+# xx_test_env_var_xx = ""
+
+
 _DEPRECATION_MSG = (
     "The '{old}' environment variable is deprecated and will be removed in a future release. "
     "Please use '{new}' instead. The nrel.gov API domain has moved to nlr.gov."
@@ -42,14 +46,14 @@ def _get_env_with_fallback(new_name, old_name):
     return None
 
 
-def set_environment_var(global_varname: str, var_value: str):
-    """Set `var_value` as the global variable :py:attr:`global_varname`.
+# def set_environment_var(global_varname: str, var_value: str):
+#     """Set `var_value` as the global variable :py:attr:`global_varname`.
 
-    Args:
-        var_value (str): value to set for the environment variable
-    """
-    globals()[global_varname] = var_value
-    return globals()[global_varname]
+#     Args:
+#         var_value (str): value to set for the environment variable
+#     """
+#     globals()[global_varname] = var_value
+#     return globals()[global_varname]
 
 
 def load_file_with_variables(
@@ -146,7 +150,7 @@ def set_env_var_dot_env(setter_method, varname_new: str, varname_old: str | None
 
 
 def get_environment_var(
-    global_varname, setter_method, varname_new: str, varname_old: str | None = None, env_path=None
+    setter_method, varname_new: str, varname_old: str | None = None, env_path=None
 ):
     """Load the environment variable named :py:attr:`varname_new` (or :py:attr:`varname_old`).
     This method does the following:
@@ -178,15 +182,19 @@ def get_environment_var(
     if env_val is not None:
         return env_val
 
+    global_var_value = setter_method(var_value=None)
     # check if set as a global variable
-    if len(globals()[global_varname]) == 0:
+    if len(global_var_value) == 0:
         # attempt to set the variable from a .env file
         set_env_var_dot_env(setter_method, varname_new, varname_old, path=env_path)
 
-    if len(globals()[global_varname]) == 0:
+    global_var_value = setter_method(var_value=None)
+    if len(global_var_value) == 0:
         # variable was not found
         raise ValueError(
             f"{varname_new} (or {varname_old}) has not been set. "
             f"Please set the {varname_new} environment variable."
         )
-    return globals()[global_varname]
+
+    global_var_value = setter_method(var_value=None)
+    return global_var_value
