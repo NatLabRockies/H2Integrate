@@ -80,7 +80,7 @@ def check_parameter_inputs(finance_params, plant_config):
         # NOTE: not an issue if both values are the same,
         # but better to inform users earlier on to prevent accidents
         err_info = "\n".join(
-            f"{d}: both `{d}` and `{d.replace('_','')}` map to {d}" for d in duplicated_entries
+            f"{d}: both `{d}` and `{d.replace('_', '')}` map to {d}" for d in duplicated_entries
         )
 
         msg = f"Duplicate entries found in ProFastLCO params. Duplicated entries are: {err_info}"
@@ -500,15 +500,6 @@ class ProFastBase(om.ExplicitComponent):
 
     def setup(self):
         """Set up component inputs and outputs based on plant and technology configurations."""
-        # Determine commodity units
-        if self.options["commodity_type"] == "electricity":
-            self.price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-            self.commodity_amount_units = "kWh"
-        else:
-            self.price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-            self.commodity_amount_units = "kg"
 
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups
@@ -519,19 +510,25 @@ class ProFastBase(om.ExplicitComponent):
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
 
-        # Add model-specific outputs defined by subclass
-        self.add_model_specific_outputs()
-
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Add rated capacity and capacity factor inputs
         self.add_input(
             f"rated_{self.options['commodity_type']}_production",
             val=0.0,
-            units=commodity_rate_units,
+            units_by_conn=True,
             shape=1,
             require_connection=True,
         )
+
+        # Placeholders
+        self.commodity_amount_units = "unit_amount"
+        self.price_units = f"USD/({self.commodity_amount_units})"
+
+        # Add model-specific outputs defined by subclass
+
+        self.add_model_specific_outputs()
+
         self.add_input(
             "capacity_factor",
             val=0.0,
@@ -602,6 +599,9 @@ class ProFastBase(om.ExplicitComponent):
         Returns:
             ProFAST: A fully configured ProFAST financial model object ready for execution.
         """
+
+        self.variable_cost_settings.__setattr__("unit", self.price_units.replace("USD", "$"))
+        self.coproduct_cost_settings.__setattr__("unit", self.price_units.replace("USD", "$"))
 
         # create years of operation list
         years_of_operation = create_years_of_operation(

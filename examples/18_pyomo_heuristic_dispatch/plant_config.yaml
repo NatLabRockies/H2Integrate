@@ -34,6 +34,7 @@ resource_to_tech_connections:
 finance_parameters:
   finance_groups:
     commodity: electricity
+    commodity_stream: elec_combiner
     finance_model: ProFastLCO
     model_inputs:
       params:

@@ -61,6 +61,7 @@ finance_parameters:
   finance_subgroups:
     all_electricity:
       commodity: electricity
+      commodity_stream: wind
       finance_groups: [profast_model]
       technologies: [wind, battery]
 

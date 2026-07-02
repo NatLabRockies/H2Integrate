@@ -26,6 +26,7 @@ def profast_inputs_no1():
     cap_items = {"depr_type": "MACRS", "depr_period": 5, "refurb": [0.0]}
     model_inputs = {
         "commodity_sell_price": 0.04,  # USD/kWh for electricity
+        "commodity_sell_price_units": "USD/(kW*h)",
         "params": params,
         "capital_items": cap_items,
     }
@@ -55,6 +56,7 @@ def profast_inputs_no2():
 
     model_inputs = {
         "commodity_sell_price": 0.07,  # USD/kWh for electricity
+        "commodity_sell_price_units": "USD/(kW*h)",
         "params": params,
         "capital_items": cap_items,
     }
@@ -185,6 +187,7 @@ def test_profast_npv_no1_change_sell_price(
     # set inputs for 'pf2' with commodity sell price of 0.07 USD/(kW*h)
     new_sell_price = 0.07
     prob.set_val("pf2.sell_price_electricity_no1_expensive", new_sell_price, units="USD/(kW*h)")
+
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf2.{variable}", cost, units=units)
@@ -258,6 +261,62 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"pf.{variable}", cost, units=units)
 
+    prob.run_model()
+
+    with subtests.test("Sell price"):
+        assert (
+            pytest.approx(
+                prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)"), rel=1e-6
+            )
+            == profast_inputs_no2["commodity_sell_price"]
+        )
+
+    with subtests.test("NPV"):
+        assert (
+            pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
+            == 611288384.412
+        )
+
+
+@pytest.mark.regression
+def test_profast_npv_nonstandard_price_units(
+    profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+
+    profast_inputs_no2["commodity_sell_price_units"] = "USD/(kW*min)"
+
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    prob.set_val(
+        "pf.sell_price_electricity_no2",
+        profast_inputs_no2["commodity_sell_price"],
+        units="USD/(kW*h)",
+    )
     prob.run_model()
 
     with subtests.test("Sell price"):
