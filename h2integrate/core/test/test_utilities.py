@@ -26,6 +26,8 @@ from h2integrate.core.supported_models import supported_models
 @pytest.fixture(scope="function")
 def temp_resource_dir_env():
     """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
+    # NOTE: changes to this fixture can result in hard-to-debug test failures
+    # in tests for resource components. Please do not modify this fixture if possible!
     resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
     original = os.environ.get("RESOURCE_DIR")
     os.environ["RESOURCE_DIR"] = resource_dir
@@ -190,6 +192,9 @@ def test_check_data_dir_full_dir_exists(subtests):
 
 @pytest.mark.unit
 def test_check_resource_dir_environment_var(subtests, temp_resource_dir_env):
+    # NOTE: changes to this test can result in hard-to-debug test failures!
+    # Please do not modify this test if possible.
+
     data_dir = temp_resource_dir_env
     output_dir = check_resource_dir()
     with subtests.test("Environment variable data_dir, no data_subdir"):
