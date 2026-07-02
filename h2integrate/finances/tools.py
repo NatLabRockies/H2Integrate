@@ -1,12 +1,6 @@
 import re
 
-from openmdao.utils.units import (
-    PhysicalUnit,
-    _find_unit,
-    convert_units,
-    is_compatible,
-    simplify_unit,
-)
+from openmdao.utils.units import _find_unit, convert_units, is_compatible, simplify_unit
 
 
 def check_plant_config_and_profast_params(
@@ -95,7 +89,6 @@ def _compute_rate_units(price_units: str, check_conversion: bool):
         check_conversion (bool): Whether to check for a conversion factor of 1.0 from price_units
             to price units re-calculated from the estimated rate_units
 
-
     Raises:
         ValueError: if the `rate_units` cannot be easily estimated from the `price_units`
 
@@ -103,36 +96,10 @@ def _compute_rate_units(price_units: str, check_conversion: bool):
         str: rate units extrapolated from `price_units`.
     """
 
-    # 9 base units that make-up ``_powers`` attribute of a ``PhysicalUnit`` are:
-    # [m, kg, s, A, K, mol, cd, rad, sr, USD, pax, byte, unitless]
-    # All base units have a ``_factor`` attribute of 1.0
-    # ``_factor`` is the amount to multiply a number by to convert from the base units
-    # to the other units. For example, 'g' has a factor of 0.001
-
-    # 1. convert price units to amount units
-
-    # Create ``PhysicalUnit`` objects for the price units and for units of USD
-    price_unit_cls = _find_unit(price_units)
-    usd_units = _find_unit("USD")
-
-    # Remove the USD component from the numerator (divide by USD)
-    names = price_unit_cls._names - usd_units._names
-    factor = usd_units._factor * price_unit_cls._factor
-    amount_units_powers = [a - b for a, b in zip(price_unit_cls._powers, usd_units._powers)]
-    denom_amount_unit_cls = PhysicalUnit(names, factor, amount_units_powers)
-    amount_units = simplify_unit(f"1/({denom_amount_unit_cls.name()})")
-
-    # 2. convert amount units to rate units
-    # Create ``PhysicalUnit`` objects for the amount units and for units of h
-    amount_unit_cls = _find_unit(amount_units)
-    hr_units = _find_unit("h")
-
-    # Add in a time component to the denominator (divide by hours)
-    rate_names = amount_unit_cls._names - hr_units._names
-    rate_factor = hr_units._factor * amount_unit_cls._factor
-    rate_units_powers = [a - b for a, b in zip(amount_unit_cls._powers, hr_units._powers)]
-    rate_unit_cls = PhysicalUnit(rate_names, rate_factor, rate_units_powers)
-    rate_units = rate_unit_cls.name()
+    # A price has units of USD/amount, and an amount equals a rate times a time.
+    # Therefore rate_units = USD / (price_units * h), which OpenMDAO can simplify
+    # directly.
+    rate_units = simplify_unit(f"USD/(({price_units})*h)")
 
     if not check_conversion:
         return rate_units
