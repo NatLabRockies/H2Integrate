@@ -51,6 +51,7 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
     storage_pressure_bar: float = field(default=200, validator=range_val(0, 700))
     cg_capex_per_kg_350_bar: float = field(default=1333.11625, validator=gte_zero)
     cg_capex_per_kg_700_bar: float = field(default=1999.67437, validator=gte_zero)
+    marginal_cost: float = field(default=0.0)
 
     def __attrs_post_init__(self):
         undefined_capacities = self.max_capacity is None or self.max_charge_rate is None
@@ -106,8 +107,6 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         super().setup()
 
         self.add_input(
@@ -127,7 +126,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         self.add_input(
             "hydrogen_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=f"{self.config.commodity_rate_units}",
             desc="Hydrogen input timeseries for average flow rate calculation",
         )

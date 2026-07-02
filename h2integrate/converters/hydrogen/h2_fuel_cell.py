@@ -42,6 +42,7 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -89,13 +90,13 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             desc="Mass flow rate of hydrogen consumed by the fuel cell",
         )
 
-        # Default the electricity set point input as the rated capacity
+        # Default the electricity command value input as the rated capacity
         self.add_input(
-            f"{self.commodity}_set_point",
+            f"{self.commodity}_command_value",
             val=self.config.system_capacity_kw,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity set point for natural gas plant",
+            desc="Electricity command value for natural gas plant",
         )
 
     def compute(self, inputs, outputs):
@@ -105,7 +106,7 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         Args:
             inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
-                HHV efficiency, electricity_set_point, and system_capacity.
+                HHV efficiency, electricity_command_value, and system_capacity.
             outputs: OpenMDAO outputs object for electricity_out,
                 hydrogen_consumed.
         """
@@ -120,14 +121,14 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         max_h2_consumption = system_capacity * kw_to_kgh_h2
 
-        # electrical set point, saturated at maximum rated system capacity
-        electricity_set_point = np.where(
-            inputs["electricity_set_point"] > system_capacity,
+        # electrical command value, saturated at maximum rated system capacity
+        electricity_command_value = np.where(
+            inputs["electricity_command_value"] > system_capacity,
             system_capacity,
-            inputs["electricity_set_point"],
+            inputs["electricity_command_value"],
         )
 
-        h2_demand = electricity_set_point * kw_to_kgh_h2
+        h2_demand = electricity_command_value * kw_to_kgh_h2
 
         # available feedstock, saturated at maximum system feedstock consumption
         h2_available = np.where(

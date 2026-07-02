@@ -41,7 +41,7 @@ def test_storage_autosizing_basic_performance_no_losses(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )
@@ -228,7 +228,7 @@ def test_storage_autosizing_soc_bounds(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )
@@ -335,7 +335,7 @@ def test_storage_autosizing_losses(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC2",
         subsys=om.IndepVarComp(
-            name="hydrogen_set_point", val=commodity_demand - commodity_in, units="kg/h"
+            name="hydrogen_command_value", val=commodity_demand - commodity_in, units="kg/h"
         ),
         promotes=["*"],
     )

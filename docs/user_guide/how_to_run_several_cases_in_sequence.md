@@ -2,8 +2,18 @@
 
 ## Overview
 
-If you have several different cases you want to run with different input parameters, these cases can be set up in an input spreadsheet rather than directly modifying the `tech_config`.
-This is done using the functions in `h2integrate/tools/run_cases.py`
+```{tip}
+For most use cases where you want to sweep over different values of **design variables** (e.g., system capacities, number of clusters), we recommend using the built-in [parameter sweep capability](parameter_sweep_in_h2i.md).
+It handles case generation, parallel execution, and result recording automatically.
+```
+
+The approach described on this page is intended for **advanced users** who need to modify **technology configuration** parameters between runs — values that are not exposed as design variables in the `driver_config.yaml`.
+This is done using the functions in `h2integrate/tools/run_cases.py`.
+
+```{warning}
+The for-loop approach shown below does not automatically record results to a SQL file, does not support parallel execution, and requires manual post-processing.
+Use the [parameter sweep](parameter_sweep_in_h2i.md) whenever possible.
+```
 
 ## Setting up a variation of parameters in a .csv
 

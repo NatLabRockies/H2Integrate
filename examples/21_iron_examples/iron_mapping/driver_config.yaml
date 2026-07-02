@@ -3,7 +3,7 @@ description: This analysis runs a hybrid plant to match the first example in H2I
 general:
   folder_output: ex_out
 driver:
-  design_of_experiments:
+  parameter_sweep:
     flag: true
     debug_print: false
     generator: csvgen

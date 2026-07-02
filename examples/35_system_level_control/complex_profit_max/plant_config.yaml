@@ -1,0 +1,51 @@
+name: plant_config
+description: >
+  Wind + solar + battery + NG + grid plant in west Texas with
+  profit-maximization system-level control. Demonstrates complex
+  multi-source dispatch with realistic pricing.
+sites:
+  site:
+    latitude: 30.6617
+    longitude: -101.7096
+    resources:
+      wind_resource:
+        resource_model: WTKNLRDeveloperAPIWindResource
+        resource_parameters:
+          resource_year: 2013
+      solar_resource:
+        resource_model: OpenMeteoHistoricalSolarResource
+        resource_parameters:
+          resource_year: 2013
+technology_interconnections:
+  # Combine wind and solar into a single renewable stream
+  - [wind, renewable_combiner, electricity, cable]
+  - [solar, renewable_combiner, electricity, cable]
+  # Renewables charge the battery
+  - [renewable_combiner, battery, electricity, cable]
+  # Everything feeds into the final combiner
+  - [renewable_combiner, fin_combiner, electricity, cable]
+  - [battery, fin_combiner, electricity, cable]
+  - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+  - [natural_gas_plant, fin_combiner, electricity, cable]
+  - [grid_buy, fin_combiner, electricity, cable]
+  # Final combiner delivers to demand
+  - [fin_combiner, electrical_load_demand, electricity, cable]
+resource_to_tech_connections:
+  - [site.wind_resource, wind, wind_resource_data]
+  - [site.solar_resource, solar, solar_resource_data]
+plant:
+  plant_life: 30
+  simulation:
+    n_timesteps: 8760
+    dt: 3600
+system_level_control:
+  control_strategy: ProfitMaximizationControl
+  control_parameters:
+    commodity_sell_price: 0.06  # $/kWh default; overridden in run script
+    cost_per_tech:
+      natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
+      grid_buy: buy_price  # use electricity_buy_price from cost config
+  solver_options:
+    solver_name: gauss_seidel
+    max_iter: 30
+    convergence_tolerance: 1.0e-6

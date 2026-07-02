@@ -110,8 +110,6 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-
         performance_inputs = self.options["tech_config"]["model_inputs"]["performance_parameters"]
 
         # initialize layout config
@@ -286,6 +284,9 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
+
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)
 
         # 3. Cache the results for future use if enabled
         self.cache_outputs(
