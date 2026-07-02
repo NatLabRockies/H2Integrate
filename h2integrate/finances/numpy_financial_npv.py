@@ -5,6 +5,7 @@ import pandas as pd
 import openmdao.api as om
 import numpy_financial as npf
 from attrs import field, define
+from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
@@ -105,7 +106,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         )
 
         rate_units = _compute_rate_units(
-            self.config.commodity_sell_price_units, check_conversion=True
+            self.config.commodity_sell_price_units, check_conversion=False
         )
 
         self.add_input(
@@ -178,18 +179,28 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
         self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        rate_units_from_price = _compute_rate_units(self.price_units, check_conversion=False)
+
+        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
+        if float(conversion_ratio) != 1.0:
+            capacity = convert_units(
+                inputs[f"rated_{self.options['commodity_type']}_production"],
+                rate_units_capacity,
+                rate_units_from_price,
+            )
+        else:
+            capacity = inputs[f"rated_{self.options['commodity_type']}_production"]
+
+        # Extract annual production based on commodity type
+        annual_production = inputs["capacity_factor"] * capacity * 8760
 
         # By convention in NPV calculations, investments (capex, opex, refurbishment) are
         # negative cash flows while revenues are positive. This follows the numpy_financial
         # convention where money going out is negative and money coming in is positive.
         sign_of_costs = -1
-
-        # Extract annual production based on commodity type
-        annual_production = (
-            inputs["capacity_factor"]
-            * inputs[f"rated_{self.options['commodity_type']}_production"]
-            * 8760
-        )
 
         # Calculate revenue from selling the commodity at the specified price
         # Revenue is only generated during operational years (not during construction year 0)
