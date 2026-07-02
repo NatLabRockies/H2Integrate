@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from h2integrate.resource.utilities.env_var_api_tools import set_nlr_key_dot_env
+from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
 
 from test.conftest import (  # noqa: F401
     temp_dir,
