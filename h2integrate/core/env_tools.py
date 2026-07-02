@@ -180,7 +180,6 @@ def get_environment_var(
 
     # check if set as a global variable
     if len(globals()[global_varname]) == 0:
-        # if len(developer_nlr_gov_key) == 0:
         # attempt to set the variable from a .env file
         set_env_var_dot_env(setter_method, varname_new, varname_old, path=env_path)
 
