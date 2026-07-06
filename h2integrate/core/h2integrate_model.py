@@ -534,8 +534,6 @@ class H2IntegrateModel:
         perf_params = model_inputs.get("performance_parameters", {})
         shared_params = model_inputs.get("shared_parameters", {})
         all_params = {**shared_params, **perf_params}
-        demand_commodity = all_params["commodity"]
-        demand_commodity_rate_units = all_params.get("commodity_rate_units", None)
 
         # Check that the demand tech is in the technology_interconnections
         tech_interconnections = self.plant_config["technology_interconnections"]
@@ -581,6 +579,8 @@ class H2IntegrateModel:
             if connection[0] in upstream_controllable_techs
         ]
         upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
+        slc_topology["technology_graph"] = upstream_tech_graph
+
         # Check if storage models have a controller
         storage_tech_to_control = {}
         for tech, classifier in self.tech_control_classifiers.items():
@@ -595,6 +595,7 @@ class H2IntegrateModel:
                 else:
                     # storage model does use a controller
                     storage_tech_to_control[tech] = True
+        slc_topology["storage_techs_to_control"] = storage_tech_to_control
 
         # Remove feedstocks and connectors
         control_classifiers_to_connect = [
@@ -609,14 +610,12 @@ class H2IntegrateModel:
             for e in sources_to_commodities
             if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
         }
+        slc_topology["tech_to_commodity"] = tech_to_commodity
 
         # Store classification results in plant_config for SLC component
         slc_topology["demand_tech"] = demand_tech
-        slc_topology["demand_commodity"] = demand_commodity
-        slc_topology["demand_commodity_rate_units"] = demand_commodity_rate_units
-        slc_topology["tech_to_commodity"] = tech_to_commodity
-        slc_topology["storage_techs_to_control"] = storage_tech_to_control
-        slc_topology["technology_graph"] = upstream_tech_graph
+        slc_topology["demand_commodity"] = all_params["commodity"]
+        slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
 
         slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
 
@@ -2131,7 +2130,7 @@ class H2IntegrateModel:
         a commodity (length-4 entry), it is stored as an edge attribute.
 
         Args:
-            tech_interconections (list): list of technology interconnections
+            tech_interconnections (list): list of technology interconnections
 
         Returns:
             nx.DiGraph: A directed graph with technologies as nodes and
