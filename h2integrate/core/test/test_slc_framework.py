@@ -57,7 +57,7 @@ def make_mock_tech_config(demand_tech, storage_techs, demand_class_name="Generic
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["complex_electrical"])
-def test_slc_config_missing_demand(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_missing_demand(plant_config, tech_control_classifiers, subtests):
     # initialize the model
     model = object.__new__(H2IntegrateModel)
     model.slc = True
@@ -82,7 +82,7 @@ def test_slc_config_missing_demand(plant_config, tech_control_classifiers, subte
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["complex_electrical"])
-def test_slc_config_demand_not_in_tech(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_demand_not_in_tech(plant_config, tech_control_classifiers, subtests):
     # initialize the model
     model = object.__new__(H2IntegrateModel)
     model.slc = True
@@ -106,7 +106,7 @@ def test_slc_config_demand_not_in_tech(plant_config, tech_control_classifiers, s
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["complex_electrical"])
-def test_slc_config_invalid_demand_tech(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_invalid_demand_tech(plant_config, tech_control_classifiers, subtests):
     model = object.__new__(H2IntegrateModel)
     model.slc = True
     model.plant_config = plant_config
@@ -132,7 +132,7 @@ def test_slc_config_invalid_demand_tech(plant_config, tech_control_classifiers, 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["complex_electrical"])
-def test_slc_config_unconnected_demand(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_unconnected_demand(plant_config, tech_control_classifiers, subtests):
     model = object.__new__(H2IntegrateModel)
     model.slc = True
     demand_tech = plant_config["system_level_control"]["demand_component"]
@@ -163,7 +163,7 @@ def test_slc_config_unconnected_demand(plant_config, tech_control_classifiers, s
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["hydrogen_system"])
-def test_slc_config_h2_system(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_h2_system(plant_config, tech_control_classifiers, subtests):
     model = object.__new__(H2IntegrateModel)
     model.slc = True
     model.plant_config = plant_config
@@ -175,12 +175,12 @@ def test_slc_config_h2_system(plant_config, tech_control_classifiers, subtests):
     model.technology_graph = model.create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
-    slc_config = model._classify_slc_technologies()
+    slc_topology = model._classify_slc_technologies()
 
-    with subtests.test("SLC config demand tech"):
-        assert slc_config["demand_tech"] == demand_tech
+    with subtests.test("SLC topology demand tech"):
+        assert slc_topology["demand_tech"] == demand_tech
 
-    slc_techs = set(slc_config["technology_graph"].nodes())
+    slc_techs = set(slc_topology["technology_graph"].nodes())
     all_techs = set(model.technology_graph.nodes())
     upstream_techs = nx.ancestors(model.technology_graph, demand_tech)
 
@@ -196,7 +196,7 @@ def test_slc_config_h2_system(plant_config, tech_control_classifiers, subtests):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["ammonia_system_nh3_dmd"])
-def test_slc_config_nh3_system(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_nh3_system(plant_config, tech_control_classifiers, subtests):
     model = object.__new__(H2IntegrateModel)
     model.slc = True
     model.plant_config = plant_config
@@ -208,12 +208,12 @@ def test_slc_config_nh3_system(plant_config, tech_control_classifiers, subtests)
     model.technology_graph = model.create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
-    slc_config = model._classify_slc_technologies()
+    slc_topology = model._classify_slc_technologies()
 
-    with subtests.test("SLC config demand tech"):
-        assert slc_config["demand_tech"] == demand_tech
+    with subtests.test("SLC topology demand tech"):
+        assert slc_topology["demand_tech"] == demand_tech
 
-    slc_techs = set(slc_config["technology_graph"].nodes())
+    slc_techs = set(slc_topology["technology_graph"].nodes())
     all_techs = set(model.technology_graph.nodes())
     upstream_techs = nx.ancestors(model.technology_graph, demand_tech)
 
@@ -229,7 +229,7 @@ def test_slc_config_nh3_system(plant_config, tech_control_classifiers, subtests)
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["ammonia_system_nh3_dmd_with_upstream_demand"])
-def test_slc_config_nh3_system_upstream_demand(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_nh3_system_upstream_demand(plant_config, tech_control_classifiers, subtests):
     # theres a demand component upstream of the demand_tech
     model = object.__new__(H2IntegrateModel)
     model.slc = True
@@ -242,12 +242,12 @@ def test_slc_config_nh3_system_upstream_demand(plant_config, tech_control_classi
     model.technology_graph = model.create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
-    slc_config = model._classify_slc_technologies()
+    slc_topology = model._classify_slc_technologies()
 
-    with subtests.test("SLC config demand tech"):
-        assert slc_config["demand_tech"] == demand_tech
+    with subtests.test("SLC topology demand tech"):
+        assert slc_topology["demand_tech"] == demand_tech
 
-    slc_techs = set(slc_config["technology_graph"].nodes())
+    slc_techs = set(slc_topology["technology_graph"].nodes())
     all_techs = set(model.technology_graph.nodes())
     upstream_techs = nx.ancestors(model.technology_graph, demand_tech)
 
@@ -263,13 +263,13 @@ def test_slc_config_nh3_system_upstream_demand(plant_config, tech_control_classi
 
     with subtests.test("Upstream demand tech not included in tech_to_commodity"):
         assert not any(
-            tech_commod[0] == "h2_load_demand" for tech_commod in slc_config["tech_to_commodity"]
+            tech_commod[0] == "h2_load_demand" for tech_commod in slc_topology["tech_to_commodity"]
         )
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("connection_case", ["ammonia_system_h2_dmd"])
-def test_slc_config_nh3_system_with_h2_demand(plant_config, tech_control_classifiers, subtests):
+def test_slc_topology_nh3_system_with_h2_demand(plant_config, tech_control_classifiers, subtests):
     # demand_tech is downstream of another demand component
     model = object.__new__(H2IntegrateModel)
     model.slc = True
@@ -282,12 +282,12 @@ def test_slc_config_nh3_system_with_h2_demand(plant_config, tech_control_classif
     model.technology_graph = model.create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
-    slc_config = model._classify_slc_technologies()
+    slc_topology = model._classify_slc_technologies()
 
-    with subtests.test("SLC config demand tech"):
-        assert slc_config["demand_tech"] == demand_tech
+    with subtests.test("SLC topology demand tech"):
+        assert slc_topology["demand_tech"] == demand_tech
 
-    slc_techs = set(slc_config["technology_graph"].nodes())
+    slc_techs = set(slc_topology["technology_graph"].nodes())
     all_techs = set(model.technology_graph.nodes())
     upstream_techs = nx.ancestors(model.technology_graph, demand_tech)
 

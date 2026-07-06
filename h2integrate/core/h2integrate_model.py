@@ -76,8 +76,8 @@ class H2IntegrateModel:
 
         # add system-level controller if configured
         if self.slc:
-            slc_config = self._classify_slc_technologies()
-            self.add_system_level_controller(slc_config)
+            slc_topology = self._classify_slc_technologies()
+            self.add_system_level_controller(slc_topology)
 
         # connect technologies
         # technologies are connected within the `technology_interconnections` section of the
@@ -481,7 +481,7 @@ class H2IntegrateModel:
         component is currently supported.
 
         Returns:
-            dict: Classification dictionary (``slc_config``) with keys:
+            dict: Classification dictionary (``slc_topology``) with keys:
 
                 - ``"demand_tech"`` (str): Name of the demand technology (the tech whose
                   performance model is a ``DemandComponent``).
@@ -504,7 +504,7 @@ class H2IntegrateModel:
                   ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
                   the SLC interacts with each tech.
         """
-        slc_config = {}
+        slc_topology = {}
         technologies = self.technology_config.get("technologies", {})
 
         if not (
@@ -611,18 +611,18 @@ class H2IntegrateModel:
         }
 
         # Store classification results in plant_config for SLC component
-        slc_config["demand_tech"] = demand_tech
-        slc_config["demand_commodity"] = demand_commodity
-        slc_config["demand_commodity_rate_units"] = demand_commodity_rate_units
-        slc_config["tech_to_commodity"] = tech_to_commodity
-        slc_config["storage_techs_to_control"] = storage_tech_to_control
-        slc_config["technology_graph"] = upstream_tech_graph
+        slc_topology["demand_tech"] = demand_tech
+        slc_topology["demand_commodity"] = demand_commodity
+        slc_topology["demand_commodity_rate_units"] = demand_commodity_rate_units
+        slc_topology["tech_to_commodity"] = tech_to_commodity
+        slc_topology["storage_techs_to_control"] = storage_tech_to_control
+        slc_topology["technology_graph"] = upstream_tech_graph
 
-        slc_config["tech_control_classifiers"] = self.tech_control_classifiers
+        slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
 
-        return slc_config
+        return slc_topology
 
-    def add_system_level_controller(self, slc_config):
+    def add_system_level_controller(self, slc_topology):
         """Add a system-level controller component and connect it within the plant.
 
         Instantiates the controller specified by ``control_strategy`` in the plant configuration,
@@ -647,7 +647,7 @@ class H2IntegrateModel:
            is largely inconsequential as we're not propagating derivatives at this time.
 
         3. **Connect technology outputs to controller inputs** - For each ``(tech_name,
-           commodity)`` pair in ``slc_config["tech_to_commodity"]``:
+           commodity)`` pair in ``slc_topology["tech_to_commodity"]``:
 
            - **Feedstock techs**: Only the commodity output
              (``{tech_name}_source.{commodity}_out``) is connected to the controller. Feedstocks
@@ -687,7 +687,7 @@ class H2IntegrateModel:
               current SLC constraint that exactly one demand component is defined.
 
         Args:
-            slc_config (dict): Pre-computed dictionary produced by
+            slc_topology (dict): Pre-computed dictionary produced by
                 ``_classify_slc_technologies()``. Expected keys:
 
                 - ``"demand_tech"`` (str): Name of the demand technology.
@@ -725,7 +725,7 @@ class H2IntegrateModel:
             driver_config=self.driver_config,
             plant_config=self.plant_config,
             tech_config=self.technology_config,
-            slc_config=slc_config,
+            slc_topology=slc_topology,
         )
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
@@ -742,10 +742,10 @@ class H2IntegrateModel:
         self.plant.linear_solver = om.DirectSolver()
 
         # --- Step 3: Connect technology outputs/inputs to the controller --
-        for tech_to_commodity in slc_config["tech_to_commodity"]:
+        for tech_to_commodity in slc_topology["tech_to_commodity"]:
             tech_name, commodity = tech_to_commodity
 
-            if slc_config["tech_control_classifiers"][tech_name] == "feedstock":
+            if slc_topology["tech_control_classifiers"][tech_name] == "feedstock":
                 # Feedstocks only provide their commodity output to the
                 # controller; they receive no set-point back.
                 self.plant.connect(
@@ -754,7 +754,7 @@ class H2IntegrateModel:
                 )
                 continue
 
-            if slc_config["tech_control_classifiers"][tech_name] == "fixed":
+            if slc_topology["tech_control_classifiers"][tech_name] == "fixed":
                 # Fixed techs only provide their commodity output to the
                 # controller; they always produce and receive no set-point.
                 self.plant.connect(
@@ -776,7 +776,7 @@ class H2IntegrateModel:
             )
 
             # Storage tech: connect the storage duration as a controller input
-            if slc_config["tech_control_classifiers"][tech_name] == "storage":
+            if slc_topology["tech_control_classifiers"][tech_name] == "storage":
                 self.plant.connect(
                     f"{tech_name}.storage_duration",
                     f"system_level_controller.{tech_name}_{commodity}_storage_duration",
@@ -794,8 +794,8 @@ class H2IntegrateModel:
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
             cost_per_tech = plant_slc_config.get("control_parameters", {}).get("cost_per_tech", {})
-            technology_graph = slc_config["technology_graph"]
-            for tech_name, _ in slc_config["tech_to_commodity"]:
+            technology_graph = slc_topology["technology_graph"]
+            for tech_name, _ in slc_topology["tech_to_commodity"]:
                 if self.tech_control_classifiers[tech_name] == "dispatchable":
                     cost_spec = cost_per_tech.get(tech_name, 0.0)
                     if cost_spec == "VarOpEx":
@@ -823,8 +823,8 @@ class H2IntegrateModel:
                     # numeric scalar: used directly, no connection needed
 
         # --- Step 5: Connect the demand profile to the controller ---------
-        demand_tech = slc_config["demand_tech"]
-        demand_commodity = slc_config["demand_commodity"]
+        demand_tech = slc_topology["demand_tech"]
+        demand_commodity = slc_topology["demand_commodity"]
         self.plant.connect(
             f"{demand_tech}.{demand_commodity}_demand_out",
             f"system_level_controller.{demand_commodity}_demand",
