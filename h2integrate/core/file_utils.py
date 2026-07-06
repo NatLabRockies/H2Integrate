@@ -1,7 +1,9 @@
+import os
 import re
 import csv
 import copy
 from pathlib import Path
+from functools import partial, update_wrapper
 
 import yaml
 import ruamel.yaml as ry
@@ -9,7 +11,7 @@ from yaml.nodes import ScalarNode
 from yaml.composer import Composer
 from yaml.resolver import BaseResolver
 
-from h2integrate import ROOT_DIR
+from h2integrate import ROOT_DIR, RESOURCE_DEFAULT_DIR, FEEDSTOCK_DEFAULT_DIR
 from h2integrate.core.dict_utils import remove_numpy, dict_to_yaml_formatting
 
 
@@ -452,3 +454,82 @@ def check_file_format_for_csv_generator(
     new_file.close()
 
     return new_fpath
+
+
+def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str | None = None):
+    """Checks for a folder to contain data files (e.g. resource data files), or creates
+    one if necessary. If :py:attr:`data_dir` is input, the logic is as follows:
+
+    1) Check that :py:attr:`data_dir` exists, if it doesn't, then create a folder.
+
+        Note: If data_dir is a relative filepath, it is assumed relative to the
+        current working directory.
+
+    2) If :py:attr:`data_subdir` is None, then return the full path :py:attr:`data_dir`.
+        Otherwise, calls this function again with
+
+        >>> check_data_dir(data_dir=str(data_dir / data_subdir))
+
+    If :py:attr:`data_dir` is not input, the logic is as follows:
+
+    3) Check for an environment variable named using an upper case :py:attr:`data_type`_DIR, such
+        as "RESOURCE_DIR" or "FEEDSTOCK_DIR." If this environment variable exists, follow the logic
+        in Steps 1-2.
+
+    4) Use :py:attr:`data_type`'s default :py:attr:`data_dir` as the :py:attr:`data_dir` and follow
+        the logic in Steps 1-2.
+
+    Args:
+        data_dir (Path | str, optional): Path of directory that has the :py:attr:`data_type` files.
+            Defaults to None.
+        data_subdir (str, optional): folder name within :py:attr:`data_dir`. Defaults to None.
+
+    Returns:
+        Path: valid directory to save or load :py:attr:`data_type` files.
+    """
+    data_type_map = {
+        "resource": RESOURCE_DEFAULT_DIR,
+        "feedstock": FEEDSTOCK_DEFAULT_DIR,
+    }
+    if not isinstance(data_type, str):
+        raise TypeError(f"`data_type` should be one of: {', '.join(data_type_map)}.")
+
+    data_type = data_type.lower()
+    if (default_dir := data_type_map.get(data_type)) is None:
+        raise ValueError(f"`data_type` should be one of: {', '.join(data_type_map)}.")
+
+    # check for user-provided resource data_dir
+    if data_dir is not None:
+        if not Path(data_dir).is_dir():
+            Path.mkdir(data_dir, exist_ok=True)
+        if data_subdir is None:
+            return Path(data_dir).absolute()
+        full_dir = Path(data_dir) / data_subdir
+        full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
+        return full_dir.absolute()
+
+    # Check for user-defined environment variable with resource data_subdir
+    data_dir = os.getenv(f"{data_type.upper()}_DIR")
+    if data_dir is not None:
+        if not Path(data_dir).is_dir():
+            Path.mkdir(data_dir, exist_ok=True)
+        if data_subdir is None:
+            return Path(data_dir).absolute()
+        full_dir = Path(data_dir) / data_subdir
+        full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
+        return full_dir.absolute()
+
+    # use default resource directory
+    if data_subdir is None:
+        return default_dir
+    full_dir = default_dir / data_subdir
+    full_dir = check_data_dir(data_type=data_type, data_dir=full_dir)
+    return full_dir.absolute()
+
+
+# Convenience wrappers to support existing default data directories
+check_resource_dir = partial(check_data_dir, data_type="resource")
+update_wrapper(check_resource_dir, check_data_dir)
+
+check_feedstock_dir = partial(check_data_dir, data_type="feedstock")
+update_wrapper(check_feedstock_dir, check_data_dir)
