@@ -1,17 +1,11 @@
 # Adding a new technology to new H2Integrate
 
 This doc page describes the steps to add a new technology to the new H2Integrate.
-In broad strokes, this involves writing performance and cost wrappers for your technology in the format that H2Integrate expects, then adding those to the list of available technologies in the H2Integrate codebase. Once you've gone through this process you can use your model by defining the technology model in the `tech_config.yaml`.
+In broad strokes, this involves writing performance and cost wrappers for your technology in the expected format, then adding those to the list of available technologies in the codebase. Once you've gone through this process you can use your model by specifying it in your `tech_config.yaml`.
 
 We'll first walk through a relatively straightforward example of adding a new technology, then discuss some of the more complex cases you might encounter.
+When you contribute your model to H2Integrate, make sure to follow the pull request checklist for new technologies at the bottom of this doc page.
 
-## Pull Request Checklist for New Technologies
-
-When you're ready to submit a pull request for your new model please ensure you complete all
-items in the "New Model Checklist" section of the pull request template. Remember that adding
-a new technology typically requires review from both a core maintainer and ideally a second team
-member, as these additions significantly expand H2Integrate's capabilities and set patterns for
-future development.
 
 ## Baseclasses in H2Integrate
 Every model in H2Integrate inherits from a small set of baseclasses that wire it
@@ -21,8 +15,6 @@ class and configuration class for each piece of your technology.
 See the class structure in H2I to learn more: [Class Structure](#class_structure)
 
 ## Adding a new technology
-
-Every technology within H2Integrate uses classes to help organize the models and makes it easier for them to interact with other models if they follow a similar structure.
 
 Common model types (performance, cost, control, etc.) with slightly more explanation and examples are include here: [Technology Model Types](#technology_model_types)
 
@@ -38,7 +30,7 @@ Every model has:
 (basic-functions-of-every-model)=
 ### Basic functions of every model
 
-Every model within H2Integrate follows a similar structure to help make it easier to work within H2Integrate and across models. We use a class structure for each "piece" of a model. We typically separate out performance and cost models for a given technology so you can run performance and costs individually.
+Every model within H2Integrate follows a similar structure to help make it easier to work within H2Integrate and across models. We typically have separate performance and cost models for a given technology so you can more easily use a combination of these models in your analysis.
 
 Within the class for a technology you have three basic functions that are always included and these are special methods expected and used by OpenMDAO under the hood:
 
@@ -141,7 +133,7 @@ Every model must define the following class attributes. These are typically set 
 
 Performance models must also define the following class attributes:
 - `commodity` (str), `commodity_rate_units` (str), `commodity_amount_units` (str): set in `initialize()` (or before calling `super().setup()`). These define the commodity produced by the model and the units used for its rate (e.g. `"kW"`, `"kg/h"`) and cumulative amount (e.g. `"kW*h"`, `"kg"`). `PerformanceModelBaseClass.setup()` uses them to register all of the standard outputs and will raise `NotImplementedError` if any are missing.
-- `_control_classifier` (str): How the system-level controller (SLC) should treat this model. One of `"fixed"`, `"flexible"`, `"dispatchable"`, `"storage"`, or `"feedstock"`. The classifier determines whether the SLC sends a set-point to the model and how its output is folded into the dispatch logic. See the {ref}`control classifier docs <system-level-control>` (`docs/control/system_level_control/control_classifier.md`) for details.
+- `_control_classifier` (str): How the system-level controller (SLC) should treat this model. One of `"fixed"`, `"flexible"`, `"dispatchable"`, `"storage"`, or `"feedstock"`. The classifier determines whether the SLC sends a set-point to the model and how its output is folded into the dispatch logic. See the [control classifier docs](../control/system_level_control/control_classifier.md) for details.
 
 For `flexible` models specifically, the baseclass automatically registers the `{commodity}_command_value` input and `uncurtailed_{commodity}_out` output, and the `compute()` method must call `self.apply_curtailment(outputs)` after writing the raw production to `outputs[f"{commodity}_out"]`. For `dispatchable` models the command value is consumed by the model's own internal logic; no curtailment helper is needed. `fixed` and `feedstock` models do not receive a command value at all.
 
@@ -180,7 +172,7 @@ Add your new technology with the appropriate key depending on whether it is a pe
 Use a string version of the class name as the dictionary key. This greatly simplifies debugging configuration issues and improves model findability in the documentation and code.
 ```
 
-The registry uses lazy imports: each value is a
+The registry uses lazy imports to decrease computational overhead: each value is a
 `"relative.module.path:ClassName"` string relative to the `h2integrate`
 package, and the class is imported the first time it is accessed. Here's what
 the updated `supported_models.py` looks like with the new solar entries:
@@ -248,3 +240,12 @@ There is an example of this in the `hopp_wrapper.py` file.
 If you encounter a case that isn't covered here, please discuss it with the H2Integrate dev team for guidance.
 H2Integrate is constantly evolving and we plan to encounter new challenges as we add more technologies to the model.
 Your feedback and suggestions help you and others use H2Integrate successfully.
+
+(pull-request-template)=
+## Pull request checklist for new technologies
+
+When you're ready to submit a pull request for your new model please ensure you complete all
+items in the "New Model Checklist" section of the pull request template. Remember that adding
+a new technology typically requires review from both a core maintainer and ideally a second team
+member, as these additions significantly expand H2Integrate's capabilities and set patterns for
+future development.

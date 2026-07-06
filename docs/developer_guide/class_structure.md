@@ -1,20 +1,20 @@
 (class_structure)=
 # Class structure in H2Integrate
 
-A major focus of H2Integrate is modularizing the components and system architecture so it's easier to construct and analyze complex hybrid power plants producing commodities for a variety of uses.
-As such, we've taken great care to develop a series of base classes and inherited classes to help users develop their own models.
+A major focus of H2Integrate is modularizing the components and system architecture so it's easier to construct and analyze complex hybrid energy systems producing commodities for a variety of uses.
+As such, we've taken great care to develop a series of baseclasses and inherited classes to help users develop their own models.
 
 ## Choosing baseclasses for your model
 
 Every model in H2Integrate inherits from a small set of baseclasses that wire it
-into the rest of the framework. Before writing code, pick the appropriate base
+into the rest of the framework. Before writing a new model, pick the appropriate base
 class and configuration class for each piece of your technology:
 
 | Piece               | Baseclass                                                | Config baseclass                |
 | ------------------- | -------------------------------------------------------- | ------------------------------- |
 | Performance model   | `PerformanceModelBaseClass`                              | `BaseConfig`                    |
 | Cost model          | `CostModelBaseClass`                                     | `CostModelBaseConfig`           |
-| Controller (opt.)   | A `PassthroughController` is inserted automatically      | n/a                             |
+| Controller (optional)   | A `PassthroughController` is inserted automatically; see [Technology-Level Control](../control/technology_level_control/technology_control_overview.md) for custom controller baseclasses | n/a |
 
 General model baseclasses and configs baseclasses are defined in:
 - `h2integrate/core/model_baseclasses.py`
@@ -31,7 +31,7 @@ General model baseclasses and configs baseclasses are defined in:
 
 ```{note}
 Category-specific baseclasses are only worth creating when **multiple models
-share inputs, outputs, or methods**. The wind module is the canonical example:
+share inputs, outputs, or methods**. The wind module is a canonical example:
 both `FlorisWindPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel`
 inherit from `WindPerformanceBaseClass` so they share the same wind-resource
 discrete input and turbine-rating output. If you are writing a technology model
@@ -44,6 +44,11 @@ Configuration classes use the [`attrs`](https://www.attrs.org) library and the
 `tech_config['model_inputs']` against the declared fields. This pattern is now
 standard for both performance and cost models in H2Integrate.
 
+For custom technology-level controllers, inherit from `StorageOpenLoopControlBase`
+(open-loop) or `PyomoStorageControllerBaseClass` (pyomo-based). See
+[Technology-Level Control](../control/technology_level_control/technology_control_overview.md)
+for details.
+
 ## Inherited classes
 
 Inheriting from `PerformanceModelBaseClass` (rather than `om.ExplicitComponent`
@@ -54,6 +59,7 @@ directly) means the baseclass:
     - Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
 
 ### Multiple layers of inheritance
+
 Individual technology classes could inherit directly from the core baseclasses. If there are multiple technologies that have a lot of the same inputs, outputs, and/or methods we can use an additional layer of class inheritance that helps reduce duplicated code and potential errors.
 
 Let us take a PEM electrolyzer model as an example.
