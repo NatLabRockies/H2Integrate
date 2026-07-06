@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
@@ -73,14 +74,15 @@ class ProFastLCO(ProFastBase):
         base = f"LCO{self.options['commodity_type'][0].upper()}"
         self.LCO_str = f"{base}_{desc}" if desc else base
 
-        self.add_output(self.LCO_str, val=0.0, units=self.price_units)
+        self.add_output(self.LCO_str, val=0.0, compute_units=_compute_price_units)
+        self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=_compute_price_units)
+
         self.outputs_to_units = {
             "wacc": "percent",
             "crf": "percent",
             "irr": "percent",
             "profit_index": "unitless",
             "investor_payback_period": "yr",
-            "price": self.price_units,
         }
         for output_var, units in self.outputs_to_units.items():
             self.add_output(f"{output_var}_{self.output_txt}", val=0.0, units=units)
@@ -105,6 +107,11 @@ class ProFastLCO(ProFastBase):
         Returns:
             None
         """
+
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[self.LCO_str]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+
         pf = self.populate_profast(inputs)
 
         if "system_level_control" in self.options["plant_config"] and np.all(
@@ -125,6 +132,7 @@ class ProFastLCO(ProFastBase):
         # populate outputs
         # Output names based on naming convention for finance subgroups
         outputs[self.LCO_str] = sol["lco"]
+        outputs[f"price_{self.output_txt}"] = sol["price"]
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
             if isinstance(val, np.ndarray | list | tuple):  # only for IRR

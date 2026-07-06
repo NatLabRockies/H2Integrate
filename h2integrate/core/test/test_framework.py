@@ -688,69 +688,51 @@ def test_invalid_finance_group_combination(subtests):
 
 
 @pytest.mark.unit
-def test_finance_subgroup_electricity_without_electricity_producer_raises(subtests):
+def test_finance_subgroup_missing_commodity_stream_raises(subtests):
+    """A finance subgroup missing ``commodity_stream`` must raise a clear error.
+
+    ``commodity_stream`` is a required field on every finance subgroup; if it
+    is omitted the framework must raise ``ValueError`` with a clear message
+    rather than letting ``commodity_stream`` remain ``None`` (which would later
+    produce ``None.rated_*_production`` connection errors from OpenMDAO).
+    """
     driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
-    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
-
-    # Force default commodity_stream selection path and ensure no electricity producers are present.
-    plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
-        "commodity_stream", None
-    )
-    plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
-        "electrolyzer",
-        "h2_storage",
-    ]
-
-    h2i_config = {
-        "name": "H2I",
-        "system_summary": "",
-        "driver_config": driver_config,
-        "technology_config": tech_config,
-        "plant_config": plant_config,
-    }
 
     expected_msg = (
-        "Commodity 'electricity' was specified, but no electricity producing techs were found."
+        r"Finance subgroup 'electricity' \(commodity 'electricity'\) is "
+        r"missing the required `commodity_stream` field\. Please specify "
+        r"which technology's output should be used as the commodity stream "
+        r"for this subgroup\."
     )
 
-    with subtests.test("Raises when subgroup has no electricity-producing technologies"):
-        with pytest.raises(ValueError, match=expected_msg):
-            H2IntegrateModel(h2i_config)
-
-
-@pytest.mark.unit
-def test_finance_subgroup_electricity_with_multiple_producers_raises(subtests):
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
-    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
-    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
-
-    # Force default commodity_stream selection path with multiple producers in one subgroup.
-    plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
-        "commodity_stream", None
-    )
-    plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
-        "wind",
-        "solar",
-        "battery",
-    ]
-
-    h2i_config = {
-        "name": "H2I",
-        "system_summary": "",
-        "driver_config": driver_config,
-        "technology_config": tech_config,
-        "plant_config": plant_config,
+    scenarios = {
+        "no producing tech in subgroup": ["electrolyzer", "h2_storage"],
+        "multiple producing techs in subgroup": ["wind", "solar", "battery"],
     }
 
-    expected_msg = (
-        "Multiple electricity producing technologies found in finance subgroup 'electricity'. "
-        "Please specify the commodity_stream for the finance subgroup electricity."
-    )
+    for label, technologies in scenarios.items():
+        with subtests.test(label):
+            plant_config = load_plant_yaml(
+                EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
+            )
+            plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
+                "commodity_stream", None
+            )
+            plant_config["finance_parameters"]["finance_subgroups"]["electricity"][
+                "technologies"
+            ] = technologies
 
-    with subtests.test("Raises when subgroup has multiple electricity-producing technologies"):
-        with pytest.raises(ValueError, match=expected_msg):
-            H2IntegrateModel(h2i_config)
+            h2i_config = {
+                "name": "H2I",
+                "system_summary": "",
+                "driver_config": driver_config,
+                "technology_config": tech_config,
+                "plant_config": plant_config,
+            }
+
+            with pytest.raises(ValueError, match=expected_msg):
+                H2IntegrateModel(h2i_config)
 
 
 @pytest.mark.unit
