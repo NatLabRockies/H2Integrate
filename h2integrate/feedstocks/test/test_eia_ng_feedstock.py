@@ -62,7 +62,7 @@ def test_EIANaturalGasFeedstockConfig(subtests, EIA_API_key_file):
     assert ng_feedstock.filename == Path("./data.csv").resolve()
     assert not ng_feedstock.filename.exists()
     assert ng_feedstock.price.size == 8760
-    assert ng_feedstock.price.price.sum() == 0
+    assert ng_feedstock.price.sum() == 0
     assert ng_feedstock.resource_year == 2022
     assert not ng_feedstock.monthly
     assert ng_feedstock.price_category == "wellhead"
@@ -91,7 +91,7 @@ def test_EIANaturalGasFeedstockConfig_with_coordinates():
     assert ng_feedstock.commodity_amount_units == "MMBtu"
     assert ng_feedstock.filename is None
     assert ng_feedstock.price.size == 8760
-    assert ng_feedstock.price.price.sum() == 0
+    assert ng_feedstock.price.sum() == 0
     assert ng_feedstock.resource_year == 2022
     assert ng_feedstock.monthly
     assert ng_feedstock.price_category == "wellhead"

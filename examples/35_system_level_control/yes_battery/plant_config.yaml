@@ -68,6 +68,7 @@ finance_parameters:
       finance_model: ProFastNPV
       model_inputs:
         commodity_sell_price: 0.05167052
+        commodity_sell_price_units: USD/(kW*h)
         params:
           analysis_start_year: 2032
           installation_time: 36  # months

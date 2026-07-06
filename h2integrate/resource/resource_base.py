@@ -8,7 +8,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.resource.utilities.file_tools import check_resource_dir
+from h2integrate.core.file_utils import check_resource_dir
 from h2integrate.resource.utilities.download_tools import download_from_api
 
 
@@ -300,7 +300,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             inputs are different than the previous latitude and longitude values. If resource data
             has not been already loaded for the, continue to Step 1.
         1) Check if resource data was input. If not, continue to Step 2.
-        2) Get valid resource_dir with the method `check_resource_dir()`
+        2) Get valid resource_dir with :py:function:`check_resource_dir()`
         3) Create a filename if resource_filename was not input or if the site location changed
             with the method `create_filename()`. Otherwise, use resource_filename as the filename.
         4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid filepath,
@@ -344,8 +344,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         provided_dir = False if self.config.resource_dir is None else True
 
         # 2a) check if file exists directly within resource directory
-        # 2) Get valid resource_dir with the method `check_resource_dir()`
-        resource_dir = check_resource_dir(resource_dir=self.config.resource_dir)
+        # 2) Get valid resource_dir with the function check_resource_dir()
+        resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
         # 3a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
             # If a filename was input, use resource_filename as the filename.
@@ -357,15 +357,15 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # if file doesn't exist, continue to Step 2b
         if not filepath.is_file():
             # 2b) check if file exists directly within a subfolder of the resource directory
-            # 2) Get valid resource_dir with the method `check_resource_dir()`
+            # 2) Get valid resource_dir with the function check_resource_dir()
             if (
                 provided_dir
                 and Path(self.config.resource_dir).parts[-1] == self.config.resource_type
             ):
-                resource_dir = check_resource_dir(resource_dir=self.config.resource_dir)
+                resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
             else:
                 resource_dir = check_resource_dir(
-                    resource_dir=self.config.resource_dir, resource_subdir=self.config.resource_type
+                    data_dir=self.config.resource_dir, data_subdir=self.config.resource_type
                 )
             # 3) Create a filename if resource_filename was input
             if provided_filename and not site_changed:
