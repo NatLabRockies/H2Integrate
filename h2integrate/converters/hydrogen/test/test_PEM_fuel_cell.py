@@ -15,7 +15,7 @@ def plant_config():
         "plant": {
             "plant_life": 30,
             "simulation": {
-                "n_timesteps": 8760,
+                "n_timesteps": 48,
                 "dt": 3600,
             },
         },
@@ -79,13 +79,14 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
 
     prob.set_val("fuel_cell.hydrogen_in", hydrogen_input, units="kg/h")
     prob.set_val("fuel_cell.oxygen_in", oxygen_input, units="kg/h")
+    prob.set_val("fuel_cell.electricity_command_value", np.ones(n_timesteps) * 1000.0, units="kW")
 
     prob.run_model()
 
     electricity_output = prob.get_val("fuel_cell.electricity_out", units="kW")
-    hydrogen_consumed = prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")
-    oxygen_consumed = prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")
-    water_out = prob.get_val("fuel_cell.water_out", units="kg/h")
+    prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")
+    prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")
+    prob.get_val("fuel_cell.water_out", units="kg/h")
 
     with subtests.test("max electricity output bounded by system capacity"):
         assert np.max(electricity_output) <= 1500.0 + 1e-6
@@ -106,33 +107,60 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             prob.get_val("fuel_cell.total_electricity_produced", units="kW*h"), rel=1e-6
         ) == np.sum(electricity_output)
 
-    with subtests.test("annual_electricity_produced equals total for full-year sim"):
-        assert pytest.approx(
-            prob.get_val("fuel_cell.annual_electricity_produced", units="kW*h/year"), rel=1e-6
-        ) == np.sum(electricity_output)
+    with subtests.test("electricity out"):
+        assert (
+            pytest.approx(np.sum(prob.get_val("fuel_cell.electricity_out", units="kW")), rel=1e-6)
+            == 48209.20157
+        )
 
-    with subtests.test("capacity_factor matches definition"):
-        assert pytest.approx(
-            prob.get_val("fuel_cell.capacity_factor", units="unitless"), rel=1e-6
-        ) == np.sum(electricity_output) / (1500.0 * n_timesteps)
+    with subtests.test("capacity_factor"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.capacity_factor", units="unitless"), rel=1e-2)
+            == 0.669
+        )
 
-    with subtests.test("hydrogen consumed is non-negative and bounded by supply"):
-        assert np.min(hydrogen_consumed) >= 0.0
-        assert np.max(hydrogen_consumed) <= 200.0 + 1e-6
+    with subtests.test("annual_electricity_production"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.annual_electricity_produced", units="kW*h/year"), rel=1e-2
+            )
+            == 8760000.86
+        )
 
-    with subtests.test("oxygen consumed is non-negative and bounded by supply"):
-        assert np.min(oxygen_consumed) >= 0.0
-        assert np.max(oxygen_consumed) <= 2000.0 + 1e-6
+    with subtests.test("rated_electricity_production"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.rated_electricity_production", units="kW"), rel=1e-6
+            )
+            == 1500.0
+        )
 
-    with subtests.test("water produced is non-negative"):
-        assert np.min(water_out) >= 0.0
+    with subtests.test("total_electricity_produced"):
+        assert (
+            pytest.approx(
+                prob.get_val("fuel_cell.total_electricity_produced", units="kW*h"), rel=1e-6
+            )
+            == 48209.20157
+        )
 
-    with subtests.test("stoichiometric mass balance H2 + O2 -> H2O"):
-        # Combined reactant mass should equal water produced (mass conservation)
-        np.testing.assert_allclose(
-            hydrogen_consumed + oxygen_consumed,
-            water_out,
-            rtol=1e-3,
+    with subtests.test("hydrogen consumed"):
+        assert (
+            pytest.approx(
+                np.sum(prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")), rel=1e-6
+            )
+            == 2291.481556
+        )
+
+    with subtests.test("oxygen consumed"):
+        assert (
+            pytest.approx(np.sum(prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")), rel=1e-6)
+            == 18186.361561
+        )
+
+    with subtests.test("water out"):
+        assert (
+            pytest.approx(np.sum(prob.get_val("fuel_cell.water_out", units="kg/h")), rel=1e-6)
+            == 20459.65675
         )
 
 

@@ -241,6 +241,10 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
         stack_temperature = inputs["stack_temperature"]
         # fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
 
+        ############################################################################
+        # Can convert from MMBtu to Joules in openmdao
+        # Then can convert from Joules to kg using some heating value or enthalpy
+
         # Convert natural gas input from MMBtu/h to kg/h for CH4
         # Assume 1 MMBtu ~ 1 MCF
         # Use ideal gas law to account for temperature difference
@@ -248,7 +252,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
         ng_density_cold = 0.717  # kg/m^3 at 25 deg C and 1 atm
         ng_density_hot = ng_density_cold * (298.15 / stack_temperature)  # kg/m^3 at stack temp
 
-        # Use Mass = volume * density, and 1 MCF = 1000 ft^3 = 28.3168 m^3
+        # Use Mass = volume * density, and 1 MCF = 1e3 ft^3 = 28.3168 m^3
         mcf_to_kg = 28.3168 * ng_density_hot  # kg
         print(natural_gas_in, mcf_to_kg)
         natural_gas_kg_hr = natural_gas_in * mcf_to_kg  # Convert MMBtu/h to kg/h for CH4
@@ -393,21 +397,15 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
 class SONGFuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the solid oxide natural gas fuel cell cost model.
 
-    Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_fuel_supply_per_kw`,
-    `capex_air_supply_per_kw`, `capex_cooling_per_kw`, `capex_controls_instrumentation_per_kw`,
-    `capex_electrical_per_kw`, `capex_assembly_per_kw`, `capex_additional_labor_per_kw`,
-    and `fixed_opex_per_kw_per_year`. The `cost_year` field is inherited from `CostModelBaseConfig`.
+    Fields include `system_capacity_kw`, `capex_stack_per_kw`,
+        `capex_bop`, `capex_indirect_costs_per_kw`, and `fixed_opex_per_kw_per_year`.
+    The `cost_year` field is inherited from `CostModelBaseConfig`.
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
     capex_stack_per_kw: float = field(validator=gte_zero)
-    capex_fuel_supply_per_kw: float = field(validator=gte_zero)
-    capex_air_supply_per_kw: float = field(validator=gte_zero)
-    capex_cooling_per_kw: float = field(validator=gte_zero)
-    capex_controls_instrumentation_per_kw: float = field(validator=gte_zero)
-    capex_electrical_per_kw: float = field(validator=gte_zero)
-    capex_assembly_per_kw: float = field(validator=gte_zero)
-    capex_additional_labor_per_kw: float = field(validator=gte_zero)
+    capex_bop: float = field(validator=gte_zero)
+    capex_indirect_costs_per_kw: float = field(validator=gte_zero)
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
 
 
@@ -442,13 +440,8 @@ class SONGFuelCellCostModel(CostModelBaseClass):
         self.add_input(
             "unit_capex",
             val=self.config.capex_stack_per_kw
-            + self.config.capex_fuel_supply_per_kw
-            + self.config.capex_air_supply_per_kw
-            + self.config.capex_cooling_per_kw
-            + self.config.capex_controls_instrumentation_per_kw
-            + self.config.capex_electrical_per_kw
-            + self.config.capex_assembly_per_kw
-            + self.config.capex_additional_labor_per_kw,
+            + self.config.capex_bop
+            + self.config.capex_indirect_costs_per_kw,
             units="USD/kW",
             desc="Capital cost per unit capacity",
         )
