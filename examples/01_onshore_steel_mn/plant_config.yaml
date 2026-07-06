@@ -76,11 +76,13 @@ finance_parameters:
       technologies: [wind, solar, battery]
     hydrogen:
       commodity: hydrogen
+      commodity_stream: electrolyzer
       commodity_desc: delivered
       finance_groups: [profast_model]
       technologies: [wind, solar, battery, electrolyzer, h2_storage]
     steel:
       commodity: steel
+      commodity_stream: steel
       finance_groups: [steel]
       technologies: [steel]
   cost_adjustment_parameters:

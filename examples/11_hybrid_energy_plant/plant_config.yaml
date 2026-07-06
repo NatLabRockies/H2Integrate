@@ -9,6 +9,7 @@ plant:
 finance_parameters:
   finance_groups:
     commodity: electricity
+    commodity_stream: hopp
     finance_model: ProFastLCO
     model_inputs:
       params:

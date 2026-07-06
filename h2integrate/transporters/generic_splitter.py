@@ -98,6 +98,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
                 "fraction_to_priority_tech",
                 val=self.config.fraction_to_priority_tech,
                 desc="Fraction of input commodity to send to the priority technology (0.0 to 1.0)",
+                units="unitless",
             )
         elif split_mode == "prescribed_commodity":
             self.add_input(
