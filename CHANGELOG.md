@@ -49,7 +49,12 @@
 - Removed hard-coded logic of price units in finance models to be flexible to any type of commodity. Created helper functions `_compute_price_units` and `_compute_rate_units` in `h2integrate.finances.tools` and integrated usage of these functions into all finance models  (`numpy_financial_npv`, `profast_npv`, `profast_lco`) accordingly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
 - Removed the `is_electricity_producer` helper from `h2integrate.core.commodity_stream_definitions` and the electricity-specific auto-detection branch in `H2IntegrateModel`, making finance-subgroup `commodity_stream` resolution fully commodity-agnostic; updated example `plant_config.yaml` files that previously relied on the auto-detection to set `commodity_stream` explicitly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
 - Ensure OpenMDAO data is cleaned up during testing [PR 797](https://github.com/NatLabRockies/H2Integrate/pull/797).
-- Updates `h2integrate/core/file_utils.py::check_data_dir` to allow for the creation of nested directories, not just the final subdirectory for smoother initialization of a feedstock directory.
+- Updates `h2integrate/core/file_utils.py::check_data_dir` to allow for the creation of nested
+  directories, not just the final subdirectory for smoother initialization of a feedstock directory
+  [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the
+  feedstock data with the resource data methodology
+  [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
 
 ## 0.8 [April 15, 2026]
 
