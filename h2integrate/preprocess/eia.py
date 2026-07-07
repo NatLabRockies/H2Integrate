@@ -361,10 +361,11 @@ def get_eia_ng_data(
         pd.DataFrame: A monthly dataframe containing the date, state, price_category, and price
             (MMBTU).
     """
-    if feedstock_dir is None:
-        feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
-    else:
-        feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
+    if filename is not None:
+        if feedstock_dir is None:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+        else:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
     file_path = filename if filename is None else _validate_file_name(feedstock_dir / filename)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)

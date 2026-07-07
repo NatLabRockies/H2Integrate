@@ -120,14 +120,14 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             self.state = geospatial.get_state_from_coords(
                 latitude=self.latitude, longitude=self.longitude
             )
-
-        self.feedstock_dir = check_feedstock_dir(
-            data_dir=self.feedstock_dir, data_subdir=self.commodity
-        )
-        if self.feedstock_dir is None:
-            check_feedstock_dir(data_dir=self.feedstock_dir, data_subdir="natural_gas")
-        else:
-            check_feedstock_dir(data_dir=self.feedstock_dir)
+        if self.filename is not None:
+            self.feedstock_dir = check_feedstock_dir(
+                data_dir=self.feedstock_dir, data_subdir=self.commodity
+            )
+            if self.feedstock_dir is None:
+                check_feedstock_dir(data_dir=self.feedstock_dir, data_subdir="natural_gas")
+            else:
+                check_feedstock_dir(data_dir=self.feedstock_dir)
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
