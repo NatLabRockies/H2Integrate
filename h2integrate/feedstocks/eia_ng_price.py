@@ -125,11 +125,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             data_dir=self.feedstock_dir, data_subdir=self.commodity
         )
         if self.feedstock_dir is None:
-            feedstock_dir = check_feedstock_dir(
-                data_dir=self.feedstock_dir, data_subdir="natural_gas"
-            )
+            check_feedstock_dir(data_dir=self.feedstock_dir, data_subdir="natural_gas")
         else:
-            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
+            check_feedstock_dir(data_dir=self.feedstock_dir)
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
