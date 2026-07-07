@@ -669,8 +669,8 @@ class H2IntegrateModel:
 
         5. **Connect the demand profile** - Connects the demand technology's output
            (``{demand_tech}.{demand_commodity}_demand_out``) to the controller's demand input
-              (``system_level_controller.{demand_commodity}_demand``). This relies on the
-              current SLC constraint that exactly one demand component is defined.
+           (``system_level_controller.{demand_commodity}_demand``). This relies on the
+           current SLC constraint that exactly one demand component is defined.
 
         Args:
             slc_config (dict): Pre-computed dictionary produced by
