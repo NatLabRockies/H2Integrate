@@ -64,4 +64,5 @@ finance_parameters:
       technologies: [hopp, wind, battery]
     co2:
       commodity: co2
+      commodity_stream: doc
       technologies: [hopp, wind, battery, doc]
