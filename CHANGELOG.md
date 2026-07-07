@@ -50,7 +50,7 @@
 - Removed the `is_electricity_producer` helper from `h2integrate.core.commodity_stream_definitions` and the electricity-specific auto-detection branch in `H2IntegrateModel`, making finance-subgroup `commodity_stream` resolution fully commodity-agnostic; updated example `plant_config.yaml` files that previously relied on the auto-detection to set `commodity_stream` explicitly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
 - Ensure OpenMDAO data is cleaned up during testing [PR 797](https://github.com/NatLabRockies/H2Integrate/pull/797).
 - Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
-- Reduced Sphinx documentation build warnings from roughly 880 to under 20. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Reduced Sphinx documentation build warnings from roughly 880 to under 20. [PR 800](https://github.com/NatLabRockies/H2Integrate/pull/800)
   - Set `napoleon_use_ivar` and added `napoleon_custom_sections` so custom Google-style sections (Inputs, Outputs, Promoted Inputs, Promoted Outputs, Subsystems, Discrete Inputs, Discrete Outputs, Options, Behavior, Side Effects) render cleanly.
   - Suppressed the `etoc.toctree` category emitted by autosummary `:recursive:` stubs.
   - Cleared stale `_autosummary/` files at the start of every docs build.

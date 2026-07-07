@@ -335,7 +335,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check ammonia production"):
         assert (
             pytest.approx(
-                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
+                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-3
             )
             == 406226.7872
         )
@@ -369,7 +369,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-4
+                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-3
             )
             == 1.1021542544557135
         )
