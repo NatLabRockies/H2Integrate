@@ -14,7 +14,7 @@ There are two performance models available to model the hydrogen well subsurface
 
 There is one cost model available to model the hydrogen well subsurface, which applies to both natural and stimulated geologic hydrogen.
 
-- [`"GeoH2SubsurfaceCostModel"`](#GeoH2SubsurfaceCostModel): A subsurface cost model that calculates the capital and operating for subsurface well systems in geologic hydrogen production.
+- [`"GeoH2SubsurfaceCostModel"`](#mathur-modified-geoh2-cost): A subsurface cost model that calculates the capital and operating for subsurface well systems in geologic hydrogen production.
 
 (simple-natural-geoh2-performance)=
 ### Simple Natural GeoH2 Performance
@@ -37,7 +37,7 @@ The modeling approach in this performance model is informed by:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 - Templeton et al. (UC Boulder): <https://doi.org/10.3389/fgeoc.2024.1366268>
 
-(GeoH2SubsurfaceCostModel)=
+(mathur-modified-geoh2-cost)=
 ### Mathur Modified GeoH2 Cost
 
 The modeling approach in this cost model is based on:

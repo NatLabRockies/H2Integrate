@@ -61,6 +61,12 @@ sphinx:
     autodoc_typehints: description
     html_static_path:
       - _static
+    # A local ``autosummary/module.rst`` template lives here that filters out
+    # pytest ``conftest.py`` submodules from the generated stubs (they can't be
+    # imported outside a pytest session, so autosummary would emit "failed to
+    # import" warnings for every one).
+    templates_path:
+      - _templates
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
     # Render "Attributes:" sections with the :ivar: role instead of separate

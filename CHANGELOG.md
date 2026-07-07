@@ -58,6 +58,8 @@
   - Added `:no-index:` to hand-authored autoclass directives that duplicated autosummary entries.
   - Cleaned up docstring formatting bugs across roughly twenty source files (bullet and definition list separations, starred attribute markers, unbalanced backticks, and stray substitution references).
   - Fixed several MyST cross-reference targets (missing labels, ambiguous doc vs ref targets, incorrect autosummary path, duplicate labels, broken image path, and a broken literalinclude path).
+  - Added a custom `docs/_templates/autosummary/module.rst` template that filters pytest `conftest.py` submodules from generated stubs, eliminating the "failed to import conftest" warnings that appeared on the Read the Docs build.
+  - Renamed the `GeoH2SubsurfaceCostModel` MyST label in `docs/technology_models/geologic_hydrogen.md` to `mathur-modified-geoh2-cost` to remove an ambiguous cross-reference with the autosummary entry for the Python class of the same name.
 
 
 ## 0.8 [April 15, 2026]
