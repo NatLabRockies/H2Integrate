@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 
 from h2integrate.preprocess import geospatial
-from h2integrate.core.file_utils import get_path
+from h2integrate.core.file_utils import get_path, check_feedstock_dir
 
 
 MCF_to_MMBTU = 1 / 0.964
@@ -330,6 +330,7 @@ def get_eia_ng_data(
     state: str | list[str],
     api_key_file: str | Path | None = None,
     filename: str | Path | None = None,
+    feedstock_dir: str | Path | None = None,
     *,
     monthly: bool = True,
 ):
@@ -357,7 +358,8 @@ def get_eia_ng_data(
             (MMBTU).
     """
 
-    filename = _validate_file_name(filename)
+    feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+    file_path = filename if filename is None else _validate_file_name(feedstock_dir / filename)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)
     resource_year = _validate_resource_year(resource_year)
@@ -368,9 +370,9 @@ def get_eia_ng_data(
         keep_cols = ["state", *keep_cols]
     if len(price_category) > 1:
         keep_cols = ["category", *keep_cols]
-    if filename is not None:
-        if filename.exists():
-            df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
+    if file_path is not None:
+        if file_path.exists():
+            df = pd.read_csv(file_path, parse_dates=["period"]).set_index("period")
             df = df.loc[
                 (df.index.year >= start)
                 & (df.index.year <= end)
@@ -419,7 +421,7 @@ def get_eia_ng_data(
     df = convert_to_monthly(df, *resource_year)
     df.price *= MCF_to_MMBTU
 
-    if filename is not None:
-        df.to_csv(filename, index_label="period")
+    if file_path is not None:
+        df.to_csv(file_path, index_label="period")
 
     return df

@@ -8,7 +8,7 @@ from attrs import field, define
 
 from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.file_utils import get_path
+from h2integrate.core.file_utils import get_path, check_feedstock_dir
 from h2integrate.core.validators import range_val
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
 from h2integrate.core.model_baseclasses import BaseConfig
@@ -82,6 +82,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
+    feedstock_dir: str | Path = field(default=None, converter=attrs.converters.optional(Path))
     filename: str = field(default=None)
 
     commodity: str = field(default="natural_gas", init=False)
@@ -95,8 +96,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
 
     def __attrs_post_init__(self):
         """Creates the EIA natural gas facet series code based on validated user inputs, sets the
-        :py:attr:`commodity_amount_units` if not given a value, and fetches the EIA natural gas
-        price.
+        :py:attr:`commodity_amount_units` if not given a value, processes the
+        :py:attr:`feedstock_dir` or converts it to the default directory,  and fetches the EIA
+        natural gas price.
         """
         if self.filename is not None:
             try:
@@ -115,6 +117,10 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             self.state = geospatial.get_state_from_coords(
                 latitude=self.latitude, longitude=self.longitude
             )
+
+        self.feedstock_dir = check_feedstock_dir(
+            data_dir=self.feedstock_dir, data_subdir=self.commodity
+        )
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
@@ -157,6 +163,7 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
             state=self.config.state,
             monthly=self.config.monthly,
             filename=self.config.filename,
+            feedstock_dir=self.config.feedstock_dir,
         )
         price = eia.convert_to_hourly(price)
         self.config.price = price.price.to_numpy()
