@@ -49,6 +49,9 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             already be located. If the file exists, the columns "period", "state", and "price" must
             exist, otherwise the file will not be used. "period" should be of the form YYYY or
             YYYY-MM, and state should be either the full state name or the two-letter abbreviation.
+        feedstock_dir (str | Path, optional): File path for where the the data should be saved to or
+            retrieved from. If None, and :py:attr:`filename` is used, then
+            ":py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas" will be used.
         annual_cost (float, optional): fixed cost associated with the feedstock in USD/year.
             Defaults to 0.0.
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
@@ -121,6 +124,12 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         self.feedstock_dir = check_feedstock_dir(
             data_dir=self.feedstock_dir, data_subdir=self.commodity
         )
+        if self.feedstock_dir is None:
+            feedstock_dir = check_feedstock_dir(
+                data_dir=self.feedstock_dir, data_subdir="natural_gas"
+            )
+        else:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):

@@ -348,17 +348,23 @@ def get_eia_ng_data(
             results.
         api_key_file (Path, optional): Full file name of the file where the API key is located. If
             no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
-        filename (str | Path | None): Full file name where the EIA data can either be loaded from
+        filename (str | Path | None): File name where the EIA data can either be loaded from
             or should be saved to. If None, then data will be queried and returned with saving
-            left to the user.
+            left to the user. Should be used in conjunction with :py:attr:`feedstock_dir` or the
+            file will be expected in :py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas"
+        feedstock_dir (str | Path | None): File path for where the the data should be saved to or
+            retrieved from. If None, and :py:attr:`filename` is used, then
+            ":py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas" will be used.
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
 
     Returns:
         pd.DataFrame: A monthly dataframe containing the date, state, price_category, and price
             (MMBTU).
     """
-
-    feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+    if feedstock_dir is None:
+        feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+    else:
+        feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
     file_path = filename if filename is None else _validate_file_name(feedstock_dir / filename)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)
