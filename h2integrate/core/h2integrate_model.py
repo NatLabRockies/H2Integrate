@@ -1057,6 +1057,7 @@ class H2IntegrateModel:
         """Automatically add a PassthroughController to a tech group if appropriate.
 
         A controller is auto-inserted only when:
+
         - the technology has no user-defined ``control_strategy`` in its config,
         - the performance model exposes a ``_control_classifier`` of
           ``"flexible"``, ``"dispatchable"``, or ``"storage"``,
@@ -1146,23 +1147,23 @@ class H2IntegrateModel:
 
         Behavior:
             * If ``finance_parameters`` is not defined in the plant configuration,
-            no finance model is created.
+              no finance model is created.
             * If no subgroups are defined, all technologies are grouped together
-            under a default finance group. ``commodity`` and ``finance_model`` are
-            required in this case.
+              under a default finance group. ``commodity`` and ``finance_model`` are
+              required in this case.
             * If subgroups are provided, each subgroup defines its own set of
-            technologies, associated commodity, and finance model(s).
-            Each subgroup is nested under a unique name of your choice under
-            ["finance_parameters"]["subgroups"] in the plant configuration.
+              technologies, associated commodity, and finance model(s).
+              Each subgroup is nested under a unique name of your choice under
+              ["finance_parameters"]["subgroups"] in the plant configuration.
             * Subsystems such as ``AdjustedCapexOpexComp`` and
-            ``GenericProductionSummerPerformanceModel``, and the selected finance
-            models are added to each subgroup's finance group.
+              ``GenericProductionSummerPerformanceModel``, and the selected finance
+              models are added to each subgroup's finance group.
             * If `commodity_stream` is provided for a subgroup, the output of the
-            technology specified as the `commodity_stream` must be the same as the
-            specified commodity for that subgroup.
+              technology specified as the `commodity_stream` must be the same as the
+              specified commodity for that subgroup.
             * Supports both global finance models and technology-specific finance
-            models. Technology-specific finance models are defined in the technology
-            configuration.
+              models. Technology-specific finance models are defined in the technology
+              configuration.
 
         Raises:
             ValueError:
@@ -1175,12 +1176,12 @@ class H2IntegrateModel:
                 ``self.supported_models``.
 
         Side Effects:
-            * Updates ``self.plant_config["finance_parameters"]["finance_group"] if only a single
-            finance model is provided (wraps it in a default finance subgroup).
+            * Updates ``self.plant_config["finance_parameters"]["finance_group"]`` if only a
+              single finance model is provided (wraps it in a default finance subgroup).
             * Constructs and attaches OpenMDAO finance subsystem groups to the
-            plant model under names ``finance_subgroup_<subgroup_name>``.
+              plant model under names ``finance_subgroup_<subgroup_name>``.
             * Stores processed subgroup configurations in
-            ``self.finance_subgroups``.
+              ``self.finance_subgroups``.
 
         Example:
             Suppose ``plant_config["finance_parameters"]["finance_group"]`` defines a single finance
