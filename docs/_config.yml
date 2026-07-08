@@ -10,7 +10,11 @@ only_build_toc_files: false
 # See https://jupyterbook.org/content/execute.html
 execute:
   execute: null
-  execute_notebooks: auto
+  # "cache" uses jupyter-cache to skip re-executing notebooks and MyST cells
+  # whose source/kernel hasn't changed, so local rebuilds are fast when only
+  # prose or unrelated Python has changed. Pass --clean to build_book.sh (or
+  # delete docs/_build) to force a full re-execution.
+  execute_notebooks: cache
   timeout: -1  # better for longer running notebooks
   merge_streams: true  # keeps unsynchronized cell outputs in a single output cell
   exclude_patterns:
