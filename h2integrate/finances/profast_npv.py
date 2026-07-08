@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 import numpy as np
 from openmdao.utils.units import convert_units
 
@@ -41,7 +43,8 @@ class ProFastNPV(ProFastBase):
 
         Retrieves the commodity sell price and its units from the plant configuration
         and registers it as an input for the component. Calls the base `setup()` method
-        to initialize other ProFAST inputs and outputs.
+        to initialize other ProFAST inputs and outputs. The commodity sell price can be
+        either a scalar value or a list with the same length as plant life.
 
         Raises:
             ValueError: If `commodity_sell_price` or `commodity_sell_price_units` is not
@@ -64,10 +67,10 @@ class ProFastNPV(ProFastBase):
 
         super().setup()
 
-        if isinstance(self.commodity_sell_price, float | int):
-            if self.commodity_sell_price is None:
-                raise ValueError("commodity_sell_price is missing as an input")
-        else:
+        if self.commodity_sell_price is None:
+            raise ValueError("commodity_sell_price is missing as an input")
+
+        if isinstance(self.commodity_sell_price, Iterable):
             if len(self.commodity_sell_price) != int(self.params.plant_life):
                 raise ValueError(
                     f"`commodity_sell_price` has an invalid length of "
