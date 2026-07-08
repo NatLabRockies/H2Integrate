@@ -97,7 +97,7 @@ def load_file_with_variables(
         )
     # grab the line containing the variable,
     # assumes the line containing the variable is formatted as "variable=variable_value"
-    val = line_w_var[0].split(f"{var}=").strip()
+    val = line_w_var[0].split(f"{var}=")[-1].strip()
     # set variable as a global variable
     setter_method(var_value=val)
     return
@@ -144,6 +144,8 @@ def set_env_var_dot_env(setter_method, varname_new: str, varname_old: str | None
         for r in possible_locs:
             if Path(r).exists():
                 load_dotenv(r)
+        # TODO: add in checks to run load_file_with_variables from possible locs
+        # list(Path.cwd().glob("*.env"))
     val = _get_env_with_fallback(varname_new, varname_old)
     if val is not None:
         setter_method(var_value=val)
@@ -180,6 +182,7 @@ def get_environment_var(
     # check if set as an environment variable (new name first, then old with warning)
     env_val = _get_env_with_fallback(varname_new, varname_old)
     if env_val is not None:
+        # TODO: call setter method here
         return env_val
 
     global_var_value = setter_method(var_value=None)
@@ -196,5 +199,5 @@ def get_environment_var(
             f"Please set the {varname_new} environment variable."
         )
 
-    global_var_value = setter_method(var_value=None)
+    # global_var_value = setter_method(var_value=None)
     return global_var_value
