@@ -9,7 +9,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
     Provides common setup logic shared by all system-level control strategies:
     demand input, fixed/flexible/dispatchable/storage/feedstock technology I/O
     creation, and technology classification reading from ``plant_config`` and
-    ``slc_config``.
+    ``slc_topology``.
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
 
@@ -23,8 +23,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
     ``GenericDemandComponent``) connected by ``H2IntegrateModel``. When SLC is
     enabled, only one demand component is currently supported.
 
-    Information passed to the controller from H2IntegrateModel is input in the ``slc_config``,
-    which must contain:
+    Information passed to the controller from H2IntegrateModel is input in the
+    ``slc_topology`` option. This dict is framework-internal state derived from the
+    plant and technology configs by ``H2IntegrateModel._classify_slc_technologies()``,
+    not something users author directly. It must contain:
 
     - ``demand_commodity``: the commodity being controlled (e.g. "electricity")
     - ``demand_commodity_rate_units``: units string (or None) of the demand commodity
@@ -62,35 +64,35 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
-        self.options.declare("slc_config", types=dict)
+        self.options.declare("slc_topology", types=dict)
 
     def setup(self):
         plant_config = self.options["plant_config"]
-        slc_config = self.options["slc_config"]
+        slc_topology = self.options["slc_topology"]
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
 
         # Read pre-computed classification from plant_config
-        self.commodity = slc_config["demand_commodity"]
-        self.commodity_rate_units = slc_config.get("demand_commodity_rate_units", None)
-        self.demand_tech = slc_config["demand_tech"]
-        self.storage_techs_to_control = slc_config.get("storage_techs_to_control", {})
-        self.technology_graph = slc_config["technology_graph"]
+        self.commodity = slc_topology["demand_commodity"]
+        self.commodity_rate_units = slc_topology.get("demand_commodity_rate_units", None)
+        self.demand_tech = slc_topology["demand_tech"]
+        self.storage_techs_to_control = slc_topology.get("storage_techs_to_control", {})
+        self.technology_graph = slc_topology["technology_graph"]
 
         self.fixed_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "fixed"
+            k for k, v in slc_topology["tech_control_classifiers"].items() if v == "fixed"
         ]
         self.flexible_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "flexible"
+            k for k, v in slc_topology["tech_control_classifiers"].items() if v == "flexible"
         ]
         self.dispatchable_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "dispatchable"
+            k for k, v in slc_topology["tech_control_classifiers"].items() if v == "dispatchable"
         ]
         self.storage_techs = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "storage"
+            k for k, v in slc_topology["tech_control_classifiers"].items() if v == "storage"
         ]
         self.feedstock_comps = [
-            k for k, v in slc_config["tech_control_classifiers"].items() if v == "feedstock"
+            k for k, v in slc_topology["tech_control_classifiers"].items() if v == "feedstock"
         ]
 
         self.input_techs = set(
@@ -107,7 +109,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             desc=f"Demand profile of {self.commodity}",
         )
 
-        self.techs_to_commodities = slc_config["tech_to_commodity"]
+        self.techs_to_commodities = slc_topology["tech_to_commodity"]
 
         # There are multiple commodities being produced by technologies in the system
         self.multi_commodity_system = (

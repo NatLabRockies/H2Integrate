@@ -1,0 +1,157 @@
+
+control_classifiers:
+  wind: flexible
+  solar: flexible
+  natural_gas_plant: dispatchable
+  grid_buy: dispatchable
+  ng_feedstock: feedstock
+  n2_feedstock: feedstock
+  h2_storage: storage
+  battery: storage
+  electrolyzer: dispatchable
+  haber_bosch: dispatchable
+
+
+
+complex_electrical:
+  # from example 35_system_level_control/complex_profit_max
+  technology_interconnections:
+    # Combine wind and solar into a single renewable stream
+    - [wind, renewable_combiner, electricity, cable]
+    - [solar, renewable_combiner, electricity, cable]
+    # Renewables charge the battery
+    - [renewable_combiner, battery, electricity, cable]
+    # Everything feeds into the final combiner
+    - [renewable_combiner, fin_combiner, electricity, cable]
+    - [battery, fin_combiner, electricity, cable]
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    - [natural_gas_plant, fin_combiner, electricity, cable]
+    - [grid_buy, fin_combiner, electricity, cable]
+    # Final combiner delivers to demand
+    - [fin_combiner, electrical_load_demand, electricity, cable]
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: electrical_load_demand
+
+hydrogen_system:
+  # from example 35_system_level_control/yes_hydrogen
+  technology_interconnections:
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    # connect NG feedstock to NG plant
+    - [wind, battery, electricity, cable]
+    # wind output available for battery charging (electricity_in)
+    - [wind, elec_combiner, electricity, cable]
+    # wind to combined output
+    - [battery, elec_combiner, electricity, cable]
+    # battery net output to combined output
+    - [natural_gas_plant, elec_combiner, electricity, cable]
+    # electricity to electrolyzer
+    - [elec_combiner, electrolyzer, electricity, cable]
+    # electrolyzer to storage
+    - [electrolyzer, h2_storage, hydrogen, pipe]
+    # combine hydrogen streams
+    - [electrolyzer, h2_combiner, hydrogen, pipe]
+    - [h2_storage, h2_combiner, hydrogen, pipe]
+    # send hydrogen to load
+    - [h2_combiner, h2_load_demand, hydrogen, pipe]
+    # combined supply to demand
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: h2_load_demand
+
+
+ammonia_system_h2_dmd:
+  # electricity -> h2 -> ammonia
+  # n2 from feedstock, elec from natural gas
+  # demanding h2
+  technology_interconnections:
+    # add ng feedstock to natural gas plant
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    # connect renewable system
+    - [wind, combiner, electricity, cable]
+    - [solar, combiner, electricity, cable]
+    - [combiner, battery, electricity, cable]
+    # combine the battery output with the wind and solar generation
+    - [battery, elec_combiner, electricity, cable]
+    - [combiner, elec_combiner, electricity, cable]
+    # connect the electricity supply to the electrolyzer
+    - [elec_combiner, electrolyzer, electricity, cable]
+    - [electrolyzer, h2_storage, hydrogen, pipe]
+    # combine the h2 from the electrolyzer and the h2_storage
+    - [electrolyzer, h2_combiner, hydrogen, pipe]
+    - [h2_storage, h2_combiner, hydrogen, pipe]
+    # subtract the hydrogen supplied from the hydrogen demand
+    - [h2_combiner, h2_load_demand, hydrogen, pipe]
+    # connect the hydrogen supplied as the demand to the haber_bosch model
+    - [h2_load_demand, haber_bosch, hydrogen, pipe]
+    - [n2_feedstock, haber_bosch, nitrogen, pipe]
+    - [natural_gas_plant, haber_bosch, electricity, cable]
+    # etc
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: h2_load_demand
+
+
+ammonia_system_nh3_dmd:
+  # electricity -> h2 -> ammonia
+  # n2 from feedstock, elec from natural gas
+  # demanding h2
+  technology_interconnections:
+    # add ng feedstock to natural gas plant
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    # connect renewable system
+    - [wind, combiner, electricity, cable]
+    - [solar, combiner, electricity, cable]
+    - [combiner, battery, electricity, cable]
+    # combine the battery output with the wind and solar generation
+    - [battery, elec_combiner, electricity, cable]
+    - [combiner, elec_combiner, electricity, cable]
+    # connect the electricity supply to the electrolyzer
+    - [elec_combiner, electrolyzer, electricity, cable]
+    - [electrolyzer, h2_storage, hydrogen, pipe]
+    # combine the h2 from the electrolyzer and the h2_storage
+    - [electrolyzer, h2_combiner, hydrogen, pipe]
+    - [h2_storage, h2_combiner, hydrogen, pipe]
+    # connect the hydrogen to the haber_bosch model
+    - [h2_combiner, haber_bosch, hydrogen, pipe]
+    - [n2_feedstock, haber_bosch, nitrogen, pipe]
+    - [natural_gas_plant, haber_bosch, electricity, cable]
+    - [haber_bosch, nh3_load_demand, ammonia, pipe]
+    # etc
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: nh3_load_demand
+
+
+ammonia_system_nh3_dmd_with_upstream_demand:
+  # electricity -> h2 -> ammonia
+  # n2 from feedstock, elec from natural gas
+  # demanding h2
+  technology_interconnections:
+    # add ng feedstock to natural gas plant
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    # connect renewable system
+    - [wind, combiner, electricity, cable]
+    - [solar, combiner, electricity, cable]
+    - [combiner, battery, electricity, cable]
+    # combine the battery output with the wind and solar generation
+    - [battery, elec_combiner, electricity, cable]
+    - [combiner, elec_combiner, electricity, cable]
+    # connect the electricity supply to the electrolyzer
+    - [elec_combiner, electrolyzer, electricity, cable]
+    - [electrolyzer, h2_storage, hydrogen, pipe]
+    # combine the h2 from the electrolyzer and the h2_storage
+    - [electrolyzer, h2_combiner, hydrogen, pipe]
+    - [h2_storage, h2_combiner, hydrogen, pipe]
+    # connect the hydrogen to the haber_bosch model
+    # subtract the hydrogen supplied from the hydrogen demand
+    - [h2_combiner, h2_load_demand, hydrogen, pipe]
+    # connect the hydrogen supplied as the demand to the haber_bosch model
+    - [h2_load_demand, haber_bosch, hydrogen, pipe]
+    - [n2_feedstock, haber_bosch, nitrogen, pipe]
+    - [natural_gas_plant, haber_bosch, electricity, cable]
+    - [haber_bosch, nh3_load_demand, ammonia, pipe]
+    # etc
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: nh3_load_demand

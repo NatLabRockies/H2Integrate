@@ -501,7 +501,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
     # check for user-provided resource data_dir
     if data_dir is not None:
         if not Path(data_dir).is_dir():
-            Path.mkdir(data_dir, exist_ok=True)
+            Path.mkdir(data_dir, exist_ok=True, parents=True)
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir
@@ -512,7 +512,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
     data_dir = os.getenv(f"{data_type.upper()}_DIR")
     if data_dir is not None:
         if not Path(data_dir).is_dir():
-            Path.mkdir(data_dir, exist_ok=True)
+            Path.mkdir(data_dir, parents=True, exist_ok=True)
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir
