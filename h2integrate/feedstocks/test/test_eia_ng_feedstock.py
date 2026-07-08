@@ -41,8 +41,9 @@ def EIA_API_key_file(temp_dir):
 def test_EIANaturalGasFeedstockConfig(subtests, EIA_API_key_file):
     """Tests a failed API for basic parameterizations."""
 
-    good_api_fn, bad_api_fn = EIA_API_key_file
+    good_api_fn, _ = EIA_API_key_file
 
+    default_ng_path = Path(__file__).parents[3] / "resource_files/feedstock_files/natural_gas"
     ng_feedstock = EIANaturalGasFeedstockConfig(
         resource_year=2022,
         monthly=False,
@@ -59,8 +60,47 @@ def test_EIANaturalGasFeedstockConfig(subtests, EIA_API_key_file):
     assert ng_feedstock.commodity == "natural_gas"
     assert ng_feedstock.commodity_rate_units == "MMBtu/h"
     assert ng_feedstock.commodity_amount_units == "MMBtu"
-    assert ng_feedstock.filename == Path("./data.csv").resolve()
-    assert not ng_feedstock.filename.exists()
+    assert ng_feedstock.filename == "data.csv"
+    assert ng_feedstock.feedstock_dir == default_ng_path
+    assert ng_feedstock.price.size == 8760
+    assert ng_feedstock.price.sum() == 0
+    assert ng_feedstock.resource_year == 2022
+    assert not ng_feedstock.monthly
+    assert ng_feedstock.price_category == "wellhead"
+    assert ng_feedstock.state == "CT"
+    assert ng_feedstock.latitude == best_trailer_in_colorado_coords[0]
+    assert ng_feedstock.longitude == best_trailer_in_colorado_coords[1]
+    assert ng_feedstock.cost_year == 2025
+    assert ng_feedstock.annual_cost == 1.0
+    assert ng_feedstock.start_up_cost == 2.0
+    assert ng_feedstock.api_key_file == good_api_fn
+
+
+@pytest.mark.unit
+def test_EIANaturalGasFeedstockConfig_with_dir(subtests, EIA_API_key_file):
+    """Tests a failed API for basic parameterizations."""
+
+    good_api_fn, bad_api_fn = EIA_API_key_file
+
+    ng_feedstock = EIANaturalGasFeedstockConfig(
+        resource_year=2022,
+        monthly=False,
+        price_category="WELLHEAD",
+        state="connecticut",
+        latitude=best_trailer_in_colorado_coords[0],
+        longitude=best_trailer_in_colorado_coords[1],
+        cost_year=2025,
+        annual_cost=1,
+        start_up_cost=2,
+        filename="test_eia_ng_feedstock.csv",
+        feedstock_dir=Path(__file__).parent,
+        api_key_file=good_api_fn,
+    )
+    assert ng_feedstock.commodity == "natural_gas"
+    assert ng_feedstock.commodity_rate_units == "MMBtu/h"
+    assert ng_feedstock.commodity_amount_units == "MMBtu"
+    assert ng_feedstock.filename == "test_eia_ng_feedstock.csv"
+    assert ng_feedstock.feedstock_dir == Path(__file__).parent
     assert ng_feedstock.price.size == 8760
     assert ng_feedstock.price.sum() == 0
     assert ng_feedstock.resource_year == 2022

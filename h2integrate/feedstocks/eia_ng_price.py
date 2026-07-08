@@ -103,12 +103,6 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         :py:attr:`feedstock_dir` or converts it to the default directory,  and fetches the EIA
         natural gas price.
         """
-        if self.filename is not None:
-            try:
-                self.filename = get_path(self.filename)
-            except FileNotFoundError:
-                self.filename = Path(self.filename).resolve()
-
         if self.state is None:
             if self.latitude is None or self.longitude is None:
                 msg = (
@@ -121,13 +115,11 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
                 latitude=self.latitude, longitude=self.longitude
             )
         if self.filename is not None:
-            self.feedstock_dir = check_feedstock_dir(
-                data_dir=self.feedstock_dir, data_subdir=self.commodity
-            )
             if self.feedstock_dir is None:
-                check_feedstock_dir(data_dir=self.feedstock_dir, data_subdir="natural_gas")
+                fd = check_feedstock_dir(data_dir=self.feedstock_dir, data_subdir="natural_gas")
             else:
-                check_feedstock_dir(data_dir=self.feedstock_dir)
+                fd = check_feedstock_dir(data_dir=self.feedstock_dir)
+            self.feedstock_dir = fd
 
 
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
@@ -162,7 +154,6 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         self.config = EIANaturalGasFeedstockConfig.from_dict(
             cost_config | site_config, additional_cls_name=self.__class__.__name__, strict=False
         )
-
         price = eia.get_eia_ng_data(
             api_key_file=self.config.api_key_file,
             resource_year=self.config.resource_year,
