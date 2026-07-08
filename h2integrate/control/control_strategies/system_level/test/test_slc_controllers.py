@@ -52,11 +52,11 @@ def _build_technology_graph(technology_interconnections):
 def _build_tech_control_classifiers(
     fixed=None, flexible=None, dispatchable=None, storage=None, feedstock=None
 ):
-    tech_control_classifiers = {k: "fixed" for k in (fixed or [])}
-    tech_control_classifiers |= {k: "flexible" for k in (flexible or [])}
-    tech_control_classifiers |= {k: "dispatchable" for k in (dispatchable or [])}
-    tech_control_classifiers |= {k: "storage" for k in (storage or [])}
-    tech_control_classifiers |= {k: "feedstock" for k in (feedstock or [])}
+    tech_control_classifiers = dict.fromkeys(fixed or [], "fixed")
+    tech_control_classifiers |= dict.fromkeys(flexible or [], "flexible")
+    tech_control_classifiers |= dict.fromkeys(dispatchable or [], "dispatchable")
+    tech_control_classifiers |= dict.fromkeys(storage or [], "storage")
+    tech_control_classifiers |= dict.fromkeys(feedstock or [], "feedstock")
     return tech_control_classifiers
 
 
