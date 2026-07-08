@@ -170,7 +170,7 @@ def get_environment_var(
     # check if set as an environment variable (new name first, then old with warning)
     env_val = _get_env_with_fallback(varname_new, varname_old)
     if env_val is not None:
-        # TODO: call setter method here
+        setter_method(var_value=env_val)
         return env_val
 
     global_var_value = setter_method(var_value=None)

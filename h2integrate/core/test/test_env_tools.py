@@ -78,8 +78,15 @@ def test_get_environment_var_with_fallback(subtests):
         assert env_var_val == "none"
 
     os.environ.pop("TEST_ENV", None)
-    with subtests.test("global didnt change (unsure if this is OK)"):
-        assert xx_test_env_var_xx == ""
+
+    with subtests.test("Global variable was set"):
+        assert xx_test_env_var_xx == "none"
+
+    with subtests.test("Global variable was set #2"):
+        retrieved_val = setter_getter_method(var_value=None)
+        assert retrieved_val == "none"
+
+    setter_getter_method(var_value="")
 
 
 @pytest.mark.unit
@@ -102,6 +109,9 @@ def test_get_environment_var_dot_env(temp_dir, subtests):
     tmp_dir_path = Path.cwd() / ".env"
     with subtests.test("env file exists"):
         assert tmp_dir_path.is_file()
+
+    with subtests.test("Global variable starts as empty"):
+        assert xx_test_env_var_xx == ""
 
     get_environment_var(
         setter_getter_method, "NOT_REAL_ENV", varname_old="TEST_ENV_OLD", env_path=None
