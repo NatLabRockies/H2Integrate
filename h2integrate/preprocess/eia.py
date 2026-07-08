@@ -341,7 +341,7 @@ def get_eia_ng_data(
             data should be retrieved. Should be between 2001 and the current year, inclusive of
             endpoints as that is all that the EIA provides, regardless of what is queried.
         price_category (str | list[str]): One or a combination of "wellhead", "imports", "citygate",
-            "residential", "commercial","industrial", "electrical_power", or "exports". Note that
+            "residential", "commercial", "industrial", "electrical_power", or "exports". Note that
             not all categories will return state-level data.
         state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
             as "United States" or "US". Only the "US" or one of the 50 US states will produce valid

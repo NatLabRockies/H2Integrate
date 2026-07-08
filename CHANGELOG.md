@@ -56,6 +56,7 @@
 - Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the
   feedstock data with the resource data methodology
   [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
 
 ## 0.8 [April 15, 2026]
 
