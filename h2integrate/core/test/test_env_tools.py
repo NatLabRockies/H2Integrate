@@ -6,20 +6,6 @@ import pytest
 from h2integrate.core.env_tools import get_environment_var
 
 
-# @pytest.fixture(scope="function")
-# def temp_environment_var():
-#     """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
-#     # NOTE: changes to this fixture can result in hard-to-debug test failures
-#     # in tests for resource components. Please do not modify this fixture if possible!
-#     resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
-#     original = os.environ.get("RESOURCE_DIR")
-#     os.environ["RESOURCE_DIR"] = resource_dir
-#     yield resource_dir
-#     os.environ.pop("RESOURCE_DIR", None)
-#     assert os.getenv("RESOURCE_DIR") is None
-#     if original is not None:
-#         os.environ["RESOURCE_DIR"] = original
-
 xx_test_env_var_xx = ""
 
 

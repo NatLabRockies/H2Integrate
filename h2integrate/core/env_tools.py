@@ -7,10 +7,6 @@ from dotenv import load_dotenv
 from h2integrate import ROOT_DIR
 
 
-# global xx_test_env_var_xx
-# xx_test_env_var_xx = ""
-
-
 _DEPRECATION_MSG = (
     "The '{old}' environment variable is deprecated and will be removed in a future release. "
     "Please use '{new}' instead. The nrel.gov API domain has moved to nlr.gov."
@@ -44,16 +40,6 @@ def _get_env_with_fallback(new_name, old_name):
         )
         return value
     return None
-
-
-# def set_environment_var(global_varname: str, var_value: str):
-#     """Set `var_value` as the global variable :py:attr:`global_varname`.
-
-#     Args:
-#         var_value (str): value to set for the environment variable
-#     """
-#     globals()[global_varname] = var_value
-#     return globals()[global_varname]
 
 
 def load_file_with_variables(
@@ -91,6 +77,8 @@ def load_file_with_variables(
             )
             var = varname_old  # use old name for parsing
     if len(line_w_var) != 1:
+        # TODO: add an input to toggle whether to thow an error
+        # If not throw an error, set the val to None
         raise ValueError(
             f"{var} variable in found in {fpath} file {len(line_w_var)} times. "
             "Please specify this variable once."
