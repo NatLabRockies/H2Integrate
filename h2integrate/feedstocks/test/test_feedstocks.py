@@ -5,12 +5,20 @@ These tests validate the feedstock components that provide resource inputs to te
 including natural gas, electricity, water, and other feedstock types.
 """
 
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.feedstocks.feedstocks import FeedstockCostModel, FeedstockPerformanceModel
+from h2integrate.feedstocks import (
+    FeedstockCostModel,
+    FeedstockPerformanceModel,
+    EIANaturalGasFeedstockCostModel,
+)
+from h2integrate.preprocess.eia import convert_to_hourly
 
 
 @fixture
@@ -43,6 +51,34 @@ def ng_feedstock_input_config():
                 "start_up_cost": 0,
                 "cost_year": 2023,
                 "commodity_amount_units": "MMBtu",  # optional
+            },
+        }
+    }
+    return tech_config
+
+
+@fixture
+def eia_ng_feedstock_tech_config():
+    tech_config = {
+        "model_inputs": {
+            "shared_parameters": {
+                "commodity": "natural_gas",
+                "commodity_rate_units": "MMBtu/h",
+            },
+            "performance_parameters": {
+                "rated_capacity": 100.0,
+            },
+            "cost_parameters": {
+                "price": 4.2,  # USD/MMBtu
+                "annual_cost": 0,
+                "start_up_cost": 100000.0,
+                "cost_year": 2025,
+                "resource_year": 2001,
+                "state": "MN",
+                "monthly": True,
+                "price_category": "industrial",
+                "filename": Path(__file__).parent / "test_eia_ng_data.csv",
+                "commodity_amount_units": "MMBtu",
             },
         }
     }
@@ -118,21 +154,21 @@ def create_basic_feedstock_config(
             },
         }
     }
-    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 8760, "dt": 3600}}}
     driver_config = {}
-    return tech_config, plant_config, driver_config
+    return tech_config, driver_config
 
 
 @pytest.mark.unit
-def test_single_feedstock_natural_gas():
+def test_single_feedstock_natural_gas(plant_config):
     """Test a single natural gas feedstock with basic parameters."""
-    tech_config, plant_config, driver_config = create_basic_feedstock_config()
+    tech_config, driver_config = create_basic_feedstock_config()
 
     # Test performance model
-    perf_model = FeedstockPerformanceModel()
-    perf_model.options["tech_config"] = tech_config
-    perf_model.options["plant_config"] = plant_config
-    perf_model.options["driver_config"] = driver_config
+    perf_model = FeedstockPerformanceModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_perf", perf_model)
@@ -145,10 +181,11 @@ def test_single_feedstock_natural_gas():
     assert np.all(ng_output == 100.0)
 
     # Test cost model
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob_cost = om.Problem()
     prob_cost.model.add_subsystem("feedstock_cost", cost_model)
@@ -169,34 +206,99 @@ def test_single_feedstock_natural_gas():
 
 
 @pytest.mark.unit
-def test_multiple_same_type_feedstocks():
+def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
+    """Test a single natural gas feedstock with basic parameters."""
+    tech_config = eia_ng_feedstock_tech_config
+    _, driver_config = create_basic_feedstock_config()
+
+    # Test performance model
+    perf_model = FeedstockPerformanceModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config={},
+    )
+
+    prob = om.Problem()
+    prob.model.add_subsystem("feedstock_perf", perf_model)
+    prob.setup()
+    prob.run_model()
+
+    # Check that output is generated correctly
+    ng_output = prob.get_val("feedstock_perf.natural_gas_out")
+    assert len(ng_output) == 8760
+    assert np.all(ng_output == 100.0)
+
+    # Test cost model
+    cost_model = EIANaturalGasFeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config={},
+    )
+
+    prob_cost = om.Problem()
+    prob_cost.model.add_subsystem("feedstock_cost", cost_model)
+    prob_cost.setup()
+
+    # Set some consumption values
+    consumption = np.full(8760, 50.0)  # 50 MMBtu/hour
+    prob_cost.set_val("feedstock_cost.natural_gas_consumed", consumption)
+    prob_cost.run_model()
+
+    # replicate price data
+    price = pd.DataFrame(
+        [
+            ["01/01/2001", 12.23029],
+            ["02/01/2001", 6.950207],
+            ["03/01/2001", 6.182573],
+            ["04/01/2001", 6.410788],
+            ["05/01/2001", 5.715768],
+            ["06/01/2001", 4.439834],
+            ["07/01/2001", 3.910788],
+            ["08/01/2001", 3.827801],
+            ["09/01/2001", 3.807054],
+            ["10/01/2001", 2.572614],
+            ["11/01/2001", 4.159751],
+            ["12/01/2001", 4.294606],
+        ],
+        columns=["period", "price"],
+    )
+    price.period = pd.to_datetime(price.period)
+    price = price.set_index("period")
+    price = convert_to_hourly(price)
+    price = price.price.to_numpy()
+
+    # Check outputs
+    capex = prob_cost.get_val("feedstock_cost.CapEx", units="USD")[0]
+    opex = prob_cost.get_val("feedstock_cost.VarOpEx", units="USD/year")[0]
+
+    assert capex == 100000.0  # start_up_cost
+    expected_opex = 0.0 + (price * consumption).sum()
+    assert opex == pytest.approx(expected_opex, abs=1e-5)
+
+
+@pytest.mark.unit
+def test_multiple_same_type_feedstocks(plant_config):
     """Test multiple feedstocks of the same type with different parameters."""
     # Test two natural gas feedstocks with different capacities and prices
     units = "MMBtu/h"
-    tech_config1, plant_config, driver_config = create_basic_feedstock_config(
+    tech_config1, driver_config = create_basic_feedstock_config(
         rated_capacity=50.0, price=4.0, start_up_cost=50000.0, units=units
     )
-    tech_config2, _, _ = create_basic_feedstock_config(
+    tech_config2, _ = create_basic_feedstock_config(
         rated_capacity=150.0, price=4.5, start_up_cost=150000.0, units=units
     )
 
     # Test both feedstocks can coexist and have different outputs
-    perf_model1 = FeedstockPerformanceModel()
-    perf_model1.options.update(
-        {
-            "tech_config": tech_config1,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_model1 = FeedstockPerformanceModel(
+        tech_config=tech_config1,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_model2 = FeedstockPerformanceModel()
-    perf_model2.options.update(
-        {
-            "tech_config": tech_config2,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_model2 = FeedstockPerformanceModel(
+        tech_config=tech_config2,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
     prob = om.Problem()
@@ -213,48 +315,43 @@ def test_multiple_same_type_feedstocks():
 
 
 @pytest.mark.unit
-def test_multiple_different_type_feedstocks():
+def test_multiple_different_type_feedstocks(plant_config):
     """Test feedstocks of different types (natural gas, electricity, water)."""
     # Natural gas feedstock
     ng_units = "MMBtu/h"
-    ng_config, plant_config, driver_config = create_basic_feedstock_config(
+    ng_config, driver_config = create_basic_feedstock_config(
         feedstock_type="natural_gas", units=ng_units, rated_capacity=100.0, price=4.2
     )
 
     # Electricity feedstock
     ec_units = "MW*h"
-    elec_config, _, _ = create_basic_feedstock_config(
+    elec_config, _ = create_basic_feedstock_config(
         feedstock_type="electricity", units=ec_units, rated_capacity=50.0, price=0.05
     )
 
     # Water feedstock
     h2o_units = "galUS"
-    water_config, _, _ = create_basic_feedstock_config(
+    water_config, _ = create_basic_feedstock_config(
         feedstock_type="water", units=h2o_units, rated_capacity=1000.0, price=0.001
     )
 
     # Test all three feedstock types
-    perf_ng = FeedstockPerformanceModel()
-    perf_ng.options.update(
-        {"tech_config": ng_config, "plant_config": plant_config, "driver_config": driver_config}
+    perf_ng = FeedstockPerformanceModel(
+        tech_config=ng_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_elec = FeedstockPerformanceModel()
-    perf_elec.options.update(
-        {
-            "tech_config": elec_config,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_elec = FeedstockPerformanceModel(
+        tech_config=elec_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
-    perf_water = FeedstockPerformanceModel()
-    perf_water.options.update(
-        {
-            "tech_config": water_config,
-            "plant_config": plant_config,
-            "driver_config": driver_config,
-        }
+    perf_water = FeedstockPerformanceModel(
+        tech_config=water_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
     )
 
     prob = om.Problem()
@@ -275,7 +372,7 @@ def test_multiple_different_type_feedstocks():
 
 
 @pytest.mark.unit
-def test_variable_pricing():
+def test_variable_pricing(plant_config):
     """Test feedstock with variable pricing (array of prices)."""
     # Create hourly price array that varies throughout the year
     hourly_prices = np.full(8760, 4.2)
@@ -287,14 +384,13 @@ def test_variable_pricing():
         elif 22 <= hour_of_day or hour_of_day <= 6:  # Off-peak hours
             hourly_prices[i] = 3.0
 
-    tech_config, plant_config, driver_config = create_basic_feedstock_config(
-        price=hourly_prices.tolist()
-    )
+    tech_config, driver_config = create_basic_feedstock_config(price=hourly_prices.tolist())
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -316,16 +412,17 @@ def test_variable_pricing():
 
 
 @pytest.mark.unit
-def test_zero_cost_feedstock():
+def test_zero_cost_feedstock(plant_config):
     """Test feedstock with zero costs (free resource)."""
-    tech_config, plant_config, driver_config = create_basic_feedstock_config(
+    tech_config, driver_config = create_basic_feedstock_config(
         price=0.0, annual_cost=0.0, start_up_cost=0.0
     )
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -343,7 +440,7 @@ def test_zero_cost_feedstock():
 
 
 @pytest.mark.unit
-def test_per_year_pricing():
+def test_per_year_pricing(plant_config):
     """Test feedstock with per-year pricing (array of length plant_life)."""
     plant_life = 30
     n_timesteps = 8760
@@ -351,14 +448,15 @@ def test_per_year_pricing():
     # Different price each year
     yearly_prices = np.linspace(3.0, 6.0, plant_life).tolist()
 
-    tech_config, plant_config, driver_config = create_basic_feedstock_config(
+    tech_config, driver_config = create_basic_feedstock_config(
         price=yearly_prices, start_up_cost=0.0
     )
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
@@ -377,16 +475,17 @@ def test_per_year_pricing():
 
 
 @pytest.mark.unit
-def test_per_year_pricing_invalid_length():
+def test_per_year_pricing_invalid_length(plant_config):
     """Test that an invalid price array length raises ValueError."""
     bad_prices = [4.2] * 15  # Neither n_timesteps (8760) nor plant_life (30)
 
-    tech_config, plant_config, driver_config = create_basic_feedstock_config(price=bad_prices)
+    tech_config, driver_config = create_basic_feedstock_config(price=bad_prices)
 
-    cost_model = FeedstockCostModel()
-    cost_model.options["tech_config"] = tech_config
-    cost_model.options["plant_config"] = plant_config
-    cost_model.options["driver_config"] = driver_config
+    cost_model = FeedstockCostModel(
+        tech_config=tech_config,
+        plant_config=plant_config,
+        driver_config=driver_config,
+    )
 
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
