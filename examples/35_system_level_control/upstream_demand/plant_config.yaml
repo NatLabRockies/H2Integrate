@@ -1,5 +1,5 @@
 name: plant_config
-description: Wind + NG plant with profit-maximization control and diurnal pricing.
+description: This plant is located in Texas, USA.
 sites:
   site:
     latitude: 30.6617
@@ -9,14 +9,34 @@ sites:
         resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2013
+# array of arrays containing left-to-right technology
+# interconnections; can support bidirectional connections
+# with the reverse definition.
+# this will naturally grow as we mature the interconnected tech
 technology_interconnections:
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+  # connect NG feedstock to NG plant
   - [wind, battery, electricity, cable]
-  - [wind, fin_combiner, electricity, cable]
-  - [battery, fin_combiner, electricity, cable]
-  - [natural_gas_plant, fin_combiner, electricity, cable]
-  - [fin_combiner, electrical_load_demand, electricity, cable]
+  # wind output available for battery charging (electricity_in)
+  - [wind, elec_combiner, electricity, cable]
+  # wind to combined output
+  - [battery, elec_combiner, electricity, cable]
+  # battery net output to combined output
+  - [natural_gas_plant, elec_combiner, electricity, cable]
+  # electricity to electrical demand
+  - [elec_combiner, electrical_load_demand, electricity, cable]
+  # electrical demand to electrolyzer
+  - [electrical_load_demand, electrolyzer, electricity, cable]
+  # electrolyzer to storage
+  - [electrolyzer, h2_storage, hydrogen, pipe]
+  # combine hydrogen streams
+  - [electrolyzer, h2_combiner, hydrogen, pipe]
+  - [h2_storage, h2_combiner, hydrogen, pipe]
+  # send hydrogen to load
+  - [h2_combiner, h2_load_demand, hydrogen, pipe]
+  # combined supply to demand
 resource_to_tech_connections:
+  # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
 plant:
   plant_life: 30
@@ -24,22 +44,17 @@ plant:
     n_timesteps: 8760
     dt: 3600
 system_level_control:
-  control_strategy: ProfitMaximizationControl
+  control_strategy: DemandFollowingControl
   demand_component: electrical_load_demand
-  control_parameters:
-    commodity_sell_price: profast_npv  # name of finance group whose commodity_sell_price to use
-    cost_per_tech:
-      natural_gas_plant: feedstock  # use upstream feedstock (ng_feedstock) VarOpEx
   solver_options:
     solver_name: gauss_seidel
     max_iter: 20
+    convergence_tolerance: 1.0e-6
 finance_parameters:
   finance_groups:
-    profast_npv:
-      finance_model: ProFastNPV
+    profast_lco:
+      finance_model: ProFastLCO
       model_inputs:
-        commodity_sell_price: 0.06
-        commodity_sell_price_units: USD/(kW*h)
         params:
           analysis_start_year: 2032
           installation_time: 36  # months
@@ -60,11 +75,26 @@ finance_parameters:
           depr_period: 5  # 5  years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
           refurb: [0.]
   finance_subgroups:
+    renewables:
+      commodity: electricity
+      commodity_stream: wind
+      finance_groups: [profast_lco]
+      technologies: [wind]
+    natural_gas:
+      commodity: electricity
+      commodity_stream: natural_gas_plant
+      finance_groups: [profast_lco]
+      technologies: [natural_gas_plant, ng_feedstock]
     electricity:
       commodity: electricity
-      commodity_stream: fin_combiner
-      finance_groups: [profast_npv]
-      technologies: [wind, natural_gas_plant, ng_feedstock, battery]
+      commodity_stream: electrical_load_demand
+      finance_groups: [profast_lco]
+      technologies: [wind, battery, natural_gas_plant, ng_feedstock]
+    hydrogen:
+      commodity: hydrogen
+      commodity_stream: h2_combiner
+      finance_groups: [profast_lco]
+      technologies: [wind, battery, natural_gas_plant, ng_feedstock, electrolyzer, h2_storage]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022

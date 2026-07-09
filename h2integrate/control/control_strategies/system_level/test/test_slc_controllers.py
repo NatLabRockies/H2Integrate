@@ -52,15 +52,15 @@ def _build_technology_graph(technology_interconnections):
 def _build_tech_control_classifiers(
     fixed=None, flexible=None, dispatchable=None, storage=None, feedstock=None
 ):
-    tech_control_classifiers = {k: "fixed" for k in (fixed or [])}
-    tech_control_classifiers |= {k: "flexible" for k in (flexible or [])}
-    tech_control_classifiers |= {k: "dispatchable" for k in (dispatchable or [])}
-    tech_control_classifiers |= {k: "storage" for k in (storage or [])}
-    tech_control_classifiers |= {k: "feedstock" for k in (feedstock or [])}
+    tech_control_classifiers = dict.fromkeys(fixed or [], "fixed")
+    tech_control_classifiers |= dict.fromkeys(flexible or [], "flexible")
+    tech_control_classifiers |= dict.fromkeys(dispatchable or [], "dispatchable")
+    tech_control_classifiers |= dict.fromkeys(storage or [], "storage")
+    tech_control_classifiers |= dict.fromkeys(feedstock or [], "feedstock")
     return tech_control_classifiers
 
 
-def _build_slc_config(
+def _build_slc_topology(
     technology_graph,
     tech_control_classifiers: dict,
     demand_tech: str = "demand",
@@ -81,7 +81,7 @@ def _build_slc_config(
         k: True if k in storage_techs_with_control else False for k in storage_techs
     }
 
-    slc_config = {
+    slc_topology = {
         "demand_commodity": demand_commodity,
         "demand_commodity_rate_units": demand_commodity_rate_units,
         "demand_tech": demand_tech,
@@ -90,20 +90,20 @@ def _build_slc_config(
         "technology_graph": technology_graph,
         "tech_control_classifiers": tech_control_classifiers,
     }
-    return slc_config
+    return slc_topology
 
 
-def _build_problem(slc_cls, plant_config, slc_config, demand=50000, tech_config={}):
+def _build_problem(slc_cls, plant_config, slc_topology, demand=50000, tech_config={}):
     """Create and setup an OpenMDAO Problem with the given controller."""
     prob = om.Problem()
 
     feedstock_techs = [
-        k for k, v in slc_config["tech_control_classifiers"].items() if v == "feedstock"
+        k for k, v in slc_topology["tech_control_classifiers"].items() if v == "feedstock"
     ]
     feedstock_subsystem_names = []
     for fi, feedstock_tech in enumerate(feedstock_techs):
         feedstock_commodity = [
-            e[-1] for e in slc_config["tech_to_commodity"] if e[0] == feedstock_tech
+            e[-1] for e in slc_topology["tech_to_commodity"] if e[0] == feedstock_tech
         ]
         feedstock_comp = prob.model.add_subsystem(f"IVC{fi}", om.Group())
         feedstock_comp.add_subsystem(
@@ -125,7 +125,7 @@ def _build_problem(slc_cls, plant_config, slc_config, demand=50000, tech_config=
             driver_config={},
             plant_config=plant_config,
             tech_config=tech_config,
-            slc_config=slc_config,
+            slc_topology=slc_topology,
         ),
     )
 
@@ -136,7 +136,7 @@ def _build_problem(slc_cls, plant_config, slc_config, demand=50000, tech_config=
     prob.setup()
 
     # Set demand profile from config
-    demand_name = f"slc.{slc_config['demand_commodity']}_demand"
+    demand_name = f"slc.{slc_topology['demand_commodity']}_demand"
     prob.set_val(demand_name, demand)
 
     return prob
@@ -154,9 +154,9 @@ class TestSystemLevelControlBase:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(flexible=["wind"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
         # Use DemandFollowingControl since base is abstract
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
         # _var_rel2meta uses relative names (no "slc." prefix)
         assert "wind_electricity_out" in prob.model.slc._var_rel2meta
         assert "wind_rated_electricity_production" in prob.model.slc._var_rel2meta
@@ -167,8 +167,8 @@ class TestSystemLevelControlBase:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
         assert "ng_electricity_out" in prob.model.slc._var_rel2meta
         assert "ng_rated_electricity_production" in prob.model.slc._var_rel2meta
         assert "ng_electricity_set_point" in prob.model.slc._var_rel2meta
@@ -178,8 +178,8 @@ class TestSystemLevelControlBase:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(storage=["battery"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         assert "battery_electricity_out" in prob.model.slc._var_rel2meta
         assert "battery_rated_electricity_production" in prob.model.slc._var_rel2meta
@@ -189,8 +189,8 @@ class TestSystemLevelControlBase:
         plant_config = _build_plant_config([])
         tech_graph = _build_technology_graph([])
         tech_control_classifiers = _build_tech_control_classifiers()
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         assert "electricity_demand" in prob.model.slc._var_rel2meta
 
@@ -215,8 +215,8 @@ class TestDemandFollowingControl:
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng1", "ng2"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         prob.set_val("slc.ng1_rated_electricity_production", 80000)
         prob.set_val("slc.ng2_rated_electricity_production", 40000)
@@ -238,8 +238,8 @@ class TestDemandFollowingControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             flexible=["wind"], dispatchable=["ng"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         prob.set_val("slc.wind_electricity_out", [30000, 60000, 50000, 10000])
         prob.set_val("slc.wind_rated_electricity_production", 120000)
@@ -264,8 +264,8 @@ class TestDemandFollowingControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             flexible=["wind"], storage=["battery"], dispatchable=["ng"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         prob.set_val("slc.wind_electricity_out", [70000, 30000, 50000, 50000])
         prob.set_val("slc.wind_rated_electricity_production", 120000)
@@ -284,8 +284,8 @@ class TestDemandFollowingControl:
         plant_config = _build_plant_config([])
         tech_graph = _build_technology_graph([])
         tech_control_classifiers = _build_tech_control_classifiers()
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_config)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
         prob.run_model()  # should not raise
 
@@ -310,8 +310,8 @@ class TestCostMinimizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["cheap", "expensive"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.cheap_rated_electricity_production", 80000)
         prob.set_val("slc.expensive_rated_electricity_production", 40000)
@@ -336,8 +336,8 @@ class TestCostMinimizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["cheap", "expensive"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.cheap_rated_electricity_production", 30000)
         prob.set_val("slc.expensive_rated_electricity_production", 40000)
@@ -360,8 +360,8 @@ class TestCostMinimizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             flexible=["wind"], dispatchable=["ng"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.wind_electricity_out", [40000, 40000, 40000, 40000])
         prob.set_val("slc.wind_rated_electricity_production", 120000)
@@ -393,8 +393,8 @@ class TestProfitMaximizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["cheap", "expensive"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.cheap_rated_electricity_production", 30000)
         prob.set_val("slc.expensive_rated_electricity_production", 40000)
@@ -419,8 +419,8 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["a", "b"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.a_rated_electricity_production", 80000)
         prob.set_val("slc.b_rated_electricity_production", 40000)
@@ -442,8 +442,8 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         prob.set_val("slc.commodity_sell_price", 0.01)
@@ -462,8 +462,8 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         # Don't set sell_price explicitly — should use config default 0.10
@@ -482,8 +482,8 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         # Sell price varies: 2 profitable hours, 2 unprofitable
@@ -514,11 +514,11 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["grid"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
         prob = _build_problem(
             ProfitMaximizationControl,
             plant_config,
-            slc_config,
+            slc_topology,
             demand=50000,
             tech_config=tech_config,
         )
@@ -552,11 +552,11 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["grid"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
         prob = _build_problem(
             ProfitMaximizationControl,
             plant_config,
-            slc_config,
+            slc_topology,
             demand=50000,
             tech_config=tech_config,
         )
@@ -581,8 +581,8 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["gen"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.gen_rated_electricity_production", 100000)
         # Set VarOpEx ($/year, shape=plant_life=30) and production
@@ -607,8 +607,8 @@ class TestProfitMaximizationControl:
         plant_config = _build_plant_config(tech_connections, sell_price=0.10, cost_per_tech={})
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_rated_electricity_production", 100000)
         prob.set_val("slc.commodity_sell_price", 0.10)
@@ -632,8 +632,8 @@ class TestProfitMaximizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["ng_plant"], feedstock=["ng_feed"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_plant_rated_electricity_production", 100000)
         # Feedstock VarOpEx: $1M/yr; production: 100 MW * 4 h = 400 MWh
@@ -662,8 +662,8 @@ class TestProfitMaximizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["plant"], feedstock=["feed_a", "feed_b"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.plant_rated_electricity_production", 100000)
         # Two feedstocks: $500k and $300k → total $800k/yr
@@ -692,8 +692,8 @@ class TestProfitMaximizationControl:
         tech_control_classifiers = _build_tech_control_classifiers(
             dispatchable=["ng_plant"], feedstock=["ng_feed"]
         )
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
-        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_config, demand=50000)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(ProfitMaximizationControl, plant_config, slc_topology, demand=50000)
 
         prob.set_val("slc.ng_plant_rated_electricity_production", 100000)
         prob.set_val("slc.commodity_sell_price", 0.01)
@@ -718,7 +718,7 @@ class TestProfitMaximizationControl:
         )
         tech_graph = _build_technology_graph(tech_connections)
         tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng_plant"])
-        slc_config = _build_slc_config(tech_graph, tech_control_classifiers)
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
 
         with pytest.raises(ValueError, match="at least one feedstock"):
-            _build_problem(CostMinimizationControl, plant_config, slc_config, demand=50000)
+            _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)

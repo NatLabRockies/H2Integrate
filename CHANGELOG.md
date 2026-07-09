@@ -41,6 +41,7 @@
 - Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
 - Speed up the slowest tests in the suite by swapping the Floris wind model for `PYSAMWindPlantPerformanceModel` in examples 01 (`01_onshore_steel_mn`) and 02 (`02_texas_ammonia`), updating the affected `test_steel_example`/`test_simple_ammonia_example` expected values, fixing a pre-existing `cases.sql` cache-path bug and module-scoping the fixtures in `h2integrate/postprocess/test/test_sql_timeseries_to_csv.py` so the example only runs once for all four tests. [PR 782](https://github.com/NatLabRockies/H2Integrate/pull/782)
 - Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
+- Added system-level-controller unit tests that confirm the `cost_per_tech: feedstock` mode correctly sums `VarOpEx` from all upstream feedstocks for a multi-feedstock dispatchable, including a fuel-cell-style hydrogen-plus-oxygen scenario and a case with feedstocks at different graph depths. [PR 793](https://github.com/NatLabRockies/H2Integrate/pull/793)
 - Rewrote the "Adding a new technology" developer guide. Also replaced the hand-maintained model overview page with an auto-generated section (`docs/generate_model_overview.py`) that classifies every registered class in `supported_models` and appends the first sentence of each class's docstring. Migrated `.readthedocs.yaml` to invoke `docs/build_book.sh` via `build.commands` so hosted and local builds stay in sync. [PR 787](https://github.com/NatLabRockies/H2Integrate/pull/787)
 - Moves `h2integrate/resource/utilities/file_tools.py::check_resource_dir` to a general function
   `h2integrate/core/utilities/file_utils.py::check_data_dir` with a wrapped version for resource
@@ -60,7 +61,13 @@
   - Fixed several MyST cross-reference targets (missing labels, ambiguous doc vs ref targets, incorrect autosummary path, duplicate labels, broken image path, and a broken literalinclude path).
   - Added a custom `docs/_templates/autosummary/module.rst` template that filters pytest `conftest.py` submodules from generated stubs, eliminating the "failed to import conftest" warnings that appeared on the Read the Docs build.
   - Renamed the `GeoH2SubsurfaceCostModel` MyST label in `docs/technology_models/geologic_hydrogen.md` to `mathur-modified-geoh2-cost` to remove an ambiguous cross-reference with the autosummary entry for the Python class of the same name.
-
+- Updates `h2integrate/core/file_utils.py::check_data_dir` to allow for the creation of nested
+  directories, not just the final subdirectory for smoother initialization of a feedstock directory
+  [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the
+  feedstock data with the resource data methodology
+  [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
 
 ## 0.8 [April 15, 2026]
 

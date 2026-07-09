@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 
 from h2integrate.preprocess import geospatial
-from h2integrate.core.file_utils import get_path
+from h2integrate.core.file_utils import get_path, check_feedstock_dir
 
 
 MCF_to_MMBTU = 1 / 0.964
@@ -330,6 +330,7 @@ def get_eia_ng_data(
     state: str | list[str],
     api_key_file: str | Path | None = None,
     filename: str | Path | None = None,
+    feedstock_dir: str | Path | None = None,
     *,
     monthly: bool = True,
 ):
@@ -340,24 +341,32 @@ def get_eia_ng_data(
             data should be retrieved. Should be between 2001 and the current year, inclusive of
             endpoints as that is all that the EIA provides, regardless of what is queried.
         price_category (str | list[str]): One or a combination of "wellhead", "imports", "citygate",
-            "residential", "commercial","industrial", "electrical_power", or "exports". Note that
+            "residential", "commercial", "industrial", "electrical_power", or "exports". Note that
             not all categories will return state-level data.
         state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
             as "United States" or "US". Only the "US" or one of the 50 US states will produce valid
             results.
         api_key_file (Path, optional): Full file name of the file where the API key is located. If
             no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
-        filename (str | Path | None): Full file name where the EIA data can either be loaded from
+        filename (str | Path | None): File name where the EIA data can either be loaded from
             or should be saved to. If None, then data will be queried and returned with saving
-            left to the user.
+            left to the user. Should be used in conjunction with :py:attr:`feedstock_dir` or the
+            file will be expected in :py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas"
+        feedstock_dir (str | Path | None): File path for where the the data should be saved to or
+            retrieved from. If None, and :py:attr:`filename` is used, then
+            ":py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas" will be used.
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
 
     Returns:
         pd.DataFrame: A monthly dataframe containing the date, state, price_category, and price
             (MMBTU).
     """
-
-    filename = _validate_file_name(filename)
+    if filename is not None:
+        if feedstock_dir is None:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+        else:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
+    file_path = filename if filename is None else _validate_file_name(feedstock_dir / filename)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)
     resource_year = _validate_resource_year(resource_year)
@@ -368,9 +377,9 @@ def get_eia_ng_data(
         keep_cols = ["state", *keep_cols]
     if len(price_category) > 1:
         keep_cols = ["category", *keep_cols]
-    if filename is not None:
-        if filename.exists():
-            df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
+    if file_path is not None:
+        if file_path.exists():
+            df = pd.read_csv(file_path, parse_dates=["period"]).set_index("period")
             df = df.loc[
                 (df.index.year >= start)
                 & (df.index.year <= end)
@@ -419,7 +428,7 @@ def get_eia_ng_data(
     df = convert_to_monthly(df, *resource_year)
     df.price *= MCF_to_MMBTU
 
-    if filename is not None:
-        df.to_csv(filename, index_label="period")
+    if file_path is not None:
+        df.to_csv(file_path, index_label="period")
 
     return df
