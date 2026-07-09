@@ -1670,9 +1670,11 @@ class H2IntegrateModel:
                     )
 
             elif len(connection) == 3:
+                source_tech, dest_tech, connected_parameter = connection
+                src_indices = None
+
                 # initialize src_indices to allow connections between different shaped variables
-                if isinstance(connection[-1], list):
-                    source_tech, dest_tech, connected_parameter = connection
+                if isinstance(connected_parameter, list):
                     connected_parameter, src_indices = (
                         self._split_indices_from_connected_parameter_definition(connected_parameter)
                     )

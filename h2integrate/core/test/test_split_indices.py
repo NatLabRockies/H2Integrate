@@ -57,7 +57,3 @@ class TestSplitIndicesFromConnectedParameterDefinition:
         params, src_indices = self.split_indices(["source[0:100:2]", "dest"])
         assert params == ["source", "dest"]
         assert src_indices == om.slicer[0:100:2]
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
