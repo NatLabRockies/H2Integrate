@@ -2289,29 +2289,34 @@ class H2IntegrateModel:
         """
         source_parameter, dest_parameter = connected_parameter
 
-        # Regex pattern to match anything enclosed in square brackets
-        pattern = re.compile(r"\[.*?\]")
+        def _extract_slice(parameter):
+            """Return the contents inside the brackets (e.g. '0:8760'), or None."""
+            match = re.search(r"\[(.*)\]", parameter)
+            return None if match is None else match.group(1)
 
-        source_match = pattern.search(source_parameter)
-        dest_match = pattern.search(dest_parameter)
+        def _to_indices(spec):
+            """Convert a bracket spec string into a slice or list of ints."""
+            if ":" in spec:
+                return slice(*(int(p) if p.strip() else None for p in spec.split(":")))
+            return [int(p) for p in spec.split(",")]
 
-        # Extract the matched slice pattern or None if no pattern found
-        source_slice = source_match if source_match is None else source_match.group()
-        dest_slice = dest_match if dest_match is None else dest_match.group()
+        source_slice = _extract_slice(source_parameter)
+        dest_slice = _extract_slice(dest_parameter)
+
         if source_slice == dest_slice:
             src_indices = None
         elif dest_slice is not None and source_slice is not None:
-            pattern = re.compile(r":(\d+)")
-            dest_length = int(pattern.search(dest_slice).group().split(":")[-1])
-
-            # Scale source indices by destination length to handle shape mismatches
-            # Example: source_slice="[0:1]" with dest_length=8760 -> multiply 1 by 8760
-            src_indices = eval(f"om.slicer[{source_slice} * {dest_length}]")
+            # Scale source indices by destination length to handle shape mismatches.
+            # Example: source_slice="0" with dest_length=8760 -> [0] repeated 8760 times.
+            dest_length = int(dest_slice.split(":")[-1])
+            src_indices = om.slicer[_to_indices(source_slice) * dest_length]
         else:
-            # No destination slice pattern; use source slice pattern directly
-            src_indices = None if source_slice is None else eval(f"om.slicer{source_slice}")
+            # No destination slice pattern; use source slice pattern directly.
+            src_indices = None if source_slice is None else om.slicer[_to_indices(source_slice)]
 
-        # Remove the slice patterns from parameter names to get clean names
+        # Remove the slice patterns from parameter names to get clean names.
         connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
+        import pdb
 
+        pdb.set_trace()
         return connected_parameter, src_indices
