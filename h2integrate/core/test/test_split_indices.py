@@ -45,6 +45,13 @@ class TestSplitIndicesFromConnectedParameterDefinition:
         assert src_indices == om.slicer[[0] * 8760]
 
     @pytest.mark.unit
+    def test_both_slices_tiled(self):
+        """Test with slice patterns in both parameters."""
+        params, src_indices = self.split_indices(["power_out[0,1]", "power_in[0:8760]"])
+        assert params == ["power_out", "power_in"]
+        assert src_indices == om.slicer[[0, 1] * 4380]
+
+    @pytest.mark.unit
     def test_dest_partial_slice(self):
         """Test that a non-zero destination slice start raises a ValueError."""
         error_msg = "A non-zero start was provided for the slice for destination parameter"

@@ -2306,15 +2306,32 @@ class H2IntegrateModel:
         if source_slice == dest_slice:
             src_indices = None
         elif dest_slice is not None and source_slice is not None:
-            # Scale source indices by destination length to handle shape mismatches.
-            # Example: source_slice="0" with dest_length=8760 -> [0] repeated 8760 times.
+            # Tile the source indices to fill the destination length to handle shape
+            # mismatches. Examples:
+            #   source="0",   dest_length=8760 -> [0] repeated 8760 times
+            #   source="0,1", dest_length=10   -> [0, 1] cycled to fill 10 slots
             if dest_slice.split(":")[0] not in ("", "0"):
                 raise ValueError(
                     "A non-zero start was provided for the slice for destination "
                     f"parameter <{dest_parameter}>"
                 )
             dest_length = int(dest_slice.split(":")[-1])
-            src_indices = om.slicer[_to_indices(source_slice) * dest_length]
+
+            source_indices = _to_indices(source_slice)
+            if isinstance(source_indices, slice):
+                source_indices = list(
+                    range(
+                        source_indices.start or 0,
+                        source_indices.stop,
+                        source_indices.step or 1,
+                    )
+                )
+
+            # Repeat the source values enough times to cover the destination, then
+            # truncate so the result is exactly dest_length long. This cycles through
+            # the source values when the source is shorter than the destination.
+            n_repeats = -(-dest_length // len(source_indices))  # ceiling division
+            src_indices = om.slicer[(source_indices * n_repeats)[:dest_length]]
         else:
             # No destination slice pattern; use source slice pattern directly.
             src_indices = None if source_slice is None else om.slicer[_to_indices(source_slice)]
