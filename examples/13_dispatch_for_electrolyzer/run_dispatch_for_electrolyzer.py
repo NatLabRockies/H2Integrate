@@ -31,7 +31,7 @@ h2i = H2IntegrateModel(input_config)
 h2i.setup()
 
 electrolyzer_capacity_MW = 60
-h2i.prob.set_val("battery.electricity_demand", 0.1 * electrolyzer_capacity_MW, units="MW")
+h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
 h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
 h2i.run()

@@ -34,6 +34,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -43,8 +44,6 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 
     def setup(self):
         super().setup()
-
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = ElectricArcFurnacePerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -64,25 +63,25 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
 
-        # Default the steel set point input as the rated capacity
+        # Default the steel command value input as the rated capacity
         self.add_input(
-            "steel_set_point",
+            "steel_command_value",
             val=self.config.steel_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Steel set point for steel plant",
+            desc="Steel command value for steel plant",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -230,20 +229,20 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
                 "Value"
             ].sum()  # t/t
 
-        # steel set point, saturated at maximum rated system capacity
-        steel_set_point = np.where(
-            inputs["steel_set_point"] > inputs["system_capacity"],
+        # steel command value, saturated at maximum rated system capacity
+        steel_command_value = np.where(
+            inputs["steel_command_value"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["steel_set_point"],
+            inputs["steel_command_value"],
         )
 
         # initialize an array of how much steel could be produced
-        # from the available feedstocks and the set point
+        # from the available feedstocks and the command value
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["steel_set_point"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["steel_command_value"]))
         )
-        # first entry is the steel set point
-        steel_from_feedstocks[0] = steel_set_point
+        # first entry is the steel command value
+        steel_from_feedstocks[0] = steel_command_value
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity
@@ -311,8 +310,6 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
 
         if "cost_year" in config_dict:
@@ -357,7 +354,7 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
         self.add_input(
             "steel_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Steel produced",
         )

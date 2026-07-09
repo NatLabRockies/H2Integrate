@@ -6,6 +6,7 @@ class SteelPerformanceBaseClass(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -15,10 +16,9 @@ class SteelPerformanceBaseClass(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         # NOTE: the SteelPerformanceModel does not use electricity or hydrogen in its calc
-        self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
-        self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
+        self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         """

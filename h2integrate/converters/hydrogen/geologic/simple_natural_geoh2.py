@@ -152,7 +152,6 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.add_input("site_prospectivity", units="unitless", val=self.config.site_prospectivity)
         self.add_input(
@@ -172,11 +171,11 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         self.add_output("wellhead_h2_concentration_mass", units="percent")
         self.add_output("wellhead_h2_concentration_mol", units="percent")
         self.add_output("lifetime_wellhead_flow", units="kg/h")
-        self.add_output("wellhead_gas_out_natural", units="kg/h", shape=(n_timesteps,))
+        self.add_output("wellhead_gas_out_natural", units="kg/h", shape=(self.n_timesteps,))
         self.add_output("max_wellhead_gas", units="kg/h")
 
     def compute(self, inputs, outputs):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        n_timesteps = self.n_timesteps
 
         # Coerce scalar inputs to Python scalars (handles 0-d and 1-d arrays)
         ramp_up_time = float(np.asarray(inputs["ramp_up_time"]).item())
@@ -207,7 +206,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         else:
             ramp_up_flow = init_wh_flow
         remaining_steps = (
-            n_timesteps * self.options["plant_config"]["plant"]["plant_life"] - ramp_up_steps
+            n_timesteps * self.plant_life - ramp_up_steps
         )  # remaining time steps in lifetime
 
         # Use decline curve modeling if selected
@@ -260,7 +259,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         yearly_h2 = []
         # for each 8760 in the flow profile, calculate the capacity factor for
         # that year and add to array
-        for year in range(self.options["plant_config"]["plant"]["plant_life"]):
+        for year in range(self.plant_life):
             start_idx = year * 8760
             end_idx = start_idx + 8760
             max_h2_produced = ramp_up_flow * w_h2 * 8760

@@ -63,6 +63,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def setup(self):
         self.config = ECOElectrolyzerPerformanceModelConfig.from_dict(
@@ -107,7 +108,6 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         # TODO: add feedstock inputs and consumption outputs
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        plant_life = self.options["plant_config"]["plant"]["plant_life"]
         electrolyzer_size_mw = inputs["n_clusters"][0] * self.config.cluster_rating_MW
         electrolyzer_capex_kw = self.config.electrolyzer_capex
 
@@ -159,7 +159,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         H2_Results, h2_ts, h2_tot, power_to_electrolyzer_kw = run_h2_PEM(
             electrical_generation_timeseries=energy_to_electrolyzer_kw,
             electrolyzer_size=electrolyzer_size_mw,
-            useful_life=plant_life,
+            useful_life=self.plant_life,
             n_pem_clusters=n_pem_clusters,
             electrolyzer_direct_cost_kw=electrolyzer_capex_kw,
             user_defined_pem_param_dictionary=pem_param_dict,
@@ -221,3 +221,9 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["annual_oxygen_produced"] = H2_Results["Performance Schedules"][
             "Annual O2 Production [kg/year]"
         ]
+
+        # Apply command_value from system-level controller if present
+        if "system_level_control" in self.options["plant_config"]:
+            command_value = inputs[f"{self.commodity}_command_value"]
+            commodity_out_key = f"{self.commodity}_out"
+            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], command_value)

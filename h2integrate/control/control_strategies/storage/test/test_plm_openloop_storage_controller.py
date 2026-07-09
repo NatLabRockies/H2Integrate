@@ -521,7 +521,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base, 
     prob.setup()
     prob.run_model()
 
-    set_point = prob.get_val("hydrogen_set_point", units="kg/h")
+    set_point = prob.get_val("hydrogen_command_value", units="kg/h")
     soc = prob.get_val("SOC", units="unitless")
 
     with subtests.test("Discharge occurs before peak (hours 8-9)"):
@@ -679,7 +679,7 @@ def test_plm_controller_blocking_charge_in_peak_range(
     prob.setup()
     prob.run_model()
 
-    set_point = prob.get_val("hydrogen_set_point", units="kg/h")
+    set_point = prob.get_val("hydrogen_command_value", units="kg/h")
     soc = prob.get_val("SOC", units="unitless")
 
     with subtests.test("Controller instantiates and runs without error"):

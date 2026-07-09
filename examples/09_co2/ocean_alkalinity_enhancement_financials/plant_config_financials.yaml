@@ -49,9 +49,11 @@ finance_parameters:
   finance_subgroups:
     electricity:
       commodity: electricity
+      commodity_stream: wind
       technologies: [wind]
     oae:
       commodity: co2
+      commodity_stream: oae
       finance_groups: [oae]
       technologies: [oae]
   cost_adjustment_parameters:

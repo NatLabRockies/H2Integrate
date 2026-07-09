@@ -55,7 +55,6 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = CO2HPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
@@ -76,21 +75,23 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
         # Set up feedstock supply inputs - can be replaced by connections
         meoh_cap = self.config.plant_capacity_kgpy
-        meoh_max_out = np.ones(n_timesteps) * meoh_cap / n_timesteps
+        meoh_max_out = np.ones(self.n_timesteps) * meoh_cap / self.n_timesteps
         self.add_input("meoh_syn_cat_in", units="ft**3/yr", val=syn_ratio * np.sum(meoh_max_out))
-        self.add_input("ng_in", shape=n_timesteps, units="kg/h", val=ng_ratio * meoh_max_out)
-        self.add_input("co2_in", shape=n_timesteps, units="kg/h", val=co2_ratio * meoh_max_out)
-        self.add_input("hydrogen_in", shape=n_timesteps, units="kg/h", val=h2_ratio * meoh_max_out)
+        self.add_input("ng_in", shape=self.n_timesteps, units="kg/h", val=ng_ratio * meoh_max_out)
+        self.add_input("co2_in", shape=self.n_timesteps, units="kg/h", val=co2_ratio * meoh_max_out)
         self.add_input(
-            "electricity_in", shape=n_timesteps, units="kW*h/h", val=elec_ratio * meoh_max_out
+            "hydrogen_in", shape=self.n_timesteps, units="kg/h", val=h2_ratio * meoh_max_out
+        )
+        self.add_input(
+            "electricity_in", shape=self.n_timesteps, units="kW*h/h", val=elec_ratio * meoh_max_out
         )
 
         # Set up feedstock consumption outputs
         self.add_output("meoh_syn_cat_consume", units="ft**3/yr")
-        self.add_output("ng_consume", shape=n_timesteps, units="kg/h")
-        self.add_output("co2_consume", shape=n_timesteps, units="kg/h")
-        self.add_output("hydrogen_consume", shape=n_timesteps, units="kg/s")
-        self.add_output("electricity_consume", shape=n_timesteps, units="kW*h/h")
+        self.add_output("ng_consume", shape=self.n_timesteps, units="kg/h")
+        self.add_output("co2_consume", shape=self.n_timesteps, units="kg/h")
+        self.add_output("hydrogen_consume", shape=self.n_timesteps, units="kg/s")
+        self.add_output("electricity_consume", shape=self.n_timesteps, units="kW*h/h")
 
     def compute(self, inputs, outputs):
         n_timesteps = len(inputs["ng_in"])
@@ -172,7 +173,6 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = CO2HCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
@@ -181,8 +181,8 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
 
         self.add_input("ng_lhv", units="MJ/kg", val=self.config.ng_lhv)
         self.add_input("meoh_syn_cat_consume", units="ft**3/yr")
-        self.add_input("ng_consume", shape=n_timesteps, units="kg/h")
-        self.add_input("carbon_dioxide_consume", shape=n_timesteps, units="kg/h")
+        self.add_input("ng_consume", shape=self.n_timesteps, units="kg/h")
+        self.add_input("carbon_dioxide_consume", shape=self.n_timesteps, units="kg/h")
         self.add_input("meoh_syn_cat_price", units="USD/ft**3", val=self.config.meoh_syn_cat_price)
         self.add_input(
             "ng_price", units="USD/MBtu", val=self.config.ng_price
@@ -232,7 +232,6 @@ class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = MethanolFinanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
             additional_cls_name=self.__class__.__name__,
@@ -258,13 +257,13 @@ class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
             "electricity_consume",
             units="kW*h/h",
             desc="Electricity consumption in kWh/h",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
         )
         self.add_input(
             "hydrogen_consume",
             units="kg/s",
             desc="Hydrogen consumption in kg/h",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
         )
         self.add_input(
             "LCOE",

@@ -1,3 +1,6 @@
+from openmdao.utils.units import convert_units
+
+from h2integrate.finances.tools import _compute_rate_units
 from h2integrate.finances.profast_base import ProFastBase
 
 
@@ -35,29 +38,37 @@ class ProFastNPV(ProFastBase):
     def setup(self):
         """Set up inputs for the NPV calculation.
 
-        Retrieves the commodity sell price from the plant configuration and registers it
-        as an input for the component. Calls the base `setup()` method to initialize
-        other ProFAST inputs and outputs.
+        Retrieves the commodity sell price and its units from the plant configuration
+        and registers it as an input for the component. Calls the base `setup()` method
+        to initialize other ProFAST inputs and outputs.
 
         Raises:
-            ValueError: If `commodity_sell_price` is not provided in the configuration.
+            ValueError: If `commodity_sell_price` or `commodity_sell_price_units` is not
+                provided in the configuration.
 
         Returns:
             None
         """
-        self.commodity_sell_price = self.options["plant_config"]["finance_parameters"][
-            "model_inputs"
-        ].get("commodity_sell_price", None)
+        model_inputs = self.options["plant_config"]["finance_parameters"]["model_inputs"]
+        self.commodity_sell_price = model_inputs.get("commodity_sell_price", None)
+        self.commodity_sell_price_units = model_inputs.get("commodity_sell_price_units", None)
 
         if self.commodity_sell_price is None:
             raise ValueError("commodity_sell_price is missing as an input")
+        if self.commodity_sell_price_units is None:
+            raise ValueError(
+                "commodity_sell_price_units is missing as an input. "
+                "ProFastNPV requires the user to specify the units of "
+                "commodity_sell_price explicitly in "
+                "plant_config['finance_parameters']['model_inputs']."
+            )
 
         super().setup()
 
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.commodity_sell_price,
-            units=self.price_units,
+            units=self.commodity_sell_price_units,
         )
 
     def compute(self, inputs, outputs):
@@ -70,7 +81,36 @@ class ProFastNPV(ProFastBase):
         Returns:
             None
         """
-        pf = self.populate_profast(inputs)
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
+        self.commodity_amount_units = self.commodity_sell_price_units.replace("USD/", "").strip(
+            "()"
+        )
+
+        # compute rate_units from the price
+        rate_units_from_price = _compute_rate_units(
+            self.commodity_sell_price_units, check_conversion=False
+        )
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
+
+        # ensure that sell price units are compatible with the rate units
+        if float(conversion_ratio) != 1.0:
+            # convert rate units to units compatible with the price_units
+            inputs_adjusted = dict(inputs.items())
+            capacity_converted = convert_units(
+                inputs[f"rated_{self.options['commodity_type']}_production"],
+                rate_units_capacity,
+                rate_units_from_price,
+            )
+            inputs_adjusted[f"rated_{self.options['commodity_type']}_production"] = (
+                capacity_converted
+            )
+            pf = self.populate_profast(inputs_adjusted)
+        else:
+            pf = self.populate_profast(inputs)
 
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(
             price=inputs[f"sell_price_{self.output_txt}"][0]

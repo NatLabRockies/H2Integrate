@@ -94,6 +94,10 @@ Each model has its own set of inputs, which are defined in the source code for t
 Because there are no default values for the parameters, we suggest you look at an existing example that uses the model you are interested in to see what inputs are required or look at the source code for the model.
 The different models are defined in the `supported_models.py` file in the `h2integrate` package.
 
+```{note}
+Every technology group also contains a controller that converts a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the performance model. If you do not specify a `control_strategy` for a technology, H2Integrate automatically inserts an implicit passthrough controller that simply maps demand to set-point. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for more details.
+```
+
 ## Plant config file
 
 The plant config file defines the system configuration, any parameters that might be shared across technologies, and how the technologies are connected together.
@@ -237,7 +241,7 @@ Once the configs are loaded into H2I and the model is instantiated, you can dire
 This is an advanced approach that isn't necessarily recommended for basic users, but showcases the level of flexibility possible with H2I.
 
 ```{note}
-The same behavior shown here with a manual for-loop can be achieved by using the [design of experiments capability](design_of_experiments_in_h2i.md).
+The same behavior shown here with a manual for-loop can be achieved more easily by using the [parameter sweep capability](parameter_sweep_in_h2i.md), which is the recommended approach for most users.
 ```
 
 ```{code-cell} ipython3

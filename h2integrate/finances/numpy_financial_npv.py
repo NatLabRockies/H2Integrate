@@ -5,9 +5,10 @@ import pandas as pd
 import openmdao.api as om
 import numpy_financial as npf
 from attrs import field, define
+from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.finances.tools import check_plant_config_and_profast_params
+from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
 from h2integrate.core.validators import gte_zero, range_val
 
 
@@ -20,6 +21,8 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
         discount_rate (float): discount rate, expressed as a fraction between 0 and 1.
         commodity_sell_price (int | float, optional): sell price of commodity in
             USD/unit of commodity. Defaults to 0.0
+        commodity_sell_price_units (str): OpenMDAO unit string for ``commodity_sell_price``
+            (e.g. ``"USD/(kW*h)"`` for electricity or ``"USD/kg"`` for hydrogen). Required.
         save_cost_breakdown (bool, optional): whether to save the cost breakdown per year.
             Defaults to False.
         save_npv_breakdown (bool, optional): whether to save the npv breakdown per technology.
@@ -32,6 +35,7 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
     plant_life: int = field(converter=int, validator=gte_zero)
     discount_rate: float = field(validator=range_val(0, 1))
     commodity_sell_price: int | float = field(default=0.0)
+    commodity_sell_price_units: str = field()
     save_cost_breakdown: bool = field(default=False)
     save_npv_breakdown: bool = field(default=False)
     cost_breakdown_file_description: str = field(default="default")
@@ -86,30 +90,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.NPV_str = f"NPV_{commodity_type}{suffix}"
         self.output_txt = f"{commodity_type}{suffix}"
 
-        # TODO: update below with standardized naming
-        if self.options["commodity_type"] == "electricity":
-            commodity_price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-        else:
-            commodity_price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-
         self.add_output(self.NPV_str, val=0.0, units="USD")
-
-        self.add_input(
-            f"rated_{self.options['commodity_type']}_production",
-            val=0.0,
-            units=commodity_rate_units,
-            shape=1,
-            require_connection=True,
-        )
-        self.add_input(
-            "capacity_factor",
-            val=0.0,
-            units="unitless",
-            shape=plant_life,
-            require_connection=True,
-        )
 
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]
@@ -122,6 +103,25 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.config = NumpyFinancialNPVFinanceConfig.from_dict(
             finance_params,
             additional_cls_name=self.__class__.__name__,
+        )
+
+        rate_units = _compute_rate_units(
+            self.config.commodity_sell_price_units, check_conversion=False
+        )
+
+        self.add_input(
+            f"rated_{self.options['commodity_type']}_production",
+            val=0.0,
+            units=rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            shape=plant_life,
+            require_connection=True,
         )
 
         tech_config = self.tech_config = self.options["tech_config"]
@@ -141,7 +141,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.config.commodity_sell_price,
-            units=commodity_price_units,
+            units=self.config.commodity_sell_price_units,
         )
 
     def compute(self, inputs, outputs):
@@ -176,17 +176,31 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             FileNotFoundError: If the specified output directory cannot be created.
             ValueError: If refurbishment schedules cannot be derived from inputs.
         """
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        rate_units_from_price = _compute_rate_units(self.price_units, check_conversion=False)
+
+        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
+        if float(conversion_ratio) != 1.0:
+            capacity = convert_units(
+                inputs[f"rated_{self.options['commodity_type']}_production"],
+                rate_units_capacity,
+                rate_units_from_price,
+            )
+        else:
+            capacity = inputs[f"rated_{self.options['commodity_type']}_production"]
+
+        # Extract annual production based on commodity type
+        annual_production = inputs["capacity_factor"] * capacity * 8760
+
         # By convention in NPV calculations, investments (capex, opex, refurbishment) are
         # negative cash flows while revenues are positive. This follows the numpy_financial
         # convention where money going out is negative and money coming in is positive.
         sign_of_costs = -1
-
-        # Extract annual production based on commodity type
-        annual_production = (
-            inputs["capacity_factor"]
-            * inputs[f"rated_{self.options['commodity_type']}_production"]
-            * 8760
-        )
 
         # Calculate revenue from selling the commodity at the specified price
         # Revenue is only generated during operational years (not during construction year 0)

@@ -19,11 +19,11 @@ The inputs and outputs of storage performance models are generalized here for an
 - `commodity_in`: commodity available to use for charging storage
 
 If using a **feedback control strategy** (this means that the controller received the actual storage state periodically), the control-related inputs for control to the storage performance include:
-- `commodity_demand`: the target demand profile to satisfy with the storage performance model and the input commodity. This is passed to the control strategy through the `pyomo_dispatch_solver` method.
+- `commodity_set_point`: the target set-point profile to satisfy with the storage performance model and the input commodity. This is passed to the control strategy through the `pyomo_dispatch_solver` method.
 - `pyomo_dispatch_solver`: the control function from the storage controller that outputs dispatch commands to the storage performance model.
 
 If using an **open-loop control strategy**, the control input to the storage performance model is:
-- `commodity_set_point`: the dispatch commands to the storage performance model, negative values indicate charge commands and positive values indicate discharge commands
+- `commodity_command_value`: the dispatch commands to the storage performance model, negative values indicate charge commands and positive values indicate discharge commands
 
 Some storage models may also have design inputs of `max_charge_rate`, `storage_capacity`, and `max_discharge_rate`.
 

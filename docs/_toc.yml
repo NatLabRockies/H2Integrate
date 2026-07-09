@@ -15,7 +15,7 @@ parts:
       - file: user_guide/connecting_technologies
       - file: user_guide/defining_sites_and_resources
       - file: user_guide/design_optimization_in_h2i
-      - file: user_guide/design_of_experiments_in_h2i
+      - file: user_guide/parameter_sweep_in_h2i
       - file: user_guide/postprocessing_results
       - file: user_guide/recording_and_loading_data
       - file: user_guide/how_to_interface_with_user_defined_model
@@ -38,6 +38,7 @@ parts:
       - file: technology_models/co2.md
       - file: technology_models/methanol.md
       - file: technology_models/ammonia.md
+      - file: technology_models/ammonia_synloop_dynamics
       - file: technology_models/wind_plant_ard.md
       - file: technology_models/geologic_hydrogen.md
       - file: technology_models/grid
@@ -70,10 +71,20 @@ parts:
           - file: resource/tidal_resource
   - caption: Control
     chapters:
-      - file: control/control_overview
-      - file: control/open-loop_controllers
-      - file: control/pyomo_controllers
-      - file: control/controller_demonstrations
+      - file: control/system_level_control/system_level_control
+        sections:
+          - file: control/system_level_control/system_level_control_base
+          - file: control/system_level_control/control_classifier
+          - file: control/system_level_control/controllers
+            sections:
+              - file: control/system_level_control/slc_demand_following
+              - file: control/system_level_control/slc_profit_max
+              - file: control/system_level_control/slc_cost_min
+      - file: control/technology_level_control/technology_control_overview
+        sections:
+          - file: control/technology_level_control/open-loop_controllers
+          - file: control/technology_level_control/pyomo_controllers
+          - file: control/technology_level_control/controller_demonstrations
   - caption: Demand
     chapters:
       - file: demand/demand_components
@@ -95,10 +106,10 @@ parts:
       - file: developer_guide/coding_guidelines
       - file: developer_guide/why_make_h2integrate
       - file: developer_guide/adding_a_new_technology
-      - file: developer_guide/features_not_currently_implemented
       - file: developer_guide/class_structure
-      - file: developer_guide/describing_whats_in_classes
+      - file: developer_guide/technology_model_types
       - file: developer_guide/testing
+      - file: developer_guide/features_not_currently_implemented
   - caption: Miscellaneous Resources
     chapters:
       - file: misc_resources/FAQ
