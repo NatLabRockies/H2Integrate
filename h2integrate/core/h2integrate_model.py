@@ -2308,6 +2308,11 @@ class H2IntegrateModel:
         elif dest_slice is not None and source_slice is not None:
             # Scale source indices by destination length to handle shape mismatches.
             # Example: source_slice="0" with dest_length=8760 -> [0] repeated 8760 times.
+            if dest_slice.split(":")[0] not in ("", "0"):
+                raise ValueError(
+                    "A non-zero start was provided for the slice for destination "
+                    f"parameter <{dest_parameter}>"
+                )
             dest_length = int(dest_slice.split(":")[-1])
             src_indices = om.slicer[_to_indices(source_slice) * dest_length]
         else:
@@ -2316,7 +2321,5 @@ class H2IntegrateModel:
 
         # Remove the slice patterns from parameter names to get clean names.
         connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
-        import pdb
 
-        pdb.set_trace()
         return connected_parameter, src_indices
