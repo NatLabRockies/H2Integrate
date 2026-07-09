@@ -33,9 +33,10 @@ technologies:
         low_pressure_electrical_efficiency: 0.22
         minimum_heat_extract: 1  # MW
       cost_parameters:
+        cost_year: 2022
         nuclear_reactor_rated_capacity: 5000000.0
-        nuclear_reactor_upfront_cost: 5750.0  # $/kWe
-        nuclear_reactor_fixed_om_cost: 2.64
+        nuclear_reactor_upfront_cost: 5750.0  # $/kWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
+        nuclear_reactor_fixed_om_cost: 2.64 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
         nuclear_reactor_variable_om_cost: 0.0145
         # Values from Table 38, Meta-Analysis of Advanced Nuclear Reactor Cost Estimations,
         # slightly adjusted away from 93% capacity factor
@@ -51,7 +52,7 @@ technologies:
         commodity: electricity
         commodity_rate_units: kW
       performance_parameters:
-        rated_capacity: 25000.0  # kW
+        rated_capacity: 30000.0  # kW
       cost_parameters:
         cost_year: 2022
         commodity_amount_units: kW*h
