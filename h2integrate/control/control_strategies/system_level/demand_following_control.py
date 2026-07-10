@@ -117,10 +117,11 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         # should probably also get a list of generators, feedstocks, and storage
         # should also get an idea of what components are in each "step" of the conversion
-        converter_techs, converter_order, converter_ancestors = self.find_converter_techs(
+
+        converter_order, converter_upstreams = self.find_converter_techs(
             include_feedstock_sources=True
         )
-        converter_upstreams = self._get_converter_input_techs(converter_order, converter_ancestors)
+
         converter_tech_names = {v[1] for k, v in converter_order.items()}
         converter_cnt = list(converter_order.keys())
         converter_cnt.sort()
@@ -132,9 +133,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         # demand_converter = None
         for converter_ii in converter_cnt:
             input_cmod, tech, output_cmod = converter_order[converter_ii]
-            tech_ancestors = (
-                set(converter_ancestors[converter_ii]) & converter_upstreams[(input_cmod, tech)]
-            )
+            tech_ancestors = converter_upstreams[(input_cmod, tech)]
             conversion_ratio = self.get_converter_conversion_ratio(
                 inputs,
                 input_cmod,
@@ -170,7 +169,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         for converter_ii in converter_cnt:
             input_cmod, tech, output_cmod = converter_order[converter_ii]
             # conversion is input_cmod/output_cmod
-            tech_ancestors = converter_ancestors[converter_ii]
+            tech_ancestors = converter_upstreams[(input_cmod, tech)]
             conversion_factors[converter_ii]
             upstream_techs = converter_upstreams[(input_cmod, tech)]
             upstream_converters = upstream_techs & set(converter_tech_names)
@@ -181,4 +180,4 @@ class DemandFollowingControl(SystemLevelControlBase):
                 # there are converters upstream
                 pass
 
-        {k[0] for k in converter_techs if k[0] != self.commodity}
+        {k[0] for i, k in converter_order.items() if k[0] != self.commodity}

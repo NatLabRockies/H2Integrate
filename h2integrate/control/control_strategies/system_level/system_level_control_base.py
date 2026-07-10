@@ -783,17 +783,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 in the set of candidate technologies. Defaults to True.
 
         Returns:
-            3-element tuple containing:
+            2-element tuple containing:
 
-            - **converter_techs** (set[tuple[str, str, str]]): Set of
-                ``(input_commodity, tech_name, output_commodity)`` tuples for each
-                detected conversion. Returns ``None`` for single-commodity systems.
-            - **converter_order** (dict): Dictionary defining the directional order of converters.
-                Keys are an integer indicating order (lower numbers indicate a more upstream
-                converter). The values are the same as the elements of ``converter_techs``
-            - **converter_ancestors** (dict): Dictionary defining the technologies that
-                are upstream and connected to the converter. Same keys as ``converter_order``.
-                Dictionary values are the upstream technologies of the converter.
+            - **converter_order** (dict[int, tuple[str, str, str]]): Dictionary
+                defining the directional order of converters. Keys are an integer indicating
+                order (lower numbers indicate a more upstream converter). The values are
+                ``(input_commodity, tech_name, output_commodity)`` tuples.
+            - **upstreams** (dict[tuple[str,str], set[str]]): Keys are set of
+                ``(input_commodity, tech_name)`` and the values are a set of
+                upstream technologies that output the `input_commodity` to `tech_name`.
         """
         # TODO: add an input thats `include_demand_component`
 
@@ -806,8 +804,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if not self.multi_commodity_system:
             return
 
+        # ``converter_techs`` is a set of ``(input_commodity, tech_name, output_commodity)``
+        # tuples for each detected conversion
         converter_techs = set()
+        # ``converter_order`` is a dictionary defining the directional order of the converters
+        # the keys are integers, lower numbers mean it comes first.
+        # Values are the format of entries in ``converter_techs``
         converter_order = {}
+        # ``converter_ancestors`` is a dictionary with the same keys as ``converter_order``
+        # and the values as upstream technologies that produce ``input_commodity`` and are
+        # connected to the converter tech (does not include converters in upstream technologies)
         converter_ancestors = {}
         node_order = list(self.technology_graph.nodes())
         edges = list(self.technology_graph.edges(data="commodity"))
@@ -876,10 +882,35 @@ class SystemLevelControlBase(om.ExplicitComponent):
             rev_converter_ancestors = {v: k for k, v in converter_ancestors.items()}
             # re-reverse it
             converter_ancestors = {v: k for k, v in rev_converter_ancestors.items()}
-        return converter_techs, converter_order, converter_ancestors
+
+        # Make sure we iterate through the converters in the right order
+        converter_cnt = list(converter_order.keys())
+        converter_cnt.sort()
+        previous_converters = set()  # track previous converters
+        # ``upstreams`` is similar to ``converter_ancestors`` but has keys as a tuple formatted as
+        # ``(input_commodity, tech_name)``. The values are a set of the technologies upstream of
+        # ``tech_name`` that output ``input_commodity`` that is input to ``tech_name``.
+        # Key difference from ``converter_ancestors`` is that this includes upstream converter techs
+        upstreams = {}  # upstreams is similar to
+        # NOTE: unsure how the below logic will work with splitters
+        for converter_ii in converter_cnt:
+            input_cmod, tech, output_cmod = converter_order[converter_ii]
+            # Get all the upstream technologies that produce a specific commodity
+            upstream1 = self.get_upstream_techs_for_commodity(
+                tech, input_cmod, include_feedstock_sources=True
+            )
+            # Combined the upstream techs with all the previous converters
+            upstream_converter = set(upstream1) & previous_converters
+            # Remove any of the previous converters that arent connected to this converter
+            upstreams[(input_cmod, tech)] = set(upstream1) & (
+                upstream_converter | set(converter_ancestors[converter_ii])
+            )
+            previous_converters.add(tech)
+        # return converter_techs, converter_order, converter_ancestors, upstreams
+        return converter_order, upstreams
 
     def _get_converter_input_techs(self, converter_order, converter_ancestors):
-        """_summary_
+        """TODO: REMOVE THIS METHOD (lumped it into `find_converter_techs`)
 
         Args:
             converter_order (dict[int, set[tuple[str, str, str]]]): _description_
@@ -952,7 +983,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         converter_order,
         converter_ancestors,
     ):
-        """_summary_
+        """NOT DONE
 
         Args:
             up_converter (_type_): _description_
