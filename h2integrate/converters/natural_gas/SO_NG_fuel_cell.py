@@ -3,6 +3,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gte_zero
+from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, faraday
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -30,81 +31,46 @@ class SONGFuelCellPerformanceConfig(BaseConfig):
     # fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
 
 
-def calc_current(power_ref, cell_area, n_cells, stack_number):
+def calc_current(system_power_reference, cell_area, n_cells, n_stacks):
+    """_summary_
+
+    Args:
+        system_power_reference (np.ndarray): power demanded of the entire system in W
+        cell_area (float): cell active area in cm^2
+        n_cells (int): number of cells per stack
+        n_stacks (int): number of stacks in the system
+
+    Returns:
+            tuple(np.ndarray, np.poly1d): stack current and
+                function to convert from current density to voltage
+    """
     # Calculates the current and voltage from IV curve based on power reference
-    current_curve = [
-        0.0356,
-        0.05413333,
-        0.0796,
-        0.11366667,
-        0.244,
-        0.454,
-        # 0.70366667,
-        # 0.96933333,
-        # 1.24,
-        # 1.52666667,
-        # 1.80333333,
-        # 2.07,
-        # 2.32,
-        # 2.54333333,
-        # 2.73666667,
-        # 2.9,
-    ]  # in A
-    voltage_curve = [
-        0.987,
-        0.936,
-        0.884,
-        0.838,
-        0.786,
-        0.736,
-        # 0.686,
-        # 0.636,
-        # 0.586,
-        # 0.53566667,
-        # 0.486,
-        # 0.436,
-        # 0.386,
-        # 0.33533333,
-        # 0.286,
-        # 0.236,
-    ]  # in V
-    power_curve = [
-        35.16666667,
-        50.53333333,
-        70.33333333,
-        95.46666667,
-        191.66666667,
-        334.33333333,
-        # 482.66666667,
-        # 616.66666667,
-        # 729.0,
-        # 817.0,
-        # 875.33333333,
-        # 902.0,
-        # 895.0,
-        # 854.33333333,
-        # 782.66666667,
-        # 684.33333333,
-    ]
+    J_curve = np.array([0.0356, 0.05413333, 0.0796, 0.11366667, 0.244, 0.454])  # in A/cm^2
+    voltage_curve = np.array([0.987, 0.936, 0.884, 0.838, 0.786, 0.736])  # in V
+    power_curve = (
+        np.array([35.16666667, 50.53333333, 70.33333333, 95.46666667, 191.66666667, 334.33333333])
+        / 1e3
+    )  # in W/cm^2
 
-    # Change power from mW to W
-    power_curve = [x / 1e3 for x in power_curve]
+    # function to calculate voltage from current density
+    V_coefs = np.polyfit(J_curve, voltage_curve, 5)
+    V_J_curve = np.poly1d(V_coefs)
 
-    power_coefs = np.polyfit(power_curve, current_curve, 5)
-    power_I_curve = np.poly1d(power_coefs)
-    V_coefs = np.polyfit(current_curve, voltage_curve, 5)
-    V_I_curve = np.poly1d(V_coefs)
+    # function to calculate current density from power
+    # I_curve = J_curve * cell_area
+    # P_curve = I_curve * (n_cells * voltage_curve)
+    stack_P_curve = power_curve * cell_area * n_cells
+    J_coefs = np.polyfit(stack_P_curve, J_curve, 5)
+    J_P_curve = np.poly1d(J_coefs)
 
-    # convert power_ref to Watts
-    power_ref = power_ref * 1e3
-    # clip very high power_ref to max power in curve
-    power_density = power_ref / cell_area / stack_number / n_cells
-    power_density_clip = min(power_density, max(power_curve))
+    # Calculate power per stack and power density
+    power_per_stack = system_power_reference / n_stacks
 
-    I_cell = max(power_I_curve(power_density_clip), 0)
-    V_cell = V_I_curve(I_cell)
-    I_cell = I_cell * cell_area
-    return I_cell, V_cell
+    stack_current_density = J_P_curve(power_per_stack)  # convert to kW for the curve
+    stack_current = stack_current_density * cell_area * n_cells  # in A
+    stack_current = np.clip(stack_current, a_min=0.0, a_max=None)  # clip negative values
+
+    return stack_current, V_J_curve
 
 
 class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -233,12 +199,17 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
             outputs: OpenMDAO outputs object for electricity_out, natural_gas_consumed,
                 oxygen_consumed, water_out, and carbon_dioxide_out.
         """
+        # Set calculation constants:
+        M_H2 = H_MW * 2 / 1000  # Molar mass of H2 in kg/mol
+        M_O2 = O2_MW / 1000  # Molar mass of O2 in kg/mol
+        M_H2O = M_H2 + M_O2 / 2  # Molar mass of H2O in kg/mol
+        M_CH4 = CH4_MW / 1000  # Molar mass of CH4 in kg/mol
+        M_CO2 = CO2_MW / 1000  # Molar mass of CO2 in kg/mol
 
         # calculate max input and output
-        inputs["system_capacity"]  # plant capacity in kW
-        natural_gas_in = inputs["natural_gas_in"]  # MMBtu/h
-        oxygen_in = inputs["oxygen_in"]  # kg/h
+        inputs["oxygen_in"]  # kg/h
         stack_temperature = inputs["stack_temperature"]
+        natural_gas_in = inputs["natural_gas_in"]  # MMBtu/h
         # fuel_cell_efficiency = inputs["fuel_cell_efficiency"]
 
         ############################################################################
@@ -248,136 +219,78 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
         # Convert natural gas input from MMBtu/h to kg/h for CH4
         # Assume 1 MMBtu ~ 1 MCF
         # Use ideal gas law to account for temperature difference
-        stack_temperature = inputs["stack_temperature"]
         ng_density_cold = 0.717  # kg/m^3 at 25 deg C and 1 atm
         ng_density_hot = ng_density_cold * (298.15 / stack_temperature)  # kg/m^3 at stack temp
 
         # Use Mass = volume * density, and 1 MCF = 1e3 ft^3 = 28.3168 m^3
         mcf_to_kg = 28.3168 * ng_density_hot  # kg
-        print(natural_gas_in, mcf_to_kg)
         natural_gas_kg_hr = natural_gas_in * mcf_to_kg  # Convert MMBtu/h to kg/h for CH4
 
         # Add consumption of water for steam reforming of natural gas to hydrogen
 
-        # Set calculation constants:
-        self.f_c = 96485.33  # Faraday's constant in A/mol
-        self.M_H2 = 0.002016  # Molar mass of H2 in kg/mol
-        self.M_O2 = 0.032  # Molar mass of O2 in kg/mol
-        self.M_H2O = 0.018  # Molar mass of H2O in kg/mol
-        self.M_CO2 = 0.044  # Molar mass of CO2 in kg/mol
-        self.M_CH4 = 0.01604  # Molar mass of CH4 (methane) in kg/mol
-        self.Tref = 298.15  # Standard room temperature in K [25 deg Celsius]
-        self.cp_H2 = 14300  # Specific heat of H2 in J/(kg*K)
-        self.cp_air = 1005  # Specific heat of air in J/(kg*K)
-        self.cp_H2O = 4184  # Specific heat of water in J/(kg*K)
-        self.cp_N2 = 1040  # Specific heat of nitrogen in J/(kg*K)
-        self.cp_O2 = 918  # Specific heat of oxygen in J/(kg*K)
-        self.hhv_h2 = 141.8 * 1e6  # Higher heating value of hydrogen in J/kg
-        self.hhv_air = 0  # No higher heating value of air
-        self.hhv_H2O = 2260  # Higher heating value of water in J/kg
-        self.hhv_CO2 = 0  # No higher heating value of CO2
         # Sizing the cells
-        self.max_cell_power_density = 0.000334
-        # is n_cells = N_series?
-        self.N_series = 1
-        self.stack_size = self.config.system_capacity_kw / self.config.n_stacks
-        self.cell_active_area = 400  # [cm^2] from Battelle (https://www.energy.gov/sites/prod/files/2018/02/f49/fcto_battelle_mfg_cost_analysis_1%20_to_25kw_pp_chp_fc_systems_jan2017_0.pdf)
-        self.n_cells = round(
-            self.stack_size / (self.cell_active_area * self.max_cell_power_density)
+        max_cell_power_density = 0.000334  # in W/cm^2
+        stack_size = inputs["system_capacity"][0] / self.config.n_stacks
+        cell_active_area = 400  # [cm^2] from Battelle (https://www.energy.gov/sites/prod/files/2018/02/f49/fcto_battelle_mfg_cost_analysis_1%20_to_25kw_pp_chp_fc_systems_jan2017_0.pdf)
+        n_cells = round(stack_size / (cell_active_area * max_cell_power_density))
+        # Recalculate the rated power production based on final fuel cell sizing
+        rated_power_production = (
+            max_cell_power_density * n_cells * cell_active_area * self.config.n_stacks
         )
 
-        # PSUEDO CODE:
-        """
-        1. Receive power setpoint into fuel cell
-        2. Find current and voltage from I-V curve based on power setpoint
-        3. Calculate natural gas (CH4) and oxygen consumed based on Faraday's law
-        4. Calculate electricity produced from cell voltage and current
-        5. Calculate H2O and CO2 generated from the reaction
-        6. Output electricity clipped to system capacity and other metrics
+        ################## Model Calculations ##################
+        # 1. Receive power setpoint into fuel cell
+        power_reference = np.clip(
+            inputs[f"{self.commodity}_command_value"], a_min=0.0, a_max=rated_power_production
+        )
 
-        """
+        # 2. Find stack current from power reference
+        commanded_I_stack, V_J_curve = calc_current(
+            power_reference * 1e3, cell_active_area, n_cells, self.config.n_stacks
+        )
 
-        ng_consumed = np.zeros(self.n_timesteps)
-        o2_consumed = np.zeros(self.n_timesteps)
-        co2_generated = np.zeros(self.n_timesteps)
-        h2o_generated = np.zeros(self.n_timesteps)
-        commodity_out = np.zeros(self.n_timesteps)
+        # 3. Find available hydrogen and oxygen for each timestep
+        ng_in_kg_per_s = natural_gas_kg_hr / 3600  # convert from kg/h to kg/s
+        o2_in_kg_per_s = inputs["oxygen_in"] / 3600  # convert from kg/h to kg/s
 
-        for i in range(self.n_timesteps):
-            power_reference = inputs[f"{self.commodity}_command_value"][i]
-            natural_gas_in_loop = natural_gas_kg_hr[i]
-            oxygen_in_loop = oxygen_in[i]
+        # convert from kg/s to A per stack - current that feedstocks in can support
+        I_stack_from_ng = (ng_in_kg_per_s * 8 * faraday) / (M_CH4 * self.config.n_stacks)
+        I_stack_from_o2 = (o2_in_kg_per_s * 4 * faraday) / (M_O2 * self.config.n_stacks)
 
-            # Find current and voltage from IV curve with power setpoint
-            I_cell, V_cell = calc_current(
-                power_reference, self.cell_active_area, self.n_cells, self.config.n_stacks
-            )
+        # 4. Take minimum current from power reference, hydrogen available, and oxygen available
+        I_stack = np.minimum(commanded_I_stack, np.minimum(I_stack_from_ng, I_stack_from_o2))
 
-            # Calculate natural gas and oxygen consumed
-            NG_consumed_rate = ((I_cell * self.N_series * self.M_CH4) / (8.0 * self.f_c)) * (
-                self.dt * self.config.n_stacks * self.n_cells
-            )  # kg/time step
-            O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
-                self.dt * self.config.n_stacks * self.n_cells
-            )  # kg/time step
+        # 5. Calculate current density and voltage from I-V curve
+        J_cell = I_stack / (cell_active_area * n_cells)  # in A/cm^2
+        I_cell = J_cell * cell_active_area  # in A
+        V_cell = V_J_curve(J_cell)  # in V
 
-            if NG_consumed_rate > natural_gas_in_loop or O2_consumed_rate > oxygen_in_loop:
-                # implement an adjustment based on H2 & O2 available
-                new_i_ng = (
-                    natural_gas_in_loop
-                    / (self.dt * self.config.n_stacks * self.n_cells)
-                    * (8.0 * self.f_c)
-                    / (self.N_series * self.M_CH4)
-                )
-                new_i_o2 = (
-                    oxygen_in_loop
-                    / (self.dt * self.config.n_stacks * self.n_cells)
-                    * (4.0 * self.f_c)
-                    / (self.N_series * self.M_O2)
-                )
-                I_cell = min(new_i_ng, new_i_o2)
-                # TODO: recalc voltage based on new current
-                print("Not enough NG or O2 for this power point")
-                # Calculate natural gas and oxygen consumed
-                NG_consumed_rate = ((I_cell * self.N_series * self.M_CH4) / (8.0 * self.f_c)) * (
-                    self.dt * self.config.n_stacks * self.n_cells
-                )  # kg/time step
-                O2_consumed_rate = ((I_cell * self.N_series * self.M_O2) / (4.0 * self.f_c)) * (
-                    self.dt * self.config.n_stacks * self.n_cells
-                )  # kg/time step
+        # 6. Calculate power output from current and voltage
+        power_out = V_cell * I_cell * n_cells * self.config.n_stacks / 1e3  # in kW
 
-            # Compute electricity from the system
-            electricity_produced = (
-                V_cell * I_cell * self.n_cells * self.config.n_stacks / 1e3
-            )  # Calculated in watts, convert to kW
+        # 7. Calculate hydrogen and oxygen consumed and water produced
+        #       based on electrochemical reactions
+        ng_consumed = ((I_cell * M_CH4) / (8.0 * faraday)) * (
+            self.dt * self.config.n_stacks * n_cells
+        )  # kg/time step
+        o2_consumed = ((I_cell * M_O2) / (4.0 * faraday)) * (
+            self.dt * self.config.n_stacks * n_cells
+        )  # kg/time step
+        h2o_generated = ((I_cell * M_H2O) / (2 * faraday)) * (
+            self.dt * self.config.n_stacks * n_cells
+        )  # kg/time step
 
-            # Compute H2O out
-            H2O_generated = (
-                (I_cell * self.N_series / (2 * self.f_c))
-                * self.M_H2O
-                * (self.dt * self.config.n_stacks * self.n_cells)
-            )  # in kg/time step
-            # TODO: check electron numbers in these calculations
-            # Compute CO2 out
-            CO2_generated = (
-                (I_cell * self.N_series / (8 * self.f_c))
-                * self.M_CO2
-                * (self.dt * self.config.n_stacks * self.n_cells)
-            )  # in kg/time step
-
-            ng_consumed[i] = NG_consumed_rate
-            o2_consumed[i] = O2_consumed_rate
-            h2o_generated[i] = H2O_generated
-            co2_generated[i] = CO2_generated
-            commodity_out[i] = electricity_produced
+        co2_generated = ((I_cell * M_CO2) / (8 * faraday)) * (
+            self.dt * self.config.n_stacks * n_cells
+        )  # kg/time step
 
         # Set Outputs
         # clip the electricity output to the system capacity
-        outputs["electricity_out"] = np.minimum(commodity_out, self.config.system_capacity_kw)
+        outputs["rated_electricity_production"] = rated_power_production
+        outputs["electricity_out"] = np.minimum(power_out, rated_power_production)
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
             self.dt / 3600
         )
-        outputs["rated_electricity_production"] = self.config.system_capacity_kw
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
@@ -397,14 +310,20 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
 class SONGFuelCellCostConfig(CostModelBaseConfig):
     """Configuration class for the solid oxide natural gas fuel cell cost model.
 
-    Fields include `system_capacity_kw`, `capex_stack_per_kw`,
-        `capex_bop`, `capex_indirect_costs_per_kw`, and `fixed_opex_per_kw_per_year`.
+    Attributes:
+        system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
+        capex_stack_per_kw (float): Capital expenditure for the stack per kilowatt ($/kW).
+        capex_bop (float): Capital expenditure for balance of plant ($/kW).
+        capex_indirect_costs_per_kw (float): Indirect capital costs per kilowatt ($/kW).
+        fixed_opex_per_kw_per_year (float): Fixed operating expenditure per
+                                            kilowatt per year ($/kW/year).
+
     The `cost_year` field is inherited from `CostModelBaseConfig`.
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
     capex_stack_per_kw: float = field(validator=gte_zero)
-    capex_bop: float = field(validator=gte_zero)
+    capex_bop_per_kw: float = field(validator=gte_zero)
     capex_indirect_costs_per_kw: float = field(validator=gte_zero)
     fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
 
@@ -440,7 +359,7 @@ class SONGFuelCellCostModel(CostModelBaseClass):
         self.add_input(
             "unit_capex",
             val=self.config.capex_stack_per_kw
-            + self.config.capex_bop
+            + self.config.capex_bop_per_kw
             + self.config.capex_indirect_costs_per_kw,
             units="USD/kW",
             desc="Capital cost per unit capacity",

@@ -43,14 +43,9 @@ def cost_config():
         "model_inputs": {
             "cost_parameters": {
                 "system_capacity_kw": 1500.0,
-                "capex_stack_per_kw": 800.0,
-                "capex_fuel_supply_per_kw": 140.67,
-                "capex_air_supply_per_kw": 138.79,
-                "capex_cooling_per_kw": 64.14,
-                "capex_controls_instrumentation_per_kw": 106.52,
-                "capex_electrical_per_kw": 447.83,
-                "capex_assembly_per_kw": 63.51,
-                "capex_additional_labor_per_kw": 137.96,
+                "capex_stack_per_kw": 500.0,
+                "capex_bop_per_kw": 1000,
+                "capex_indirect_costs_per_kw": 1500,
                 "fixed_opex_per_kw_per_year": 31.0,
                 "cost_year": 2026,
             }
@@ -112,9 +107,9 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
     with subtests.test("rated_electricity_production"):
         assert (
             pytest.approx(
-                prob.get_val("fuel_cell.rated_electricity_production", units="kW"), rel=1e-6
+                prob.get_val("fuel_cell.rated_electricity_production", units="kW"), rel=1e-4
             )
-            == 1500.0
+            == 1498.9
         )
 
     with subtests.test("total_electricity_produced"):
@@ -136,13 +131,13 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
     with subtests.test("oxygen consumed"):
         assert (
             pytest.approx(np.sum(prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")), rel=1e-6)
-            == 18186.36156
+            == 18185.2245185
         )
 
     with subtests.test("water out"):
         assert (
             pytest.approx(np.sum(prob.get_val("fuel_cell.water_out", units="kg/h")), rel=1e-6)
-            == 20459.65675
+            == 20476.7060254
         )
 
     with subtests.test("carbon dioxide out"):
@@ -150,7 +145,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             pytest.approx(
                 np.sum(prob.get_val("fuel_cell.carbon_dioxide_out", units="kg/h")), rel=1e-6
             )
-            == 12503.12357
+            == 12505.9649206
         )
 
 
@@ -259,7 +254,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
         assert co2_out[5] == pytest.approx(0.0, abs=1e-6)
 
     with subtests.test("limited NG supply reduces electricity output and byproducts"):
-        assert electricity_output[6] == pytest.approx(55.547789, rel=1e-2)
+        assert electricity_output[6] == pytest.approx(79.43635323, rel=1e-2)
         assert ng_consumed[6] == pytest.approx(1.0, rel=1e-2)
         assert o2_consumed[6] == pytest.approx(22.509924, rel=1e-2)
         assert water_out[6] == pytest.approx(25.323664, rel=1e-2)
@@ -289,14 +284,7 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
 
     cp = cost_config["model_inputs"]["cost_parameters"]
     expected_unit_capex = (
-        cp["capex_stack_per_kw"]
-        + cp["capex_fuel_supply_per_kw"]
-        + cp["capex_air_supply_per_kw"]
-        + cp["capex_cooling_per_kw"]
-        + cp["capex_controls_instrumentation_per_kw"]
-        + cp["capex_electrical_per_kw"]
-        + cp["capex_assembly_per_kw"]
-        + cp["capex_additional_labor_per_kw"]
+        cp["capex_stack_per_kw"] + cp["capex_bop_per_kw"] + cp["capex_indirect_costs_per_kw"]
     )
     expected_capex = cp["system_capacity_kw"] * expected_unit_capex
     expected_opex = cp["system_capacity_kw"] * cp["fixed_opex_per_kw_per_year"]
