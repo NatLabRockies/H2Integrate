@@ -98,14 +98,14 @@ finance_parameters:
     # Approach B - "upstream LCOE feedstock": only the electrolyzer capital plus the
     # purchased-electricity cost (electricity_feedstock priced at the LCOE above)
     # are financed here. This should give an LCOH close to Approach A.
-    hydrogen_lcoe:
+    hydrogen_elec_feedstock:
       commodity: hydrogen
       commodity_stream: electrolyzer
       technologies: [electricity_feedstock, electrolyzer]
     # Approach C - "grid buy": like Approach B, but the electricity is purchased
     # through a grid_buy interconnection priced at the LCOE above. This should also
     # give an LCOH close to Approaches A and B.
-    hydrogen_grid_buy:
+    hydrogen_elec_grid_buy:
       commodity: hydrogen
       commodity_stream: electrolyzer
       technologies: [grid_buy, electrolyzer]

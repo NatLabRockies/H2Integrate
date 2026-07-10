@@ -1322,6 +1322,28 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
             == 5.3063358423
         )
 
+    with subtests.test("Check LCOH from LCOE feedstock"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_elec_feedstock.LCOH", units="USD/kg")[
+                    0
+                ],
+                rel=1e-5,
+            )
+            == 5.50083
+        )
+
+    with subtests.test("Check LCOH from grid buy"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_elec_grid_buy.LCOH", units="USD/kg")[
+                    0
+                ],
+                rel=1e-5,
+            )
+            == 5.50083
+        )
+
     wind_generation = model.prob.get_val("wind.electricity_out", units="kW")
     solar_generation = model.prob.get_val("solar.electricity_out", units="kW")
     total_generation = model.prob.get_val("combiner.electricity_out", units="kW")

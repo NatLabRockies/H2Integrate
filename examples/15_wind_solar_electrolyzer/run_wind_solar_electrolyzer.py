@@ -19,8 +19,12 @@ model.post_process()
 # close to the LOCH in Approach A.
 lcoe = model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/kW/h")[0]
 lcoh_integrated = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
-lcoh_feedstock = model.prob.get_val("finance_subgroup_hydrogen_lcoe.LCOH", units="USD/kg")[0]
-lcoh_grid_buy = model.prob.get_val("finance_subgroup_hydrogen_grid_buy.LCOH", units="USD/kg")[0]
+lcoh_feedstock = model.prob.get_val(
+    "finance_subgroup_hydrogen_elec_feedstock.LCOH", units="USD/kg"
+)[0]
+lcoh_grid_buy = model.prob.get_val("finance_subgroup_hydrogen_elec_grid_buy.LCOH", units="USD/kg")[
+    0
+]
 
 print(f"Upstream electricity LCOE:                      {lcoe:.4f} USD/kWh")
 print(f"LCOH - A: wind + solar + electrolyzer together: {lcoh_integrated:.4f} USD/kg")
