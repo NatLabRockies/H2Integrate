@@ -63,6 +63,42 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
+  electricity_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+      performance_parameters:
+        rated_capacity: 500000000.0  # kW
+      cost_parameters:
+        cost_year: 2022
+        price: 0.0  # USD/kWh - to be set through connections
+        annual_cost: 0.
+        start_up_cost: 0.
+  # Grid interconnection used purely to purchase electricity for the electrolyzer
+  # (Approach C). NOTE: the tech name MUST start with "grid_buy" for the financial
+  # logic to treat its variable cost as a purchase (expense) rather than a coproduct.
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 5.e8  # kW - large so it never limits the electrolyzer's purchases
+      cost_parameters:
+        cost_year: 2022
+        # Purchase price is set through a connection to the wind + solar LCOE.
+        electricity_buy_price: 0.0  # USD/kWh - overwritten by the finance_subgroup_electricity.LCOE
+        buy_price_mode: per_timestep
+        # No interconnection capital/O&M charged here so only the energy cost matters.
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
