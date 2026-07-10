@@ -63,7 +63,7 @@ The `source_parameter` and `destination_parameter` should be input into the arra
 
 ##### Slice notation for mismatched shapes
 
-3-element connections with different shared parameter names allow the user append a NumPy-style slice in square brackets to the source and/or destination parameter name.
+3-element connections with different shared parameter names allow the user to append a NumPy-style slice in square brackets to the source and/or destination parameter name.
 This is used to connect variables whose shapes differ, for example feeding a scalar finance output into a per-timestep input.
 The slice is parsed into OpenMDAO `src_indices`, and the bracketed text is stripped from the parameter name before the connection is made.
 
