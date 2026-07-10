@@ -69,7 +69,7 @@ The slice is parsed into OpenMDAO `src_indices`, and the bracketed text is strip
 
 ```yaml
 technology_interconnections: [
-  # select a subset of the source before connecting
+  # select a subset of the source to connect to the destination
   ["tech_a", "tech_b", ["source_param[0:100]", "dest_param"]],
   # tile a single source element across an 8760-length destination
   ["finance_subgroup_electricity", "grid_buy", ["LCOE[0]", "electricity_buy_price[0:8760]"]],
