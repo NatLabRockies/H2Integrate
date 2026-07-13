@@ -9,49 +9,58 @@ from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 class AmmoniaSynLoopCostConfig(CostModelBaseConfig):
     """
     Configuration inputs for the ammonia synthesis loop cost model.
-    *Starred inputs are from tech_config/ammonia/model_inputs/shared_parameters
-    The other inputs are from tech_config/ammonia/model_inputs/cost_parameters
+
+    Attributes marked with a leading asterisk (``*``) are read from
+    ``tech_config/ammonia/model_inputs/shared_parameters``; the other inputs come from
+    ``tech_config/ammonia/model_inputs/cost_parameters``.
 
     Attributes:
-        ---Scaling---
-        *production_capacity (float): The total production capacity of the ammonia synthesis loop
-            (in kg ammonia per hour)
+        production_capacity (float): (\\*) The total production capacity of the ammonia synthesis
+            loop (in kg ammonia per hour). *[Scaling]*
         baseline_capacity (float): The capacity of the baseline ammonia plant for cost simulations
-            (in kg ammonia per hour)
+            (in kg ammonia per hour). *[Scaling]*
         base_cost_year (int): Year in which base USD costs are derived - to be adjusted using
-            CEPCI for capex and CPI for opex.
+            CEPCI for capex and CPI for opex. *[Scaling]*
         capex_scaling_exponent (float): Power applied to ratio of capacities when calculating capex
-            from a baseline value at a different capacity.
+            from a baseline value at a different capacity. *[Scaling]*
         labor_scaling_exponent (float): Power applied to ratio of capacities when calculating labor
-            cost from a baseline value at a different capacity.
-
-        ---CAPEX---
+            cost from a baseline value at a different capacity. *[Scaling]*
         asu_capex_base (float): Baseline capital expenditure for the air separation unit [$].
+            *[CAPEX]*
         synloop_capex_base (float): Baseline capital expenditure for the synthesis loop [$].
-        heat_capex_base (float) : Baseline capital expenditure for the boiler and steam turbine [$].
+            *[CAPEX]*
+        heat_capex_base (float) : Baseline capital expenditure for the boiler and steam
+            turbine [$]. *[CAPEX]*
         cool_capex_base (float) : Baseline capital expenditure for the cooling tower [$].
-        other_eqpt_capex_base (float): Other baseline direct capital expenditures [$].
+            *[CAPEX]*
+        other_eqpt_capex_base (float): Other baseline direct capital expenditures [$]. *[CAPEX]*
         land_capex_base (float): Baseline capital expenditure for land to construct the plant [$].
+            *[CAPEX]*
         deprec_noneq_capex_rate (float): Fract of equipment capex for depreciable nonequipment [$].
-
-        ---OPEX---
-        labor_rate_base (float) : Baseline all-in labor rate [$/hr].
+            *[CAPEX]*
+        labor_rate_base (float) : Baseline all-in labor rate [$/hr]. *[OPEX]*
         num_workers_base (float) : Baseline number of workers for the entire ammonia plant [-].
-        hours_yr (float) : Work hours per year per worker [hr/year].
+            *[OPEX]*
+        hours_yr (float) : Work hours per year per worker [hr/year]. *[OPEX]*
         gen_admin (float) : General and administrative expenses as a fraction of labor [-].
+            *[OPEX]*
         prop_tax_ins (float) : Property tax and insurance as a fraction of total capex [-].
+            *[OPEX]*
         maint_rep (float) : Maintenance and repair cost as a fraction of equipment capex [-].
-        oxygen_byproduct_rate (float): Rate at which oxygen byproduct is generated [kg O2/kg NH3]
-        water_consumption_rate (float): Ratio of cooling water consumed by the reactor [gal/kg NH3]
-        *catalyst_consumption_rate (float): The mass ratio of catalyst consumed by the reactor over
-            its lifetime to ammonia produced
-        *catalyst_replacement_interval (float): The interval in years when the catalyst is replaced
-        rebuild_cost_base (float): Cost to rebuild baseline reactor for catalyst replacement [USD].
-
-        ---Feedstock Costs---
-        cooling_water_cost_base (float): Cost of cooling water [$/gal H2O]
-        catalyst_cost_base (float): Cost of iron-based catalyst [$/kg cat]
-        oxygen_price_base (float): Sales price of oxygen co-product [$/kg O2]
+            *[OPEX]*
+        oxygen_byproduct_rate (float): Rate at which oxygen byproduct is generated
+            [kg O2/kg NH3]. *[OPEX]*
+        water_consumption_rate (float): Ratio of cooling water consumed by the reactor
+            [gal/kg NH3]. *[OPEX]*
+        catalyst_consumption_rate (float): (\\*) The mass ratio of catalyst consumed by the reactor
+            over its lifetime to ammonia produced. *[OPEX]*
+        catalyst_replacement_interval (float): (\\*) The interval in years when the catalyst is
+            replaced. *[OPEX]*
+        rebuild_cost_base (float): Cost to rebuild baseline reactor for catalyst
+            replacement [USD]. *[OPEX]*
+        cooling_water_cost_base (float): Cost of cooling water [$/gal H2O]. *[Feedstock Costs]*
+        catalyst_cost_base (float): Cost of iron-based catalyst [$/kg cat]. *[Feedstock Costs]*
+        oxygen_price_base (float): Sales price of oxygen co-product [$/kg O2]. *[Feedstock Costs]*
     """
 
     production_capacity: float = field()

@@ -24,10 +24,32 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
+  # Physical plant: wind + solar are combined and used to run a single electrolyzer.
+  # This same physical plant is financed three different ways below (see finance_subgroups).
   - [wind, combiner, electricity, cable]
-                                                # source_tech, dest_tech, transport_item, transport_type = connection
   - [solar, combiner, electricity, cable]
   - [combiner, electrolyzer, electricity, cable]
+
+  # --- Approach B wiring: upstream LCOE used as a feedstock price --------------
+  # Compute the wind + solar levelized cost of electricity (LCOE) in the
+  # `electricity` finance subgroup, then charge the electrolyzer for the
+  # electricity it consumes at that LCOE through the `electricity_feedstock` tech.
+  #
+  # 1. Feed the computed LCOE in as the feedstock purchase price (scalar slice):
+  - [finance_subgroup_electricity, electricity_feedstock, [LCOE, price]]
+  # 2. Charge the feedstock for exactly the electricity the electrolyzer consumes:
+  - [electrolyzer, electricity_feedstock, electricity_consumed]
+  # 3. Provide the feedstock supply profile (used for its capacity factor):
+  - [electricity_feedstock_source, electricity_feedstock, electricity_out]
+
+  # --- Approach C wiring: upstream LCOE used as a grid purchase price ----------
+  # Same idea as Approach B, but the electricity is "purchased" through a
+  # `grid_buy` interconnection priced at the LCOE instead of a generic feedstock.
+  #
+  # 1. Feed the computed LCOE in as the grid buy price (scalar tiled to 8760 h):
+  - [finance_subgroup_electricity, grid_buy, ['LCOE[0]', 'electricity_buy_price[0:8760]']]
+  # 2. Buy from the grid exactly the electricity the electrolyzer consumes:
+  - [electrolyzer, grid_buy, [electricity_consumed, electricity_set_point]]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [wind_site.wind_resource, wind, wind_resource_data]
@@ -61,14 +83,32 @@ finance_parameters:
         depr_period: 5  # 5  years - for clean energy facilities as specified by the IRS MACRS schedule https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
         refurb: [0.]
   finance_subgroups:
+    # Upstream electricity finance group: levelized cost of the wind + solar
+    # electricity. Its LCOE output feeds Approaches B and C below.
     electricity:
       commodity: electricity
       commodity_stream: combiner  # use the total electricity output from the combiner for the finance calc
       technologies: [wind, solar]
+    # Approach A - "same finance model": wind + solar + electrolyzer are all
+    # financed together, so the renewable capital is embedded directly in the LCOH.
     hydrogen:
       commodity: hydrogen
       commodity_stream: electrolyzer
       technologies: [wind, solar, electrolyzer]
+    # Approach B - "upstream LCOE feedstock": only the electrolyzer capital plus the
+    # purchased-electricity cost (electricity_feedstock priced at the LCOE above)
+    # are financed here. This should give an LCOH close to Approach A.
+    hydrogen_elec_feedstock:
+      commodity: hydrogen
+      commodity_stream: electrolyzer
+      technologies: [electricity_feedstock, electrolyzer]
+    # Approach C - "grid buy": like Approach B, but the electricity is purchased
+    # through a grid_buy interconnection priced at the LCOE above. This should also
+    # give an LCOH close to Approaches A and B.
+    hydrogen_elec_grid_buy:
+      commodity: hydrogen
+      commodity_stream: electrolyzer
+      technologies: [grid_buy, electrolyzer]
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022

@@ -260,19 +260,21 @@ class ResizeablePerformanceModelBaseClass(PerformanceModelBaseClass):
 
     Discrete Inputs:
         - size_mode (str): The mode in which the component is sized. Options:
+
             - "normal": The component size is taken from the tech_config.
             - "resize_by_max_feedstock": The component size is calculated relative to the
-                maximum available amount of a certain feedstock or feedstocks
+              maximum available amount of a certain feedstock or feedstocks
             - "resize_by_max_commodity": The electrolyzer size is calculated relative to the
-                maximum amount of the commodity used by another tech
-        - flow_used_for_sizing (str): The feedstock/commodity flow used to determine the plant size
-            in "resize_by_max_feedstock" and "resize_by_max_commodity" modes
+              maximum amount of the commodity used by another tech
+
+        - flow_used_for_sizing (str): The feedstock/commodity flow used to determine the plant
+          size in "resize_by_max_feedstock" and "resize_by_max_commodity" modes
 
     Inputs:
         - max_feedstock_ratio (float): The ratio of the max feedstock that can be consumed by
-            this component to the max feedstock available.
+          this component to the max feedstock available.
         - max_commodity_ratio (float): The ratio of the max commodity that can be produced by
-            this component to the max commodity consumed by the downstream tech.
+          this component to the max commodity consumed by the downstream tech.
     """
 
     def setup(self):

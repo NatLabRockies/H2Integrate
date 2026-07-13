@@ -477,13 +477,6 @@ class ProFastBase(om.ExplicitComponent):
             per year of the plant life.
         replacement_schedule_{tech} (np.ndarray): Fraction of the technology capacity that
             is replaced in each year of the plant life.
-
-
-    Methods:
-        initialize(): Declares component options.
-        setup(): Defines inputs/outputs and initializes ProFAST configuration.
-        populate_profast(inputs): Builds a ProFAST input dictionary based on user inputs.
-        compute(inputs, outputs, ...): Must be implemented in a subclass.
     """
 
     def initialize(self):
