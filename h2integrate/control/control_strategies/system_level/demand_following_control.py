@@ -142,6 +142,28 @@ class DemandFollowingControl(SystemLevelControlBase):
                 list(tech_ancestors),
                 return_avg=self.config.use_average_conversion_factor,
             )
+            if not self.config.use_average_conversion_factor:
+                if np.all(np.abs(conversion_ratio) == 0.0):
+                    conversion_ratio_val = self.get_converter_capacity_conversion_ratio(
+                        inputs,
+                        input_cmod,
+                        output_cmod,
+                        tech,
+                        list(tech_ancestors),
+                    )
+                    conversion_ratio = np.full(
+                        len(inputs[self.demand_input_name]), conversion_ratio_val
+                    )
+
+            if self.config.use_average_conversion_factor:
+                if conversion_ratio == 0.0:
+                    conversion_ratio = self.get_converter_capacity_conversion_ratio(
+                        inputs,
+                        input_cmod,
+                        output_cmod,
+                        tech,
+                        list(tech_ancestors),
+                    )
             conversion_factors[converter_ii] = conversion_ratio
             # check if the tech has an edge with the demand component
             if output_cmod == demand_commodity:
@@ -155,29 +177,72 @@ class DemandFollowingControl(SystemLevelControlBase):
             raise ValueError("logic is wrong")
         # node_order = list(self.technology_graph.nodes())
         # nodes_after_last_converter = node_order[node_order.index(tech)+1:]
-        inputs[self.demand_input_name].copy()
 
-        list(self.technology_graph.predecessors(self.demand_tech))
-        list(nx.all_simple_paths(self.technology_graph, demand_converter, self.demand_tech))
+        # upstream_of_dmd = list(self.technology_graph.predecessors(self.demand_tech))
+        upstream_of_dmd = list(
+            nx.all_simple_paths(self.technology_graph, demand_converter, self.demand_tech)
+        )
+        upstream_of_dmd_techs = set()
+        for upstream_path in upstream_of_dmd:
+            techs_upstream = set(upstream_path)
+            upstream_of_dmd_techs &= techs_upstream
+
+        # technologies from the last converter to the demand component
+        upstream_of_dmd_techs = upstream_of_dmd_techs - {self.demand_tech}
+        # set the setpoint of all the technologies creating the stream that feeds the demand
+        self.get_setpoints_for_commodity_subset(
+            inputs,
+            outputs,
+            self.commodity,
+            inputs[self.demand_input_name].copy(),
+            tech_subset=upstream_of_dmd_techs,
+        )
+
+        # now go through the rest of the commodity streams and get the demand
+        demand = inputs[self.demand_input_name].copy()
+        converter_cnt.reverse()
+        for converter_ii in converter_cnt:
+            input_cmod, tech, output_cmod = converter_order[converter_ii]
+            conversion_ratio = conversion_factors[converter_ii]
+            upstream_techs = converter_upstreams[(input_cmod, tech)]
+            upstream_converters = upstream_techs & set(converter_tech_names)
+            if len(upstream_converters) == 0:
+                # no other converters upstream
+                upstream_commodity_demand = demand * conversion_ratio
+                # set setpoints
+                self.get_setpoints_for_commodity_subset(
+                    inputs,
+                    outputs,
+                    self.commodity,
+                    upstream_commodity_demand,
+                    tech_subset=upstream_techs,
+                )
+
+            else:
+                # there are converters upstream
+
+                pass
 
         # if demand_converter is None:
         #     # If a converter isnt directly connected to the demand tech, assume its the last one
         #     # TODO: update so that it finds the converter that IS connected to the demand tech
         #     demand_converter = tech
         # work backward from commodity demand
-        converter_cnt.reverse()
-        for converter_ii in converter_cnt:
-            input_cmod, tech, output_cmod = converter_order[converter_ii]
-            # conversion is input_cmod/output_cmod
-            tech_ancestors = converter_upstreams[(input_cmod, tech)]
-            conversion_factors[converter_ii]
-            upstream_techs = converter_upstreams[(input_cmod, tech)]
-            upstream_converters = upstream_techs & set(converter_tech_names)
-            if len(upstream_converters) == 0:
-                # no converters are upstream
-                pass
-            else:
-                # there are converters upstream
-                pass
+        # tmp = {converter_order[i]:conversion_factors[i] for i in list(conversion_factors.keys())}
 
-        {k[0] for i, k in converter_order.items() if k[0] != self.commodity}
+        # converter_cnt.reverse()
+        # for converter_ii in converter_cnt:
+        #     input_cmod, tech, output_cmod = converter_order[converter_ii]
+        #     # conversion is input_cmod/output_cmod
+        #     tech_ancestors = converter_upstreams[(input_cmod, tech)]
+        #     conversion_factors[converter_ii]
+        #     upstream_techs = converter_upstreams[(input_cmod, tech)]
+        #     upstream_converters = upstream_techs & set(converter_tech_names)
+        #     if len(upstream_converters) == 0:
+        #         # no converters are upstream
+        #         pass
+        #     else:
+        #         # there are converters upstream
+        #         pass
+
+        # {k[0] for i, k in converter_order.items() if k[0] != self.commodity}

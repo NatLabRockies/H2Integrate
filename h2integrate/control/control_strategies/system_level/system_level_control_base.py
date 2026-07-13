@@ -943,6 +943,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
             previous_converters.add(tech)
         return upstreams
 
+    def get_converter_capacity_conversion_ratio(
+        self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
+    ):
+        rated_name_fmt = "{tech}_rated_{commod}_production"
+        in_names = [rated_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
+        total_in_cmod_capac = [inputs[n] for n in in_names if n in inputs]
+        total_input_capac = np.array(total_in_cmod_capac).sum()
+        total_output_capac = inputs[rated_name_fmt.format(tech=converter_tech, commod=out_cmod)]
+        return total_input_capac / total_output_capac[0]
+
     def get_converter_conversion_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors, return_avg=True
     ):
@@ -964,6 +974,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         """
         input_name_fmt = "{tech}_{commod}_out"
         in_names = [input_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
+        # used_inputs = [n for n in in_names if n in inputs]
         total_in_cmod = [inputs[n] for n in in_names if n in inputs]
         total_input = np.array(total_in_cmod).sum(axis=0)
         total_output = inputs[input_name_fmt.format(tech=converter_tech, commod=out_cmod)]
