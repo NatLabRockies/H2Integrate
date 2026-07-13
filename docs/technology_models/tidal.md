@@ -23,7 +23,7 @@ Key capabilities include:
 - Optional automatic power curve scaling to match device rating
 - Integration with hybrid energy system simulations
 
-(pysam-options)=
+(pysam-options-tidal)=
 #### PySAM Options
 A user can specify any of the attributes available within the [MhkTidal module](https://nrel-pysam.readthedocs.io/en/main/modules/MhkTidal.html). They can do this using the `pysam_options` dictionary in the when setting up the `PySAMTidalPerformanceModel`.
 

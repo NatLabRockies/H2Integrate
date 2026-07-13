@@ -32,6 +32,7 @@ The cost model will calculate capex costs based on the Stinn correlations and op
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ```{eval-rst}
@@ -39,6 +40,7 @@ The cost model will calculate capex costs based on the Stinn correlations and op
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ## Cost Model
@@ -48,6 +50,7 @@ The cost model will calculate capex costs based on the Stinn correlations and op
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```
 
 ```{eval-rst}
@@ -55,4 +58,5 @@ The cost model will calculate capex costs based on the Stinn correlations and op
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```

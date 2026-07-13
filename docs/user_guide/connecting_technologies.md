@@ -61,6 +61,31 @@ There are two connection formats:
 The `source_parameter` and `destination_parameter` should be input into the array as another array. If it's input as a tuple the model will raise an error.
 ```
 
+##### Slice notation for mismatched shapes
+
+3-element connections with different shared parameter names allow the user to append a NumPy-style slice in square brackets to the source and/or destination parameter name.
+This is used to connect variables whose shapes differ, for example feeding a scalar finance output into a per-timestep input.
+The slice is parsed into OpenMDAO `src_indices`, and the bracketed text is stripped from the parameter name before the connection is made.
+
+```yaml
+technology_interconnections: [
+  # select a subset of the source to connect to the destination
+  ["tech_a", "tech_b", ["source_param[0:100]", "dest_param"]],
+  # tile a single source element across an 8760-length destination
+  ["finance_subgroup_electricity", "grid_buy", ["LCOE[0]", "electricity_buy_price[0:8760]"]],
+]
+```
+
+Behavior depends on which side carries a slice:
+
+- **Source only** (`"source_param[0:100]"`): the slice selects source indices directly (supports start/stop/step, e.g. `[0:100:2]`, and `[:]` for the full range).
+- **Destination only** or **both sides equal**: no `src_indices` are applied (the slice is treated as documentation of the target shape).
+- **Both sides** (`"LCOE[0]"` → `"electricity_buy_price[0:8760]"`): the source indices are *tiled* to fill the destination length. A single index is repeated (e.g. `[0]` → 8760 copies) and a multi-index source such as `[0,1]` is cycled to fill the destination.
+
+```{note}
+When the destination has a slice, it must (1) start at `0` (a non-zero start raises a `ValueError`) and (2) include the destination length, e.g. `[0:8760]`. The length is required because the input shape is not known until `prob.setup()` has run.
+```
+
 ### Internal connection logic
 
 H2Integrate processes these connections in the `connect_technologies()` method of `h2integrate_model.py`. Here's what happens internally:

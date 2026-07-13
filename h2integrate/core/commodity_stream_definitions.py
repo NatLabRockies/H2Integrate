@@ -2,6 +2,7 @@
 Commodity stream definitions for H2Integrate.
 
 This module contains:
+
 1. multivariable_streams: Definitions for streams that bundle multiple related variables
 2. add_multivariable_output / add_multivariable_input: Helpers to register all
    constituent variables of a multivariable stream on an OpenMDAO component

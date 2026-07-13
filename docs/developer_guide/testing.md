@@ -62,7 +62,7 @@ Run `pytest -m unit` to run only the unit test suite or `pytest -m not-unit` to 
 An example of a unit test is in the example below where there is only a validation of the location
 of the output directory and subdirectory, and not the contents of those files.
 
-:::{literalinclude} ../../h2integrate/resource/utilities/test/test_resource_file_tools.py
+:::{literalinclude} ../../h2integrate/core/test/test_utilities.py
 :start-at: @pytest.mark.unit
 :end-at: assert output_dir == expected_output_dir
 :::

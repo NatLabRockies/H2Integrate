@@ -177,7 +177,7 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
@@ -203,7 +203,7 @@ def test_slc_battery_with_controller(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
@@ -273,10 +273,7 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
 
     model.setup()
 
-    model.prob.set_val(
-        "electrical_load_demand.electricity_demand",
-        demand_profile,
-    )
+    model.prob.set_val("electrical_load_demand.electricity_demand", demand_profile, units="kW")
     model.prob.set_val(
         "system_level_controller.commodity_sell_price",
         sell_price,
@@ -290,19 +287,114 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
 
     model.run()
 
-    wind_out = model.prob.get_val("wind.electricity_out")
-    solar_out = model.prob.get_val("solar.electricity_out")
+    wind_out = model.prob.get_val("wind.electricity_out", units="kW")
+    solar_out = model.prob.get_val("solar.electricity_out", units="kW")
     ng_out = model.prob.get_val("natural_gas_plant.electricity_out", units="kW")
-    grid_out = model.prob.get_val("grid_buy.electricity_out")
+    grid_out = model.prob.get_val("grid_buy.electricity_out", units="kW")
 
     with subtests.test("wind farm generates power"):
         assert wind_out.sum() > 0
 
     with subtests.test("solar farm generates power"):
-        assert solar_out.sum() > 0
+        assert solar_out.sum() > 200 * 1e6
 
     with subtests.test("natural gas dispatched"):
         assert ng_out.sum() > 0
 
     with subtests.test("grid used when needed"):
         assert grid_out.sum() > 0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/upstream_demand", None)]
+)
+def test_slc_upstream_demand(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "upstream_demand.yaml")
+
+    model.run()
+
+    wind_out = model.prob.get_val("wind.electricity_out", units="MW")
+
+    with subtests.test("wind farm AEP"):
+        assert pytest.approx(wind_out.sum(), rel=1e-6) == 278847.0832172
+
+    with subtests.test("electrical load met"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("electrical_load_demand.electricity_out", units="MW").sum(),
+                rel=1e-6,
+            )
+            == 223380.0
+        )
+
+    with subtests.test("SLC input demand"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("system_level_controller.electricity_demand", units="MW").sum(),
+                rel=1e-6,
+            )
+            == 223380.0
+        )
+
+    with subtests.test("SLC wind set point"):
+        assert np.all(
+            model.prob.get_val("system_level_controller.wind_electricity_set_point", units="kW")
+            == model.prob.get_val("wind.rated_electricity_production", units="kW")
+        )
+
+    with subtests.test("SLC natural_gas_plant set point"):
+        assert np.all(
+            model.prob.get_val(
+                "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
+            )
+            <= model.prob.get_val("natural_gas_plant.rated_electricity_production", units="kW")
+        )
+
+    with subtests.test("Renewables LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/MW/h"), rel=1e-6
+            )
+            == 77.07060203912586
+        )
+
+    with subtests.test("Natural Gas LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_natural_gas.LCOE", units="USD/MW/h"), rel=1e-6
+            )
+            == 201.36578778849778
+        )
+
+    with subtests.test("LCOE"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/MW/h"), rel=1e-6
+            )
+            == 175.33434298082273
+        )
+
+    with subtests.test("LCOH"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
+            )
+            == 10.46208236258859
+        )
+
+    with subtests.test("Electrolyzer not in SLC"):
+        slc_electrolyzer_output_var = "system_level_controller.electrolyzer_hydrogen_set_point"
+        with pytest.raises(KeyError) as excinfo:
+            # check that no hydrogen systems are in
+            model.prob.get_val(slc_electrolyzer_output_var, units="kg/h")
+        assert f"Variable '{slc_electrolyzer_output_var}' not found. " in str(excinfo.value)
+
+    with subtests.test("H2 Storage not in SLC"):
+        slc_h2s_output_var = "system_level_controller.h2_storage_hydrogen_set_point"
+        with pytest.raises(KeyError) as excinfo:
+            # check that no hydrogen systems are in
+            model.prob.get_val(slc_h2s_output_var, units="kg/h")
+        assert f"Variable '{slc_h2s_output_var}' not found. " in str(excinfo.value)

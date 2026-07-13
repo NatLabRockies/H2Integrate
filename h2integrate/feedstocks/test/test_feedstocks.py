@@ -77,7 +77,8 @@ def eia_ng_feedstock_tech_config():
                 "state": "MN",
                 "monthly": True,
                 "price_category": "industrial",
-                "filename": Path(__file__).parent / "test_eia_ng_data.csv",
+                "feedstock_dir": Path(__file__).parent,
+                "filename": "test_eia_ng_data.csv",
                 "commodity_amount_units": "MMBtu",
             },
         }

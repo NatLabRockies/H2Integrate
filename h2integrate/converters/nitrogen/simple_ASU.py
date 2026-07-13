@@ -225,10 +225,10 @@ def make_cost_unit_multiplier(unit_str):
         unit_str (str): The unit string, e.g., "kw", "mw", "kg/hour", "tonne/day", etc.
 
     Returns:
-        tuple: (conversion_multiplier, unit_type)
-            conversion_multiplier (float): Multiplier to convert the input unit to
-                the model's base unit.
-            unit_type (str): "power" if the unit is power-based, "mass" if mass-based.
+        tuple: ``(conversion_multiplier, unit_type)`` where ``conversion_multiplier``
+        (float) is the multiplier to convert the input unit to the model's base unit and
+        ``unit_type`` (str) is ``"power"`` if the unit is power-based, or ``"mass"`` if
+        mass-based.
 
     Notes:
         - For "mw", the multiplier converts MW to kW.

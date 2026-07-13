@@ -472,9 +472,9 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
 
     If :py:attr:`data_dir` is not input, the logic is as follows:
 
-    3) Check for an environment variable named using an upper case :py:attr:`data_type`_DIR, such
-        as "RESOURCE_DIR" or "FEEDSTOCK_DIR." If this environment variable exists, follow the logic
-        in Steps 1-2.
+    3) Check for an environment variable named using an upper case :py:attr:`data_type`
+        followed by ``_DIR``, such as ``"RESOURCE_DIR"`` or ``"FEEDSTOCK_DIR"``. If this
+        environment variable exists, follow the logic in Steps 1-2.
 
     4) Use :py:attr:`data_type`'s default :py:attr:`data_dir` as the :py:attr:`data_dir` and follow
         the logic in Steps 1-2.
@@ -501,7 +501,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
     # check for user-provided resource data_dir
     if data_dir is not None:
         if not Path(data_dir).is_dir():
-            Path.mkdir(data_dir, exist_ok=True)
+            Path.mkdir(data_dir, exist_ok=True, parents=True)
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir
@@ -512,7 +512,7 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
     data_dir = os.getenv(f"{data_type.upper()}_DIR")
     if data_dir is not None:
         if not Path(data_dir).is_dir():
-            Path.mkdir(data_dir, exist_ok=True)
+            Path.mkdir(data_dir, parents=True, exist_ok=True)
         if data_subdir is None:
             return Path(data_dir).absolute()
         full_dir = Path(data_dir) / data_subdir

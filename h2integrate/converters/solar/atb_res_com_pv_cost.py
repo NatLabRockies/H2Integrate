@@ -15,6 +15,7 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
     Reference cost values can be found on the `Solar - PV Dist. Comm` or
     `Solar - PV Dist. Res` sheets of the
     `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
+
     Attributes:
         capex_per_kWdc (float|int): capital cost of solar-PV system in $/kW-DC
         opex_per_kWdc_per_year (float|int): annual operating cost of solar-PV
