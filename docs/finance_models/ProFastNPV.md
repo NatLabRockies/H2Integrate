@@ -24,6 +24,14 @@ finance_parameters:
     cost_year_adjustment_inflation: 0.025 # used to adjust costs for technologies to target_dollar_year
 ```
 
+```{note}
+`commodity_sell_price` can be input as a scalar value (as shown above) or as a list that has the same length as the `plant_life` specified in the plant configuration file. Please refer to the documentation on [different types of financial analysis](https://h2integrate.readthedocs.io/en/latest/finance_models/financial_analyses.html) to determine how to input the `commodity_sell_price` across different years.
+```
+
+```{important}
+ProFAST will apply the general inflation rate (input under `model_inputs[params]['inflation_rate']`) to the `commodity_sell_price` in its calculations.
+```
+
 (profastnpv:outputs)=
 ## Output values and naming convention
 ``ProFastNPV`` outputs the following data following the naming convention detailed below:
