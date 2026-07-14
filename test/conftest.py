@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
+from h2integrate.resource.utilities.nlr_developer_api_keys import get_nlr_developer_api_credential
 
 
 def pytest_sessionstart(session):
@@ -21,7 +21,7 @@ def pytest_sessionstart(session):
 
     # Set a dummy API key
     os.environ["NLR_API_KEY"] = "a" * 40
-    set_nlr_key_dot_env()
+    get_nlr_developer_api_credential(which="key")
 
     # Set RESOURCE_DIR to None so pulls example files from default DIR
     initial_resource_dir = os.getenv("RESOURCE_DIR")

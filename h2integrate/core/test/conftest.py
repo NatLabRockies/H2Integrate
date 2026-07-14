@@ -5,7 +5,7 @@ Pytest configuration file.
 import os
 
 from h2integrate import EXAMPLE_DIR
-from h2integrate.resource.utilities.nlr_developer_api_keys import set_nlr_key_dot_env
+from h2integrate.resource.utilities.nlr_developer_api_keys import get_nlr_developer_api_credential
 
 from test.conftest import (  # noqa: F401
     temp_dir,
@@ -35,7 +35,7 @@ def pytest_sessionstart(session):
     # does not mess with a user's environment
     # Set a dummy API key
     os.environ["NLR_API_KEY"] = "a" * 40
-    set_nlr_key_dot_env()
+    get_nlr_developer_api_credential(which="key")
 
     # if user provided a resource directory, save it to a temp variable
     # this allows tests to run as expected while not causing
