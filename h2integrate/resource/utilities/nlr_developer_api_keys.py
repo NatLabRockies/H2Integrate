@@ -1,86 +1,81 @@
-from functools import partial, update_wrapper
+import warnings
+from pathlib import Path
 
-from h2integrate.core.env_tools import get_environment_var, set_env_var_dot_env
-
-
-# global variables
-developer_nlr_gov_key = ""
-developer_nlr_gov_email = ""
+from h2integrate.core.env_tools import get_environment_variables
 
 
-# Setter methods for each NLR API variable
-def set_developer_nlr_gov_key(var_value):
-    """Set `var_value` as the global variable `developer_nlr_gov_key` if
-    `var_value` is a string. If `var_value` is None, then `developer_nlr_gov_key`
-    is not modified, but the value is returned. This function always acts as a
-    getter method for `developer_nlr_gov_key`, but also functions as a setter method
-    if `var_value` is a string.
+_DEPRECATION_MSG = (
+    "The '{old}' environment variable is deprecated and will be removed in a future release. "
+    "Please use '{new}' instead. The nrel.gov API domain has moved to nlr.gov."
+)
+
+_ENV_MISSING_MSG = (
+    "{new} (or {old}) has not been set. " "Please set the {new} environment variable."
+)
+
+
+def get_nlr_developer_api_credential(which: str, env_path: str | Path | None) -> str:
+    """Get either the NLR API email or key with a fallback for the NREL credentials.
 
     Args:
-        var_value (str | None): API key for NLR Developer Network.
-            Should be length 40.
+        which (str): One of "email" or "key" to indicate which NLR API credential should be
+            retrieved.
+        env_path (None | Path | str, optional): Filepath to file containing NLR API credentials.
+            Defaults to None.
+
+    Raises:
+        ValueError: Raised if an invalid value was passed to :py:attr:`which`.
+        KeyError: Raised if neither of the NLR or NREL credentials could be found.
 
     Returns:
-        str: value of `developer_nlr_gov_key`
+        str: API key or email for NLR Developer Network.
     """
-    global developer_nlr_gov_key
-    if var_value is not None:
-        developer_nlr_gov_key = var_value
-    return developer_nlr_gov_key
+    if which.lower() not in ("email", "key"):
+        raise ValueError("`which` must be one of 'email' or 'key'.")
+    old_name = f"NREL_API_{which.upper()}"
+    new_name = f"NLR_API_{which.upper()}"
+    nlr_api_vars = get_environment_variables(
+        new_name, old_name, file_path=env_path, set_variables=True
+    )
+    if not bool(nlr_api_vars):
+        # returned an empty dictionary
+        raise ValueError(_ENV_MISSING_MSG.format(old=old_name, new=new_name))
+    if (old_name in nlr_api_vars) and (new_name not in nlr_api_vars):
+        warnings.warn(
+            _DEPRECATION_MSG.format(old=old_name, new=new_name),
+            FutureWarning,
+            stacklevel=3,
+        )
+    return list(nlr_api_vars.values())[0]
 
 
-def set_developer_nlr_gov_email(var_value):
-    """Set `var_value` as the global variable `developer_nlr_gov_email` if
-    `var_value` is a string. If `var_value` is None, then `developer_nlr_gov_email`
-    is not modified, but the value is returned. This function always acts as a
-    getter method for `developer_nlr_gov_email`, but also functions as a setter method
-    if `var_value` is a string.
+def get_nlr_developer_api_key() -> str:
+    """Load the API key (NLR_API_KEY) for the NLR Developer Network.
 
-    Args:
-        var_value (str | None): email corresponding to the API key for NLR Developer Network.
+    Raises:
+        ValueError: If NLR_API_KEY or NREL_API_KEY was not found as an environment variable
 
     Returns:
-        str: value of `developer_nlr_gov_email`
+        str: API key for NLR Developer Network. Should be length 40.
     """
-    global developer_nlr_gov_email
-    if var_value is not None:
-        developer_nlr_gov_email = var_value
-    return developer_nlr_gov_email
+    nlr_api_key = get_nlr_developer_api_credential(which="key")
+    return nlr_api_key
 
 
-# Getter methods called by NLR API resource models
-get_nlr_developer_api_key = partial(
-    get_environment_var,
-    setter_method=set_developer_nlr_gov_key,
-    varname_new="NLR_API_KEY",
-    varname_old="NREL_API_KEY",
-)
-update_wrapper(get_nlr_developer_api_key, get_environment_var)
+def get_nlr_developer_api_email() -> str:
+    """Load the API email (NLR_API_EMAIL) for the NLR Developer Network.
 
-get_nlr_developer_api_email = partial(
-    get_environment_var,
-    setter_method=set_developer_nlr_gov_email,
-    varname_new="NLR_API_EMAIL",
-    varname_old="NREL_API_EMAIL",
-)
-update_wrapper(get_nlr_developer_api_email, get_environment_var)
+    Raises:
+        ValueError: If NLR_API_EMAIL or NREL_API_EMAIL was not found as an environment variable
 
-# Generic setter methods, used to set the environment variable before running a script
-set_nlr_api_key_dot_env = partial(
-    set_env_var_dot_env,
-    setter_method=set_developer_nlr_gov_key,
-    varname_new="NLR_API_KEY",
-    varname_old="NREL_API_KEY",
-)
-set_nlr_email_key_dot_env = partial(
-    set_env_var_dot_env,
-    setter_method=set_developer_nlr_gov_email,
-    varname_new="NLR_API_EMAIL",
-    varname_old="NREL_API_EMAIL",
-)
+    Returns:
+        str: email corresponding to the API key for NLR Developer Network.
+
+    """
+    nlr_api_email = get_nlr_developer_api_credential(which="email")
+    return nlr_api_email
 
 
-# Setter methods for both variables needed for NLR API calls
-def set_nlr_key_dot_env(path=None):
-    set_nlr_api_key_dot_env(path=path)
-    set_nlr_email_key_dot_env(path=path)
+def set_nlr_key_dot_env(path: str | None | Path = None):
+    get_nlr_developer_api_credential(which="email", env_path=path)
+    get_nlr_developer_api_credential(which="key", env_path=path)
