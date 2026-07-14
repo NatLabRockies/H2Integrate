@@ -78,7 +78,7 @@ def get_environment_variables(
     """
     # Check if the environment variables have already been set
     env_vars = {name: os.environ.get(name) for name in args if os.environ.get(name) is not None}
-    remaining_vars = set(env_vars) - set(args)
+    remaining_vars = set(args) - set(env_vars)
     if len(remaining_vars) == 0:
         # All environment variables have already been set
         return env_vars
