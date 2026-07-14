@@ -123,7 +123,7 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe
 
 
 @pytest.mark.regression
@@ -195,4 +195,60 @@ def test_profast_comp_coproduct(
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe
+
+
+@pytest.mark.regression
+def test_profast_comp_heat(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+    }
+    pf = ProFastLCO(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="heat",
+        description="no1",
+    )
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_heat_production", mean_hourly_production, units="MMBtu/h")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_heat_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    prob.run_model()
+
+    with subtests.test("LCO-Heat"):
+        assert (
+            pytest.approx(prob.get_val("pf.LCOH_no1", units="USD/(MMBtu)")[0], rel=1e-6)
+            == 63.8181779 * 1e-3
+        )
+
+    with subtests.test("WACC"):
+        assert (
+            pytest.approx(prob.get_val("pf.wacc_heat_no1", units="percent")[0], rel=1e-6)
+            == 0.056453864
+        )
+
+    with subtests.test("CRF"):
+        assert (
+            pytest.approx(prob.get_val("pf.crf_heat_no1", units="percent")[0], rel=1e-6)
+            == 0.0674704169
+        )
+
+    with subtests.test("Profit Index"):
+        assert (
+            pytest.approx(prob.get_val("pf.profit_index_heat_no1", units="unitless")[0], rel=1e-6)
+            == 2.12026237778
+        )

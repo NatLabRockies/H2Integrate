@@ -121,32 +121,34 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
-    Subsystems:
+    **Subsystems:**
 
-        ard_sub_prob (SubmodelComp): Encapsulated Ard Problem exposing specified inputs/outputs.
-        wind_ard_performance_compatibility (WindArdPerformanceCompatibilityComponent):
-            Necessary for providing required performance metrics to H2Integrate.
-        wind_ard_cost_compatibility (WindArdCostCompatibilityComponent):
-            Necessary for providing cost_year to H2Integrate.
+    - ``ard_sub_prob`` (SubmodelComp): Encapsulated Ard Problem exposing specified
+      inputs/outputs.
+    - ``wind_ard_performance_compatibility`` (WindArdPerformanceCompatibilityComponent):
+      Necessary for providing required performance metrics to H2Integrate.
+    - ``wind_ard_cost_compatibility`` (WindArdCostCompatibilityComponent):
+      Necessary for providing cost_year to H2Integrate.
 
-    Promoted Inputs:
+    **Promoted Inputs:**
 
-        spacing_primary: Primary spacing parameter.
-        spacing_secondary: Secondary spacing parameter.
-        angle_orientation: Orientation angle.
-        angle_skew: Skew angle.
-        x_substations: X-coordinates of substations.
-        y_substations: Y-coordinates of substations.
+    - ``spacing_primary``: Primary spacing parameter.
+    - ``spacing_secondary``: Secondary spacing parameter.
+    - ``angle_orientation``: Orientation angle.
+    - ``angle_skew``: Skew angle.
+    - ``x_substations``: X-coordinates of substations.
+    - ``y_substations``: Y-coordinates of substations.
 
-    Promoted Outputs:
+    **Promoted Outputs:**
 
-        electricity_out (float): Annual energy production (AEP) in MWh (as provided by ARD/FLORIS).
-        CapEx (float): Capital expenditure from ARD turbine & balance of plant cost model.
-        OpEx (float): Operating expenditure from ARD.
-        boundary_distances (array): Distances from turbines to boundary segments.
-        turbine_spacing (array): Inter-turbine spacing metrics.
-        cost_year: Cost year from cost component.
-        VarOpEx: Variable operating expenditure (currently placeholder).
+    - ``electricity_out`` (float): Annual energy production (AEP) in MWh (as provided by
+      ARD/FLORIS).
+    - ``CapEx`` (float): Capital expenditure from ARD turbine & balance of plant cost model.
+    - ``OpEx`` (float): Operating expenditure from ARD.
+    - ``boundary_distances`` (array): Distances from turbines to boundary segments.
+    - ``turbine_spacing`` (array): Inter-turbine spacing metrics.
+    - ``cost_year``: Cost year from cost component.
+    - ``VarOpEx``: Variable operating expenditure (currently placeholder).
     """
 
     _time_step_bounds = (

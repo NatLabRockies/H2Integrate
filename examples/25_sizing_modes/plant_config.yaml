@@ -44,7 +44,9 @@ finance_parameters:
   finance_subgroups:
     h2:
       commodity: hydrogen
+      commodity_stream: electrolyzer
       technologies: [hopp, electrolyzer]
     nh3:
       commodity: ammonia
+      commodity_stream: ammonia
       technologies: [hopp, electrolyzer, ammonia]

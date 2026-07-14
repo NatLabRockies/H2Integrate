@@ -83,16 +83,6 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     Attributes:
         system_model (``BatteryStateful``): Instance of the PySAM BatteryStateful model, initialized
             with the selected chemistry and configuration parameters.
-
-
-    Methods:
-        compute(inputs, outputs, discrete_inputs, discrete_outputs):
-            Runs the PySAM BatteryStateful model for a simulation timestep,
-            updating outputs such as SOC, charge/discharge limits, unmet
-            demand, and unused commodities.
-        _set_control_mode(control_mode=1.0, input_power=0.0, input_current=0.0,
-            control_variable="input_power"):
-            Sets the battery control mode (power or current).
     """
 
     _time_step_bounds = (

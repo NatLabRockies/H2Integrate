@@ -91,7 +91,7 @@ The `powercurve_calc_config` section allows customization of the turbine power c
     - 2: Multi-Generator
     - 3: Direct Drive
 
-(pysam-options)=
+(pysam-options-windpower)=
 ## PySAM Options
 - `pysam_options` (dict): The top-level keys correspond to the Groups available in the [Windpower module](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html). The next level is the individual attributes a user could set and a full list is available through the PySAM documentation of Windpower module. The Groups that users may want to specify specific options for are the:
     - [Turbine](#turbine-group)

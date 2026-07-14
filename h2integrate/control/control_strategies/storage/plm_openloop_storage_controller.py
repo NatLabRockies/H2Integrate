@@ -230,23 +230,28 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         allowable bounds.
 
         Dispatch strategy outline:
+
         - Discharge:
+
           * Starting when time_to_peak <= advance_discharge_period
           * Discharge at max rate (or less to reach targets)
           * Stop discharging only when SOC reaches min_soc
         - Charge:
+
           * When not discharging, SOC < max, and allow_charge window is active
           * Start charging only after delay_charge_period since last discharge
           * Charge at max rate (or less to reach target)
           * Stop charging when SOC reaches max_soc
 
         Expected input keys:
+
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
             * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
             * ``max_capacity``: Maximum total storage capacity.
 
         Outputs populated:
+
             * ``<commodity>_command_value``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
@@ -599,6 +604,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         """Merge peaks_1 and peak_2 schedules with peak_1 precedence.
 
         Combines two peak schedules (primary and fallback) using day-level precedence:
+
         - For each day, if the peaks_1 profile has any peaks on that day,
           use all peaks_1 peaks for that day
         - Otherwise, use the peaks_2 peaks for that day

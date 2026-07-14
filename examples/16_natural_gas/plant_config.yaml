@@ -75,7 +75,7 @@ finance_parameters:
       technologies: [solar, battery]
     natural_gas:
       commodity: electricity
-      commmodity_stream: natural_gas_plant
+      commodity_stream: natural_gas_plant
       finance_groups: [profast_model]
       technologies: [natural_gas_plant, ng_feedstock]
     electricity:
