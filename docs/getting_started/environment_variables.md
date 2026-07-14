@@ -1,17 +1,20 @@
+(environment_variables:environment-variables)=
+# Environment Variables
+H2Integrate can pull data from datasets accessible with API keys or user-specific tokens. Since API keys and tokens are unique to each user, these are accessed in H2Integrate as environment variables. These environment variables only need to be set to utilize their corresponding functionality. Some environment variables can also used to customize your workflow. The list of environment variables for different types of functionality are listed below:
+
+- [NLR Developer Network](environment_variables:nlr_developer)
+    - `NLR_API_KEY`
+    - `NLR_API_EMAIL`
+- [EIA Natural Gas Cost Data](environment_variables:eia_ng)
+    - `EIA_API_KEY`
+- Customized Workflow
+    - `RESOURCE_DIR`
+
+To utilize the functionality of the models that require environment variables, instructions on how to set environment variables are shown [below](environment_variables:setting-environment-variables).
+
 (environment_variables:setting-environment-variables)=
 # Setting Environment Variables
-
-H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
-To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
-    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/).
-
-You will need to set the API key and the email you used to get the API key for downloading resource data from the NLR developer network. The 40 character API key is referred to in following sections as the value for the `NLR_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NLR_API_EMAIL` environment variable.
-
-```{note}
-The old environment variable names ``NREL_API_KEY`` and ``NREL_API_EMAIL`` are still supported
-for backward compatibility, but are deprecated and will be removed in a future release.
-Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
-```
+We will use the environment variables needed for the NLR Developer Network (`NLR_API_KEY` and `NLR_API_EMAIL`) to showcase different methods of setting environment variables in this section.
 
 In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NLR API key and `'email-for-api-key'` should be replaced with your email address.
 
@@ -106,3 +109,26 @@ The ".env" file will be looked for in all of the following locations:
     NLR_API_EMAIL='email-for-api-key'
     ```
 3. Save and close the ".env" file.
+
+
+(environment_variables:nlr_developer)=
+## NLR Developer Network Environment Variables
+
+H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
+To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
+    [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/).
+
+You will need to set the API key and the email you used to get the API key for downloading resource data from the NLR developer network. The 40 character API key is referred to in following sections as the value for the `NLR_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NLR_API_EMAIL` environment variable.
+
+```{note}
+The old environment variable names ``NREL_API_KEY`` and ``NREL_API_EMAIL`` are still supported
+for backward compatibility, but are deprecated and will be removed in a future release.
+Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
+```
+
+(environment_variables:eia_ng)=
+## EIA Natural Gas Cost
+Further documentation on the EIA natural gas cost model can be [here](https://h2integrate.readthedocs.io/en/latest/technology_models/feedstocks.html). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
+    ```bash
+    EIA_API_KEY='api-key-value'
+    ```
