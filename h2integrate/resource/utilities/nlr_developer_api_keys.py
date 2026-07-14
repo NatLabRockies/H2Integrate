@@ -14,7 +14,7 @@ _ENV_MISSING_MSG = (
 )
 
 
-def get_nlr_developer_api_credential(which: str, env_path: str | Path | None) -> str:
+def get_nlr_developer_api_credential(which: str, env_path: str | Path | None = None) -> str:
     """Get either the NLR API email or key with a fallback for the NREL credentials.
 
     Args:
