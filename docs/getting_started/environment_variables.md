@@ -133,6 +133,7 @@ Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 (environment_variables:eia_ng)=
 # EIA Natural Gas Cost
 Further documentation on the EIA natural gas cost model can be [here](https://h2integrate.readthedocs.io/en/latest/technology_models/feedstocks.html). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
-    ```bash
-    EIA_API_KEY='api-key-value'
-    ```
+
+```bash
+EIA_API_KEY='api-key-value'
+```
