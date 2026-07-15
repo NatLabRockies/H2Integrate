@@ -1,5 +1,10 @@
 import numpy as np
+import pandas as pd
 from attrs import field, define
+from openmdao.utils import units as om_units
+from simses.battery.battery import Battery
+from simses.degradation.state import DegradationState
+from simses.model.cell.sony_lfp import SonyLFP
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero, range_val, range_val_or_none
@@ -7,6 +12,19 @@ from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
 )
+
+
+class LFP280Ah(SonyLFP):
+    """280 Ah / 3.2 V prismatic LFP cell scaled from the SonyLFP OCV/resistance curves."""
+
+    _SCALE = 3.0 / 280.0  # resistance scales inversely with capacity
+
+    def __init__(self):
+        super().__init__()
+        self.electrical.nominal_capacity = 280.0  # Ah
+
+    def internal_resistance(self, state):
+        return super().internal_resistance(state) * self._SCALE
 
 
 @define(kw_only=True)
@@ -158,29 +176,102 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
 
-        charge_rate = inputs["max_charge_rate"][0]
+        inputs["max_charge_rate"][0]
         if "max_discharge_rate" in inputs:
             discharge_rate = inputs["max_discharge_rate"][0]
         else:
             discharge_rate = inputs["max_charge_rate"][0]
         storage_capacity = inputs["storage_capacity"][0]
 
-        # TODO degradation: adjust compute method for degradation as needed
-        self.degradation(discrete_inputs["solar_resource_data"])
-        # outputs[f"{self.commodity}_auxiliary_demand"] =
-        outputs = self.run_storage(
-            charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
+        ### from Ankit
+        cell = LFP280Ah()
+
+        battery = Battery(
+            cell=cell,
+            circuit=(239, 18),
+            initial_states={"start_soc": 0.5, "start_T": 25.0},
+            degradation=LFP280Ah.default_degradation_model(
+                initial_soc=0.5,
+                initial_state=DegradationState(qloss_cal=1e-4),
+            ),
         )
 
-    # TODO degradation: add degradation method here
-    def degradation(
-        self,
-        solar_resource_data,
-    ):
-        """_summary_
+        summary = pd.Series(
+            {
+                "nominal_capacity [Ah]": battery.nominal_capacity,
+                "nominal_voltage [V]": battery.nominal_voltage,
+                "nominal_energy [kWh]": battery.nominal_energy_capacity / 1e3,
+                "max_charge_current [A]": battery.max_charge_current,
+                "max_discharge_current [A]": battery.max_discharge_current,
+                "thermal_capacity [kJ/K]": battery.thermal_capacity / 1e3,
+            }
+        )
+        print("Battery summary:")
+        print(summary.to_string())
+        print()
 
-        Args:
-            solar_resource_data (_type_): a dictionary of hourly (or by timestep) solar resource
-            information including irradiance and temperature
-        """
-        return
+        dt = self.dt_hr * 60.0
+
+        # power_profile = inputs[f"{self.commodity}_in"]
+        power_profile = inputs[f"{self.commodity}_set_point"]
+
+        log = {
+            k: np.empty(self.n_timesteps)
+            for k in ["soc", "v", "i", "T", "loss", "heat", "soh_Q", "soh_R", "power"]
+        }
+        for i, p in enumerate(power_profile):
+            battery.step(float(p), dt)
+            for k in log:
+                log[k][i] = getattr(battery.state, k)
+
+        index = pd.date_range("2025-01-01", periods=self.n_timesteps, freq=f"{int(dt)}s")
+        df_bat = pd.DataFrame(log, index=index)
+        print("\nFirst rows:")
+        print(df_bat.head().to_string())
+
+        #############
+
+        # Populate all OpenMDAO outputs defined in this class and its parent classes,
+        # pulling the time-series results from the simses battery run (``df_bat``).
+
+        soc_ts = df_bat["soc"].to_numpy()
+        # Convert battery power (W) into the desired commodity rate units.
+        # Sign convention: positive = discharge (out of storage), negative = charge.
+        power_ts = om_units.convert_units(
+            df_bat["power"].to_numpy(), "W", self.commodity_rate_units
+        )
+
+        # --- BatteryPerformanceModel outputs ---
+        outputs[f"{self.commodity}_auxiliary_demand"] = np.zeros(self.n_timesteps)
+
+        # --- StoragePerformanceBase outputs ---
+        outputs["storage_duration"] = (
+            storage_capacity / discharge_rate if discharge_rate > 0 else 0.0
+        )
+        outputs["SOC"] = soc_ts * 100.0  # fraction -> percent
+        outputs[f"storage_{self.commodity}_charge"] = np.where(power_ts < 0, power_ts, 0.0)
+        outputs[f"storage_{self.commodity}_discharge"] = np.where(power_ts > 0, power_ts, 0.0)
+
+        # --- PerformanceModelBaseClass outputs ---
+        outputs[f"{self.commodity}_out"] = power_ts
+        outputs[f"rated_{self.commodity}_production"] = discharge_rate
+        outputs[f"total_{self.commodity}_produced"] = np.sum(power_ts) * self.dt_amount
+        outputs[f"annual_{self.commodity}_produced"] = outputs[
+            f"total_{self.commodity}_produced"
+        ] * (1 / self.fraction_of_year_simulated)
+        outputs["replacement_schedule"] = np.zeros(self.plant_life)
+        outputs["operational_life"] = self.plant_life
+
+        if discharge_rate <= 0:
+            outputs["capacity_factor"] = 0.0
+            outputs["standard_capacity_factor"] = 0.0
+        else:
+            outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
+                discharge_rate * self.n_timesteps * self.dt_amount
+            )
+            total_commodity_discharged = (
+                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
+            )
+            outputs["standard_capacity_factor"] = total_commodity_discharged / (
+                discharge_rate * self.n_timesteps * self.dt_amount
+            )
