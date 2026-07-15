@@ -457,7 +457,12 @@ def test_profast_npv_with_inflation(
     mean_hourly_production = 500000.0
     prob = om.Problem()
     price_escalation = 0.02  # 2% inflation in price
-    profast_inputs_no2["commodity_sell_price"] = [0.07] * 30
+
+    years = np.arange(0, 34, 1)
+    initial_price = 0.07
+    inflated_price = initial_price * ((1.0 + price_escalation) ** (years - 1))
+
+    profast_inputs_no2["commodity_sell_price"] = list(inflated_price[4:])
     profast_inputs_no2["params"]["inflation_rate"] = price_escalation  # 2% inflation
     plant_config = {
         "plant": {
@@ -504,7 +509,7 @@ def test_profast_npv_with_inflation(
     nominal_price = np.concatenate(
         [np.zeros(4), prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)")]
     )
-    years = np.arange(0, 34, 1)
+
     # Remove inflation from nominal price
     real_price = nominal_price / ((1.0 + price_escalation) ** (years - 1))
 
