@@ -10,6 +10,10 @@ H2Integrate can pull data from datasets accessible with API keys or user-specifi
 - Customized Workflow
     - `RESOURCE_DIR`
 
+```{note}
+Tips on debugging environment variable related errors or issues can be found [here](https://h2integrate.readthedocs.io/en/develop/misc_resources/debugging_environment_variables.html)
+```
+
 To utilize the functionality of the models that require environment variables, instructions on how to set environment variables are shown [below](environment_variables:setting-environment-variables).
 
 (environment_variables:setting-environment-variables)=
@@ -112,7 +116,7 @@ The ".env" file will be looked for in all of the following locations:
 
 
 (environment_variables:nlr_developer)=
-## NLR Developer Network Environment Variables
+# NLR Developer Network Environment Variables
 
 H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
 To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
@@ -127,7 +131,7 @@ Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 ```
 
 (environment_variables:eia_ng)=
-## EIA Natural Gas Cost
+# EIA Natural Gas Cost
 Further documentation on the EIA natural gas cost model can be [here](https://h2integrate.readthedocs.io/en/latest/technology_models/feedstocks.html). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
     ```bash
     EIA_API_KEY='api-key-value'

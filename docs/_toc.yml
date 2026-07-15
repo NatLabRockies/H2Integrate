@@ -116,6 +116,7 @@ parts:
       - file: misc_resources/glossary
       - file: misc_resources/defining_filepaths
       - file: misc_resources/turbine_models_library_preprocessing
+      - file: misc_resources/debugging_environment_variables
   - caption: API Reference
     maxdepth: 3
     chapters:

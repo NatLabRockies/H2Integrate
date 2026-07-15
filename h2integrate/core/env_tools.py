@@ -64,10 +64,12 @@ def get_environment_variables(
 
     1) Check the existing environment variables for :py:attr:`args`. If any :py:attr:`args`
     have not yet been set as environment variables, continue to 2.
+
     2) If :py:attr:`file_path` is provided, then load environment variables from
     :py:attr:`file_path`. If :py:attr:`set_variables` is True, then set the environment
     variables that were found. Return the environment variables found up to this point.
     If :py:attr:`file_path` is None, continue to 3.
+
     3) Check default directories (home directory, H2Integrate root directory, or the current
     working directory) for :py:attr:`file_name` and load environment variables if the filepath
     is valid. This prioritizes environment variable values found in step 1 over environment
