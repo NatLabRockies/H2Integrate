@@ -269,8 +269,19 @@ class BasicProFASTParameterConfig(BaseConfig):
         # Rename underscores to spaces for ProFAST compatibility
         pf_params = {k.replace("_", " "): v for k, v in pf_params_init.items()}
 
+        # If a user provides a non-default escalation value, track it before
+        # updating it to the inflation rate
+        input_escalation_params = {}
+        for k, v in pf_params.items():
+            if isinstance(v, dict) and ("escalation" in v):
+                if v.get("escalation", 0.0) != 0.0:
+                    input_escalation_params[k] = v.copy()
+
         # Apply inflation rate defaults to escalation fields
         pf_params = update_defaults(pf_params, "escalation", self.inflation_rate)
+        # Ensure that user-specified escalation values are not over-written to `inflation_rate``
+        # when `update_defaults` is called
+        pf_params |= input_escalation_params
 
         # Remap finance keys to ProFAST names where applicable
         params = {}
