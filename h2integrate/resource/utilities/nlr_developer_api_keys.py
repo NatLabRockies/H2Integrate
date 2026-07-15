@@ -74,8 +74,3 @@ def get_nlr_developer_api_email() -> str:
     """
     nlr_api_email = get_nlr_developer_api_credential(which="email")
     return nlr_api_email
-
-
-def set_nlr_key_dot_env(path: str | None | Path = None):
-    get_nlr_developer_api_credential(which="email", env_path=path)
-    get_nlr_developer_api_credential(which="key", env_path=path)

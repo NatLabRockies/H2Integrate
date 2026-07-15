@@ -43,7 +43,7 @@ def load_env_vars_from_file(file_path: Path) -> dict:
             elif ":" in line:
                 sep = ":"
             else:
-                # skip this line
+                # skip line if invalid or missing separator
                 continue
             k, v = line.strip().split(sep, 1)
             env_vars[k.strip()] = v.strip()
@@ -52,58 +52,82 @@ def load_env_vars_from_file(file_path: Path) -> dict:
 
 def get_environment_variables(
     *args: str,
-    file_name: str | None = None,
+    file_name: str | None = ".env",
     file_path: str | None = None,
     set_variables: bool = True,
 ):
-    """Retrieve a series of credentials from a :py:attr:`file_name` in either the home directory
-    or H2Integrate root directory. If `:py:attr:`file_path` is provided, then :py:attr:`file_name`
-    and already set environment variables will be ignored. If :py:attr:`file_name` is provided, then
-    already set environment variables will be ignored. If neither file options are used, then an
-    existing environment variable will be retrieved.
+    """Retrieve a series of environment variables and values from existing environment variables,
+    from a fully resolved :py:attr:`file_path`, or from a :py:attr:`file_name` located in either
+    the home directory, H2Integrate root directory, or the current working directory.
+
+    This function does the following:
+
+    1) Check the existing environment variables for :py:attr:`args`. If any :py:attr:`args`
+    have not yet been set as environment variables, continue to 2.
+    2) If :py:attr:`file_path` is provided, then load environment variables from
+    :py:attr:`file_path`. If :py:attr:`set_variables` is True, then set the environment
+    variables that were found. Return the environment variables found up to this point.
+    If :py:attr:`file_path` is None, continue to 3.
+    3) Check default directories (home directory, H2Integrate root directory, or the current
+    working directory) for :py:attr:`file_name` and load environment variables if the filepath
+    is valid. This prioritizes environment variable values found in step 1 over environment
+    variables loaded from the files. If :py:attr:`set_variables` is True, then
+    set the environment variables that were found. Return the environment variables found
+    up to this point.
 
     Args:
-        args (str): Name(s) of the credential(s) that should be retrieved from either
-            :py:attr:`file_name` or environment variables.
+        args (str): Name(s) of the environment variable(s) that should be retrieved from
+            environment variables, :py:attr:`file_path` or a default location of
+            :py:attr:`file_name`.
         file_name (str, optional): The name of a configuration file found in either the H2Integrate
-            root directory or the user's home directory that should contain the credential(s) in
-            :py:attr:`args`.
+            root directory, the user's home directory, or the user's current working directory
+            that should contain the environment variable(s) in :py:attr:`args`. Defaults to '.env'.
         file_path (str | Path, optional): The full file path for where the configuration file can be
-        found if not using the H2Integrate root directory or user home directory
+            found if not using one of the default directories.
         set_variables (bool, optional): If True, set the environment variables if they
             haven't already been set.
 
     Returns:
-        dict: Dictionary of all :py:attr:`args` with values of either the value if found.
+        dict: Dictionary of the :py:attr:`args` that values were found for.
     """
+    # Step 1: Get existing environment variables
     # Check if the environment variables have already been set
-    env_vars = {name: os.environ.get(name) for name in args if os.environ.get(name) is not None}
+    env_vars = {name: var for name in args if (var := os.environ.get(name)) is not None}
     remaining_vars = set(args) - set(env_vars)
-    if len(remaining_vars) == 0:
+    if not remaining_vars:
         # All environment variables have already been set
         return env_vars
 
+    # Step 2: Load environment variables from `file_path`
     if file_path is not None:
         file_path = Path(file_path).resolve()
         if file_path.is_file():
-            env_vars = load_env_vars_from_file(file_path)
+            # Prioritize environment variables from specified `file_path`
+            env_vars |= load_env_vars_from_file(file_path)
+            # Remove extraneous environment variables that were loaded from the file
             env_vars_subset = {name: env_vars.get(name) for name in args if name in env_vars}
             if set_variables:
                 # Set the environment variables
                 set_env_var(overwrite=True, **env_vars_subset)
+            # NOTE: should we check here if all the environment variables were found?
+            # Should the next part of the code execute if theres remaining
+            # environment variables?
             return env_vars_subset
 
         raise FileNotFoundError(f"Provided `file_path` is invalid: {file_path}")
 
-    default_folders = [Path.cwd(), Path.home(), ROOT_DIR, ROOT_DIR.parent]
+    # Step 3: Look in the cwd, home directory, and H2Integrate ROOT folders for `file_name`
+    default_folders = [ROOT_DIR, ROOT_DIR.parent, Path.cwd(), Path.home()]
     if file_name is None:
         # If a file_name isn't provided, look for a .env file
         file_name = ".env"
 
     for folder in default_folders:
         if (file_path := (folder / file_name)).is_file():
-            env_vars |= load_env_vars_from_file(file_path)
+            # Prioritize environment variables that have already been set
+            env_vars = load_env_vars_from_file(file_path) | env_vars
 
+    # Remove extraneous environment variables that were loaded from file(s)
     env_vars_subset = {name: env_vars.get(name) for name in args if name in env_vars}
     if set_variables:
         # Set the environment variables
