@@ -107,6 +107,7 @@ class DemandFollowingControl(SystemLevelControlBase):
                 outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
                     remaining_demand / n_dispatchable
                 )
+        return outputs
 
     def compute(self, inputs, outputs):
         if not self.multi_commodity_system:
@@ -201,6 +202,12 @@ class DemandFollowingControl(SystemLevelControlBase):
         # now go through the rest of the commodity streams and get the demand
         demand = inputs[self.demand_input_name].copy()
         converter_cnt.reverse()
+
+        def compounding_conversion(init_demand, conversion_ratios):
+            for c in conversion_ratios.items():
+                init_demand = init_demand * c
+                yield init_demand
+
         for converter_ii in converter_cnt:
             input_cmod, tech, output_cmod = converter_order[converter_ii]
             conversion_ratio = conversion_factors[converter_ii]
@@ -213,13 +220,30 @@ class DemandFollowingControl(SystemLevelControlBase):
                 self.get_setpoints_for_commodity_subset(
                     inputs,
                     outputs,
-                    self.commodity,
+                    output_cmod,  # self.commodity, # should this be output_cmod
                     upstream_commodity_demand,
                     tech_subset=upstream_techs,
                 )
 
             else:
+                # TODO: finish this bit
                 # there are converters upstream
+                # upstream_flows = set()
+                # for uc in upstream_converters:
+                #     upstream_tech_flows = {k for k,v in converter_upstreams.items() if k[1] == uc}
+                #     up_upstream_techs = [converter_upstreams[k] for k in upstream_tech_flows}
+                #     up_upstream_converters = up_upstream_techs & set(converter_tech_names)
+
+                # Set the commodity demand of this converter subset
+                upstream_commodity_demand = demand * conversion_ratio
+                # set setpoints
+                self.get_setpoints_for_commodity_subset(
+                    inputs,
+                    outputs,
+                    self.commodity,
+                    upstream_commodity_demand,
+                    tech_subset=upstream_techs,
+                )
 
                 pass
 
