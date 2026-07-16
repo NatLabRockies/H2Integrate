@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 
+import numpy as np
 from openmdao.utils.units import convert_units
 
 from h2integrate.finances.tools import _compute_rate_units
@@ -126,19 +127,8 @@ class ProFastNPV(ProFastBase):
         else:
             pf = self.populate_profast(inputs)
 
-        # create years of operation list
-        # years_of_operation = create_years_of_operation(
-        #     self.params.plant_life,
-        #     self.params.analysis_start_year,
-        #     self.params.installation_time,
-        # )
-
-        years_of_operation = list(pf.vals["long term utilization"].keys())
-        # Input sell_profile as a dictionary so ProFAST doesn't apply the commodity escalation
-        sell_profile = dict(zip(years_of_operation, inputs[f"sell_price_{self.output_txt}"]))
-
-        # non_op_Nyears = int(np.ceil(self.params.installation_time / 12) + 1)
-        # sell_profile = np.concatenate(
-        #     [np.zeros(non_op_Nyears), inputs[f"sell_price_{self.output_txt}"]]
-        # )
+        non_op_Nyears = int(np.ceil(self.params.installation_time / 12) + 1)
+        sell_profile = np.concatenate(
+            [np.zeros(non_op_Nyears), inputs[f"sell_price_{self.output_txt}"]]
+        )
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(price=sell_profile)

@@ -454,16 +454,19 @@ def test_profast_npv_missing_sell_price(profast_inputs_no2, fake_filtered_tech_c
 def test_profast_npv_with_inflation(
     profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
 ):
+    price_escalation = 0.02  # 2% inflation in price
+    pf_params = profast_inputs_no2["params"]
+    pf_params["commodity"] = {"escalation": price_escalation}
     mean_hourly_production = 500000.0
     prob = om.Problem()
-    price_escalation = 0.02  # 2% inflation in price
 
     years = np.arange(0, 34, 1)
     initial_price = 0.07
-    inflated_price = initial_price * ((1.0 + price_escalation) ** (years - 1))
+    # inflated_price = initial_price * ((1.0 + price_escalation) ** (years - 1))
 
-    profast_inputs_no2["commodity_sell_price"] = list(inflated_price[4:])
-    profast_inputs_no2["params"]["inflation_rate"] = price_escalation  # 2% inflation
+    profast_inputs_no2["commodity_sell_price"] = [initial_price] * 30
+    profast_inputs_no2["params"] = pf_params
+    # profast_inputs_no2["params"]["inflation_rate"] = price_escalation  # 2% inflation
     plant_config = {
         "plant": {
             "plant_life": 30,
@@ -503,7 +506,7 @@ def test_profast_npv_with_inflation(
     with subtests.test("NPV"):
         assert (
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
-            == 1336544230.1139889
+            == 1427542124.9970489
         )
 
     nominal_price = np.concatenate(
@@ -519,5 +522,5 @@ def test_profast_npv_with_inflation(
     with subtests.test("NPV (real sell price)"):
         assert (
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
-            == 520290489.52904046
+            == 611288384.4121004
         )
