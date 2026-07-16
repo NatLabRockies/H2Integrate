@@ -1,10 +1,3 @@
-# Nuclear power plant models
-
-H2Integrate currently includes two nuclear converter options:
-
-- `QuinnNuclearPerformanceModel` with `QuinnNuclearCostModel` for a simple electricity-only nuclear plant
-- `SimpleThermalNuclearReactorPerformanceModel` with `SimpleThermalNuclearReactorCostModel` for a thermal reactor that can trade off electricity production and process heat delivery
-
 ## Simple thermal nuclear reactor model
 
 Use this model by setting:
@@ -47,7 +40,7 @@ The performance config is built from `performance_parameters` and shared inputs 
 
 | Name | Shape | Units | Description |
 | --- | --- | --- | --- |
-| `electricity_out` | array[n_timesteps] | kW | Electrical output after mode-specific dispatch and clipping. |
+| `electricity_out` | array[n_timesteps] | kW | Electrical output of the nuclear system. |
 | `heat_out` | array[n_timesteps] | kW | Delivered process heat. |
 | `high_pressure_heat_demanded` | array[n_timesteps] | kW | Requested heat after applying `minimum_heat_extract`. |
 | `high_pressure_heat` | array[n_timesteps] | kW | Available process heat stream before low-pressure electric conversion. |
@@ -55,7 +48,7 @@ The performance config is built from `performance_parameters` and shared inputs 
 | `rated_electricity_production` | scalar | kW | Rated electrical production. |
 | `total_electricity_produced` | scalar | kW*h | Electricity produced over the simulated period. |
 | `annual_electricity_produced` | array[plant_life] | kW*h/year | Annualized electricity production repeated across plant life. |
-| `capacity_factor` | array[plant_life] | unitless | Average electrical output divided by rated electrical capacity. |
+| `capacity_factor` | array[plant_life] | unitless | Electrical capacity factor, likely below nominal fleet values. |
 | `replacement_schedule` | array[plant_life] | unitless | Currently zeros. |
 
 ### Thermal reactor dispatch logic
@@ -95,31 +88,3 @@ The thermal reactor cost model uses direct capacity-based cost inputs and comput
 | `CapEx` | scalar | USD | `rated_capacity * nuclear_reactor_upfront_cost` |
 | `OpEx` | scalar | USD/year | `rated_capacity * nuclear_reactor_fixed_om_cost` |
 | `VarOpEx` | array[plant_life] | USD/year | Variable O&M from simulated electricity output, repeated across plant life. |
-
-### Example `tech_config`
-
-This matches the current HTSE example structure and naming.
-
-```yaml
-technologies:
-  nuclear:
-    performance_model:
-      model: SimpleThermalNuclearReactorPerformanceModel
-    cost_model:
-      model: SimpleThermalNuclearReactorCostModel
-    model_inputs:
-      performance_parameters:
-        operating_mode: heat
-        electricity_command_value: 500000  # kW
-        high_pressure_electrical_efficiency: 0.12
-        low_pressure_electrical_efficiency: 0.22
-        minimum_heat_extract: 1000  # kW
-      cost_parameters:
-        nuclear_reactor_upfront_cost: 5750.0
-        nuclear_reactor_fixed_om_cost: 2.64
-        nuclear_reactor_variable_om_cost: 0.0145
-      shared_parameters:
-        rated_capacity: 1000000.0
-```
-
-For a full coupled example, see [examples/99_nuclear_reactor_htse/tech_config.yaml](../../examples/99_nuclear_reactor_htse/tech_config.yaml).
