@@ -29,7 +29,7 @@ finance_parameters:
 ```
 
 ```{important}
-ProFAST will apply the general inflation rate (input under `model_inputs[params]['inflation_rate']`) to the `commodity_sell_price` in its calculations.
+ProFAST will apply the commodity escalation rate to the `commodity_sell_price` in its calculations. The commodity escalation rate will default to the general inflation rate (input under `model_inputs['params']['inflation_rate']`) unless explicity provided as `model_inputs['params']['commodity']['escalation']`
 ```
 
 (profastnpv:outputs)=
