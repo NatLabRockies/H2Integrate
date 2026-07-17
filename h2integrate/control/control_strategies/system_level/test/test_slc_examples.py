@@ -1,6 +1,9 @@
+import os
+
 import numpy as np
 import pytest
 
+from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -398,3 +401,86 @@ def test_slc_upstream_demand(subtests, temp_copy_of_example):
             # check that no hydrogen systems are in
             model.prob.get_val(slc_h2s_output_var, units="kg/h")
         assert f"Variable '{slc_h2s_output_var}' not found. " in str(excinfo.value)
+
+
+@pytest.mark.integration
+def test_slc_complex_multi_commodity_v1(subtests):
+    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
+    os.chdir(ex_folder)
+    h2i = H2IntegrateModel(ex_folder / "top_level_config.yaml")
+
+    h2i.setup()
+
+    h2i.run()
+
+    with subtests.test("LCOH"):
+        assert (
+            pytest.approx(3.8867863862476097, rel=1e-6)
+            == h2i.model.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0]
+        )
+
+    with subtests.test("LCOA - Produced"):
+        assert (
+            pytest.approx(1.2607467064967108, rel=1e-6)
+            == h2i.model.get_val("finance_subgroup_nh3_produced.LCOA", units="USD/kg")[0]
+        )
+
+    with subtests.test("LCOA - Delivered"):
+        assert (
+            pytest.approx(1.360845569863152, rel=1e-6)
+            == h2i.model.get_val("finance_subgroup_nh3_delivered.LCOA", units="USD/kg")[0]
+        )
+
+    with subtests.test("Unmet Ammonia Demand"):
+        assert (
+            pytest.approx(92862.44227354404, rel=1e-6)
+            == h2i.model.get_val("nh3_load_demand.unmet_ammonia_demand_out", units="t/h").sum()
+        )
+
+    with subtests.test("Ammonia Demand Capacity Factor"):
+        assert (
+            pytest.approx(77.68258710060003, rel=1e-6)
+            == h2i.model.get_val("nh3_load_demand.capacity_factor", units="percent")[0]
+        )
+
+
+@pytest.mark.integration
+def test_slc_complex_multi_commodity_v2(subtests):
+    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
+    os.chdir(ex_folder)
+    h2i = H2IntegrateModel(ex_folder / "top_level_config_v2.yaml")
+
+    h2i.setup()
+
+    h2i.run()
+
+    with subtests.test("LCOH"):
+        assert pytest.approx(3.8867863862476097, rel=1e-6) == h2i.model.get_val(
+            "finance_subgroup_h2.LCOH", units="USD/kg"
+        )
+
+    with subtests.test("LCOA - Produced"):
+        assert pytest.approx(1.2607467064967108, rel=1e-6) == h2i.model.get_val(
+            "finance_subgroup_nh3_produced.LCOA", units="USD/kg"
+        )
+
+    with subtests.test("LCOA - Available"):
+        assert pytest.approx(1.2625680481267114, rel=1e-6) == h2i.model.get_val(
+            "finance_subgroup_ammonia_available.LCOA", units="USD/kg"
+        )
+
+    with subtests.test("LCOA - Delivered"):
+        assert pytest.approx(1.3628115196257977, rel=1e-6) == h2i.model.get_val(
+            "finance_subgroup_nh3_delivered.LCOA", units="USD/kg"
+        )
+
+    with subtests.test("Unmet Ammonia Demand"):
+        assert (
+            pytest.approx(92862.44227354404, rel=1e-6)
+            == h2i.model.get_val("nh3_load_demand.unmet_ammonia_demand_out", units="t/h").sum()
+        )
+
+    with subtests.test("Ammonia Demand Capacity Factor"):
+        assert pytest.approx(77.68258710060003, rel=1e-6) == h2i.model.get_val(
+            "nh3_load_demand.capacity_factor", units="percent"
+        )

@@ -92,7 +92,7 @@ finance_parameters:
       commodity: hydrogen
       commodity_stream: electrolyzer
       technologies: [wind, solar, battery, electrolyzer, h2_storage]
-    nh3:
+    nh3_produced:
       commodity: ammonia
       commodity_stream: haber_bosch
       technologies:
@@ -102,7 +102,28 @@ finance_parameters:
         - electrolyzer
         - h2_storage
         - haber_bosch
-    n2:
-      commodity: nitrogen
-      commodity_stream: n2_feedstock
-      technologies: [n2_feedstock]
+        - n2_feedstock
+    ammonia_available:
+      commodity: ammonia
+      commodity_stream: nh3_combiner
+      technologies:
+        - wind
+        - solar
+        - battery
+        - electrolyzer
+        - h2_storage
+        - haber_bosch
+        - n2_feedstock
+        - nh3_storage
+    nh3_delivered:
+      commodity: ammonia
+      commodity_stream: nh3_load_demand
+      technologies:
+        - wind
+        - solar
+        - battery
+        - electrolyzer
+        - h2_storage
+        - haber_bosch
+        - n2_feedstock
+        - nh3_storage
