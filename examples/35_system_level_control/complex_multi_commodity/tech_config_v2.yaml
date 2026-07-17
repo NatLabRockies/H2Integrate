@@ -270,3 +270,37 @@ technologies:
         commodity: ammonia
         commodity_rate_units: kg/h
         demand_profile: 47499.84  # kg/h
+  # below is only used in V2
+  nh3_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: ammonia
+        commodity_rate_units: kg/h
+  nh3_storage:
+    performance_model:
+      model: StoragePerformanceModel
+    control_strategy:
+      model: DemandOpenLoopStorageController
+    cost_model:
+      model: GenericStorageCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: ammonia
+        commodity_rate_units: kg/h
+        commodity_amount_units: kg
+        demand_profile: 47499.84  # 50 kg/h
+      # performance_parameters:
+        min_soc_fraction: 0.0
+        max_soc_fraction: 1.0
+        charge_efficiency: 1.0
+        discharge_efficiency: 1.0
+        max_capacity: 15000.0
+        init_soc_fraction: 0.0
+        max_charge_rate: 5000.0
+      cost_parameters:
+        capacity_capex: 200.0
+        charge_capex: 240.0
+        opex_fraction: 0.05
+        cost_year: 2020
