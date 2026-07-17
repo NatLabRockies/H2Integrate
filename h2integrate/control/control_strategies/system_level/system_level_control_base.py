@@ -815,7 +815,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # and the values as upstream technologies that produce ``input_commodity`` and are
         # connected to the converter tech (does not include converters in upstream technologies)
         converter_ancestors = {}
-        node_order = list(self.technology_graph.nodes())
+        list(self.technology_graph.nodes())
         edges = list(self.technology_graph.edges(data="commodity"))
         ii = 0
         # Track the most recently discovered converter so we can scope
@@ -838,8 +838,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 # Only consider ancestors that appear after the last converter
                 # in topological order, preventing double-counting across
                 # chained converters.
-                converter_idx = node_order.index(last_converter)
-                nodes_after_converter = set(node_order[converter_idx + 1 :])
+                # converter_idx = node_order.index(last_converter)
+                # nodes_after_converter = set(node_order[converter_idx + 1 :])
+                nodes_after_converter = nx.descendants(self.technology_graph, last_converter)
                 ancestors = all_ancestors & nodes_after_converter
             else:
                 ancestors = all_ancestors
@@ -879,9 +880,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
             # re-reverse it
             converter_order = {v: k for k, v in rev_converter_order.items()}
             # remove duplicate converter orders
-            rev_converter_ancestors = {v: k for k, v in converter_ancestors.items()}
             # re-reverse it
-            converter_ancestors = {v: k for k, v in rev_converter_ancestors.items()}
+            # converter_ancestors = {v: list(k) for k, v in rev_converter_ancestors.items()}
+            converter_ancestors = {k: converter_ancestors[k] for k in list(converter_order.keys())}
 
         # Make sure we iterate through the converters in the right order
         converter_cnt = list(converter_order.keys())
@@ -979,10 +980,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         total_input = np.array(total_in_cmod).sum(axis=0)
         total_output = inputs[input_name_fmt.format(tech=converter_tech, commod=out_cmod)]
         # Check if the converter produced any `out_cmod`
-        if total_output.sum() > 0:
-            conversion_factor = np.nan_to_num(total_input / total_output)
-            return conversion_factor.mean() if return_avg else conversion_factor
-        return total_input.mean() if return_avg else total_input
+        # if total_output.sum() > 0:
+        conversion_factor = np.nan_to_num(total_input / np.abs(total_output))
+        return conversion_factor.mean() if return_avg else conversion_factor
+        # return total_input.mean() if return_avg else total_input
 
     def get_multi_converter_conversion_ratio(
         self,
