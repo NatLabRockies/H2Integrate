@@ -51,7 +51,6 @@ class DemandFollowingControl(SystemLevelControlBase):
             self.options["plant_config"]["system_level_control"].get("control_parameters", {})
         )
 
-        self.calls_to_compute = 0.0
         self.post_setup_multi_commodity()
 
     def post_setup_multi_commodity(self):
@@ -320,7 +319,11 @@ class DemandFollowingControl(SystemLevelControlBase):
         converter_tech_names = {v[1] for k, v in converter_order.items()}
         commodity_in_cmod_out = self.commodity in list(commodities_out)
         if not commodity_in_cmod_out:
-            print("none of the demand commodities are made by missing techs")
+            warnings.warn(
+                "none of the demand commodities are made by missing techs",
+                UserWarning,
+                stacklevel=3,
+            )
 
         missing_tech_downstreams = [
             list(nx.descendants(self.technology_graph, tech)) for tech in missing_input_techs
@@ -332,22 +335,30 @@ class DemandFollowingControl(SystemLevelControlBase):
             missing_tech_downstreams_shared = missing_tech_downstreams_shared & set(downstream)
             # TODO: check that no other converters are inbetween
             if set(downstream) & other_converters:
-                print("theres an extra converter between the missing techs and the demand")
+                warnings.warn(
+                    "theres an extra converter between the missing techs and the demand",
+                    UserWarning,
+                    stacklevel=3,
+                )
         if not missing_tech_downstreams_shared or len(missing_tech_downstreams_shared) > 1:
-            print("something unexpected happened")
+            warnings.warn("something unexpected happened", UserWarning, stacklevel=3)
 
         missing_converter_tech = missing_input_techs & converter_tech_names
         if len(missing_converter_tech) > 1:
-            print("unsure how code will work with multiple converters connected to demand")
+            warnings.warn(
+                "unsure how code will work with multiple converters connected to demand",
+                UserWarning,
+                stacklevel=3,
+            )
         if not missing_converter_tech:
-            print("should have a converter before demand ...")
+            warnings.warn("should have a converter before demand ...", UserWarning, stacklevel=3)
 
         for m0 in list(missing_converter_tech):
             for m1 in list(missing_input_techs - missing_converter_tech):
                 m0_upstream = nx.has_path(self.technology_graph, m0, m1)
                 m1_upstream = nx.has_path(self.technology_graph, m1, m0)
                 if not m0_upstream or m1_upstream:
-                    print("these technologies arent connected")
+                    warnings.warn("these technologies arent connected", UserWarning, stacklevel=3)
 
         # all checks have passed, these techs should be in the same group
         #
@@ -372,8 +383,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         return conversion_factor_add_on, rev_group_add_on
 
     def compute(self, inputs, outputs):
-        self.calls_to_compute += 1
-
         if not self.multi_commodity_system:
             self.get_setpoints_for_commodity_subset(
                 inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
@@ -397,7 +406,7 @@ class DemandFollowingControl(SystemLevelControlBase):
             commodity_graph = nx.DiGraph()  # nodes are commodities
 
             if len(paths) > 1:
-                print("There should only be one path")
+                warnings.warn("There should only be one path", UserWarning, stacklevel=3)
             path = paths[0]
             reverse_path = path[::-1]
 
@@ -477,4 +486,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         unset_techs_cmods = self.techs_to_commodities - set(self.tech_demands_set)
         unset_techs = [k for k in list(unset_techs_cmods) if k[0] not in self.feedstock_comps]
         if unset_techs:
-            warnings.warn(f"Commands not set for these technologies: {unset_techs}", UserWarning)
+            warnings.warn(
+                f"Commands not set for these technologies: {unset_techs}", UserWarning, stacklevel=3
+            )

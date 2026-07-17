@@ -1,5 +1,3 @@
-import itertools
-
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -910,40 +908,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # return converter_techs, converter_order, converter_ancestors, upstreams
         return converter_order, upstreams
 
-    def _get_converter_input_techs(self, converter_order, converter_ancestors):
-        """TODO: REMOVE THIS METHOD (lumped it into `find_converter_techs`)
-
-        Args:
-            converter_order (dict[int, set[tuple[str, str, str]]]): _description_
-            converter_ancestors (dict[int, list[str]]): _description_
-
-        Returns:
-            dict[tuple[str,str], set[str]]: Keys are set of
-                ``(input_commodity, tech_name)`` and the values are a set of
-                upstream technologies that output the `input_commodity` to `tech_name`.
-
-        """
-        # Make sure we iterate through the converters in the right order
-        converter_cnt = list(converter_order.keys())
-        converter_cnt.sort()
-        previous_converters = set()  # track previous converters
-        upstreams = {}
-        # NOTE: unsure how the below logic will work with splitters
-        for converter_ii in converter_cnt:
-            input_cmod, tech, output_cmod = converter_order[converter_ii]
-            # Get all the upstream technologies that produce a specific commodity
-            upstream1 = self.get_upstream_techs_for_commodity(
-                tech, input_cmod, include_feedstock_sources=True
-            )
-            # Combined the upstream techs with all the previous converters
-            upstream_converter = set(upstream1) & previous_converters
-            # Remove any of the previous converters that arent connected to this converter
-            upstreams[(input_cmod, tech)] = set(upstream1) & (
-                upstream_converter | set(converter_ancestors[converter_ii])
-            )
-            previous_converters.add(tech)
-        return upstreams
-
     def get_converter_capacity_conversion_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
     ):
@@ -983,53 +947,3 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # if total_output.sum() > 0:
         conversion_factor = np.nan_to_num(total_input / np.abs(total_output))
         return conversion_factor.mean() if return_avg else conversion_factor
-        # return total_input.mean() if return_avg else total_input
-
-    def get_multi_converter_conversion_ratio(
-        self,
-        up_converter,
-        up_converter_incmod,
-        down_converter,
-        down_converter_outcmod,
-        converter_techs,
-        converter_order,
-        converter_ancestors,
-    ):
-        """NOT DONE
-
-        Args:
-            up_converter (_type_): _description_
-            up_converter_incmod (_type_): _description_
-            down_converter (_type_): _description_
-            down_converter_outcmod (_type_): _description_
-            converter_order (_type_): _description_
-            converter_ancestors (_type_): _description_
-        """
-        # check that theres a path
-        paths = list(nx.all_simple_paths(self.technology_graph, up_converter, down_converter))
-        converter_tech_names = {v[1] for k, v in converter_order.items()}
-
-        intermediate_converters = set()
-        # intermediate converters is a list of (converter_tech, output_commod)
-        for path in paths:
-            tech0 = path[0]  # same as up_converter
-            for tech0, tech1 in itertools.pairwise(path):
-                if (
-                    commod := self.technology_graph.edges[tech0, tech1].get("commodity", None)
-                ) is not None:
-                    # intermediate_commodities.add(commod)
-                    tech0_is_intermediate = tech0 in converter_tech_names and tech0 != up_converter
-                    tech1_is_intermediate = (
-                        tech1 in converter_tech_names and tech1 != down_converter
-                    )
-                    if tech0_is_intermediate or tech1_is_intermediate:
-                        # intermediate_converters.add(tech0)
-                        intermediate_converters.add(tuple(tech0, commod))
-
-        # Determine which commodities are connected from ``up_converter`` to ``down_converter``
-        converter_upstreams = self._get_converter_input_techs(converter_order, converter_ancestors)
-        converter_upstreams[tuple(up_converter_incmod, up_converter)]
-
-        # loop through all the input commodities for the down converter
-        [k[0] for k, v in converter_upstreams.items() if k[1] == down_converter]
-        converter_upstreams[tuple(down_converter_outcmod, up_converter)]
