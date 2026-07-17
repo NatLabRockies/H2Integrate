@@ -258,7 +258,6 @@ class DemandFollowingControl(SystemLevelControlBase):
                         list(tech_ancestors),
                     )
             conversion_factors[converter_info] = conversion_ratio
-            # TODO: update so key is converter_info
         return conversion_factors
 
     def convert_combined_conversion_factors_to_tech_demand(
