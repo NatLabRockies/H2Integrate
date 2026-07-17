@@ -109,31 +109,10 @@ class DemandFollowingControl(SystemLevelControlBase):
                 )
         return outputs
 
-    def compute(self, inputs, outputs):
-        if not self.multi_commodity_system:
-            self.get_setpoints_for_commodity_subset(
-                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
-            )
-            return
-
-        # should probably also get a list of generators, feedstocks, and storage
-        # should also get an idea of what components are in each "step" of the conversion
-
-        converter_order, converter_upstreams = self.find_converter_techs(
-            include_feedstock_sources=True
-        )
-
-        converter_tech_names = {v[1] for k, v in converter_order.items()}
-        converter_cnt = list(converter_order.keys())
-        converter_cnt.sort()
+    def get_conversion_factors(self, converter_order, converter_upstreams, inputs):
         conversion_factors = {}
-
-        demand_converter = None
-        demand_commodity = self.demand_input_name.replace("_demand", "")
-
-        # demand_converter = None
-        for converter_ii in converter_cnt:
-            input_cmod, tech, output_cmod = converter_order[converter_ii]
+        for converter_ii, converter_info in converter_order.items():
+            input_cmod, tech, output_cmod = converter_info
             tech_ancestors = converter_upstreams[(input_cmod, tech)]
             conversion_ratio = self.get_converter_conversion_ratio(
                 inputs,
@@ -166,11 +145,40 @@ class DemandFollowingControl(SystemLevelControlBase):
                         list(tech_ancestors),
                     )
             conversion_factors[converter_ii] = conversion_ratio
-            # check if the tech has an edge with the demand component
-            if output_cmod == demand_commodity:
-                demand_converter = str(tech)
-            # if self.technology_graph.has_edge(tech,self.demand_tech):
-            #     demand_converter = tech
+            # TODO: update so key is converter_info
+        return conversion_factors
+
+    def compute(self, inputs, outputs):
+        if not self.multi_commodity_system:
+            self.get_setpoints_for_commodity_subset(
+                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
+            )
+            return
+
+        # should probably also get a list of generators, feedstocks, and storage
+        # should also get an idea of what components are in each "step" of the conversion
+
+        converter_order, converter_upstreams = self.find_converter_techs(
+            include_feedstock_sources=True
+        )
+
+        converter_tech_names = {v[1] for k, v in converter_order.items()}
+        converter_cnt = list(converter_order.keys())
+        converter_cnt.sort()
+
+        demand_converter = None
+        demand_commodity = self.demand_input_name.replace("_demand", "")
+
+        conversion_factors = self.get_conversion_factors(
+            converter_order, converter_upstreams, inputs
+        )
+
+        # demand_converter = None
+        # check if the tech has an edge with the demand component
+        # if output_cmod == demand_commodity:
+        #     demand_converter = str(tech)
+        # if self.technology_graph.has_edge(tech,self.demand_tech):
+        #     demand_converter = tech
         if demand_converter is None:
             raise ValueError(f"no converters produce the demanded commodity {demand_commodity}")
 
