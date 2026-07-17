@@ -8,7 +8,8 @@ os.chdir(EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity")
 
 ##################################
 # Create an H2I model with a fixed electricity load demand
-h2i = H2IntegrateModel("top_level_config.yaml")
+# h2i = H2IntegrateModel("top_level_config.yaml")
+h2i = H2IntegrateModel("top_level_config_v2.yaml")
 
 h2i.setup()
 

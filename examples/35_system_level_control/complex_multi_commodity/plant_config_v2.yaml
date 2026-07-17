@@ -36,7 +36,12 @@ technology_interconnections:
   - [h2_combiner, haber_bosch, hydrogen, pipe]
   - [n2_feedstock, haber_bosch, nitrogen, pipe]
   - [electricity_feedstock, haber_bosch, electricity, cable]
-  - [haber_bosch, nh3_load_demand, ammonia, pipe]
+  # ammonia system
+  - [haber_bosch, nh3_storage, ammonia, pipe]
+  - [nh3_storage, nh3_combiner, ammonia, pipe]
+  - [haber_bosch, nh3_combiner, ammonia, pipe]
+  - [nh3_combiner, nh3_load_demand, ammonia, pipe]
+
   # etc
 tech_to_dispatch_connections:
   - [combiner, battery]
