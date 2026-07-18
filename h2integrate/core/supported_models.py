@@ -136,6 +136,7 @@ supported_models = _ModelRegistry(
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
         "ShellTubeHXPerformanceModel": "converters.heat.shell_tube_hx:ShellTubeHXPerformanceModel",
         "ShellTubeHXCostModel": "converters.heat.shell_tube_hx_cost_model:ShellTubeHXCostModel",
+        "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
