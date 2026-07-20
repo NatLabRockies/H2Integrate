@@ -233,7 +233,24 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             # For latitudes > 50, use latitude directly
             return abs_latitude
 
-    def calc_azimith_angle(self, latitude):
+    def calc_azimuth_angle(self, latitude):
+        """
+        Calculates the azimuth angle of the PV panel based on the site latitude and user inputs.
+        If a user specifies the azimuth angle in `design_config.pysam_options.SystemDesign.azimuth`,
+        that value will be returned. If the user-specified azimuth angle seems incorrect based on
+        the site latitude, a UserWarning will be raised. If the user does not specify the azimuth
+        angle explicitly, then the azimuth angle will be returned as:
+
+        - 180 degrees (south-facing) if the site is in the northern hemisphere (latitude>=0)
+        - 0 degrees (north-facing) if the site is in the southern hemisphere (latitude<0)
+
+        Args:
+            latitude (float): latitude of the site in degrees.
+
+        Returns:
+            float: azimuth angle of the solar panels in degrees.
+        """
+
         if (
             azimuth := self.design_config.pysam_options.get("SystemDesign", {}).get("azimuth", None)
         ) is not None:
@@ -322,7 +339,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.value("tilt", tilt_angle)
 
         # calculate the azimuth angle based on site latitude or get user input azimuth angle
-        azimuth = self.calc_azimith_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
+        azimuth = self.calc_azimuth_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
         # assign the azimuth angle
         self.system_model.value("azimuth", azimuth)
 

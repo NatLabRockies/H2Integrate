@@ -143,26 +143,26 @@ class TestCalcAzimuthAngle:
     )
     def test_azimuth_angle(self, latitude, user_input_azimuth, expected_azimuth):
         model = self._make_model(azimuth=user_input_azimuth)
-        result = PYSAMSolarPlantPerformanceModel.calc_azimith_angle(model, latitude)
+        result = PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
         assert result == pytest.approx(expected_azimuth)
 
     def test_southern_hemisphere_azimuth_warning(self):
         latitude = -30.0  # southern hemisphere
-        user_input_azimuth = 180.0  # south-facing
+        user_input_azimuth = 180  # south-facing
         model = self._make_model(azimuth=user_input_azimuth)
 
         expected_str = f"Site is located in southern hemisphere (latitude of {latitude})"
         with pytest.warns(UserWarning) as excinfo:
-            PYSAMSolarPlantPerformanceModel.calc_azimith_angle(model, latitude)
+            PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
         assert expected_str in str(excinfo.list[0].message)
 
     def test_northern_hemisphere_azimuth_warning(self):
         latitude = 30.0  # northern hemisphere
-        user_input_azimuth = 0.0  # north-facing
+        user_input_azimuth = 0  # north-facing
         model = self._make_model(azimuth=user_input_azimuth)
         expected_str = f"Site is located in northern hemisphere (latitude of {latitude})"
         with pytest.warns(UserWarning) as excinfo:
-            PYSAMSolarPlantPerformanceModel.calc_azimith_angle(model, latitude)
+            PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
         assert expected_str in str(excinfo.list[0].message)
 
 
