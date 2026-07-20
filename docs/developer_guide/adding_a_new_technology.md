@@ -12,11 +12,11 @@ Every model in H2Integrate inherits from a small set of baseclasses that wire it
 into the rest of the framework. Before writing code, pick the appropriate base
 class and configuration class for each piece of your technology.
 
-See the class structure in H2I to learn more: [Class Structure](#class_structure)
+See the class structure in H2I to learn more: {ref}`Class Structure <class_structure>`
 
 ## Adding a new technology
 
-Common model types (performance, cost, control, etc.) with slightly more explanation and examples are include here: [Technology Model Types](#technology_model_types)
+Common model types (performance, cost, control, etc.) with slightly more explanation and examples are include here: {ref}`Technology Model Types <technology_model_types>`
 
 Every model has:
 - [Required class attributes](#required-class-attributes): These are usually defined within the class but not in a specific function definition.
@@ -103,9 +103,9 @@ class SolarPerformanceClass(PerformanceModelBaseClass):
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # example calculation using inputs set in `setup()
+        # example calculation using inputs set in setup()
         # this input can be an openmdao design variable
-        rated_pv_output = inputs["system_capacity"]*0.33 `
+        rated_pv_output = inputs["system_capacity"] * 0.33
 
         # example of calculation using a value from the attrs configuration class.
         # this method of input cannot be an openmdao design variable
@@ -116,10 +116,10 @@ class SolarPerformanceClass(PerformanceModelBaseClass):
 
         ...
 
-        # set outputs defined in `setup()` or baseclass `setup()`
+        # set outputs defined in setup() or baseclass setup()
         output["panel_efficiency"] = panel_efficiency
 
-        # this output is defined in the `PerformanceModelBaseClass` but is required to be set in the performance model since that class is inherited
+        # this output is defined in the PerformanceModelBaseClass but is required to be set in the performance model since that class is inherited
         output["capacity_factor"] = capacity_factor
 
 ```

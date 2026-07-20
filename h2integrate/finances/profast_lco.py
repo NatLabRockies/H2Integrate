@@ -43,13 +43,6 @@ class ProFastLCO(ProFastBase):
             as LCOx.
         ``<LCOx>_breakdown`` (dict): Annualized breakdown of LCO costs by category.
 
-    Methods:
-        add_model_specific_outputs(): Creates model outputs for the LCO and associated financial
-            metrics, including cost breakdowns.
-        compute(inputs, outputs, discrete_inputs, discrete_outputs): Runs the ProFAST simulation,
-            calculates the LCO and financial outputs, generates breakdowns, and optionally exports
-            configuration and results to files.
-
     Notes:
 
         - Outputs and file exports are governed by user-specified finance parameters in the plant

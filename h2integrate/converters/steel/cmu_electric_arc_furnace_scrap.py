@@ -38,21 +38,22 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceConfig(BaseConfig):
             values of 94% mass Fe and 1% mass SiO2 in scrap.
         energy_mass_balance_dict (dict): dictionary with inputs for energy and mass
             balance calculations. Defaults are based on values from CMU decarbSTEEL EAF model.
+            Keys include:
+
             - natural_gas (float): Natural gas used per ton of steel. Default 0.44 MMBtu/ton.
             - electrodes (float): Electrodes used per ton of steel. Default 2.00 kg/ton.
             - slag_basicity (float): basicity, kg CaO / (kg SiO2 + kg Al2O3). Default 1.50.
             - mass_Al2O3_slag_per_tscrap (float): kg Al2O3 in slag per ton scrap.
-                Default 0.0.
+              Default 0.0.
             - mass_Al2O3_slag_per_tLS (float): total kg Al2O3 in slag per ton liquid steel.
-                Default 0.0.
+              Default 0.0.
             - pct_MgO_slag (float): percent mass fraction of MgO in slag. Default is 0.12.
             - pct_FeO_slag (float): percent mass fraction of FeO in slag. Default is 0.30.
             - pct_carbon_steel_tap (float): percent mass fraction carbon input to EAF as
-                % of steel tap mass. Default 0.03.
+              % of steel tap mass. Default 0.03.
             - CaO_MgO_ratio (float): kg of CaO to kg MgO. Default is 56/40.
             - electricity_kWh_per_tonne_steel (float): electricity usage per ton of steel.
-                Default is 470 kWh/ton.
-
+              Default is 470 kWh/ton.
     """
 
     steel_production_capacity_tonnes_per_year: float = field(default=2200000.0)
@@ -320,10 +321,12 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
 
     def energy_mass_balance_per_unit(self):
         """Computes the energy and mass balance for the EAF fed with scrap only case on a
-            per ton of scrap basis (tscrap) and per ton of liquid steel basis (tLS).
+        per ton of scrap basis (tscrap) and per ton of liquid steel basis (tLS).
+
         Returns:
             output_dict (dict): Dictionary with the amount of feedstocks and energy used per
-                ton of steel.
+            ton of steel. Keys include:
+
                 - mass_slag_per_tscrap (kg/t): Total mass of slag produced per ton of scrap.
                 - mass_MgO_slag_per_tscrap (kg/t): Mass of MgO in slag per ton of scrap.
                 - mass_FeO_slag_per_tscrap (kg/t): Mass of FeO in slag per ton of scrap.
@@ -337,7 +340,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
                 - mass_MgO_slag_per_tLS (kg/t): Mass of MgO in slag per ton of liquid steel.
                 - mass_FeO_slag_per_tLS (kg/t): Mass of FeO in slag per ton of liquid steel.
                 - mass_Fe_to_FeO_tLS (kg/t): Mass of Fe consumed to produce FeO per ton of
-                    liquid steel.
+                  liquid steel.
                 - mass_Fe_scrap_per_tLS (kg/t): Mass of Fe from scrap per ton of liquid steel.
                 - coal_per_tLS (t/t): Mass of coal per ton of liquid steel.
                 - oxygen_per_tLS (Nm^3/t): Normal cubic meters of oxygen per ton of liquid steel.
@@ -346,8 +349,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
                 - mass_flux_per_tLS (kg/t): Mass of flux (lime and doloma) per ton of liquid steel.
                 - EAF_scrap_heat_loss_pct (%): Percentage of heat loss in EAF with scrap-only case.
                 - electricity_per_tLS (kWh/t): Total electricity consumption per ton of liquid
-                    steel for EAF with scrap-only case, including heat loss adjustment.
-
+                  steel for EAF with scrap-only case, including heat loss adjustment.
         """
         output_dict = {}
         # Including DRI in feed (assumed constants in feedstocks)

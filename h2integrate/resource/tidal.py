@@ -40,16 +40,6 @@ class TidalResource(om.ExplicitComponent):
             - Rows 4+: Data values:
             - `Speed` (current speed) in meters/second.
 
-
-    Methods:
-        initialize():
-            Declares the options for the component, including the required "filename" option.
-        setup():
-            Defines the outputs for the component, in this case just the "tidal_velocity" array.
-        compute(inputs, outputs):
-            Reads, processes, and resamples the data from the input file.
-            Outputs the hourly tidal velocity values.
-
     Raises:
         FileNotFoundError: If the specified file does not exist.
         ValueError: If the file does not contain sufficient data or the required
