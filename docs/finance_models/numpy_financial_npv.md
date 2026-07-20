@@ -19,6 +19,7 @@ Implements validation and default handling using the `attrs` library.
 | `plant_life`                      | `int`            | Operating life of the plant in years. Must be ≥ 0.    | —           |
 | `discount_rate`                   | `float`          | Discount rate (0–1).                | —           |
 | `commodity_sell_price`            | `int` or `float` | Sale price of the commodity (USD/unit).               | `0.0`       |
+| `commodity_sell_price_units`      | `str`            | OpenMDAO unit string for `commodity_sell_price` (e.g. `"USD/(kW*h)"` for electricity or `"USD/kg"` for hydrogen). | —           |
 | `save_cost_breakdown`             | `bool`           | Whether to save annual cost breakdowns to CSV.        | `False`     |
 | `save_npv_breakdown`              | `bool`           | Whether to save per-technology NPV breakdowns to CSV. | `False`     |
 | `cost_breakdown_file_description` | `str`            | Descriptor appended to output filenames.              | `'default'` |
@@ -32,6 +33,7 @@ npv:
   model_inputs:
     discount_rate: 0.09 # each period is discounted at a rate of `discount_rate`
     commodity_sell_price: 0.078 # if commodity is electricity $/kwh
+    commodity_sell_price_units: "USD/(kW*h)" # OpenMDAO unit string for the sell price
     save_cost_breakdown: True
     save_npv_breakdown: True
 ```

@@ -362,14 +362,6 @@ def get_eia_ng_data(
     price_category = _validate_price_category(price_category)
     resource_year = _validate_resource_year(resource_year)
 
-    url = create_eia_ng_api_url(
-        api_key_file=api_key_file,
-        resource_year=resource_year,
-        price_category=price_category,
-        state=state,
-        monthly=monthly,
-    )
-
     start, end = resource_year
     keep_cols = ["price"]
     if len(state) > 1:
@@ -380,14 +372,23 @@ def get_eia_ng_data(
         if filename.exists():
             df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
             df = df.loc[
-                (df.index.year >= start)(df.index.year <= end)
+                (df.index.year >= start)
+                & (df.index.year <= end)
                 & df.category.isin(price_category)
                 & df.state.isin(state),
                 keep_cols,
             ]
-            df = convert_to_monthly(df)
+            df = convert_to_monthly(df, start, end)
             if df is not None:
                 return df
+
+    url = create_eia_ng_api_url(
+        api_key_file=api_key_file,
+        resource_year=resource_year,
+        price_category=price_category,
+        state=state,
+        monthly=monthly,
+    )
 
     r = requests.get(url)
     if r.status_code != 200:

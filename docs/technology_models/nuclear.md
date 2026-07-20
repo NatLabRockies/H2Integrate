@@ -1,83 +1,81 @@
-# Nuclear power plant model
+# Nuclear power plant models
 
-The nuclear power plant model provides a simple, size-based performance model and a type-based cost model.
-Cost defaults are intended to be populated from literature, such as Quinn et al. (2023) on SMR LWR techno-economic analysis.
-See the paper here: [Quinn et al. (2023)](#references).
+H2Integrate currently includes two nuclear converter options:
 
-To use this model, set the performance model to `QuinnNuclearPerformanceModel` and the cost model to `QuinnNuclearCostModel` in your `tech_config`.
+- `QuinnNuclearPerformanceModel` with `QuinnNuclearCostModel` for a simple electricity-only nuclear plant
+- `SimpleThermalNuclearReactorPerformanceModel` with `SimpleThermalNuclearReactorCostModel` for a thermal reactor that can trade off electricity production and process heat delivery
 
-## Performance model
+The first model is based on Quinn et al. (2023). The second is a simplified thermal reactor representation intended for coupled workflows such as nuclear plus HTSE.
 
-The performance model limits electricity production by the rated capacity and an optional demand signal.
+## Quinn electricity-only nuclear model
+
+Use this model by setting:
+
+- performance model: `QuinnNuclearPerformanceModel`
+- cost model: `QuinnNuclearCostModel`
+
+### Performance behavior
+
+This model produces electricity only. It clips the commanded electricity output to the rated plant capacity and reports aggregate production metrics.
 
 **Inputs**
+
 | Name | Shape | Units | Description |
 | --- | --- | --- | --- |
 | `system_capacity` | scalar | kW | Rated electrical capacity. |
-| `electricity_set_point` | array[n_timesteps] | kW | Optional set point profile; defaults to rated capacity. |
+| `electricity_command_value` | array[n_timesteps] | kW | Requested electrical output profile. Defaults to `system_capacity`. |
 
 **Outputs**
+
 | Name | Shape | Units | Description |
 | --- | --- | --- | --- |
-| `electricity_out` | array[n_timesteps] | kW | Electricity produced, capped at `system_capacity`. |
-| `rated_electricity_production` | scalar | kW | Rated production (capacity). |
-| `total_electricity_produced` | scalar | kW*h | Sum of production over the simulation. |
-| `annual_electricity_produced` | array[plant_life] | kW*h/year | Annualized production. |
-| `capacity_factor` | array[plant_life] | unitless | Ratio of actual to maximum production. |
-| `replacement_schedule` | array[plant_life] | unitless | Placeholder replacement schedule (zeros). |
-| `operational_life` | scalar | yr | Operational life (defaults to plant life). |
+| `electricity_out` | array[n_timesteps] | kW | Electricity output after clipping to capacity. |
+| `rated_electricity_production` | scalar | kW | Rated plant capacity. |
+| `total_electricity_produced` | scalar | kW*h | Electricity produced over the simulated period. |
+| `annual_electricity_produced` | scalar | kW*h/year | Annualized electricity production. |
+| `capacity_factor` | scalar | unitless | Simulated production divided by maximum possible production. |
 
-## Cost model
+### Cost behavior
 
-The cost model uses direct cost parameters to compute capital and operating costs.
-It supports optional scaling of capex with size using a reference capacity and scaling exponent.
+The cost model applies:
 
-**Inputs**
-| Name | Shape | Units | Description |
-| --- | --- | --- | --- |
-| `system_capacity` | scalar | kW | Plant capacity used for cost scaling. |
-| `electricity_out` | array[n_timesteps] | kW | Output from performance model. |
+- capital cost from `capex_per_kw`
+- fixed O&M from `fixed_opex_per_kw_year`
+- variable O&M from `variable_opex_per_mwh`
+- optional capex scaling using `reference_capacity_kw` and `capex_scaling_exponent`
 
-**Cost parameters (tech_config)**
+**Cost parameters**
+
 | Key | Type | Description |
 | --- | --- | --- |
-| `system_capacity_kw` | float | Rated electrical capacity (kW). |
-| `capex_per_kw` | float | Capital cost per kW. |
-| `fixed_opex_per_kw_year` | float | Fixed O&M per kW per year. |
-| `variable_opex_per_mwh` | float | Variable O&M per MWh. |
-| `reference_capacity_kw` | float | Reference capacity for capex scaling (defaults to `system_capacity_kw`). |
-| `capex_scaling_exponent` | float | Capex scaling exponent (defaults to 1.0). |
-| `cost_year` | int | Dollar year for the input costs. |
-
-The capex calculation follows:
-
-$$
-C_{\text{capex}} = (c_{\text{capex}} \cdot (P / P_{\text{ref}})^{(k-1)}) \cdot P
-$$
-
-Where $c_{\text{capex}}$ is `capex_per_kw`, $P$ is plant capacity (kW), $P_{\text{ref}}$ is `reference_capacity_kw`, and $k$ is `capex_scaling_exponent`.
+| `system_capacity_kw` | float | Rated electrical capacity in kW. |
+| `capex_per_kw` | float | Capital cost in USD/kW. |
+| `fixed_opex_per_kw_year` | float | Fixed O&M in USD/(kW*year). |
+| `variable_opex_per_mwh` | float | Variable O&M in USD/MWh. |
+| `reference_capacity_kw` | float, optional | Reference capacity for capex scaling. Defaults to `system_capacity_kw`. |
+| `capex_scaling_exponent` | float | Scaling exponent applied to capex. Defaults to `1.0`. |
+| `cost_year` | int | Dollar year of the cost inputs. |
 
 **Outputs**
+
 | Name | Shape | Units | Description |
 | --- | --- | --- | --- |
-| `CapEx` | scalar | USD | Total capital expenditure. |
-| `OpEx` | scalar | USD/year | Fixed plus variable O&M. |
-| `VarOpEx` | array[plant_life] | USD/year | Variable O&M (repeated each year). |
-| `cost_year` | scalar | year | Dollar year of costs. |
+| `CapEx` | scalar | USD | Total capital cost. |
+| `OpEx` | scalar | USD/year | Fixed annual O&M. |
+| `VarOpEx` | array[plant_life] | USD/year | Variable annual O&M repeated across plant life. |
 
-## Example tech_config
+### Example `tech_config`
 
 ```yaml
 technologies:
   nuclear:
     performance_model:
-      model: "QuinnNuclearPerformanceModel"
+      model: QuinnNuclearPerformanceModel
     cost_model:
-      model: "QuinnNuclearCostModel"
+      model: QuinnNuclearCostModel
     model_inputs:
       performance_parameters:
         system_capacity_kw: 300000.0
-        capacity_factor: 0.9
       cost_parameters:
         system_capacity_kw: 450000.0
         capex_per_kw: 6000.0
@@ -87,6 +85,7 @@ technologies:
         capex_scaling_exponent: 0.9
         cost_year: 2023
 ```
+
 
 ## References
 

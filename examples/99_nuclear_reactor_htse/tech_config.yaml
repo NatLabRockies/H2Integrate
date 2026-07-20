@@ -68,6 +68,7 @@ technologies:
       performance_parameters:
         nominal_heat_required: 6.4  # kWh/kg
         nominal_electricity_required: 36.8  # kWh/kg
+        #https://lwrs.inl.gov/content/uploads/11/2024/03/TechnicalEconomicAssessment-LWR-SupportedHydrogen.pdf #INL/RPT-23-75604
         cluster_rating_MW: 1  # Electric-only sizing component, so capacity = rating*clusters/nom_elec
         n_clusters: 25
         turndown_ratio: 0.1  # minimum operating power
