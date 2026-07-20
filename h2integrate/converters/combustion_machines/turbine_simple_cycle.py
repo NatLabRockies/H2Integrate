@@ -1,12 +1,10 @@
+import numpy as np
 from attrs import field, define
 
-import numpy as np
-
+import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
-
-import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 
 
 @define(kw_only=True)
@@ -21,7 +19,8 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
 
     Attributes:
     -----------
-        flowrate_max_fluid_cubic_m_per_s (float): maximum volumetric flowrate of working fluid through the turbine in m^3/s.
+        flowrate_max_fluid_cubic_m_per_s (float): maximum volumetric flowrate of
+            working fluid through the turbine in m^3/s.
 
         system_capacity_mw (float): rated system capacity in MW.
 
@@ -79,9 +78,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         super().setup()
 
         self.config = SimpleCycleTurbinePerformanceConfig.from_dict(
-            merge_shared_inputs(
-                self.options["tech_config"]["model_inputs"], "performance"
-            ),
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
 
@@ -103,7 +100,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add system max rated capacity as an input w/ config value as default
         self.add_input(
-            f"system_capacity",
+            "system_capacity",
             val=self.config.system_capacity_mw,
             units="MW",
             desc="rated generator capacity in MW",
@@ -120,7 +117,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add max volumetric flowrate as an input w/ config value as default
         self.add_input(
-            f"flowrate_max_fluid",
+            "flowrate_max_fluid",
             val=self.config.flowrate_max_fluid_cubic_m_per_s,
             units="m**3/s",
             desc="maximum volumetric flowrate of working fluid through the turbine",
@@ -158,14 +155,16 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         self.working_fluid = NGCT.pyfluids.Fluid(NGCT.pyfluids.FluidsList.Air)
         wx_data = [(T_ambient, P_ambient)]
         self.wx_checksums = [hash(wxd) for wxd in wx_data]
-        self.ambient_fluid_list = [self.working_fluid.with_state(
-            NGCT.pyfluids.Input.pressure(P),
-            NGCT.pyfluids.Input.temperature(T),
-        ) for T, P in wx_data]
+        self.ambient_fluid_list = [
+            self.working_fluid.with_state(
+                NGCT.pyfluids.Input.pressure(P),
+                NGCT.pyfluids.Input.temperature(T),
+            )
+            for T, P in wx_data
+        ]
         self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
 
     def compute(self, inputs, outputs, discrete_inputs, _discrete_outputs):
-
         # working variables for inputs
         system_capacity_mw = float(inputs["system_capacity"][0])
         flowrate_max_fluid_m3_per_s = float(inputs["flowrate_max_fluid"][0])
@@ -173,21 +172,26 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # extract from the solar resource data
         temperature_degC = discrete_inputs["solar_resource_data"]["temperature"]
-        pressure_Pa = discrete_inputs["solar_resource_data"]["pressure"]*100.0  # convert hPa to Pa
+        pressure_Pa = (
+            discrete_inputs["solar_resource_data"]["pressure"] * 100.0
+        )  # convert hPa to Pa
         wx_data = list(zip(temperature_degC.tolist(), pressure_Pa.tolist()))
         wx_checksums = [hash(wxd) for wxd in wx_data]
 
         # figure out if we can re-use the cache
-        if not all([a == b for a, b in zip(wx_checksums, self.wx_checksums)]):
+        if not all(a == b for a, b in zip(wx_checksums, self.wx_checksums)):
             self.wx_checksums = None  # break everything that will be recomputed
             self.ambient_fluid_list = None  # break everything that will be recomputed
             self.fundamental_cycle = None  # break everything that will be recomputed
 
             self.wx_checksums = wx_checksums
-            self.ambient_fluid_list = [self.working_fluid.with_state(
-                NGCT.pyfluids.Input.pressure(P),
-                NGCT.pyfluids.Input.temperature(T),
-            ) for T, P in wx_data]
+            self.ambient_fluid_list = [
+                self.working_fluid.with_state(
+                    NGCT.pyfluids.Input.pressure(P),
+                    NGCT.pyfluids.Input.temperature(T),
+                )
+                for T, P in wx_data
+            ]
             self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
             # print("DEBUG!!!!! RE-COMPUTING UNIT-MASS CYCLE B/C AMBIENT FLUID STATES CHANGED")
         else:
@@ -195,45 +199,71 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             # print("DEBUG!!!!! RE-USING ORIGINAL CYCLE (NO AMBIENT FLUID CHANGE)")
 
         # extract the net unit mass net work
-        unit_mass_net_work_vec = [(result.process_work_unit[(3,4)] + result.process_work_unit[(1,2)]) for result in self.fundamental_cycle]  # kJ/kg
-        unit_mass_net_heat_input_vec = [result.process_heat_unit[(2,3)] for result in self.fundamental_cycle]  # kJ/kg
-        eta_th_vec = [result.get_efficiency() for result in self.fundamental_cycle]  # -
+        unit_mass_net_work_vec = [
+            (result.process_work_unit[(3, 4)] + result.process_work_unit[(1, 2)])
+            for result in self.fundamental_cycle
+        ]  # kJ/kg
+        unit_mass_net_heat_input_vec = [
+            result.process_heat_unit[(2, 3)] for result in self.fundamental_cycle
+        ]  # kJ/kg
+        [result.get_efficiency() for result in self.fundamental_cycle]  # -
 
         # compute the rating/flowrate/input heat limited flowrate
-        mass_flowrates = [NGCT.NGCT.get_mass_flowrate(
-            fluid_ambient=fluid_ambient,
-            Q_fluid_max=flowrate_max_fluid_m3_per_s,
-            wdot_turbine=result.process_work_unit[(3,4)],
-            wdot_compressor=result.process_work_unit[(1,2)],
-            qdot_HX_combustor=result.process_heat_unit[(2,3)],
-            power_rated=system_capacity_mw*1000.0,  # expects kW, convert from MW
-            heatrate_fuel_capacity=fuel_source_in,
-        ) for fluid_ambient, result, fuel_source_in in zip(
-            self.ambient_fluid_list, self.fundamental_cycle, fuel_source_heating_in_kJ_per_s.squeeze().tolist(),
-        )]
-        # volume_flowrates = [m/fluid_ambient.density for m, fluid_ambient in zip(mass_flowrates, self.ambient_fluid_list)]  # m^3/s
+        mass_flowrates = [
+            NGCT.NGCT.get_mass_flowrate(
+                fluid_ambient=fluid_ambient,
+                Q_fluid_max=flowrate_max_fluid_m3_per_s,
+                wdot_turbine=result.process_work_unit[(3, 4)],
+                wdot_compressor=result.process_work_unit[(1, 2)],
+                qdot_HX_combustor=result.process_heat_unit[(2, 3)],
+                power_rated=system_capacity_mw * 1000.0,  # expects kW, convert from MW
+                heatrate_fuel_capacity=fuel_source_in,
+            )
+            for fluid_ambient, result, fuel_source_in in zip(
+                self.ambient_fluid_list,
+                self.fundamental_cycle,
+                fuel_source_heating_in_kJ_per_s.squeeze().tolist(),
+            )
+        ]
+        # volume_flowrates = [
+        #     m/fluid_ambient.density
+        #     for m, fluid_ambient in zip(mass_flowrates, self.ambient_fluid_list)
+        # ]  # m^3/s
 
-        net_work_vec = [m*w/1000.0 for m, w in zip(mass_flowrates, unit_mass_net_work_vec)]  # MW
-        net_heat_input_vec = [m*q for m, q in zip(mass_flowrates, unit_mass_net_heat_input_vec)]  # kJ/s
+        net_work_vec = [
+            m * w / 1000.0 for m, w in zip(mass_flowrates, unit_mass_net_work_vec)
+        ]  # MW
+        net_heat_input_vec = [
+            m * q for m, q in zip(mass_flowrates, unit_mass_net_heat_input_vec)
+        ]  # kJ/s
 
         # import matplotlib.pyplot as plt
         # fig, axes = plt.subplots(5, 1, sharex=True)
         # axes[0].plot(temperature_degC)
+        # axes[0].set_ylabel("Temperature (°C)")
         # axes[1].plot(pressure_Pa)
+        # axes[1].set_ylabel("Pressure (Pa)")
         # axes[2].plot(net_work_vec)
         # axes[2].axhline(system_capacity_mw, c='r', linestyle="--")
+        # axes[2].set_ylabel("Net Work (MW)")
         # axes[3].plot(volume_flowrates)
         # axes[3].axhline(flowrate_max_fluid_m3_per_s, c='r', linestyle="--")
+        # axes[3].set_ylabel("Max Flowrate (m³/s)")
         # axes[4].plot(mass_flowrates)
+        # axes[4].set_ylabel("Mass Flowrate (kg/s)")
+        # axes[4].set_xlabel("Time Step")
+        #
         # plt.show()
 
         generator_efficiency = self.config.generator_efficiency
-        electricity_out = generator_efficiency*np.array(net_work_vec)  # MW
+        electricity_out = generator_efficiency * np.array(net_work_vec)  # MW
 
         outputs["electricity_out"] = electricity_out
         outputs[f"{self.fuel_source}_consumed"] = net_heat_input_vec
 
-        outputs["rated_electricity_production"] = system_capacity_mw  # QUESTION!!!!! WHAT IS RATED???
+        outputs["rated_electricity_production"] = (
+            system_capacity_mw  # QUESTION!!!!! WHAT IS RATED???
+        )
 
         max_production = inputs["system_capacity"] * len(electricity_out) * self.dt / 3600.0
 
@@ -242,7 +272,9 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
-        outputs[f"unmet_{self.commodity}_demand"] = inputs["electricity_command_value"] - electricity_out
+        outputs[f"unmet_{self.commodity}_demand"] = (
+            inputs["electricity_command_value"] - electricity_out
+        )
 
 
 if __name__ == "__main__":
@@ -286,9 +318,9 @@ if __name__ == "__main__":
                 "performance_model": {
                     "model": "SimpleCycleTurbinePerformanceModel",
                 },
-                "cost_model": {
-                    "model": "NaturalGasCostModel",
-                },
+                # "cost_model": {
+                #     "model": "NaturalGasCostModel",
+                # },
                 "model_inputs": {
                     "performance_parameters": {
                         "system_capacity_mw": 239.0,
@@ -298,6 +330,12 @@ if __name__ == "__main__":
                         "isentropic_efficiency_compressor": 0.85,
                         "isentropic_efficiency_turbine": 0.90,
                         "generator_efficiency": 1.0,
+                    },
+                    "cost_parameters": {
+                        "capex_per_kw": 1000,  # $/kW - typical for NGCC; stolen from ex. 16
+                        "fixed_opex_per_kw_per_year": 10.0,  # $/kW/year; stolen from ex. 16
+                        "variable_opex_per_mwh": 2.5,  # $/MWh; stolen from ex. 16
+                        "cost_year": 2023,  # stolen from ex. 16
                     },
                 },
             },
@@ -315,7 +353,8 @@ if __name__ == "__main__":
                         "resource_model": "GOESAggregatedSolarAPI",
                         "resource_parameters": {
                             "resource_year": 2024,
-                            "resource_dir": "../../../examples/11_hybrid_energy_plant/tech_inputs/weather/solar",
+                            "resource_dir": "../../../examples/11_hybrid_energy_plant/"
+                            "tech_inputs/weather/solar",
                             "resource_filename": "30.6617_-101.7096_psmv3_60_2013.csv",
                         },
                     },
@@ -334,16 +373,18 @@ if __name__ == "__main__":
         ],
         "resource_to_tech_connections": [
             ["site.solar_resource", "ng", "solar_resource_data"],
-        ]
+        ],
     }
 
-    h2i = H2IntegrateModel({
-        "name": "brayton",
-        "system_summary": "a brayon-cycle NG plant sim using real time ambient condition data",
-        "driver_config": driver_config,
-        "technology_config": technology_config,
-        "plant_config": plant_config,
-    })
+    h2i = H2IntegrateModel(
+        {
+            "name": "brayton",
+            "system_summary": "a Brayton-cycle NG plant sim using real time ambient condition data",
+            "driver_config": driver_config,
+            "technology_config": technology_config,
+            "plant_config": plant_config,
+        }
+    )
 
     # Run the model
     h2i.run()
@@ -351,6 +392,7 @@ if __name__ == "__main__":
     # show N2 diagram
     if False:
         import openmdao.api as om
+
         om.n2(h2i.model)
 
     # Post-process the results
