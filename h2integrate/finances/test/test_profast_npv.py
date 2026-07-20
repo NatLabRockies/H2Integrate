@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
@@ -331,4 +332,195 @@ def test_profast_npv_nonstandard_price_units(
         assert (
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
             == 611288384.412
+        )
+
+
+@pytest.mark.regression
+def test_profast_npv_multi_year_sell_price(
+    profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    profast_inputs_no2["commodity_sell_price"] = [0.07] * 30
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    prob.run_model()
+
+    with subtests.test("Sell price"):
+        assert (
+            pytest.approx(
+                prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)"), rel=1e-6
+            )
+            == profast_inputs_no2["commodity_sell_price"]
+        )
+
+    with subtests.test("NPV"):
+        assert (
+            pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
+            == 611288384.412
+        )
+
+
+@pytest.mark.regression
+def test_profast_npv_multi_year_error(profast_inputs_no2, fake_filtered_tech_config, subtests):
+    prob = om.Problem()
+    profast_inputs_no2["commodity_sell_price"] = [0.07] * 10
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    mean_hourly_production = 500000.0
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+
+    expected_message = "`commodity_sell_price` has an invalid length of 10"
+    with subtests.test("Incorrect sell price length"):
+        with pytest.raises(ValueError) as excinfo:
+            prob.setup()
+        assert expected_message in str(excinfo.value)
+
+
+@pytest.mark.regression
+def test_profast_npv_missing_sell_price(profast_inputs_no2, fake_filtered_tech_config, subtests):
+    prob = om.Problem()
+    profast_inputs_no2["commodity_sell_price"] = None
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    mean_hourly_production = 500000.0
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+
+    expected_message = "commodity_sell_price is missing as an input"
+    with subtests.test("Missing sell price"):
+        with pytest.raises(ValueError) as excinfo:
+            prob.setup()
+        assert expected_message in str(excinfo.value)
+
+
+@pytest.mark.regression
+def test_profast_npv_with_inflation(
+    profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    price_escalation = 0.02  # 2% inflation in price
+    pf_params = profast_inputs_no2["params"]
+    pf_params["commodity"] = {"escalation": price_escalation}
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+
+    years = np.arange(0, 34, 1)
+    initial_price = 0.07
+    # inflated_price = initial_price * ((1.0 + price_escalation) ** (years - 1))
+
+    profast_inputs_no2["commodity_sell_price"] = [initial_price] * 30
+    profast_inputs_no2["params"] = pf_params
+    # profast_inputs_no2["params"]["inflation_rate"] = price_escalation  # 2% inflation
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    prob.run_model()
+
+    with subtests.test("Sell price (flat rate)"):
+        assert (
+            pytest.approx(
+                prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)"), rel=1e-6
+            )
+            == profast_inputs_no2["commodity_sell_price"]
+        )
+
+    # This NPV is about 2.2x times the NPV when inflation is zero
+    with subtests.test("NPV"):
+        assert (
+            pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
+            == 1427542124.9970489
+        )
+
+    nominal_price = np.concatenate(
+        [np.zeros(4), prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)")]
+    )
+
+    # Remove inflation from nominal price
+    real_price = nominal_price / ((1.0 + price_escalation) ** (years - 1))
+
+    prob.set_val("pf.sell_price_electricity_no2", real_price[4:], units="USD/(kW*h)")
+    prob.run_model()
+    # Removing inflation from nominal price gives NPV of 0.4 what is what before
+    with subtests.test("NPV (real sell price)"):
+        assert (
+            pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
+            == 611288384.4121004
         )
