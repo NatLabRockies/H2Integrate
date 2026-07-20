@@ -77,7 +77,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     degradation coupling, startup dynamics, or detailed balance-of-plant behavior.
     """
 
-    def setup(self):
+    def setup(self) -> None:
         self.config = HTSEElectrolyzerPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
@@ -298,7 +298,7 @@ class HTSECostModelConfig(CostModelBaseConfig):
     fixed_capex: float | None = field(default=None)
     cost_year: int = field(default=2025, converter=int)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         if self.fixed_opex is None:
             self.fixed_opex = 0.0 if self.fixed_capex is None else float(self.fixed_capex)
 
@@ -315,7 +315,7 @@ class HTSECostModel(ElectrolyzerCostBaseClass):
     The current model does not set a nonzero variable operating cost.
     """
 
-    def setup(self):
+    def setup(self) -> None:
         self.config = HTSECostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=False,

@@ -59,7 +59,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 
     _time_step_bounds = (3600, 3600)
 
-    def initialize(self):
+    def initialize(self) -> None:
         super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
@@ -223,7 +223,7 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
 
     _time_step_bounds = (3600, 3600)
 
-    def setup(self):
+    def setup(self) -> None:
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
