@@ -12,6 +12,25 @@ from h2integrate.core.model_baseclasses import (
 
 @define(kw_only=True)
 class SimpleThermalNuclearReactorConfig(BaseConfig):
+    """Configuration class for the thermal nuclear reactor performance model.
+
+    Args:
+        operating_mode (str): Dispatch mode of the reactor. Must be ``"heat"`` or
+            ``"electricity"``. In ``heat`` mode the reactor satisfies process heat demand
+            first and converts the remaining low-pressure heat to electricity; in
+            ``electricity`` mode it satisfies the electricity command first and delivers
+            the remaining available heat.
+        electricity_command_value (float): Requested electrical output in kW.
+        high_pressure_electrical_efficiency (float): Fraction of total thermal input
+            converted to electricity in the high-pressure stage (unitless).
+        low_pressure_electrical_efficiency (float): Efficiency applied to the remaining
+            low-pressure heat when generating electricity (unitless).
+        rated_capacity (float): Rated electrical capacity in kW, used to infer the reactor
+            thermal capacity.
+        minimum_heat_extract (float): Minimum process heat reserved for extraction in kW.
+            Defaults to ``0.0``.
+    """
+
     operating_mode: str = field(validator=contains(["heat", "electricity"]))
     electricity_command_value: float = field(validator=gt_zero)
     high_pressure_electrical_efficiency: float = field(validator=gt_zero)
@@ -21,7 +40,22 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
 
 
 class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
-    """Simple thermal nuclear reactor model with heat and electricity outputs."""
+    """Simple thermal nuclear reactor model with heat and electricity outputs.
+
+    This model represents a reactor with a high-pressure electric conversion stage, a
+    low-pressure electric conversion stage, and an extractable process heat stream taken
+    upstream of the low-pressure turbine stages. It trades off electricity production and
+    process heat delivery according to the selected operating mode, making it suitable for
+    coupled workflows such as nuclear plus HTSE.
+
+    The reactor infers its thermal capacity from the rated electrical capacity using a
+    combined electric efficiency and supports two operating modes:
+
+    - ``heat``: satisfy heat demand first, then convert the remaining low-pressure heat to
+      electricity.
+    - ``electricity``: satisfy the electricity command first, then send the remaining
+      available process heat to ``heat_out``.
+    """
 
     _time_step_bounds = (3600, 3600)
 
@@ -30,7 +64,6 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "kW"
         self.commodity_amount_units = "kW*h"
-
 
     def setup(self):
         self.config = SimpleThermalNuclearReactorConfig.from_dict(
@@ -82,16 +115,22 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.add_output("high_pressure_heat", val=0.0, shape=self.n_timesteps, units="kW")
         self.add_output("low_pressure_heat", val=0.0, shape=self.n_timesteps, units="kW")
         self.add_output("heat_out", val=0.0, shape=self.n_timesteps, units="kW")
- 
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         operating_mode = discrete_inputs["operating_mode"]
         hp_eff = float(inputs["high_pressure_electrical_efficiency"][0])
         lp_eff = float(inputs["low_pressure_electrical_efficiency"][0])
         electric_capacity_mw = float(inputs["rated_capacity"][0]) * 1e-3  # convert kW to MW
-        minimum_heat_extract_kw = np.maximum(inputs["minimum_heat_extract"], 0.0)  #maintain kW rating
-        requested_power_mw = np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3 #convert kW to MW, fix >0
-        external_heat_demand_kw = np.maximum(inputs["heat_command_value"], 0.0) #maintaining kW rating
-      
+        minimum_heat_extract_kw = np.maximum(
+            inputs["minimum_heat_extract"], 0.0
+        )  # maintain kW rating
+        requested_power_mw = (
+            np.maximum(inputs["electricity_command_value"], 0.0) * 1e-3
+        )  # convert kW to MW, fix >0
+        external_heat_demand_kw = np.maximum(
+            inputs["heat_command_value"], 0.0
+        )  # maintaining kW rating
+
         combined_efficiency = hp_eff + (1.0 - hp_eff) * lp_eff
         if combined_efficiency <= 0.0:
             raise ValueError("Combined nuclear electric efficiency must be greater than zero")
@@ -101,8 +140,10 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         thermal_capacity_mw = electric_capacity_mw / combined_efficiency
         high_pressure_electricity_mw = thermal_capacity_mw * hp_eff
         available_process_heat_mw = thermal_capacity_mw * (1.0 - hp_eff)
-        heat_demand_mw = np.maximum(external_heat_demand_kw, minimum_heat_extract_kw) * 1e-3 #convert to MW from kW
-        
+        heat_demand_mw = (
+            np.maximum(external_heat_demand_kw, minimum_heat_extract_kw) * 1e-3
+        )  # convert to MW from kW
+
         if operating_mode == "heat":
             heat_out_mw = np.minimum(heat_demand_mw, available_process_heat_mw)
             electricity_out_mw = (
@@ -150,6 +191,17 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 
 @define(kw_only=True)
 class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
+    """Configuration class for the thermal nuclear reactor cost model.
+
+    Args:
+        rated_capacity (float): Rated capacity used for cost calculations in kW.
+        nuclear_reactor_upfront_cost (float): Capital cost per kW in USD/kW.
+        nuclear_reactor_fixed_om_cost (float): Fixed annual O&M in USD/(kW*year).
+        nuclear_reactor_variable_om_cost (float): Variable O&M applied to the simulated
+            electricity production in USD/(kW*h).
+        cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
+    """
+
     rated_capacity: float = field(validator=gt_zero)
     nuclear_reactor_upfront_cost: float = field(validator=gt_zero)
     nuclear_reactor_fixed_om_cost: float = field(validator=gt_zero)
@@ -158,7 +210,16 @@ class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
 
 
 class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
-    """Simple cost model for the thermal nuclear reactor."""
+    """Simple cost model for the thermal nuclear reactor.
+
+    The model applies capacity-based capital and fixed O&M costs and computes variable O&M
+    from the delivered electricity:
+
+    - ``CapEx`` from ``rated_capacity * nuclear_reactor_upfront_cost``
+    - ``OpEx`` from ``rated_capacity * nuclear_reactor_fixed_om_cost``
+    - ``VarOpEx`` from ``nuclear_reactor_variable_om_cost`` applied to the simulated
+      electricity output, repeated across the plant life.
+    """
 
     _time_step_bounds = (3600, 3600)
 
