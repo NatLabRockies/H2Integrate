@@ -260,7 +260,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             return azimuth
 
         # User did not explicitly define azimuth angle
-        if latitude < 0.0:
+        if latitude <= 0.0:
             # North-facing for southern-hemisphere
             return 0.0
         return 180.0  # South-facing for northern hemisphere
