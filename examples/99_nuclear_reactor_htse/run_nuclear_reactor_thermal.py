@@ -26,7 +26,6 @@ h2i = H2IntegrateModel(config)
 # Run and process the model
 h2i.run()
 
-h2i.create_xdsm()
 h2i.post_process()
 # expected water kg/h 4,347.8261
 # generate plots of the output

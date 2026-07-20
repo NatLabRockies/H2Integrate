@@ -11,23 +11,16 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  # - [nuclear, htse, electricity, cable]
   - [nuclear, htse, [heat_out, heat_in]]
   - [nuclear, electrical_load_demand, electricity, cable]
   - [htse, nuclear, [heat_demand, heat_command_value]]
   - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]
-  # - [htse, h2_storage, hydrogen, pipe]
   - [water_feedstock, htse, water, pipe]
   - [htse_electricity_feedstock, htse, electricity, cable]
-  # - [htse, heat_load_demand, [heat_demand, heat_demand]]
-
-  # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
-  # - [heat_load_demand, nuclear, [heat_demand_out, external_heat_demand]]
   - [finance_subgroup_electricity, grid_sell, [LCOE, electricity_sell_price]]
   - [finance_subgroup_electricity, htse_electricity_feedstock, [LCOE, price]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_set_point]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
-  # - [electrical_load_demand, nuclear, [electricity_demand_out, electricity]]
 tech_to_dispatch_connections: []
 resource_to_tech_connections: []
 finance_parameters:
@@ -60,7 +53,7 @@ finance_parameters:
       finance_model: ProFastLCO
       model_inputs:
         params:
-          analysis_start_year: 2036
+          analysis_start_year: 2036  # delayed so nuclear plant and HTSE plant come online the same year
           installation_time: 12  # months - estimating 1 year for construction
           inflation_rate: 0.0  # 0 for nominal analysis
           discount_rate: 0.15  # nominal equity return based on 2024 ATB baseline workbook for nuclear
