@@ -39,6 +39,13 @@ heat_htse = np.sum(h2i.prob.get_val("htse.heat_demand", units="GW"))
 
 h2_htse = h2i.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
 
+# Print levelized cost outputs for each finance model/subgroup
+lcoe_electricity = h2i.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+lcoh_hydrogen = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
+
+print(f"LCOE (electricity finance subgroup): {lcoe_electricity:.2f} USD/MWh")
+print(f"LCOH (hydrogen finance subgroup): {lcoh_hydrogen:.4f} USD/kg")
+
 
 # Prepare data for bar charts
 labels = ["Nuclear Plant", "HTSE Plant", "Grid Sold"]

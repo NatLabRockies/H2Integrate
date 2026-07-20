@@ -80,11 +80,6 @@ finance_parameters:
       commodity_stream: nuclear
       finance_groups: [nuclear_finance]
       technologies: [nuclear]
-    nuclear:
-      commodity: electricity
-      commodity_stream: nuclear
-      finance_groups: [nuclear_finance]
-      technologies: [nuclear, grid_sell]
     hydrogen:
       commodity: hydrogen
       commodity_stream: htse
