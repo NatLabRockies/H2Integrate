@@ -35,7 +35,7 @@ def pytest_sessionstart(session):
     # does not mess with a user's environment
     # Set a dummy API key
     os.environ["NLR_API_KEY"] = "a" * 40
-    _ = get_nlr_developer_api_credential(which="key")
+    _ = get_nlr_developer_api_credential(which="key", set_vars=True)
 
     # if user provided a resource directory, save it to a temp variable
     # this allows tests to run as expected while not causing

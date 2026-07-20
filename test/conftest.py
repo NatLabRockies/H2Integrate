@@ -21,7 +21,7 @@ def pytest_sessionstart(session):
 
     # Set a dummy API key
     os.environ["NLR_API_KEY"] = "a" * 40
-    _ = get_nlr_developer_api_credential(which="key")
+    _ = get_nlr_developer_api_credential(which="key", set_vars=True)
 
     # Set RESOURCE_DIR to None so pulls example files from default DIR
     initial_resource_dir = os.getenv("RESOURCE_DIR")

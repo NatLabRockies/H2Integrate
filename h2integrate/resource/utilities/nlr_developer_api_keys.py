@@ -14,7 +14,9 @@ _ENV_MISSING_MSG = (
 )
 
 
-def get_nlr_developer_api_credential(which: str, env_path: str | Path | None = None) -> str:
+def get_nlr_developer_api_credential(
+    which: str, env_path: str | Path | None = None, set_vars: bool = True
+) -> str:
     """Get either the NLR API email or key with a fallback for the NREL credentials.
 
     Args:
@@ -35,7 +37,7 @@ def get_nlr_developer_api_credential(which: str, env_path: str | Path | None = N
     old_name = f"NREL_API_{which.upper()}"
     new_name = f"NLR_API_{which.upper()}"
     nlr_api_vars = get_environment_variables(
-        new_name, old_name, file_path=env_path, set_variables=True
+        new_name, old_name, file_path=env_path, set_variables=set_vars
     )
     if not bool(nlr_api_vars):
         # returned an empty dictionary
