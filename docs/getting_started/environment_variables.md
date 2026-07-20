@@ -1,6 +1,6 @@
 (environment_variables:environment-variables)=
 # Environment Variables
-H2Integrate can pull data from datasets accessible with API keys or user-specific tokens. Since API keys and tokens are unique to each user, these are accessed in H2Integrate as environment variables. These environment variables only need to be set to utilize their corresponding functionality. Some environment variables can also used to customize your workflow. The list of environment variables for different types of functionality are listed below:
+H2Integrate can pull data (such as wind and solar resource data, feedstock prices, etc) from public datasets accessible with API keys or user-specific tokens. Since API keys and tokens are unique to each user, these are accessed in H2Integrate as environment variables. These environment variables only need to be set to utilize their corresponding functionality. Some environment variables can also be used to customize your workflow. The list of environment variables that may be used by H2Integrate are listed below:
 
 - [NLR Developer Network](environment_variables:nlr_developer)
     - `NLR_API_KEY`
@@ -11,7 +11,7 @@ H2Integrate can pull data from datasets accessible with API keys or user-specifi
     - `RESOURCE_DIR`
 
 ```{note}
-Tips on debugging environment variable related errors or issues can be found [here](https://h2integrate.readthedocs.io/en/develop/misc_resources/debugging_environment_variables.html)
+Tips on debugging environment variable related errors or issues can be found [here](#env_var_debug:intro)
 ```
 
 To utilize the functionality of the models that require environment variables, instructions on how to set environment variables are shown [below](environment_variables:setting-environment-variables).
@@ -26,7 +26,7 @@ An optional environment variable is `RESOURCE_DIR`. If set, this will be used as
 
 The remaining sections outline different options for setting environment variables in H2Integrate:
 - [Save environment variables with conda (preferred)](#save-environment-variables-with-conda-preferred)
-- [Set environment variables with a .yaml file](#set-environment-variables-with-yaml-file)
+- [Set environment variables with a .yml file](#set-environment-variables-with-yaml-file)
 - [Set environment variables with a .env file](#set-environment-variables-with-env-file)
 
 (save-environment-variables-with-conda-preferred)=
@@ -76,7 +76,7 @@ unset RESOURCE_DIR
 ```
 
 (set-environment-variables-with-yaml-file)=
-## Set Environment Variables with .yaml file
+## Set Environment Variables with .yml file
 
 1. In `environment.yml`, add the following lines to the bottom of the file, and replace the
     environment variable values with your information. Be sure that
@@ -122,7 +122,7 @@ H2Integrate can pull weather resource datasets (e.g. data needed for wind or sol
 To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
     [https://developer.nlr.gov/signup/](https://developer.nlr.gov/signup/).
 
-You will need to set the API key and the email you used to get the API key for downloading resource data from the NLR developer network. The 40 character API key is referred to in following sections as the value for the `NLR_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NLR_API_EMAIL` environment variable.
+You will need to set the API key and the email you used to get the API key to download resource data from the NLR developer network. The 40 character API key is referred to in following sections as the value for the `NLR_API_KEY` environment variable. The email used to get the API key is referred to in the following sections as the value for the `NLR_API_EMAIL` environment variable.
 
 ```{note}
 The old environment variable names ``NREL_API_KEY`` and ``NREL_API_EMAIL`` are still supported
@@ -132,7 +132,7 @@ Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 
 (environment_variables:eia_ng)=
 # EIA Natural Gas Cost
-Further documentation on the EIA natural gas cost model can be [here](https://h2integrate.readthedocs.io/en/latest/technology_models/feedstocks.html). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
+Further documentation on the EIA natural gas cost model can be [here](#feedstocks:eia_ng_price). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
 
 ```bash
 EIA_API_KEY='api-key-value'

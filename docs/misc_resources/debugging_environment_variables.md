@@ -11,6 +11,7 @@ kernelspec:
   name: python3
 ---
 
+(env_var_debug:intro)=
 # Environment Variables: Non-standard Configuration and Debugging Issues
 
 If errors are encountered with models that use environment variables, such as a missing API key or other credential, this may be because the environment variables were set using a non-preferred method or your workflow may be different. The different approaches to setting environment variables is documented [here](https://h2integrate.readthedocs.io/en/latest/getting_started/environment_variables.html). Some of the non-preferred methods to set environment variables may require that environment variables be reset when your environment is activated. If you're setting environment variables with a .env file, then errors may occur because the file is not found.
