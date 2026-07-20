@@ -46,7 +46,6 @@ lcoh_hydrogen = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg
 print(f"LCOE (electricity finance subgroup): {lcoe_electricity:.2f} USD/MWh")
 print(f"LCOH (hydrogen finance subgroup): {lcoh_hydrogen:.4f} USD/kg")
 
-
 # Prepare data for bar charts
 labels = ["Nuclear Plant", "HTSE Plant", "Grid Sold"]
 electricity = [e_nuclear, e_htse, e_sold]
