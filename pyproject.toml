@@ -118,6 +118,7 @@ gis = [
   "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
+thermo = ["pyfluids"]
 extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 
