@@ -50,6 +50,7 @@ dependencies = [
   "pandas>=2.0.3",
   "pint",
   "ProFAST",
+  "pyfluids>=4.0.0",
   "Pyomo>=6.1.2",
   "rainflow",
   "requests",
