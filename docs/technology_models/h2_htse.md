@@ -94,7 +94,7 @@ These are read from `performance_parameters` and `shared_parameters`.
 | `heat_demand` | array[n_timesteps] | kW | Requested HTSE thermal demand based on hydrogen demand. |
 | `electricity_demand` | array[n_timesteps] | kW | Reported electrical demand signal. In the current implementation this is set to installed electrical size in kW. |
 | `electricity_consumed` | array[n_timesteps] | kW | Electricity required by the current energy balance calculation. |
-| `water_demand` | array[n_timesteps] | kg/h | Water consumption based on hydrogen production stoichiometry. |
+| `water_consumed` | array[n_timesteps] | galUS/h | Water consumption based on hydrogen production stoichiometry. |
 | `efficiency` | scalar | unitless | Mean ratio of utilized input energy to available input energy over the simulation. |
 | `replacement_schedule` | array[plant_life] | unitless | Replacement events derived from `uptime_hours_until_eol`. |
 | `time_until_replacement` | scalar | h | Hours until replacement. |
@@ -173,5 +173,3 @@ The cost model is size-based and currently depends only on installed HTSE size.
 | `OpEx` | scalar | USD/year | `fixed_opex * electrolyzer_size_kw` |
 | `VarOpEx` | array[plant_life] | USD/year | Inherited base output. The current model does not set a nonzero variable operating cost. |
 | `cost_year` | scalar | year | Cost dollar year. |
-
-

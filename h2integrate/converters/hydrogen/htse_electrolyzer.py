@@ -70,7 +70,11 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     the remaining required energy electrically when possible, and limits hydrogen
     production by the combined available energy and the turndown threshold. It also exposes
     operating signals useful for coupled systems, including ``heat_demand``,
-    ``electricity_demand``, ``electricity_consumed``, and water demand.
+    ``electricity_demand``, ``electricity_consumed``, and ``water_consumed``.
+
+    In the current implementation, ``electricity_demand`` reports installed electrical
+    demand equal to nameplate size, while ``electricity_consumed`` reports timestep
+    electricity required by the energy balance.
 
     The implementation is intentionally simple and should be interpreted as a reduced-order
     plant representation, not a detailed SOEC stack model with thermal transients,
@@ -143,7 +147,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
             / self.config.nominal_electricity_required,
             shape=self.n_timesteps,
             units="kW",
-            desc="Thermal demanded by the HTSE system",
+            desc="Thermal demand by the HTSE system",
         )
         self.add_output(
             "electricity_demand",
