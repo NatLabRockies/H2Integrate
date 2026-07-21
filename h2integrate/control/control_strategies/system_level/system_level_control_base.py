@@ -770,7 +770,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Intersect with controller-managed techs
         return list(ancestors_with_commodity & input_techs)
 
-    def find_converter_techs(self, include_feedstock_sources=True):
+    def _find_converter_techs(self, include_feedstock_sources=True):
         """Identify technologies that transform one commodity into another.
 
         A "converter" is a tech whose output commodities differ from the commodities

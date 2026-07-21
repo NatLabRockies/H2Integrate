@@ -54,7 +54,7 @@ class DemandFollowingControl(SystemLevelControlBase):
     def post_setup_multi_commodity(self):
         if not self.multi_commodity_system:
             return
-        converters, converter_upstreams = self.find_converter_techs(include_feedstock_sources=True)
+        converters, converter_upstreams = self._find_converter_techs(include_feedstock_sources=True)
         # Group together technologies that are connected to a converter
         # I.e., group together an electrolyzer an hydrogen storage,
         # name this group as the shared commodity with a unique number
@@ -71,7 +71,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         # missing_input_techs = set(self.input_techs) - set(reversed_grouped_techs.keys())
 
         # NOTE: maybe only run below if theres a missing_input_tech
-        non_converter_input_techs_in_group, demand_group = self.get_demand_components_group(
+        non_converter_input_techs_in_group, demand_group = self._find_demand_tech_group(
             converters, converter_upstreams
         )
         grouped_techs.update(demand_group)
@@ -100,7 +100,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         # Also add these technologies to the reversed_group_techs
 
         non_input_techs_conversion_factor_keys, techs_to_groups = (
-            self.get_non_input_techs_for_groups(grouped_techs)
+            self._find_group_for_non_input_techs(grouped_techs)
         )
         # Add conversion factors of 1 for the technologies that are non_input_techs
         conversion_factor_keys += non_input_techs_conversion_factor_keys
@@ -296,7 +296,7 @@ class DemandFollowingControl(SystemLevelControlBase):
             return result
         return tech_groups_demand
 
-    def check_techs_connected_to_demand(self, converter_tech_names, missing_input_techs):
+    def _check_demand_tech_group_connections(self, converter_tech_names, missing_input_techs):
         successful = True
         commodities_for_missing_techs = {
             tech: self._get_commodity_for_tech(tech) for tech in list(missing_input_techs)
@@ -352,13 +352,15 @@ class DemandFollowingControl(SystemLevelControlBase):
                     successful = False
         return successful
 
-    def get_demand_components_group(self, converters, converter_upstreams):
+    def _find_demand_tech_group(self, converters, converter_upstreams):
         found_input_techs = self.dict_values_to_flat_list(converter_upstreams)
         missing_input_techs = set(self.input_techs) - set(found_input_techs)
 
         converter_tech_names = {v[1] for v in list(converters)}
 
-        successful = self.check_techs_connected_to_demand(converter_tech_names, missing_input_techs)
+        successful = self._check_demand_tech_group_connections(
+            converter_tech_names, missing_input_techs
+        )
         if not successful:
             msg = "A bug may exist. Please refer to earlier warnings"
             warnings.warn(msg, UserWarning, stacklevel=3)
@@ -383,7 +385,7 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         return non_converter_input_techs_in_group, demand_group
 
-    def get_non_input_techs_for_groups(self, grouped_techs):
+    def _find_group_for_non_input_techs(self, grouped_techs):
         # Get the nodes of the technology graph that aren't a controllable technology
         def get_group_for_tech(tech_name):
             group = [grp for grp, techs in grouped_techs.items() if tech_name in techs]
