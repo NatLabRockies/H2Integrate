@@ -70,7 +70,7 @@
 - Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
 - Add support for slice notation in technology connections to allow users to connect between variables of different shapes. [PR 774](https://github.com/NatLabRockies/H2Integrate/pull/774)
 - Updated `commodity_sell_price` input to `ProFastNPV` to be per year of the plant life. Also updated `BasicProFASTParameterConfig.as_dict()` so explicitly input escalation values are not overwritten to the general inflation rate [PR 799](https://github.com/NatLabRockies/H2Integrate/pull/799)
-
+- Added `calc_azimuth_angle()` to `PYSAMSolarPlantPerformanceModel` to provide default azimuth angle based on whether the site is in the northern or southern hemisphere [PR 806](https://github.com/NatLabRockies/H2Integrate/pull/806)
 
 ## 0.8 [April 15, 2026]
 
