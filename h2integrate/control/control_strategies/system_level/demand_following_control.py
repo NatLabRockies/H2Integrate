@@ -56,10 +56,8 @@ class DemandFollowingControl(SystemLevelControlBase):
     def post_setup_multi_commodity(self):
         if not self.multi_commodity_system:
             return
-        converter_order, converter_upstreams = self.find_converter_techs(
-            include_feedstock_sources=True
-        )
-        converter_tech_names = {v[1] for k, v in converter_order.items()}
+        converters, converter_upstreams = self.find_converter_techs(include_feedstock_sources=True)
+        converter_tech_names = {v[1] for v in list(converters)}
         # 1. Get the nodes of the technology graph that aren't a controllable technology
         non_input_techs = (
             set(self.technology_graph.nodes) - set(self.input_techs) - {self.demand_tech}
@@ -88,7 +86,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         if missing_input_techs:
             # TODO: check that this works for the normal case
             conversion_factor_add_on, rev_group_add_on = self.get_demand_converter_techs(
-                converter_order, reversed_grouped_techs
+                converters, reversed_grouped_techs
             )
             group_tech_add_on = {v: k for k, v in rev_group_add_on.items()}
             for g in list(group_tech_add_on.keys()):
@@ -145,7 +143,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         self.simple_graph = simple_graph
         self.non_converter_conversion_factors = non_converter_convsion_factors
         self.grouped_techs = grouped_techs
-        self.converter_order = converter_order
+        self.converters = converters
         self.converter_upstreams = converter_upstreams
         self.converter_tech_names = converter_tech_names
 
@@ -218,9 +216,9 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         return outputs
 
-    def get_conversion_factors(self, converter_order, converter_upstreams, inputs):
+    def get_conversion_factors(self, converters, converter_upstreams, inputs):
         conversion_factors = {}
-        for converter_info in converter_order.values():
+        for converter_info in list(converters):
             input_cmod, tech, output_cmod = converter_info
             tech_ancestors = converter_upstreams[(input_cmod, tech)]
             conversion_ratio = self.get_converter_conversion_ratio(
@@ -308,14 +306,14 @@ class DemandFollowingControl(SystemLevelControlBase):
             return result
         return tech_groups_demand
 
-    def get_demand_converter_techs(self, converter_order, reversed_grouped_techs):
+    def get_demand_converter_techs(self, converters, reversed_grouped_techs):
         missing_input_techs = set(self.input_techs) - set(reversed_grouped_techs.keys())
 
         # downstream_techs = set()
         # missing_input_tech_commodities = set()
         commodities_out = [self._get_commodity_for_tech(tech) for tech in list(missing_input_techs)]
         commodities_out = set(functools.reduce(operator.iadd, commodities_out, []))
-        converter_tech_names = {v[1] for k, v in converter_order.items()}
+        converter_tech_names = {v[1] for v in list(converters)}
         commodity_in_cmod_out = self.commodity in list(commodities_out)
         if not commodity_in_cmod_out:
             warnings.warn(
@@ -389,7 +387,7 @@ class DemandFollowingControl(SystemLevelControlBase):
             return
 
         converter_conversion_factors = self.get_conversion_factors(
-            self.converter_order, self.converter_upstreams, inputs
+            self.converters, self.converter_upstreams, inputs
         )
 
         conversion_factors = (

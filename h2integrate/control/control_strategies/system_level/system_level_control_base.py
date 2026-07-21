@@ -783,9 +783,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns:
             2-element tuple containing:
 
-            - **converter_order** (dict[int, tuple[str, str, str]]): Dictionary
-                defining the directional order of converters. Keys are an integer indicating
-                order (lower numbers indicate a more upstream converter). The values are
+            - **converter_order** (tuple[str, str, str]): Set of tuples formatted as
                 ``(input_commodity, tech_name, output_commodity)`` tuples.
             - **upstreams** (dict[tuple[str,str], set[str]]): Keys are set of
                 ``(input_commodity, tech_name)`` and the values are a set of
@@ -906,7 +904,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             )
             previous_converters.add(tech)
         # return converter_techs, converter_order, converter_ancestors, upstreams
-        return converter_order, upstreams
+        # return converter_order, upstreams
+        return converter_techs, upstreams
 
     def get_converter_capacity_conversion_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
