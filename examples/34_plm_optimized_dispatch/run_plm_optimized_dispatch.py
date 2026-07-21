@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from h2integrate.core.utilities import build_time_series_from_plant_config
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
+
 EXAMPLE_DIR = Path(__file__).parent
 
 
@@ -68,8 +69,9 @@ eventlogmask = [False] * n_timesteps
 for i in range(n_timesteps):
     if i == 0:
         eventlogmask[i] = False
-    elif u_dicharge_gt[i] == 1 and u_dicharge_gt[i-1] ==0 :
+    elif u_dicharge_gt[i] == 1 and u_dicharge_gt[i - 1] == 0:
         eventlogmask[i] = True
+
 
 def shade_peaks(ax):
     for day in days:
@@ -98,6 +100,7 @@ def shade_peaks(ax):
             linewidth=0,
             zorder=0,
         )
+
 
 # Plot LMP
 ax = axes[0]
@@ -149,7 +152,7 @@ ax.plot(
     time_index[:plot_time_window],
     -p_charge[:plot_time_window],
     color="orange",
-    linestyle = "--",
+    linestyle="--",
     label="Charging",
     linewidth=1.0,
 )
@@ -183,7 +186,7 @@ ax.plot(
 )
 ax.set_ylabel("Demand (kW)", fontsize=8)
 ax.set_xlabel("Time")
-ax.set_ylim([2500,6250])
+ax.set_ylim([2500, 6250])
 ax.legend(fontsize=7, loc="lower left", frameon=True)
 
 plt.tight_layout()

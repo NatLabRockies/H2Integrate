@@ -1,6 +1,6 @@
+import math
 from types import SimpleNamespace
 
-import math
 import numpy as np
 import pandas as pd
 import pytest
@@ -30,14 +30,14 @@ def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
     if config.event_duration is not None:
         controller.steps_per_event = max(
             1,
-                math.ceil(
-                    pd.Timedelta(
-                        value=config.event_duration["val"],
-                        unit=config.event_duration["units"],
-                    ).total_seconds()
-                    / dt_seconds
-                )
-            )
+            math.ceil(
+                pd.Timedelta(
+                    value=config.event_duration["val"],
+                    unit=config.event_duration["units"],
+                ).total_seconds()
+                / dt_seconds
+            ),
+        )
     else:
         controller.steps_per_event = 1
     return controller
@@ -63,7 +63,6 @@ def base_config():
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
-
     )
 
 
@@ -370,9 +369,9 @@ def test_power_zero_when_binary_zero(subtests, base_config):
                 assert pd_gt < 1e-6, f"p_discharge_gt[{t}]={pd_gt} but discharge_gt[{t}]={u_gt}"
         with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
             if u_coop < 0.5:
-                assert pd_coop < 1e-6, (
-                    f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
-                )
+                assert (
+                    pd_coop < 1e-6
+                ), f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
@@ -482,6 +481,7 @@ def om_tech_config():
             },
         }
     }
+
 
 @pytest.mark.regression
 def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_config, om_tech_config):
