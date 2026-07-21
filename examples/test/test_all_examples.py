@@ -3054,7 +3054,7 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("99_nuclear_reactor_htse", None)]
+    "example_folder,resource_example_folder", [("36_nuclear_reactor_htse", None)]
 )
 def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
