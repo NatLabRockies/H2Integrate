@@ -57,11 +57,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         if not self.multi_commodity_system:
             return
         converters, converter_upstreams = self.find_converter_techs(include_feedstock_sources=True)
-        converter_tech_names = {v[1] for v in list(converters)}
-        # 1. Get the nodes of the technology graph that aren't a controllable technology
-        non_input_techs = (
-            set(self.technology_graph.nodes) - set(self.input_techs) - {self.demand_tech}
-        )
         # Group together technologies that are connected to a converter
         # I.e., group together an electrolyzer an hydrogen storage,
         # name this group as the shared commodity with a unique number
@@ -73,14 +68,16 @@ class DemandFollowingControl(SystemLevelControlBase):
             for vv in list(v):
                 reversed_grouped_techs[vv] = k
 
-        non_converter_convsion_factors = {}
         # 3. Add in a conversion factor of 1 for all non-converter technologies
-        for tc in self.techs_to_commodities:
-            t, c = tc
-            if t not in converter_tech_names:
-                non_converter_convsion_factors[(c, t, c)] = (
-                    1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
-                )
+        converter_tech_names = {v[1] for v in list(converters)}
+        conversion_factor = (
+            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
+        )
+        non_converter_convsion_factors = {
+            (tc[1], tc[0], tc[1]): conversion_factor
+            for tc in self.techs_to_commodities
+            if tc[0] not in converter_tech_names
+        }
 
         missing_input_techs = set(self.input_techs) - set(reversed_grouped_techs.keys())
         if missing_input_techs:
@@ -103,6 +100,11 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         # 4. Add conversion factors of 1 for the technologies that are non_input_techs
         # Also add these technologies to the reversed_group_techs
+
+        # Get the nodes of the technology graph that aren't a controllable technology
+        non_input_techs = (
+            set(self.technology_graph.nodes) - set(self.input_techs) - {self.demand_tech}
+        )
         for non_t in list(non_input_techs):
             up_techs = set(self.technology_graph.predecessors(non_t)) - non_input_techs
             down_techs = set(self.technology_graph.successors(non_t)) - non_input_techs
@@ -112,6 +114,7 @@ class DemandFollowingControl(SystemLevelControlBase):
                 for t in list(up_techs):
                     commod = self.technology_graph.edges[t, non_t].get("commodity", None)
                     if commod is not None:
+                        # Add these technologies to the reversed_group_techs
                         reversed_grouped_techs[non_t] = reversed_grouped_techs[t]
                         break
 
@@ -119,8 +122,10 @@ class DemandFollowingControl(SystemLevelControlBase):
                 for t in list(down_techs):
                     commod = self.technology_graph.edges[non_t, t].get("commodity", None)
                     if commod is not None:
+                        # Add these technologies to the reversed_group_techs
                         reversed_grouped_techs[non_t] = reversed_grouped_techs[t]
                         break
+            # Add conversion factors of 1 for the technologies that are non_input_techs
             non_converter_convsion_factors[(commod, non_t, commod)] = (
                 1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
             )

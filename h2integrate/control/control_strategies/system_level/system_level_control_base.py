@@ -783,7 +783,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns:
             2-element tuple containing:
 
-            - **converter_order** (tuple[str, str, str]): Set of tuples formatted as
+            - **converters** (tuple[str, str, str]): Set of tuples formatted as
                 ``(input_commodity, tech_name, output_commodity)`` tuples.
             - **upstreams** (dict[tuple[str,str], set[str]]): Keys are set of
                 ``(input_commodity, tech_name)`` and the values are a set of
