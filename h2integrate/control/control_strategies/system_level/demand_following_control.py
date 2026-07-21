@@ -102,6 +102,8 @@ class DemandFollowingControl(SystemLevelControlBase):
         non_input_techs = (
             set(self.technology_graph.nodes) - set(self.input_techs) - {self.demand_tech}
         )
+        # Also add these technologies to the reversed_group_techs
+
         for non_t in list(non_input_techs):
             up_techs = set(self.technology_graph.predecessors(non_t)) - non_input_techs
             down_techs = set(self.technology_graph.successors(non_t)) - non_input_techs
@@ -126,7 +128,6 @@ class DemandFollowingControl(SystemLevelControlBase):
             conversion_factor_keys.append((commod, non_t, commod))
 
         # 5. Make the edges of the grouped technologies
-        simple_edges_real = []
         simple_graph = nx.DiGraph()
         for e in list(self.technology_graph.edges(data="commodity")):
             s0, d0, c = e
@@ -135,11 +136,7 @@ class DemandFollowingControl(SystemLevelControlBase):
             d = reversed_grouped_techs.get(d0, d0)
 
             if s != d:
-                simple_edges_real.append((s, d, c))
-        simple_graph = nx.DiGraph()
-        for connection in simple_edges_real:
-            # NOTE: this could be done in the above loop
-            simple_graph.add_edge(connection[0], connection[1], commodity=connection[2])
+                simple_graph.add_edge(s, d, commodity=c)
 
         self.simple_graph = simple_graph
         # self.non_converter_conversion_factors = non_converter_convsion_factors
