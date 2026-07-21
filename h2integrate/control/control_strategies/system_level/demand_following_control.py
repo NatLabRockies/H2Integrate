@@ -1,6 +1,4 @@
-import operator
 import warnings
-import functools
 import itertools
 
 import numpy as np
@@ -140,12 +138,14 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         self.simple_graph = simple_graph
         # self.non_converter_conversion_factors = non_converter_convsion_factors
-        conversion_factor = (
-            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
-        )
-        self.non_converter_conversion_factors = dict(
-            zip(conversion_factor_keys, [conversion_factor] * len(conversion_factor_keys))
-        )
+        # conversion_factor = (
+        #     1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
+        # )
+        # self.non_converter_conversion_factors = dict(
+        #     zip(conversion_factor_keys, [conversion_factor] * len(conversion_factor_keys))
+        # )
+
+        self.non_converter_conversion_factor_keys = conversion_factor_keys
 
         self.grouped_techs = grouped_techs
         self.converters = converters
@@ -407,79 +407,6 @@ class DemandFollowingControl(SystemLevelControlBase):
 
         return non_converter_input_techs_in_group, demand_group
 
-    def get_demand_converter_techs(self, converters, reversed_grouped_techs):
-        missing_input_techs = set(self.input_techs) - set(reversed_grouped_techs.keys())
-
-        # downstream_techs = set()
-        # missing_input_tech_commodities = set()
-        commodities_out = [self._get_commodity_for_tech(tech) for tech in list(missing_input_techs)]
-        commodities_out = set(functools.reduce(operator.iadd, commodities_out, []))
-        converter_tech_names = {v[1] for v in list(converters)}
-        commodity_in_cmod_out = self.commodity in list(commodities_out)
-        if not commodity_in_cmod_out:
-            warnings.warn(
-                "none of the demand commodities are made by missing techs",
-                UserWarning,
-                stacklevel=3,
-            )
-
-        missing_tech_downstreams = [
-            list(nx.descendants(self.technology_graph, tech)) for tech in missing_input_techs
-        ]
-        missing_tech_downstreams_shared = {self.demand_tech}
-        other_converters = converter_tech_names - missing_input_techs
-
-        for downstream in missing_tech_downstreams:
-            missing_tech_downstreams_shared = missing_tech_downstreams_shared & set(downstream)
-            # TODO: check that no other converters are inbetween
-            if set(downstream) & other_converters:
-                warnings.warn(
-                    "theres an extra converter between the missing techs and the demand",
-                    UserWarning,
-                    stacklevel=3,
-                )
-        if not missing_tech_downstreams_shared or len(missing_tech_downstreams_shared) > 1:
-            warnings.warn("something unexpected happened", UserWarning, stacklevel=3)
-
-        missing_converter_tech = missing_input_techs & converter_tech_names
-        if len(missing_converter_tech) > 1:
-            warnings.warn(
-                "unsure how code will work with multiple converters connected to demand",
-                UserWarning,
-                stacklevel=3,
-            )
-        if not missing_converter_tech:
-            warnings.warn("should have a converter before demand ...", UserWarning, stacklevel=3)
-
-        for m0 in list(missing_converter_tech):
-            for m1 in list(missing_input_techs - missing_converter_tech):
-                m0_upstream = nx.has_path(self.technology_graph, m0, m1)
-                m1_upstream = nx.has_path(self.technology_graph, m1, m0)
-                if not m0_upstream or m1_upstream:
-                    warnings.warn("these technologies arent connected", UserWarning, stacklevel=3)
-
-        # all checks have passed, these techs should be in the same group
-        #
-        # converter_upstreams[(demand_commodity, self.demand_tech)] = missing_input_techs
-        input_comps = {self.demand_tech} - missing_input_techs
-
-        non_input_components = (
-            set(functools.reduce(operator.iadd, missing_tech_downstreams, [])) - input_comps
-        )
-        unique_number = (
-            max([int(k.split("-", -1)[-1]) for k in list(reversed_grouped_techs.values())])
-        ) + 1
-        group_name = f"{self.commodity}-{int(unique_number)}"
-        rev_group_add_on = {k: group_name for k in list(non_input_components | missing_input_techs)}
-        non_converter_conversion = (
-            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
-        )
-        conversion_factor_add_on = {
-            (self.commodity, tech, self.commodity): non_converter_conversion
-            for tech in list(missing_input_techs - missing_converter_tech)
-        }
-        return conversion_factor_add_on, rev_group_add_on
-
     def compute(self, inputs, outputs):
         if not self.multi_commodity_system:
             self.get_setpoints_for_commodity_subset(
@@ -491,9 +418,17 @@ class DemandFollowingControl(SystemLevelControlBase):
             self.converters, self.converter_upstreams, inputs
         )
 
-        conversion_factors = (
-            self.non_converter_conversion_factors.copy() | converter_conversion_factors
+        conversion_factor_of_1 = (
+            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
         )
+
+        non_converter_conversion_factors = dict(
+            zip(
+                self.non_converter_conversion_factor_keys,
+                [conversion_factor_of_1] * len(self.non_converter_conversion_factor_keys),
+            )
+        )
+        conversion_factors = non_converter_conversion_factors | converter_conversion_factors
 
         # 6. Get the compounding conversion factors
         in_degs = dict(self.simple_graph.in_degree)
