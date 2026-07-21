@@ -551,17 +551,9 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
 
 
 @pytest.mark.regression
-def test_plm_history(
-    subtests, om_plant_config, om_tech_config
-):
-    """The controller's p_discharge_coop_history must match the expected dispatch pattern.
-
-    With demand=1, lmp=1, peak_window=02:00-04:00, init_soc=1.0, capacity=10 kWh,
-    P_max=1 kW, dt=1h, min_soc=0.0:
-      - Off-peak (t != 2,3): p_discharge_coop=1.0 while SOC is available,
-        because p_tocoop is costly (1.05*1 + 20 = 21.05 per kW) and coop is free.
-      - Peak (t=2,3): p_discharge_coop is forced to 0; p_discharge_gt handles demand.
-      - Once SOC hits min_soc, coop can no longer discharge and p_tocoop takes over.
+def test_plm_history(subtests, om_plant_config, om_tech_config):
+    """
+    The controller's p_discharge_coop_history must match the expected dispatch pattern.
     """
     n = om_plant_config["plant"]["simulation"]["n_timesteps"]
 
@@ -597,9 +589,30 @@ def test_plm_history(
 
     expected_history = np.array(
         [
-            1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         ]
     )
 

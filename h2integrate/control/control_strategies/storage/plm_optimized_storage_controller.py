@@ -321,13 +321,19 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                     self.discharge_gt_bin_history[abs_t] = d1_val
                     self.discharge_coop_bin_history[abs_t] = d2_val
                     self.charge_bin_history[abs_t] = c_val
-                    self.p_discharge_gt_history[abs_t] = pyomo.value(self.dr_model.p_discharge_gt[t])
-                    self.p_discharge_coop_history[abs_t] = pyomo.value(self.dr_model.p_discharge_coop[t])
+                    self.p_discharge_gt_history[abs_t] = pyomo.value(
+                        self.dr_model.p_discharge_gt[t]
+                    )
+                    self.p_discharge_coop_history[abs_t] = pyomo.value(
+                        self.dr_model.p_discharge_coop[t]
+                    )
                     self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
                     self.p_tocoop_history[abs_t] = pyomo.value(self.dr_model.p_tocoop[t])
 
                     discharging = d1_val > 0.5
-                    prev_discharging = t > 0 and pyomo.value(self.dr_model.discharge_gt[t - 1]) > 0.5
+                    prev_discharging = (
+                        t > 0 and pyomo.value(self.dr_model.discharge_gt[t - 1]) > 0.5
+                    )
                     # Detect the rising edge of a discharge event (0 -> 1) and count
                     # it if it occurs in this window.
                     if discharging and not prev_discharging:
@@ -649,7 +655,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         # minimzing the cost of energy for the CoOp.
         m.objective = pyomo.Objective(
             expr=-incentive * dt_hours * sum(m.p_discharge_gt[t] for t in m.T)
-            + dt_hours *  sum(self._GnT_pricingfunction(signal_w[t]) * m.p_tocoop[t] for t in m.T),
+            + dt_hours * sum(self._GnT_pricingfunction(signal_w[t]) * m.p_tocoop[t] for t in m.T),
             sense=pyomo.minimize,
         )
 
@@ -739,7 +745,10 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             m.T,
             rule=lambda mdl, t: (
                 signal_d[t]
-                == mdl.p_tocoop[t] + mdl.p_discharge_gt[t] + mdl.p_discharge_coop[t] - mdl.p_charge[t]
+                == mdl.p_tocoop[t]
+                + mdl.p_discharge_gt[t]
+                + mdl.p_discharge_coop[t]
+                - mdl.p_charge[t]
             ),
         )
 
