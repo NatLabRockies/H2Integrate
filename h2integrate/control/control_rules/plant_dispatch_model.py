@@ -101,12 +101,13 @@ class PyomoDispatchPlantModel:
     def initialize_parameters(self, inputs: dict, dispatch_params: dict):
         """Initialize parameters for optimization model
 
-        inputs (dict):
-            Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
-                f"{commodity}_in"       : Available generated commodity profile.
-                f"{commodity}_set_point"   : Demanded commodity output profile.
-        dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
+        Args:
+            inputs (dict): Dictionary of numpy arrays (length = self.n_timesteps) containing at
+                least:
 
+                - ``f"{commodity}_in"``: Available generated commodity profile.
+                - ``f"{commodity}_set_point"``: Demanded commodity output profile.
+            dispatch_params (dict): Dictionary of the dispatch input parameters from config.
         """
         self.time_weighting_factor = self.time_weighting_factor_input  # Discount factor
         for tech in self.source_techs:

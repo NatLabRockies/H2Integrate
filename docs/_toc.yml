@@ -106,10 +106,10 @@ parts:
       - file: developer_guide/coding_guidelines
       - file: developer_guide/why_make_h2integrate
       - file: developer_guide/adding_a_new_technology
-      - file: developer_guide/features_not_currently_implemented
       - file: developer_guide/class_structure
-      - file: developer_guide/describing_whats_in_classes
+      - file: developer_guide/technology_model_types
       - file: developer_guide/testing
+      - file: developer_guide/features_not_currently_implemented
   - caption: Miscellaneous Resources
     chapters:
       - file: misc_resources/FAQ

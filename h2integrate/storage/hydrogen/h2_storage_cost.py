@@ -166,10 +166,10 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -300,10 +300,10 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -439,10 +439,10 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
         - Max pressure: 100 bar.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (

@@ -46,7 +46,7 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
         tech_name (str):
             Technology identifier used to namespace Pyomo blocks / variables within
             the broader OpenMDAO model (e.g., "battery", "h2_storage").
-        system_commodity_interface_limit (float | int | str |list[float]): Max interface
+        system_commodity_interface_limit (float | int | str | list[float]): Max interface
             (e.g. grid interface) flow used to bound dispatch (scalar or per-timestep list of
             length n_control_window_hours).
         round_digits (int):

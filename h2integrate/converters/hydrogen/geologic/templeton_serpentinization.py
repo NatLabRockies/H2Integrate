@@ -57,7 +57,9 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         config (StimulatedGeoH2PerformanceConfig): Configuration object containing model
             parameters for the stimulated system.
 
-    Inputs (in addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`):
+    Inputs:
+        In addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`:
+
         olivine_phase_vol (float): Volume percent of olivine in the formation [%].
         olivine_fe_ii_conc (float): Mass percent of iron (II) in the olivine [%].
         depth_to_formation (float): Depth below the surface of the caprock that does not
@@ -68,7 +70,9 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         bulk_density (float): Bulk density of the rock [kg/m³].
         water_temp (float): Temperature of the injected water [°C].
 
-    Outputs (in addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`):
+    Outputs:
+        In addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`:
+
         hydrogen_out_stim (ndarray): Hourly hydrogen production profile from stimulation
             over one year (8760 hours) [kg/h].
     """

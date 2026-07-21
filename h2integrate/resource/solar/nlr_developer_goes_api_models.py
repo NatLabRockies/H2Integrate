@@ -159,7 +159,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
+    `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
     Args:
