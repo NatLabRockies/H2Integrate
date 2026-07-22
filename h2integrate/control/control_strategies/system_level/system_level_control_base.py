@@ -1066,8 +1066,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         def get_group_for_tech(tech_name):
             group = [grp for grp, techs in grouped_techs.items() if tech_name in techs]
             if len(group) == 0:
-                msg = f"Cannot find simplified group for technology {tech_name}"
-                raise ValueError(msg)
+                return None
+                # msg = f"Cannot find simplified group for technology {tech_name}"
+                # raise ValueError(msg)
             return group[0]
 
         techs_to_groups = {}
@@ -1082,8 +1083,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
             up_techs = set(self.technology_graph.predecessors(non_t)) - non_input_techs
             down_techs = set(self.technology_graph.successors(non_t)) - non_input_techs
 
+            tech_group = get_group_for_tech(non_t)
             commod = None
-            if up_techs:
+            if up_techs and (tech_group is None):
                 for t in list(up_techs):
                     commod = self.technology_graph.edges[t, non_t].get("commodity", None)
                     if commod is not None:
@@ -1091,15 +1093,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
                         techs_to_groups[non_t] = get_group_for_tech(t)
                         break
 
-            if down_techs and commod is None:
+            if down_techs and (commod is None) and (tech_group is None):
                 for t in list(down_techs):
                     commod = self.technology_graph.edges[non_t, t].get("commodity", None)
                     if commod is not None:
                         # Add these technologies to the reversed_group_techs
                         techs_to_groups[non_t] = get_group_for_tech(t)
+                        # techs_to_groups[t] = get_group_for_tech(t)
                         break
             # Add conversion factors of 1 for the technologies that are non_input_techs
-            conversion_factor_keys.append((commod, non_t, commod))
+            if tech_group is None:
+                conversion_factor_keys.append((commod, non_t, commod))
         return conversion_factor_keys, techs_to_groups
 
     def _make_conversion_factor_recipes(self):
