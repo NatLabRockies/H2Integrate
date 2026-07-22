@@ -1,6 +1,6 @@
+import pytest
 import openmdao.api as om
 from pytest import approx, fixture
-import pytest
 
 from h2integrate.converters.heat.shell_tube_hx_cost_model import ShellTubeHXCostModel
 
