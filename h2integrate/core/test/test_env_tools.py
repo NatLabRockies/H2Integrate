@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from contextlib import chdir
 
 import pytest
 
@@ -47,36 +48,26 @@ def test_set_environment_var(subtests, temp_env_var):
 def test_load_env_vars_from_file(subtests, temp_dir):
     env_path = temp_dir / ".env"
     with env_path.open("w+") as file:
-        file.write("TEST_CREDENTIAL=my_credential_value\n")
+        file.write("TEST_CREDENTIAL=my_credential_value\n")  # = with no spaces
+        file.write("TEST_CREDENTIAL_B=testing@yahoo.fake\n")  # = with spaces
+        file.write("TEST_CREDENTIAL_C_IS_A_SENTENCE\n")  # should be skipped
+        file.write("TEST_CREDENTIAL_D : testingValue\n")  # : with spaces
+        file.write("TEST_CREDENTIAL_E :: another_credential\n")  # consecutive delimiter
 
     env_vars = load_env_vars_from_file(file_path=env_path)
-    with subtests.test("Read using = seperator"):
-        assert env_vars["TEST_CREDENTIAL"] == "my_credential_value"
 
-    # add another variable to the file
-    with env_path.open("a+") as file:
-        file.write("TEST_CREDENTIAL_B=testing@yahoo.fake\n")
-
-    env_vars = load_env_vars_from_file(env_path)
-    with subtests.test("Two credential with = seperator (TEST_CREDENTIAL)"):
+    with subtests.test("4 environment variables loaded"):
+        assert len(env_vars) == 4
+    with subtests.test("Credential using = separator without spaces"):
         assert env_vars["TEST_CREDENTIAL"] == "my_credential_value"
-    with subtests.test("Two credential with = seperator (TEST_CREDENTIAL_B)"):
+    with subtests.test("Credential using = separator with spaces"):
         assert env_vars["TEST_CREDENTIAL_B"] == "testing@yahoo.fake"
-
-    # add a line without a separator to the file and a line using a different separator
-    with env_path.open("a+") as file:
-        file.write("TEST_CREDENTIAL_C_IS_A_SENTENCE\nTEST_CREDENTIAL_D : testingValue\n")
-
-    env_vars = load_env_vars_from_file(env_path)
-    with subtests.test("Empty line and mixed separators (TEST_CREDENTIAL)"):
-        assert env_vars["TEST_CREDENTIAL"] == "my_credential_value"
-    with subtests.test("Empty line and mixed separators (TEST_CREDENTIAL_B)"):
-        assert env_vars["TEST_CREDENTIAL_B"] == "testing@yahoo.fake"
-    with subtests.test("Empty line and mixed separators (TEST_CREDENTIAL_D)"):
+    with subtests.test("Credential using : separator with spaces"):
         assert env_vars["TEST_CREDENTIAL_D"] == "testingValue"
-    with subtests.test("Empty line and mixed separators (skipped sentence line)"):
-        extra_vars = set(env_vars) - {"TEST_CREDENTIAL", "TEST_CREDENTIAL_B", "TEST_CREDENTIAL_D"}
-        assert len(extra_vars) == 0
+    with subtests.test("Line without separator is not loaded"):
+        assert "TEST_CREDENTIAL_C" not in env_vars
+    with subtests.test("Credential using consecutive delimiter"):
+        assert env_vars["TEST_CREDENTIAL_E"] == ": another_credential"
 
 
 @pytest.mark.unit
@@ -195,13 +186,12 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
     # started off not as environment variable
     with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
-
     with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") is None
 
-    current_dir = Path.cwd()
+    # current_dir = Path.cwd()
 
-    os.chdir(temp_dir)
+    # os.chdir(temp_dir)
 
     env_path = temp_dir / ".env"
 
@@ -211,9 +201,10 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
     with env_path.open("w+") as file:
         file.write(env_file_txt)
 
-    env_vars = get_environment_variables(
-        "TEST_CREDENTIAL_B", "TEST_CREDENTIAL_C", set_variables=True
-    )
+    with chdir(temp_dir):
+        env_vars = get_environment_variables(
+            "TEST_CREDENTIAL_B", "TEST_CREDENTIAL_C", set_variables=True
+        )
 
     with subtests.test("TEST_CREDENTIAL_B value"):
         assert env_vars["TEST_CREDENTIAL_B"] == "byeFolks"
@@ -227,5 +218,3 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
 
     with subtests.test("TEST_CREDENTIAL_C set as environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") == "i<3H2I"
-
-    os.chdir(current_dir)
