@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from contextlib import chdir
 
 import pytest
@@ -13,9 +12,9 @@ from h2integrate.core.env_tools import (
 
 @pytest.fixture(scope="function")
 def temp_env_var(credential_value: str):
-    """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
+    """Temporarily set the `TEST_CREDENTIAL` environment variable"""
     # NOTE: changes to this fixture can result in hard-to-debug test failures
-    # in tests for resource components. Please do not modify this fixture if possible!
+    # in tests for environment variables components. Please do not modify this fixture if possible!
 
     original = os.environ.get("TEST_CREDENTIAL")
     os.environ["TEST_CREDENTIAL"] = credential_value
@@ -96,24 +95,23 @@ def test_get_environment_variables_already_set(subtests, temp_env_var):
 
 @pytest.mark.unit
 def test_get_environment_variables_from_filepath(subtests, temp_dir):
-    env_path = temp_dir / "myapi.env"
-
     os.environ.pop("TEST_CREDENTIAL_A", None)
     os.environ.pop("TEST_CREDENTIAL_B", None)
 
+    # environment variables were properly removed prior to rest of test
+    with subtests.test("TEST_CREDENTIAL_A not an environment variable"):
+        assert os.environ.get("TEST_CREDENTIAL_A") is None
+    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
+        assert os.environ.get("TEST_CREDENTIAL_B") is None
+
+    # Make a file containing credentials
+    env_path = temp_dir / "myapi.env"
     env_file_txt = f"TEST_CREDENTIAL_A={temp_dir}\nTEST_CREDENTIAL_B=bees\n"
 
     with env_path.open("w+") as file:
         file.write(env_file_txt)
 
-    # started off not as environment variable
-    with subtests.test("TEST_CREDENTIAL_A not an environment variable"):
-        assert os.environ.get("TEST_CREDENTIAL_A") is None
-
-    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
-        assert os.environ.get("TEST_CREDENTIAL_B") is None
-
-    # values pulled from file
+    # Get the environment variables but don't set them
     env_vars = get_environment_variables(
         "TEST_CREDENTIAL_A", "TEST_CREDENTIAL_B", file_path=env_path, set_variables=False
     )
@@ -124,7 +122,7 @@ def test_get_environment_variables_from_filepath(subtests, temp_dir):
     with subtests.test("TEST_CREDENTIAL_B value"):
         assert env_vars["TEST_CREDENTIAL_B"] == "bees"
 
-    # were not set as environment variables
+    # Check that variables were not set as environment variables
     with subtests.test("TEST_CREDENTIAL_A not set"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
 
@@ -139,17 +137,14 @@ def test_get_environment_variables_from_default_folder(subtests, temp_dir):
     os.environ.pop("TEST_CREDENTIAL_A", None)
     os.environ.pop("TEST_CREDENTIAL_B", None)
 
-    # started off not as environment variable
+    # environment variables were properly removed prior to rest of test
     with subtests.test("TEST_CREDENTIAL_A not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
 
     with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
-    current_dir = Path.cwd()
-
-    os.chdir(temp_dir)
-
+    # Make a file containing credentials
     env_path = temp_dir / "myfile.env"
 
     env_file_txt = f"TEST_CREDENTIAL_A={temp_dir}\nTEST_CREDENTIAL_B=howdyFolks\n"
@@ -158,9 +153,12 @@ def test_get_environment_variables_from_default_folder(subtests, temp_dir):
     with env_path.open("w+") as file:
         file.write(env_file_txt)
 
-    env_vars = get_environment_variables(
-        "TEST_CREDENTIAL_A", "TEST_CREDENTIAL_B", file_name="myfile.env", set_variables=False
-    )
+    # Change CWD to the temporary folder when loading environment variables
+    # Get the environment variables but don't set them
+    with chdir(temp_dir):
+        env_vars = get_environment_variables(
+            "TEST_CREDENTIAL_A", "TEST_CREDENTIAL_B", file_name="myfile.env", set_variables=False
+        )
 
     with subtests.test("TEST_CREDENTIAL_A value"):
         assert env_vars["TEST_CREDENTIAL_A"] == str(temp_dir)
@@ -175,24 +173,19 @@ def test_get_environment_variables_from_default_folder(subtests, temp_dir):
     with subtests.test("TEST_CREDENTIAL_B not set"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
-    os.chdir(current_dir)
-
 
 @pytest.mark.unit
 def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
     os.environ.pop("TEST_CREDENTIAL_B", None)
     os.environ.pop("TEST_CREDENTIAL_C", None)
 
-    # started off not as environment variable
+    # environment variables were properly removed prior to rest of test
     with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
     with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") is None
 
-    # current_dir = Path.cwd()
-
-    # os.chdir(temp_dir)
-
+    # Create path to .env file and make the file
     env_path = temp_dir / ".env"
 
     env_file_txt = f"TEST_CREDENTIAL_A={temp_dir}\nTEST_CREDENTIAL_B=byeFolks\n"
@@ -201,18 +194,22 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
     with env_path.open("w+") as file:
         file.write(env_file_txt)
 
+    # Change CWD to the temporary folder when loading environment variables
+    # Don't specify a filepath or filename
+    # Get the environment variables and set them
     with chdir(temp_dir):
         env_vars = get_environment_variables(
             "TEST_CREDENTIAL_B", "TEST_CREDENTIAL_C", set_variables=True
         )
 
+    # credentials were found and returned
     with subtests.test("TEST_CREDENTIAL_B value"):
         assert env_vars["TEST_CREDENTIAL_B"] == "byeFolks"
 
     with subtests.test("TEST_CREDENTIAL_C value"):
         assert env_vars["TEST_CREDENTIAL_C"] == "i<3H2I"
 
-    # were not set as environment variables
+    # credentials were set as environment variables
     with subtests.test("TEST_CREDENTIAL_B set as environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") == "byeFolks"
 
