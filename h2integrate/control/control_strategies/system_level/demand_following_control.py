@@ -52,6 +52,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         self.post_setup_multi_commodity()
 
     def post_setup_multi_commodity(self):
+        # TODO: move this method to SLC base class
         if not self.multi_commodity_system:
             return
         converters, converter_upstreams = self._find_converter_techs(include_feedstock_sources=True)
@@ -120,13 +121,14 @@ class DemandFollowingControl(SystemLevelControlBase):
                 simple_graph.add_edge(s, d, commodity=c)
 
         self.simple_graph = simple_graph
-
         self.non_converter_conversion_factor_keys = conversion_factor_keys
-
         self.grouped_techs = grouped_techs
         self.converters = converters
         self.converter_upstreams = converter_upstreams
         self.converter_tech_names = converter_tech_names
+
+        conversion_recipes = self._make_conversion_factor_recipes()
+        self.conversion_recipes = conversion_recipes
 
     def get_setpoints_for_commodity_subset(
         self, inputs, outputs, commodity, commodity_demand, tech_subset: list | set | None = None
@@ -287,12 +289,23 @@ class DemandFollowingControl(SystemLevelControlBase):
             return result
         return tech_groups_demand
 
+    def new_compute(self, inputs, outputs):
+        if not self.multi_commodity_system:
+            self.get_setpoints_for_commodity_subset(
+                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
+            )
+            return
+
+        self.get_conversion_factors(self.converters, self.converter_upstreams, inputs)
+
     def compute(self, inputs, outputs):
         if not self.multi_commodity_system:
             self.get_setpoints_for_commodity_subset(
                 inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
             )
             return
+
+        self.new_compute(inputs, outputs)
 
         converter_conversion_factors = self.get_conversion_factors(
             self.converters, self.converter_upstreams, inputs
@@ -313,6 +326,8 @@ class DemandFollowingControl(SystemLevelControlBase):
         # 6. Get the compounding conversion factors
         in_degs = dict(self.simple_graph.in_degree)
         starting_techs = {k for k, v in in_degs.items() if v == 0}
+
+        compounding_conversion_factor_recipes = {}
         grouped_techs_compounding_conversion_factors = {}
         for starting_tech in list(starting_techs):
             paths = list(nx.all_simple_paths(self.simple_graph, starting_tech, self.demand_tech))
@@ -338,6 +353,7 @@ class DemandFollowingControl(SystemLevelControlBase):
             path_conversion = (
                 1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
             )
+            path_recipe = []
 
             for edge in commodity_edges:
                 # in_cmod is demand of next tech
@@ -349,18 +365,24 @@ class DemandFollowingControl(SystemLevelControlBase):
                         if self.config.use_average_conversion_factor
                         else np.ones(self.n_timesteps)
                     )
+                    recipe = []
                     for t in techs_in_group:
                         if t in self.converter_tech_names:
                             conversion *= conversion_factors[(in_cmod, t, out_cmod)]
+                            recipe.append((in_cmod, t, out_cmod))
                         else:
                             conversion *= conversion_factors[(out_cmod, t, out_cmod)]
+                            recipe.append((out_cmod, t, out_cmod))
                     # TODO: add check if any other non-converter techs have a non-1 conversion factor
                 else:
                     conversion = conversion_factors[(in_cmod, tech, out_cmod)]
+                    recipe = [(in_cmod, tech, out_cmod)]
                 path_conversion *= conversion
+                path_recipe.append(recipe)
                 grouped_techs_compounding_conversion_factors[(out_cmod, in_cmod, tech)] = (
                     path_conversion
                 )
+                compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe
 
         compounding_conversion_factors = self.convert_combined_conversion_factors_to_tech_demand(
             self.grouped_techs,
