@@ -1,6 +1,6 @@
+import pytest
 import openmdao.api as om
 from pytest import approx, fixture
-import pytest
 
 from h2integrate.converters.heat.shell_tube_hx import ShellTubeHXPerformanceModel
 
@@ -27,6 +27,7 @@ def shell_tube_hx_config():
         }
     }
     return tech_config
+
 
 @pytest.mark.unit
 class TestShellTubeHXPerformanceModel:
