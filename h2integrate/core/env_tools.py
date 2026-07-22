@@ -1,7 +1,43 @@
 import os
+import warnings
 from pathlib import Path
 
 from h2integrate import ROOT_DIR
+
+
+def _check_duplicate_environment_vars(
+    *args: str, original_env_vars: dict, new_env_vars: dict
+) -> set:
+    """Check if any environment variables are defined twice and if so,
+    check for any mismatched values.
+
+    Args:
+        args (str): Name(s) of the environment variable(s) that should be retrieved from
+            environment variable dictionaries
+        original_env_vars (dict): dictionary of previously loaded environment variables
+        new_env_vars (dict): dictionary of additionally loaded environment variables
+
+    Returns:
+        set: environment variables that exist in both environment variable
+            dictionaries and have different values
+    """
+
+    # common variables between both sets of variables
+    shared_vars = set(original_env_vars) & set(new_env_vars)
+    if not shared_vars:
+        # return empty set
+        return shared_vars
+    # args that are shared variables
+    shared_args = set(args) & shared_vars
+    if not shared_args:
+        # return empty set, no duplicate args
+        return shared_args
+    # Check if theres a value mismatch between shared args
+    mismatched_args = set()
+    for arg in list(shared_args):
+        if original_env_vars[arg] != new_env_vars[arg]:
+            mismatched_args.add(arg)
+    return mismatched_args
 
 
 def set_env_var(*, overwrite: bool = False, **kwargs: str):
@@ -127,7 +163,23 @@ def get_environment_variables(
     for folder in default_folders:
         if (file_path := (folder / file_name)).is_file():
             # Prioritize environment variables that have already been set
-            env_vars = load_env_vars_from_file(file_path) | env_vars
+            env_vars_from_file = load_env_vars_from_file(file_path)
+            mismatched_vars = _check_duplicate_environment_vars(
+                *args, original_env_vars=env_vars, new_env_vars=env_vars_from_file
+            )
+            if mismatched_vars:
+                mismatched_txt = "\n".join(
+                    f"Environment variable '{mis_var}' set to '{env_vars_from_file[mis_var]}' in "
+                    f"file {file_path!s} but set as value '{env_vars[mis_var]}' earlier."
+                    for mis_var in mismatched_vars
+                )
+                msg = (
+                    f"Mismatched values found for environment variable(s) {list(mismatched_vars)}. "
+                    f"{mismatched_txt}. Values loaded from file {file_path} will not be used."
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
+            env_vars = env_vars_from_file | env_vars
 
     # Remove extraneous environment variables that were loaded from file(s)
     env_vars_subset = {name: env_vars.get(name) for name in args if name in env_vars}

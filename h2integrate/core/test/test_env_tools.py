@@ -7,6 +7,7 @@ from h2integrate.core.env_tools import (
     set_env_var,
     load_env_vars_from_file,
     get_environment_variables,
+    _check_duplicate_environment_vars,
 )
 
 
@@ -23,6 +24,41 @@ def temp_env_var(credential_value: str):
     assert os.getenv("TEST_CREDENTIAL") is None
     if original is not None:
         os.environ["TEST_CREDENTIAL"] = original
+
+
+@pytest.mark.unit
+def test_duplicate_defined_environment_vars(subtests):
+    env_vars0 = {
+        "A": "alphabet",
+        "B": "numbers",
+    }
+
+    # Check that an empty set is returned when values match
+    duplicate_vars = _check_duplicate_environment_vars(
+        "A", "B", original_env_vars=env_vars0, new_env_vars=env_vars0
+    )
+    with subtests.test("No mismatched shared variable values"):
+        assert not bool(duplicate_vars)
+
+    env_vars1 = {
+        "A": "alpha-bet",
+        "B": "numbers",
+    }
+
+    # Check that mismatched variables are returned without a match
+    duplicate_vars = _check_duplicate_environment_vars(
+        "A", "B", original_env_vars=env_vars0, new_env_vars=env_vars1
+    )
+    with subtests.test("A has mismatched values"):
+        assert len(duplicate_vars) == 1
+        assert list(duplicate_vars)[0] == "A"
+
+    # Check that an empty set is returned when specified variable matches
+    duplicate_vars = _check_duplicate_environment_vars(
+        "B", original_env_vars=env_vars0, new_env_vars=env_vars1
+    )
+    with subtests.test("No mismatched shared args"):
+        assert not bool(duplicate_vars)
 
 
 @pytest.mark.unit
@@ -215,3 +251,18 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
 
     with subtests.test("TEST_CREDENTIAL_C set as environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") == "i<3H2I"
+
+    # Change environment variable B to a new value
+    os.environ["TEST_CREDENTIAL_B"] = "byeFriends"
+    os.environ.pop("TEST_CREDENTIAL_C", None)
+    expected_str = (
+        f"Environment variable 'TEST_CREDENTIAL_B' set to 'byeFolks' in file "
+        f"{env_path!s} but set as value 'byeFriends' earlier."
+    )
+    with subtests.test("Mismatched environment variables"):
+        with chdir(temp_dir):
+            with pytest.warns(UserWarning) as excinfo:
+                env_vars = get_environment_variables(
+                    "TEST_CREDENTIAL_B", "TEST_CREDENTIAL_C", set_variables=True
+                )
+            assert expected_str in str(excinfo.list[0].message)
