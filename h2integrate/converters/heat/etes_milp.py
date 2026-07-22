@@ -73,6 +73,7 @@ class ETESMILPConfig(BaseConfig):
         SOC_min (float): Minimum state of charge (fraction of S_TES).
         SOC_init (float): Initial state of charge (fraction of S_TES).
             Defaults to 0.5 per the doc.
+        # TODO: Don't think we want the cyclic behavior below
         cyclic (bool): If True, force E_st at end of horizon equal to the
             initial state (typical for annual operation). Defaults to True.
         t_ch_min_h (float): Minimum time (h) for fully charging the

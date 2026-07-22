@@ -155,3 +155,4 @@ class ETESCostModel(CostModelBaseClass):
 
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex
+        # TODO: Expand to include cost of electricity used from heuristic etes model

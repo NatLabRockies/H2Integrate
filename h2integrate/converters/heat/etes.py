@@ -101,9 +101,11 @@ class ETESPerformanceModel(om.ExplicitComponent):
     Scalar outputs:
         E_total_delivered_kWh: Total thermal energy delivered to load
             over the simulation, in kWh_th.
-        round_trip_efficiency: Ratio of total thermal energy delivered to
+        overall_round_trip_efficiency: Ratio of total thermal energy delivered to
             total electricity consumed.
     """
+
+    # TODO: Change all thermal energies to Q and reserve E for electricity
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
@@ -158,7 +160,7 @@ class ETESPerformanceModel(om.ExplicitComponent):
             desc="Total thermal energy delivered to load over the simulation",
         )
         self.add_output(
-            "round_trip_efficiency",
+            "overall_round_trip_efficiency",
             val=0.0,
             desc="Ratio of thermal energy delivered to electricity consumed",
         )
@@ -211,7 +213,7 @@ class ETESPerformanceModel(om.ExplicitComponent):
 
             # --- Discharge to meet thermal load ---
             # Required storage-side withdrawal rate to meet load:
-            dis_req_rate = load[t] / eta_dis if eta_dis > 0 else 0.0
+            dis_req_rate = load[t] / eta_dis if eta_dis > 0 else 0.0 # kW_th
             # Available energy in storage after standing loss, above SOC_min:
             available_E = max(E_prev - loss_energy - E_min, 0.0)
             dis_available_rate = available_E / dt if dt > 0 else 0.0
@@ -232,7 +234,7 @@ class ETESPerformanceModel(om.ExplicitComponent):
 
             # Update storage state
             E_new = E_prev - loss_energy + (ch_rate - dis_rate) * dt
-            # Numerical clamp
+            # Numerical clamp - TODO: Is this actually necessary? Test with an extreme case
             E_new = min(max(E_new, E_min), E_max)
 
             # Record outputs
@@ -264,4 +266,4 @@ class ETESPerformanceModel(om.ExplicitComponent):
         total_heat = float(np.sum(heat_out) * dt)
         total_elec = float(np.sum(elec_used) * dt)
         outputs["E_total_delivered_kWh"] = total_heat
-        outputs["round_trip_efficiency"] = total_heat / total_elec if total_elec > 0 else 0.0
+        outputs["overall_round_trip_efficiency"] = total_heat / total_elec if total_elec > 0 else 0.0
