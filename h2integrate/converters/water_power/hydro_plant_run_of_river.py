@@ -40,6 +40,7 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -49,13 +50,12 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = RunOfRiverHydroPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
 
-        self.add_input("discharge", val=0.0, shape=n_timesteps, units="m**3/s")
+        self.add_input("discharge", val=0.0, shape=self.n_timesteps, units="m**3/s")
 
     def compute(self, inputs, outputs):
         # Calculate the power output of the run-of-river hydropower plant
@@ -84,6 +84,10 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
         # Calculate capacity factor
         max_production = plant_capacity_kw * self.n_timesteps * (self.dt / 3600)
         outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
 
 
 @define(kw_only=True)

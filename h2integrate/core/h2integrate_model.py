@@ -5,34 +5,23 @@ from enum import IntEnum
 import numpy as np
 import networkx as nx
 import openmdao.api as om
-import matplotlib.pyplot as plt
 
-from h2integrate.core.sites import SiteLocationComponent
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
-from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
     no_replacement_schedule_models,
 )
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
-from h2integrate.core.pose_optimization import PoseOptimization
-from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
-from h2integrate.core.commodity_stream_definitions import (
-    multivariable_streams,
-    is_electricity_producer,
+from h2integrate.core.commodity_stream_definitions import multivariable_streams
+from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
+from h2integrate.control.control_strategies.system_level.solver_options import (
+    SLCSolverOptionsConfig,
 )
-from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
-    PyomoStorageControllerBaseClass,
+from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+    _get_tech_buy_price_input_name,
 )
-
-
-try:
-    import pyxdsm
-except ImportError:
-    pyxdsm = None
 
 
 class State(IntEnum):
@@ -47,9 +36,16 @@ class H2IntegrateModel:
         # read in config file; it's a yaml dict that looks like this:
         self.load_config(config_input)
 
+        # add bool for whether using system-level control
+        self.slc = False
+        if "system_level_control" in self.plant_config:
+            self.slc = True
+
         # create technology connection graph based on technology interconnections
         # defined in plant config
-        self.create_technology_graph()
+        self.technology_graph = self.create_technology_graph(
+            self.plant_config.get("technology_interconnections", {})
+        )
 
         # load in supported models
         self.supported_models = supported_models.copy()
@@ -80,6 +76,11 @@ class H2IntegrateModel:
         self.create_technology_models()
 
         self.create_finance_model()
+
+        # add system-level controller if configured
+        if self.slc:
+            slc_topology = self._classify_slc_technologies()
+            self.add_system_level_controller(slc_topology)
 
         # connect technologies
         # technologies are connected within the `technology_interconnections` section of the
@@ -192,6 +193,12 @@ class H2IntegrateModel:
         self.system_summary = config.get("system_summary")
 
         # Load and validate each component configuration using the helper method
+        from h2integrate.core.inputs.validation import (
+            load_tech_yaml,
+            load_plant_yaml,
+            load_driver_yaml,
+        )
+
         self.driver_config, self.driver_config_path, _ = self._load_component_config(
             "driver_config", config.get("driver_config"), config_path, load_driver_yaml
         )
@@ -212,17 +219,20 @@ class H2IntegrateModel:
             if "control_strategy" in vals:
                 controller_model_name = vals["control_strategy"]["model"]
                 controller_cls = supported_models.get(controller_model_name)
-                if controller_cls is not None and issubclass(
-                    controller_cls, PyomoStorageControllerBaseClass
-                ):
-                    model_inputs = self.technology_config["technologies"][name]["model_inputs"]
-                    if (
-                        "control_parameters" not in model_inputs
-                        or model_inputs["control_parameters"] is None
-                    ):
-                        model_inputs["control_parameters"] = {"tech_name": name}
-                    else:
-                        model_inputs["control_parameters"]["tech_name"] = name
+                if controller_cls is not None:
+                    from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (  # noqa: E501
+                        PyomoStorageControllerBaseClass,
+                    )
+
+                    if issubclass(controller_cls, PyomoStorageControllerBaseClass):
+                        model_inputs = self.technology_config["technologies"][name]["model_inputs"]
+                        if (
+                            "control_parameters" not in model_inputs
+                            or model_inputs["control_parameters"] is None
+                        ):
+                            model_inputs["control_parameters"] = {"tech_name": name}
+                        else:
+                            model_inputs["control_parameters"]["tech_name"] = name
 
     def create_custom_models(self, model_config, config_parent_path, model_types, prefix=""):
         """This method loads custom models from the specified directory and adds them to the
@@ -416,6 +426,9 @@ class H2IntegrateModel:
         Returns:
             om.Group: OpenMDAO group for a site
         """
+
+        from h2integrate.core.sites import SiteLocationComponent
+
         # Initialize the site group
         site_group = om.Group()
 
@@ -453,10 +466,391 @@ class H2IntegrateModel:
         the same for each technology. This includes site information, project parameters,
         control strategy, and finance parameters.
         """
+
         plant_group = om.Group()
 
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
+
+    def _classify_slc_technologies(self):
+        """Classify technologies for system-level control.
+
+        Uses ``self.tech_control_classifiers`` (populated by ``create_technology_models()``)
+        to partition technologies into fixed, flexible, dispatchable, and storage lists.
+        Also identifies the single demand technology and its commodity.
+
+        SLC demand is supplied by a demand component (for example,
+        ``GenericDemandComponent``). When SLC is enabled, only one demand
+        component is currently supported.
+
+        Returns:
+            dict: Classification dictionary (``slc_topology``) with keys:
+
+                - ``"demand_tech"`` (str): Name of the demand technology (the tech whose
+                  performance model is a ``DemandComponent``).
+                - ``"demand_commodity"`` (str): Commodity the demand technology consumes
+                  (e.g. ``"electricity"``, ``"hydrogen"``).
+                - ``"demand_commodity_rate_units"`` (str | None): Units string for the
+                  demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
+                  specified in the demand tech config.
+                - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
+                  ``(tech_name, commodity)`` pairs for every technology that the SLC
+                  controls or reads from. Built from outgoing edges of the technology
+                  graph and filtered to fixed, flexible, dispatchable, storage, and
+                  feedstock classifiers.
+                - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
+                  interconnections, with edge attribute ``commodity`` indicating the
+                  commodity carried on each edge. Used by cost-aware controllers to
+                  trace upstream feedstocks.
+                - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name
+                  to its ``_control_classifier`` (one of ``"fixed"``, ``"flexible"``,
+                  ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
+                  the SLC interacts with each tech.
+        """
+        slc_topology = {}
+        technologies = self.technology_config.get("technologies", {})
+
+        if not (
+            demand_tech := self.plant_config["system_level_control"].get("demand_component", False)
+        ):
+            msg = (
+                "Please specify the technology name for the demand component in "
+                "the plant configuration file under ``system_level_control['demand_component']``"
+            )
+            raise ValueError(msg)
+        if demand_tech not in technologies:
+            msg = (
+                f"Demand technology specified for system level controller, ``{demand_tech}``,"
+                "not defined in the tech configuration file."
+            )
+            raise ValueError(msg)
+        model_name = technologies[demand_tech].get("performance_model", {}).get("model", "")
+        if "DemandComponent" not in model_name:
+            msg = (
+                f"Demand component ``{model_name}`` is not a supported model for the system level "
+                "control demand technology. Supported demand component performance models include "
+                "``DemandComponent`` in the class name."
+            )
+            raise ValueError(msg)
+
+        model_inputs = technologies[demand_tech].get("model_inputs", {})
+        perf_params = model_inputs.get("performance_parameters", {})
+        shared_params = model_inputs.get("shared_parameters", {})
+        all_params = {**shared_params, **perf_params}
+
+        # Check that the demand tech is in the technology_interconnections
+        tech_interconnections = self.plant_config["technology_interconnections"]
+        demand_is_source_connection = [
+            tech_connection
+            for tech_connection in tech_interconnections
+            if tech_connection[0] == demand_tech
+        ]
+        demand_is_destination_connection = [
+            tech_connection
+            for tech_connection in tech_interconnections
+            if tech_connection[1] == demand_tech
+        ]
+        if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
+            # Raise error if demand technology is not connected
+            msg = (
+                "No demand commodity was found in the technology interconnections. "
+                f"Please ensure that the demand technology ``{demand_tech}`` "
+                "is connected in the technology_interconnections"
+            )
+            raise ValueError(msg)
+
+        # Classify technologies based on their output commodity (or commodities)
+        # Use a set to remove duplicates (in case one tech produces multiple commodities)
+        # get list of technologies upstream of the demand technology
+        upstream_techs = nx.ancestors(self.technology_graph, demand_tech)
+        # only connect the technologies that are connected to the demand tech
+        upstream_controllable_techs = {
+            tech for tech in upstream_techs if nx.has_path(self.technology_graph, tech, demand_tech)
+        }
+
+        sources_to_commodities = {
+            (e[0], e[-1])
+            for e in self.technology_graph.edges(data="commodity")
+            if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
+        }
+
+        # re-make technology interconnections using only technologies
+        # upstream of the demand component
+        upstream_interconnections = [
+            connection
+            for connection in tech_interconnections
+            if connection[0] in upstream_controllable_techs
+        ]
+        upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
+        slc_topology["technology_graph"] = upstream_tech_graph
+
+        # Check if storage models have a controller
+        storage_tech_to_control = {}
+        for tech, classifier in self.tech_control_classifiers.items():
+            if classifier == "storage":
+                control_model = (
+                    self.technology_config["technologies"][tech]
+                    .get("control_strategy", {})
+                    .get("model", None)
+                )
+                if control_model is None:
+                    storage_tech_to_control[tech] = False
+                else:
+                    # storage model does use a controller
+                    storage_tech_to_control[tech] = True
+        slc_topology["storage_techs_to_control"] = storage_tech_to_control
+
+        # Remove feedstocks and connectors
+        control_classifiers_to_connect = [
+            "fixed",
+            "flexible",
+            "dispatchable",
+            "storage",
+            "feedstock",
+        ]
+        tech_to_commodity = {
+            (e[0], e[-1])
+            for e in sources_to_commodities
+            if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
+        }
+        slc_topology["tech_to_commodity"] = tech_to_commodity
+
+        # Store classification results in plant_config for SLC component
+        slc_topology["demand_tech"] = demand_tech
+        slc_topology["demand_commodity"] = all_params["commodity"]
+        slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
+
+        slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
+
+        return slc_topology
+
+    def add_system_level_controller(self, slc_topology):
+        """Add a system-level controller component and connect it within the plant.
+
+        Instantiates the controller specified by ``control_strategy`` in the plant configuration,
+        adds it as an OpenMDAO subsystem named ``"system_level_controller"``, configures
+        solvers on the plant group to resolve the feedback loop, and creates all
+        necessary OpenMDAO connections between the controller and the technology models it
+        dispatches.
+
+        The method executes in five sequential steps:
+
+        1. **Select and instantiate the controller** - Looks up the class from
+           ``supported_models`` using the ``control_strategy`` string (e.g.
+           ``"DemandFollowingControl"``, ``"ProfitMaximizationControl"``). Raises ``ValueError``
+           if the strategy name is not found. The instantiated component is added to
+           ``self.plant`` as ``"system_level_controller"``.
+
+        2. **Configure the plant-level nonlinear solver** - Because the controller creates a
+           feedback loop (controller outputs become technology inputs, whose outputs feed back to
+           the controller), a nonlinear solver is required. Solver type and options are read from
+           ``plant_config["system_level_control"]["solver_options"]`` via
+           ``SLCSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and
+           is largely inconsequential as we're not propagating derivatives at this time.
+
+        3. **Connect technology outputs to controller inputs** - For each ``(tech_name,
+           commodity)`` pair in ``slc_topology["tech_to_commodity"]``:
+
+           - **Feedstock techs**: Only the commodity output
+             (``{tech_name}_source.{commodity}_out``) is connected to the controller. Feedstocks
+             have no demand-input connection.
+           - **Fixed techs**: Only the commodity output
+             (``{tech_name}.{commodity}_out``) is connected to the controller. Fixed techs
+             always produce and receive no demand-input connection.
+           - **Flexible / dispatchable / storage techs**: Both the commodity output
+             (``{tech_name}.{commodity}_out``) and rated production
+             (``{tech_name}.rated_{commodity}_production``) are connected as controller inputs.
+             The controller's per-tech ``{tech_name}_{commodity}_set_point`` output is then
+             connected to the tech group's ``{commodity}_set_point`` input. Every controlled
+             tech group is expected to expose this input — either via a user-defined
+             ``control_strategy`` or via the auto-injected ``PassthroughController`` — which
+             converts the set-point signal into the appropriate performance-model command value.
+
+        4. **Connect marginal-cost inputs for cost-aware strategies** - Only executed when
+           ``control_strategy`` is ``"CostMinimizationControl"`` or
+           ``"ProfitMaximizationControl"``. Additional cost-aware control strategies
+           would need to be added here. For each dispatchable tech, the ``cost_per_tech``
+           specification determines which cost signal is connected:
+
+           - ``"VarOpEx"``: connects the tech's own ``VarOpEx`` output.
+           - ``"feedstock"``: uses graph traversal (``nx.ancestors``) on the
+             ``technology_graph`` to find all upstream feedstock technologies
+             at any depth and connects each feedstock's ``VarOpEx`` output.
+             This is consistent with the ``_find_feedstock_techs`` method
+             used by the controller component internally.
+           - ``"buy_price"``: the controller's ``{tech_name}_buy_price`` input is
+             connected input-to-input to the technology's own buy-price input
+             (``electricity_buy_price`` for Grid, ``price`` for Feedstock) so a
+             single ``prob.set_val()`` on the tech propagates to the SLC. The
+             default value still comes from the tech config.
+           - Numeric scalar: no connection needed; the value is used directly as a constant
+             marginal cost.
+
+        5. **Connect the demand profile** - Connects the demand technology's output
+           (``{demand_tech}.{demand_commodity}_demand_out``) to the controller's demand input
+           (``system_level_controller.{demand_commodity}_demand``). This relies on the
+           current SLC constraint that exactly one demand component is defined.
+
+        Args:
+            slc_topology (dict): Pre-computed dictionary produced by
+                ``_classify_slc_technologies()``. Expected keys:
+
+                - ``"demand_tech"`` (str): Name of the demand technology.
+                - ``"demand_commodity"`` (str): Commodity the demand consumes.
+                - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of ``(tech_name,
+                  commodity)`` pairs for all controlled techs.
+                - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name to
+                  classifier (``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``,
+                  ``"feedstock"``).
+                - ``"storage_techs_to_control"`` (dict[str, bool]): Whether each storage tech
+                  has its own sub-controller.
+                - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
+                  interconnections.
+
+        Raises:
+            ValueError: If ``control_strategy`` is not found in ``self.supported_models``.
+
+        Side Effects:
+            - Adds ``"system_level_controller"`` subsystem to ``self.plant``.
+            - Sets ``self.plant.nonlinear_solver`` and ``self.plant.linear_solver``.
+            - Creates OpenMDAO connections within ``self.plant``.
+        """
+        plant_slc_config = self.plant_config["system_level_control"]
+
+        # --- Step 1: Select and instantiate the controller class ----------
+        strategy_name = plant_slc_config.get("control_strategy")
+        slc_cls = self.supported_models.get(strategy_name)
+        if slc_cls is None:
+            raise ValueError(
+                f"Unknown control_strategy '{strategy_name}' in system_level_control. "
+                f"Must be a valid model name in supported_models."
+            )
+
+        slc_comp = slc_cls(
+            driver_config=self.driver_config,
+            plant_config=self.plant_config,
+            tech_config=self.technology_config,
+            slc_topology=slc_topology,
+        )
+        self.plant.add_subsystem("system_level_controller", slc_comp)
+
+        # --- Step 2: Configure the nonlinear solver on the plant group ----
+        # The feedback loop (controller <-> technologies) requires an
+        # iterative nonlinear solver to converge.
+        solver_config = SLCSolverOptionsConfig.from_dict(plant_slc_config.get("solver_options", {}))
+        solver_cls = solver_config.return_nonlinear_solver()
+        solver = solver_cls()
+        solver_options = solver_config.get_solver_options()
+        for k, v in solver_options.items():
+            solver.options[k] = v
+        self.plant.nonlinear_solver = solver
+        self.plant.linear_solver = om.DirectSolver()
+
+        # --- Step 3: Connect technology outputs/inputs to the controller --
+        for tech_to_commodity in slc_topology["tech_to_commodity"]:
+            tech_name, commodity = tech_to_commodity
+
+            if slc_topology["tech_control_classifiers"][tech_name] == "feedstock":
+                # Feedstocks only provide their commodity output to the
+                # controller; they receive no set-point back.
+                self.plant.connect(
+                    f"{tech_name}_source.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                continue
+
+            if slc_topology["tech_control_classifiers"][tech_name] == "fixed":
+                # Fixed techs only provide their commodity output to the
+                # controller; they always produce and receive no set-point.
+                self.plant.connect(
+                    f"{tech_name}.{commodity}_out",
+                    f"system_level_controller.{tech_name}_{commodity}_out",
+                )
+                continue
+
+            # Flexible, dispatchable, and storage techs: connect their
+            # commodity output and rated production as controller inputs.
+            self.plant.connect(
+                f"{tech_name}.{commodity}_out",
+                f"system_level_controller.{tech_name}_{commodity}_out",
+            )
+
+            self.plant.connect(
+                f"{tech_name}.rated_{commodity}_production",
+                f"system_level_controller.{tech_name}_rated_{commodity}_production",
+            )
+
+            # Storage tech: connect the storage duration as a controller input
+            if slc_topology["tech_control_classifiers"][tech_name] == "storage":
+                self.plant.connect(
+                    f"{tech_name}.storage_duration",
+                    f"system_level_controller.{tech_name}_{commodity}_storage_duration",
+                )
+
+            # Every controlled tech group exposes a ``{commodity}_set_point``
+            # input (provided by either a user-defined control_strategy or an
+            # auto-injected PassthroughController). Route the SLC's per-tech
+            # set-point output to that input.
+            self.plant.connect(
+                f"system_level_controller.{tech_name}_{commodity}_set_point",
+                f"{tech_name}.{commodity}_set_point",
+            )
+
+        # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
+        if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
+            cost_per_tech = plant_slc_config.get("control_parameters", {}).get("cost_per_tech", {})
+            technology_graph = slc_topology["technology_graph"]
+            for tech_name, _ in slc_topology["tech_to_commodity"]:
+                if self.tech_control_classifiers[tech_name] == "dispatchable":
+                    cost_spec = cost_per_tech.get(tech_name, 0.0)
+                    if cost_spec == "VarOpEx":
+                        # Tech's own variable operating expenditure
+                        self.plant.connect(
+                            f"{tech_name}.VarOpEx",
+                            f"system_level_controller.{tech_name}_VarOpEx",
+                        )
+                    elif cost_spec == "feedstock":
+                        # Find all upstream feedstock technologies using
+                        # graph traversal (matches _find_feedstock_techs
+                        # in the SLC component).
+                        ancestors = nx.ancestors(technology_graph, tech_name)
+                        feedstock_names = [
+                            t
+                            for t in ancestors
+                            if self.tech_control_classifiers.get(t) == "feedstock"
+                        ]
+                        for feedstock_name in feedstock_names:
+                            self.plant.connect(
+                                f"{feedstock_name}.VarOpEx",
+                                f"system_level_controller.{feedstock_name}_VarOpEx",
+                            )
+                    elif cost_spec == "buy_price":
+                        # Input-to-input connection (OpenMDAO 3.44+): tie the
+                        # tech's own buy-price input to the SLC's buy-price
+                        # input so a single ``prob.set_val()`` on the tech
+                        # updates both the cost model and the controller.
+                        #
+                        # OpenMDAO 3.44 requires input-to-input connections to
+                        # be made on the top-level model (not a subgroup); we
+                        # use promoted names from ``self.plant`` since the
+                        # plant is added to ``self.model`` with ``promotes=*``.
+                        tech_buy_price_input = _get_tech_buy_price_input_name(
+                            self.technology_config, tech_name
+                        )
+                        if tech_buy_price_input is not None:
+                            self.model.connect(
+                                f"{tech_name}.{tech_buy_price_input}",
+                                f"system_level_controller.{tech_name}_buy_price",
+                            )
+                    # numeric scalar: used directly, no connection needed
+
+        # --- Step 5: Connect the demand profile to the controller ---------
+        demand_tech = slc_topology["demand_tech"]
+        demand_commodity = slc_topology["demand_commodity"]
+        self.plant.connect(
+            f"{demand_tech}.{demand_commodity}_demand_out",
+            f"system_level_controller.{demand_commodity}_demand",
+        )
 
     def create_technology_models(self):
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
@@ -479,6 +873,7 @@ class H2IntegrateModel:
         self.dispatch_rule_sets = []
         self.cost_models = []
         self.finance_models = []
+        self.tech_control_classifiers = {}  # for system-level control
 
         combined_performance_and_cost_models = [
             "HOPPComponent",
@@ -536,6 +931,7 @@ class H2IntegrateModel:
                     tech_config=individual_tech_config,
                 )
                 self._check_time_step(perf_model, comp)
+                self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
                 tech_group = self.plant.add_subsystem(tech_name, om.Group())
@@ -571,11 +967,16 @@ class H2IntegrateModel:
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
+
+                    self._check_control_classifier(perf_model, comp)
+                    self.tech_control_classifiers.update({tech_name: comp._control_classifier})
                     self._check_time_step(perf_model, comp)
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
                     self.finance_models.append(om_model_object)
+
+                    self._add_passthrough_controller(tech_group, comp, individual_tech_config)
 
                     continue
 
@@ -588,6 +989,7 @@ class H2IntegrateModel:
                     "cost_model",
                 ]
 
+                perf_om_object = None
                 for model_type in model_types:
                     if model_type in individual_tech_config:
                         om_model_object = self._process_model(
@@ -598,6 +1000,22 @@ class H2IntegrateModel:
                         else:
                             plural_model_type_name = model_type + "s"
                         getattr(self, plural_model_type_name).append(om_model_object)
+
+                        if model_type == "performance_model":
+                            perf_om_object = om_model_object
+
+                        # Collect control classifier for system-level control
+                        if model_type == "performance_model" and self.slc:
+                            perf_cls = self.supported_models.get(perf_model)
+                            if perf_cls is not None:
+                                classifier = getattr(perf_cls, "_control_classifier", None)
+                                if classifier is not None:
+                                    self.tech_control_classifiers[tech_name] = classifier
+
+                if perf_om_object is not None:
+                    self._add_passthrough_controller(
+                        tech_group, perf_om_object, individual_tech_config
+                    )
 
                 # Process the finance models
                 if "finance_model" in individual_tech_config:
@@ -620,9 +1038,9 @@ class H2IntegrateModel:
                             self.finance_models.append(finance_object)
 
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
-            cost_model = individual_tech_config.get("cost_model", {}).get("model")
+            cost_model = individual_tech_config.get("cost_model", {}).get("model", "")
 
-            if cost_model == "FeedstockCostModel":
+            if "FeedstockCostModel" in cost_model:
                 comp = self.supported_models[cost_model](
                     driver_config=self.driver_config,
                     plant_config=self.plant_config,
@@ -664,6 +1082,89 @@ class H2IntegrateModel:
             )
             raise ValueError(msg)
 
+    def _check_control_classifier(self, model_name, model_object):
+        if not self.slc:
+            return
+        if not hasattr(model_object, "_control_classifier"):
+            msg = f"Model {model_name} is missing a control classifier"
+            raise ValueError(msg)
+
+    def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
+        """Automatically add a PassthroughController to a tech group if appropriate.
+
+        A controller is auto-inserted only when:
+
+        - the technology has no user-defined ``control_strategy`` in its config,
+        - the performance model exposes a ``_control_classifier`` of
+          ``"flexible"``, ``"dispatchable"``, or ``"storage"``,
+        - the performance model has set ``commodity`` and ``commodity_rate_units``
+          attributes (typically set in its ``initialize()``), or those values
+          can be read from the individual tech config.
+
+        The controller's ``{commodity}_set_point`` input becomes the tech group's
+        external set-point-input promoted at the tech group level, and its
+        ``{commodity}_command_value`` output is auto-connected (via promotion) to the
+        performance model's ``{commodity}_command_value`` input if one exists.
+        """
+        # Skip if the user has already specified a control strategy for this tech;
+        # their explicit choice takes precedence over the auto-injected passthrough.
+        if "control_strategy" in individual_tech_config:
+            return
+
+        # Only flexible/dispatchable/storage techs accept an externally
+        # provided demand signal. Fixed, feedstock, and connector techs are
+        # handled elsewhere (fixed/feedstock have no demand input) and must
+        # not get a passthrough.
+        classifier = getattr(perf_comp, "_control_classifier", None)
+        if classifier not in ("flexible", "dispatchable", "storage"):
+            return
+
+        # The performance model must declare the commodity it produces and the
+        # units of its set-point so the PassthroughController can size its I/O
+        # consistently. If they aren't yet set on the component (some models
+        # only assign these in ``setup()``), fall back to reading them from the
+        # individual tech config's model_inputs.
+        commodity = getattr(perf_comp, "commodity", None)
+        commodity_rate_units = getattr(perf_comp, "commodity_rate_units", None)
+        if commodity is None or commodity_rate_units is None:
+            model_inputs = individual_tech_config.get("model_inputs", {})
+            shared = model_inputs.get("shared_parameters", {})
+            perf_inputs = model_inputs.get("performance", {})
+            if commodity is None:
+                commodity = perf_inputs.get("commodity", shared.get("commodity"))
+            if commodity_rate_units is None:
+                commodity_rate_units = perf_inputs.get(
+                    "commodity_rate_units", shared.get("commodity_rate_units")
+                )
+        if commodity is None or commodity_rate_units is None:
+            return
+
+        # Build the controller sized to the plant's simulation horizon so its
+        # vector I/O matches the performance model's time-series I/O.
+        n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+        controller = PassthroughController(
+            commodity=commodity,
+            n_timesteps=n_timesteps,
+            commodity_rate_units=commodity_rate_units,
+        )
+
+        # Promote all controller variables so:
+        #   - `{commodity}_set_point` becomes the tech group's external input
+        #     (this is what the system-level controller connects to), and
+        #   - `{commodity}_command_value` is auto-connected by name to the
+        #     performance model's matching input via promotion.
+        om_controller = tech_group.add_subsystem("controller", controller, promotes=["*"])
+        self.control_strategies.append(om_controller)
+
+        # Ensure the controller runs before the performance/cost models that
+        # consume its command_value output. Subsystem creation order otherwise
+        # places the controller last in the group's execution order, which
+        # would delay the command_value by one solver iteration.
+        existing_order = list(tech_group._static_subsystems_allprocs.keys())
+        if "controller" in existing_order:
+            new_order = ["controller"] + [n for n in existing_order if n != "controller"]
+            tech_group.set_order(new_order)
+
     def create_finance_model(self):
         """
         Create and configure the finance model(s) for the plant.
@@ -682,23 +1183,23 @@ class H2IntegrateModel:
 
         Behavior:
             * If ``finance_parameters`` is not defined in the plant configuration,
-            no finance model is created.
+              no finance model is created.
             * If no subgroups are defined, all technologies are grouped together
-            under a default finance group. ``commodity`` and ``finance_model`` are
-            required in this case.
+              under a default finance group. ``commodity`` and ``finance_model`` are
+              required in this case.
             * If subgroups are provided, each subgroup defines its own set of
-            technologies, associated commodity, and finance model(s).
-            Each subgroup is nested under a unique name of your choice under
-            ["finance_parameters"]["subgroups"] in the plant configuration.
+              technologies, associated commodity, and finance model(s).
+              Each subgroup is nested under a unique name of your choice under
+              ["finance_parameters"]["subgroups"] in the plant configuration.
             * Subsystems such as ``AdjustedCapexOpexComp`` and
-            ``GenericProductionSummerPerformanceModel``, and the selected finance
-            models are added to each subgroup's finance group.
+              ``GenericProductionSummerPerformanceModel``, and the selected finance
+              models are added to each subgroup's finance group.
             * If `commodity_stream` is provided for a subgroup, the output of the
-            technology specified as the `commodity_stream` must be the same as the
-            specified commodity for that subgroup.
+              technology specified as the `commodity_stream` must be the same as the
+              specified commodity for that subgroup.
             * Supports both global finance models and technology-specific finance
-            models. Technology-specific finance models are defined in the technology
-            configuration.
+              models. Technology-specific finance models are defined in the technology
+              configuration.
 
         Raises:
             ValueError:
@@ -711,12 +1212,12 @@ class H2IntegrateModel:
                 ``self.supported_models``.
 
         Side Effects:
-            * Updates ``self.plant_config["finance_parameters"]["finance_group"] if only a single
-            finance model is provided (wraps it in a default finance subgroup).
+            * Updates ``self.plant_config["finance_parameters"]["finance_group"]`` if only a
+              single finance model is provided (wraps it in a default finance subgroup).
             * Constructs and attaches OpenMDAO finance subsystem groups to the
-            plant model under names ``finance_subgroup_<subgroup_name>``.
+              plant model under names ``finance_subgroup_<subgroup_name>``.
             * Stores processed subgroup configurations in
-            ``self.finance_subgroups``.
+              ``self.finance_subgroups``.
 
         Example:
             Suppose ``plant_config["finance_parameters"]["finance_group"]`` defines a single finance
@@ -732,6 +1233,9 @@ class H2IntegrateModel:
             # attaches a ProFAST finance model component to the plant.
 
         """
+
+        from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
+
         # if there aren't any finance parameters don't setup a finance model
         if "finance_parameters" not in self.plant_config:
             return
@@ -783,6 +1287,9 @@ class H2IntegrateModel:
                 .get(default_finance_group_name, {})
                 .get("finance_model")
             )
+            commodity_stream = self.plant_config["finance_parameters"]["finance_groups"].get(
+                "commodity_stream"
+            )
 
             if not commodity or not finance_model_name:
                 raise ValueError(
@@ -798,6 +1305,8 @@ class H2IntegrateModel:
                 "finance_groups": [default_finance_group_name],
                 "technologies": all_techs,
             }
+            if commodity_stream is not None:
+                subgroup["commodity_stream"] = commodity_stream
             subgroups = {default_finance_group_name: subgroup}
 
         # --- Normal subgroup handling ---
@@ -861,66 +1370,18 @@ class H2IntegrateModel:
 
             finance_subgroup = om.Group()
 
-            # Default logic for handling cases without specified commodity streams
+            # ``commodity_stream`` identifies the technology whose output is used as
+            # the commodity-production signal for this subgroup's finance model. It
+            # must be supplied explicitly by the user — there is no default mapping
+            # from commodity to tech name.
             if commodity_stream is None:
-                if commodity == "electricity":
-                    elec_tech_names = [
-                        tech for tech in tech_configs if is_electricity_producer(tech)
-                    ]
-                    if len(elec_tech_names) < 1:
-                        msg = (
-                            "Commodity 'electricity' was specified, but no electricity "
-                            "producing techs were found."
-                        )
-                        raise ValueError(msg)
-
-                    elif len(elec_tech_names) > 1:
-                        msg = (
-                            f"Multiple electricity producing technologies found in finance subgroup"
-                            f" '{subgroup_name}'. Please specify the commodity_stream for the "
-                            f"finance subgroup {subgroup_name}."
-                        )
-                        raise ValueError(msg)
-                    else:
-                        finance_subgroups[subgroup_name].update(
-                            {"commodity_stream": elec_tech_names[0]}
-                        )
-
-                else:
-                    # Default logic for tech-names and the primary commodity streams
-                    default_techs_to_commodities = {
-                        "electrolyzer": "hydrogen",
-                        "geoh2": "hydrogen",
-                        "ammonia": "ammonia",
-                        "doc": "co2",
-                        "oae": "co2",
-                        "methanol": "methanol",
-                        "air_separator": "nitrogen",
-                    }
-
-                    for default_tech, tech_commodity in default_techs_to_commodities.items():
-                        if commodity == tech_commodity and any(
-                            default_tech in tech_name for tech_name in tech_names
-                        ):
-                            commodity_stream_tech_name = [
-                                tech_name for tech_name in tech_names if default_tech in tech_name
-                            ]
-                            finance_subgroups[subgroup_name].update(
-                                {"commodity_stream": commodity_stream_tech_name[0]}
-                            )
-
-                # Check if a default commodity_stream was found, throw error if not
-                missing_commodity_stream = (
-                    finance_subgroups[subgroup_name].get("commodity_stream", None) is None
+                msg = (
+                    f"Finance subgroup '{subgroup_name}' (commodity '{commodity}') is "
+                    "missing the required `commodity_stream` field. Please specify "
+                    "which technology's output should be used as the commodity stream "
+                    "for this subgroup."
                 )
-                if missing_commodity_stream and len(tech_names) > 1:
-                    msg = (
-                        "Could not find a default technology to use as the commodity stream "
-                        f"for commodity {finance_subgroups[subgroup_name]['commodity']}. "
-                        "Please specify the `commodity_stream` for finance subgroup "
-                        f"{subgroup_name}."
-                    )
-                    raise UserWarning(msg)
+                raise ValueError(msg)
 
             # Add adjusted capex/opex
             adjusted_capex_opex_comp = AdjustedCapexOpexComp(
@@ -1139,11 +1600,11 @@ class H2IntegrateModel:
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
                 perf_model_name = source_tech_config.get("performance_model", {}).get("model")
-                cost_model_name = source_tech_config.get("cost_model", {}).get("model")
+                cost_model_name = source_tech_config.get("cost_model", {}).get("model", "")
 
                 # If the source is a feedstock, make sure to connect the amount of
                 # feedstock consumed from the technology back to the feedstock cost model
-                if cost_model_name == "FeedstockCostModel":
+                if "FeedstockCostModel" in cost_model_name:
                     self.plant.connect(
                         f"{dest_tech}.{transport_item}_consumed",
                         f"{source_tech}.{transport_item}_consumed",
@@ -1233,8 +1694,16 @@ class H2IntegrateModel:
                     )
 
             elif len(connection) == 3:
-                # connect directly from source to dest
                 source_tech, dest_tech, connected_parameter = connection
+                src_indices = None
+
+                # initialize src_indices to allow connections between different shaped variables
+                if isinstance(connected_parameter, list):
+                    connected_parameter, src_indices = (
+                        self._split_indices_from_connected_parameter_definition(connected_parameter)
+                    )
+
+                # connect directly from source to dest
                 if isinstance(connected_parameter, tuple | list):
                     source_parameter, dest_parameter = connected_parameter
                     # Check if this is a multivariable stream connection
@@ -1248,7 +1717,9 @@ class H2IntegrateModel:
                         )
                     else:
                         self.plant.connect(
-                            f"{source_tech}.{source_parameter}", f"{dest_tech}.{dest_parameter}"
+                            f"{source_tech}.{source_parameter}",
+                            f"{dest_tech}.{dest_parameter}",
+                            src_indices=src_indices,
                         )
                 else:
                     # Check if the connected_parameter is a multivariable stream
@@ -1264,6 +1735,7 @@ class H2IntegrateModel:
                         self.plant.connect(
                             f"{source_tech}.{connected_parameter}",
                             f"{dest_tech}.{connected_parameter}",
+                            src_indices=src_indices,
                         )
 
             else:
@@ -1420,6 +1892,8 @@ class H2IntegrateModel:
         Add the driver to the OpenMDAO model and add recorder.
         """
 
+        from h2integrate.core.pose_optimization import PoseOptimization
+
         myopt = PoseOptimization(self.driver_config)
         if "driver" in self.driver_config:
             myopt.set_driver(self.prob)
@@ -1445,7 +1919,7 @@ class H2IntegrateModel:
         # do model setup based on the driver config
         # might add a recorder, driver, set solver tolerances, etc
         if self.state < State.SETUP:
-            self.prob.setup()
+            self.setup()
 
         if self.state < State.RUN:
             # OpenMDAO will skip this step if it encounters an issue leading to silent failures
@@ -1479,12 +1953,16 @@ class H2IntegrateModel:
             self.print_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
+            from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
+
             convert_sql_to_csv_summary(self.recorder_path, save_to_file=True)
 
         for model in self.performance_models:
             if hasattr(model, "post_process") and callable(model.post_process):
                 model.post_process(show_plots=show_plots)
                 if show_plots:
+                    import matplotlib.pyplot as plt
+
                     plt.show()
         self.state = State.POST_PROCESS
 
@@ -1679,26 +2157,31 @@ class H2IntegrateModel:
                 "but none were found."
             )
 
-    def create_technology_graph(self):
+    def create_technology_graph(self, tech_interconnections: list | set):
         """Create a directed graph of the technology interconnections.
 
         Builds a NetworkX directed graph where nodes represent technologies
         and edges represent connections between them. If a connection includes
         a commodity (length-4 entry), it is stored as an edge attribute.
 
-        Sets:
-            self.technology_graph (nx.DiGraph): A directed graph with
-                technologies as nodes and interconnections as edges.
-        """
-        self.technology_graph = nx.DiGraph()
+        Args:
+            tech_interconnections (list): list of technology interconnections
 
-        for connection in self.plant_config.get("technology_interconnections", {}):
+        Returns:
+            nx.DiGraph: A directed graph with technologies as nodes and
+                interconnections as edges.
+        """
+        technology_graph = nx.DiGraph()
+
+        for connection in tech_interconnections:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
-                self.technology_graph.add_edge(source, destination, commodity=connection[2])
+                technology_graph.add_edge(source, destination, commodity=connection[2])
             else:
-                self.technology_graph.add_edge(source, destination)
+                technology_graph.add_edge(source, destination)
+
+        return technology_graph
 
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.
@@ -1732,12 +2215,12 @@ class H2IntegrateModel:
                     group = getattr(self.prob.model.plant, f"{tech_name}_source")
                 else:
                     group = getattr(self.prob.model.plant, tech_name)
-                    if model_name != "FeedstockCostModel":
+                    if "FeedstockCostModel" not in model_name:
                         group = getattr(group, model_name, None)
                         if group is None:
                             continue
 
-                io_params.update(group.get_io_metadata().keys())
+                io_params.update([key.split(".")[-1] for key in group.get_io_metadata().keys()])
 
             tech_io[tech_name] = io_params
 
@@ -1797,3 +2280,87 @@ class H2IntegrateModel:
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
 
         return tech_commodities
+
+    @staticmethod
+    def _split_indices_from_connected_parameter_definition(connected_parameter):
+        """Extract and parse slice indices from connected parameter definitions for OpenMDAO
+        connections.
+
+        This function processes parameter names containing slice patterns in square brackets
+        (e.g., "power[0:8760]") and generates OpenMDAO-compatible src_indices for connections
+        between variables of different shapes.
+
+        Args:
+            connected_parameter (list[str]): A two-element list containing:
+                - [0] source parameter name, optionally with pattern like "var[slice_spec]"
+                - [1] destination parameter name, optionally with pattern like "var[slice_spec]"
+
+                Example: ["power[0:8760]", "demand[:]"]
+
+        Returns:
+            tuple: A two-element tuple containing:
+                - connected_parameter (list[str]): The parameter names with slices removed
+                  (e.g., ["power", "demand"])
+                - src_indices: OpenMDAO slicer object for indexing source outputs to match
+                  destination input shapes. Returns om.slicer[slice] for indexing.
+
+        Note:
+            If the destination has a slice pattern, it must include the length ":N"
+            (e.g., "[0:N]"), the function extracts N as the destination length and
+            multiplies the source slice by this factor to create properly scaled indices.
+            The length is required because the length is not known in the OpenMDAO model
+            until prob.setup() has been called.
+        """
+        source_parameter, dest_parameter = connected_parameter
+
+        def _extract_slice(parameter):
+            """Return the contents inside the brackets (e.g. '0:8760'), or None."""
+            match = re.search(r"\[(.*)\]", parameter)
+            return None if match is None else match.group(1)
+
+        def _to_indices(spec):
+            """Convert a bracket spec string into a slice or list of ints."""
+            if ":" in spec:
+                return slice(*(int(p) if p.strip() else None for p in spec.split(":")))
+            return [int(p) for p in spec.split(",")]
+
+        source_slice = _extract_slice(source_parameter)
+        dest_slice = _extract_slice(dest_parameter)
+
+        if source_slice == dest_slice:
+            src_indices = None
+        elif dest_slice is not None and source_slice is not None:
+            # Tile the source indices to fill the destination length to handle shape
+            # mismatches. Examples:
+            #   source="0",   dest_length=8760 -> [0] repeated 8760 times
+            #   source="0,1", dest_length=10   -> [0, 1] cycled to fill 10 slots
+            if dest_slice.split(":")[0] not in ("", "0"):
+                raise ValueError(
+                    "A non-zero start was provided for the slice for destination "
+                    f"parameter <{dest_parameter}>"
+                )
+            dest_length = int(dest_slice.split(":")[-1])
+
+            source_indices = _to_indices(source_slice)
+            if isinstance(source_indices, slice):
+                source_indices = list(
+                    range(
+                        source_indices.start or 0,
+                        source_indices.stop,
+                        source_indices.step or 1,
+                    )
+                )
+
+            # Repeat the source values enough times to cover the destination, then
+            # truncate so the result is exactly dest_length long. This cycles through
+            # the source values when the source is shorter than the destination.
+            n_repeats = -(-dest_length // len(source_indices))  # ceiling division
+            src_indices = om.slicer[(source_indices * n_repeats)[:dest_length]]
+        else:
+            # No destination slice pattern; use source slice pattern directly.
+            src_indices = None if source_slice is None else om.slicer[_to_indices(source_slice)]
+
+        # Remove the slice patterns from parameter names to get clean names.
+        connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
+
+        return connected_parameter, src_indices

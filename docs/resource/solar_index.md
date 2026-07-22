@@ -1,4 +1,5 @@
 (solar_resource:models)=
+(solar-resource-model-overview)=
 # Solar Resource: Model Overview
 
 - [GOES PSM v4 API](goes_solar_v4_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
@@ -20,6 +21,7 @@ Please refer to the [Setting Environment Variables](../getting_started/environme
 ```
 
 (solarresource:overview)=
+(solar-resource-output-data)=
 # Solar Resource: Output Data
 
 Solar resource models may output solar resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a solar resource model.

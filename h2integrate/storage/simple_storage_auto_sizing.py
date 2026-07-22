@@ -170,9 +170,9 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         1) Calculate the max charge and discharge rate as the maximum of the `commodity_in`
             profile and oversize to account for charge/discharge efficiencies.
         2) Estimate the storage SOC (in `commodity_amount_units`). The SOC increases when
-            charging and decreases when discharging. If `commodity_set_point` is input,
+            charging and decreases when discharging. If `commodity_command_value` is input,
             calculate the storage SOC as the cumulative summation of the negative of
-            `commodity_set_point` input (`commodity_set_point` input is
+            `commodity_command_value` input (`commodity_command_value` input is
             negative when charging and positive when discharging).
             Otherwise, calculate the storage SOC as the cumulative summation of
             `commodity_in - demand`.
@@ -207,6 +207,8 @@ class StorageAutoSizingModel(StoragePerformanceBase):
 
             commodity_demand = np.mean(inputs[f"{self.commodity}_in"]) * np.ones(self.n_timesteps)
 
+        elif self.using_feedback_control:
+            commodity_demand = inputs[f"{self.commodity}_set_point"]
         else:
             commodity_demand = inputs[f"{self.commodity}_demand"]
 
@@ -219,11 +221,11 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         # Auto-size the storage capacity to meet the demand as much as possible
         # 2. Estimate the storage SOC in `commodity_amount_units`
         # NOTE: commodity_storage_soc is just an absolute value and is not a percentage.
-        if f"{self.commodity}_set_point" in inputs:
-            # `{self.commodity}_set_point` is negative when charging and positive when
-            # discharging, the negative of `{self.commodity}_set_point` can be used to
+        if f"{self.commodity}_command_value" in inputs:
+            # `{self.commodity}_command_value` is negative when charging and positive when
+            # discharging, the negative of `{self.commodity}_command_value` can be used to
             # estimate the SOC (which increases when charging and decreases when discharging)
-            commodity_storage_soc = np.cumsum(-1 * inputs[f"{self.commodity}_set_point"])
+            commodity_storage_soc = np.cumsum(-1 * inputs[f"{self.commodity}_command_value"])
         else:
             # estimate the SOC (which increases when charging and decreases when discharging)
             # based on the demand profile and the input commodity
@@ -263,7 +265,7 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         # (such as demand profile, charge rate, and storage capacity)
         inputs_adjusted = dict(inputs.items())
         if self.config.set_demand_as_avg_commodity_in:
-            inputs_adjusted[f"{self.commodity}_demand"] = commodity_demand
+            inputs_adjusted[f"{self.commodity}_set_point"] = commodity_demand
 
         if "pyomo_dispatch_solver" in discrete_inputs:
             inputs_adjusted["storage_capacity"] = np.array([rated_storage_capacity])

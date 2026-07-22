@@ -160,7 +160,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
         0.0,  # test case with set point equal to zero
     )
 
-    prob.set_val("fuel_cell.electricity_set_point", elec_set_point, units="kW")
+    prob.set_val("fuel_cell.electricity_command_value", elec_set_point, units="kW")
 
     prob.run_model()
 

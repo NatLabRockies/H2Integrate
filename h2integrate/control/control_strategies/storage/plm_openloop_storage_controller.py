@@ -230,28 +230,33 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         allowable bounds.
 
         Dispatch strategy outline:
+
         - Discharge:
+
           * Starting when time_to_peak <= advance_discharge_period
           * Discharge at max rate (or less to reach targets)
           * Stop discharging only when SOC reaches min_soc
         - Charge:
+
           * When not discharging, SOC < max, and allow_charge window is active
           * Start charging only after delay_charge_period since last discharge
           * Charge at max rate (or less to reach target)
           * Stop charging when SOC reaches max_soc
 
         Expected input keys:
+
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
-            * ``<commodity>_demand``: Timeseries demand profile.
+            * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
             * ``max_capacity``: Maximum total storage capacity.
 
         Outputs populated:
-            * ``<commodity>_set_point``: Dispatch command to storage,
+
+            * ``<commodity>_command_value``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
         Raises:
-            UserWarning: If the demand profile is entirely zero.
+            UserWarning: If the set-point profile is entirely zero.
             UserWarning: If ``max_charge_rate`` or ``max_capacity`` is negative.
 
         Returns:
@@ -279,7 +284,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
 
         # Build timestamped demand dictionaries from simulation timeline.
         demand_profile = self._build_demand_profile_dict(
-            inputs[f"{commodity}_demand"],
+            inputs[f"{commodity}_set_point"],
             self.time_index,
         )
 
@@ -381,7 +386,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
             if soc >= soc_max:
                 charging = False
 
-        outputs[f"{commodity}_set_point"] = set_point_array
+        outputs[f"{commodity}_command_value"] = set_point_array
 
         # insert warning message if for any time step the magnitude of
         # any negative entry in set_point_array is greater than inputs[f"{commodity}_in"]
@@ -599,6 +604,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         """Merge peaks_1 and peak_2 schedules with peak_1 precedence.
 
         Combines two peak schedules (primary and fallback) using day-level precedence:
+
         - For each day, if the peaks_1 profile has any peaks on that day,
           use all peaks_1 peaks for that day
         - Otherwise, use the peaks_2 peaks for that day

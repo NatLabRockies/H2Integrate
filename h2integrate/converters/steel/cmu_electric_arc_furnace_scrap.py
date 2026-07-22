@@ -38,21 +38,22 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceConfig(BaseConfig):
             values of 94% mass Fe and 1% mass SiO2 in scrap.
         energy_mass_balance_dict (dict): dictionary with inputs for energy and mass
             balance calculations. Defaults are based on values from CMU decarbSTEEL EAF model.
+            Keys include:
+
             - natural_gas (float): Natural gas used per ton of steel. Default 0.44 MMBtu/ton.
             - electrodes (float): Electrodes used per ton of steel. Default 2.00 kg/ton.
             - slag_basicity (float): basicity, kg CaO / (kg SiO2 + kg Al2O3). Default 1.50.
             - mass_Al2O3_slag_per_tscrap (float): kg Al2O3 in slag per ton scrap.
-                Default 0.0.
+              Default 0.0.
             - mass_Al2O3_slag_per_tLS (float): total kg Al2O3 in slag per ton liquid steel.
-                Default 0.0.
+              Default 0.0.
             - pct_MgO_slag (float): percent mass fraction of MgO in slag. Default is 0.12.
             - pct_FeO_slag (float): percent mass fraction of FeO in slag. Default is 0.30.
             - pct_carbon_steel_tap (float): percent mass fraction carbon input to EAF as
-                % of steel tap mass. Default 0.03.
+              % of steel tap mass. Default 0.03.
             - CaO_MgO_ratio (float): kg of CaO to kg MgO. Default is 56/40.
             - electricity_kWh_per_tonne_steel (float): electricity usage per ton of steel.
-                Default is 470 kWh/ton.
-
+              Default is 470 kWh/ton.
     """
 
     steel_production_capacity_tonnes_per_year: float = field(default=2200000.0)
@@ -105,6 +106,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -114,8 +116,6 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
 
     def setup(self):
         super().setup()
-
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = CMUElectricArcFurnaceScrapOnlyPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -139,15 +139,15 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
             desc="Actual steel production",
         )
 
-        # Default the steel demand input as the production rate
+        # Default the steel command value input as the production rate
         self.add_input(
-            "steel_demand",
+            "steel_command_value",
             val=units.convert_units(
                 self.config.steel_production_rate_tonnes_per_year, "t/year", "t/h"
             ),
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Steel demand for steel plant",
+            desc="Steel command value for steel plant",
         )
 
         feedstocks_to_units = {
@@ -165,14 +165,14 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
@@ -181,7 +181,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "slag_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of slag",
         )
@@ -189,7 +189,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "mass_MgO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of MgO in slag",
         )
@@ -197,7 +197,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "mass_FeO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of FeO in slag",
         )
@@ -205,7 +205,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "mass_Fe_to_FeO",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of Fe consumed to produce FeO",
         )
@@ -213,7 +213,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "mass_Fe_from_scrap",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of Fe from scrap",
         )
@@ -221,7 +221,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
         self.add_output(
             "mass_steel_per_unit_scrap",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/t",
             desc="Total unit of steel formed from EAF fed with scrap only per unit of scrap",
         )
@@ -258,20 +258,20 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
             "lime": energy_mass_per_tonne["burnt_lime_per_tLS"],  # t/t
         }
 
-        # steel demand, saturated at maximum rated system capacity
-        steel_demand = np.where(
-            inputs["steel_demand"] > system_production,
+        # steel command value, saturated at maximum rated system capacity
+        steel_command_value = np.where(
+            inputs["steel_command_value"] > system_production,
             system_production,
-            inputs["steel_demand"],
+            inputs["steel_command_value"],
         )
 
         # initialize an array of how much steel could be produced
-        # from the available feedstocks and the demand
+        # from the available feedstocks and the command value
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_demand"]))
+            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_command_value"]))
         )
-        # first entry is the steel demand
-        steel_from_feedstocks[0] = steel_demand
+        # first entry is the steel command value
+        steel_from_feedstocks[0] = steel_command_value
         ii = 1
 
         for feedstock_type, consumption_rate in feedstocks_usage_per_tonne_steel.items():
@@ -321,10 +321,12 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
 
     def energy_mass_balance_per_unit(self):
         """Computes the energy and mass balance for the EAF fed with scrap only case on a
-            per ton of scrap basis (tscrap) and per ton of liquid steel basis (tLS).
+        per ton of scrap basis (tscrap) and per ton of liquid steel basis (tLS).
+
         Returns:
             output_dict (dict): Dictionary with the amount of feedstocks and energy used per
-                ton of steel.
+            ton of steel. Keys include:
+
                 - mass_slag_per_tscrap (kg/t): Total mass of slag produced per ton of scrap.
                 - mass_MgO_slag_per_tscrap (kg/t): Mass of MgO in slag per ton of scrap.
                 - mass_FeO_slag_per_tscrap (kg/t): Mass of FeO in slag per ton of scrap.
@@ -338,7 +340,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
                 - mass_MgO_slag_per_tLS (kg/t): Mass of MgO in slag per ton of liquid steel.
                 - mass_FeO_slag_per_tLS (kg/t): Mass of FeO in slag per ton of liquid steel.
                 - mass_Fe_to_FeO_tLS (kg/t): Mass of Fe consumed to produce FeO per ton of
-                    liquid steel.
+                  liquid steel.
                 - mass_Fe_scrap_per_tLS (kg/t): Mass of Fe from scrap per ton of liquid steel.
                 - coal_per_tLS (t/t): Mass of coal per ton of liquid steel.
                 - oxygen_per_tLS (Nm^3/t): Normal cubic meters of oxygen per ton of liquid steel.
@@ -347,8 +349,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
                 - mass_flux_per_tLS (kg/t): Mass of flux (lime and doloma) per ton of liquid steel.
                 - EAF_scrap_heat_loss_pct (%): Percentage of heat loss in EAF with scrap-only case.
                 - electricity_per_tLS (kWh/t): Total electricity consumption per ton of liquid
-                    steel for EAF with scrap-only case, including heat loss adjustment.
-
+                  steel for EAF with scrap-only case, including heat loss adjustment.
         """
         output_dict = {}
         # Including DRI in feed (assumed constants in feedstocks)

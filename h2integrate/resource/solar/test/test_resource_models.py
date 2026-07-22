@@ -107,19 +107,18 @@ def test_goes_resource_models(
         "plant": plant_simulation,
     }
 
-    with subtests.test("Load from default directory"):
-        prob = om.Problem()
-        comp = supported_models[model](
-            plant_config=plant_config,
-            resource_config=plant_config["site"]["resources"]["solar_resource"][
-                "resource_parameters"
-            ],
-            driver_config={},
-        )
-        prob.model.add_subsystem("resource", comp)
-        prob.setup()
-        prob.run_model()
-        data = prob.get_val("resource.solar_resource_data")
+    prob = om.Problem()
+    comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"][
+            "resource_parameters"
+        ],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    prob.run_model()
+    data = prob.get_val("resource.solar_resource_data")
 
     with subtests.test("Data file was found where expected"):
         name_expected = f"{lat}_{lon}_{resource_year}_{model_name}_60min_utc_tz.csv"

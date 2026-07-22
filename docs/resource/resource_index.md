@@ -14,6 +14,7 @@ There are two ways to supply resource data to a technology:
 
 
 
+(resource-data-specified-using-setval)=
 ### Resource data specified using `set_val()`
 
 Resource data for a technology can be set using the `set_val()` command. In the [Run of River Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/07_run_of_river_plant/), the technology named `river` needs a resource input called `discharge`. An example of this is shown below:
@@ -38,6 +39,7 @@ h2i.run()
 ```
 
 
+(custom-resource-models)=
 ### Custom resource models
 The benefit of using a custom resource model is that the resource data can be made to vary for different inputs, which can be beneficial if running a design sweep or optimization where the resource location (specified by a latitude and longitude) is a design variable.
 

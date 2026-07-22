@@ -10,6 +10,7 @@ def npv_finance_inputs():
     npv_dict = {
         "discount_rate": 0.09,
         "commodity_sell_price": 0.04,
+        "commodity_sell_price_units": "USD/(kW*h)",
         "save_cost_breakdown": False,
         "save_npv_breakdown": False,
         "cost_breakdown_file_description": False,
@@ -130,6 +131,65 @@ def test_simple_npv_positive(
     for variable, cost in fake_cost_dict.items():
         units = "USD" if "capex" in variable else "USD/year"
         prob.set_val(f"npv.{variable}", cost, units=units)
+
+    prob.run_model()
+
+    with subtests.test("Sell price"):
+        assert (
+            pytest.approx(
+                prob.get_val("npv.sell_price_electricity_no1", units="USD/(kW*h)"), rel=1e-6
+            )
+            == npv_finance_inputs_positive["commodity_sell_price"]
+        )
+
+    with subtests.test("NPV positive"):
+        npv_value = prob.get_val("npv.NPV_electricity_no1", units="USD")[0]
+        assert pytest.approx(npv_value, rel=1e-6) == 3597582813.8071656
+
+
+@pytest.mark.regression
+def test_simple_npv_positive_nonstandard_units(
+    npv_finance_inputs, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+
+    # Increase commodity sell price to get positive NPV
+    npv_finance_inputs_positive = npv_finance_inputs.copy()
+    npv_finance_inputs_positive["commodity_sell_price"] = 0.15
+    npv_finance_inputs_positive["commodity_sell_price_units"] = "USD/(kW*min)"
+
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": npv_finance_inputs_positive},
+    }
+    pf = NumpyFinancialNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no1",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * 30, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("npv", pf, promotes=["*"])
+    prob.setup()
+
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"npv.{variable}", cost, units=units)
+
+    prob.set_val(
+        "npv.sell_price_electricity_no1",
+        npv_finance_inputs_positive["commodity_sell_price"],
+        units="USD/(kW*h)",
+    )
 
     prob.run_model()
 
