@@ -120,6 +120,9 @@ class DemandFollowingControl(SystemLevelControlBase):
             if s != d:
                 simple_graph.add_edge(s, d, commodity=c)
 
+        # ESG TODO: check that simple_graph has the expected edges
+        # ---> I think its somewhat working now
+
         self.simple_graph = simple_graph
         self.non_converter_conversion_factor_keys = conversion_factor_keys
         self.grouped_techs = grouped_techs
@@ -128,6 +131,11 @@ class DemandFollowingControl(SystemLevelControlBase):
         self.converter_tech_names = converter_tech_names
 
         conversion_recipes = self._make_conversion_factor_recipes()
+
+        # ESG TODO: check that conversion_recipes is as expected
+        # The two below recipes are the same? Still need to debug the conversion recipes
+        # ('ammonia', 'hydrogen', 'ammonia-5')
+        # ('hydrogen', 'electricity', 'hydrogen-1')
         self.conversion_recipes = conversion_recipes
 
     def get_setpoints_for_commodity_subset(
