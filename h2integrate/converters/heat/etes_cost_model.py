@@ -19,7 +19,7 @@ OpEx is taken as a fixed fraction of CapEx per the same convention as
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
+from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -77,9 +77,7 @@ class ETESCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input("S_TES_kWh", val=0.0, units="kW*h", desc="Storage capacity")
-        self.add_input(
-            "S_ch_kW", val=0.0, units="kW", desc="Charging unit electric power rating"
-        )
+        self.add_input("S_ch_kW", val=0.0, units="kW", desc="Charging unit electric power rating")
         self.add_input(
             "S_dis_kW", val=0.0, units="kW", desc="Discharging unit thermal power rating"
         )

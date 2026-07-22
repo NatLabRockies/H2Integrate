@@ -2,10 +2,7 @@ import numpy as np
 import pytest
 from pytest import approx
 
-from h2integrate.converters.heat.etes_milp import (
-    ETESMILPConfig,
-    solve_etes_milp,
-)
+from h2integrate.converters.heat.etes_milp import ETESMILPConfig, solve_etes_milp
 
 
 def _peak_price_profile(n=24):
@@ -23,10 +20,14 @@ class TestETESMILP:
         price = _peak_price_profile(n)
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             fixed_charge_rate=0.10,
             opex_fraction=0.04,
             cyclic=True,
@@ -52,10 +53,14 @@ class TestETESMILP:
         # expensive hours.
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             S_TES_fixed_kWh=500_000.0,
             S_ch_fixed_kW=100_000.0,
             S_dis_fixed_kW=20_000.0,
@@ -76,10 +81,14 @@ class TestETESMILP:
         price = _peak_price_profile(n)
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.01,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.01,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
         )
         res = solve_etes_milp(cfg, price, load, dt_h=1.0)
 
@@ -96,10 +105,14 @@ class TestETESMILP:
         price = np.tile([0.02, 0.20], n // 2)
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             cyclic=True,
         )
         res = solve_etes_milp(cfg, price, load, dt_h=1.0)
@@ -113,9 +126,13 @@ class TestETESMILP:
         price = _peak_price_profile(n)
         cfg = ETESMILPConfig(
             etes_type="R-ETES",
-            eta_ch=0.98, eta_dis=0.90, f_loss=0.0068,
-            f_ch_max=0.3, f_dis_max=0.2,
-            C_lin_TES=10.0, C_min_TES=3.0,
+            eta_ch=0.98,
+            eta_dis=0.90,
+            f_loss=0.0068,
+            f_ch_max=0.3,
+            f_dis_max=0.2,
+            C_lin_TES=10.0,
+            C_min_TES=3.0,
             fixed_charge_rate=0.10,
             opex_fraction=0.04,
         )
@@ -135,10 +152,14 @@ class TestETESMILP:
         t_min = 6.0
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=t_min,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
         )
         res = solve_etes_milp(cfg, price, load, dt_h=1.0)
         # S_ch * eta_ch * t_ch_min <= S_TES
@@ -151,10 +172,14 @@ class TestETESMILP:
         price = _peak_price_profile(n)
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             S_TES_fixed_kWh=200_000.0,
             S_ch_fixed_kW=50_000.0,
             S_dis_fixed_kW=20_000.0,
@@ -176,10 +201,14 @@ class TestETESMILP:
         price = np.full(n, 0.50)  # expensive grid
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=0.0,  # disable to avoid sizing coupling
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             S_TES_fixed_kWh=1.0,  # essentially no storage
             S_ch_fixed_kW=1.0,
             S_dis_fixed_kW=1.0,
@@ -197,10 +226,14 @@ class TestETESMILP:
         price = _peak_price_profile(n)
         cfg = ETESMILPConfig(
             etes_type="P-ETES",
-            eta_ch=0.95, eta_dis=0.73, f_loss=0.0,
+            eta_ch=0.95,
+            eta_dis=0.73,
+            f_loss=0.0,
             t_ch_min_h=2.0,
-            C_lin_TES=5.0, C_min_TES=1.5,
-            C_lin_ch=100.0, C_lin_dis=150.0,
+            C_lin_TES=5.0,
+            C_min_TES=1.5,
+            C_lin_ch=100.0,
+            C_lin_dis=150.0,
             fixed_charge_rate=0.10,
             opex_fraction=0.04,
         )
@@ -218,5 +251,7 @@ class TestETESMILP:
         with pytest.raises(ValueError, match="etes_type"):
             ETESMILPConfig(
                 etes_type="BAD",
-                eta_ch=0.9, eta_dis=0.7, f_loss=0.0,
+                eta_ch=0.9,
+                eta_dis=0.7,
+                f_loss=0.0,
             )

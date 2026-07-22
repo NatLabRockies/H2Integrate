@@ -26,14 +26,18 @@ Example
 >>> n = 24
 >>> cfg = ETESMILPConfig(
 ...     etes_type="P-ETES",
-...     eta_ch=0.95, eta_dis=0.73, f_loss=0.0068,
+...     eta_ch=0.95,
+...     eta_dis=0.73,
+...     f_loss=0.0068,
 ...     t_ch_min_h=4.0,
-...     C_lin_TES=5.0, C_min_TES=1.5,
-...     C_lin_ch=100.0, C_lin_dis=150.0,
+...     C_lin_TES=5.0,
+...     C_min_TES=1.5,
+...     C_lin_ch=100.0,
+...     C_lin_dis=150.0,
 ...     fixed_charge_rate=0.10,
 ... )
->>> price = np.array([0.02]*8 + [0.10]*8 + [0.05]*8)  # $/kWh_e
->>> load = np.full(24, 10_000.0)                       # kW_th
+>>> price = np.array([0.02] * 8 + [0.10] * 8 + [0.05] * 8)  # $/kWh_e
+>>> load = np.full(24, 10_000.0)  # kW_th
 >>> result = solve_etes_milp(cfg, price, load, dt_h=1.0)
 >>> result.S_TES_kWh  # doctest: +SKIP
 """
@@ -41,14 +45,13 @@ Example
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import pyomo.environ as pyo
+from attrs import field as attrs_field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.validators import gt_zero, gte_zero
-from attrs import field as attrs_field, define
 
 
 _PREFERRED_SOLVERS = ("appsi_highs", "highs", "cbc", "glpk")
@@ -137,9 +140,9 @@ class ETESMILPConfig(BaseConfig):
     S_ch_max_kW: float = attrs_field(default=1.0e9, validator=gt_zero)
     S_dis_min_kW: float = attrs_field(default=0.0, validator=gte_zero)
     S_dis_max_kW: float = attrs_field(default=1.0e9, validator=gt_zero)
-    S_TES_fixed_kWh: Optional[float] = attrs_field(default=None)
-    S_ch_fixed_kW: Optional[float] = attrs_field(default=None)
-    S_dis_fixed_kW: Optional[float] = attrs_field(default=None)
+    S_TES_fixed_kWh: float | None = attrs_field(default=None)
+    S_ch_fixed_kW: float | None = attrs_field(default=None)
+    S_dis_fixed_kW: float | None = attrs_field(default=None)
 
     C_lin_TES: float = attrs_field(default=0.0, validator=gte_zero)
     C_const_TES: float = attrs_field(default=0.0, validator=gte_zero)
@@ -155,8 +158,8 @@ class ETESMILPConfig(BaseConfig):
     allow_unmet_load: bool = attrs_field(default=False)
     unmet_load_penalty: float = attrs_field(default=1.0e4)
     enforce_mutex_charge_dis: bool = attrs_field(default=False)
-    solver: Optional[str] = attrs_field(default=None)
-    solver_options: Optional[dict] = attrs_field(default=None)
+    solver: str | None = attrs_field(default=None)
+    solver_options: dict | None = attrs_field(default=None)
 
 
 @dataclass
@@ -188,7 +191,7 @@ class ETESMILPResult:
     objective_value: float
 
 
-def _pick_solver(name: Optional[str]):
+def _pick_solver(name: str | None):
     if name is not None:
         solver = pyo.SolverFactory(name)
         if not solver.available(exception_flag=False):
@@ -199,7 +202,7 @@ def _pick_solver(name: Optional[str]):
             solver = pyo.SolverFactory(s)
             if solver.available(exception_flag=False):
                 return solver, s
-        except Exception:
+        except (ValueError, AttributeError):
             continue
     raise RuntimeError(
         f"No LP/MILP solver available; tried {_PREFERRED_SOLVERS}. "
@@ -248,7 +251,8 @@ def solve_etes_milp(
     m.S_TES = pyo.Var(
         domain=pyo.NonNegativeReals,
         bounds=(cfg.S_TES_min_kWh, cfg.S_TES_max_kWh),
-        initialize=cfg.S_TES_fixed_kWh if cfg.S_TES_fixed_kWh is not None
+        initialize=cfg.S_TES_fixed_kWh
+        if cfg.S_TES_fixed_kWh is not None
         else 0.5 * (cfg.S_TES_min_kWh + cfg.S_TES_max_kWh),
     )
     if cfg.S_TES_fixed_kWh is not None:
@@ -258,7 +262,8 @@ def solve_etes_milp(
         m.S_ch = pyo.Var(
             domain=pyo.NonNegativeReals,
             bounds=(cfg.S_ch_min_kW, cfg.S_ch_max_kW),
-            initialize=cfg.S_ch_fixed_kW if cfg.S_ch_fixed_kW is not None
+            initialize=cfg.S_ch_fixed_kW
+            if cfg.S_ch_fixed_kW is not None
             else 0.5 * (cfg.S_ch_min_kW + cfg.S_ch_max_kW),
         )
         if cfg.S_ch_fixed_kW is not None:
@@ -266,7 +271,8 @@ def solve_etes_milp(
         m.S_dis = pyo.Var(
             domain=pyo.NonNegativeReals,
             bounds=(cfg.S_dis_min_kW, cfg.S_dis_max_kW),
-            initialize=cfg.S_dis_fixed_kW if cfg.S_dis_fixed_kW is not None
+            initialize=cfg.S_dis_fixed_kW
+            if cfg.S_dis_fixed_kW is not None
             else 0.5 * (cfg.S_dis_min_kW + cfg.S_dis_max_kW),
         )
         if cfg.S_dis_fixed_kW is not None:
@@ -357,10 +363,9 @@ def solve_etes_milp(
 
         # Minimum charging time: S_ch * eta_ch <= S_TES / t_ch_min
         if cfg.t_ch_min_h > 0:
-            m.t_ch_min_con = pyo.Constraint(
-                expr=m.S_ch * cfg.eta_ch * cfg.t_ch_min_h <= m.S_TES
-            )
+            m.t_ch_min_con = pyo.Constraint(expr=m.S_ch * cfg.eta_ch * cfg.t_ch_min_h <= m.S_TES)
     else:  # R-ETES: rates coupled to S_TES
+
         def _ch_cap_rule(mm, t):
             return mm.Q_ch[t] <= cfg.f_ch_max * mm.S_TES
 
@@ -373,9 +378,7 @@ def solve_etes_milp(
     # --- Cost variables ---
     # Storage cost: c_tes >= linear; c_tes >= floor (handles economy-of-scale floor)
     m.c_tes = pyo.Var(domain=pyo.NonNegativeReals)
-    m.c_tes_lin = pyo.Constraint(
-        expr=m.c_tes >= cfg.C_lin_TES * m.S_TES + cfg.C_const_TES
-    )
+    m.c_tes_lin = pyo.Constraint(expr=m.c_tes >= cfg.C_lin_TES * m.S_TES + cfg.C_const_TES)
     if cfg.C_min_TES > 0:
         m.c_tes_floor = pyo.Constraint(expr=m.c_tes >= cfg.C_min_TES * m.S_TES)
 
@@ -394,9 +397,7 @@ def solve_etes_milp(
     # Annualized capex = (FCR + opex_fraction) * CapEx
     # Electricity cost = sum_t (Q_ch[t] / eta_ch) * price[t] * dt
     annualization = cfg.fixed_charge_rate + cfg.opex_fraction
-    grid_cost = sum(
-        (m.Q_ch[t] / cfg.eta_ch) * float(price[t]) * dt_h for t in m.T
-    )
+    grid_cost = sum((m.Q_ch[t] / cfg.eta_ch) * float(price[t]) * dt_h for t in m.T)
     unmet_penalty = sum(m.unmet[t] * cfg.unmet_load_penalty * dt_h for t in m.T)
 
     m.obj = pyo.Objective(

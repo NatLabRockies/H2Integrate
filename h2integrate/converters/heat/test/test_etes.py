@@ -1,6 +1,6 @@
 import numpy as np
-import openmdao.api as om
 import pytest
+import openmdao.api as om
 from pytest import approx, fixture
 
 from h2integrate.converters.heat.etes import ETESPerformanceModel

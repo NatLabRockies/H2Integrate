@@ -213,7 +213,7 @@ class ETESPerformanceModel(om.ExplicitComponent):
 
             # --- Discharge to meet thermal load ---
             # Required storage-side withdrawal rate to meet load:
-            dis_req_rate = load[t] / eta_dis if eta_dis > 0 else 0.0 # kW_th
+            dis_req_rate = load[t] / eta_dis if eta_dis > 0 else 0.0  # kW_th
             # Available energy in storage after standing loss, above SOC_min:
             available_E = max(E_prev - loss_energy - E_min, 0.0)
             dis_available_rate = available_E / dt if dt > 0 else 0.0
@@ -266,4 +266,6 @@ class ETESPerformanceModel(om.ExplicitComponent):
         total_heat = float(np.sum(heat_out) * dt)
         total_elec = float(np.sum(elec_used) * dt)
         outputs["E_total_delivered_kWh"] = total_heat
-        outputs["overall_round_trip_efficiency"] = total_heat / total_elec if total_elec > 0 else 0.0
+        outputs["overall_round_trip_efficiency"] = (
+            total_heat / total_elec if total_elec > 0 else 0.0
+        )
