@@ -25,6 +25,6 @@ for casename in caselist:
     # TODO: Update with demand module once it is developed
     demand_profile = np.ones(8760) * 640.0
     model.setup()
-    model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     model.run()
     model.post_process()

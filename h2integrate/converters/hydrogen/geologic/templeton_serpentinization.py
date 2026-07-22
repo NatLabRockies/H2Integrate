@@ -57,7 +57,9 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         config (StimulatedGeoH2PerformanceConfig): Configuration object containing model
             parameters for the stimulated system.
 
-    Inputs (in addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`):
+    Inputs:
+        In addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`:
+
         olivine_phase_vol (float): Volume percent of olivine in the formation [%].
         olivine_fe_ii_conc (float): Mass percent of iron (II) in the olivine [%].
         depth_to_formation (float): Depth below the surface of the caprock that does not
@@ -68,7 +70,9 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         bulk_density (float): Bulk density of the rock [kg/m³].
         water_temp (float): Temperature of the injected water [°C].
 
-    Outputs (in addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`):
+    Outputs:
+        In addition to those in :class:`GeoH2SubsurfacePerformanceBaseClass`:
+
         hydrogen_out_stim (ndarray): Hourly hydrogen production profile from stimulation
             over one year (8760 hours) [kg/h].
     """
@@ -79,7 +83,6 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = StimulatedGeoH2PerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
@@ -94,11 +97,11 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         self.add_input("bulk_density", units="kg/m**3", val=self.config.bulk_density)
         self.add_input("water_temp", units="C", val=self.config.water_temp)
 
-        self.add_output("hydrogen_out_stim", units="kg/h", shape=n_timesteps)
+        self.add_output("hydrogen_out_stim", units="kg/h", shape=self.n_timesteps)
 
     def compute(self, inputs, outputs):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        lifetime = self.options["plant_config"]["plant"]["plant_life"]
+        n_timesteps = self.n_timesteps
+        lifetime = self.plant_life
 
         # Calculate serpentinization penetration rate
         grain_size = inputs["grain_size"]

@@ -68,6 +68,8 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    _control_classifier = "connector"
+
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})
         self.options.declare("plant_config", types=dict, default={})
@@ -96,6 +98,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
                 "fraction_to_priority_tech",
                 val=self.config.fraction_to_priority_tech,
                 desc="Fraction of input commodity to send to the priority technology (0.0 to 1.0)",
+                units="unitless",
             )
         elif split_mode == "prescribed_commodity":
             self.add_input(

@@ -1,0 +1,8 @@
+name: H2Integrate_config
+system_summary: >
+  Complex profit-maximization example using wind, solar, battery storage,
+  natural gas, and grid electricity to meet a time-varying demand with
+  realistic wholesale electricity pricing.
+driver_config: driver_config.yaml
+plant_config: plant_config.yaml
+technology_config: tech_config.yaml

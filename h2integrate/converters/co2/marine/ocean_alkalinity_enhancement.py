@@ -73,6 +73,7 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -280,12 +281,11 @@ class OAECostModel(CostModelBaseClass):
                 additional_cls_name=self.__class__.__name__,
             )
         super().setup()
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
             "annual_co2_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="t/year",
         )
         self.add_input(
@@ -377,13 +377,11 @@ class OAECostAndFinancialModel(CostModelBaseClass):
                 additional_cls_name=self.__class__.__name__,
             )
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
             "annual_co2_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="t/year",
             desc="Annual co2 captured",
         )
@@ -396,14 +394,14 @@ class OAECostAndFinancialModel(CostModelBaseClass):
         self.add_input(
             "annual_input_electricity",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="kW*h/year",
             desc="Annual energy input to the OAE",
         )
         self.add_input(
             "unused_energy",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Unused energy unused by OAE system",
         )

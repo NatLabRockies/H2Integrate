@@ -38,6 +38,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -85,6 +86,10 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         outputs["rated_electricity_production"] = self.plant_rating_kw
         outputs["capacity_factor"] = aep / self.plant_capacity
 
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)
+
 
 class WindArdCostCompatibilityComponent(CostModelBaseClass):
     """The class is needed to allow connecting the Ard cost_year easily in H2Integrate.
@@ -116,43 +121,50 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
-    Subsystems:
+    **Subsystems:**
 
-        ard_sub_prob (SubmodelComp): Encapsulated Ard Problem exposing specified inputs/outputs.
-        wind_ard_performance_compatibility (WindArdPerformanceCompatibilityComponent):
-            Necessary for providing required performance metrics to H2Integrate.
-        wind_ard_cost_compatibility (WindArdCostCompatibilityComponent):
-            Necessary for providing cost_year to H2Integrate.
+    - ``ard_sub_prob`` (SubmodelComp): Encapsulated Ard Problem exposing specified
+      inputs/outputs.
+    - ``wind_ard_performance_compatibility`` (WindArdPerformanceCompatibilityComponent):
+      Necessary for providing required performance metrics to H2Integrate.
+    - ``wind_ard_cost_compatibility`` (WindArdCostCompatibilityComponent):
+      Necessary for providing cost_year to H2Integrate.
 
-    Promoted Inputs:
+    **Promoted Inputs:**
 
-        spacing_primary: Primary spacing parameter.
-        spacing_secondary: Secondary spacing parameter.
-        angle_orientation: Orientation angle.
-        angle_skew: Skew angle.
-        x_substations: X-coordinates of substations.
-        y_substations: Y-coordinates of substations.
+    - ``spacing_primary``: Primary spacing parameter.
+    - ``spacing_secondary``: Secondary spacing parameter.
+    - ``angle_orientation``: Orientation angle.
+    - ``angle_skew``: Skew angle.
+    - ``x_substations``: X-coordinates of substations.
+    - ``y_substations``: Y-coordinates of substations.
 
-    Promoted Outputs:
+    **Promoted Outputs:**
 
-        electricity_out (float): Annual energy production (AEP) in MWh (as provided by ARD/FLORIS).
-        CapEx (float): Capital expenditure from ARD turbine & balance of plant cost model.
-        OpEx (float): Operating expenditure from ARD.
-        boundary_distances (array): Distances from turbines to boundary segments.
-        turbine_spacing (array): Inter-turbine spacing metrics.
-        cost_year: Cost year from cost component.
-        VarOpEx: Variable operating expenditure (currently placeholder).
+    - ``electricity_out`` (float): Annual energy production (AEP) in MWh (as provided by
+      ARD/FLORIS).
+    - ``CapEx`` (float): Capital expenditure from ARD turbine & balance of plant cost model.
+    - ``OpEx`` (float): Operating expenditure from ARD.
+    - ``boundary_distances`` (array): Distances from turbines to boundary segments.
+    - ``turbine_spacing`` (array): Inter-turbine spacing metrics.
+    - ``cost_year``: Cost year from cost component.
+    - ``VarOpEx``: Variable operating expenditure (currently placeholder).
     """
 
     _time_step_bounds = (
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
+
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
         if set_up_ard_model is None:
             msg = (

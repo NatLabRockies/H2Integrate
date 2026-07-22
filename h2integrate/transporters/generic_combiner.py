@@ -43,6 +43,8 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    _control_classifier = "connector"
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
