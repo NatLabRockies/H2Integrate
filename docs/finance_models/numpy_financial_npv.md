@@ -17,8 +17,8 @@ Implements validation and default handling using the `attrs` library.
 | Attribute                         | Type             | Description                                           | Default     |
 | --------------------------------- | ---------------- | ----------------------------------------------------- | ----------- |
 | `plant_life`                      | `int`            | Operating life of the plant in years. Must be ≥ 0.    | —           |
-| `discount_rate`                   | `float`          | Discount rate (0–1). Can be either a real or nominal rate depending on how `inflation_rate` is specified. | —           |
-| `inflation_rate`                  | `float`          | Inflation rate (0–1). Combined with `discount_rate` via the Fisher equation `(1 + r_eff) = (1 + discount_rate) * (1 + inflation_rate)` to form the effective discount rate. Set to 0 if `discount_rate` is already a nominal rate. This matches how ProFAST combines its real discount rate and `general_inflation` inputs. | `0.0`       |
+| `real_discount_rate`              | `float`          | Discount rate (0-1). Can be either a real or nominal rate depending on how `inflation_rate` is specified. | -           |
+| `inflation_rate`                  | `float`          | Inflation rate (0-1). Combined with `real_discount_rate` via the Fisher equation `(1 + r_eff) = (1 + real_discount_rate) * (1 + inflation_rate)` to form the effective discount rate. Set to 0 if `real_discount_rate` is already a nominal rate. This matches how ProFAST combines its real discount rate and `general_inflation` inputs. | `0.0`       |
 | `commodity_sell_price`            | `int` or `float` | Sale price of the commodity (USD/unit).               | `0.0`       |
 | `commodity_sell_price_units`      | `str`            | OpenMDAO unit string for `commodity_sell_price` (e.g. `"USD/(kW*h)"` for electricity or `"USD/kg"` for hydrogen). | —           |
 | `save_cost_breakdown`             | `bool`           | Whether to save annual cost breakdowns to CSV.        | `False`     |
@@ -32,8 +32,8 @@ An example of what to include in the `plant_config` to use the `NPVFinance` mode
 npv:
   finance_model: "NumpyFinancialNPV"
   model_inputs:
-    discount_rate: 0.09 # each period is discounted at a rate of `(1 + discount_rate) * (1 + inflation_rate) - 1`
-    inflation_rate: 0.0 # optional, defaults to 0; provide e.g. 0.025 if `discount_rate` is a real rate
+    real_discount_rate: 0.09 # each period is discounted at a rate of `(1 + real_discount_rate) * (1 + inflation_rate) - 1`
+    inflation_rate: 0.0 # optional, defaults to 0; provide e.g. 0.025 if `real_discount_rate` is a real rate
     commodity_sell_price: 0.078 # if commodity is electricity $/kwh
     commodity_sell_price_units: "USD/(kW*h)" # OpenMDAO unit string for the sell price
     save_cost_breakdown: True
@@ -68,7 +68,7 @@ npv:
     - Technologies with `replacement_cost_percent` and a refurbishment period incur periodic capital costs.
 
 3. Discounting
-    - Each series of cash flows is discounted using NumPy Financial’s `npf.npv(effective_rate, values)`, where `effective_rate = (1 + discount_rate) * (1 + inflation_rate) - 1` is the Fisher-equation combination of the user-supplied real (or nominal) discount rate and inflation rate. When `inflation_rate` is left at its default of 0, this reduces to `discount_rate`, so the user can supply either a nominal discount rate alone or split it into a real discount rate plus an inflation rate. The multiplicative (Fisher) form matches the way ProFAST combines its real discount rate and `general_inflation` inputs.
+    - Each series of cash flows is discounted using NumPy Financial’s `npf.npv(effective_rate, values)`, where `effective_rate = (1 + real_discount_rate) * (1 + inflation_rate) - 1` is the Fisher-equation combination of `real_discount_rate` and `inflation_rate`. When `inflation_rate` is left at its default of 0, `effective_rate` reduces to `real_discount_rate`, so the value passed as `real_discount_rate` is used directly as the (nominal) discount rate. To model inflation explicitly, supply a real `real_discount_rate` together with a nonzero `inflation_rate`. The multiplicative (Fisher) form matches the way ProFAST combines its real discount rate and `general_inflation` inputs.
 
 4. Summation
    - Total NPV = sum of all discounted cash flows.

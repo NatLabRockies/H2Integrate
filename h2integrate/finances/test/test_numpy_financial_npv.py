@@ -11,7 +11,7 @@ from h2integrate.finances.numpy_financial_npv import (
 @fixture
 def npv_finance_inputs():
     npv_dict = {
-        "discount_rate": 0.09,
+        "real_discount_rate": 0.09,
         "commodity_sell_price": 0.04,
         "commodity_sell_price_units": "USD/(kW*h)",
         "save_cost_breakdown": False,
@@ -220,18 +220,18 @@ def test_inflation_rate_combines_via_fisher_equation(
     # Real discount rate 0.05 + inflation 0.04 should give the same NPV as a
     # nominal rate of (1.05 * 1.04 - 1) = 0.092, NOT 0.09 (the additive form).
     nominal_inputs = npv_finance_inputs.copy()
-    nominal_inputs["discount_rate"] = 1.05 * 1.04 - 1.0  # 0.092
+    nominal_inputs["real_discount_rate"] = 1.05 * 1.04 - 1.0  # 0.092
 
     split_inputs = npv_finance_inputs.copy()
-    split_inputs["discount_rate"] = 0.05
+    split_inputs["real_discount_rate"] = 0.05
     split_inputs["inflation_rate"] = 0.04
 
     inflation_only_inputs = npv_finance_inputs.copy()
-    inflation_only_inputs["discount_rate"] = 0.0
+    inflation_only_inputs["real_discount_rate"] = 0.0
     inflation_only_inputs["inflation_rate"] = 0.09
 
     inflation_only_nominal_inputs = npv_finance_inputs.copy()
-    inflation_only_nominal_inputs["discount_rate"] = 0.09
+    inflation_only_nominal_inputs["real_discount_rate"] = 0.09
 
     prob_nominal = _build_npv_problem(nominal_inputs, fake_filtered_tech_config, fake_cost_dict)
     prob_split = _build_npv_problem(split_inputs, fake_filtered_tech_config, fake_cost_dict)
@@ -253,7 +253,7 @@ def test_inflation_rate_combines_via_fisher_equation(
         assert pytest.approx(npv_split, rel=1e-12) == npv_nominal
 
     with subtests.test("Inflation-only matches equivalent nominal (real=0)"):
-        # With discount_rate=0, (1+0)*(1+pi)-1 = pi, so this should match a
+        # With real_discount_rate=0, (1+0)*(1+pi)-1 = pi, so this should match a
         # nominal rate equal to the inflation rate exactly.
         assert pytest.approx(npv_inflation_only, rel=1e-12) == npv_inflation_only_nominal
 
@@ -265,7 +265,7 @@ def test_inflation_rate_validator_rejects_out_of_range():
         NumpyFinancialNPVFinanceConfig.from_dict(
             {
                 "plant_life": 30,
-                "discount_rate": 0.05,
+                "real_discount_rate": 0.05,
                 "inflation_rate": -0.01,
                 "commodity_sell_price_units": "USD/(kW*h)",
             }
@@ -275,7 +275,7 @@ def test_inflation_rate_validator_rejects_out_of_range():
         NumpyFinancialNPVFinanceConfig.from_dict(
             {
                 "plant_life": 30,
-                "discount_rate": 0.05,
+                "real_discount_rate": 0.05,
                 "inflation_rate": 1.5,
                 "commodity_sell_price_units": "USD/(kW*h)",
             }
