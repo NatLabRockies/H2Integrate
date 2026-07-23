@@ -33,7 +33,7 @@ npv:
   finance_model: "NumpyFinancialNPV"
   model_inputs:
     discount_rate: 0.09 # each period is discounted at a rate of `(1 + discount_rate) * (1 + inflation_rate) - 1`
-    inflation_rate: 0.0 # optional, defaults to 0; provide e.g. 0.025 if `discount_rate` is a real rate
+ inflation_rate: 0.0 # optional, defaults to 0; provide e.g. 0.025 if inflation rate is 2.5%. 
     commodity_sell_price: 0.078 # if commodity is electricity $/kwh
     commodity_sell_price_units: "USD/(kW*h)" # OpenMDAO unit string for the sell price
     save_cost_breakdown: True
