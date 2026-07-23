@@ -52,7 +52,7 @@ for folder in default_directories:
 
 If you want to determine whether your environment file is placed in one of the valid locations, the code below will tell you if your environment file is found in any of the default directories:
 
-```{code-cell} ipython3
+```python
 from pathlib import Path
 
 from h2integrate import ROOT_DIR
