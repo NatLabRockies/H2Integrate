@@ -20,6 +20,7 @@ Implements validation and default handling using the `attrs` library.
 | `discount_rate`                   | `float`          | Discount rate (0–1). Can be either a real or nominal rate depending on how `inflation_rate` is specified. | —           |
 | `inflation_rate`                  | `float`          | Inflation rate (0–1). Combined with `discount_rate` via the Fisher equation `(1 + r_eff) = (1 + discount_rate) * (1 + inflation_rate)` to form the effective discount rate. Set to 0 if `discount_rate` is already a nominal rate. This matches how ProFAST combines its real discount rate and `general_inflation` inputs. | `0.0`       |
 | `commodity_sell_price`            | `int` or `float` | Sale price of the commodity (USD/unit).               | `0.0`       |
+| `commodity_sell_price_units`      | `str`            | OpenMDAO unit string for `commodity_sell_price` (e.g. `"USD/(kW*h)"` for electricity or `"USD/kg"` for hydrogen). | —           |
 | `save_cost_breakdown`             | `bool`           | Whether to save annual cost breakdowns to CSV.        | `False`     |
 | `save_npv_breakdown`              | `bool`           | Whether to save per-technology NPV breakdowns to CSV. | `False`     |
 | `cost_breakdown_file_description` | `str`            | Descriptor appended to output filenames.              | `'default'` |
@@ -34,6 +35,7 @@ npv:
     discount_rate: 0.09 # each period is discounted at a rate of `(1 + discount_rate) * (1 + inflation_rate) - 1`
     inflation_rate: 0.0 # optional, defaults to 0; provide e.g. 0.025 if `discount_rate` is a real rate
     commodity_sell_price: 0.078 # if commodity is electricity $/kwh
+    commodity_sell_price_units: "USD/(kW*h)" # OpenMDAO unit string for the sell price
     save_cost_breakdown: True
     save_npv_breakdown: True
 ```

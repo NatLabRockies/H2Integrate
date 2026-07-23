@@ -55,6 +55,7 @@ finance_parameters:
       finance_model: ProFastNPV
       model_inputs:
         commodity_sell_price: 0.10
+        commodity_sell_price_units: USD/(kW*h)
         params:
           analysis_start_year: 2032
           installation_time: 36  # months
@@ -79,6 +80,7 @@ finance_parameters:
       model_inputs:
         discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind
         commodity_sell_price: 0.078
+        commodity_sell_price_units: USD/(kW*h)
         save_cost_breakdown: true
         save_npv_breakdown: true
   cost_adjustment_parameters:
@@ -99,10 +101,7 @@ finance_parameters:
       technologies: [wind, battery]
     electricity:
       commodity: electricity
-      # since commodity_stream is not specified, the default behavior is to
-      # use the electricity produced from all electricity producing technologies
-      # included in 'technologies'. In this case, it will use the electricity
-      # produced by the wind technology as the commodity stream.
+      commodity_stream: wind
       finance_groups: [profast, npv, profast_npv]
       commodity_desc: all_electricity
       technologies: [wind, battery]

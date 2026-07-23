@@ -40,6 +40,7 @@ plant:
     dt: 3600
 system_level_control:
   control_strategy: ProfitMaximizationControl
+  demand_component: electrical_load_demand
   control_parameters:
     commodity_sell_price: 0.06  # $/kWh default; overridden in run script
     cost_per_tech:

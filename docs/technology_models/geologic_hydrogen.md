@@ -37,7 +37,7 @@ The modeling approach in this performance model is informed by:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 - Templeton et al. (UC Boulder): <https://doi.org/10.3389/fgeoc.2024.1366268>
 
-(GeoH2SubsurfaceCostModel)=
+(mathur-modified-geoh2-cost)=
 ### Mathur Modified GeoH2 Cost
 
 The modeling approach in this cost model is based on:

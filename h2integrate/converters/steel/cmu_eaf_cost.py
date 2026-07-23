@@ -30,7 +30,7 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
             in an electric arc furnace, used to calculate labor costs. Default value is 4/20.
         cost_year (int): Year for which the cost data is reported, used for inflation adjustments.
             Default value is 2022, which corresponds to the year of the cost data used in the CMU
-                decarbSTEEL v5 model.
+            decarbSTEEL v5 model.
 
     """
 

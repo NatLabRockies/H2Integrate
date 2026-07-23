@@ -13,6 +13,7 @@ def npv_finance_inputs():
     npv_dict = {
         "discount_rate": 0.09,
         "commodity_sell_price": 0.04,
+        "commodity_sell_price_units": "USD/(kW*h)",
         "save_cost_breakdown": False,
         "save_npv_breakdown": False,
         "cost_breakdown_file_description": False,
@@ -153,6 +154,7 @@ def _build_npv_problem(npv_finance_inputs, fake_filtered_tech_config, fake_cost_
     """Build and run an NPV problem with the given finance inputs."""
     mean_hourly_production = 500000.0
     prob = om.Problem()
+
     plant_config = {
         "plant": {
             "plant_life": 30,
@@ -261,10 +263,20 @@ def test_inflation_rate_validator_rejects_out_of_range():
     """inflation_rate must be in [0, 1]."""
     with pytest.raises(ValueError, match="inflation_rate"):
         NumpyFinancialNPVFinanceConfig.from_dict(
-            {"plant_life": 30, "discount_rate": 0.05, "inflation_rate": -0.01}
+            {
+                "plant_life": 30,
+                "discount_rate": 0.05,
+                "inflation_rate": -0.01,
+                "commodity_sell_price_units": "USD/(kW*h)",
+            }
         )
 
     with pytest.raises(ValueError, match="inflation_rate"):
         NumpyFinancialNPVFinanceConfig.from_dict(
-            {"plant_life": 30, "discount_rate": 0.05, "inflation_rate": 1.5}
+            {
+                "plant_life": 30,
+                "discount_rate": 0.05,
+                "inflation_rate": 1.5,
+                "commodity_sell_price_units": "USD/(kW*h)",
+            }
         )

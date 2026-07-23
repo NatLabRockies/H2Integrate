@@ -38,6 +38,7 @@ plant:
 finance_parameters:
   finance_groups:
     commodity: methanol
+    commodity_stream: methanol
     finance_model: ProFastLCO
     model_inputs:
       params:

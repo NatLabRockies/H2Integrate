@@ -43,8 +43,8 @@ Within this framework, there are two distinct layers, **finance groups** and **f
     List of `finance_groups` that contain the `finance_model` and `model_inputs`. Required if multiple `finance_groups` are being used. Technology-specific `finance_groups` can be called by using the technology name listed in the `tech_config` (e.g., `steel` to use the steel specific finance model).
   - `commodity_desc` (optional):
     A text label to further distinguish outputs for a commodity. This is particularly useful when multiple finance models or subgroups reference the same commodity but need to produce separate outputs.
-  - `commodity_stream` (optional):
-    A text label of a technology that outputs the specified ``commodity`` to use as the commodity production stream in finance calculations. This is particularly useful when wanting to choose a specific commodity stream to use in finance calculations (such as the outputs of combiners or splitters)
+  - `commodity_stream`:
+    A text label of a technology that outputs the specified ``commodity`` to use as the commodity production stream in finance calculations. This is required for every subgroup and lets you choose a specific commodity stream to use in finance calculations (such as the outputs of combiners or splitters).
   - The below two parameters are only needed to [use a specified timeseries profile for finance calculations](fin:commodity_output_streams)
     - `use_commodity_stream_timeseries` (optional): A boolean that defaults to False. If True, then flags to use a timeseries profile for the finance calculation rather than the capacity factor and rated commodity production of the `commodity_stream` technology.
     - `commodity_stream_output`: The name of timeseries profile output variable from `commodity_stream` to use for the finance calculation(s). This parameter is required if `use_commodity_stream_timeseries` is True.
@@ -60,7 +60,7 @@ We'll now walk through three common configurations, highlighting the differences
 (finparam:nosubgroups)=
 ### Single-model (no subgroups)
 If no `finance_subgroups` are specified, all technologies are automatically grouped into a single default subgroup. In this case:
-  - `commodity` and `finance_model` must be defined directly in `finance_groups`.
+  - `commodity`, `commodity_stream`, and `finance_model` must be defined directly in `finance_groups`.
   - A default subgroup named `default` is created internally.
 
 General format:
@@ -68,6 +68,7 @@ General format:
 finance_parameters:
   finance_groups:
     commodity: "hydrogen"
+    commodity_stream: "electrolyzer"
     finance_model: "ProFastLCO"
     model_inputs:
       discount_rate: 0.08
@@ -97,9 +98,11 @@ finance_parameters:
   finance_subgroups:
     subgroup_a:
       commodity: "hydrogen" #required
+      commodity_stream: "electrolyzer" #required
       technologies: ["electrolyzer"]
     subgroup_b:
       commodity: "ammonia" #required
+      commodity_stream: "asu" #required
       technologies: ["electrolyzer", "asu"]
 ```
 

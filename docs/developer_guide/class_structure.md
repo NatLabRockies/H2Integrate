@@ -1,18 +1,66 @@
+(class_structure)=
 # Class structure in H2Integrate
 
-A major focus of H2Integrate is modularizing the components and system architecture so it's easier to construct and analyze complex hybrid power plants producing commodities for a variety of uses.
-As such, we've taken great care to develop a series of base classes and inherited classes to help users develop their own models.
+A major focus of H2Integrate is modularizing the components and system architecture so it's easier to construct and analyze complex hybrid energy systems producing commodities for a variety of uses.
+As such, we've taken great care to develop a series of baseclasses and inherited classes to help users develop their own models.
 
-## Base classes
+## Choosing baseclasses for your model
 
-We previously discussed converters, transporters, and storage components.
-These components each have an associated base class that contain the methods expected and used for each of those components.
-These base classes live within the `core` directory of H2Integrate.
+Every model in H2Integrate inherits from a small set of baseclasses that wire it
+into the rest of the framework. Before writing a new model, pick the appropriate base
+class and configuration class for each piece of your technology:
+
+| Piece               | Baseclass                                                | Config baseclass                |
+| ------------------- | -------------------------------------------------------- | ------------------------------- |
+| Performance model   | `PerformanceModelBaseClass`                              | `BaseConfig`                    |
+| Cost model          | `CostModelBaseClass`                                     | `CostModelBaseConfig`           |
+| Controller (optional)   | A `PassthroughController` is inserted automatically; see [Technology-Level Control](../control/technology_level_control/technology_control_overview.md) for custom controller baseclasses | n/a |
+
+General model baseclasses and configs baseclasses are defined in:
+- `h2integrate/core/model_baseclasses.py`
+- `h2integrate/core/utilities.py`
+
+- **Adding a brand-new technology?** Inherit directly from existing core baseclasses and configuration baseclasses
+       - Performance models use: `PerformanceModelBaseClass` and `BaseConfig`
+       - Cost models use: `CostModelBaseClass` and `CostModelBaseConfig`
+- **Adding a technology that already has a category-specific baseclass?** Inherit
+  from a category-specific baseclass instead to easily set up shared I/O and commodity attributes for that technology. Existing examples include:
+      - `SolarPerformanceBaseClass`,
+      - `WindPerformanceBaseClass`
+      - `ElectrolyzerPerformanceBaseClass`
+
+```{note}
+Category-specific baseclasses are only worth creating when **multiple models
+share inputs, outputs, or methods**. The wind module is a canonical example:
+both `FlorisWindPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel`
+inherit from `WindPerformanceBaseClass` so they share the same wind-resource
+discrete input and turbine-rating output. If you are writing a technology model
+that doesn't fit into an existing category, skip the intermediate baseclass and
+inherit directly from `PerformanceModelBaseClass`.
+```
+
+Configuration classes use the [`attrs`](https://www.attrs.org) library and the
+`BaseConfig.from_dict` constructor, which validates user-supplied entries from
+`tech_config['model_inputs']` against the declared fields. This pattern is now
+standard for both performance and cost models in H2Integrate.
+
+For custom technology-level controllers, inherit from `StorageOpenLoopControlBase`
+(open-loop) or `PyomoStorageControllerBaseClass` (pyomo-based). See
+[Technology-Level Control](../control/technology_level_control/technology_control_overview.md)
+for details.
 
 ## Inherited classes
 
-Individual technology classes could inherit directly from these base classes, but we do not encourage this within H2Integrate.
-Instead, we have an additional layer of class inheritance that helps reduce duplicated code and potential errors.
+Inheriting from `PerformanceModelBaseClass` (rather than `om.ExplicitComponent`
+directly) means the baseclass:
+    - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
+    - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
+    - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
+    - Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+
+### Multiple layers of inheritance
+
+Individual technology classes could inherit directly from the core baseclasses. If there are multiple technologies that have a lot of the same inputs, outputs, and/or methods we can use an additional layer of class inheritance that helps reduce duplicated code and potential errors.
 
 Let us take a PEM electrolyzer model as an example.
 Each electrolyzer model has shared methods and attributes that would be present in any valid model.
