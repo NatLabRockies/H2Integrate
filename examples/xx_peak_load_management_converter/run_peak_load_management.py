@@ -37,7 +37,7 @@ model.setup()
 model.run()
 model.post_process()
 
-demand_profile = model.prob.get_val("fuel_cell.electricity_demand", units="kW")
+demand_profile = model.prob.get_val("fuel_cell.electricity_command_value", units="kW")
 # plot the results for the first week
 demand_profile_upstream = np.array(
     model.technology_config["technologies"]["fuel_cell"]["model_inputs"]["control_parameters"][

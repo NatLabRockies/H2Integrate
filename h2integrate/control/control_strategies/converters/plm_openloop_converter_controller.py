@@ -72,7 +72,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"][0]
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
-        demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"]
+        demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"][0]
         self.command_value = np.zeros(self.n_timesteps)
 
         for idx, val in enumerate(demand_profile):
@@ -85,6 +85,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
                 if self.config.demand_profile_upstream_kind == "electricity":
                     desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
+
                     self.command_value[idx] = min(
                         max(
                             max(desired_dispatch, 0),

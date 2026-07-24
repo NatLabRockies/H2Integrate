@@ -29,14 +29,15 @@ technologies:
         system_capacity_kw: 1000.0
       performance_parameters:
         fuel_cell_efficiency_hhv: 0.50
+        uptime_hours_until_eol: 80000
       cost_parameters:
         capex_per_kw: 200.0
         fixed_opex_per_kw_per_year: 10.0
+        variable_opex_per_kwh: 0.0
         cost_year: 2018
       control_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        system_capacity_rate: 1000.0
         demand_profile: !include demand_profiles/demand_profile.yaml
         demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml
         demand_profile_peak_cutoff: 400.0
