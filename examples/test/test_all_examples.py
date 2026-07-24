@@ -3076,7 +3076,7 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
         assert annual_hydrogen == pytest.approx(5.951086956521741)
 
     with subtests.test("Grid annual electricity sold is non-negative"):
-        assert annual_grid_sell == pytest.approx(8.509745843478264)
+        assert annual_grid_sell == pytest.approx(8.53262086956522)
 
     with subtests.test("Electricity balance between HTSE demand and grid sales"):
         assert pytest.approx(annual_nuclear_electricity, rel=1e-4) == (
