@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ import requests_cache
 import openmeteo_requests
 from attrs import field, define
 from retry_requests import retry
+from timezonefinder import TimezoneFinder
 
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
@@ -98,6 +100,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             "snow_depth": "m",
             "rain": "mm",  # "precipitable_water": "cm",
             "albedo": "percent",
+            "is_day": "unitless",
         }
         # get the data dictionary
         data = self.get_data(self.config.latitude, self.config.longitude)
@@ -159,6 +162,69 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
 
         return input_data
 
+    def make_time_index_v2(self, data, timezone, lat, lon):
+        # dt.datetime.fromisoformat('2014-01-01 00:00:00')
+        t0 = data["time"].iloc[0]
+        t1 = data["time"].iloc[1]
+
+        dt_t0 = datetime.fromisoformat(t0)
+        dt_t1 = datetime.fromisoformat(t1)
+
+        freq = pd.to_timedelta((dt_t1 - dt_t0).seconds, unit="s")
+        if dt_t0.tzinfo is None:
+            # missing timezone info
+            if "T" in t0:
+                print("WEB")
+                # Web download, downloaded in timezone specified
+                return pd.DatetimeIndex(data["time"])
+            # Old download method
+            # in UTC, times are in UTC
+            # in local time, times are also in UTC
+            if timezone != "GMT" or timezone != "UTC":
+                print("OLD - ADJUST")
+                tf = TimezoneFinder()
+                local_timezone = tf.timezone_at(lat=lat, lng=lon)
+                dt_t0 = dt_t0.astimezone(tz=ZoneInfo(local_timezone))
+            else:
+                print("OLD - UTC")
+        else:
+            print(f"TIMEZONE AWARE - {timezone}")
+        # utc_offset = dt_t0.utcoffset().total_seconds()
+        # New download method - timezone aware
+
+        return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
+
+    def make_time_index(self, data, timezone_name: str):
+        t0 = data["time"].iloc[0]
+
+        if "T" in t0:
+            print()
+            # Web download, downloaded in timezone specified
+            time = pd.DatetimeIndex(data["time"])
+            print(f"Web download, t0 is {t0} (timezone_name is {timezone_name})")
+            return time
+
+        # see if timezone is included in timestamp, for bugfix
+        t0_pd = pd.to_datetime(t0, format="ISO8601")
+        time = pd.DatetimeIndex(data["time"], tz="UTC")
+
+        if t0_pd.tzinfo is None:
+            # old format, time is in UTC even for local time
+
+            if self.utc:
+                # If data was downloaded in UTC, return it
+                print(f"Old download in UTC, t0 is {t0} (timezone_name is {timezone_name})")
+
+                return time
+            # Data downloaded in local time but timestamps were in UTC
+            # Convert time to local time
+            print(f"Old download in Local, t0 is {t0} (timezone_name is {timezone_name})")
+            return time.tz_convert(timezone_name)
+
+        # new format
+        print(f"NEW API DOWNLOAD, t0 is {t0} (timezone_name is {timezone_name})")
+        return time
+
     def download_data(self, url, fpath):
         """Download data from url to a file.
 
@@ -186,11 +252,15 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
 
         # Make time column in ISO 8601 format
         time_data = pd.date_range(
-            start=pd.to_datetime(hourly_data.Time(), unit="s"),
-            end=pd.to_datetime(hourly_data.TimeEnd(), unit="s"),
+            start=pd.to_datetime(hourly_data.Time(), unit="s", utc=True),
+            end=pd.to_datetime(hourly_data.TimeEnd(), unit="s", utc=True),
             freq=pd.Timedelta(seconds=hourly_data.Interval()),
             inclusive="left",
         )
+        if response.UtcOffsetSeconds() != 0:
+            # Data downloaded for local time
+            # convert timestamps to local time
+            time_data = time_data.tz_convert(response.Timezone().decode())
 
         # Convert timeseries data to a DataFrame
         df = pd.DataFrame(ts_data, index=time_data)
@@ -216,16 +286,21 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             header_data.update(
                 {"timezone_abbreviation": response.TimezoneAbbreviation().decode("utf-8")}
             )
+            header_data["data_tz"] = "local_with_utc_offset"
         else:
             if response.UtcOffsetSeconds() == 0:
                 header_data.update({"timezone_abbreviation": "GMT"})
+                header_data["data_tz"] = "UTC"
             else:
                 tz = response.UtcOffsetSeconds() / 3600
                 header_data.update({"timezone_abbreviation": f"GMT{tz}"})
+                header_data["data_tz"] = "local_with_utc_offset"
 
         header1 = ",".join(k for k in header_data.keys())
         header2 = ",".join(str(v) for v in header_data.values())
         header = f"{header1}\n{header2}\n\n"
+
+        # DATA downloaded from the web has time in the timezone corresponding to utc_offset_seconds
 
         # Combine header plus data arrays
         txt = header + data_str
@@ -278,10 +353,21 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             "filepath": str(fpath),
         }
 
+        print("--------------Start--------------")
+        print(self.pathname)
         data = pd.read_csv(fpath, header=2)
 
+        # time = self.make_time_index(data, header_dict["timezone"])
+
+        time = self.make_time_index_v2(
+            data,
+            header_dict["timezone"],
+            float(header_dict["latitude"]),
+            float(header_dict["longitude"]),
+        )
+        print(f"-> {time[0]}")
         # Make time columns
-        time = pd.DatetimeIndex(data["time"])
+        # time = pd.DatetimeIndex(data["time"])
         data["Year"] = time.year
         data["Month"] = time.month
         data["Day"] = time.day
