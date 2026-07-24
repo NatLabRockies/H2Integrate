@@ -1,5 +1,5 @@
 name: technology_config
-description: This plant charges a battery from the grid to reduce peak demand
+description: This plant dispatches a battery to reduce peak demand
 technologies:
   battery:
     performance_model:

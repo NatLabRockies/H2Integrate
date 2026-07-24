@@ -1,5 +1,5 @@
 name: technology_config
-description: This plant charges a battery from the grid to reduce peak demand
+description: This plant dispatches a fuel cell to reduce peak demand
 technologies:
   hydrogen_feedstock:
     performance_model:
