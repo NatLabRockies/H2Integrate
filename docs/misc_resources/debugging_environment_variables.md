@@ -14,7 +14,7 @@ kernelspec:
 (env_var_debug:intro)=
 # Environment Variables: Non-standard Configuration and Debugging Issues
 
-If errors are encountered with models that use environment variables, such as a missing API key or other credential, this may be because the environment variables were set using a non-preferred method or your workflow may be different. The different approaches to setting environment variables is documented [in the getting started guides](#environment_variables:environment-variables). Some of the non-preferred methods to set environment variables may require that environment variables be reset when your environment is activated. If you're setting environment variables with a .env file, then errors may occur because the file is not found.
+If you encounter errors with models that use environment variables, such as a missing API key or other credential, this may be because the environment variables were set using a non-recommended method. The different approaches to setting environment variables is documented [in the getting started guides](#environment_variables:environment-variables). If you're setting environment variables with a .env file, then errors may occur because the file is not found.
 
 The following sections will demonstrate how to debug environment variable issues and alternative ways to set environment variables.
 
@@ -27,7 +27,7 @@ The following sections will demonstrate how to debug environment variable issues
 
 ## Non-standard environment file location or name
 
-If your getting an error for a missing environment variable and your environment variables are stored in a `.env` file, then the `.env` file may not be found in the expected location.
+If you're getting an error for a missing environment variable and your environment variables are stored in a `.env` file, then the `.env` file may not be found in the expected location.
 
 (env_var_debug:get_default_fpaths)=
 ### Get the supported default filepaths
