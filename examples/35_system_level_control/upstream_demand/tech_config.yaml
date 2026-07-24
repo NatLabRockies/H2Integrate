@@ -1,0 +1,164 @@
+name: technology_config
+description: This plant produces electricity with wind, solar, and a natural gas power plant to meet a fixed electrical load
+  demand.
+technologies:
+  wind:
+    performance_model:
+      model: PYSAMWindPlantPerformanceModel
+    cost_model:
+      model: ATBWindPlantCostModel
+    model_inputs:
+      performance_parameters:
+        num_turbines: 20
+        turbine_rating_kw: 6000
+        hub_height: 115
+        rotor_diameter: 170
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        pysam_options:
+          Farm:
+            wind_farm_wake_model: 0
+          Losses:
+            ops_strategies_loss: 10.0
+        layout:
+          layout_mode: basicgrid
+          layout_options:
+            row_D_spacing: 5.0
+            turbine_D_spacing: 5.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: square
+      cost_parameters:
+        capex_per_kW: 1300
+        opex_per_kW_per_year: 39
+        cost_year: 2022
+  ng_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
+      performance_parameters:
+        rated_capacity: 750.  # MMBtu
+      cost_parameters:
+        cost_year: 2023
+        price: 4.2  # USD/MMBtu
+        annual_cost: 0.
+        start_up_cost: 0.
+  natural_gas_plant:
+    performance_model:
+      model: NaturalGasPerformanceModel
+    cost_model:
+      model: NaturalGasCostModel
+    model_inputs:
+      shared_parameters:
+        heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
+        system_capacity_mw: 100.  # MW
+      cost_parameters:
+        capex_per_kw: 1000  # $/kW - typical for NGCC
+        fixed_opex_per_kw_per_year: 10.0  # $/kW/year
+        variable_opex_per_mwh: 0.0  # $/MWh
+        cost_year: 2023
+  battery:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: GenericStorageCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 20000  # kW (20 MW)
+        max_capacity: 80000  # kWh (80 MWh, 4-hour duration)
+        init_soc_fraction: 0.5
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.1
+      performance_parameters:
+        round_trip_efficiency: 0.90
+        demand_profile: 20000  # kW, required by storage base config
+      cost_parameters:
+        cost_year: 2022
+        capacity_capex: 310  # $/kWh
+        charge_capex: 311  # $/kW
+        opex_fraction: 0.025
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        in_streams: 3
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
+        demand_profile: 25.5
+  electrolyzer:
+    performance_model:
+      model: ECOElectrolyzerPerformanceModel
+    cost_model:
+      model: SingliticoCostModel
+    model_inputs:
+      shared_parameters:
+        location: onshore
+        electrolyzer_capex: 1295  # $/kW overnight installed capital costs for a 1 MW system in 2022 USD/kW (DOE hydrogen program record 24005 Clean Hydrogen Production Cost Scenarios with PEM Electrolyzer Technology 05/20/24) (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
+      performance_parameters:
+        size_mode: normal
+        n_clusters: 10
+        cluster_rating_MW: 3
+        eol_eff_percent_loss: 10  # eol defined as x% change in efficiency from bol
+        uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
+        include_degradation_penalty: true  # include degradation
+        turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
+      financial_parameters:
+        capital_items:
+          depr_period: 7  # based on PEM Electrolysis H2A Production Case Study Documentation estimate of 7 years. also see https://www.irs.gov/publications/p946#en_US_2020_publink1000107507
+          replacement_cost_percent: 0.15  # percent of capex - H2A default case
+  h2_storage:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: GenericStorageCostModel
+    # control_strategy:
+    #   model: DemandOpenLoopStorageController
+    model_inputs:
+      shared_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+        max_charge_rate: 100.0  # kg/time step
+        max_capacity: 300.0  # kg
+      performance_parameters:
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.1  # fraction (0-1)
+        max_discharge_rate: 100.0  # kg/time step
+        charge_efficiency: 1.0  # fraction (0-1)
+        discharge_efficiency: 1.0  # fraction (0-1)
+        demand_profile: 500.0  # constant demand of 5000 kg per hour (see commodity_rate_units)
+      cost_parameters:
+        cost_year: 2022
+        capacity_capex: 100  # $/kg
+        charge_capex: 100  # $/kg/h
+        opex_fraction: 0.025
+  h2_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+  h2_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+        demand_profile: 500.0

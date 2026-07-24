@@ -177,7 +177,18 @@ class CostModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
+        # n_timesteps is number of timesteps in a simulation
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # dt is seconds per timestep
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+
+        # fraction_of_year_simulated is the ratio of simulation length to length of year
+        # and may be used to estimate annual performance from simulation performance
+        hours_per_year = 8760
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+        self.fraction_of_year_simulated = hours_simulated / hours_per_year
         # Define outputs: CapEx and OpEx costs
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")
@@ -204,9 +215,6 @@ class CostModelBaseClass(om.ExplicitComponent):
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
-
-        # dt is seconds per timestep
-        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
@@ -251,19 +259,21 @@ class ResizeablePerformanceModelBaseClass(PerformanceModelBaseClass):
 
     Discrete Inputs:
         - size_mode (str): The mode in which the component is sized. Options:
+
             - "normal": The component size is taken from the tech_config.
             - "resize_by_max_feedstock": The component size is calculated relative to the
-                maximum available amount of a certain feedstock or feedstocks
+              maximum available amount of a certain feedstock or feedstocks
             - "resize_by_max_commodity": The electrolyzer size is calculated relative to the
-                maximum amount of the commodity used by another tech
-        - flow_used_for_sizing (str): The feedstock/commodity flow used to determine the plant size
-            in "resize_by_max_feedstock" and "resize_by_max_commodity" modes
+              maximum amount of the commodity used by another tech
+
+        - flow_used_for_sizing (str): The feedstock/commodity flow used to determine the plant
+          size in "resize_by_max_feedstock" and "resize_by_max_commodity" modes
 
     Inputs:
         - max_feedstock_ratio (float): The ratio of the max feedstock that can be consumed by
-            this component to the max feedstock available.
+          this component to the max feedstock available.
         - max_commodity_ratio (float): The ratio of the max commodity that can be produced by
-            this component to the max commodity consumed by the downstream tech.
+          this component to the max commodity consumed by the downstream tech.
     """
 
     def setup(self):

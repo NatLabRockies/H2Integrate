@@ -13,7 +13,7 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
     """
     Configuration class for the open-loop storage control models.
 
-     Attributes:
+    Attributes:
         commodity (str): Name of the commodity being stored (e.g., "hydrogen").
         commodity_rate_units (str): Rate units of the commodity (e.g., "kg/h" or "kW").
         demand_profile (int | float | list | dict): Demand values for each timestep, in
@@ -26,18 +26,17 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
             classes to require storage sizing and efficiency parameters. Leave False for
             controllers that do not need storage-specific fields. Set to True in child
             config classes that require optional attributes.
-
-    Optional Attributes:
-        max_capacity (float): Maximum storage capacity of the commodity (in non-rate units,
-            e.g., "kg" if `commodity_rate_units` is "kg/h").
-        max_soc_fraction (float): Maximum allowable state of charge (SOC) as a fraction
+        max_capacity (float, optional): Maximum storage capacity of the commodity (in non-rate
+            units, e.g., "kg" if `commodity_rate_units` is "kg/h").
+        max_soc_fraction (float, optional): Maximum allowable state of charge (SOC) as a fraction
             of `max_capacity`, between 0 and 1.
-        min_soc_fraction (float): Minimum allowable SOC as a fraction of `max_capacity`,
+        min_soc_fraction (float, optional): Minimum allowable SOC as a fraction of `max_capacity`,
             between 0 and 1.
-        init_soc_fraction (float): Initial SOC as a fraction of `max_capacity`,
+        init_soc_fraction (float, optional): Initial SOC as a fraction of `max_capacity`,
             between 0 and 1.
-        max_charge_rate (float): Maximum rate at which the commodity can be charged (in units
-            per time step, e.g., "kg/time step"). This rate does not include the charge_efficiency.
+        max_charge_rate (float, optional): Maximum rate at which the commodity can be charged (in
+            units per time step, e.g., "kg/time step"). This rate does not include the
+            charge_efficiency.
         charge_equals_discharge (bool, optional): If True, set the max_discharge_rate equal to the
             max_charge_rate. If False, specify the max_discharge_rate as a value different than
             the max_charge_rate. Defaults to True.

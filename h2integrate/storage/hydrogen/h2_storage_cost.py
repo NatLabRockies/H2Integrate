@@ -107,8 +107,6 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         super().setup()
 
         self.add_input(
@@ -128,7 +126,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         self.add_input(
             "hydrogen_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=f"{self.config.commodity_rate_units}",
             desc="Hydrogen input timeseries for average flow rate calculation",
         )
@@ -168,10 +166,10 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -302,10 +300,10 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -441,10 +439,10 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
         - Max pressure: 100 bar.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (

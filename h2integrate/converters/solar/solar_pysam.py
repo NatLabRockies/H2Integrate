@@ -1,3 +1,6 @@
+import warnings
+
+import numpy as np
 import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define
 
@@ -230,6 +233,55 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             # For latitudes > 50, use latitude directly
             return abs_latitude
 
+    def calc_azimuth_angle(self, latitude):
+        """
+        Calculates the azimuth angle of the PV panel based on the site latitude and user inputs.
+        If a user specifies the azimuth angle in `design_config.pysam_options.SystemDesign.azimuth`,
+        that value will be returned. If the user-specified azimuth angle seems incorrect based on
+        the site latitude, a UserWarning will be raised. If the user does not specify the azimuth
+        angle explicitly, then the azimuth angle will be returned as:
+
+        - 180 degrees (south-facing) if the site is in the northern hemisphere (latitude>=0)
+        - 0 degrees (north-facing) if the site is in the southern hemisphere (latitude<0)
+
+        Args:
+            latitude (float): latitude of the site in degrees.
+
+        Returns:
+            float: azimuth angle of the solar panels in degrees.
+        """
+
+        if (
+            azimuth := self.design_config.pysam_options.get("SystemDesign", {}).get("azimuth", None)
+        ) is not None:
+            # User did explicitly define azimuth angle
+            if latitude < 0.0 and float(azimuth) == 180.0:
+                # Southern hemisphere with south-facing azimuth angle
+                msg = (
+                    f"Site is located in southern hemisphere (latitude of {latitude}) "
+                    f"and solar-PV azimuth angle is set to {azimuth} degrees. For sites in the "
+                    "southern hemisphere, it is recommended to use an north-facing azimuth angle "
+                    "of 0 degrees. Solar-PV generation may be lower than expected. "
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+            if latitude > 0.0 and float(np.abs(azimuth)) == 0.0:
+                # Northern hemisphere with north-facing azimuth angle
+                msg = (
+                    f"Site is located in northern hemisphere (latitude of {latitude}) "
+                    f"and solar-PV azimuth angle is set to {azimuth} degrees. For sites in the "
+                    "northern hemisphere, it is recommended to use an south-facing azimuth angle "
+                    "of 180 degrees. Solar-PV generation may be lower than expected. "
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
+            return azimuth
+
+        # User did not explicitly define azimuth angle
+        if latitude <= 0.0:
+            # North-facing for southern-hemisphere
+            return 0.0
+        return 180.0  # South-facing for northern hemisphere
+
     def format_resource_data(self, solar_resource_data):
         """Format solar resource data into the format required for the
         PySAM PvWattsv8 module. This method includes:
@@ -285,6 +337,11 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
         # assign the tilt angle
         self.system_model.value("tilt", tilt_angle)
+
+        # calculate the azimuth angle based on site latitude or get user input azimuth angle
+        azimuth = self.calc_azimuth_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
+        # assign the azimuth angle
+        self.system_model.value("azimuth", azimuth)
 
         # set the system capacity
         self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])

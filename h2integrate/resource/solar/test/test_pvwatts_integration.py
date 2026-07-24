@@ -11,7 +11,6 @@ def pysam_performance_model():
     pysam_options = {
         "SystemDesign": {
             "array_type": 2,
-            "azimuth": 180,
             "bifaciality": 0.65,
             "inv_eff": 96.0,
             "losses": 14.0757,

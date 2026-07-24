@@ -154,8 +154,6 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         self.config = CMUElectricArcFurnaceDRIPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
@@ -184,7 +182,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             val=units.convert_units(
                 self.config.steel_production_rate_tonnes_per_year, "t/year", "t/h"
             ),
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Steel command value for steel plant",
         )
@@ -241,14 +239,14 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
@@ -257,7 +255,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "slag_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of slag",
         )
@@ -265,7 +263,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_MgO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of MgO in slag",
         )
@@ -273,7 +271,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_FeO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of FeO in slag",
         )
@@ -281,7 +279,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_Fe_to_FeO",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of Fe consumed to produce FeO",
         )
@@ -289,7 +287,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_steel_per_unit_dri",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/t",
             desc="Total unit of steel formed from EAF fed with dri + scrap per unit of dri",
         )
@@ -386,10 +384,12 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
 
     def energy_mass_balance_per_unit(self, inputs):
         """Computes the energy and mass balance for the EAF fed with dri and scrap on a
-            per ton of dri or liquid steel basis.
+        per ton of dri or liquid steel basis.
+
         Returns:
             output_dict (dict): Dictionary with the amount of feedstocks and energy used per
-                ton of steel.
+            ton of steel. Keys include:
+
                 - mass_slag_per_tDRI (kg/t): Total mass of slag produced per ton of DRI.
                 - mass_MgO_slag_per_tDRI (kg/t): Mass of MgO in slag per ton of DRI.
                 - mass_FeO_slag_per_tDRI (kg/t): Mass of FeO in slag per ton of DRI.
@@ -406,7 +406,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
                 - mass_MgO_slag_per_tLS (kg/t): Mass of MgO in slag per ton of liquid steel.
                 - mass_FeO_slag_per_tLS (kg/t): Mass of FeO in slag per ton of liquid steel.
                 - mass_Fe_to_FeO_per_tLS (kg/t): Mass of Fe consumed to produce FeO per ton
-                    of liquid steel.
+                  of liquid steel.
                 - mass_CO_injected_per_tLS (kg/t): Mass of CO injected per ton of liquid steel.
                 - coal_per_tLS (t/t): Mass of coal per ton of liquid steel.
                 - oxygen_per_tLS (Nm^3/t): Normal cubic meters of oxygen per ton of liquid steel.
@@ -416,8 +416,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
                 - off_gas_CO_kg (kg/t): Mass of CO in off-gas per ton of liquid steel.
                 - EAF_DRI_heat_loss_pct (%): Percentage of heat loss in EAF.
                 - electricity_per_tLS (kWh/t): Total electricity consumption per ton of liquid
-                    steel for EAF with scrap-only case, including heat loss adjustment.
-
+                  steel for EAF with scrap-only case, including heat loss adjustment.
         """
         output_dict = {}
         # Including DRI in feed (assumed constants in feedstocks)

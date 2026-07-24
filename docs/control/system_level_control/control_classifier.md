@@ -19,7 +19,7 @@ storage | Can modulate consumption/production within bounds while tracking SOC |
 feedstock | Are not directly controlled, but useful for SLC to make dispatch decisions | feedstocks
 
 To add a classifier for a particular model it would look something like this in the class:
-```{python}
+```python
 _control_classifier = "flexible"
 ```
 
@@ -30,6 +30,7 @@ _control_classifier = "flexible"
 ## Fixed
 A fixed performance model represents anything that always produces at its rated capacity and cannot be controlled or reduced by the system level controller. The SLC reads the output from a fixed technology and subtracts it from the demand, but does not send a set-point back to the technology. A good example of this is a classical nuclear plant model: it produces a constant output that the rest of the system must accommodate.
 
+(flexible)=
 ## Flexible
 A flexible performance model represents anything whose production is determined by an external resource (e.g., wind speed, solar irradiance) and that can only be *reduced* below that resource-determined maximum and never increased above it. The system-level controller sends a `{commodity}_set_point` that acts as an upper bound: when the resource-driven output exceeds the set-point, output is curtailed down to the set-point; otherwise, output is left at the resource-driven value. A good example is the PVWatts PySAM solar plant in H2I; its performance is a function of the input solar resource, and we cannot tell the sun to shine more, but we can curtail the panel output below the available solar production.
 
@@ -37,7 +38,7 @@ In other words, flexible is a strictly more restricted case of [dispatchable](#d
 
 To simplify the implementation of applying this curtailment we added a method, `apply_curtailment()`, to the `PerformanceBaseClass`.
 
-```{figure} figures/curtailable.png
+```{figure} figures/flexible.png
 :width: 70%
 :align: center
 ```
