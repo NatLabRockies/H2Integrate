@@ -19,6 +19,9 @@ from h2integrate.control.control_strategies.passthrough_controller import Passth
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
+from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+    _get_tech_buy_price_input_name,
+)
 
 
 class State(IntEnum):
@@ -675,8 +678,11 @@ class H2IntegrateModel:
              at any depth and connects each feedstock's ``VarOpEx`` output.
              This is consistent with the ``_find_feedstock_techs`` method
              used by the controller component internally.
-           - ``"buy_price"``: no connection needed; the controller reads a default value from the
-             tech config that can be overridden at runtime via ``prob.set_val()``.
+           - ``"buy_price"``: the controller's ``{tech_name}_buy_price`` input is
+             connected input-to-input to the technology's own buy-price input
+             (``electricity_buy_price`` for Grid, ``price`` for Feedstock) so a
+             single ``prob.set_val()`` on the tech propagates to the SLC. The
+             default value still comes from the tech config.
            - Numeric scalar: no connection needed; the value is used directly as a constant
              marginal cost.
 
@@ -818,7 +824,24 @@ class H2IntegrateModel:
                                 f"{feedstock_name}.VarOpEx",
                                 f"system_level_controller.{feedstock_name}_VarOpEx",
                             )
-                    # "buy_price": default from tech config, overridable via set_val
+                    elif cost_spec == "buy_price":
+                        # Input-to-input connection (OpenMDAO 3.44+): tie the
+                        # tech's own buy-price input to the SLC's buy-price
+                        # input so a single ``prob.set_val()`` on the tech
+                        # updates both the cost model and the controller.
+                        #
+                        # OpenMDAO 3.44 requires input-to-input connections to
+                        # be made on the top-level model (not a subgroup); we
+                        # use promoted names from ``self.plant`` since the
+                        # plant is added to ``self.model`` with ``promotes=*``.
+                        tech_buy_price_input = _get_tech_buy_price_input_name(
+                            self.technology_config, tech_name
+                        )
+                        if tech_buy_price_input is not None:
+                            self.model.connect(
+                                f"{tech_name}.{tech_buy_price_input}",
+                                f"system_level_controller.{tech_name}_buy_price",
+                            )
                     # numeric scalar: used directly, no connection needed
 
         # --- Step 5: Connect the demand profile to the controller ---------

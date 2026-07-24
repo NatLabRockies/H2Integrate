@@ -109,6 +109,63 @@ class TestCalcTiltAngle:
         assert result == pytest.approx(0)  # default fallback
 
 
+@pytest.mark.unit
+class TestCalcAzimuthAngle:
+    """Unit tests for PYSAMSolarPlantPerformanceModel.calc_tilt_angle
+    with various latitudes including southern hemisphere (negative) values.
+    """
+
+    def _make_model(self, azimuth: float | None = None):
+        """Create a lightweight mock of PYSAMSolarPlantPerformanceModel
+        with the minimum attributes needed by calc_tilt_angle."""
+        model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
+        model.design_config = MagicMock()
+        model.design_config.tilt_angle_func = "none"
+        model.design_config.tilt = 0.0
+        model.design_config.create_model_from = "default"
+        if azimuth is not None:
+            model.design_config.pysam_options = {"SystemDesign": {"azimuth": azimuth}}
+        else:
+            model.design_config.pysam_options = {}
+        model.system_model = MagicMock()
+        model.system_model.value.return_value = 20.0  # default tilt from PySAM model
+        return model
+
+    # --- tilt_angle_func = "lat" ---
+    @pytest.mark.parametrize(
+        "latitude, user_input_azimuth, expected_azimuth",
+        [
+            (30.0, None, 180.0),
+            (-30.0, None, 0.0),
+            (30.0, 90.0, 90.0),
+            (-30.0, 90.0, 90.0),
+        ],
+    )
+    def test_azimuth_angle(self, latitude, user_input_azimuth, expected_azimuth):
+        model = self._make_model(azimuth=user_input_azimuth)
+        result = PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
+        assert result == pytest.approx(expected_azimuth)
+
+    def test_southern_hemisphere_azimuth_warning(self):
+        latitude = -30.0  # southern hemisphere
+        user_input_azimuth = 180  # south-facing
+        model = self._make_model(azimuth=user_input_azimuth)
+
+        expected_str = f"Site is located in southern hemisphere (latitude of {latitude})"
+        with pytest.warns(UserWarning) as excinfo:
+            PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
+        assert expected_str in str(excinfo.list[0].message)
+
+    def test_northern_hemisphere_azimuth_warning(self):
+        latitude = 30.0  # northern hemisphere
+        user_input_azimuth = 0  # north-facing
+        model = self._make_model(azimuth=user_input_azimuth)
+        expected_str = f"Site is located in northern hemisphere (latitude of {latitude})"
+        with pytest.warns(UserWarning) as excinfo:
+            PYSAMSolarPlantPerformanceModel.calc_azimuth_angle(model, latitude)
+        assert expected_str in str(excinfo.list[0].message)
+
+
 @fixture
 def basic_pysam_options():
     pysam_options = {
