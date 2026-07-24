@@ -150,7 +150,7 @@ auto-generated API page.
 - `hydrogen`: hydrogen production
   - performance models:
     + {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModel` - An OpenMDAO component that wraps the PEM electrolyzer model.
-    + {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModel` - A simplified HTSE model using electricity and heat inputs.
+    + {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModel` - A simplified high-temperature steam electrolysis (HTSE) model.
     + {py:class}`~h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceModel` - Performance model for a hydrogen fuel cell.
     + {py:class}`~h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerPerformanceModel` - Performance model for steam methane reforming (SMR) hydrogen production plants.
   - cost models:
