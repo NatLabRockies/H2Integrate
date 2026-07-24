@@ -1,5 +1,5 @@
 name: plant_config
-description: Demonstrates multivariable streams with a gas combiner
+description: Plant configuration for peak load management storage heuristic control
 plant:
   plant_life: 30
   simulation:
