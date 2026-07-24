@@ -2,18 +2,20 @@ import numpy as np
 import pytest
 import pyfluids
 
-from h2integrate.converters.combustion_machines.NGCT_thermo_model import (
-    NGCT,
-    GE_7FA05_NGCT,
-    GE_7EA_NGCT_2014,
-    NGCTResult,
+from h2integrate.converters.combustion_machines.thermo_tools import (
+    ThermodynamicCycleResult,
     compute_heat_transfer,
     make_humid_air_mixture,
     compute_turbine_work_rate,
     compute_compressor_work_rate,
     humidity_ratio_to_water_mass_fraction,
-    compute_turbine_outlet_state_isentropic,
-    compute_compressor_outlet_state_isentropic,
+    compute_isentropic_expansion_outlet_state,
+    compute_isentropic_compression_outlet_state,
+)
+from h2integrate.converters.combustion_machines.NGCT_thermo_model import (
+    NGCT,
+    GE_7FA05_NGCT,
+    GE_7EA_NGCT_2014,
 )
 
 
@@ -113,7 +115,7 @@ def test_make_humid_air_mixture_builds_valid_state(iso_conditions):
 @pytest.mark.unit
 def test_compressor_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
     ratio_p = 12.6
-    compressed = compute_compressor_outlet_state_isentropic(iso_ambient_state, ratio_p)
+    compressed = compute_isentropic_compression_outlet_state(iso_ambient_state, ratio_p)
 
     assert compressed.pressure == pytest.approx(iso_ambient_state.pressure * ratio_p)
     assert compressed.entropy == pytest.approx(iso_ambient_state.entropy, rel=1e-6, abs=1e-3)
@@ -126,7 +128,7 @@ def test_turbine_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
         pyfluids.Input.pressure(iso_ambient_state.pressure * 12.6),
         pyfluids.Input.temperature(1300.0),
     )
-    exhaust = compute_turbine_outlet_state_isentropic(combusted, 12.6)
+    exhaust = compute_isentropic_expansion_outlet_state(combusted, 12.6)
 
     assert exhaust.pressure == pytest.approx(combusted.pressure / 12.6)
     assert exhaust.entropy == pytest.approx(combusted.entropy, rel=1e-6, abs=1e-3)
@@ -135,12 +137,12 @@ def test_turbine_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
 
 @pytest.mark.unit
 def test_helper_sign_conventions(iso_ambient_state):
-    compressed = compute_compressor_outlet_state_isentropic(iso_ambient_state, 10.0)
+    compressed = compute_isentropic_compression_outlet_state(iso_ambient_state, 10.0)
     combusted = compressed.with_state(
         pyfluids.Input.pressure(compressed.pressure),
         pyfluids.Input.temperature(1300.0),
     )
-    exhaust = compute_turbine_outlet_state_isentropic(combusted, 10.0)
+    exhaust = compute_isentropic_expansion_outlet_state(combusted, 10.0)
 
     wdot_compressor = compute_compressor_work_rate(
         iso_ambient_state, compressed, isentropic_efficiency=0.85
@@ -157,7 +159,7 @@ def test_helper_sign_conventions(iso_ambient_state):
 
 @pytest.mark.unit
 def test_ngct_result_aggregates_cycle_quantities(iso_ambient_state):
-    result = NGCTResult(desc="synthetic cycle")
+    result = ThermodynamicCycleResult(desc="synthetic cycle")
     for index in range(1, 5):
         result.add_state(index, iso_ambient_state, f"state {index}")
 
