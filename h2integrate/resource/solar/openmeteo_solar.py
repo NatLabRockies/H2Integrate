@@ -99,7 +99,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             # "solar_zenith_angle": "deg",
             "snow_depth": "m",
             "rain": "mm",  # "precipitable_water": "cm",
-            "albedo": "percent",
+            # "albedo": "percent",
             "is_day": "unitless",
         }
         # get the data dictionary
@@ -175,21 +175,30 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         dt_t0 = datetime.fromisoformat(t0)
         dt_t1 = datetime.fromisoformat(t1)
 
-        freq = pd.to_timedelta((dt_t1 - dt_t0).seconds, unit="s")
+        time_step_seconds = (dt_t1 - dt_t0).seconds
+
+        # NOTE: unsure whether to adjust to middle of hour before
+        # dt_t0 = dt_t0 - timedelta(seconds=time_step_seconds/2)
+
+        freq = pd.to_timedelta(time_step_seconds, unit="s")
         if dt_t0.tzinfo is None:
             # missing timezone info
             if "T" in t0:
-                print("WEB")
                 # Web download, downloaded in timezone specified
+                # but timestamps don't have timezone info
                 return pd.DatetimeIndex(data["time"])
             # Old download method
             # in UTC, times are in UTC
             # in local time, times are also in UTC
-            if timezone != "GMT" or timezone != "UTC":
-                print("OLD - ADJUST")
+            if timezone != "GMT":
+                print(f"OLD - ADJUST: {timezone}")
                 tf = TimezoneFinder()
                 local_timezone = tf.timezone_at(lat=lat, lng=lon)
-                dt_t0 = dt_t0.astimezone(tz=ZoneInfo(local_timezone))
+                # in local time, times are also in UTC
+                dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))
+                # convert those times to local time
+                dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
+
             else:
                 print("OLD - UTC")
         else:
@@ -198,37 +207,6 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         # New download method - timezone aware
 
         return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
-
-    def make_time_index(self, data, timezone_name: str):
-        t0 = data["time"].iloc[0]
-
-        if "T" in t0:
-            print()
-            # Web download, downloaded in timezone specified
-            time = pd.DatetimeIndex(data["time"])
-            print(f"Web download, t0 is {t0} (timezone_name is {timezone_name})")
-            return time
-
-        # see if timezone is included in timestamp, for bugfix
-        t0_pd = pd.to_datetime(t0, format="ISO8601")
-        time = pd.DatetimeIndex(data["time"], tz="UTC")
-
-        if t0_pd.tzinfo is None:
-            # old format, time is in UTC even for local time
-
-            if self.utc:
-                # If data was downloaded in UTC, return it
-                print(f"Old download in UTC, t0 is {t0} (timezone_name is {timezone_name})")
-
-                return time
-            # Data downloaded in local time but timestamps were in UTC
-            # Convert time to local time
-            print(f"Old download in Local, t0 is {t0} (timezone_name is {timezone_name})")
-            return time.tz_convert(timezone_name)
-
-        # new format
-        print(f"NEW API DOWNLOAD, t0 is {t0} (timezone_name is {timezone_name})")
-        return time
 
     def download_data(self, url, fpath):
         """Download data from url to a file.
@@ -262,6 +240,11 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             freq=pd.Timedelta(seconds=hourly_data.Interval()),
             inclusive="left",
         )
+
+        print(
+            f"{self.pathname}: start_time: {hourly_data.Time()} \n end_time:{hourly_data.TimeEnd()}"
+        )
+
         if response.UtcOffsetSeconds() != 0:
             # Data downloaded for local time
             # convert timestamps to local time
