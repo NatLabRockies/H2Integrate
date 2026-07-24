@@ -100,7 +100,7 @@ This model represents a reactor with:
 
 - a high-pressure electric conversion stage
 - a low-pressure electric conversion stage
-- an extractable process heat stream, extracted upstream of the low-pressure turbine stages
+- an extractable process heat stream, extracted upstream of the low-pressure turbine stages (dashed red arrow in the figure)
 
 It supports two operating modes:
 
