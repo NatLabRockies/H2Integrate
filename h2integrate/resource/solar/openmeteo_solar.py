@@ -146,8 +146,13 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         Returns:
             str: url to use for API call.
         """
+
         start_year = int(self.config.resource_year - 1)
         end_year = int(self.config.resource_year + 1)
+
+        # start_date = datetime.strptime(f"{start_year}-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+        # end_date = datetime.strptime(f"{end_year}-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+
         input_data = {
             "latitude": latitude,
             "longitude": longitude,
