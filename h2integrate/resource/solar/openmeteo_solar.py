@@ -150,9 +150,6 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         start_year = int(self.config.resource_year - 1)
         end_year = int(self.config.resource_year + 1)
 
-        # start_date = datetime.strptime(f"{start_year}-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-        # end_date = datetime.strptime(f"{end_year}-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-
         input_data = {
             "latitude": latitude,
             "longitude": longitude,
@@ -167,8 +164,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
 
         return input_data
 
-    def make_time_index_v2(self, data, timezone, lat, lon):
-        # dt.datetime.fromisoformat('2014-01-01 00:00:00')
+    def make_time_index(self, data, timezone, lat, lon):
         t0 = data["time"].iloc[0]
         t1 = data["time"].iloc[1]
 
@@ -191,20 +187,12 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             # in UTC, times are in UTC
             # in local time, times are also in UTC
             if timezone != "GMT":
-                print(f"OLD - ADJUST: {timezone}")
                 tf = TimezoneFinder()
                 local_timezone = tf.timezone_at(lat=lat, lng=lon)
                 # in local time, times are also in UTC
                 dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))
                 # convert those times to local time
                 dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
-
-            else:
-                print("OLD - UTC")
-        else:
-            print(f"TIMEZONE AWARE - {timezone}")
-        # utc_offset = dt_t0.utcoffset().total_seconds()
-        # New download method - timezone aware
 
         return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
 
@@ -345,17 +333,13 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         print(self.pathname)
         data = pd.read_csv(fpath, header=2)
 
-        # time = self.make_time_index(data, header_dict["timezone"])
-
-        time = self.make_time_index_v2(
+        time = self.make_time_index(
             data,
             header_dict["timezone"],
             float(header_dict["latitude"]),
             float(header_dict["longitude"]),
         )
-        print(f"-> {time[0]}")
         # Make time columns
-        # time = pd.DatetimeIndex(data["time"])
         data["Year"] = time.year
         data["Month"] = time.month
         data["Day"] = time.day
