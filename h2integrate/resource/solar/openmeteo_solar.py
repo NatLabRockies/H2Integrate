@@ -99,7 +99,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             # "solar_zenith_angle": "deg",
             "snow_depth": "m",
             "rain": "mm",  # "precipitable_water": "cm",
-            # "albedo": "percent",
+            "albedo": "unitless",
             "is_day": "unitless",
         }
         # get the data dictionary
@@ -258,15 +258,15 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             header_data.update(
                 {"timezone_abbreviation": response.TimezoneAbbreviation().decode("utf-8")}
             )
-            header_data["data_tz"] = "local_with_utc_offset"
+            # header_data["data_tz"] = "local_with_utc_offset"
         else:
             if response.UtcOffsetSeconds() == 0:
                 header_data.update({"timezone_abbreviation": "GMT"})
-                header_data["data_tz"] = "UTC"
+                # header_data["data_tz"] = "UTC"
             else:
                 tz = response.UtcOffsetSeconds() / 3600
                 header_data.update({"timezone_abbreviation": f"GMT{tz}"})
-                header_data["data_tz"] = "local_with_utc_offset"
+                # header_data["data_tz"] = "local_with_utc_offset"
 
         header1 = ",".join(k for k in header_data.keys())
         header2 = ",".join(str(v) for v in header_data.values())
@@ -325,8 +325,6 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             "filepath": str(fpath),
         }
 
-        print("--------------Start--------------")
-        print(self.pathname)
         data = pd.read_csv(fpath, header=2)
 
         time = self.make_time_index(
