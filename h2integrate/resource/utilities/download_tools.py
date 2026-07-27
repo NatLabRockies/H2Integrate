@@ -60,16 +60,19 @@ def download_from_api(url, filename):
 
 
 def make_time_index_openmeteo(data, timezone, lat, lon):
-    """_summary_
+    """Make a pd.DatetimeIndex object from the 'time' column of the input data.
+    This is intended to be used with resource data obtained from
+    OpenMeteo resource models.
 
     Args:
         data (pd.DataFrame): resource data with a 'time' column in ISO format
-        timezone (str): _description_
-        lat (float): _description_
-        lon (float): _description_
+        timezone (str): name of timezone for the site. Only checked to see
+            if timezone is 'UTC' or 'GMT'
+        lat (float): site latitude
+        lon (float): site longitude
 
     Returns:
-        pd.DatetimeIndex: _description_
+        pd.DatetimeIndex: time index of OpenMeteo data
     """
     t0 = data["time"].iloc[0]
     t1 = data["time"].iloc[1]
@@ -89,10 +92,12 @@ def make_time_index_openmeteo(data, timezone, lat, lon):
             # Web download, formatted as `YYYY-MM-DDTHH:mm` (ex: 2014-12-31T23:00)
             # downloaded in timezone specified but timestamps don't have timezone info
             return pd.DatetimeIndex(data["time"])
-        # Old download method
-        # in UTC, times are in UTC
-        # in local time, times are also in UTC
-        if timezone != "GMT":
+
+        # Old download method that had bugs
+        # in UTC, times are in UTC (OK)
+        if timezone != "GMT" and timezone != "UTC":
+            # in local time, times were in UTC
+            # and need to be converter to local timezone
             tf = TimezoneFinder()
             local_timezone = tf.timezone_at(lat=lat, lng=lon)
             # in local time, times are also in UTC
@@ -100,4 +105,6 @@ def make_time_index_openmeteo(data, timezone, lat, lon):
             # convert those times to local time
             dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
 
+    # Either the time column was already timezone aware or
+    # has been adjusted to the proper timezone
     return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
