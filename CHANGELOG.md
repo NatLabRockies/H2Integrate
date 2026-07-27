@@ -131,6 +131,7 @@
 - Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653) and [PR 671](https://github.com/NatLabRockies/H2Integrate/pull/671)
 - Remove demand-related outputs from storage performance models and replace usage with demand components [PR 666](https://github.com/NatLabRockies/H2Integrate/pull/666)
 - Added a compressed gas hydrogen storage model [PR 680](https://github.com/NatLabRockies/H2Integrate/pull/680)
+- Generalized functions for retrieving and setting environment variables in `h2integrate/core/test/test_env_tools.py`. The main function used to get and/or set environment variables is `get_environment_variables`, which is now used by the `get_nlr_developer_api_key` and `get_nlr_developer_api_email` functions [PR 798](https://github.com/NatLabRockies/H2Integrate/pull/798)
 
 ## 0.7.2 [April 9, 2026]
 

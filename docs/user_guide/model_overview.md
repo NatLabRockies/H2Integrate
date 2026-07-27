@@ -1,7 +1,7 @@
 
 (model-overview)=
 # Model Overview
-Currently, H2I recognizes four types of models:
+Currently, H2I recognizes five types of models:
 
 - [Resource](#resource)
 - [Converter](#converters)
