@@ -1,6 +1,5 @@
 from pathlib import Path
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -8,10 +7,10 @@ import requests_cache
 import openmeteo_requests
 from attrs import field, define
 from retry_requests import retry
-from timezonefinder import TimezoneFinder
 
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
+from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
 
 
@@ -164,38 +163,6 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
 
         return input_data
 
-    def make_time_index(self, data, timezone, lat, lon):
-        t0 = data["time"].iloc[0]
-        t1 = data["time"].iloc[1]
-
-        dt_t0 = datetime.fromisoformat(t0)
-        dt_t1 = datetime.fromisoformat(t1)
-
-        time_step_seconds = (dt_t1 - dt_t0).seconds
-
-        # NOTE: unsure whether to adjust to middle of hour before
-        # dt_t0 = dt_t0 - timedelta(seconds=time_step_seconds/2)
-
-        freq = pd.to_timedelta(time_step_seconds, unit="s")
-        if dt_t0.tzinfo is None:
-            # missing timezone info
-            if "T" in t0:
-                # Web download, downloaded in timezone specified
-                # but timestamps don't have timezone info
-                return pd.DatetimeIndex(data["time"])
-            # Old download method
-            # in UTC, times are in UTC
-            # in local time, times are also in UTC
-            if timezone != "GMT":
-                tf = TimezoneFinder()
-                local_timezone = tf.timezone_at(lat=lat, lng=lon)
-                # in local time, times are also in UTC
-                dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))
-                # convert those times to local time
-                dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
-
-        return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
-
     def download_data(self, url, fpath):
         """Download data from url to a file.
 
@@ -327,7 +294,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
 
         data = pd.read_csv(fpath, header=2)
 
-        time = self.make_time_index(
+        time = make_time_index_openmeteo(
             data,
             header_dict["timezone"],
             float(header_dict["latitude"]),

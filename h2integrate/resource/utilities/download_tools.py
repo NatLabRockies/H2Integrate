@@ -1,8 +1,12 @@
 import json
 import time
 from pathlib import Path
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+import pandas as pd
 import requests
+from timezonefinder import TimezoneFinder
 
 
 def download_from_api(url, filename):
@@ -53,3 +57,47 @@ def download_from_api(url, filename):
             n_tries += 1
 
     return success
+
+
+def make_time_index_openmeteo(data, timezone, lat, lon):
+    """_summary_
+
+    Args:
+        data (pd.DataFrame): resource data with a 'time' column in ISO format
+        timezone (str): _description_
+        lat (float): _description_
+        lon (float): _description_
+
+    Returns:
+        pd.DatetimeIndex: _description_
+    """
+    t0 = data["time"].iloc[0]
+    t1 = data["time"].iloc[1]
+
+    dt_t0 = datetime.fromisoformat(t0)
+    dt_t1 = datetime.fromisoformat(t1)
+
+    time_step_seconds = (dt_t1 - dt_t0).seconds
+
+    # NOTE: unsure whether to adjust to middle of hour before
+    # dt_t0 = dt_t0 - timedelta(seconds=time_step_seconds/2)
+
+    freq = pd.to_timedelta(time_step_seconds, unit="s")
+    if dt_t0.tzinfo is None:
+        # missing timezone info
+        if "T" in t0:
+            # Web download, formatted as `YYYY-MM-DDTHH:mm` (ex: 2014-12-31T23:00)
+            # downloaded in timezone specified but timestamps don't have timezone info
+            return pd.DatetimeIndex(data["time"])
+        # Old download method
+        # in UTC, times are in UTC
+        # in local time, times are also in UTC
+        if timezone != "GMT":
+            tf = TimezoneFinder()
+            local_timezone = tf.timezone_at(lat=lat, lng=lon)
+            # in local time, times are also in UTC
+            dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))
+            # convert those times to local time
+            dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
+
+    return pd.date_range(start=dt_t0, periods=len(data), freq=freq)
