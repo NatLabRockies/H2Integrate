@@ -1,6 +1,6 @@
 (environment_variables:environment-variables)=
 # Environment Variables
-H2Integrate can pull data (such as wind and solar resource data, feedstock prices, etc) from public datasets accessible with API keys or user-specific tokens. Since API keys and tokens are unique to each user, these are accessed in H2Integrate as environment variables. These environment variables only need to be set to utilize their corresponding functionality. Some environment variables can also be used to customize your workflow. The list of environment variables that may be used by H2Integrate are listed below:
+H2Integrate can pull data (such as wind and solar resource data, feedstock prices, etc) from public datasets accessible with API keys or user-specific tokens. Since API keys and tokens are unique to each user, these are accessed in H2Integrate as environment variables. These environment variables need to be set to use their corresponding functionality. Some environment variables can also be used to customize your workflow. The list of environment variables that may be used by H2Integrate are listed below:
 
 - [NLR Developer Network](environment_variables:nlr_developer)
     - `NLR_API_KEY`
@@ -14,7 +14,7 @@ H2Integrate can pull data (such as wind and solar resource data, feedstock price
 Tips on debugging environment variable related errors or issues can be found [here](#env_var_debug:intro)
 ```
 
-To utilize the functionality of the models that require environment variables, instructions on how to set environment variables are shown [below](environment_variables:setting-environment-variables).
+To use models that require environment variables, [follow these instructions below](environment_variables:setting-environment-variables).
 
 (environment_variables:setting-environment-variables)=
 # Setting Environment Variables

@@ -109,7 +109,7 @@ technologies:
     model_inputs:
       shared_parameters:
         commodity: water
-        commodity_rate_units: galUS  # galUS/h
+        commodity_rate_units: galUS/h
       performance_parameters:
         rated_capacity: 40000.  # need 38710.49649 galUS/h
       cost_parameters:
