@@ -225,21 +225,16 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             header_data.update(
                 {"timezone_abbreviation": response.TimezoneAbbreviation().decode("utf-8")}
             )
-            # header_data["data_tz"] = "local_with_utc_offset"
         else:
             if response.UtcOffsetSeconds() == 0:
                 header_data.update({"timezone_abbreviation": "GMT"})
-                # header_data["data_tz"] = "UTC"
             else:
                 tz = response.UtcOffsetSeconds() / 3600
                 header_data.update({"timezone_abbreviation": f"GMT{tz}"})
-                # header_data["data_tz"] = "local_with_utc_offset"
 
         header1 = ",".join(k for k in header_data.keys())
         header2 = ",".join(str(v) for v in header_data.values())
         header = f"{header1}\n{header2}\n\n"
-
-        # DATA downloaded from the web has time in the timezone corresponding to utc_offset_seconds
 
         # Combine header plus data arrays
         txt = header + data_str
