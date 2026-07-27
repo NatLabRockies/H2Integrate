@@ -229,10 +229,6 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
             inclusive="left",
         )
 
-        print(
-            f"{self.pathname}: start_time: {hourly_data.Time()} \n end_time:{hourly_data.TimeEnd()}"
-        )
-
         if response.UtcOffsetSeconds() != 0:
             # Data downloaded for local time
             # convert timestamps to local time
