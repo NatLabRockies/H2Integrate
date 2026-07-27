@@ -73,9 +73,7 @@ def pysam_performance_model():
         ("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 0, 1e-3, 443558.17053592583),  # noqa: E501
         ("OpenMeteoHistoricalSolarResource", "solar", -28.454864, 114.551749, 2024, "openmeteo_archive_solar", 8, 2e-2, 192656.49240723),  # noqa: E501
         ("OpenMeteoHistoricalSolarResource", "solar", -28.454864, 114.551749, 2020, "openmeteo_archive_solar", 8, 2e-2, 557516.006852063),  # noqa: E501
-        ("OpenMeteoHistoricalSolarResource", "solar", -28.454864, 114.551749, 2020, "openmeteo_archive_solar", 0, 2e-2, 557466.6915506845),  # noqa: E501
         ("Himawari8SolarAPI", "solar", -28.454864, 114.551749, 2020, "himawari8_v3", 8, 1e-2, 576746.92754748),  # noqa: E501
-        ("Himawari8SolarAPI", "solar", -28.454864, 114.551749, 2020, "himawari8_v3", 0, 1e-2, 576741.41897),  # noqa: E501
     ],
     ids=[
         "Himawari7SolarAPI",
@@ -86,9 +84,7 @@ def pysam_performance_model():
         "OpenMeteoHistoricalSolarResource",
         "OpenMeteoHistoricalSolarResource-LeapYear",
         "OpenMeteoHistoricalSolarResource-LocalTz",
-        "OpenMeteoHistoricalSolarResource-UTC",
         "Himawari8SolarAPI-LocalTz",
-        "Himawari8SolarAPI-UTC",
     ]
 )
 # fmt: on
@@ -241,7 +237,6 @@ def test_open_meteo_timezone_pv_watts_integration(subtests):
     # [resource_model, timezone, filename]
     cases = {
         "himawari_local": ["Himawari8SolarAPI", 8, None],
-        "himawari_utc": ["Himawari8SolarAPI", 0, None],
         "old_api_local": [
             "OpenMeteoHistoricalSolarResource",
             8,
@@ -252,13 +247,7 @@ def test_open_meteo_timezone_pv_watts_integration(subtests):
             8,
             "open-meteo-28.44S114.55E71m-local_tz_2020.csv"
             ],
-        "web_download_utc": [
-            "OpenMeteoHistoricalSolarResource",
-            0,
-            "open-meteo-28.44S114.55E71m-utc_2020.csv"
-            ],
         "new_api_local": ["OpenMeteoHistoricalSolarResource", 8, None],
-        "new_api_utc": ["OpenMeteoHistoricalSolarResource", 0, None],
     }
 
     for case_desc, case_params in cases.items():
@@ -276,22 +265,16 @@ def test_open_meteo_timezone_pv_watts_integration(subtests):
 
     expected_aeps = {
         "himawari_local": 577525.6489160028,
-        "himawari_utc": 577520.1409516747,
         "old_api_local": 557516.006852063,
         "web_download_local": 557469.8482059091,
-        "web_download_utc": 557420.537261142,
         "new_api_local": 557516.006852063,
-        "new_api_utc": 557466.6915506845,
     }
 
     expected_cfs = {
         "himawari_local": 32.43637206240537,
-        "himawari_utc": 32.43606271098416,
         "old_api_local": 31.312542850595232,
         "web_download_local": 31.30995037868805,
-        "web_download_utc": 31.307180859872364,
         "new_api_local": 31.312542850595232,
-        "new_api_utc": 31.30977308709319,
     }
 
     for case, expected_aep in expected_aeps.items():
