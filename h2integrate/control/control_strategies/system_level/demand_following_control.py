@@ -133,14 +133,13 @@ class DemandFollowingControl(SystemLevelControlBase):
         conversion_recipes = self._make_conversion_factor_recipes()
 
         # ESG TODO: check that conversion_recipes is as expected
-        # The two below recipes are the same? Still need to debug the conversion recipes
-        # ('ammonia', 'hydrogen', 'ammonia-5')
-        # ('hydrogen', 'electricity', 'hydrogen-1')
+        # ---> I think its somewhat working now
         self.conversion_recipes = conversion_recipes
 
     def get_setpoints_for_commodity_subset(
         self, inputs, outputs, commodity, commodity_demand, tech_subset: list | set | None = None
     ):
+        # TODO: rename this method
         if tech_subset is None:
             tech_subset = set(self.input_techs)
 
@@ -213,39 +212,35 @@ class DemandFollowingControl(SystemLevelControlBase):
             input_cmod, tech, output_cmod = converter_info
             tech_ancestors = converter_upstreams[(input_cmod, tech)]
             conversion_ratio = self.get_converter_conversion_ratio(
-                inputs,
-                input_cmod,
-                output_cmod,
-                tech,
-                list(tech_ancestors),
-                return_avg=self.config.use_average_conversion_factor,
+                inputs, input_cmod, output_cmod, tech, list(tech_ancestors)
             )
-            if not self.config.use_average_conversion_factor:
-                if np.all(np.abs(conversion_ratio) == 0.0):
-                    conversion_ratio_val = self.get_converter_capacity_conversion_ratio(
-                        inputs,
-                        input_cmod,
-                        output_cmod,
-                        tech,
-                        list(tech_ancestors),
-                    )
-                    conversion_ratio = np.full(
-                        len(inputs[self.demand_input_name]), conversion_ratio_val
-                    )
+
+            has_nan = np.isnan(conversion_ratio).any()
+            has_inf = np.isinf(conversion_ratio).any()
+            is_zero = np.all(conversion_ratio == 0.0)
+            if has_inf or has_nan or is_zero:
+                # not all values are finite
+                # has_nan = np.isnan(conversion_ratio).any()
+                # has_inf = np.isinf(conversion_ratio).any()
+                if is_zero:
+                    bad_indices = list(np.arange(0, len(conversion_ratio), 1))
+                else:
+                    inf_indices = np.argwhere(~np.isfinite(conversion_ratio)).flatten()
+                    nan_indices = np.argwhere(~np.isnan(conversion_ratio)).flatten()
+                    bad_indices = list(set(inf_indices) | set(nan_indices))
+
+                capacity_ratio = self.get_converter_capacity_conversion_ratio(
+                    inputs,
+                    input_cmod,
+                    output_cmod,
+                    tech,
+                    list(tech_ancestors),
+                )
+                conversion_ratio[bad_indices] = capacity_ratio
 
             if self.config.use_average_conversion_factor:
-                if (
-                    (conversion_ratio == 0.0)
-                    or np.isnan(conversion_ratio)
-                    or np.isinf(conversion_ratio)
-                ):
-                    conversion_ratio = self.get_converter_capacity_conversion_ratio(
-                        inputs,
-                        input_cmod,
-                        output_cmod,
-                        tech,
-                        list(tech_ancestors),
-                    )
+                conversion_ratio = conversion_ratio.mean()
+
             conversion_factors[converter_info] = conversion_ratio
         return conversion_factors
 
@@ -256,6 +251,7 @@ class DemandFollowingControl(SystemLevelControlBase):
         grouped_techs_compounding_conversion_factors,
         use_simple_keynames=True,
     ):
+        # TODO: remove
         tech_groups_demand = {}
         run_with_complex_keynames = False
         for stuff, conv_fac in grouped_techs_compounding_conversion_factors.items():

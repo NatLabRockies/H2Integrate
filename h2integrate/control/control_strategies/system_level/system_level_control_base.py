@@ -946,7 +946,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return total_commodity_in_capacity / total_output_capac[0]
 
     def get_converter_conversion_ratio(
-        self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors, return_avg=True
+        self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
     ):
         """Get conversion ratio of ``in_cmod/out_cmod`` for technology ``converter_tech``
 
@@ -973,8 +973,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         total_output = inputs[input_name_fmt.format(tech=converter_tech, commod=out_cmod)]
         # Check if the converter produced any `out_cmod`
         # if total_output.sum() > 0:
-        conversion_factor = np.nan_to_num(total_input / np.abs(total_output))
-        return conversion_factor.mean() if return_avg else conversion_factor
+        # conversion_factor = np.nan_to_num(total_input / np.abs(total_output))
+        conversion_factor = total_input / np.abs(total_output)
+        return conversion_factor  # conversion_factor.mean() if return_avg else conversion_factor
 
     def dict_values_to_flat_list(self, dictionary):
         flat_list = []
