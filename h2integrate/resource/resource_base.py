@@ -300,7 +300,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             inputs are different than the previous latitude and longitude values. If resource data
             has not been already loaded for the, continue to Step 1.
         1) Check if resource data was input. If not, continue to Step 2.
-        2) Get valid resource_dir with :py:function:`check_resource_dir()`
+        2) Get valid resource_dir with :py:func:`check_resource_dir`
         3) Create a filename if resource_filename was not input or if the site location changed
             with the method `create_filename()`. Otherwise, use resource_filename as the filename.
         4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid filepath,

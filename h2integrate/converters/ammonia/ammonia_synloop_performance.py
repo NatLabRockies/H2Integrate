@@ -16,25 +16,30 @@ from h2integrate.core.commodity_stream_definitions import add_multivariable_outp
 class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
     """
     Configuration inputs for the ammonia synthesis loop performance model.
-    *Starred inputs are from tech_config/ammonia/model_inputs/shared_parameters
-    The other inputs are from tech_config/ammonia/model_inputs/performance_parameters
+
+    Attributes marked with a leading asterisk (``*``) are read from
+    ``tech_config/ammonia/model_inputs/shared_parameters``; the other inputs come from
+    ``tech_config/ammonia/model_inputs/performance_parameters``.
 
     Attributes:
         size_mode (str): The mode in which the component is sized. Options:
+
             - "normal": The component size is taken from the tech_config.
             - "resize_by_max_feedstock": Resize based on maximum feedstock availability.
             - "resize_by_max_commodity": Resize based on maximum commodity demand.
+
         flow_used_for_sizing (str | None): The feedstock/commodity flow used for sizing.
             Required when size_mode is not "normal".
         max_feedstock_ratio (float): Ratio for sizing in "resize_by_max_feedstock" mode.
             Defaults to 1.0.
         max_commodity_ratio (float): Ratio for sizing in "resize_by_max_commodity" mode.
             Defaults to 1.0.
-        *production_capacity (float): The total production capacity of the ammonia synthesis loop
-            (in kg ammonia per hour)
-        *catalyst_consumption_rate (float): The mass ratio of catalyst consumed by the reactor over
-            its lifetime to ammonia produced (in kg catalyst / kg ammonia)
-        *catalyst_replacement_interval (float): The interval in years when the catalyst is replaced
+        production_capacity (float): (\\*) The total production capacity of the ammonia synthesis
+            loop (in kg ammonia per hour)
+        catalyst_consumption_rate (float): (\\*) The mass ratio of catalyst consumed by the reactor
+            over its lifetime to ammonia produced (in kg catalyst / kg ammonia)
+        catalyst_replacement_interval (float): (\\*) The interval in years when the catalyst is
+            replaced
         capacity_factor (float): The ratio of ammonia produced over a year to maximum production
             capacity (as a decimal)
         energy_demand (float): The total energy demand of the ammonia synthesis loop
@@ -167,7 +172,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         nitrogen_in (array): Hourly nitrogen feed to the synthesis loop [kg/h].
         electricity_in (array): Hourly electricity supplied to the synthesis loop [MW].
 
-        Outputs:
+    Outputs:
         ammonia_out (array): Hourly ammonia produced by the synthesis loop [kg/h].
         nitrogen_out (array): Hourly unused nitrogen feedstock (excludes purge gas) [kg/h].
         hydrogen_out (array): Hourly unused hydrogen feedstock (excludes purge gas) [kg/h].
@@ -190,11 +195,9 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         total_nitrogen_consumed (float): Total nitrogen consumed over the modeled period [kg/year].
         total_electricity_consumed (float): Total electricity consumed over the modeled
             period [kWh/year].
-        limiting_output (array of int): Limiting factor indicator per timestep [-]:
-            0 = nitrogen-limited,
-            1 = hydrogen-limited,
-            2 = electricity-limited,
-            3 = capacity-limited.
+        limiting_output (array of int): Limiting factor indicator per timestep [-],
+            where 0 = nitrogen-limited, 1 = hydrogen-limited, 2 = electricity-limited,
+            and 3 = capacity-limited.
         max_hydrogen_capacity (float): Maximum rate of hydrogen consumption  [kg/h].
         ammonia_capacity_factor (float): Ratio of ammonia produced to the maximum production
             capacity [-].

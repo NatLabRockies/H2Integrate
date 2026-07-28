@@ -77,7 +77,8 @@ def eia_ng_feedstock_tech_config():
                 "state": "MN",
                 "monthly": True,
                 "price_category": "industrial",
-                "filename": Path(__file__).parent / "test_eia_ng_data.csv",
+                "feedstock_dir": Path(__file__).parent,
+                "filename": "test_eia_ng_data.csv",
                 "commodity_amount_units": "MMBtu",
             },
         }
@@ -324,13 +325,13 @@ def test_multiple_different_type_feedstocks(plant_config):
     )
 
     # Electricity feedstock
-    ec_units = "MW*h"
+    ec_units = "MW"
     elec_config, _ = create_basic_feedstock_config(
         feedstock_type="electricity", units=ec_units, rated_capacity=50.0, price=0.05
     )
 
     # Water feedstock
-    h2o_units = "galUS"
+    h2o_units = "galUS/h"
     water_config, _ = create_basic_feedstock_config(
         feedstock_type="water", units=h2o_units, rated_capacity=1000.0, price=0.001
     )

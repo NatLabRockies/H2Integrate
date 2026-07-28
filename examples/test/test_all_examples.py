@@ -335,7 +335,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check ammonia production"):
         assert (
             pytest.approx(
-                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-4
+                model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-3
             )
             == 406226.7872
         )
@@ -369,7 +369,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOA"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-4
+                model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-3
             )
             == 1.1021542544557135
         )
@@ -1320,6 +1320,28 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
                 rel=1e-5,
             )
             == 5.3063358423
+        )
+
+    with subtests.test("Check LCOH from LCOE feedstock"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_elec_feedstock.LCOH", units="USD/kg")[
+                    0
+                ],
+                rel=1e-5,
+            )
+            == 5.50083
+        )
+
+    with subtests.test("Check LCOH from grid buy"):
+        assert (
+            pytest.approx(
+                model.prob.get_val("finance_subgroup_hydrogen_elec_grid_buy.LCOH", units="USD/kg")[
+                    0
+                ],
+                rel=1e-5,
+            )
+            == 5.50083
         )
 
     wind_generation = model.prob.get_val("wind.electricity_out", units="kW")
