@@ -907,8 +907,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # NOTE: using tracked_ancestors would make this code very senstive to the order of
         # tech connections
         # I.e., would get different results if feedstocks connected to haber_bosch first
-        # tracked_ancestors = set()
-        # tracked_converters = set()
         # Track the most recently discovered converter so we can scope
         # upstream searches for chained converters (A→B→C where B and C
         # both convert). Without this, C would see A's commodity as upstream
@@ -963,11 +961,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                             for e in self.techs_to_commodities
                             if e[1] == in_comm and e[0] in connected_ancestors
                         ]
-                        # for tracked_a in converter_ancestors[ii]:
-                        #     tracked_ancestors.add(tracked_a)
+
                         ii += 1
                 last_converter = source_tech
-                # tracked_converters.add(source_tech)
 
         if len(converter_techs) < len(converter_order):
             # remove duplicate converter orders
@@ -976,7 +972,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
             converter_order = {v: k for k, v in rev_converter_order.items()}
             # remove duplicate converter orders
             # re-reverse it
-            # converter_ancestors = {v: list(k) for k, v in rev_converter_ancestors.items()}
             converter_ancestors = {k: converter_ancestors[k] for k in list(converter_order.keys())}
 
         # Make sure we iterate through the converters in the right order
@@ -1243,7 +1238,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
             path_recipe = []
 
             for edge in commodity_edges:
-                # edge_recipe = []
                 # in_cmod is demand of next tech
                 out_cmod, in_cmod, tech = edge
                 if tech in self.grouped_techs:
@@ -1258,7 +1252,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     # TODO: add check if any other non-converter techs have a non-1 conversion factor
                 else:
                     recipe = [(in_cmod, tech, out_cmod)]
-                # edge_recipe.append(recipe)
+
                 path_recipe.append(recipe)
                 compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
                     path_recipe.copy()
@@ -1302,37 +1296,3 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 path_conversion *= conversion_factors.get(tech_conversion, 1.0)
 
         return path_conversion
-
-        # for edge in recipe:
-        #     # in_cmod is demanded from techs upstream of tech_group
-
-        #     if tech in self.grouped_techs:
-        #         techs_in_group = list(self.grouped_techs[tech])
-        #         conversion = 1.0
-
-        #     else:
-        #         conversion = conversion_factors[(in_cmod, tech, out_cmod)]
-
-        # conversion_factor = 1.0
-
-        # res = {
-        #     "techs": list(self.grouped_techs[tech_to_demand[0]]),
-        #     # "conversion factor": conv_fac,
-        # }
-
-        # res = {
-        #     "techs": tech_to_demand[0],
-        #     # "conversion factor": conv_fac
-        #     }
-
-    # def _get_conversion_from_recipe(self, conversion_factors, recipe):
-    #     tech_to_demand = [
-    #             s
-    #             for s in list(self.simple_graph.predecessors(tech))
-    #             if self.simple_graph.edges[s, tech].get("commodity", "") == input_cmod
-    #         ]
-    #     if len(tech_to_demand) != 1:
-    #         raise ValueError("Unexpected situation!")
-    #     if tech_to_demand[0] in self.grouped_techs:
-    #         return list(self.grouped_techs[tech_to_demand[0]])
-    #     return tech_to_demand[0]
