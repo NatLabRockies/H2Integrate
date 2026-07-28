@@ -1,5 +1,4 @@
 import warnings
-import itertools
 
 import numpy as np
 import networkx as nx
@@ -220,8 +219,6 @@ class DemandFollowingControl(SystemLevelControlBase):
             is_zero = np.all(conversion_ratio == 0.0)
             if has_inf or has_nan or is_zero:
                 # not all values are finite
-                # has_nan = np.isnan(conversion_ratio).any()
-                # has_inf = np.isinf(conversion_ratio).any()
                 if is_zero:
                     bad_indices = list(np.arange(0, len(conversion_ratio), 1))
                 else:
@@ -243,55 +240,6 @@ class DemandFollowingControl(SystemLevelControlBase):
 
             conversion_factors[converter_info] = conversion_ratio
         return conversion_factors
-
-    def convert_combined_conversion_factors_to_tech_demand(
-        self,
-        grouped_techs,
-        simple_graph,
-        grouped_techs_compounding_conversion_factors,
-        use_simple_keynames=True,
-    ):
-        # TODO: remove
-        tech_groups_demand = {}
-        run_with_complex_keynames = False
-        for stuff, conv_fac in grouped_techs_compounding_conversion_factors.items():
-            output_cmod, input_cmod, tech = stuff
-            tech_to_demand = [
-                s
-                for s in list(simple_graph.predecessors(tech))
-                if simple_graph.edges[s, tech].get("commodity", "") == input_cmod
-            ]
-            if len(tech_to_demand) != 1:
-                raise ValueError("Unexpected situation!")
-            # f"{input_cmod} demand for {tech_to_demand} so {tech} can make {output_cmod}"
-            if tech_to_demand[0] in grouped_techs:
-                res = {
-                    "techs": list(grouped_techs[tech_to_demand[0]]),
-                    "conversion factor": conv_fac,
-                }
-            else:
-                res = {"techs": tech_to_demand[0], "conversion factor": conv_fac}
-            # NOTE: could throw this in a function so that the keys are simple if needed
-            # below has complicated keys in case theres a more complex architecture
-            key = (
-                (input_cmod, tech_to_demand[0])
-                if use_simple_keynames
-                else (input_cmod, tech_to_demand[0], (tech, output_cmod))
-            )
-
-            if use_simple_keynames and key in tech_groups_demand:
-                run_with_complex_keynames = True
-                break
-            tech_groups_demand[key] = res
-        if run_with_complex_keynames:
-            result = self.convert_combined_conversion_factors_to_tech_demand(
-                grouped_techs,
-                simple_graph,
-                grouped_techs_compounding_conversion_factors,
-                use_simple_keynames=False,
-            )
-            return result
-        return tech_groups_demand
 
     def compute(self, inputs, outputs):
         if not self.multi_commodity_system:
@@ -342,134 +290,6 @@ class DemandFollowingControl(SystemLevelControlBase):
                 tech_subset=techs_to_demand,
             )
             conversion_factors_tracker[recipe_name] = conversion_factor
-        unset_techs_cmods = self.techs_to_commodities - set(self.tech_demands_set)
-        unset_techs = [k for k in list(unset_techs_cmods) if k[0] not in self.feedstock_comps]
-        if unset_techs:
-            warnings.warn(
-                f"Commands not set for these technologies: {unset_techs}", UserWarning, stacklevel=3
-            )
-
-    def old_compute(self, inputs, outputs):
-        # TODO: remove
-        if not self.multi_commodity_system:
-            self.get_setpoints_for_commodity_subset(
-                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
-            )
-            return
-
-        # self.new_compute(inputs, outputs)
-
-        converter_conversion_factors = self.get_conversion_factors(
-            self.converters, self.converter_upstreams, inputs
-        )
-
-        conversion_factor_of_1 = (
-            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
-        )
-
-        non_converter_conversion_factors = dict(
-            zip(
-                self.non_converter_conversion_factor_keys,
-                [conversion_factor_of_1] * len(self.non_converter_conversion_factor_keys),
-            )
-        )
-        conversion_factors = non_converter_conversion_factors | converter_conversion_factors
-
-        # 6. Get the compounding conversion factors
-        in_degs = dict(self.simple_graph.in_degree)
-        starting_techs = {k for k, v in in_degs.items() if v == 0}
-
-        compounding_conversion_factor_recipes = {}
-        grouped_techs_compounding_conversion_factors = {}
-        for starting_tech in list(starting_techs):
-            paths = list(nx.all_simple_paths(self.simple_graph, starting_tech, self.demand_tech))
-            commodity_graph = nx.DiGraph()  # nodes are commodities
-
-            if len(paths) > 1:
-                warnings.warn("There should only be one path", UserWarning, stacklevel=3)
-            path = paths[0]
-            reverse_path = path[::-1]
-
-            commodity_conversions = [
-                self.simple_graph.edges[p0, p1].get("commodity", None)
-                for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
-            ]
-            commodity_nodes = list(itertools.pairwise(commodity_conversions))
-            techs = reverse_path[1:]
-            for i, commod_node in enumerate(commodity_nodes):
-                # ammonia, hydrogen
-                down_cmod, up_cmod = commod_node
-                commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
-
-            commodity_edges = commodity_graph.edges(data="tech")
-            path_conversion = (
-                1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
-            )
-            path_recipe = []
-
-            for edge in commodity_edges:
-                # in_cmod is demand of next tech
-                out_cmod, in_cmod, tech = edge
-                if tech in self.grouped_techs:
-                    techs_in_group = list(self.grouped_techs[tech])
-                    conversion = (
-                        1.0
-                        if self.config.use_average_conversion_factor
-                        else np.ones(self.n_timesteps)
-                    )
-                    recipe = []
-                    for t in techs_in_group:
-                        if t in self.converter_tech_names:
-                            conversion *= conversion_factors[(in_cmod, t, out_cmod)]
-                            recipe.append((in_cmod, t, out_cmod))
-                        else:
-                            conversion *= conversion_factors[(out_cmod, t, out_cmod)]
-                            recipe.append((out_cmod, t, out_cmod))
-                    # TODO: add check if any other non-converter techs have a non-1 conversion factor
-                else:
-                    conversion = conversion_factors[(in_cmod, tech, out_cmod)]
-                    recipe = [(in_cmod, tech, out_cmod)]
-                path_conversion *= conversion
-                path_recipe.append(recipe)
-                grouped_techs_compounding_conversion_factors[(out_cmod, in_cmod, tech)] = (
-                    path_conversion
-                )
-                compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe
-
-        compounding_conversion_factors = self.convert_combined_conversion_factors_to_tech_demand(
-            self.grouped_techs,
-            self.simple_graph,
-            grouped_techs_compounding_conversion_factors,
-            use_simple_keynames=True,
-        )
-        if any(len(k) > 2 for k in list(compounding_conversion_factors.keys())):
-            raise NotImplementedError("This type of system cannot be handled")
-
-        self.tech_demands_set = []
-        # Set demand for the techs in the "demand" group
-        demand_techs = self.converter_upstreams[(self.commodity, self.demand_tech)]
-        outputs = self.get_setpoints_for_commodity_subset(
-            inputs,
-            outputs,
-            self.commodity,
-            inputs[self.demand_input_name].copy(),
-            tech_subset=demand_techs,
-        )
-
-        for cmod_group, cf_techs in compounding_conversion_factors.items():
-            commodity, _ = cmod_group
-
-            inputs[self.demand_input_name]
-            commodity_demand = inputs[self.demand_input_name].copy() * cf_techs["conversion factor"]
-
-            outputs = self.get_setpoints_for_commodity_subset(
-                inputs,
-                outputs,
-                commodity,
-                commodity_demand,
-                tech_subset=cf_techs["techs"],
-            )
-        # NOTE: could add check to make sure everything was set
         unset_techs_cmods = self.techs_to_commodities - set(self.tech_demands_set)
         unset_techs = [k for k in list(unset_techs_cmods) if k[0] not in self.feedstock_comps]
         if unset_techs:
