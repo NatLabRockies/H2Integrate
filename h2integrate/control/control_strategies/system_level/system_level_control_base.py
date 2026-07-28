@@ -127,6 +127,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
 
+        self._post_setup_multi_commodity()
+
     def _setup_commodity(
         self,
         tech_name,
@@ -733,6 +735,90 @@ class SystemLevelControlBase(om.ExplicitComponent):
             marginal_cost_scalar = 0.0
 
         return np.full(self.n_timesteps, marginal_cost_scalar)
+
+    def _post_setup_multi_commodity(self):
+        if not self.multi_commodity_system:
+            return
+        converters, converter_upstreams = self._find_converter_techs(include_feedstock_sources=True)
+        # Group together technologies that are connected to a converter
+        # I.e., group together an electrolyzer an hydrogen storage,
+        # name this group as the shared commodity with a unique number
+        grouped_techs = {f"{k[0][0]}-{i}": k[1] for i, k in enumerate(converter_upstreams.items())}
+
+        # 3. Add in a conversion factor of 1 for all non-converter technologies
+        converter_tech_names = {v[1] for v in list(converters)}
+
+        conversion_factor_keys = [
+            (tc[1], tc[0], tc[1])
+            for tc in self.techs_to_commodities
+            if tc[0] not in converter_tech_names
+        ]
+        # missing_input_techs = set(self.input_techs) - set(reversed_grouped_techs.keys())
+
+        # NOTE: maybe only run below if theres a missing_input_tech
+        non_converter_input_techs_in_group, demand_group = self._find_demand_tech_group(
+            converters, converter_upstreams
+        )
+        grouped_techs.update(demand_group)
+
+        conversion_factor_keys += [
+            (self.commodity, k, self.commodity) for k in non_converter_input_techs_in_group
+        ]
+
+        # Add demand component to converter_upstreams
+        demand_group_techs = list(demand_group.values())[0]
+        converter_upstreams[(self.commodity, self.demand_tech)] = (
+            set(demand_group_techs) & self.input_techs
+        )
+
+        # 2. Make a dictionary for future-use that has keys of the technology names and
+        # the group they belong to
+        reversed_grouped_techs = {}
+        for k, v in grouped_techs.items():
+            for vv in list(v):
+                reversed_grouped_techs[vv] = k
+
+        # 4. Add conversion factors of 1 for the technologies that are non_input_techs
+        # Also add these technologies to the reversed_group_techs
+
+        # Get the nodes of the technology graph that aren't a controllable technology
+        # Also add these technologies to the reversed_group_techs
+
+        non_input_techs_conversion_factor_keys, techs_to_groups = (
+            self._find_group_for_non_input_techs(grouped_techs)
+        )
+        # Add conversion factors of 1 for the technologies that are non_input_techs
+        conversion_factor_keys += non_input_techs_conversion_factor_keys
+        reversed_grouped_techs.update(
+            techs_to_groups
+        )  # unsure why we're not updating grouped_techs
+
+        # 5. Make the edges of the grouped technologies
+        simple_graph = nx.DiGraph()
+        for e in list(self.technology_graph.edges(data="commodity")):
+            s0, d0, c = e
+
+            s = reversed_grouped_techs.get(s0, s0)
+            d = reversed_grouped_techs.get(d0, d0)
+
+            if s != d:
+                simple_graph.add_edge(s, d, commodity=c)
+
+        # ESG TODO: check that simple_graph has the expected edges
+        # ---> I think its somewhat working now
+
+        self.simple_graph = simple_graph
+        self.non_converter_conversion_factor_keys = conversion_factor_keys
+        self.grouped_techs = grouped_techs
+        self.converters = converters
+        self.converter_upstreams = converter_upstreams
+        self.converter_tech_names = converter_tech_names
+
+        conversion_recipes = self._make_conversion_factor_recipes()
+
+        # ESG TODO: check that conversion_recipes is as expected
+        # ---> I think its somewhat working now
+        self.conversion_recipes = conversion_recipes
 
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
