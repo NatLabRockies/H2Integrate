@@ -41,6 +41,7 @@ technologies:
 ### API details
 For API details, see the [`QuinnNuclearPerformanceModel` and `QuinnNuclearCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant).
 
+(references)=
 ### References
 - Quinn, J. et al., 2023. Small modular reactor light water reactor techno-economic analysis. Applied Energy 120669. https://doi.org/10.1016/j.apenergy.2023.120669
 
