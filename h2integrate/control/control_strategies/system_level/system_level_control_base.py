@@ -926,11 +926,24 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
     ):
         rated_name_fmt = "{tech}_rated_{commod}_production"
+        feedstock_name_fmt = "{tech}_{commod}_out"
         in_names = [rated_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
+        in_feedstock_names = [
+            feedstock_name_fmt.format(tech=t, commod=in_cmod)
+            for t in list(tech_ancestors)
+            if t in self.feedstock_comps
+        ]
+
         total_in_cmod_capac = [inputs[n] for n in in_names if n in inputs]
+        avg_feedstock_capac = [inputs[n].mean() for n in in_feedstock_names if n in inputs]
+
         total_input_capac = np.array(total_in_cmod_capac).sum()
+        total_feedstock_capac = np.array(avg_feedstock_capac).sum()
+
+        total_commodity_in_capacity = total_input_capac + total_feedstock_capac
+
         total_output_capac = inputs[rated_name_fmt.format(tech=converter_tech, commod=out_cmod)]
-        return total_input_capac / total_output_capac[0]
+        return total_commodity_in_capacity / total_output_capac[0]
 
     def get_converter_conversion_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors, return_avg=True
@@ -1117,6 +1130,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         starting_techs = {k for k, v in in_degs.items() if v == 0}
 
         compounding_conversion_factor_recipes = {}
+
         for starting_tech in list(starting_techs):
             paths = list(nx.all_simple_paths(self.simple_graph, starting_tech, self.demand_tech))
 
@@ -1142,6 +1156,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             path_recipe = []
 
             for edge in commodity_edges:
+                # edge_recipe = []
                 # in_cmod is demand of next tech
                 out_cmod, in_cmod, tech = edge
                 if tech in self.grouped_techs:
@@ -1156,8 +1171,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     # TODO: add check if any other non-converter techs have a non-1 conversion factor
                 else:
                     recipe = [(in_cmod, tech, out_cmod)]
+                # edge_recipe.append(recipe)
                 path_recipe.append(recipe)
-                compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe
+                compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
+                    path_recipe.copy()
+                )
 
         return compounding_conversion_factor_recipes
 
@@ -1172,6 +1190,53 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if tech_to_demand[0] in self.grouped_techs:
             return list(self.grouped_techs[tech_to_demand[0]])
         return tech_to_demand[0]
+
+    def _get_techs_to_demand_from_recipe(self, recipe_name):
+        output_cmod, input_cmod, tech_group = recipe_name
+        techs_to_demand = [
+            s
+            for s in list(self.simple_graph.predecessors(tech_group))
+            if self.simple_graph.edges[s, tech_group].get("commodity", "") == input_cmod
+        ]
+        if len(techs_to_demand) != 1:
+            raise ValueError("Unexpected situation!")
+        if techs_to_demand[0] in self.grouped_techs:
+            techs_in_group = list(self.grouped_techs[techs_to_demand[0]])
+        else:
+            techs_in_group = techs_to_demand[0]
+        return techs_in_group
+
+    def _get_conversion_from_recipe(self, conversion_factors, recipe):
+        # Get comp
+        path_conversion = 1.0
+
+        for path in recipe:
+            for tech_conversion in path:
+                path_conversion *= conversion_factors.get(tech_conversion, 1.0)
+
+        return path_conversion
+
+        # for edge in recipe:
+        #     # in_cmod is demanded from techs upstream of tech_group
+
+        #     if tech in self.grouped_techs:
+        #         techs_in_group = list(self.grouped_techs[tech])
+        #         conversion = 1.0
+
+        #     else:
+        #         conversion = conversion_factors[(in_cmod, tech, out_cmod)]
+
+        # conversion_factor = 1.0
+
+        # res = {
+        #     "techs": list(self.grouped_techs[tech_to_demand[0]]),
+        #     # "conversion factor": conv_fac,
+        # }
+
+        # res = {
+        #     "techs": tech_to_demand[0],
+        #     # "conversion factor": conv_fac
+        #     }
 
     # def _get_conversion_from_recipe(self, conversion_factors, recipe):
     #     tech_to_demand = [

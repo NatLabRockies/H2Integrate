@@ -297,15 +297,6 @@ class DemandFollowingControl(SystemLevelControlBase):
             return result
         return tech_groups_demand
 
-    def new_compute(self, inputs, outputs):
-        if not self.multi_commodity_system:
-            self.get_setpoints_for_commodity_subset(
-                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
-            )
-            return
-
-        self.get_conversion_factors(self.converters, self.converter_upstreams, inputs)
-
     def compute(self, inputs, outputs):
         if not self.multi_commodity_system:
             self.get_setpoints_for_commodity_subset(
@@ -313,7 +304,64 @@ class DemandFollowingControl(SystemLevelControlBase):
             )
             return
 
-        self.new_compute(inputs, outputs)
+        converter_conversion_factors = self.get_conversion_factors(
+            self.converters, self.converter_upstreams, inputs
+        )
+
+        conversion_factor_of_1 = (
+            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
+        )
+
+        non_converter_conversion_factors = dict(
+            zip(
+                self.non_converter_conversion_factor_keys,
+                [conversion_factor_of_1] * len(self.non_converter_conversion_factor_keys),
+            )
+        )
+        conversion_factors = non_converter_conversion_factors | converter_conversion_factors
+
+        self.tech_demands_set = []
+
+        demand_techs = self.converter_upstreams[(self.commodity, self.demand_tech)]
+
+        outputs = self.get_setpoints_for_commodity_subset(
+            inputs,
+            outputs,
+            self.commodity,
+            inputs[self.demand_input_name].copy(),
+            tech_subset=demand_techs,
+        )
+
+        conversion_factors_tracker = {}
+        for recipe_name, recipe in self.conversion_recipes.items():
+            commodity_to_demand = recipe_name[1]
+            techs_to_demand = self._get_techs_to_demand_from_recipe(recipe_name)
+            conversion_factor = self._get_conversion_from_recipe(conversion_factors, recipe)
+            demand = inputs[self.demand_input_name].copy() * conversion_factor
+            outputs = self.get_setpoints_for_commodity_subset(
+                inputs,
+                outputs,
+                commodity_to_demand,
+                demand,
+                tech_subset=techs_to_demand,
+            )
+            conversion_factors_tracker[recipe_name] = conversion_factor
+        unset_techs_cmods = self.techs_to_commodities - set(self.tech_demands_set)
+        unset_techs = [k for k in list(unset_techs_cmods) if k[0] not in self.feedstock_comps]
+        if unset_techs:
+            warnings.warn(
+                f"Commands not set for these technologies: {unset_techs}", UserWarning, stacklevel=3
+            )
+
+    def old_compute(self, inputs, outputs):
+        # TODO: remove
+        if not self.multi_commodity_system:
+            self.get_setpoints_for_commodity_subset(
+                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
+            )
+            return
+
+        # self.new_compute(inputs, outputs)
 
         converter_conversion_factors = self.get_conversion_factors(
             self.converters, self.converter_upstreams, inputs
