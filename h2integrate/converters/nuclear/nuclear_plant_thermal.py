@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.validators import gt_zero, contains, range_val
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -33,8 +33,8 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
 
     operating_mode: str = field(validator=contains(["heat", "electricity"]))
     electricity_command_value: float = field(validator=gt_zero)
-    high_pressure_electrical_efficiency: float = field(validator=gt_zero)
-    low_pressure_electrical_efficiency: float = field(validator=gt_zero)
+    high_pressure_electrical_efficiency: float = field(validator=range_val(0.0, 1.0))
+    low_pressure_electrical_efficiency: float = field(validator=range_val(0.0, 1.0))
     rated_capacity: float = field(validator=gt_zero)
     minimum_heat_extract: float = field(default=0.0)
 
@@ -227,6 +227,7 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        self.fraction_of_year_simulated = (self.dt * n_timesteps / 3600.0) / 8760.0
         self.config = SimpleThermalNuclearReactorCostConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=False,
@@ -266,5 +267,7 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
         outputs["OpEx"] = fixed_om_per_kw_year * rated_capacity_kw
 
         delivered_electricity_kwh = np.sum(inputs["electricity_out"]) * (self.dt / 3600.0)
-        annual_variable_om = variable_om_per_kwh * delivered_electricity_kwh
+        annual_variable_om = (
+            variable_om_per_kwh * delivered_electricity_kwh / (self.fraction_of_year_simulated)
+        )
         outputs["VarOpEx"] = np.full(self.plant_life, annual_variable_om)
