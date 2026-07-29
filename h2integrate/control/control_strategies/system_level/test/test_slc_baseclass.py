@@ -97,9 +97,9 @@ def test_find_converter_techs_nh3_system(subtests):
     # Test methods in _post_setup_multi_commodity
     # _find_converter_techs(include_feedstock_sources=True)
     # _find_demand_tech_group()
-    example_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
-    plant_config = load_plant_yaml(example_folder / "plant_config_v2.yaml")
-    tech_config = load_tech_yaml(example_folder / "tech_config_v2.yaml")
+    example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
     slc = make_and_setup_slc_baseclass(plant_config, tech_config)
 
     # Test _find_converter_techs()
@@ -144,9 +144,9 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
     # _find_demand_tech_group()
     # _find_group_for_non_input_techs
     # _make_conversion_factor_recipes()
-    example_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
-    plant_config = load_plant_yaml(example_folder / "plant_config_v2.yaml")
-    tech_config = load_tech_yaml(example_folder / "tech_config_v2.yaml")
+    example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
     slc_config = make_slc_topology(plant_config, tech_config)
 
     prob = om.Problem()
@@ -324,9 +324,9 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
 
     # --- Same setup as ``test_multi_commodity_post_setup_nh3_system`` ---
 
-    example_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
-    plant_config = load_plant_yaml(example_folder / "plant_config_v2.yaml")
-    tech_config = load_tech_yaml(example_folder / "tech_config_v2.yaml")
+    example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
     slc_config = make_slc_topology(plant_config, tech_config)
 
     prob = om.Problem()
@@ -515,9 +515,9 @@ def test_slc_baseclass_complex_multicommodity_no_storage(subtests):
     # h2i = object.__new__(H2IntegrateModel)
     # h2i.slc = True
 
-    example_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
-    plant_config = load_plant_yaml(example_folder / "plant_config_v2.yaml")
-    tech_config = load_tech_yaml(example_folder / "tech_config_v2.yaml")
+    example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
     driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
 
     config_input = {

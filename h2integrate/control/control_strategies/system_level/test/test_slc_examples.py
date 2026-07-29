@@ -450,10 +450,10 @@ def test_slc_complex_multi_commodity_v1(subtests):
 
 
 @pytest.mark.integration
-def test_slc_complex_multi_commodity_v2(subtests):
-    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
+def test_slc_complex_nh3_with_storage(subtests):
+    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
     os.chdir(ex_folder)
-    h2i = H2IntegrateModel(ex_folder / "top_level_config_v2.yaml")
+    h2i = H2IntegrateModel(ex_folder / "top_level_config.yaml")
 
     h2i.setup()
 
