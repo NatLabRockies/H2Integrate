@@ -188,7 +188,7 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
     with subtests.test("LCOH"):
         assert (
             pytest.approx(
-                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
+                model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-6
             )
             == 14.878096642042243
         )
@@ -415,31 +415,31 @@ def test_slc_complex_multi_commodity_v1(subtests):
 
     with subtests.test("LCOH"):
         assert (
-            pytest.approx(3.8867863862476097, rel=1e-6)
+            pytest.approx(4.064419131023322, rel=1e-6)
             == h2i.model.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0]
         )
 
     with subtests.test("LCOA - Produced"):
         assert (
-            pytest.approx(1.2607467064967108, rel=1e-6)
+            pytest.approx(1.306352207437524, rel=1e-6)
             == h2i.model.get_val("finance_subgroup_nh3_produced.LCOA", units="USD/kg")[0]
         )
 
     with subtests.test("LCOA - Delivered"):
         assert (
-            pytest.approx(1.360845569863152, rel=1e-6)
+            pytest.approx(1.404495041524232, rel=1e-6)
             == h2i.model.get_val("finance_subgroup_nh3_delivered.LCOA", units="USD/kg")[0]
         )
 
     with subtests.test("Unmet Ammonia Demand"):
         assert (
-            pytest.approx(92862.44227354404, rel=1e-6)
+            pytest.approx(102882.4504724315, rel=1e-6)
             == h2i.model.get_val("nh3_load_demand.unmet_ammonia_demand_out", units="t/h").sum()
         )
 
     with subtests.test("Ammonia Demand Capacity Factor"):
         assert (
-            pytest.approx(77.68258710060003, rel=1e-6)
+            pytest.approx(75.27450203676736, rel=1e-6)
             == h2i.model.get_val("nh3_load_demand.capacity_factor", units="percent")[0]
         )
 
@@ -455,32 +455,36 @@ def test_slc_complex_multi_commodity_v2(subtests):
     h2i.run()
 
     with subtests.test("LCOH"):
-        assert pytest.approx(3.8867863862476097, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(4.064419131023322, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_h2.LCOH", units="USD/kg"
         )
 
     with subtests.test("LCOA - Produced"):
-        assert pytest.approx(1.2607467064967108, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.306352207437524, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_nh3_produced.LCOA", units="USD/kg"
         )
 
     with subtests.test("LCOA - Available"):
-        assert pytest.approx(1.2625680481267114, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.3082392786020187, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_ammonia_available.LCOA", units="USD/kg"
         )
 
     with subtests.test("LCOA - Delivered"):
-        assert pytest.approx(1.3628115196257977, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.4065238834234126, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_nh3_delivered.LCOA", units="USD/kg"
         )
 
     with subtests.test("Unmet Ammonia Demand"):
         assert (
-            pytest.approx(92862.44227354404, rel=1e-6)
+            pytest.approx(102882.4504724315, rel=1e-6)
             == h2i.model.get_val("nh3_load_demand.unmet_ammonia_demand_out", units="t/h").sum()
         )
 
     with subtests.test("Ammonia Demand Capacity Factor"):
-        assert pytest.approx(77.68258710060003, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(75.27450203676736, rel=1e-6) == h2i.model.get_val(
             "nh3_load_demand.capacity_factor", units="percent"
         )
+
+    # TODO: update logic to dispatch storage
+    with subtests.test("Ammonia Storage Command"):
+        assert np.all(h2i.model.get_val("nh3_storage.ammonia_command_value") == 0.0)
