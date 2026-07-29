@@ -868,8 +868,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for vv in list(v):
                 reversed_grouped_techs[vv] = k
 
-        # 4. Add conversion factors of 1 for the technologies that are non_input_techs
-        # Also add these technologies to the reversed_group_techs
+        # 4. Track the technologies that are non_input_techs so we know
+        # they don't have a converison factor. Also add these technologies
+        # to the reversed_group_techs
 
         # Get the nodes of the technology graph that aren't a controllable technology
         # Also add these technologies to the reversed_group_techs
@@ -894,9 +895,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if s != d:
                 simple_graph.add_edge(s, d, commodity=c)
 
-        # ESG TODO: check that simple_graph has the expected edges
-        # ---> I think its somewhat working now
-
         self.simple_graph = simple_graph
         self.non_converter_conversion_factor_keys = conversion_factor_keys
         self.grouped_techs = grouped_techs
@@ -906,8 +904,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         conversion_recipes = self._make_conversion_factor_recipes()
 
-        # ESG TODO: check that conversion_recipes is as expected
-        # ---> I think its somewhat working now
         self.conversion_recipes = conversion_recipes
 
     def get_upstream_techs_for_commodity(
