@@ -49,7 +49,7 @@ The HTSE performance model inherits from the electrolyzer base classes, so it is
 
 ### Dispatch and sizing behavior
 
-Installed size is first inferred from:
+Installed size is first calculated as:
 
 $$
 \text{electrolyzer\_size\_mw} = n_{clusters} \times cluster\_rating\_MW
