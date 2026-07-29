@@ -1,6 +1,6 @@
 # High-Temperature Steam Electrolysis (HTSE) Model
 
-The HTSE model in H2Integrate represents hydrogen production from high-temperature steam electrolysis using electricity and thermal input. It is implemented as two components:
+The HTSE model in H2Integrate represents hydrogen production from high-temperature steam electrolysis using electricity and thermal input. In this model, HTSE is represented as a solid oxide electrolyzer cell (SOEC) process. It is implemented as two components:
 
 - `HTSEPerformanceModel`
 - `HTSECostModel`

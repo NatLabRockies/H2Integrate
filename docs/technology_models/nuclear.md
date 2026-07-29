@@ -16,28 +16,6 @@ Use this model by setting:
 
 This model produces electricity only and clips commanded output to rated plant capacity.
 
-### Example `tech_config`
-
-```yaml
-technologies:
-  nuclear:
-    performance_model:
-      model: QuinnNuclearPerformanceModel
-    cost_model:
-      model: QuinnNuclearCostModel
-    model_inputs:
-      performance_parameters:
-        system_capacity_kw: 300000.0
-      cost_parameters:
-        system_capacity_kw: 450000.0
-        capex_per_kw: 6000.0
-        fixed_opex_per_kw_year: 120.0
-        variable_opex_per_mwh: 2.5
-        reference_capacity_kw: 300000.0
-        capex_scaling_exponent: 0.9
-        cost_year: 2023
-```
-
 ### API details
 For API details, see the [`QuinnNuclearPerformanceModel` and `QuinnNuclearCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant).
 

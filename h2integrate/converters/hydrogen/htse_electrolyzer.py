@@ -3,7 +3,7 @@ from attrs import field, define
 from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseConfig,
     ResizeablePerformanceModelBaseConfig,
@@ -25,9 +25,6 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
             in kWh/kg.
         nominal_electricity_required (float): Nominal electrical energy required per kg of
             hydrogen in kWh/kg.
-        location (str): Deployment location, either ``"onshore"`` or ``"offshore"``.
-            Present in config but not used directly in the current performance calculation.
-            Defaults to ``"onshore"``.
         cluster_rating_MW (float): Nameplate electrical rating per cluster in MW.
         eol_eff_percent_loss (float): End-of-life efficiency loss in percent. Present in
             config but not used directly in the current timestep energy balance. Defaults
@@ -46,7 +43,6 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
     n_clusters: int = field(validator=gt_zero)
     nominal_heat_required: float = field(validator=gt_zero)
     nominal_electricity_required: float = field(validator=gt_zero)
-    location: str = field(default="onshore", validator=contains(["onshore", "offshore"]))
     cluster_rating_MW: float = field(validator=gt_zero)
     eol_eff_percent_loss: float = field(default=10.0, validator=gt_zero)
     uptime_hours_until_eol: int = field(default=80000, validator=gt_zero)
