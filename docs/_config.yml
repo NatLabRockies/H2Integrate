@@ -61,7 +61,41 @@ sphinx:
     autodoc_typehints: description
     html_static_path:
       - _static
+    # A local ``autosummary/module.rst`` template lives here that filters out
+    # pytest ``conftest.py`` submodules from the generated stubs (they can't be
+    # imported outside a pytest session, so autosummary would emit "failed to
+    # import" warnings for every one).
+    templates_path:
+      - _templates
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
+    # Render "Attributes:" sections with the :ivar: role instead of separate
+    # ".. attribute::" directives. This prevents autodoc from documenting the
+    # same attribute twice (once from the napoleon-parsed Attributes: block and
+    # once from autodoc's own member discovery), which was the single largest
+    # source of "duplicate object description" warnings in the docs build.
+    napoleon_use_ivar: true
+    # Teach napoleon about extra Google-style section headings that appear in
+    # H2Integrate docstrings. Each entry is either a plain string (renders as
+    # a generic section) or a ``[name, style]`` pair mapping the section to
+    # an existing napoleon style so its contents are parsed as parameters.
+    napoleon_custom_sections:
+      - [Inputs, params_style]
+      - [Outputs, params_style]
+      - [Promoted Inputs, params_style]
+      - [Promoted Outputs, params_style]
+      - [Subsystems, params_style]
+      - [Discrete Inputs, params_style]
+      - [Discrete Outputs, params_style]
+      - [Options, params_style]
+      - [Behavior, notes_style]
+      - [Side Effects, notes_style]
+    # Suppress the class of warnings emitted by sphinx-external-toc for
+    # ``.. toctree::`` directives inside autosummary-generated stubs. Those
+    # toctrees are how ``autosummary :recursive:`` links its child module
+    # pages together and can't be moved into ``_toc.yml``, so the warnings
+    # are noise rather than a real problem to fix.
+    suppress_warnings:
+      - etoc.toctree
     nb_merge_streams: true
     nb_execution_raise_on_error: true

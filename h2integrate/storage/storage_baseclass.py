@@ -12,7 +12,7 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
     Configuration class for the StoragePerformanceBase model.
 
-     Attributes:
+    Attributes:
         min_soc_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
         max_soc_fraction (float): Maximum allowable state of charge as a fraction (0 to 1).
         demand_profile (int | float | list): Demand values for each timestep, in

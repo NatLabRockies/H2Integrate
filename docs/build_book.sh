@@ -18,6 +18,13 @@ if [[ "${1:-}" == "--clean" ]]; then
     rm -rf _build
 fi
 
+# Always remove the autosummary-generated stubs before building. These files
+# are regenerated from the current package layout by ``autosummary_generate``,
+# but sphinx does not delete stubs for modules that were renamed or removed.
+# Leaving stale stubs behind produces spurious "failed to import" /
+# "document isn't included in any toctree" warnings on every subsequent build.
+rm -rf _autosummary
+
 # Generate the interactive class hierarchy diagram
 python generate_class_hierarchy.py
 

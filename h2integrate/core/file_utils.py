@@ -472,9 +472,9 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
 
     If :py:attr:`data_dir` is not input, the logic is as follows:
 
-    3) Check for an environment variable named using an upper case :py:attr:`data_type`_DIR, such
-        as "RESOURCE_DIR" or "FEEDSTOCK_DIR." If this environment variable exists, follow the logic
-        in Steps 1-2.
+    3) Check for an environment variable named using an upper case :py:attr:`data_type`
+        followed by ``_DIR``, such as ``"RESOURCE_DIR"`` or ``"FEEDSTOCK_DIR"``. If this
+        environment variable exists, follow the logic in Steps 1-2.
 
     4) Use :py:attr:`data_type`'s default :py:attr:`data_dir` as the :py:attr:`data_dir` and follow
         the logic in Steps 1-2.
