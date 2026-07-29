@@ -1006,6 +1006,19 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def get_converter_capacity_conversion_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
     ):
+        """Get capacity ratio of ``in_cmod/out_cmod`` for technology ``converter_tech``
+
+        Args:
+            inputs (dict): OpenMDAO inputs
+            in_cmod (str): commodity input to the ``converter_tech``
+            out_cmod (str): commodity output from the ``converter_tech``
+            converter_tech (str): name of the converter technologies
+            tech_ancestors (list[str] | set[str] | tuple[str]): upstream technologies
+                that produce ``in_cmod`` to the ``converter_tech``
+
+        Returns:
+            float | np.ndarray: capacity ratio of `in_cmod/out_cmod`.
+        """
         rated_name_fmt = "{tech}_rated_{commod}_production"
         feedstock_name_fmt = "{tech}_{commod}_out"
         in_names = [rated_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
@@ -1038,27 +1051,28 @@ class SystemLevelControlBase(om.ExplicitComponent):
             converter_tech (str): name of the converter technologies
             tech_ancestors (list[str] | set[str] | tuple[str]): upstream technologies
                 that produce ``in_cmod`` to the ``converter_tech``
-            return_avg (bool): if True, return the average conversion ratio over the timesries.
-                Otherwise, return the mean. Defaults to True.
 
         Returns:
-            float | np.ndarray: conversion ratio of `in_cmod/out_cmod`. If return_avg is True,
-                then returns a scalar, otherwise returns an array
+            np.ndarray: conversion ratio of `in_cmod/out_cmod`.
         """
-        # TODO: update so that return_avg is not an input and thats done externally
         input_name_fmt = "{tech}_{commod}_out"
         in_names = [input_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
-        # used_inputs = [n for n in in_names if n in inputs]
         total_in_cmod = [inputs[n] for n in in_names if n in inputs]
         total_input = np.array(total_in_cmod).sum(axis=0)
         total_output = inputs[input_name_fmt.format(tech=converter_tech, commod=out_cmod)]
-        # Check if the converter produced any `out_cmod`
-        # if total_output.sum() > 0:
-        # conversion_factor = np.nan_to_num(total_input / np.abs(total_output))
+
         conversion_factor = total_input / np.abs(total_output)
-        return conversion_factor  # conversion_factor.mean() if return_avg else conversion_factor
+        return conversion_factor
 
     def dict_values_to_flat_list(self, dictionary):
+        """Aggregate all the values in a dictionary to a flattened list
+
+        Args:
+            dictionary (dict): dictionary with values as either a list or set
+
+        Returns:
+            list: flattened list of all the values in ``dictionary``
+        """
         flat_list = []
         for v in dictionary.values():
             if isinstance(v, set):
@@ -1130,6 +1144,27 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return successful
 
     def _find_demand_tech_group(self, converters, converter_upstreams):
+        """Find the technologies that are connected to the demand converter
+        and the demand technology that produce the demanded commodity
+
+        Args:
+            converters (tuple[str, str, str]): Set of tuples formatted as
+                ``(input_commodity, tech_name, output_commodity)`` tuples.
+            converter_upstreams (dict[tuple[str,str], set[str]]): Keys are set of
+                ``(input_commodity, tech_name)`` and the values are a set of
+                upstream technologies that output the `input_commodity` to `tech_name`.
+
+        Returns:
+            2-element tuple containing:
+
+            - **non_converter_input_techs_in_group** (list[str]): List of
+                non-converter technologies that are connected to the demand technology
+                and produce the demanded commodity. Only includes technologies in
+                `self.input_techs`
+            - **demand_group** (dict[str, set[str]]): Key is the name of the demand group
+                and values are a set of all the technologies that are connected to the
+                demand technology and produce the demanded commodity.
+        """
         found_input_techs = self.dict_values_to_flat_list(converter_upstreams)
         missing_input_techs = set(self.input_techs) - set(found_input_techs)
 
@@ -1208,6 +1243,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return conversion_factor_keys, techs_to_groups
 
     def _make_conversion_factor_recipes(self):
+        """Make recipes to for compounding conversion factor calculations.
+
+        Returns:
+            dict[tuple(str,str,str), list[list[tuple]]]: recipes to calculate the
+            conversion ratio from the demand commodity to all upstream subsystems.
+            Keys are the recipe name, formatted as tuples of
+            `(output_commodity, input_commodity, converter_tech_group)`.
+            Values are embedded lists. Each list defines the technologies in a
+            step of the conversion. Each element of a list is a tuple formatted as
+            `(input_commodity, technology, output_commodity)`
+        """
         if not self.multi_commodity_system:
             return {}
 
@@ -1267,6 +1313,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return compounding_conversion_factor_recipes
 
     def _get_techs_for_conversion(self, input_cmod, tech):
+        # TODO: remove this - I think its unused
         tech_to_demand = [
             s
             for s in list(self.simple_graph.predecessors(tech))
@@ -1279,7 +1326,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return tech_to_demand[0]
 
     def _get_techs_to_demand_from_recipe(self, recipe_name):
-        output_cmod, input_cmod, tech_group = recipe_name
+        _, input_cmod, tech_group = recipe_name
         techs_to_demand = [
             s
             for s in list(self.simple_graph.predecessors(tech_group))
