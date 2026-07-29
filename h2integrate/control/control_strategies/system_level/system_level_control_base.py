@@ -1068,6 +1068,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return flat_list
 
     def _check_demand_tech_group_connections(self, converter_tech_names, missing_input_techs):
+        # NOTE: sometimes these warnings happen because of the dependency on the
+        # tech connection order
         successful = True
         commodities_for_missing_techs = {
             tech: self._get_commodity_for_tech(tech) for tech in list(missing_input_techs)
@@ -1119,7 +1121,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 m0_upstream = nx.has_path(self.technology_graph, m0, m1)
                 m1_upstream = nx.has_path(self.technology_graph, m1, m0)
                 if not m0_upstream or m1_upstream:
-                    warnings.warn("these technologies arent connected", UserWarning, stacklevel=3)
+                    warnings.warn(
+                        f"The technologies {m0} and {m1} aren't connected",
+                        UserWarning,
+                        stacklevel=3,
+                    )
                     successful = False
         return successful
 

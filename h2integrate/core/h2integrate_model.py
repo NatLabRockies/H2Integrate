@@ -581,9 +581,14 @@ class H2IntegrateModel:
         upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
         slc_topology["technology_graph"] = upstream_tech_graph
 
+        upstream_tech_control_classifiers = {
+            k: v
+            for k, v in self.tech_control_classifiers.items()
+            if k in upstream_controllable_techs
+        }
         # Check if storage models have a controller
         storage_tech_to_control = {}
-        for tech, classifier in self.tech_control_classifiers.items():
+        for tech, classifier in upstream_tech_control_classifiers.items():
             if classifier == "storage":
                 control_model = (
                     self.technology_config["technologies"][tech]
@@ -608,7 +613,7 @@ class H2IntegrateModel:
         tech_to_commodity = {
             (e[0], e[-1])
             for e in sources_to_commodities
-            if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
+            if upstream_tech_control_classifiers[e[0]] in control_classifiers_to_connect
         }
         slc_topology["tech_to_commodity"] = tech_to_commodity
 
@@ -617,7 +622,7 @@ class H2IntegrateModel:
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
 
-        slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
+        slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
         return slc_topology
 
