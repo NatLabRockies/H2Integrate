@@ -1,6 +1,5 @@
 import numpy as np
 from attrs import field, define
-from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import gt_zero
@@ -26,14 +25,8 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
         nominal_electricity_required (float): Nominal electrical energy required per kg of
             hydrogen in kWh/kg.
         cluster_rating_MW (float): Nameplate electrical rating per cluster in MW.
-        eol_eff_percent_loss (float): End-of-life efficiency loss in percent. Present in
-            config but not used directly in the current timestep energy balance. Defaults
-            to ``10.0``.
         uptime_hours_until_eol (int): Hours of operation between replacement events.
             Defaults to ``80000``.
-        include_degradation_penalty (bool): Whether to apply a degradation penalty. Present
-            in config but not used directly in the current timestep energy balance. Defaults
-            to ``False``.
         turndown_ratio (float): Minimum fraction of rated hydrogen production required to
             stay on (unitless). Defaults to ``0.1``.
         pressure_H2 (float): Hydrogen pressure setting. Present in config but not used
@@ -44,9 +37,7 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
     nominal_heat_required: float = field(validator=gt_zero)
     nominal_electricity_required: float = field(validator=gt_zero)
     cluster_rating_MW: float = field(validator=gt_zero)
-    eol_eff_percent_loss: float = field(default=10.0, validator=gt_zero)
     uptime_hours_until_eol: int = field(default=80000, validator=gt_zero)
-    include_degradation_penalty: bool = field(default=False)
     turndown_ratio: float = field(default=0.1, validator=gt_zero)
     pressure_H2: float = field(default=1.0, validator=gt_zero)
 
@@ -230,7 +221,6 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
         hydrogen_produced = np.where(hydrogen_produced >= min_turn_down, hydrogen_produced, 0.0)
 
         # Density of liquid water at 20°C (293.15 K) and 1 atm (101325 Pa)
-        PropsSI("D", "T", 293.15, "P", 101325, "Water")
         kg_per_liter_water = 1.0
         water_demand_kg_per_h = hydrogen_produced * 18.015 / 2.016
         liters_per_galUS = 3.785411
@@ -238,13 +228,8 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
             water_demand_kg_per_h * (1.0 / kg_per_liter_water) * (1.0 / liters_per_galUS)
         )
 
-        # heat_demand_kw = hydrogen_out * self.config.nominal_heat_required
-        # electricity_demand_kw = hydrogen_out * total_specific_energy - actual_heat_kw
-        # electricity_demand_kw = np.minimum(electricity_demand_kw, electricity_available_kw)
         outputs["electricity_consumed"] = electricity_demand_kw
         outputs["hydrogen_out"] = hydrogen_produced
-        # outputs["heat_demand"] = np.minimum(rated_hydrogen_production,
-        # inputs["hydrogen_command_value"]) * self.config.nominal_heat_required
         outputs["heat_demand"] = hydrogen_demand * self.config.nominal_heat_required
         outputs["electricity_demand"] = electrolyzer_size_kw
         outputs["water_consumed"] = water_demand_gal_per_h

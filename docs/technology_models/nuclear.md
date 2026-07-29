@@ -36,6 +36,14 @@ This model represents a reactor with:
 - a low-pressure electric conversion stage
 - an extractable process heat stream, extracted upstream of the low-pressure turbine stages (dashed red arrow in the figure)
 
+The model was developed to provide both heat and electricity for high-temperature steam electrolysis as modeled in `HTSEPerformanceModel` and `HTSEPerformanceModel`. The integrated thermal-nuclear and HTSE system is shown in the figure below. However, the models were implemented in such a way as to allow integration with other technologies.
+
+```{figure} images/nuclear_htse_system_diagram.png
+:alt: System diagram showing a thermal nuclear reactor with integrated high-temperature steam electrolysis.
+:width: 100%
+:align: center
+```
+
 It supports two operating modes:
 
 - `heat`: In `heat` mode, delivered heat is limited by available process heat and requested heat demand. Remaining low-pressure heat is converted to electricity.
