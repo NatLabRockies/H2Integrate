@@ -35,7 +35,7 @@ The current implementation uses `electricity_demand` to report installed electri
 
 ## Performance Model
 
-Use this model by setting:
+To use this model, within your `tech_config.yaml` file set:
 
 - performance model: `HTSEPerformanceModel`
 
