@@ -93,7 +93,7 @@ For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documen
 
 ## Cost Model
 
-Use this model by setting:
+To use this model, in your `tech_config.yaml` file, set:
 
 - cost model: `HTSECostModel`
 
