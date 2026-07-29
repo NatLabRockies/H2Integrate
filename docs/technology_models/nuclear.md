@@ -25,7 +25,7 @@ For API details, see the [`QuinnNuclearPerformanceModel` and `QuinnNuclearCostMo
 
 ## Simple thermal nuclear reactor model
 
-Use this model by setting:
+You can use this model by setting (in your `tech_config.yaml`):
 
 - performance model: `SimpleThermalNuclearReactorPerformanceModel`
 - cost model: `SimpleThermalNuclearReactorCostModel`

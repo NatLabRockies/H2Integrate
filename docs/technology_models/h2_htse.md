@@ -35,7 +35,7 @@ The current implementation uses `electricity_demand` to report installed electri
 
 ## Performance Model
 
-Use this model by setting:
+To use this model, within your `tech_config.yaml` file set:
 
 - performance model: `HTSEPerformanceModel`
 
@@ -49,7 +49,7 @@ The HTSE performance model inherits from the electrolyzer base classes, so it is
 
 ### Dispatch and sizing behavior
 
-Installed size is first inferred from:
+Installed size is first calculated as:
 
 $$
 \text{electrolyzer\_size\_mw} = n_{clusters} \times cluster\_rating\_MW
@@ -93,7 +93,7 @@ For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documen
 
 ## Cost Model
 
-Use this model by setting:
+To use this model, in your `tech_config.yaml` file, set:
 
 - cost model: `HTSECostModel`
 
