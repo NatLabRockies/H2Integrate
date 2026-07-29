@@ -203,7 +203,6 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
 
         heat_available_kw = inputs["heat_in"]
         electricity_available_kw = inputs["electricity_in"]
-        # hydrogen_demand = inputs["hydrogen_command_value"]
 
         total_specific_energy = (
             self.config.nominal_heat_required + self.config.nominal_electricity_required
