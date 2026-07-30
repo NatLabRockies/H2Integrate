@@ -339,7 +339,7 @@ def test_optimizer_dispatch_respects_charge_discharge_exclusivity(subtests, base
         discharge_gt = pyomo.value(model.discharge_gt[t])  # type: ignore[index]
         discharge_coop = pyomo.value(model.discharge_coop[t])  # type: ignore[index]
         with subtests.test(f"No simultaneous charge, discharge_gt or discharge_coop at t={t}"):
-            assert not (charge > 0.5 and discharge_gt > 0.5 and discharge_coop > 0.5)
+            assert sum(x > 0.5 for x in (charge, discharge_gt, discharge_coop)) <= 1
 
 
 @pytest.mark.regression
