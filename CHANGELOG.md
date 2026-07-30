@@ -73,6 +73,7 @@
 - Updated `commodity_sell_price` input to `ProFastNPV` to be per year of the plant life. Also updated `BasicProFASTParameterConfig.as_dict()` so explicitly input escalation values are not overwritten to the general inflation rate [PR 799](https://github.com/NatLabRockies/H2Integrate/pull/799)
 - Added `calc_azimuth_angle()` to `PYSAMSolarPlantPerformanceModel` to provide default azimuth angle based on whether the site is in the northern or southern hemisphere [PR 806](https://github.com/NatLabRockies/H2Integrate/pull/806)
 - Corrected water rate units in pipe feedstock from galUS to galUS/h [PR 813](https://github.com/NatLabRockies/H2Integrate/pull/813)
+- Corrected timestamps in OpenMeteo resource downloads when resource data is downloaded in local time [PR #814](https://github.com/NatLabRockies/H2Integrate/pull/814)
 
 ## 0.8 [April 15, 2026]
 
