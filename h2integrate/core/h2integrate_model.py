@@ -1773,6 +1773,8 @@ class H2IntegrateModel:
                     missing_resource = [
                         k for k in resource_source_connections if k not in resource_models
                     ]
+
+                    missing_resource = list(set(missing_resource) - set(self.plant_config["sites"]))
                     # check if theres a resource model that isn't connected to a technology
                     if len(missing_resource) > 0:
                         msg = (
