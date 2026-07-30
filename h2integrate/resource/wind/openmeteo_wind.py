@@ -10,6 +10,7 @@ from retry_requests import retry
 from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
+from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 
 
 @define(kw_only=True)
@@ -179,11 +180,16 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
 
         # Make time column in ISO 8601 format
         time_data = pd.date_range(
-            start=pd.to_datetime(hourly_data.Time(), unit="s"),
-            end=pd.to_datetime(hourly_data.TimeEnd(), unit="s"),
+            start=pd.to_datetime(hourly_data.Time(), unit="s", utc=True),
+            end=pd.to_datetime(hourly_data.TimeEnd(), unit="s", utc=True),
             freq=pd.Timedelta(seconds=hourly_data.Interval()),
             inclusive="left",
         )
+
+        if response.UtcOffsetSeconds() != 0:
+            # Data downloaded for local time
+            # convert timestamps to local time
+            time_data = time_data.tz_convert(response.Timezone().decode())
 
         # Convert timeseries data to a DataFrame
         df = pd.DataFrame(ts_data, index=time_data)
@@ -273,8 +279,14 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
 
         data = pd.read_csv(fpath, header=2)
 
+        time = make_time_index_openmeteo(
+            data,
+            header_dict["timezone"],
+            float(header_dict["latitude"]),
+            float(header_dict["longitude"]),
+        )
+
         # Make time columns
-        time = pd.DatetimeIndex(data["time"])
         data["Year"] = time.year
         data["Month"] = time.month
         data["Day"] = time.day
