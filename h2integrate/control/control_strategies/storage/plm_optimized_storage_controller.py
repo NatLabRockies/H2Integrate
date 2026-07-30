@@ -35,6 +35,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
         demand_signal (list[float]): Consumer demand forecast time series
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
+        GnT_pricingfunction_coeffs (list[float]): Coefficients for G&T pricing function
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in
@@ -78,6 +79,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     lmp_signal: list = field()
     demand_signal: list = field()
     peak_window: dict = field()
+    GnT_pricingfunction_coeffs: list = field()
     performance_incentive: float = field(default=None)
     performance_incentive_per_event: float = field(default=None)
     charge_efficiency: float = field(validator=range_val(0, 1), default=1.0)
@@ -831,14 +833,16 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             for t in self.dr_model.T
         ]
 
-    @staticmethod
-    def _GnT_pricingfunction(lmp: float) -> float:
+    def _GnT_pricingfunction(self,lmp: float) -> float:
         """Compute the cost a G&T charges to a CoOp based on the current grid price.
 
         Args:
-            lmp (float): Current grid price (locational marginal price), e.g., in $/MWh.
+            lmp (float): Current grid price (locational marginal price), e.g., in $/kWh.
 
         Returns:
             float: Cost charged by the G$T in the same units as `lmp`.
         """
-        return 1.05 * lmp + 20
+        return (
+            self.config.GnT_pricingfunction_coeffs[0] * lmp
+            + self.config.GnT_pricingfunction_coeffs[1]
+        )
