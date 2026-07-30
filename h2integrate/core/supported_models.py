@@ -135,6 +135,7 @@ supported_models = _ModelRegistry(
         "GenericCombinerPerformanceModel": "transporters:GenericCombinerPerformanceModel",
         "GenericSplitterPerformanceModel": "transporters:GenericSplitterPerformanceModel",
         "GenericTransporterPerformanceModel": "transporters:GenericTransporterPerformanceModel",
+        "LinearDistanceCostModel": "transporters:LinearDistanceCostModel",
         "IronTransportPerformanceComponent": "converters.iron:IronTransportPerformanceComponent",
         "IronTransportCostComponent": "converters.iron:IronTransportCostComponent",
         # Simple Summers
