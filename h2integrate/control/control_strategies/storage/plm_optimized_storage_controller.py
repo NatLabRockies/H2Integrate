@@ -30,9 +30,9 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
 
     Attributes:
         max_charge_rate (float): Maximum charge and discharge rate (kW).
-        lmp_signal (list[float]): Locational Marginal Pricing (LMP)
+        lmp_signal (list[float]): Locational Marginal Price (LMP)
             forecast time series.
-        demand_signal (list[float]): Consumer demand forcast time series
+        demand_signal (list[float]): Consumer demand forecast time series
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
         performance_incentive (float): Incentive revenue in $/kWh.
@@ -303,7 +303,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 )
                 self.problem_state = DispatchProblemState()
 
-                # Solve the optimzation problem
+                # Solve the optimization problem
                 self.solve_dispatch_model(
                     start_time=window_start,
                     n_days=math.ceil(self.n_timesteps * self.dt_seconds / 86400),
@@ -652,7 +652,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         )
 
         # Objective is maximizing incentive revenue is earned for every kWh discharged and
-        # minimzing the cost of energy for the CoOp.
+        # minimizing the cost of energy for the CoOp.
         m.objective = pyomo.Objective(
             expr=-incentive * dt_hours * sum(m.p_discharge_gt[t] for t in m.T)
             + dt_hours * sum(self._GnT_pricingfunction(signal_w[t]) * m.p_tocoop[t] for t in m.T),
@@ -833,7 +833,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
     @staticmethod
     def _GnT_pricingfunction(lmp: float) -> float:
-        """Compute the cost a G$T charges to a CoOp based on the current grid price.
+        """Compute the cost a G&T charges to a CoOp based on the current grid price.
 
         Args:
             lmp (float): Current grid price (locational marginal price), e.g., in $/MWh.
