@@ -28,20 +28,21 @@ technologies:
     model_inputs:
       performance_parameters:
         operating_mode: heat
-        electricity_command_value: 500000  # kW
+        electricity_command_value: 500  # MW
         high_pressure_electrical_efficiency: 0.12
         low_pressure_electrical_efficiency: 0.22
         minimum_heat_extract: 1  # MW
       cost_parameters:
         cost_year: 2022
-        nuclear_reactor_rated_capacity: 5000000.0
-        nuclear_reactor_upfront_cost: 5750.0  # $/kWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
-        nuclear_reactor_fixed_om_cost: 2.64 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
-        nuclear_reactor_variable_om_cost: 0.0145
+        nuclear_reactor_upfront_cost: 5750000.0  # $/MWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
+        nuclear_reactor_fixed_om_cost: 2640.0 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
+        nuclear_reactor_variable_om_cost: 145.0
         # Values from Table 38, Meta-Analysis of Advanced Nuclear Reactor Cost Estimations,
         # slightly adjusted away from 93% capacity factor
       shared_parameters:
-        rated_capacity: 1000000.0
+        commodity_rate_units: MW
+        commodity_amount_units: MWh
+        rated_capacity: 1000.0
   htse_electricity_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

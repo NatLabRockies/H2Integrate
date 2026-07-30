@@ -26,10 +26,10 @@ def plant_config():
 def thermal_performance_params():
     return {
         "operating_mode": "heat",
-        "electricity_command_value": 500000.0,
+        "electricity_command_value": 500.0,
         "high_pressure_electrical_efficiency": 0.2,
         "low_pressure_electrical_efficiency": 0.5,
-        "rated_capacity": 600000.0,
+        "rated_capacity": 600.0,
         "minimum_heat_extract": 0.0,
     }
 
@@ -37,10 +37,10 @@ def thermal_performance_params():
 @fixture
 def thermal_cost_params():
     return {
-        "rated_capacity": 600000.0,
-        "nuclear_reactor_upfront_cost": 5750.0,
-        "nuclear_reactor_fixed_om_cost": 2.64,
-        "nuclear_reactor_variable_om_cost": 0.0145,
+        "rated_capacity": 600.0,
+        "nuclear_reactor_upfront_cost": 5750000.0,
+        "nuclear_reactor_fixed_om_cost": 2640,
+        "nuclear_reactor_variable_om_cost": 145.0,
         "cost_year": 2022,
     }
 
@@ -69,7 +69,7 @@ def test_thermal_performance_heat_mode(plant_config, thermal_performance_params,
     plant_life = plant_config["plant"]["plant_life"]
 
     prob = _build_performance_problem(plant_config, thermal_performance_params)
-    prob.set_val("heat_command_value", np.full(n_timesteps, 400000.0), units="kW")
+    prob.set_val("heat_command_value", np.full(n_timesteps, 400.0), units="MW")
     prob.run_model()
 
     # thermal_capacity = 600 / (0.2 + 0.8 * 0.5) = 1000 MW
@@ -112,8 +112,8 @@ def test_thermal_performance_heat_mode(plant_config, thermal_performance_params,
 
     with subtests.test("Annual electricity production"):
         assert pytest.approx(
-            prob.get_val("annual_electricity_produced", units="kW*h/year")
-        ) == np.full(plant_life, 400000.0 * n_timesteps)
+            prob.get_val("annual_electricity_produced", units="MW*h/year")
+        ) == np.full(plant_life, 400.0 * n_timesteps)
 
 
 @pytest.mark.unit
@@ -192,7 +192,7 @@ def test_thermal_cost_model(plant_config, thermal_cost_params, subtests):
         }
     }
 
-    electricity_out = np.full(n_timesteps, 400000.0)
+    electricity_out = np.full(n_timesteps, 400.0)
 
     prob = om.Problem()
     cost_comp = SimpleThermalNuclearReactorCostModel(
@@ -206,28 +206,28 @@ def test_thermal_cost_model(plant_config, thermal_cost_params, subtests):
     prob.set_val("electricity_out", electricity_out, units="kW")
     prob.run_model()
 
-    rated_capacity_kw = thermal_cost_params["rated_capacity"]
-    upfront_cost_per_kw = thermal_cost_params["nuclear_reactor_upfront_cost"]
-    fixed_om_per_kw_year = thermal_cost_params["nuclear_reactor_fixed_om_cost"]
-    variable_om_per_kwh = thermal_cost_params["nuclear_reactor_variable_om_cost"]
+    rated_capacity_mw = thermal_cost_params["rated_capacity"]
+    upfront_cost_per_mw = thermal_cost_params["nuclear_reactor_upfront_cost"]
+    fixed_om_per_mw_year = thermal_cost_params["nuclear_reactor_fixed_om_cost"]
+    variable_om_per_mwh = thermal_cost_params["nuclear_reactor_variable_om_cost"]
 
     dt = half_year_plant_config["plant"]["simulation"]["dt"]
-    delivered_electricity_kwh = electricity_out.sum() * (dt / 3600.0)
+    delivered_electricity_mwh = electricity_out.sum() * (dt / 3600.0)
     fraction_of_year_simulated = (dt * n_timesteps / 3600.0) / 8760.0
 
     with subtests.test("Thermal reactor capital cost"):
         assert pytest.approx(prob.get_val("CapEx", units="USD")[0], rel=1e-6) == (
-            rated_capacity_kw * upfront_cost_per_kw
+            rated_capacity_mw * upfront_cost_per_mw
         )
 
     with subtests.test("Thermal reactor fixed operating cost"):
         assert pytest.approx(prob.get_val("OpEx", units="USD/year")[0], rel=1e-6) == (
-            fixed_om_per_kw_year * rated_capacity_kw
+            fixed_om_per_mw_year * rated_capacity_mw
         )
 
     with subtests.test("Thermal reactor variable operating cost"):
         expected_varopex = (
-            variable_om_per_kwh * delivered_electricity_kwh / fraction_of_year_simulated
+            variable_om_per_mwh * delivered_electricity_mwh / fraction_of_year_simulated
         )
         assert pytest.approx(prob.get_val("VarOpEx", units="USD/year"), rel=1e-6) == np.full(
             plant_life, expected_varopex
