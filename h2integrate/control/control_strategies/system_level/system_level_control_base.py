@@ -835,7 +835,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         alt_grouped_techs = {
             (f"{k[0][0]}", f"{i}"): k[1] for i, k in enumerate(converter_upstreams.items())
         }
-        {k[1] for k in converters}
 
         demand_group_techs = self.get_successors_for_tech_with_input_cmod(
             self.demand_tech, self.commodity
@@ -851,22 +850,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for k, v in grouped_techs.items():
             for vv in list(v):
                 if vv in reversed_grouped_techs:
-                    if isinstance(reversed_grouped_techs[vv], str):
-                        reversed_grouped_techs[vv] = [reversed_grouped_techs[vv], k]
-                    else:
-                        reversed_grouped_techs[vv] = reversed_grouped_techs[vv] + [k]
+                    # if isinstance(reversed_grouped_techs[vv], str):
+                    #     reversed_grouped_techs[vv] = [reversed_grouped_techs[vv], k]
+                    # else:
+                    reversed_grouped_techs[vv] = reversed_grouped_techs[vv] + [k]
                 else:
-                    reversed_grouped_techs[vv] = k
-
-        def get_group_for_tech(tech_name):
-            groups = {k for k, v in grouped_techs.items() if tech_name in v}
-            return list(groups)
+                    reversed_grouped_techs[vv] = [k]
 
         def get_group_for_tech_commodity(tech_name, output_cmod):
             possible_converter_grp = [k for k in converter_upstreams if k[0] == output_cmod]
             if not possible_converter_grp and output_cmod == self.commodity:
-                groups = get_group_for_tech(tech_name)
-                return groups
+                groups = {f"{k[0]}-{k[1]}" for k, v in alt_grouped_techs.items() if tech_name in v}
+                return list(groups)
             if possible_converter_grp:
                 possible_groups = []
                 for grp in possible_converter_grp:
@@ -884,27 +879,40 @@ class SystemLevelControlBase(om.ExplicitComponent):
         for e in list(self.technology_graph.edges(data="commodity")):
             s0, d0, c = e
 
-            s = reversed_grouped_techs.get(s0, s0)
-            d = reversed_grouped_techs.get(d0, d0)
+            s = reversed_grouped_techs.get(s0, [s0])
+            d = reversed_grouped_techs.get(d0, [d0])
 
-            if isinstance(s, str) and isinstance(d, str) and isinstance(c, str):
-                if s != d:
-                    simple_graph.add_edge(s, d, commodity=c)
-            elif isinstance(s, str) and isinstance(d, list) and isinstance(c, str):
-                for di in d:
-                    if s != di:
-                        simple_graph.add_edge(s, di, commodity=c)
-            elif isinstance(s, list) and isinstance(d, str) and isinstance(c, str):
+            if isinstance(c, str):
                 for si in s:
-                    if si != d:
-                        simple_graph.add_edge(si, d, commodity=c)
-            elif isinstance(s, list) and isinstance(d, str) and isinstance(c, list):
+                    for di in d:
+                        if si != di:
+                            simple_graph.add_edge(si, di, commodity=c)
+            else:
+                if len(d) > 1:
+                    raise ValueError("have not accounted for this design yet")
                 for ci in c:
                     group_name = get_group_for_tech_commodity(s0, ci)
-                    simple_graph.add_edge(group_name[0], d, commodity=ci)
-                    # TODO: add error if group_name is greater than 0
-            else:
-                raise ValueError("have not accounted for this design yet")
+                    if len(group_name) != 1:
+                        raise ValueError("have not accounted for this design yet")
+                    simple_graph.add_edge(group_name[0], d[0], commodity=ci)
+            # if isinstance(s, str) and isinstance(d, str) and isinstance(c, str):
+            #     if s != d:
+            #         simple_graph.add_edge(s, d, commodity=c)
+            # elif isinstance(s, str) and isinstance(d, list) and isinstance(c, str):
+            #     for di in d:
+            #         if s != di:
+            #             simple_graph.add_edge(s, di, commodity=c)
+            # elif isinstance(s, list) and isinstance(d, str) and isinstance(c, str):
+            #     for si in s:
+            #         if si != d:
+            #             simple_graph.add_edge(si, d, commodity=c)
+            # elif isinstance(s, list) and isinstance(d, str) and isinstance(c, list):
+            #     for ci in c:
+            #         group_name = get_group_for_tech_commodity(s0, ci)
+            #         simple_graph.add_edge(group_name[0], d, commodity=ci)
+            #         # TODO: add error if group_name is greater than 0
+            # else:
+            #     raise ValueError("have not accounted for this design yet")
 
         self.converters = converters
         self.grouped_techs = grouped_techs
