@@ -29,8 +29,6 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
             Defaults to ``80000``.
         turndown_ratio (float): Minimum fraction of rated hydrogen production required to
             stay on (unitless). Defaults to ``0.1``.
-        pressure_H2 (float): Hydrogen pressure setting. Present in config but not used
-            directly in the current timestep energy balance. Defaults to ``1.0``.
     """
 
     n_clusters: int = field(validator=gt_zero)
