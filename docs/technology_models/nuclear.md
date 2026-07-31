@@ -2,10 +2,8 @@
 
 H2Integrate currently includes two nuclear converter options:
 
-- `QuinnNuclearPerformanceModel` with `QuinnNuclearCostModel` for an electricity-only nuclear plant
-- `SimpleThermalNuclearReactorPerformanceModel` with `SimpleThermalNuclearReactorCostModel` for a thermal reactor that can trade off electricity production and process heat delivery
-
-The first model is based on Quinn et al. (2023). The second is a simplified thermal reactor representation intended for coupled workflows such as nuclear plus HTSE.
+- `QuinnNuclearPerformanceModel` with `QuinnNuclearCostModel` for an electricity-only nuclear plant, based on Quinn et al. (2023)
+- `SimpleThermalNuclearReactorPerformanceModel` with `SimpleThermalNuclearReactorCostModel` for a thermal reactor that can trade off electricity production and process heat delivery. This is a simplified thermal reactor representation intended for coupled workflows such as nuclear plus a high-temp steam electrolyzer (HTSE).
 
 ## Quinn electricity-only nuclear model
 
@@ -48,7 +46,7 @@ It supports two operating modes:
 
 - `heat`: In `heat` mode, delivered heat is limited by available process heat and requested heat demand. Remaining low-pressure heat is converted to electricity.
 
-- `electricity`: In `electricity` mode, electricity is limited by the command value and rated capacity. Remaining process heat is then sent as `heat_out`.
+- `electricity`: In `electricity` mode, electricity is limited by the command value and rated capacity. Remaining process heat is then outputted as `heat_out`.
 
 ```{figure} images/ThermalNucReactor-H2I.png
 :alt: Thermal nuclear reactor schematic
