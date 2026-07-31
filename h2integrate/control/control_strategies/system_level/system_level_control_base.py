@@ -903,15 +903,25 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     simple_graph.add_edge(group_name[0], d[0], commodity=ci)
 
         non_converter_keys = set()
+        converter_tech_names = {c[1] for c in converters}
+
         for converter_info, upstream_techs in converter_upstreams.items():
             input_cmod, _ = converter_info
-            non_converter_keys |= {(input_cmod, t, input_cmod) for t in upstream_techs}
+            non_converter_keys |= {
+                (input_cmod, t, input_cmod) for t in upstream_techs if t not in converter_tech_names
+            }
+
+        non_converter_keys |= {
+            (self.commodity, t, self.commodity)
+            for t in demand_group_techs
+            if t not in converter_tech_names
+        }
 
         self.converter_upstreams = converter_upstreams
         self.converters = converters
         self.grouped_techs = grouped_techs
         self.simple_graph = simple_graph
-        self.converter_tech_names = {c[1] for c in converters}
+        self.converter_tech_names = converter_tech_names
         conversion_recipes = self._make_conversion_factor_recipes()
         self.conversion_recipes = conversion_recipes
         self.non_converter_conversion_factor_keys = non_converter_keys
