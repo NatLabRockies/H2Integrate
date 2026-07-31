@@ -37,7 +37,6 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
     cluster_rating_MW: float = field(validator=gt_zero)
     uptime_hours_until_eol: int = field(default=80000, validator=gt_zero)
     turndown_ratio: float = field(default=0.1, validator=gt_zero)
-    pressure_H2: float = field(default=1.0, validator=gt_zero)
 
 
 class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
