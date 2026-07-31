@@ -2,6 +2,11 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class SAFPerformanceBaseClass(PerformanceModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "saf"
@@ -13,8 +18,8 @@ class SAFPerformanceBaseClass(PerformanceModelBaseClass):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("electricity_in", val=0, shape=n_timesteps, units="kW")
         self.add_input("lignin_in", val=0, shape=n_timesteps, units="kg/h")
-        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")        
-        self.add_input("hydrogen_in", val=0, shape=n_timesteps, units="kg/h")          
+        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("hydrogen_in", val=0, shape=n_timesteps, units="kg/h")
         self.add_input("salt_mix_in", val=0, shape=n_timesteps, units="kg/h")
         self.add_input("hydrogen_chloride_in", val=0, shape=n_timesteps, units="kg/h")
 
@@ -35,8 +40,12 @@ class SAFCostBaseClass(CostModelBaseClass):
         self.add_input("plant_capacity_mtpy", val=0, units="t/year", desc="Annual plant capacity")
         self.add_input("plant_capacity_factor", val=0, units=None, desc="Capacity factor")
         self.add_input("lignin_cost", val=0, units="USD/kg", desc="Levelized cost of lignin")
-        self.add_input("electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity")
+        self.add_input(
+            "electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity"
+        )
         self.add_input("water_cost", val=0, units="USD/kg", desc="Levelized cost of water")
-        self.add_input("hydrogen_cost", val=0, units="USD/kg", desc="Levelized cost of hydrogen")        
-        self.add_input("salt_mix_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals")       
-        self.add_input("hydrogen_chloride_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals")       
+        self.add_input("hydrogen_cost", val=0, units="USD/kg", desc="Levelized cost of hydrogen")
+        self.add_input("salt_mix_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals")
+        self.add_input(
+            "hydrogen_chloride_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )

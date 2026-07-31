@@ -10,9 +10,8 @@ sites:
 # this will naturally grow as we mature the interconnected tech
 # add lignin as commodity
 # paper, saf, lignin
-#technology_interconnections:
-#  - [paper_mill, saf, [lignin_out, lignin_in]]
-  # etc
+technology_interconnections:
+  - [paper_mill, saf, [lignin_out, lignin_in]]
 plant:
   plant_life: 40
   simulation:

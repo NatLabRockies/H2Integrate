@@ -2,6 +2,11 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 
 
 class PaperMillPerformanceBaseClass(PerformanceModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     def initialize(self):
         super().initialize()
         self.commodity = "paper"
@@ -13,7 +18,7 @@ class PaperMillPerformanceBaseClass(PerformanceModelBaseClass):
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("electricity_in", val=0, shape=n_timesteps, units="kW")
         self.add_input("wood_in", val=0, shape=n_timesteps, units="t/h")
-        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")                
+        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")
         self.add_input("calcium_carbonate_in", val=0, shape=n_timesteps, units="kg/h")
         self.add_input("sodium_sulfide_in", val=0, shape=n_timesteps, units="kg/h")
         self.add_input("sodium_hydroxide_in", val=0, shape=n_timesteps, units="kg/h")
@@ -25,8 +30,7 @@ class PaperMillPerformanceBaseClass(PerformanceModelBaseClass):
         self.add_output("rated_lignin_production", shape=n_timesteps, val=0.0, units="kg/h")
         self.add_output("total_lignin_produced", val=0.0, units="kg")
         self.add_output("annual_lignin_produced", val=0.0, units="kg/year")
-        
-        
+
     def compute(self, inputs, outputs):
         """
         Computation for the OM component.
@@ -44,12 +48,24 @@ class PaperMillCostBaseClass(CostModelBaseClass):
         self.add_input("plant_capacity_mtpy", val=0, units="t/year", desc="Annual plant capacity")
         self.add_input("plant_capacity_factor", val=0, units=None, desc="Capacity factor")
         self.add_input("wood_cost", val=0, units="USD/t", desc="Levelized cost of wood")
-        self.add_input("electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity")
-        self.add_input("water_cost", val=0, units="USD/kg", desc="Levelized cost of water")        
-        self.add_input("calcium_carbonate", val=0, units="USD/kg", desc="Levelized cost of chemicals")
+        self.add_input(
+            "electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity"
+        )
+        self.add_input("water_cost", val=0, units="USD/kg", desc="Levelized cost of water")
+        self.add_input(
+            "calcium_carbonate", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
         self.add_input("sodium_sulfide", val=0, units="USD/kg", desc="Levelized cost of chemicals")
-        self.add_input("sodium_hydroxide", val=0, units="USD/kg", desc="Levelized cost of chemicals")
-        self.add_input("chlorine_dioxide", val=0, units="USD/kg", desc="Levelized cost of chemicals")
-        self.add_input("hydrogen_peroxide", val=0, units="USD/kg", desc="Levelized cost of chemicals")
-        self.add_input("magnesium_sulfate", val=0, units="USD/kg", desc="Levelized cost of chemicals")
+        self.add_input(
+            "sodium_hydroxide", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
+        self.add_input(
+            "chlorine_dioxide", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
+        self.add_input(
+            "hydrogen_peroxide", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
+        self.add_input(
+            "magnesium_sulfate", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
         self.add_input("oxygen", val=0, units="USD/kg", desc="Levelized cost of chemicals")

@@ -1,4 +1,3 @@
-import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
@@ -11,7 +10,6 @@ from h2integrate.converters.paper_mill.paper_mill_baseclass import (
 
 @define(kw_only=True)
 class PaperMillPerformanceModelConfig(BaseConfig):
-
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
 
@@ -35,25 +33,30 @@ class PaperMillPerformanceModel(PaperMillPerformanceBaseClass):
         self.add_output("rated_pulp_out_production", val=0.0, units="t/h")
         self.add_output("total_pulp_out_produced", val=0.0, units="t")
         self.add_output("annual_pulp_out_produced", val=0.0, units="t/year")
-        
 
     def compute(self, inputs, outputs):
         paper_mill_production_mtpy = self.config.plant_capacity_mtpy * self.config.capacity_factor
-        outputs["paper_out"] = paper_mill_production_mtpy / 8760 # tons per hour
+        outputs["paper_out"] = paper_mill_production_mtpy / 8760  # tons per hour
         outputs["rated_paper_production"] = self.config.plant_capacity_mtpy / 8760  # tons per hour
         outputs["capacity_factor"] = self.config.capacity_factor
         outputs["total_paper_produced"] = outputs["paper_out"].sum()
-        outputs["annual_paper_produced"] = outputs["total_paper_produced"] * (1 / self.fraction_of_year_simulated)
-        
+        outputs["annual_paper_produced"] = outputs["total_paper_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
+
         outputs["lignin_out"] = 0.06 * 1000 * paper_mill_production_mtpy / 8760  # tons per hour
         outputs["rated_lignin_production"] = 0.06 * 1000 * self.config.plant_capacity_mtpy / 8760
         outputs["total_lignin_produced"] = outputs["lignin_out"].sum()
-        outputs["annual_lignin_produced"] = outputs["total_lignin_produced"] * (1 / self.fraction_of_year_simulated)
+        outputs["annual_lignin_produced"] = outputs["total_lignin_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
         outputs["pulp_out"] = 1.1 * paper_mill_production_mtpy / 8760
         outputs["rated_pulp_out_production"] = 1.1 * self.config.plant_capacity_mtpy / 8760
         outputs["total_pulp_out_produced"] = outputs["pulp_out"].sum()
-        outputs["annual_pulp_out_produced"] = outputs["total_pulp_out_produced"] * (1 / self.fraction_of_year_simulated)
+        outputs["annual_pulp_out_produced"] = outputs["total_pulp_out_produced"] * (
+            1 / self.fraction_of_year_simulated
+        )
 
 
 @define(kw_only=True)
@@ -68,9 +71,7 @@ class PaperMillCostModelConfig(BaseConfig):
     # Financial parameters - flattened from the nested structure
     #    grid_prices: dict = field()
     financial_assumptions: dict = field()
-    cost_year: int = field(
-        default=2022, converter=int, validator=must_equal(2022)
-    )  
+    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
     wood_unitcost: float = field(default=99.3)  # $/MT of wood
     wood_transport_cost: float = field(default=0.0)
 
@@ -113,6 +114,11 @@ class PaperMillCostModel(PaperMillCostBaseClass):
     Includes CapEx, OpEx, and byproduct credits.
     """
 
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
     # TOASK: In that case, do we need this function?
     def setup(self):
         self.config = PaperMillCostModelConfig.from_dict(
@@ -154,9 +160,9 @@ class PaperMillCostModel(PaperMillCostBaseClass):
             self.config.raw_water_consumption * self.config.raw_water_unitcost
             + self.config.wood_consumption
             * (self.config.wood_unitcost + self.config.wood_transport_cost)
-
             + self.config.calcium_carbonate_consumption
-            * (self.config.calcium_carbonate_unitcost
+            * (
+                self.config.calcium_carbonate_unitcost
                 + self.config.calcium_carbonate_transport_cost
             )
             + self.config.sodium_sulfide_consumption
