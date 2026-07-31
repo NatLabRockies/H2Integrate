@@ -4,9 +4,9 @@ from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
-os.chdir(EXAMPLE_DIR / "33_paper_mill")
+os.chdir(EXAMPLE_DIR / "36_paper_mill")
 
-model = H2IntegrateModel("33_paper_mill_mn.yaml")
+model = H2IntegrateModel("36_paper_mill_mn.yaml")
 
 
 model.setup()
@@ -14,9 +14,11 @@ model.run()
 model.post_process()
 
 
-import pandas as pd
-import numpy as np
 import ast
+
+import numpy as np
+import pandas as pd
+
 
 def flatten_value_to_series(value, length):
     """Convert scalar, list, array, or string-literal into a fixed-length vector."""
@@ -33,7 +35,7 @@ def flatten_value_to_series(value, length):
                 value = parsed
             else:
                 value = [parsed]
-        except Exception:
+        except (ValueError, SyntaxError):
             value = [value]
 
     if isinstance(value, list):
@@ -69,7 +71,7 @@ def export_outputs_masha_excel(model, excel_file="paper_mill_outputs_masha.xlsx"
                 parsed = ast.literal_eval(val)
                 if isinstance(parsed, dict):
                     val = parsed
-            except:
+            except (ValueError, SyntaxError):
                 pass
 
         if isinstance(val, dict):
@@ -87,7 +89,7 @@ def export_outputs_masha_excel(model, excel_file="paper_mill_outputs_masha.xlsx"
                 parsed = ast.literal_eval(val)
                 if isinstance(parsed, list):
                     max_len = max(max_len, len(parsed))
-            except:
+            except (ValueError, SyntaxError):
                 pass
 
     # Sheet 1 — main outputs
@@ -109,6 +111,6 @@ def export_outputs_masha_excel(model, excel_file="paper_mill_outputs_masha.xlsx"
         sheet2.to_excel(writer, sheet_name="CostBreakdowns", index=False)
 
     print(f"Excel file successfully written: {excel_file}")
-    
+
 
 export_outputs_masha_excel(model, "paper_mill_outputs_masha.xlsx")
