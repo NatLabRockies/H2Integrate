@@ -1,0 +1,6 @@
+name: H2Integrate_config
+system_summary: This reference paper mill plant is located in Minnesota and for its first pass, it contains paper mill plant powered by grid.
+  The system is designed to produce paper at a constant rate throughout the year.
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

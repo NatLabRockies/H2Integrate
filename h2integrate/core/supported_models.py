@@ -129,6 +129,10 @@ supported_models = _ModelRegistry(
         "QuinnNuclearPerformanceModel": "converters.nuclear:QuinnNuclearPerformanceModel",
         "QuinnNuclearCostModel": "converters.nuclear:QuinnNuclearCostModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "PaperMillPerformanceModel": "converters.paper_mill:PaperMillPerformanceModel",
+        "PaperMillCostModel": "converters.paper_mill:PaperMillCostModel",
+        "SAFPerformanceModel": "converters.saf:SAFPerformanceModel",
+        "SAFCostModel": "converters.saf:SAFCostModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
