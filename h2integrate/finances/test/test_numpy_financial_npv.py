@@ -280,3 +280,144 @@ def test_inflation_rate_validator_rejects_out_of_range():
                 "commodity_sell_price_units": "USD/(kW*h)",
             }
         )
+
+
+def _make_component(**overrides):
+    """Build a NumpyFinancialNPV component with a config from the given overrides.
+
+    The component is not run through OpenMDAO setup; only ``config`` is populated so
+    that the ``_real_to_nominal_rate`` and ``_compute_wacc`` helper methods can be
+    exercised in isolation.
+    """
+    params = {
+        "plant_life": 30,
+        "real_discount_rate": 0.09,
+        "commodity_sell_price_units": "USD/(kW*h)",
+    }
+    params.update(overrides)
+
+    pf = NumpyFinancialNPV(
+        driver_config={},
+        plant_config={"plant": {"plant_life": 30}, "finance_parameters": {"model_inputs": {}}},
+        tech_config={},
+        commodity_type="electricity",
+    )
+    pf.config = NumpyFinancialNPVFinanceConfig.from_dict(params)
+    return pf
+
+
+@pytest.mark.unit
+def test_real_to_nominal_rate(subtests):
+    """_real_to_nominal_rate applies the Fisher equation, and is a no-op at zero inflation."""
+    with subtests.test("Zero inflation returns the real rate unchanged"):
+        pf = _make_component(real_discount_rate=0.07, inflation_rate=0.0)
+        assert pf._real_to_nominal_rate(0.07) == pytest.approx(0.07, rel=1e-12)
+
+    with subtests.test("Nonzero inflation combines via Fisher equation"):
+        pf = _make_component(real_discount_rate=0.05, inflation_rate=0.04)
+        expected = 1.05 * 1.04 - 1.0
+        assert pf._real_to_nominal_rate(0.05) == pytest.approx(expected, rel=1e-12)
+
+    with subtests.test("Zero real rate returns the inflation rate"):
+        pf = _make_component(real_discount_rate=0.0, inflation_rate=0.09)
+        assert pf._real_to_nominal_rate(0.0) == pytest.approx(0.09, rel=1e-12)
+
+
+@pytest.mark.unit
+def test_compute_wacc(subtests):
+    """_compute_wacc weights equity/debt rates and applies the Fisher conversion (pre-tax)."""
+    with subtests.test("Zero debt/equity reduces WACC to the equity rate"):
+        pf = _make_component(real_discount_rate=0.09, debt_equity_ratio=0.0)
+        assert pf._compute_wacc() == pytest.approx(0.09, rel=1e-12)
+
+    with subtests.test("Debt and debt/equity combine into the pre-tax WACC"):
+        pf = _make_component(
+            real_discount_rate=0.10,
+            debt_rate=0.05,
+            debt_equity_ratio=1.0,
+        )
+        # equity_weight = debt_weight = 0.5 for D/E = 1.0
+        # WACC = 0.5 * 0.10 + 0.5 * 0.05 = 0.05 + 0.025 = 0.075
+        assert pf._compute_wacc() == pytest.approx(0.075, rel=1e-12)
+
+    with subtests.test("Inflation is applied to both rates before weighting"):
+        pf = _make_component(
+            real_discount_rate=0.10,
+            debt_rate=0.05,
+            debt_equity_ratio=1.0,
+            inflation_rate=0.03,
+        )
+        nominal_equity = 1.10 * 1.03 - 1.0
+        nominal_debt = 1.05 * 1.03 - 1.0
+        expected = 0.5 * nominal_equity + 0.5 * nominal_debt
+        assert pf._compute_wacc() == pytest.approx(expected, rel=1e-12)
+
+    with subtests.test("Zero debt/equity with inflation reduces WACC to the nominal equity rate"):
+        pf = _make_component(real_discount_rate=0.09, debt_equity_ratio=0.0, inflation_rate=0.02)
+        assert pf._compute_wacc() == pytest.approx(1.09 * 1.02 - 1.0, rel=1e-12)
+
+
+@pytest.mark.unit
+def test_wacc_discount_matches_equivalent_single_rate(
+    npv_finance_inputs, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    """NPV computed from WACC inputs should match a single-rate config equal to that WACC."""
+    wacc_inputs = npv_finance_inputs.copy()
+    wacc_inputs["real_discount_rate"] = 0.10
+    wacc_inputs["debt_rate"] = 0.05
+    wacc_inputs["debt_equity_ratio"] = 1.0
+
+    # WACC = 0.5 * 0.10 + 0.5 * 0.05 = 0.075
+    equivalent_inputs = npv_finance_inputs.copy()
+    equivalent_inputs["real_discount_rate"] = 0.075
+
+    prob_wacc = _build_npv_problem(wacc_inputs, fake_filtered_tech_config, fake_cost_dict)
+    prob_equivalent = _build_npv_problem(
+        equivalent_inputs, fake_filtered_tech_config, fake_cost_dict
+    )
+
+    npv_wacc = prob_wacc.get_val("npv.NPV_electricity_no1", units="USD")[0]
+    npv_equivalent = prob_equivalent.get_val("npv.NPV_electricity_no1", units="USD")[0]
+
+    with subtests.test("WACC-based NPV matches equivalent single-rate NPV"):
+        assert pytest.approx(npv_wacc, rel=1e-12) == npv_equivalent
+
+
+@pytest.mark.unit
+def test_debt_financing_shifts_npv(
+    npv_finance_inputs, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    """Adding cheaper debt lowers the WACC and raises NPV vs equity-only."""
+    equity_only_inputs = npv_finance_inputs.copy()
+    equity_only_inputs["real_discount_rate"] = 0.10
+
+    debt_financed_inputs = equity_only_inputs.copy()
+    debt_financed_inputs["debt_rate"] = 0.05
+    debt_financed_inputs["debt_equity_ratio"] = 1.0
+
+    prob_equity = _build_npv_problem(equity_only_inputs, fake_filtered_tech_config, fake_cost_dict)
+    prob_debt = _build_npv_problem(debt_financed_inputs, fake_filtered_tech_config, fake_cost_dict)
+
+    npv_equity = prob_equity.get_val("npv.NPV_electricity_no1", units="USD")[0]
+    npv_debt = prob_debt.get_val("npv.NPV_electricity_no1", units="USD")[0]
+
+    with subtests.test("Lower WACC from debt financing increases NPV"):
+        assert npv_debt > npv_equity
+
+
+@pytest.mark.unit
+def test_wacc_config_validators_reject_out_of_range(subtests):
+    """debt_rate and debt_equity_ratio must respect their valid ranges."""
+    base = {
+        "plant_life": 30,
+        "real_discount_rate": 0.09,
+        "commodity_sell_price_units": "USD/(kW*h)",
+    }
+
+    with subtests.test("debt_rate above 1 is rejected"):
+        with pytest.raises(ValueError, match="debt_rate"):
+            NumpyFinancialNPVFinanceConfig.from_dict({**base, "debt_rate": 1.5})
+
+    with subtests.test("debt_equity_ratio below 0 is rejected"):
+        with pytest.raises(ValueError, match="debt_equity_ratio"):
+            NumpyFinancialNPVFinanceConfig.from_dict({**base, "debt_equity_ratio": -1.0})
