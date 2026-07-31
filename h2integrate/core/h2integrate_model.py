@@ -571,9 +571,18 @@ class H2IntegrateModel:
         sources_to_commodities = {
             (e[0], e[-1])
             for e in self.technology_graph.edges(data="commodity")
-            if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
+            if (e[-1] is not None)
+            and (isinstance(e[-1], str))
+            and (e[0] in upstream_controllable_techs)
         }
-
+        if any(isinstance(e[-1], list) for e in self.technology_graph.edges(data="commodity")):
+            multi_cmod_edges = [
+                e for e in self.technology_graph.edges(data="commodity") if isinstance(e[-1], list)
+            ]
+            for edge in multi_cmod_edges:
+                for cmod in edge[-1]:
+                    new_element = (edge[0], cmod)
+                    sources_to_commodities.add(new_element)
         # re-make technology interconnections using only technologies
         # upstream of the demand component
         upstream_interconnections = [
@@ -2191,13 +2200,9 @@ class H2IntegrateModel:
                     ) is not None:
                         if isinstance(connected_cmods, str):
                             all_cmods = {connected_cmods, connection[2]}
-                            technology_graph.add_edge(source, destination, commodity=all_cmods)
-
                         else:
-                            connected_cmods.add(connection[2])
-                            technology_graph.add_edge(
-                                source, destination, commodity=connected_cmods
-                            )
+                            all_cmods = {*connected_cmods, connection[2]}
+                        technology_graph.add_edge(source, destination, commodity=list(all_cmods))
                 else:
                     technology_graph.add_edge(source, destination, commodity=connection[2])
             else:
