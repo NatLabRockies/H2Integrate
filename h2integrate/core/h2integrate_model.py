@@ -2182,7 +2182,24 @@ class H2IntegrateModel:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
-                technology_graph.add_edge(source, destination, commodity=connection[2])
+                # Check for existing edge
+                if technology_graph.has_edge(source, destination):
+                    if (
+                        connected_cmods := technology_graph.edges[source, destination].get(
+                            "commodity"
+                        )
+                    ) is not None:
+                        if isinstance(connected_cmods, str):
+                            all_cmods = {connected_cmods, connection[2]}
+                            technology_graph.add_edge(source, destination, commodity=all_cmods)
+
+                        else:
+                            connected_cmods.add(connection[2])
+                            technology_graph.add_edge(
+                                source, destination, commodity=connected_cmods
+                            )
+                else:
+                    technology_graph.add_edge(source, destination, commodity=connection[2])
             else:
                 technology_graph.add_edge(source, destination)
 
