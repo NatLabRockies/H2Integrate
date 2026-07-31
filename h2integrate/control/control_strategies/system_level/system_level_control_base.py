@@ -826,6 +826,88 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return np.full(self.n_timesteps, marginal_cost_scalar)
 
+    def _new_post_setup_multi_commodity(self):
+        if not self.multi_commodity_system:
+            return
+        # converter upstreams now has values of lists intead of sets
+        converters, converter_upstreams = self._find_converter_techs_new()
+        grouped_techs = {f"{k[0][0]}-{i}": k[1] for i, k in enumerate(converter_upstreams.items())}
+        alt_grouped_techs = {
+            (f"{k[0][0]}", f"{i}"): k[1] for i, k in enumerate(converter_upstreams.items())
+        }
+
+        demand_group_techs = self.get_successors_for_tech_with_input_cmod(
+            self.demand_tech, self.commodity
+        )
+        # converter_info.add((self.commodity, self.demand_tech, self.commodity))
+        # conversion fator recipes requires simple_graph, converters, demand_tech, grouped_techs
+        grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
+        alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
+        reversed_grouped_techs = {}
+        for k, v in grouped_techs.items():
+            for vv in list(v):
+                if vv in reversed_grouped_techs:
+                    if isinstance(reversed_grouped_techs[vv], str):
+                        reversed_grouped_techs[vv] = [reversed_grouped_techs[vv], k]
+                    else:
+                        reversed_grouped_techs[vv] = reversed_grouped_techs[vv] + [k]
+                else:
+                    reversed_grouped_techs[vv] = k
+
+        def get_group_for_tech(tech_name):
+            groups = {k for k, v in grouped_techs.items() if tech_name in v}
+            return list(groups)
+
+        def get_group_for_tech_commodity(tech_name, output_cmod):
+            possible_converter_grp = [k for k in converter_upstreams if k[0] == output_cmod]
+            if not possible_converter_grp and output_cmod == self.commodity:
+                groups = get_group_for_tech(tech_name)
+                return groups
+            if possible_converter_grp:
+                possible_groups = []
+                for grp in possible_converter_grp:
+                    if tech_name in converter_upstreams[grp]:
+                        possible_groups += [
+                            f"{k[0]}-{k[1]}"
+                            for k, v in alt_grouped_techs.items()
+                            if k[0] == output_cmod and tech_name in v
+                        ]
+
+                return possible_groups
+            warnings.warn("Whats up", UserWarning, stacklevel=3)
+
+        simple_graph = nx.DiGraph()
+        for e in list(self.technology_graph.edges(data="commodity")):
+            s0, d0, c = e
+
+            s = reversed_grouped_techs.get(s0, s0)
+            d = reversed_grouped_techs.get(d0, d0)
+
+            if isinstance(s, str) and isinstance(d, str) and isinstance(c, str):
+                if s != d:
+                    simple_graph.add_edge(s, d, commodity=c)
+            elif isinstance(s, str) and isinstance(d, list) and isinstance(c, str):
+                for di in d:
+                    if s != di:
+                        simple_graph.add_edge(s, di, commodity=c)
+            elif isinstance(s, list) and isinstance(d, str) and isinstance(c, str):
+                for si in s:
+                    if si != d:
+                        simple_graph.add_edge(si, d, commodity=c)
+            elif isinstance(s, list) and isinstance(d, str) and isinstance(c, list):
+                for ci in c:
+                    group_name = get_group_for_tech_commodity(s0, ci)
+                    simple_graph.add_edge(group_name[0], d, commodity=ci)
+                    # TODO: add error if group_name is greater than 0
+            else:
+                raise ValueError("have not accounted for this design yet")
+
+        self.converters = converters
+        self.grouped_techs = grouped_techs
+        self.simple_graph = simple_graph
+        conversion_recipes = self._make_conversion_factor_recipes()
+        self.conversion_recipes = conversion_recipes
+
     def _post_setup_multi_commodity(self):
         if not self.multi_commodity_system:
             return
@@ -1023,9 +1105,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     for output_commod in input_commods:
                         converter_info.add((input_commod, converter, output_commod))
 
-        # demand_group_techs = self.get_successors_for_tech_with_input_cmod(
-        # self.demand_tech, self.commodity)
-        # converter_info.add((self.commodity, self.demand_tech, self.commodity))
         return converter_info, converter_upstreams
 
     def _find_converter_techs(self, include_feedstock_sources=True):
