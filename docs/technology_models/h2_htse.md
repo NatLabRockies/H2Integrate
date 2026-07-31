@@ -52,7 +52,7 @@ The HTSE performance model inherits from the electrolyzer base classes, so it is
 Installed size is first calculated as:
 
 $$
-\text{electrolyzer\_size\_mw} = n_{clusters} \times cluster\_rating\_MW
+\text{electrolyzer\_size\_mw} = n_\text{clusters} \times \text{cluster\_rating\_MW}
 $$
 
 The model supports additional sizing modes inherited from the resizeable performance base class:
@@ -73,13 +73,13 @@ When system-level control is enabled, hydrogen demand is taken from `hydrogen_co
 The model forms:
 
 $$
-\text{total\_specific\_energy} = nominal\_heat\_required + nominal\_electricity\_required
+\text{total\_specific\_energy} = \text{nominal\_heat\_required} + \text{nominal\_electricity\_required}
 $$
 
 and computes a nominal heat-to-electricity ratio:
 
 $$
-\text{ratio\_heat\_elec\_nom} = \frac{nominal\_heat\_required}{nominal\_electricity\_required}
+\text{ratio\_heat\_elec\_nom} = \frac{\text{nominal\_heat\_required}}{\text{nominal\_electricity\_required}}
 $$
 
 Available heat is used first up to the requested `heat_demand`. The remaining required energy is supplied electrically when possible. Hydrogen production is then limited by the combined energy available and by the turndown threshold.
