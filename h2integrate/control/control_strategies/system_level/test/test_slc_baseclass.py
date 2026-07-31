@@ -11,8 +11,8 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 
 def make_tech_classifiers(tech_list):
     fixed_techs = []
-    flexible_techs = ["wind", "solar"]
-    dispatchable_techs = ["electrolyzer", "haber_bosch", "natural_gas_plant", "grid_buy"]
+    flexible_techs = ["wind", "solar", "boat", "desalination"]
+    dispatchable_techs = ["electrolyzer", "haber_bosch", "natural_gas_plant", "grid_buy", "grid"]
     storage_techs = ["battery", "h2_storage", "nh3_storage"]
     feedstock_techs = ["ng_feedstock", "n2_feedstock", "electricity_feedstock"]
     classifiers = {k: "flexible" for k in flexible_techs}
@@ -90,6 +90,55 @@ def make_and_setup_slc_baseclass(plant_config, tech_config) -> SystemLevelContro
 # _find_demand_tech_group()
 # _find_group_for_non_input_techs
 # _make_conversion_factor_recipes()
+
+
+@pytest.mark.unit
+def test_find_converter_techs_fake_system(subtests):
+    # Test methods in _post_setup_multi_commodity
+    # _find_converter_techs(include_feedstock_sources=True)
+    # _find_demand_tech_group()
+    tech_connections = [
+        ["boat", "desalination", "raw_water", ""],
+        ["desalination", "electrolyzer", "water", ""],
+        ["wind", "elec_combiner", "electricity", ""],
+        ["solar", "elec_combiner", "electricity", ""],
+        ["elec_combiner", "battery", "electricity", ""],
+        ["battery", "elec_combiner_2", "electricity", ""],
+        ["elec_combiner", "elec_combiner_2", "electricity", ""],
+        ["elec_combiner_2", "electrolyzer", "electricity", ""],
+        # ["desalination", "electrolyzer", "water", ""],
+        ["electrolyzer", "h2_storage", "hydrogen", ""],
+        ["electrolyzer", "h2_combiner", "hydrogen", ""],
+        ["electrolyzer", "haber_bosch", "oxygen", ""],
+        ["h2_storage", "h2_combiner", "hydrogen", ""],
+        ["h2_combiner", "haber_bosch", "hydrogen", ""],
+        ["grid", "haber_bosch", "electricity", ""],
+        ["n2_feedstock", "haber_bosch", "nitrogen", ""],
+        ["haber_bosch", "nh3_storage", "ammonia", ""],
+        ["haber_bosch", "nh3_combiner", "ammonia", ""],
+        ["nh3_storage", "nh3_combiner", "ammonia", ""],
+        ["nh3_combiner", "nh3_load_demand", "ammonia", ""],
+    ]
+
+    example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+
+    plant_config["technology_interconnections"] = tech_connections
+    extra_tech_config_keys = {
+        k[0]: {} for k in tech_connections if k[0] not in tech_config["technologies"]
+    }
+    extra_tech_config_keys |= {
+        k[1]: {} for k in tech_connections if k[1] not in tech_config["technologies"]
+    }
+    tech_config_fake = tech_config["technologies"] | extra_tech_config_keys
+
+    slc = make_and_setup_slc_baseclass(plant_config, {"technologies": tech_config_fake})
+
+    converters, converter_upstreams = slc._find_converter_techs(include_feedstock_sources=True)
+
+    with subtests.test("converters is not right"):
+        assert True
 
 
 @pytest.mark.unit

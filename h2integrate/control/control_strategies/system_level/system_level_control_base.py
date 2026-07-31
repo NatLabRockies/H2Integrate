@@ -945,6 +945,43 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Intersect with controller-managed techs
         return list(ancestors_with_commodity & input_techs)
 
+    def _find_converter_techs_vs(self):
+        in_flows = dict(self.technology_graph.in_degree)
+        out_flows = dict(self.technology_graph.out_degree)
+
+        non_converter_techs = [
+            k for k in list(self.technology_graph.nodes) if in_flows[k] < 1 or out_flows[k] < 1
+        ]
+        likely_converter_techs = (
+            set(self.technology_graph.nodes) - set(non_converter_techs) - set(self.storage_techs)
+        ) & set(self.input_techs)
+
+        (set(self.input_techs) | set(self.feedstock_comps)) - likely_converter_techs
+
+        {(e[0], e[-1]) for e in self.technology_graph.edges(data="commodity") if e[-1] is not None}
+
+        converter_info = set()
+        for converter in list(likely_converter_techs):
+            # predecessors are upstream and directly connected to the converter
+            predecessor_techs = set(self.technology_graph.predecessors(converter))
+            # succesor techs are directly downstream of the converter
+            successor_techs = set(self.technology_graph.successors(converter))
+            input_commods = {
+                self.technology_graph.edges[upstream_tech, converter].get("commodity")
+                for upstream_tech in predecessor_techs
+            }
+            output_commods = {
+                self.technology_graph.edges[converter, downstream_tech].get("commodity")
+                for downstream_tech in list(successor_techs)
+            }
+
+            consumed = input_commods - output_commods
+            produced = output_commods - input_commods
+            if consumed and produced:
+                for input_commod in input_commods:
+                    for output_commod in input_commods:
+                        converter_info.add((input_commod, converter, output_commod))
+
     def _find_converter_techs(self, include_feedstock_sources=True):
         """Identify technologies that transform one commodity into another.
 
