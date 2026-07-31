@@ -38,9 +38,9 @@ def thermal_performance_params():
 def thermal_cost_params():
     return {
         "rated_capacity": 600.0,
-        "nuclear_reactor_upfront_cost": 5750000.0,
-        "nuclear_reactor_fixed_om_cost": 2640,
-        "nuclear_reactor_variable_om_cost": 145.0,
+        "upfront_cost": 5750000.0,
+        "fixed_om_cost": 2640,
+        "variable_om_cost": 145.0,
         "cost_year": 2022,
     }
 
@@ -207,9 +207,9 @@ def test_thermal_cost_model(plant_config, thermal_cost_params, subtests):
     prob.run_model()
 
     rated_capacity_mw = thermal_cost_params["rated_capacity"]
-    upfront_cost_per_mw = thermal_cost_params["nuclear_reactor_upfront_cost"]
-    fixed_om_per_mw_year = thermal_cost_params["nuclear_reactor_fixed_om_cost"]
-    variable_om_per_mwh = thermal_cost_params["nuclear_reactor_variable_om_cost"]
+    upfront_cost_per_mw = thermal_cost_params["upfront_cost"]
+    fixed_om_per_mw_year = thermal_cost_params["fixed_om_cost"]
+    variable_om_per_mwh = thermal_cost_params["variable_om_cost"]
 
     dt = half_year_plant_config["plant"]["simulation"]["dt"]
     delivered_electricity_mwh = electricity_out.sum() * (dt / 3600.0)

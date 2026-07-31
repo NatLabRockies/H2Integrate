@@ -199,17 +199,17 @@ class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
 
     Args:
         rated_capacity (float): Rated capacity used for cost calculations in kW.
-        nuclear_reactor_upfront_cost (float): Capital cost per kW in USD/kW.
-        nuclear_reactor_fixed_om_cost (float): Fixed annual O&M in USD/(kW*year).
-        nuclear_reactor_variable_om_cost (float): Variable O&M applied to the simulated
+        upfront_cost (float): Capital cost per kW in USD/kW.
+        fixed_om_cost (float): Fixed annual O&M in USD/(kW*year).
+        variable_om_cost (float): Variable O&M applied to the simulated
             electricity production in USD/(kW*h).
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
     """
 
     rated_capacity: float = field(validator=gt_zero)
-    nuclear_reactor_upfront_cost: float = field(validator=gt_zero)
-    nuclear_reactor_fixed_om_cost: float = field(validator=gt_zero)
-    nuclear_reactor_variable_om_cost: float = field(validator=gt_zero)
+    upfront_cost: float = field(validator=gt_zero)
+    fixed_om_cost: float = field(validator=gt_zero)
+    variable_om_cost: float = field(validator=gt_zero)
     cost_year: int = field(default=2025, converter=int)
 
 
@@ -219,9 +219,9 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     The model applies capacity-based capital and fixed O&M costs and computes variable O&M
     from the delivered electricity:
 
-    - ``CapEx`` from ``rated_capacity * nuclear_reactor_upfront_cost``
-    - ``OpEx`` from ``rated_capacity * nuclear_reactor_fixed_om_cost``
-    - ``VarOpEx`` from ``nuclear_reactor_variable_om_cost`` applied to the simulated
+    - ``CapEx`` from ``rated_capacity * upfront_cost``
+    - ``OpEx`` from ``rated_capacity * fixed_om_cost``
+    - ``VarOpEx`` from ``variable_om_cost`` applied to the simulated
       electricity output, repeated across the plant life.
     """
 
@@ -245,27 +245,27 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
             units="MW",
         )
         self.add_input(
-            "nuclear_reactor_upfront_cost",
-            val=self.config.nuclear_reactor_upfront_cost,
+            "upfront_cost",
+            val=self.config.upfront_cost,
             units="USD/MW",
         )
         self.add_input(
-            "nuclear_reactor_fixed_om_cost",
-            val=self.config.nuclear_reactor_fixed_om_cost,
+            "fixed_om_cost",
+            val=self.config.fixed_om_cost,
             units="USD/(MW*year)",
         )
         self.add_input(
-            "nuclear_reactor_variable_om_cost",
-            val=self.config.nuclear_reactor_variable_om_cost,
+            "variable_om_cost",
+            val=self.config.variable_om_cost,
             units="USD/(MW*h)",
         )
         self.add_input("electricity_out", val=0.0, shape=n_timesteps, units="kW")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         rated_capacity_mw = float(inputs["rated_capacity"][0])
-        upfront_cost_per_mw = float(inputs["nuclear_reactor_upfront_cost"][0])
-        fixed_om_per_kw_year = float(inputs["nuclear_reactor_fixed_om_cost"][0])
-        variable_om_per_mwh = float(inputs["nuclear_reactor_variable_om_cost"][0])
+        upfront_cost_per_mw = float(inputs["upfront_cost"][0])
+        fixed_om_per_kw_year = float(inputs["fixed_om_cost"][0])
+        variable_om_per_mwh = float(inputs["variable_om_cost"][0])
 
         outputs["CapEx"] = rated_capacity_mw * upfront_cost_per_mw
         outputs["OpEx"] = fixed_om_per_kw_year * rated_capacity_mw

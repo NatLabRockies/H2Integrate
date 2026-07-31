@@ -34,9 +34,9 @@ technologies:
         minimum_heat_extract: 1  # MW
       cost_parameters:
         cost_year: 2022
-        nuclear_reactor_upfront_cost: 5750000.0  # $/MWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
-        nuclear_reactor_fixed_om_cost: 2640.0 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
-        nuclear_reactor_variable_om_cost: 145.0
+        upfront_cost: 5750000.0  # $/MWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
+        fixed_om_cost: 2640.0 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
+        variable_om_cost: 145.0
         # Values from Table 38, Meta-Analysis of Advanced Nuclear Reactor Cost Estimations,
         # slightly adjusted away from 93% capacity factor
       shared_parameters:
