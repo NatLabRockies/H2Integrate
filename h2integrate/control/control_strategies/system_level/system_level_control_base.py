@@ -833,20 +833,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
             return
         # converter upstreams now has values of lists intead of sets
         converters, converter_upstreams = self._find_converter_techs()
-        grouped_techs = {f"{k[0][0]}-{i}": k[1] for i, k in enumerate(converter_upstreams.items())}
-        alt_grouped_techs = {
-            (f"{k[0][0]}", f"{i}"): k[1] for i, k in enumerate(converter_upstreams.items())
-        }
 
         demand_group_techs = self.get_successors_for_tech_with_input_cmod(
             self.demand_tech, self.commodity
         )
 
+        converter_upstreams[(self.commodity, self.demand_tech)] = demand_group_techs
         # converter_info.add((self.commodity, self.demand_tech, self.commodity))
         # conversion fator recipes requires simple_graph, converters, demand_tech, grouped_techs
-        grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
-        alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
-
+        # grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
+        # alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
+        grouped_techs = {f"{k[0][0]}-{i}": k[1] for i, k in enumerate(converter_upstreams.items())}
+        alt_grouped_techs = {
+            (f"{k[0][0]}", f"{i}"): k[1] for i, k in enumerate(converter_upstreams.items())
+        }
         # last_converter = [k for k in demand_group_techs if k in converter_techs]
         reversed_grouped_techs = {}
         for k, v in grouped_techs.items():

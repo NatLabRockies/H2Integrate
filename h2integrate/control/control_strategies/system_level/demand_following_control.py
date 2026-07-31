@@ -44,8 +44,11 @@ class DemandFollowingControl(SystemLevelControlBase):
         super().setup()
 
         self.config = DemandFollowingControlConfig.from_dict(
-            self.options["plant_config"]["system_level_control"].get("control_parameters", {})
+            self.options["plant_config"]["system_level_control"].get("control_parameters", {}),
+            strict=False,
         )
+
+        self.tech_demands_set = []
 
     def get_setpoints_for_commodity_subset(
         self, inputs, outputs, commodity, commodity_demand, tech_subset: list | set | None = None
