@@ -2,7 +2,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import must_equal
-from h2integrate.converters.saf.saf_baseclass import SAFCostBaseClass, SAFPerformanceBaseClass
+from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -11,11 +11,22 @@ class SAFPerformanceModelConfig(BaseConfig):
     capacity_factor: float = field()
 
 
-class SAFPerformanceModel(SAFPerformanceBaseClass):
+class SAFPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a saf plant.
     Computes annual saf production based on plant capacity and capacity factor.
     """
+
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    def initialize(self):
+        super().initialize()
+        self.commodity = "saf"
+        self.commodity_amount_units = "t"
+        self.commodity_rate_units = "t/h"
 
     def setup(self):
         super().setup()
@@ -23,6 +34,13 @@ class SAFPerformanceModel(SAFPerformanceBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.add_input("electricity_in", val=0, shape=n_timesteps, units="kW")
+        self.add_input("lignin_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("hydrogen_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("salt_mix_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("hydrogen_chloride_in", val=0, shape=n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         saf_production_mtpy = self.config.plant_capacity_mtpy * self.config.capacity_factor
@@ -42,14 +60,7 @@ class SAFCostModelConfig(BaseConfig):
     operational_year: int = field()
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
-    #    water_prices: dict = field()
-
-    # Financial parameters - flattened from the nested structure
-    #    grid_prices: dict = field()
-    financial_assumptions: dict = field()
-    cost_year: int = field(
-        default=2022, converter=int, validator=must_equal(2022)
-    )  # TOASK: Do we keep cost year as 2022?
+    cost_year: int = field(default=2023, converter=int, validator=must_equal(2023))
 
     # Feedstock parameters - flattened from the nested structure
     lignin_unitcost: float = field(default=0.78)  # $/kg of final product
@@ -72,7 +83,7 @@ class SAFCostModelConfig(BaseConfig):
     water_disposal_rate: float = field(default=0)  # TODO: Change assumption
 
 
-class SAFCostModel(SAFCostBaseClass):
+class SAFCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with saf production.
     Includes CapEx, OpEx, and byproduct credits.
@@ -91,19 +102,24 @@ class SAFCostModel(SAFCostBaseClass):
         )
         super().setup()
 
+        self.add_input("plant_capacity_mtpy", val=0, units="t/year", desc="Annual plant capacity")
+        self.add_input("plant_capacity_factor", val=0, units=None, desc="Capacity factor")
+        self.add_input("lignin_cost", val=0, units="USD/kg", desc="Levelized cost of lignin")
+        self.add_input(
+            "electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity"
+        )
+        self.add_input("water_cost", val=0, units="USD/kg", desc="Levelized cost of water")
+        self.add_input("hydrogen_cost", val=0, units="USD/kg", desc="Levelized cost of hydrogen")
+        self.add_input("salt_mix_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals")
+        self.add_input(
+            "hydrogen_chloride_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals"
+        )
+
         self.add_input("saf_production_mtpy", val=0.0, units="t/year")
-        self.add_output("LCOP", val=0.0, units="USD/t")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Calculate saf production costs directly
-        model_year_CEPCI = 816.0  # 2022
-        equation_year_CEPCI = 797.9  # 2023
-
-        capex_saf_process = (
-            model_year_CEPCI / equation_year_CEPCI * 5570 * self.config.plant_capacity_mtpy**1
-        )
-
-        total_plant_cost = capex_saf_process
+        total_plant_capex = 5570 * self.config.plant_capacity_mtpy
 
         # Fixed O&M Costs
         # TODO: Need to update labor cost
@@ -112,44 +128,35 @@ class SAFCostModel(SAFCostBaseClass):
             * ((self.config.plant_capacity_mtpy / 365 * 1000) ** 0.25242)
             / ((1162077 / 365 * 1000) ** 0.25242)
         )
-        labor_cost_maintenance = 0.00863 * total_plant_cost
+        labor_cost_maintenance = 0.00863 * total_plant_capex
         0.25 * (labor_cost_annual_operation + labor_cost_maintenance)
 
         fixed_operating_cost = 390 * self.config.plant_capacity_mtpy
 
-        property_tax_insurance = 0.02 * total_plant_cost
+        property_tax_insurance = 0.02 * total_plant_capex
 
         total_fixed_operating_cost = fixed_operating_cost + property_tax_insurance
 
-        variable_consumables_cost = self.config.plant_capacity_mtpy * (
-            self.config.raw_water_consumption * self.config.raw_water_unitcost
-            + self.config.lignin_consumption
-            * (self.config.lignin_unitcost + self.config.lignin_transport_cost)
-            + self.config.salt_mix_consumption
-            * (self.config.salt_mix_unitcost + self.config.salt_mix_transport_cost)
-            + self.config.hydrogen_chloride_consumption
-            * (
-                self.config.hydrogen_chloride_unitcost
-                + self.config.hydrogen_chloride_transport_cost
-            )
-            + self.config.hydrogen_consumption
-            * (self.config.hydrogen_unitcost + self.config.hydrogen_transport_cost)
+        c = self.config
+        variable_consumables_cost = c.plant_capacity_mtpy * (
+            c.raw_water_consumption * c.raw_water_unitcost
+            + c.lignin_consumption * (c.lignin_unitcost + c.lignin_transport_cost)
+            + c.salt_mix_consumption * (c.salt_mix_unitcost + c.salt_mix_transport_cost)
+            + c.hydrogen_chloride_consumption
+            * (c.hydrogen_chloride_unitcost + c.hydrogen_chloride_transport_cost)
+            + c.hydrogen_consumption * (c.hydrogen_unitcost + c.hydrogen_transport_cost)
         )
 
         water_disposal_cost = (
-            self.config.plant_capacity_mtpy
-            * self.config.water_disposal_unitcost
-            * self.config.water_disposal_rate
+            c.plant_capacity_mtpy * c.water_disposal_unitcost * c.water_disposal_rate
         )
 
-        electricity_cost = self.config.plant_capacity_mtpy * (
-            self.config.electricity_consumption * self.config.electricity_cost
-        )
+        electricity_cost = c.plant_capacity_mtpy * (c.electricity_consumption * c.electricity_cost)
 
         total_variable_operating_cost = (
             variable_consumables_cost + water_disposal_cost + electricity_cost
         )
 
-        outputs["CapEx"] = total_plant_cost
+        outputs["CapEx"] = total_plant_capex
         outputs["OpEx"] = total_fixed_operating_cost
         outputs["VarOpEx"] = total_variable_operating_cost

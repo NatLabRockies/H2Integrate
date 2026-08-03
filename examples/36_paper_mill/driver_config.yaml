@@ -2,3 +2,9 @@ name: driver_config
 description: This analysis runs a paper mill plant and matches other examples in H2Integrate
 general:
   folder_output: outputs
+recorder:
+  file: cases.sql
+  overwrite_recorder: true
+  flag: true
+  includes: ['*']
+  excludes: ['*_resource*']

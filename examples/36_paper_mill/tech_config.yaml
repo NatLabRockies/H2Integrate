@@ -19,33 +19,26 @@ technologies:
         wood_unitcost: 99.3
         wood_transport_cost: 0.0
         electricity_cost: 0.054
-        calcium_carbonate_unitcost: 0.33 #$/kg consumable
-        sodium_sulfide_unitcost: 0.22 #$/kg consumable
-        sodium_hydroxide_unitcost: 0.33 #$/kg consumable
-        chlorine_dioxide_unitcost: 1.79 #$/kg consumable
-        hydrogen_peroxide_unitcost: 0.33 #$/kg consumable
-        magnesium_sulfate_unitcost: 0.36 #$/kg consumable
-        oxygen_unitcost: 0 #$/ton consumable
+        calcium_carbonate_unitcost: 0.33  #$/kg consumable
+        sodium_sulfide_unitcost: 0.22  #$/kg consumable
+        sodium_hydroxide_unitcost: 0.33  #$/kg consumable
+        chlorine_dioxide_unitcost: 1.79  #$/kg consumable
+        hydrogen_peroxide_unitcost: 0.33  #$/kg consumable
+        magnesium_sulfate_unitcost: 0.36  #$/kg consumable
+        oxygen_unitcost: 0  #$/ton consumable
         raw_water_unitcost: 0.001519
         raw_water_consumption: 40693
         wood_consumption: 0.225
-        calcium_carbonate_consumption: 240 #kg/MT product
-        sodium_sulfide_consumption: 16.5 #kg/MT product
-        sodium_hydroxide_consumption: 3.5 #kg/MT product
-        chlorine_dioxide_consumption: 2.0 #kg/MT product
-        hydrogen_peroxide_consumption: .5 #kg/MT product
-        magnesium_sulfate_consumption: .2 #kg/MT product
-        oxygen_consumption: 2.25 #kg/MT product    
+        calcium_carbonate_consumption: 240  # kg/MT product
+        sodium_sulfide_consumption: 16.5  # kg/MT product
+        sodium_hydroxide_consumption: 3.5  # kg/MT product
+        chlorine_dioxide_consumption: 2.0  # kg/MT product
+        hydrogen_peroxide_consumption: .5  # kg/MT product
+        magnesium_sulfate_consumption: .2  # kg/MT product
+        oxygen_consumption: 2.25  # kg/MT product
         electricity_consumption: 68.7
         water_disposal_unitcost: 0.002013
         water_disposal_rate: 18927
-        # Financial assumptions
-        financial_assumptions:
-          total income tax rate: 0.308
-          capital gains tax rate: 0.15
-          leverage after tax nominal discount rate: 0.10893
-          debt equity ratio of initial financing: 0.65
-          debt interest rate: 0.06
   saf:
     performance_model:
       model: SAFPerformanceModel
@@ -69,19 +62,12 @@ technologies:
         hydrogen_transport_cost: 0.0
         hydrogen_consumption: 580
         electricity_cost: 0.054
-        electricity_consumption: 19750  
+        electricity_consumption: 19750
         raw_water_unitcost: 0.001519
         raw_water_consumption: 2839
         water_disposal_unitcost: 0.002013
         water_disposal_rate: 0
         salt_mix_unitcost: 0.86  # $/kg
-        salt_mix_consumption: 41.3   # kg/t SAF
+        salt_mix_consumption: 41.3  # kg/t SAF
         hydrogen_chloride_unitcost: 0.26  # $/kg
         hydrogen_chloride_consumption: 1.5  # kg/t SAF
-        # Financial assumptions
-        financial_assumptions:
-          total income tax rate: 0.308
-          capital gains tax rate: 0.15
-          leverage after tax nominal discount rate: 0.10893
-          debt equity ratio of initial financing: 0.65
-          debt interest rate: 0.06

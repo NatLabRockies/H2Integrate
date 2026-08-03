@@ -15,7 +15,7 @@ class PaperMillConfig(BaseConfig):
     electricity_usage_rate: float = field()
 
 
-class PaperMillPerformance(om.ExplicitComponent):
+class CustomPaperMillPerformance(om.ExplicitComponent):
     _time_step_bounds = (
         3600,
         3600,
@@ -57,7 +57,7 @@ class PaperMillCostConfig(CostModelBaseConfig):
     plant_capacity: float = field()
 
 
-class PaperMillCost(CostModelBaseClass):
+class CustomPaperMillCost(CostModelBaseClass):
     _time_step_bounds = (
         3600,
         3600,

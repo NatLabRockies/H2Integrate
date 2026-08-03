@@ -11,7 +11,7 @@ sites:
 # add lignin as commodity
 # paper, saf, lignin
 technology_interconnections:
-  - [paper_mill, saf, [lignin_out, lignin_in]]
+  - [paper_mill, saf, lignin, pipe]
 plant:
   plant_life: 40
   simulation:
