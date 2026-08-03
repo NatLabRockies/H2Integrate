@@ -1005,7 +1005,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
             - **converters** (tuple[str, str, str]): Set of tuples formatted as
                 ``(input_commodity, tech_name, output_commodity)`` tuples.
-            - **upstreams** (dict[tuple[str,str], list[str]]): Keys are set of
+            - **converter_upstreams** (dict[tuple[str,str], list[str]]): Keys are set of
                 ``(input_commodity, tech_name)`` and the values are a set of
                 upstream technologies that output the `input_commodity` to `tech_name`.
         """
@@ -1195,6 +1195,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return compounding_conversion_factor_recipes
 
     def _get_techs_to_demand_from_recipe(self, recipe_name):
+        """Get a list of technologies that are in a subsystem that
+        outputs ``input_commodity`` to the ``tech_group_name``.
+
+        Args:
+            recipe_name (tuple[str,str,str]): name of recipe formatted as a tuple of
+                ``(input_commodity, output_commodity, tech_group_name)``
+
+        Raises:
+            ValueError: there are multiple techs
+
+        Returns:
+            list[str]: list of technologies that output the ``input_commodity``
+                and are connected upstream of ``tech_group_name``
+        """
         _, input_cmod, tech_group = recipe_name
         techs_to_demand = [
             s
@@ -1210,7 +1224,19 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return techs_in_group
 
     def _get_conversion_from_recipe(self, conversion_factors, recipe):
-        # Get comp
+        """Get the conversion factor from a recipe.
+
+        Args:
+            conversion_factors (dict): dictionary with keys of 3 element tuples
+                formatted as ``(input_commodity, tech, output_commodity)``.
+                Values are an array or float of the conversion factor
+                ``input_commodity/output_commodity``
+            recipe (list[list[tuples]]): embedded list of conversions,
+                a value from from the `conversion_recipes` attribute.
+
+        Returns:
+            float | np.ndarray: conversion factor created from the recipe.
+        """
         path_conversion = 1.0
 
         for path in recipe:
