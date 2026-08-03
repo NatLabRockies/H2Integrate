@@ -8,16 +8,16 @@ from h2integrate.finances.profast_lco import ProFastLCO
 @fixture
 def profast_inputs_no1():
     params = {
-        "analysis_start_year": 2030, #changed
-        "installation_time": 24, #24 months? 
-        "inflation_rate": 0.0, 
+        "analysis_start_year": 2030,  # changed
+        "installation_time": 24,  # 24 months?
+        "inflation_rate": 0.0,
         "discount_rate": 0.0948,
         "debt_equity_ratio": 1.72,
-        "property_tax_and_insurance": 0.015, #should we use this value?
-        "total_income_tax_rate": 0.2574, #should we use this value?
-        "capital_gains_tax_rate": 0.15, #should we use this value?
+        "property_tax_and_insurance": 0.015,  # should we use this value?
+        "total_income_tax_rate": 0.2574,  # should we use this value?
+        "capital_gains_tax_rate": 0.15,  # should we use this value?
         "sales_tax_rate": 0.00,
-        "debt_interest_rate": 0.046, #should we use this value?
+        "debt_interest_rate": 0.046,  # should we use this value?
         "debt_type": "Revolving debt",
         "loan_period_if_used": 0,
         "cash_onhand_months": 1,
@@ -61,7 +61,7 @@ def fake_cost_dict():
 
 @pytest.mark.regression
 def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
-    mean_hourly_production = 34246.6 # ton/hr
+    mean_hourly_production = 34246.6  # ton/hr
     prob = om.Problem()
     plant_config = {
         "plant": {

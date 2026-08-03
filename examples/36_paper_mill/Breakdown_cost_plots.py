@@ -1,4 +1,3 @@
-# # -*- coding: utf-8 -*-
 # """
 # Created on Fri May 15 07:38:06 2026
 
@@ -30,7 +29,8 @@
 # records["SAF with H2"] = df.iloc[3:, [3]].astype(float).sum(axis=1).values
 # records["SAF with low-carbon H2"] = df.iloc[3:, [4]].astype(float).sum(axis=1).values
 # records["Paper + Pulp\nSAF with H2"] = df.iloc[3:, [5, 6, 7]].astype(float).sum(axis=1).values
-# records["Paper + Pulp\nSAF with low-carbon H2"] = df.iloc[3:, [8, 9, 10]].astype(float).sum(axis=1).values
+# results = df.iloc[3:, [8, 9, 10]]
+# records["Paper + Pulp\nSAF with low-carbon H2"] = results.astype(float).sum(axis=1).values
 
 # # Build DataFrame
 # plot_df = pd.DataFrame(records, index=components)
@@ -79,10 +79,12 @@
 # plt.savefig("stacked_cost_breakdown_final.png", dpi=300)
 # plt.show()
 
+import textwrap
+
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-import textwrap
+
 
 # -------------------------------------------------------------
 # LOAD EXCEL
@@ -94,24 +96,22 @@ df = pd.read_excel(file_path, sheet_name="Sheet1", header=None)
 # READ STRUCTURE
 # -------------------------------------------------------------
 scenario_row = df.iloc[0, 1:].tolist()
-product_row  = df.iloc[1, 1:].tolist()
-components   = df.iloc[2:, 0].astype(str).str.strip().tolist()
-values       = df.iloc[2:, 1:].astype(float)
+product_row = df.iloc[1, 1:].tolist()
+components = df.iloc[2:, 0].astype(str).str.strip().tolist()
+values = df.iloc[2:, 1:].astype(float)
 
 # -------------------------------------------------------------
 # CLEAN NANS
 # -------------------------------------------------------------
 valid = [i for i, s in enumerate(scenario_row) if str(s) != "nan"]
 scenario_row = [scenario_row[i] for i in valid]
-product_row  = [product_row[i] for i in valid]
-values       = values.iloc[:, valid]
+product_row = [product_row[i] for i in valid]
+values = values.iloc[:, valid]
 
 # -------------------------------------------------------------
 # MULTILINE SCENARIO LABELS (automatic wrapping)
 # -------------------------------------------------------------
-scenario_row_wrapped = [
-    "\n".join(textwrap.wrap(s, width=18)) for s in scenario_row
-]
+scenario_row_wrapped = ["\n".join(textwrap.wrap(s, width=18)) for s in scenario_row]
 
 # -------------------------------------------------------------
 # BUILD MULTIINDEX
@@ -122,7 +122,7 @@ df_plot = pd.DataFrame(values.values, index=components, columns=pd.MultiIndex.fr
 # -------------------------------------------------------------
 # FLATTENED PRODUCT LABELS
 # -------------------------------------------------------------
-flat_products = product_row  
+flat_products = product_row
 
 # -------------------------------------------------------------
 # GROUP POSITIONS FOR SCENARIO LABELS
@@ -141,7 +141,7 @@ color_map = {
     "OpEx ($/kg)": "orange",
     "Feedstock ($/kg)": "deepskyblue",
     "Taxes ($/kg)": "lightpink",
-    "Finances ($/kg)": "yellowgreen"
+    "Finances ($/kg)": "yellowgreen",
 }
 
 # -------------------------------------------------------------
@@ -157,12 +157,12 @@ for comp in components:
     bottom += y
 
 # -------------------------------------------------------------
-# X‑AXIS LABELS (PRODUCT LEVEL)
+# X-AXIS LABELS (PRODUCT LEVEL)
 # -------------------------------------------------------------
 plt.xticks(x, flat_products, rotation=0, ha="center")
 
 # -------------------------------------------------------------
-# Y‑AXIS LABEL
+# Y-AXIS LABEL
 # -------------------------------------------------------------
 plt.ylabel("Levelized cost ($/kg)")
 
@@ -174,8 +174,9 @@ plt.title("Cost Breakdown by Product and Scenario")
 ymin, ymax = plt.ylim()
 for scen, idxs in scenario_groups.items():
     center = np.mean(idxs)
-    plt.text(center, ymax + ymax*0.04, scen,
-             ha="center", va="bottom", fontsize=11, fontweight="bold")
+    plt.text(
+        center, ymax + ymax * 0.04, scen, ha="center", va="bottom", fontsize=11, fontweight="bold"
+    )
 
 plt.ylim(ymin, ymax * 1.25)
 
