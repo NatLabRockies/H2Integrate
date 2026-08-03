@@ -1,9 +1,6 @@
-import os
-
 import numpy as np
 import pytest
 
-from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -409,9 +406,13 @@ def test_slc_upstream_demand(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
-def test_slc_complex_multi_commodity_v1(subtests):
-    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "complex_multi_commodity"
-    os.chdir(ex_folder)
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("35_system_level_control/complex_multi_commodity", None)],
+)
+def test_slc_complex_multi_commodity_v1(subtests, temp_copy_of_example):
+    ex_folder = temp_copy_of_example
+
     h2i = H2IntegrateModel(ex_folder / "top_level_config.yaml")
 
     h2i.setup()
@@ -448,11 +449,75 @@ def test_slc_complex_multi_commodity_v1(subtests):
             == h2i.model.get_val("nh3_load_demand.capacity_factor", units="percent")[0]
         )
 
+    with subtests.test("Wind electricity set point (flexible tech)"):
+        wind_set_point = h2i.model.get_val(
+            "system_level_controller.wind_electricity_set_point", units="kW"
+        )
+        wind_capacity = h2i.model.get_val(
+            "system_level_controller.wind_rated_electricity_production", units="kW"
+        )
+        assert np.all(wind_set_point == wind_capacity)
+    with subtests.test("Solar electricity set point (flexible tech)"):
+        solar_set_point = h2i.model.get_val(
+            "system_level_controller.solar_electricity_set_point", units="kW"
+        )
+        solar_capacity = h2i.model.get_val(
+            "system_level_controller.solar_rated_electricity_production", units="kW"
+        )
+        assert np.all(solar_set_point == solar_capacity)
+    with subtests.test("Battery electricity set point (storage)"):
+        np.testing.assert_allclose(
+            h2i.model.get_val("system_level_controller.battery_electricity_set_point", units="kW"),
+            np.full(8760, 1119087.470593775),
+            rtol=1e-6,
+            atol=1e-6,
+        )
+    with subtests.test("Electrolyzer hydrogen set point (dispatchable)"):
+        pem_set_point = h2i.model.get_val(
+            "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
+        )
+        np.testing.assert_allclose(
+            pem_set_point, np.full(8760, 11744.704419585461), rtol=1e-6, atol=1e-6
+        )
+    with subtests.test("H2 Storage hydrogen set point (storage)"):
+        h2s_set_point_max = h2i.model.get_val(
+            "system_level_controller.h2_storage_hydrogen_set_point", units="kg/h"
+        ).max()
+        h2s_set_point_min = h2i.model.get_val(
+            "system_level_controller.h2_storage_hydrogen_set_point", units="kg/h"
+        ).min()
+        assert pytest.approx(11744.704419585461, rel=1e-6) == h2s_set_point_min
+        assert pytest.approx(23489.408839170923, rel=1e-6) == h2s_set_point_max
+
+    with subtests.test("Haber Bosch: ammonia set point"):
+        assert np.all(
+            h2i.model.get_val("system_level_controller.haber_bosch_ammonia_set_point", units="kg/h")
+            == 47499.84
+        )
+    with subtests.test("Haber Bosch: hydrogen consumption"):
+        assert (
+            pytest.approx(67359635.13205291, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.hydrogen_consumed", units="kg/h").sum()
+        )
+    with subtests.test("Haber Bosch: nitrogen consumption"):
+        assert (
+            pytest.approx(312006087.72971725, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.nitrogen_consumed", units="kg/h").sum()
+        )
+    with subtests.test("Haber Bosch: electricity consumption"):
+        assert (
+            pytest.approx(178149.21787066793, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.electricity_consumed", units="MW").sum()
+        )
+
 
 @pytest.mark.integration
-def test_slc_complex_nh3_with_storage(subtests):
-    ex_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
-    os.chdir(ex_folder)
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/nh3_with_storage", None)]
+)
+def test_slc_complex_nh3_with_storage(subtests, temp_copy_of_example):
+    ex_folder = temp_copy_of_example
+
     h2i = H2IntegrateModel(ex_folder / "top_level_config.yaml")
 
     h2i.setup()
@@ -460,36 +525,109 @@ def test_slc_complex_nh3_with_storage(subtests):
     h2i.run()
 
     with subtests.test("LCOH"):
-        assert pytest.approx(4.064419131023322, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(3.8867863862476097, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_h2.LCOH", units="USD/kg"
         )
 
     with subtests.test("LCOA - Produced"):
-        assert pytest.approx(1.306352207437524, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.2054326039224676, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_nh3_produced.LCOA", units="USD/kg"
         )
 
     with subtests.test("LCOA - Available"):
-        assert pytest.approx(1.3082392786020187, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.207172852022115, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_ammonia_available.LCOA", units="USD/kg"
         )
 
     with subtests.test("LCOA - Delivered"):
-        assert pytest.approx(1.4065238834234126, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(1.3022897725787497, rel=1e-6) == h2i.model.get_val(
             "finance_subgroup_nh3_delivered.LCOA", units="USD/kg"
         )
 
     with subtests.test("Unmet Ammonia Demand"):
         assert (
-            pytest.approx(102882.4504724315, rel=1e-6)
+            pytest.approx(79364.20686173553, rel=1e-6)
             == h2i.model.get_val("nh3_load_demand.unmet_ammonia_demand_out", units="t/h").sum()
         )
 
     with subtests.test("Ammonia Demand Capacity Factor"):
-        assert pytest.approx(75.27450203676736, rel=1e-6) == h2i.model.get_val(
+        assert pytest.approx(81.00662271288984, rel=1e-6) == h2i.model.get_val(
             "nh3_load_demand.capacity_factor", units="percent"
         )
 
-    # TODO: update logic to dispatch storage
+    with subtests.test("Wind electricity set point (flexible tech)"):
+        wind_set_point = h2i.model.get_val(
+            "system_level_controller.wind_electricity_set_point", units="kW"
+        )
+        wind_capacity = h2i.model.get_val(
+            "system_level_controller.wind_rated_electricity_production", units="kW"
+        )
+        assert np.all(wind_set_point == wind_capacity)
+    with subtests.test("Solar electricity set point (flexible tech)"):
+        solar_set_point = h2i.model.get_val(
+            "system_level_controller.solar_electricity_set_point", units="kW"
+        )
+        solar_capacity = h2i.model.get_val(
+            "system_level_controller.solar_rated_electricity_production", units="kW"
+        )
+        assert np.all(solar_set_point == solar_capacity)
+    with subtests.test("Battery electricity set point (storage)"):
+        np.testing.assert_allclose(
+            h2i.model.get_val("system_level_controller.battery_electricity_set_point", units="kW"),
+            np.full(8760, 1119087.470593775),
+            rtol=1e-6,
+            atol=1e-6,
+        )
+    with subtests.test("Electrolyzer hydrogen set point (dispatchable)"):
+        pem_set_point = h2i.model.get_val(
+            "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
+        )
+        np.testing.assert_allclose(
+            pem_set_point, np.full(8760, 11744.704419585461), rtol=1e-6, atol=1e-6
+        )
+    with subtests.test("H2 Storage hydrogen set point (storage)"):
+        h2s_set_point_max = h2i.model.get_val(
+            "system_level_controller.h2_storage_hydrogen_set_point", units="kg/h"
+        ).max()
+        h2s_set_point_min = h2i.model.get_val(
+            "system_level_controller.h2_storage_hydrogen_set_point", units="kg/h"
+        ).min()
+        assert pytest.approx(11744.704419585461, rel=1e-6) == h2s_set_point_min
+        assert pytest.approx(23489.408839170923, rel=1e-6) == h2s_set_point_max
+
+    with subtests.test("Haber Bosch: ammonia set point"):
+        assert np.all(
+            h2i.model.get_val("system_level_controller.haber_bosch_ammonia_set_point", units="kg/h")
+            == 47700.0
+        )
+    with subtests.test("Haber Bosch: hydrogen consumption"):
+        assert (
+            pytest.approx(73265794.3391077, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.hydrogen_consumed", units="kg/h").sum()
+        )
+    with subtests.test("Haber Bosch: nitrogen consumption"):
+        assert (
+            pytest.approx(339363089.0568392, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.nitrogen_consumed", units="kg/h").sum()
+        )
+    with subtests.test("Haber Bosch: electricity consumption"):
+        assert (
+            pytest.approx(182579.15194510925, rel=1e-6)
+            == h2i.model.get_val("haber_bosch.electricity_consumed", units="MW").sum()
+        )
+
+    with subtests.test("NH3 storage ammonia set point (storage)"):
+        nh3_set_point_max = h2i.model.get_val(
+            "system_level_controller.nh3_storage_ammonia_set_point", units="kg/h"
+        ).max()
+        nh3_set_point_min = h2i.model.get_val(
+            "system_level_controller.nh3_storage_ammonia_set_point", units="kg/h"
+        ).min()
+        assert pytest.approx(100700.0, rel=1e-6) == nh3_set_point_max
+        assert pytest.approx(47700.0, rel=1e-6) == nh3_set_point_min
+
+    with subtests.test("NH3 storage: ammonia out"):
+        assert np.all(h2i.model.get_val("nh3_storage.ammonia_out", units="kg/h") == 0.0)
+
     with subtests.test("Ammonia Storage Command"):
         assert np.all(h2i.model.get_val("nh3_storage.ammonia_command_value") == 0.0)
