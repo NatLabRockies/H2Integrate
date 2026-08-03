@@ -49,7 +49,7 @@ def flatten_value_to_series(value, length):
     return series[:length]
 
 
-def export_outputs_masha_excel(model, excel_file="paper_mill_outputs_masha.xlsx"):
+def export_outputs_excel(model, excel_file="paper_mill_outputs_masha.xlsx"):
     """
     Produces an Excel file with:
     Sheet 1: Main outputs in Masha's desired format (variables as columns, values down rows)
@@ -107,10 +107,10 @@ def export_outputs_masha_excel(model, excel_file="paper_mill_outputs_masha.xlsx"
 
     # Write Excel using openpyxl (always available)
     with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
-        sheet1.to_excel(writer, sheet_name="MainOutputs_Masha", index=False)
+        sheet1.to_excel(writer, sheet_name="MainOutputs", index=False)
         sheet2.to_excel(writer, sheet_name="CostBreakdowns", index=False)
 
     print(f"Excel file successfully written: {excel_file}")
 
 
-export_outputs_masha_excel(model, "paper_mill_outputs_masha.xlsx")
+export_outputs_excel(model, "paper_mill_outputs.xlsx")
