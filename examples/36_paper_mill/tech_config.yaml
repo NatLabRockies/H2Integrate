@@ -9,8 +9,9 @@ technologies:
       model: PaperMillCostModel
     model_inputs:
       shared_parameters:
-        capacity_factor: 0.9
         plant_capacity_mtpy: 3300000
+      performance_parameters:
+        capacity_factor: 0.9
       cost_parameters:
         operational_year: 2030
         installation_time: 24  # months
@@ -46,8 +47,9 @@ technologies:
       model: SAFCostModel
     model_inputs:
       shared_parameters:
-        capacity_factor: 0.9
         plant_capacity_mtpy: 28000
+      performance_parameters:
+        capacity_factor: 0.9
       cost_parameters:
         operational_year: 2030
 # TOASK: LCOH vs hydrogen unit cost. Should we use the hydrogen module for the August results

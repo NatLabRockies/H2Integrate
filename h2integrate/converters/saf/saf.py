@@ -34,19 +34,18 @@ class SAFPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+
+        self.add_input("plant_capacity_mtpy", val=self.config.plant_capacity_mtpy, units="t/year")
         n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.add_input("electricity_in", val=0, shape=n_timesteps, units="kW")
-        self.add_input("lignin_in", val=0, shape=n_timesteps, units="kg/h")
-        self.add_input("water_in", val=0, shape=n_timesteps, units="kg/h")
-        self.add_input("hydrogen_in", val=0, shape=n_timesteps, units="kg/h")
-        self.add_input("salt_mix_in", val=0, shape=n_timesteps, units="kg/h")
-        self.add_input("hydrogen_chloride_in", val=0, shape=n_timesteps, units="kg/h")
+        self.add_input("lignin_in", val=0.0, shape=n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
-        saf_production_mtpy = self.config.plant_capacity_mtpy * self.config.capacity_factor
+        plant_capacity_mtpy = inputs["plant_capacity_mtpy"]
+        capacity_factor = self.config.capacity_factor
+        saf_production_mtpy = plant_capacity_mtpy * capacity_factor
         outputs["saf_out"] = saf_production_mtpy / 8760
-        outputs["rated_saf_production"] = self.config.plant_capacity_mtpy / 8760
-        outputs["capacity_factor"] = self.config.capacity_factor
+        outputs["rated_saf_production"] = plant_capacity_mtpy / 8760
+        outputs["capacity_factor"] = capacity_factor
         outputs["total_saf_produced"] = outputs["saf_out"].sum()
         outputs["annual_saf_produced"] = outputs["total_saf_produced"] * (
             1 / self.fraction_of_year_simulated
@@ -59,7 +58,6 @@ class SAFCostModelConfig(BaseConfig):
     inflation_rate: float = field()
     operational_year: int = field()
     plant_capacity_mtpy: float = field()
-    capacity_factor: float = field()
     cost_year: int = field(default=2023, converter=int, validator=must_equal(2023))
 
     # Feedstock parameters - flattened from the nested structure
@@ -102,56 +100,46 @@ class SAFCostModel(CostModelBaseClass):
         )
         super().setup()
 
-        self.add_input("plant_capacity_mtpy", val=0, units="t/year", desc="Annual plant capacity")
-        self.add_input("plant_capacity_factor", val=0, units=None, desc="Capacity factor")
-        self.add_input("lignin_cost", val=0, units="USD/kg", desc="Levelized cost of lignin")
-        self.add_input(
-            "electricity_cost", val=0, units="USD/(kW*h)", desc="Levelized cost of electricity"
-        )
-        self.add_input("water_cost", val=0, units="USD/kg", desc="Levelized cost of water")
-        self.add_input("hydrogen_cost", val=0, units="USD/kg", desc="Levelized cost of hydrogen")
-        self.add_input("salt_mix_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals")
-        self.add_input(
-            "hydrogen_chloride_cost", val=0, units="USD/kg", desc="Levelized cost of chemicals"
-        )
-
-        self.add_input("saf_production_mtpy", val=0.0, units="t/year")
+        self.add_input("plant_capacity_mtpy", val=self.config.plant_capacity_mtpy, units="t/year")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        plant_capacity_mtpy = inputs["plant_capacity_mtpy"][0]
+
         # Calculate saf production costs directly
-        total_plant_capex = 5570 * self.config.plant_capacity_mtpy
+        total_plant_capex = 5570 * plant_capacity_mtpy
 
         # Fixed O&M Costs
         # TODO: Need to update labor cost
         labor_cost_annual_operation = (
             69375996.9
-            * ((self.config.plant_capacity_mtpy / 365 * 1000) ** 0.25242)
+            * ((plant_capacity_mtpy / 365 * 1000) ** 0.25242)
             / ((1162077 / 365 * 1000) ** 0.25242)
         )
         labor_cost_maintenance = 0.00863 * total_plant_capex
         0.25 * (labor_cost_annual_operation + labor_cost_maintenance)
 
-        fixed_operating_cost = 390 * self.config.plant_capacity_mtpy
+        fixed_operating_cost = 390 * plant_capacity_mtpy
 
         property_tax_insurance = 0.02 * total_plant_capex
 
         total_fixed_operating_cost = fixed_operating_cost + property_tax_insurance
 
         c = self.config
-        variable_consumables_cost = c.plant_capacity_mtpy * (
-            c.raw_water_consumption * c.raw_water_unitcost
-            + c.lignin_consumption * (c.lignin_unitcost + c.lignin_transport_cost)
-            + c.salt_mix_consumption * (c.salt_mix_unitcost + c.salt_mix_transport_cost)
-            + c.hydrogen_chloride_consumption
-            * (c.hydrogen_chloride_unitcost + c.hydrogen_chloride_transport_cost)
-            + c.hydrogen_consumption * (c.hydrogen_unitcost + c.hydrogen_transport_cost)
-        )
+        consumable_costs_per_mt = {
+            "raw_water": c.raw_water_consumption * c.raw_water_unitcost,
+            "lignin": c.lignin_consumption * (c.lignin_unitcost + c.lignin_transport_cost),
+            "salt_mix": c.salt_mix_consumption * (c.salt_mix_unitcost + c.salt_mix_transport_cost),
+            "hydrogen_chloride": c.hydrogen_chloride_consumption
+            * (c.hydrogen_chloride_unitcost + c.hydrogen_chloride_transport_cost),
+            "hydrogen": c.hydrogen_consumption * (c.hydrogen_unitcost + c.hydrogen_transport_cost),
+        }
+        variable_consumables_cost = plant_capacity_mtpy * sum(consumable_costs_per_mt.values())
 
         water_disposal_cost = (
-            c.plant_capacity_mtpy * c.water_disposal_unitcost * c.water_disposal_rate
+            plant_capacity_mtpy * c.water_disposal_unitcost * c.water_disposal_rate
         )
 
-        electricity_cost = c.plant_capacity_mtpy * (c.electricity_consumption * c.electricity_cost)
+        electricity_cost = plant_capacity_mtpy * (c.electricity_consumption * c.electricity_cost)
 
         total_variable_operating_cost = (
             variable_consumables_cost + water_disposal_cost + electricity_cost
