@@ -97,7 +97,7 @@ class ChangeNameAttributeClass:
         conversion_recipes,
         non_converter_keys,
     ):
-        """_summary_
+        """heterogeneous commodity hybrid system
 
         Attributes:
             converter_upstreams (dict): _description_
@@ -192,7 +192,6 @@ class ChangeNameAttributeClass:
                     ('hydrogen', 'h2_storage', 'hydrogen')
                 ]
             ]
-
 
         """
         self.converter_upstreams = converter_upstreams
@@ -1140,6 +1139,23 @@ class SystemLevelControlBase(om.ExplicitComponent):
             - **converter_upstreams** (dict[tuple[str,str], list[str]]): Keys are set of
                 ``(input_commodity, tech_name)`` and the values are a set of
                 upstream technologies that output the `input_commodity` to `tech_name`.
+
+        Examples:
+            >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+            {
+                ("electricity", "electrolyzer", "hydrogen"),
+                ("electricity", "haber_bosch", "ammonia"),
+                ("hydrogen", "haber_bosch", "ammonia")
+            }
+
+            >>> converter_upstreams  # keys formatted as (input_commodity, tech)
+            {
+                ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+                ("electricity", "haber_bosch"): ["electricity_feedstock"],
+                ("hydrogen", "haber_bosch"): ["electrolyzer"],
+                ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+            }
+
         """
         in_flows = dict(self.technology_graph.in_degree)
         out_flows = dict(self.technology_graph.out_degree)
@@ -1258,6 +1274,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     def _make_conversion_factor_recipes(self, converters, simple_graph, grouped_techs):
         """Make recipes to for compounding conversion factor calculations.
+
+        Args:
+            converters (set[tuple]):
+            simple_graph (nx.DiGraph):
+            grouped_techs (dict):
 
         Returns:
             dict[tuple(str,str,str), list[list[tuple]]]: recipes to calculate the
