@@ -2961,12 +2961,13 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("33_peak_load_management/plm_storage", None)]
+    "example_folder,resource_example_folder",
+    [("33_peak_load_management_heuristics/plm_storage", None)],
 )
 def test_peak_load_management_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(example_folder / "33_peak_load_management.yaml")
+    model = H2IntegrateModel(example_folder / "33_plm_storage_heuristic.yaml")
     model.setup()
     model.run()
 
