@@ -77,7 +77,7 @@
 - Corrected water rate units in pipe feedstock from galUS to galUS/h [PR 813](https://github.com/NatLabRockies/H2Integrate/pull/813)
 - Corrected timestamps in OpenMeteo resource downloads when resource data is downloaded in local time [PR #814](https://github.com/NatLabRockies/H2Integrate/pull/814)
 - Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
-- Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
 
 ## 0.8 [April 15, 2026]
 
