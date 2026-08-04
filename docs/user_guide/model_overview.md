@@ -287,7 +287,7 @@ auto-generated API page.
 (control-models)=
 ## Control models
 
-- `control_strategies`
+- `converter_controllers`: converter controllers
   - controllers:
     + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PeakLoadManagementHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
 
