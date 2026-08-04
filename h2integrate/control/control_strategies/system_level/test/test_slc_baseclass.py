@@ -87,8 +87,6 @@ def make_and_setup_slc_baseclass(plant_config, tech_config) -> SystemLevelContro
 
 # Test methods in _post_setup_multi_commodity
 # _find_converter_techs()
-# _find_demand_tech_group()
-# _find_group_for_non_input_techs
 # _make_conversion_factor_recipes()
 
 
@@ -96,7 +94,6 @@ def make_and_setup_slc_baseclass(plant_config, tech_config) -> SystemLevelContro
 def test_find_converter_techs_fake_system(subtests):
     # Test methods in _post_setup_multi_commodity
     # _find_converter_techs()
-    # _find_demand_tech_group()
     tech_connections = [
         ["ocean", "desalination", "salt_water", ""],
         ["desalination", "electrolyzer", "fresh_water", ""],
