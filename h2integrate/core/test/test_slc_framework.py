@@ -5,6 +5,9 @@ import networkx as nx
 from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
+from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+    SystemLevelControlBase,
+)
 
 
 @fixture
@@ -330,3 +333,23 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
         assert all(
             tech_cmod in slc_topology["tech_to_commodity"] for tech_cmod in electrolyzer_commodities
         )
+
+    slc_base = object.__new__(SystemLevelControlBase)
+    input_tech_classifiers = ["fixed", "flexible", "dispatchable", "storage"]
+    input_techs = [
+        k
+        for k, v in slc_topology["tech_control_classifiers"].items()
+        if v in input_tech_classifiers
+    ]
+    feedstock_techs = [
+        k for k, v in slc_topology["tech_control_classifiers"].items() if v == "feedstock"
+    ]
+    slc_base.technology_graph = slc_topology["technology_graph"]
+    slc_base.input_techs = set(input_techs)
+    slc_base.feedstock_comps = feedstock_techs
+
+    upstream_techs = slc_base.get_upstream_techs_for_commodity(
+        "haber_bosch", "hydrogen", include_feedstock_sources=True
+    )
+    with subtests.test("Electrolyzer is upstream of Haber Bosch"):
+        assert upstream_techs == ["electrolyzer"]

@@ -857,6 +857,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if src in ancestors and comm == commodity
         }
 
+        ancestors_with_commodity |= {
+            src
+            for src, _, comm in self.technology_graph.edges(data="commodity")
+            if src in ancestors and isinstance(comm, list) and commodity in comm
+        }
+
         # Intersect with controller-managed techs
         return list(ancestors_with_commodity & input_techs)
 
