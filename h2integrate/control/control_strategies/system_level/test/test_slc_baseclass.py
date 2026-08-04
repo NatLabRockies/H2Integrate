@@ -11,10 +11,10 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 
 def make_tech_classifiers(tech_list):
     fixed_techs = []
-    flexible_techs = ["wind", "solar", "boat", "desalination"]
+    flexible_techs = ["wind", "solar", "desalination"]
     dispatchable_techs = ["electrolyzer", "haber_bosch", "natural_gas_plant", "grid_buy", "grid"]
     storage_techs = ["battery", "h2_storage", "nh3_storage"]
-    feedstock_techs = ["ng_feedstock", "n2_feedstock", "electricity_feedstock"]
+    feedstock_techs = ["ng_feedstock", "n2_feedstock", "electricity_feedstock", "ocean"]
     classifiers = {k: "flexible" for k in flexible_techs}
     classifiers |= {k: "dispatchable" for k in dispatchable_techs}
     classifiers |= {k: "storage" for k in storage_techs}
@@ -98,18 +98,18 @@ def test_find_converter_techs_fake_system(subtests):
     # _find_converter_techs()
     # _find_demand_tech_group()
     tech_connections = [
-        ["boat", "desalination", "raw_water", ""],
-        ["desalination", "electrolyzer", "water", ""],
+        ["ocean", "desalination", "salt_water", ""],
+        ["desalination", "electrolyzer", "fresh_water", ""],
         ["wind", "elec_combiner", "electricity", ""],
         ["solar", "elec_combiner", "electricity", ""],
         ["elec_combiner", "battery", "electricity", ""],
         ["battery", "elec_combiner_2", "electricity", ""],
         ["elec_combiner", "elec_combiner_2", "electricity", ""],
         ["elec_combiner_2", "electrolyzer", "electricity", ""],
-        # ["desalination", "electrolyzer", "water", ""],
         ["electrolyzer", "h2_storage", "hydrogen", ""],
         ["electrolyzer", "h2_combiner", "hydrogen", ""],
         ["electrolyzer", "haber_bosch", "oxygen", ""],
+        ["electrolyzer", "haber_bosch", "heat", ""],
         ["h2_storage", "h2_combiner", "hydrogen", ""],
         ["h2_combiner", "haber_bosch", "hydrogen", ""],
         ["grid", "haber_bosch", "electricity", ""],
@@ -136,9 +136,38 @@ def test_find_converter_techs_fake_system(subtests):
     slc = make_and_setup_slc_baseclass(plant_config, {"technologies": tech_config_fake})
 
     converters, converter_upstreams = slc._find_converter_techs()
+    pem_output_cmod = ["hydrogen", "heat", "oxygen"]
+    electrolyzer_conversions = [("electricity", "electrolyzer", c) for c in pem_output_cmod]
+    electrolyzer_conversions += [("fresh_water", "electrolyzer", c) for c in pem_output_cmod]
+    with subtests.test("Converter elements for electrolyzer"):
+        assert all(k in converters for k in electrolyzer_conversions)
 
-    with subtests.test("converters is not right"):
-        assert True
+    hb_conversions = [(c, "haber_bosch", "ammonia") for c in pem_output_cmod]
+    with subtests.test("Converter elements for haber_bosch"):
+        assert all(k in converters for k in hb_conversions)
+
+    expected_converter_upstreams = {
+        ("salt_water", "desalination"): ["ocean"],
+        ("hydrogen", "haber_bosch"): ["h2_combiner", "electrolyzer", "h2_storage"],
+        ("heat", "haber_bosch"): ["electrolyzer"],
+        ("oxygen", "haber_bosch"): ["electrolyzer"],
+        ("nitrogen", "haber_bosch"): ["n2_feedstock"],
+        ("electricity", "haber_bosch"): ["grid"],
+        ("fresh_water", "electrolyzer"): ["desalination"],
+        ("electricity", "electrolyzer"): [
+            "elec_combiner",
+            "elec_combiner_2",
+            "battery",
+            "solar",
+            "wind",
+        ],
+    }
+
+    mismatched_upstreams = [
+        k for k, v in expected_converter_upstreams.items() if set(converter_upstreams[k]) != set(v)
+    ]
+    with subtests.test("Converter upstreams"):
+        assert len(mismatched_upstreams) == 0
 
 
 @pytest.mark.unit
@@ -578,47 +607,3 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
         techs_to_demand = prob.model.slc._get_techs_to_demand_from_recipe(eh2_recipe_name)
         expected_techs = ["battery", "wind", "solar", "combiner", "elec_combiner"]
         assert set(expected_techs) == set(techs_to_demand)
-
-
-# @pytest.mark.unit
-# def test_slc_baseclass_complex_multicommodity_no_storage(subtests):
-#     # TODO: finish this test?
-#     # h2i = object.__new__(H2IntegrateModel)
-#     # h2i.slc = True
-
-#     example_folder = EXAMPLE_DIR / "35_system_level_control" / "nh3_with_storage"
-#     plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
-#     tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
-#     driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
-
-#     config_input = {
-#         "plant_config": plant_config,
-#         "technology_config": tech_config,
-#         "driver_config": driver_config,
-#     }
-#     h2i = H2IntegrateModel(config_input)
-
-#     h2i.setup()
-
-#     slc = h2i.prob.model.plant.system_level_controller
-
-#     # Check converters
-#     # Check converter_upstreams
-#     # Check simple_graph
-
-#     #
-#     # Check the grouped techs
-#     expected_groups = [
-#         {"solar", "battery", "wind"},
-#         {"electrolyzer", "h2_storage"},
-#         {"electricity_feedstock"},
-#         {"n2_feedstock"},
-#         {"nh3_combiner", "haber_bosch", "nh3_storage"},
-#     ]
-#     grouped_techs = slc.__getattribute__("grouped_techs")
-#     failed_groups = []
-#     for group, techs_in_group in grouped_techs.items():
-#         if not any(g == techs_in_group for g in expected_groups):
-#             failed_groups.append(group)
-#     with subtests.test("Grouped technologies is correct"):
-#         assert len(failed_groups) == 0
