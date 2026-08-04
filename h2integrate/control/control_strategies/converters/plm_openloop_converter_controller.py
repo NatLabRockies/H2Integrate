@@ -62,6 +62,11 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
     can be consumed by converter performance models.
     """
 
+    _time_step_bounds = (
+        1e-12,
+        np.inf,
+    )
+
     # This controller reads the performance model's ``rated_<commodity>_production``
     # output as its command ceiling, which creates a controller<->performance data
     # cycle within the technology group. h2integrate_model.py::_process_model() uses
