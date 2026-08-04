@@ -1,8 +1,9 @@
-import openmdao.api as om
+from math import log
+
 import numpy as np
+import openmdao.api as om
 from attrs import field, define
 from CoolProp.CoolProp import PropsSI
-from math import log
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero
@@ -58,10 +59,16 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
 
         # Setup OpenMDAO inputs
         self.add_input(
-            "temp_hot_in", val=self.config.temp_hot_in_C, units="degC", desc="Hot fluid inlet temperature"
+            "temp_hot_in",
+            val=self.config.temp_hot_in_C,
+            units="degC",
+            desc="Hot fluid inlet temperature",
         )
         self.add_input(
-            "temp_cold_in", val=self.config.temp_cold_in_C, units="degC", desc="Cold fluid inlet temperature"
+            "temp_cold_in",
+            val=self.config.temp_cold_in_C,
+            units="degC",
+            desc="Cold fluid inlet temperature",
         )
         self.add_input(
             "mass_flow_rate_hot",
@@ -78,7 +85,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
 
         # Setup OpenMDAO outputs
         self.add_output("temp_hot_out", val=0.0, units="degC", desc="Hot fluid outlet temperature")
-        self.add_output("temp_cold_out", val=0.0, units="degC", desc="Cold fluid outlet temperature")
+        self.add_output(
+            "temp_cold_out", val=0.0, units="degC", desc="Cold fluid outlet temperature"
+        )
         self.add_output("Q_total", val=0.0, units="kW", desc="Total heat transfer rate")
         self.add_output("epsilon", val=0.0, desc="Effectiveness of the heat exchanger")
         self.add_output("NTU", val=0.0, desc="Number of transfer units")
@@ -86,8 +95,12 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "U_global_W_m2K", val=0.0, units="W/m**2/K", desc="Overall heat transfer coefficient"
         )
-        self.add_output("pressure_drop_hot", val=0.0, units="Pa", desc="Pressure drop on the hot side")
-        self.add_output("pressure_drop_cold", val=0.0, units="Pa", desc="Pressure drop on the cold side")
+        self.add_output(
+            "pressure_drop_hot", val=0.0, units="Pa", desc="Pressure drop on the hot side"
+        )
+        self.add_output(
+            "pressure_drop_cold", val=0.0, units="Pa", desc="Pressure drop on the cold side"
+        )
         self.add_output("pump_power", val=0.0, units="kW", desc="Total pump power required")
         self.add_output("S_gen_dot", val=0.0, units="W/K", desc="Entropy generation rate")
         self.add_output("Ex_dest_dot", val=0.0, units="kW", desc="Exergy destruction rate")
@@ -180,7 +193,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             # default carbon steel
             return 45.0, 7850.0, 480.0
 
-
     def LMTD_calc(self, dT1, dT2):
         """
         Calculate the Log Mean Temperature Difference (LMTD) for a heat exchanger.
@@ -190,7 +202,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         if abs(dT1 - dT2) < 1e-6:
             return 0.5 * (dT1 + dT2)
         return (dT1 - dT2) / log(dT1 / dT2)
-
 
     def classify_regime(self, Re_min, Re_max, Re_laminar_max, Re_turb_min):
         """
@@ -202,7 +213,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             return "turbulent"
         else:
             return "transition"
-
 
     def shell_h_local(self, cold_props, m_dot_c, geom, shell, F_shell, model):
         """
@@ -244,7 +254,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         h_o *= F_shell
         return h_o, Re_s, Nu_s
 
-
     def shell_dp_Kern(self, m_dot_c, cold_props, geom, shell):
         """
         Calculate the pressure drop on the shell side using the Kern method.
@@ -265,7 +274,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         N_b = max(1, int(geom["L_tube"] / shell["baffle_spacing"]) - 1)
         dp_shell = 4.0 * f_s * (G_s**2 / (2.0 * cold_props["rho"])) * N_b
         return dp_shell
-
 
     # ----------------------------------------------------------------------
     # 3) Main HX model
@@ -464,7 +472,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 Nu_t_seg[i] = Nu_t
 
                 # Shell-side
-                h_o, Re_s, Nu_s = self.shell_h_local(cold, m_dot_c, geom, shell, F_shell, shell_model)
+                h_o, Re_s, Nu_s = self.shell_h_local(
+                    cold, m_dot_c, geom, shell, F_shell, shell_model
+                )
                 Re_s_seg[i] = Re_s
                 h_o_seg[i] = h_o
                 Nu_s_seg[i] = Nu_s
@@ -623,7 +633,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                     mu_w = wall_hot_mean["mu"]
                 else:
                     mu_w = mu_b
-                Nu_t_mean = 0.027 * Re_t_mean**0.8 * Pr_h_mean ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
+                Nu_t_mean = (
+                    0.027 * Re_t_mean**0.8 * Pr_h_mean ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
+                )
             else:
                 Nu_t_mean = 0.023 * Re_t_mean**0.8 * Pr_h_mean**0.4
         h_i_mean = Nu_t_mean * hot_m["k"] / D_i
@@ -859,7 +871,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         }
         return res
 
-
     # ----------------------------------------------------------------------
     # 4) Printing summary utility
     # ----------------------------------------------------------------------
@@ -888,11 +899,15 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         print(f"U_global         = {res['U_global']:.1f} W/m^2-K")
         print(f"U_lumped         = {res['U_lumped']:.1f} W/m^2-K")
         print(f"Q_LMTD_lumped    = {res['Q_LMTD_lumped']/1e3:8.1f} kW")
-        print(f"Q_error_frac     = {res['Q_error_frac']:.3f} " f"({100*res['Q_error_frac']:.1f} %)\n")
+        print(
+            f"Q_error_frac     = {res['Q_error_frac']:.3f} " f"({100*res['Q_error_frac']:.1f} %)\n"
+        )
 
         print(f"U_seg  min / max = {res['U_seg'].min():.1f} / {res['U_seg'].max():.1f} W/m^2-K")
         print(f"h_i    min / max = {res['h_i_seg'].min():.1f} / {res['h_i_seg'].max():.1f} W/m^2-K")
-        print(f"h_o    min / max = {res['h_o_seg'].min():.1f} / {res['h_o_seg'].max():.1f} W/m^2-K\n")
+        print(
+            f"h_o    min / max = {res['h_o_seg'].min():.1f} / {res['h_o_seg'].max():.1f} W/m^2-K\n"
+        )
 
         print(
             f"Re_tube   min/max = {int(res['Re_tube_min']):6d} / {int(res['Re_tube_max']):6d}   "
@@ -930,7 +945,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         for k, v in res["flags"].items():
             print(f"  {k:15s} = {int(v)}")
         print("============================================")
-
 
     # ----------------------------------------------------------------------
     # 5) Plotting utility
@@ -1007,7 +1021,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         plt.figure(figsize=(6, 4))
         plt.plot(x_mid, Re_t, "-r", label="Re_tube")
         plt.plot(x_mid, Re_s, "-b", label="Re_shell")
-        plt.axhline(res["params"]["Re_laminar_max"], linestyle="--", color="k", label="Re_laminar,max")
+        plt.axhline(
+            res["params"]["Re_laminar_max"], linestyle="--", color="k", label="Re_laminar,max"
+        )
         plt.axhline(res["params"]["Re_turb_min"], linestyle="--", color="k", label="Re_turb,min")
         plt.yscale("log")
         plt.grid(True, which="both", axis="y")

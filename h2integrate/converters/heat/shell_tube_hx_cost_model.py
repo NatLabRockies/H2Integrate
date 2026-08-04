@@ -1,7 +1,7 @@
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt, gt_zero, lt, must_equal
+from h2integrate.core.validators import gt, lt, gt_zero, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
@@ -12,10 +12,14 @@ class ShellTubeHXCostModelConfig(BaseConfig):
 
     Args:
         cost_year (int): The year for which the cost model is applicable. Default is 2022.
-        S (float): Total heat transfer area of the heat exchanger in square meters. Default is 10.0, limited to a range of 10 to 1000 m^2.
+        S (float): Total heat transfer area of the heat exchanger in square meters.
+            Default is 10.0, limited to a range of 10 to 1000 m^2.
         install_factor (float): Installation factor for the heat exchanger. Default is 1.61.
-        material_factor (float): Material factor for the heat exchanger. Default is 1.0 for carbon steel. Other values can be used for different materials as required for higher temperatures.
-        opex_percentage (float): Operational expenditure cost as a percentage of the capital expenditure. Default is 0.04 (4%).
+        material_factor (float): Material factor for the heat exchanger. Default is 1.0 for
+            carbon steel. Other values can be used for different materials as required
+            for higher temperatures.
+        opex_percentage (float): Operational expenditure cost as a percentage of the
+            capital expenditure. Default is 0.04 (4%).
     """
 
     cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
@@ -27,7 +31,8 @@ class ShellTubeHXCostModelConfig(BaseConfig):
 
 class ShellTubeHXCostModel(CostModelBaseClass):
     """
-    This is a cost model for a u-tube shell-and-tube heat exchanger (HX) based on Sinnot and Towler (2021).
+    This is a cost model for a u-tube shell-and-tube heat exchanger (HX) based on
+        Sinnot and Towler (2021).
 
     - CapEx = (a + b * S^n) * CEPCI_index * install_factor * material_factor
     - OpEx = 4% of CapEx per year
@@ -40,9 +45,24 @@ class ShellTubeHXCostModel(CostModelBaseClass):
         )
         super().setup()
 
-        self.add_input("S", val=self.config.S, units="m^2", desc="Total heat transfer area of the heat exchanger")
-        self.add_input("install_factor", val=self.config.install_factor, units="unitless", desc="Installation factor for the heat exchanger")
-        self.add_input("material_factor", val=self.config.material_factor, units="unitless", desc="Material factor for the heat exchanger")
+        self.add_input(
+            "S",
+            val=self.config.S,
+            units="m^2",
+            desc="Total heat transfer area of the heat exchanger",
+        )
+        self.add_input(
+            "install_factor",
+            val=self.config.install_factor,
+            units="unitless",
+            desc="Installation factor for the heat exchanger",
+        )
+        self.add_input(
+            "material_factor",
+            val=self.config.material_factor,
+            units="unitless",
+            desc="Material factor for the heat exchanger",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Coefficients for the cost model based on Sinnot and Towler (2021)
