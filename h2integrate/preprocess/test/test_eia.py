@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from requests.exceptions import HTTPError
 
 from h2integrate.preprocess import eia
 
@@ -236,7 +235,7 @@ def test_create_eia_ng_api_url(subtests):
 @pytest.mark.unit
 @pytest.mark.skipif(VALID_API_KEY_EXISTS, reason="No valid API key found to test data download")
 def test_failed_get_eia_ng_data():
-    with pytest.raises(HTTPError):
+    with pytest.raises(ValueError):
         eia.get_eia_ng_data(
             state="ak",
             resource_year=2022,
