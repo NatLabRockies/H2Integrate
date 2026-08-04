@@ -101,8 +101,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         if self.config.demand_profile_upstream_kind == "price":
             peak_cutoff_units = f"USD/({self.config.commodity_amount_units})"
         else:
-            peak_cutoff_units = self.config.commodity_amount_units
-
+            peak_cutoff_units = self.config.commodity_rate_units
         self.add_input(
             "demand_profile_upstream_peak_cutoff",
             val=self.config.demand_profile_upstream_peak_cutoff,
