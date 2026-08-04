@@ -20,8 +20,6 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
     an open-loop discharge and recharge schedule.
 
     Attributes:
-        system_capacity_kw (int | float): Maximum converter command value allowed by
-            this controller, in commodity rate units (for example, kW or kg/h).
         demand_profile_peak_cutoff (int | float): Primary set-point threshold used to
             trigger demand curtailment. Dispatch is only considered when
             ``<commodity>_set_point`` exceeds this value.
@@ -39,7 +37,6 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
 
     """
 
-    system_capacity_kw: int | float = field()
     demand_profile_peak_cutoff: int | float = field()
     demand_profile_upstream: int | float | list | None = field()
     demand_profile_upstream_peak_cutoff: int | float | None = field()
@@ -65,12 +62,19 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
     can be consumed by converter performance models.
     """
 
+    # This controller reads the performance model's ``rated_<commodity>_production``
+    # output as its command ceiling, which creates a controller<->performance data
+    # cycle within the technology group. h2integrate_model.py::_process_model() uses
+    # this flag to add a nonlinear solver so the cycle converges.
+    _reads_performance_outputs = True
+
     def setup(self):
         """Initialize configuration and register converter-specific OpenMDAO inputs.
 
         During setup:
         1. Loads controller configuration from tech_config model inputs
-        2. Registers a converter capacity input
+        2. Registers a rated-production input (auto-connected to the technology's
+           performance-model ``rated_<commodity>_production`` output via promotion)
         3. Registers an upstream cutoff input with units based on
            demand_profile_upstream_kind
         4. Stores the simulation horizon length for use in compute()
@@ -83,10 +87,10 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         super().setup()
 
         self.add_input(
-            f"system_capacity_{self.config.commodity_rate_units}",
-            val=self.config.system_capacity_kw,
+            f"rated_{self.config.commodity}_production",
+            val=0.0,
             units=f"{self.config.commodity_rate_units}",
-            desc="Converter control system awareness of the system capacity",
+            desc="Rated production of the technology, used as the converter command ceiling",
         )
 
         if self.config.demand_profile_upstream_kind == "price":
@@ -121,7 +125,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
         Args:
             inputs: OpenMDAO input vector containing set-point, upstream cutoff,
-                and converter capacity values.
+                and rated-production values.
             outputs: OpenMDAO output vector populated with
                 ``<commodity>_command_value``.
 
@@ -131,7 +135,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         """
         commodity = self.config.commodity
         demand_profile = inputs[f"{commodity}_set_point"]
-        system_capacity_rate = inputs[f"system_capacity_{self.config.commodity_rate_units}"][0]
+        rated_production = inputs[f"rated_{commodity}_production"][0]
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"][0]
@@ -154,14 +158,14 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
                             max(desired_dispatch_upstream, 0),
                         ),
                         val,
-                        system_capacity_rate,
+                        rated_production,
                     )
                 elif self.config.demand_profile_upstream_kind == "price":
                     if val_upstream > demand_profile_upstream_peak_cutoff:
                         self.command_value[idx] = min(
                             max(desired_dispatch, 0),
                             val,
-                            system_capacity_rate,
+                            rated_production,
                         )
                 else:
                     raise (

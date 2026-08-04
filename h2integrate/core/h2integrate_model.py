@@ -1066,6 +1066,17 @@ class H2IntegrateModel:
             promotes=["*"],
         )
 
+        # Some controllers read performance-model outputs (e.g.
+        # ``rated_<commodity>_production``) as inputs, which creates a
+        # controller<->performance data cycle within the technology group. Add a
+        # nonlinear solver so this coupling is resolved instead of using stale
+        # (default) values on a single execution pass.
+        if model_type == "control_strategy" and getattr(
+            model_object, "_reads_performance_outputs", False
+        ):
+            tech_group.nonlinear_solver = om.NonlinearBlockGS()
+            tech_group.linear_solver = om.DirectSolver()
+
         return om_model_object
 
     def _check_time_step(self, model_name, model_object):
