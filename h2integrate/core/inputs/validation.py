@@ -105,17 +105,21 @@ def is_path(checker, instance):
 # See: https://python-jsonschema.readthedocs.io/en/stable/faq/#why-doesn-t-my-schema-s-default-property-set-the-default-on-my-instance
 def extend_with_default(validator_class):
     validate_properties = validator_class.VALIDATORS["properties"]
-
-    validator_class.TYPE_CHECKER = validator_class.TYPE_CHECKER.redefine("Path", is_path)
+    type_checker = validator_class.TYPE_CHECKER.redefine("Path", is_path)
 
     def set_defaults(validator, properties, instance, schema):
-        for prop, subschema in properties.items():
-            if "default" in subschema:
-                instance.setdefault(prop, subschema["default"])
+        if isinstance(instance, dict):
+            for prop, subschema in properties.items():
+                if "default" in subschema:
+                    instance.setdefault(prop, subschema["default"])
 
         yield from validate_properties(validator, properties, instance, schema)
 
-    return json.validators.extend(validator_class, {"properties": set_defaults})
+    return json.validators.extend(
+        validator_class,
+        {"properties": set_defaults},
+        type_checker=type_checker,
+    )
 
 
 DefaultValidatingDraft7Validator = extend_with_default(json.Draft7Validator)
