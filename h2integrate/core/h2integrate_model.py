@@ -568,11 +568,23 @@ class H2IntegrateModel:
             tech for tech in upstream_techs if nx.has_path(self.technology_graph, tech, demand_tech)
         }
 
+        # populate sources_to_commodities first with technologies that only pass 1 commodity
         sources_to_commodities = {
             (e[0], e[-1])
             for e in self.technology_graph.edges(data="commodity")
-            if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
+            if (e[-1] is not None)
+            and (e[0] in upstream_controllable_techs)
+            and isinstance(e[-1], str)
         }
+        # now, update sources_to_commodities with technologies that have multiple output commodities
+        if any(isinstance(e[-1], list) for e in self.technology_graph.edges(data="commodity")):
+            multi_cmod_edges = [
+                e for e in self.technology_graph.edges(data="commodity") if isinstance(e[-1], list)
+            ]
+            for edge in multi_cmod_edges:
+                for cmod in edge[-1]:
+                    new_element = (edge[0], cmod)
+                    sources_to_commodities.add(new_element)
 
         # re-make technology interconnections using only technologies
         # upstream of the demand component
@@ -581,12 +593,21 @@ class H2IntegrateModel:
             for connection in tech_interconnections
             if connection[0] in upstream_controllable_techs
         ]
+
         upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
         slc_topology["technology_graph"] = upstream_tech_graph
 
+        # downselect the technology control classifiers to only include those upstream
+        # of the demand
+        upstream_tech_control_classifiers = {
+            k: v
+            for k, v in self.tech_control_classifiers.items()
+            if k in upstream_controllable_techs
+        }
+
         # Check if storage models have a controller
         storage_tech_to_control = {}
-        for tech, classifier in self.tech_control_classifiers.items():
+        for tech, classifier in upstream_tech_control_classifiers.items():
             if classifier == "storage":
                 control_model = (
                     self.technology_config["technologies"][tech]
@@ -611,7 +632,7 @@ class H2IntegrateModel:
         tech_to_commodity = {
             (e[0], e[-1])
             for e in sources_to_commodities
-            if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
+            if upstream_tech_control_classifiers[e[0]] in control_classifiers_to_connect
         }
         slc_topology["tech_to_commodity"] = tech_to_commodity
 
@@ -620,7 +641,7 @@ class H2IntegrateModel:
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
 
-        slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
+        slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
         return slc_topology
 
@@ -2177,7 +2198,26 @@ class H2IntegrateModel:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
-                technology_graph.add_edge(source, destination, commodity=connection[2])
+                # commodity is defined in connection
+                # check if there's an existing edge
+                if technology_graph.has_edge(source, destination):
+                    # check if the edge has a defined commodity
+                    if (
+                        connected_cmods := technology_graph.edges[source, destination].get(
+                            "commodity"
+                        )
+                    ) is not None:
+                        if isinstance(connected_cmods, str):
+                            # one commodity is already connected between the two techs
+                            # create a set of unique commodities passed between the two techs
+                            all_cmods = {connected_cmods, connection[2]}
+                        else:
+                            # multiple commodities are already connected between the two techs
+                            # create a set of unique commodities passed between the two techs
+                            all_cmods = {*connected_cmods, connection[2]}
+                        technology_graph.add_edge(source, destination, commodity=list(all_cmods))
+                else:
+                    technology_graph.add_edge(source, destination, commodity=connection[2])
             else:
                 technology_graph.add_edge(source, destination)
 
