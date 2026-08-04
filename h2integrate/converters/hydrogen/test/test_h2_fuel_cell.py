@@ -265,7 +265,7 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
         plant_config=plant_config, tech_config=cost_config, driver_config={}
     )
     annual_prod_comp = om.IndepVarComp(
-        name="annual_electricity_produced", val=annual_production, shape=30, units="(kW*h)/yr"
+        name="annual_electricity_produced", val=np.full(30, annual_production), units="(kW*h)/yr"
     )
 
     prob.model.add_subsystem("IVC1", annual_prod_comp, promotes=["*"])
