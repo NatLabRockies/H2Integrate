@@ -85,6 +85,8 @@ def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_
 
 
 class ChangeNameAttributeClass:
+    """heterogeneous commodity hybrid system"""
+
     def __init__(
         self,
         converter_upstreams,
@@ -95,6 +97,104 @@ class ChangeNameAttributeClass:
         conversion_recipes,
         non_converter_keys,
     ):
+        """_summary_
+
+        Attributes:
+            converter_upstreams (dict): _description_
+            converters (set[tuple]): _description_
+            grouped_techs (dict): _description_
+            simple_graph (nx.DiGraph): _description_
+            converter_tech_names (set[str]): _description_
+            conversion_recipes (dict): _description_
+            non_converter_keys (set[tuple]): _description_
+
+        Examples:
+            Below highlights what these attributes look like if we have the following system:
+
+            >>> technology_interconnections = [
+            ...     ["wind", "elec_combiner", "electricity", "cable"],
+            ...     ["solar", "elec_combiner", "electricity", "cable"],
+            ...     ["elec_combiner", "electrolyzer", "electricity", "cable"],
+            ...     ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ...     ["electricity_feedstock", "haber_bosch", "electricity", "cable"],
+            ...     ["haber_bosch", "nh3_storage", "ammonia", "pipe"],
+            ...     ["haber_bosch", "nh3_combiner", "ammonia", "pipe"],
+            ...     ["nh3_storage", "nh3_combiner", "ammonia", "pipe"],
+            ...     ["nh3_combiner", "nh3_load_demand", "ammonia", "pipe"],
+            ... ]
+
+            >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+            {
+                ("electricity", "electrolyzer", "hydrogen"),
+                ("electricity", "haber_bosch", "ammonia"),
+                ("hydrogen", "haber_bosch", "ammonia")
+            }
+
+            >>> converter_upstreams  # keys formatted as ("input_commodity", "tech")
+            {
+                ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+                ("electricity", "haber_bosch"): ["electricity_feedstock"],
+                ("hydrogen", "haber_bosch"): ["electrolyzer"],
+                ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+            }
+
+            >>> converter_tech_names  # set of strings
+            {"electrolyzer", "haber_bosch"}
+
+            >>> non_converter_keys  # formatted as (output_commodity, tech, output_commodity)
+            {
+                ("ammonia", "nh3_combiner", "ammonia"),
+                ("ammonia", "nh3_storage", "ammonia"),
+                ("electricity", "elec_combiner", "electricity"),
+                ("electricity", "wind", "electricity"),
+                ("electricity", "solar", "electricity"),
+                ("electricity", "electricity_feedstock", "electricity"),
+            }
+            >>> grouped_techs
+            {
+                "electricity-0": ["solar", "wind", "elec_combiner"],
+                "electricity-1": ["electricity_feedstock"],
+                "hydrogen-2": ["electrolyzer"],
+                "ammonia-3": ["nh3_combiner", "nh3_storage", "haber_bosch"]
+            }
+            >>> list(conversion_recipes.keys(())
+            [
+                ('ammonia', 'electricity', 'ammonia-3'),
+                ('ammonia', 'hydrogen', 'ammonia-3'),
+                ('hydrogen', 'electricity', 'hydrogen-2')
+            ]
+            >>> conversion_recipes[("ammonia", "electricity", "ammonia-3")]
+            [
+                [
+                    ('ammonia', 'nh3_combiner', 'ammonia'),
+                    ('ammonia', 'nh3_storage', 'ammonia'),
+                    ('electricity', 'haber_bosch', 'ammonia')
+                ]
+            ]
+            >>> conversion_recipes[("ammonia", "hydrogen", "ammonia-3")]
+            [
+                [
+                    ('ammonia', 'nh3_combiner', 'ammonia'),
+                    ('ammonia', 'nh3_storage', 'ammonia'),
+                    ('hydrogen', 'haber_bosch', 'ammonia')
+                ]
+            ]
+            >>> conversion_recipes[("hydrogen", "electricity", "hydrogen-2")]
+            [
+                [
+                    ('ammonia', 'nh3_combiner', 'ammonia'),
+                    ('ammonia', 'nh3_storage', 'ammonia'),
+                    ('hydrogen', 'haber_bosch', 'ammonia')
+                ],
+                [
+                    ('electricity', 'electrolyzer', 'hydrogen'),
+                    ('hydrogen', 'h2_combiner', 'hydrogen'),
+                    ('hydrogen', 'h2_storage', 'hydrogen')
+                ]
+            ]
+
+
+        """
         self.converter_upstreams = converter_upstreams
         self.converters = converters
         self.grouped_techs = grouped_techs
