@@ -245,7 +245,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
         ("electricity", "electrolyzer", "hydrogen"),
     }
 
-    converters = prob.model.slc.converters
+    converters = prob.model.slc.rename_me_config.converters
 
     with subtests.test("converters"):
         assert converters == expected_converters
@@ -259,7 +259,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
         # ("ammonia", "nh3_load_demand"): {"haber_bosch", "nh3_storage"},
     }
 
-    converter_upstreams = prob.model.slc.converter_upstreams
+    converter_upstreams = prob.model.slc.rename_me_config.converter_upstreams
     # with subtests.test("converter upstreams"):
     for k, v in expected_converter_upstreams.items():
         with subtests.test(f"converter upstreams {k}"):
@@ -284,7 +284,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
     #     assert set(edges) == set(expected_edges)
 
     # Check grouped_techs
-    grouped_techs = prob.model.slc.grouped_techs
+    grouped_techs = prob.model.slc.rename_me_config.grouped_techs
     expected_groups = [
         {"solar", "battery", "wind", "combiner", "elec_combiner"},
         {"electrolyzer", "h2_storage", "h2_combiner"},
@@ -300,7 +300,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
         assert len(failed_groups) == 0
 
     # Check conversion_recipes
-    conversion_recipes_list = prob.model.slc.conversion_recipes
+    conversion_recipes_list = prob.model.slc.rename_me_config.conversion_recipes
     conversion_recipes = {}
     for k, v in conversion_recipes_list.items():
         v_as_set = [set(vi) for vi in v]
@@ -345,7 +345,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
         assert len(conversion_recipes) == 4
 
     # Check non_converter_conversion_factor_keys
-    non_converter_keys = prob.model.slc.non_converter_conversion_factor_keys
+    non_converter_keys = prob.model.slc.rename_me_config.non_converter_conversion_factor_keys
     non_converter_techs = [k[1] for k in non_converter_keys]
     expected_non_converter_techs = [
         "nh3_storage",
@@ -371,7 +371,7 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
     with subtests.test("nh3_storage key"):
         assert ("ammonia", "nh3_storage", "ammonia") in non_converter_keys
 
-    converter_tech_names = prob.model.slc.converter_tech_names
+    converter_tech_names = prob.model.slc.rename_me_config.converter_tech_names
     with subtests.test("Converter tech names"):
         assert converter_tech_names == {"haber_bosch", "electrolyzer"}
 
@@ -514,14 +514,14 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
         ("nitrogen", "haber_bosch", "ammonia"): 2.5 / 40,
         ("electricity", "haber_bosch", "ammonia"): 13.0 / 40,
     }
-    non_converter_keys = prob.model.slc.non_converter_conversion_factor_keys
+    non_converter_keys = prob.model.slc.rename_me_config.non_converter_conversion_factor_keys
     non_converter_factor = 1.0
     non_converter_conversion_factors = dict(
         zip(non_converter_keys, [non_converter_factor] * len(non_converter_keys))
     )
     all_conversion_factors = conversion_factors | non_converter_conversion_factors
 
-    conversion_recipes = prob.model.slc.conversion_recipes
+    conversion_recipes = prob.model.slc.rename_me_config.conversion_recipes
 
     # Nitrogen/Ammonia
     n2_recipe_name = [k for k in conversion_recipes if k[0] == "ammonia" and k[1] == "nitrogen"][0]

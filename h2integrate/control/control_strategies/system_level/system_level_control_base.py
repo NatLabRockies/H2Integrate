@@ -84,6 +84,26 @@ def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_
     return 0.0, n_timesteps
 
 
+class ChangeNameAttributeClass:
+    def __init__(
+        self,
+        converter_upstreams,
+        converters,
+        grouped_techs,
+        simple_graph,
+        converter_tech_names,
+        conversion_recipes,
+        non_converter_keys,
+    ):
+        self.converter_upstreams = converter_upstreams
+        self.converters = converters
+        self.grouped_techs = grouped_techs
+        self.simple_graph = simple_graph
+        self.converter_tech_names = converter_tech_names
+        self.conversion_recipes = conversion_recipes
+        self.non_converter_conversion_factor_keys = non_converter_keys
+
+
 class SystemLevelControlBase(om.ExplicitComponent):
     """Base class for system-level controllers.
 
@@ -917,14 +937,26 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if t not in converter_tech_names
         }
 
-        self.converter_upstreams = converter_upstreams
-        self.converters = converters
-        self.grouped_techs = grouped_techs
-        self.simple_graph = simple_graph
-        self.converter_tech_names = converter_tech_names
-        conversion_recipes = self._make_conversion_factor_recipes()
-        self.conversion_recipes = conversion_recipes
-        self.non_converter_conversion_factor_keys = non_converter_keys
+        # self.converter_upstreams = converter_upstreams
+        # self.converters = converters
+        # self.grouped_techs = grouped_techs
+        # self.simple_graph = simple_graph
+        # self.converter_tech_names = converter_tech_names
+        conversion_recipes = self._make_conversion_factor_recipes(
+            converters, simple_graph, grouped_techs
+        )
+        # self.conversion_recipes = conversion_recipes
+        # self.non_converter_conversion_factor_keys = non_converter_keys
+
+        self.rename_me_config = ChangeNameAttributeClass(
+            converter_upstreams,
+            converters,
+            grouped_techs,
+            simple_graph,
+            converter_tech_names,
+            conversion_recipes,
+            non_converter_keys,
+        )
 
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
@@ -1124,7 +1156,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         conversion_factor = total_input / np.abs(total_output)
         return conversion_factor
 
-    def _make_conversion_factor_recipes(self):
+    def _make_conversion_factor_recipes(self, converters, simple_graph, grouped_techs):
         """Make recipes to for compounding conversion factor calculations.
 
         Returns:
@@ -1139,23 +1171,23 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if not self.multi_commodity_system:
             return {}
 
-        converter_tech_names = {v[1] for v in list(self.converters)}
+        converter_tech_names = {v[1] for v in list(converters)}
 
         # 6. Get the compounding conversion factors
-        in_degs = dict(self.simple_graph.in_degree)
+        in_degs = dict(simple_graph.in_degree)
         starting_techs = {k for k, v in in_degs.items() if v == 0}
 
         compounding_conversion_factor_recipes = {}
 
         for starting_tech in list(starting_techs):
-            paths = list(nx.all_simple_paths(self.simple_graph, starting_tech, self.demand_tech))
+            paths = list(nx.all_simple_paths(simple_graph, starting_tech, self.demand_tech))
 
             if len(paths) > 1:
                 warnings.warn("There should only be one path", UserWarning, stacklevel=3)
             path = paths[0]
             reverse_path = path[::-1]
             commodity_conversions = [
-                self.simple_graph.edges[p0, p1].get("commodity", None)
+                simple_graph.edges[p0, p1].get("commodity", None)
                 for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
             ]
             commodity_nodes = list(itertools.pairwise(commodity_conversions))
@@ -1174,8 +1206,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for edge in commodity_edges:
                 # in_cmod is demand of next tech
                 out_cmod, in_cmod, tech = edge
-                if tech in self.grouped_techs:
-                    techs_in_group = list(self.grouped_techs[tech])
+                if tech in grouped_techs:
+                    techs_in_group = list(grouped_techs[tech])
 
                     recipe = []
                     for t in techs_in_group:
@@ -1212,13 +1244,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         _, input_cmod, tech_group = recipe_name
         techs_to_demand = [
             s
-            for s in list(self.simple_graph.predecessors(tech_group))
-            if self.simple_graph.edges[s, tech_group].get("commodity", "") == input_cmod
+            for s in list(self.rename_me_config.simple_graph.predecessors(tech_group))
+            if self.rename_me_config.simple_graph.edges[s, tech_group].get("commodity", "")
+            == input_cmod
         ]
         if len(techs_to_demand) != 1:
             raise ValueError("Unexpected situation!")
-        if techs_to_demand[0] in self.grouped_techs:
-            techs_in_group = list(self.grouped_techs[techs_to_demand[0]])
+        if techs_to_demand[0] in self.rename_me_config.grouped_techs:
+            techs_in_group = list(self.rename_me_config.grouped_techs[techs_to_demand[0]])
         else:
             techs_in_group = techs_to_demand[0]
         return techs_in_group
