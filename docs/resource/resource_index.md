@@ -5,6 +5,18 @@
 - [Solar Resource Data](solar_resource:models)
 - [Tidal Resource Data](tidal_resource:models)
 
+## Common Resource Datasets and Considerations
+
+Both wind and solar resource data can be obtained from resource models that use the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api) or resource models that use the resource models available in the [NLR Developer Network](https://developer.nlr.gov).
+
+Resource models that use the [NLR Developer Network](https://developer.nlr.gov) require an API key (which can be obtained for free from [here](https://developer.nlr.gov/signup/)). Resource models that use the OpenMeteo Archive API do not require an API key.
+
+Another key difference is that the NLR resource datasets are constrained to specific geographic regions, meaning you have to choose the resource model that corresponds to your site location. OpenMeteo resource data is available globally, for all onshore sites.
+
+```{note}
+OpenMeteo data can be downloaded directly from the web instead of using the models in H2I. If OpenMeteo resource data is downloaded directly from the web and in the local timezone of the site, the data is downloaded with a UTC offset in *daylight time* whereas data downloaded with the H2I resource models will use a UTC offset in *standard time*. Resource data downloaded from the NLR Developer developer network in local time also use a UTC offset in *standard time*.
+```
+
 
 ## Setting resource data for a technology
 
