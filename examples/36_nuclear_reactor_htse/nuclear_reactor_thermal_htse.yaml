@@ -1,0 +1,6 @@
+name: H2Integrate_config
+system_summary: This is an example plant with a nuclear plant capable of dispatching thermal and electrical energy to an HTSE
+  system
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

@@ -135,7 +135,7 @@ finance_parameters:
       model_inputs: {discount_rate: 0.08}
     group_b:
       finance_model: "NPVFinancial"
-      model_inputs: {discount_rate: 0.05}
+      model_inputs: {real_discount_rate: 0.05}
   finance_subgroups:
     subgroup_a:
       commodity: "hydrogen"
