@@ -23,7 +23,7 @@ technologies:
         demand_profile: 0.0
       control_parameters:
         system_commodity_interface_limit: 1.0e9
-        supervisory_signal: !include demand_profiles/supervisory_signal.yaml
+        supervisory_signal: !include demand_profiles/supervisory_signal.yaml  # found in library/demand_profiles
         peak_window:
           start: 12:00:00
           end: 20:00:00

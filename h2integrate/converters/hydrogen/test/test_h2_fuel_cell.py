@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -132,7 +134,7 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
 
     with subtests.test("refurbishment_schedule_non_int_multiple"):
         n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
-        tech_config_copy = tech_config
+        tech_config_copy = copy.deepcopy(tech_config)
         tech_config_copy["model_inputs"]["performance_parameters"]["uptime_hours_until_eol"] = (
             8760 * 1.5
         )

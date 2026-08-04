@@ -287,10 +287,6 @@ auto-generated API page.
 (control-models)=
 ## Control models
 
-- `converter_controllers`: converter controllers
-  - controllers:
-    + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PeakLoadManagementHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
-
 - `pyomo_converter_dispatch`: Pyomo dispatch rules for converters
   - dispatch rules:
     + {py:class}`~h2integrate.control.control_rules.converters.generic_converter.PyomoDispatchGenericConverter`
@@ -300,6 +296,10 @@ auto-generated API page.
   - dispatch rules:
     + {py:class}`~h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass.PyomoRuleStorageBaseclass` - Base class defining Pyomo rules for generic commodity storage components.
     + {py:class}`~h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost.PyomoRuleStorageMinOperatingCosts` - Class defining Pyomo rules for the optimized dispatch for load following for generic commodity storage components.
+
+- `converter_controllers`: converter controllers
+  - controllers:
+    + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PeakLoadManagementHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
 
 - `storage_controllers`: storage controllers
   - controllers:

@@ -38,8 +38,8 @@ technologies:
       control_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        demand_profile: !include demand_profiles/demand_profile.yaml
-        demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml
+        demand_profile: !include demand_profiles/demand_profile.yaml  # found in library/demand_profiles
+        demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml  # found in library/demand_profiles
         demand_profile_peak_cutoff: 400.0
         demand_profile_upstream_peak_cutoff: 1000.0
   electrical_load_demand:
@@ -49,7 +49,7 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        demand_profile: !include demand_profiles/demand_profile.yaml
+        demand_profile: !include demand_profiles/demand_profile.yaml  # found in library/demand_profiles
   grid_buy:
     performance_model:
       model: GridPerformanceModel

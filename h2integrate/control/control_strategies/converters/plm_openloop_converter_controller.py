@@ -109,8 +109,6 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
             desc="demand_profile_upstream_peak_cutoff",
         )
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
     def compute(self, inputs, outputs):
         """Compute converter command profile using configured peak-cutoff heuristics.
 
@@ -144,6 +142,15 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"][0]
         self.command_value = np.zeros(self.n_timesteps)
+
+        if demand_profile_upstream is None:
+            demand_profile_upstream = np.zeros_like(demand_profile)
+        else:
+            demand_profile_upstream = np.asarray(demand_profile_upstream)
+            if demand_profile_upstream.ndim == 0:
+                demand_profile_upstream = np.full_like(
+                    demand_profile, float(demand_profile_upstream)
+                )
 
         for idx, val in enumerate(demand_profile):
             val_upstream = demand_profile_upstream[idx]
