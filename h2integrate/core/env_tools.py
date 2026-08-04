@@ -57,7 +57,7 @@ def set_env_var(*, overwrite: bool = False, **kwargs: str):
 
 def load_env_vars_from_file(file_path: Path) -> dict:
     """Load any dictionary-like key, value pairs from a configuration file (e.g. .env or .cdsapirc)
-    that uses either a ``key=value` or `key:value` format for storing data.
+    that uses either a ``key=value`` or ``key:value`` format for storing data.
 
     Args:
         file_path (Path): The full file path and name containing configuration details to be
