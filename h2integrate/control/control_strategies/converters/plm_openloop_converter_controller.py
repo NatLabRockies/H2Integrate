@@ -14,10 +14,10 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
     StorageOpenLoopControlBaseConfig
 ):
     """
-    Configuration class for the PeakLoadManagementHeuristicOpenLoopStorageController.
+    Configuration class for the PeakLoadManagementHeuristicOpenLoopConverterController.
 
-    Defines peak-selection and dispatch-priority rules used to pre-compute
-    an open-loop discharge and recharge schedule.
+    Defines the peak-cutoff heuristics used to compute an open-loop converter
+    command that shaves demand peaks from one or two demand profiles.
 
     Attributes:
         demand_profile_peak_cutoff (int | float): Primary set-point threshold used to

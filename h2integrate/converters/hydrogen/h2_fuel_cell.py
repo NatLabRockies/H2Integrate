@@ -19,7 +19,7 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
         fuel_cell_efficiency_hhv (float): The higher heating value efficiency of the
             fuel cell (0 <= efficiency <= 1).
-        uptime_hours_until_eol (int): Number of "on" hours until the electrolyzer reaches
+        uptime_hours_until_eol (int): Number of "on" hours until the fuel cell reaches
             end-of-life (EOL).
     """
 
@@ -111,7 +111,7 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             inputs: OpenMDAO inputs object containing hydrogen_in, fuel cell
                 HHV efficiency, electricity_command_value, and system_capacity.
             outputs: OpenMDAO outputs object for electricity_out,
-                hydrogen_consumed.
+                hydrogen_consumed, and replacement_schedule.
         """
 
         # calculate max input and output
@@ -179,7 +179,10 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             if 0 <= year < self.plant_life:
                 refurb_schedule[year] += 1
 
-        # The replacement_schedule is the fraction of the total capacity that is replaced per year
+        # The replacement_schedule is the number of refurbishments that occur in each year (0, 1, or
+        # more if several thresholds are crossed within a single year). The portion of capex of the
+        # total capacity that is replaced per refurbishment is given by the users in the tech_config
+        # as replacement_cost_percent.
         # The replacement_schedule may be used in the finance model if the replacement_cost_percent
         # is specified in the tech_config under
         # ['model_inputs']['finance_parameters']['capital_items']['replacement_cost_percent']
@@ -209,8 +212,8 @@ class H2FuelCellCostConfig(CostModelBaseConfig):
         capex_per_kw (float): Capital cost per unit of capacity in USD/kW.
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit of capacity per year
             in USD/(kW*year).
-variable_opex_per_kwh (float): Variable operating expenses per unit of production per year in
-            USD/(kWh).
+        variable_opex_per_kwh (float): Variable operating expenses per unit of electricity
+            produced in USD/(kW*h).
     """
 
     system_capacity_kw: float = field(validator=gte_zero)
@@ -277,11 +280,12 @@ class H2FuelCellCostModel(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
-        Compute capital and fixed operating costs for the fuel cell system.
+        Compute capital, fixed operating, and variable operating costs for the fuel cell system.
 
         Args:
-            inputs: OpenMDAO inputs object containing system_capacity.
-            outputs: OpenMDAO outputs object for capital_cost and fixed_operating_cost_per_year.
+            inputs: OpenMDAO inputs object containing system_capacity, unit_capex,
+                fixed_opex_per_year, unit_varopex, and annual_electricity_produced.
+            outputs: OpenMDAO outputs object for CapEx, OpEx, and VarOpEx.
         """
 
         system_capacity_kw = inputs["system_capacity"]
