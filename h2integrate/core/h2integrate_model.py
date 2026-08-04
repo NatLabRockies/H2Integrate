@@ -573,13 +573,7 @@ class H2IntegrateModel:
             if source not in upstream_controllable_techs or commodities is None:
                 continue
 
-            if isinstance(commodities, str):
-                commodity_list = [commodities]
-            else:
-                commodity_list = list(commodities)
-
-            for commodity in commodity_list:
-                sources_to_commodities.add((source, commodity))
+            sources_to_commodities.update((source, commodity) for commodity in commodities)
 
         # re-make technology interconnections using only technologies
         # upstream of the demand component
@@ -2280,12 +2274,7 @@ class H2IntegrateModel:
             if commodities is None:
                 continue  # length-3 connections have no commodity to check
 
-            if isinstance(commodities, str):
-                commodity_list = [commodities]
-            else:
-                commodity_list = list(commodities)
-
-            for commodity in commodity_list:
+            for commodity in commodities:
                 if not _has_commodity_param(tech_io[source], commodity, "out"):
                     invalid_outputs.add((source, commodity))
                 if not _has_commodity_param(tech_io[dest], commodity, "in"):
@@ -2323,10 +2312,7 @@ class H2IntegrateModel:
             if source != tech_name or commodities is None:
                 continue
 
-            if isinstance(commodities, str):
-                tech_commodities.append(commodities)
-            else:
-                tech_commodities.extend(list(commodities))
+            tech_commodities.extend(commodities)
 
         return list(dict.fromkeys(tech_commodities))
 
