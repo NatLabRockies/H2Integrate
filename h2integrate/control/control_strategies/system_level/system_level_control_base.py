@@ -1098,6 +1098,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return list(ancestors_with_commodity & input_techs)
 
     def get_successors_for_tech_with_input_cmod(self, tech, input_commodity):
+        """Find technologies upstream of ``tech`` that produce ``input_commodity``
+        for ``tech``.
+
+        Args:
+            tech (str): Technology whose upstream suppliers are sought.
+            commodity (str): Commodity of interest that is an input commodity to ``tech``
+                (e.g. ``"electricity"``).
+
+        Returns:
+            list[str]: Controller-managed technologies upstream of ``tech``
+                that produce ``commodity``.
+        """
         in_flows = dict(self.technology_graph.in_degree)
         if in_flows[tech] < 1:
             # Tech does not have any input commodiites
@@ -1134,27 +1146,31 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Returns:
             2-element tuple containing:
 
-            - **converters** (tuple[str, str, str]): Set of tuples formatted as
-                ``(input_commodity, tech_name, output_commodity)`` tuples.
-            - **converter_upstreams** (dict[tuple[str,str], list[str]]): Keys are set of
+            - **converters** *(set[tuple])*: Set of tuples formatted as
+                ``(input_commodity, tech_name, output_commodity)`` tuples. An
+                example of this variable is shown below:
+
+                >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+                {
+                    # (input_commodity, tech_name, output_commodity)
+                    ("electricity", "electrolyzer", "hydrogen"),
+                    ("electricity", "haber_bosch", "ammonia"),
+                    ("hydrogen", "haber_bosch", "ammonia")
+                }
+
+            - **converter_upstreams** *(dict[tuple[str,str], list[str]])*: Keys are set of
                 ``(input_commodity, tech_name)`` and the values are a set of
-                upstream technologies that output the `input_commodity` to `tech_name`.
+                upstream technologies that output the `input_commodity` to `tech_name`. An
+                example of this variable is shown below:
 
-        Examples:
-            >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
-            {
-                ("electricity", "electrolyzer", "hydrogen"),
-                ("electricity", "haber_bosch", "ammonia"),
-                ("hydrogen", "haber_bosch", "ammonia")
-            }
-
-            >>> converter_upstreams  # keys formatted as (input_commodity, tech)
-            {
-                ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
-                ("electricity", "haber_bosch"): ["electricity_feedstock"],
-                ("hydrogen", "haber_bosch"): ["electrolyzer"],
-                ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
-            }
+                >>> converter_upstreams  # keys formatted as (input_commodity, tech)
+                {
+                    #  (input_commodity, tech) : [techs that provide input_commodity to tech]
+                    ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+                    ("electricity", "haber_bosch"): ["electricity_feedstock"],
+                    ("hydrogen", "haber_bosch"): ["electrolyzer"],
+                    ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+                }
 
         """
         in_flows = dict(self.technology_graph.in_degree)
