@@ -963,12 +963,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
         # alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
 
+        # dictionary with keys as a group name mapping to a list of technologies in that groups
         grouped_techs = {}
         groups_to_commodities = {}
+        # Not doing this as 1-liners just in case any ordering could change (unlikely)
+        # for i, (key, value) in enumerate(converter_upstreams.items()):
+        #     grouped_techs[f"{key[0]}-{i}"] = value
+        #     groups_to_commodities[f"{key[0]}-{i}"] = key[0]
 
-        for i, k in enumerate(converter_upstreams.items()):
-            grouped_techs[f"{k[0][0]}-{i}"] = k[1]
-            groups_to_commodities[f"{k[0][0]}-{i}"] = k[0][0]
+        for i, ((commodity, _), upstream_commodity_techs) in enumerate(converter_upstreams.items()):
+            group_name = f"{commodity}-{i}"
+            grouped_techs[group_name] = upstream_commodity_techs
+            groups_to_commodities[group_name] = commodity
 
         reversed_grouped_techs = {}
         reversed_commodity_groups = {}
@@ -994,37 +1000,30 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         simple_graph = nx.DiGraph()
         for e in list(self.technology_graph.edges(data="commodity")):
-            s0, d0, c = e
+            s0, d0, c = e  # source_tech, dest_tech, commodity
+            if c is None or len(c) == 0:
+                # skip if no commodity is passed
+                continue
 
-            s = reversed_grouped_techs.get(s0, [s0])
-            d = reversed_grouped_techs.get(d0, [d0])
+            for ci in c:
+                if (s0, ci) not in reversed_commodity_groups:
+                    raise ValueError(f"The technology/commodity pair {s0}/{ci} is not in a group")
+                destination_groups = reversed_grouped_techs.get(
+                    d0, [d0]
+                )  # list of groups with tech d0
+                source_group = reversed_commodity_groups[(s0, ci)]
+                for dest_group in destination_groups:
+                    if dest_group == source_group:
+                        # skip if in same group
+                        continue
+                    if not simple_graph.has_edge(source_group, dest_group):
+                        # does not have edge
+                        simple_graph.add_edge(source_group, dest_group, commodity=ci)
 
-            if len(c) == 1:
-                for si in s:
-                    for di in d:
-                        if si != di:
-                            simple_graph.add_edge(si, di, commodity=c[0])
-            else:
-                if len(d) > 1:
-                    raise ValueError("have not accounted for this design yet")
-                for ci in c:
-                    if (s0, ci) not in reversed_commodity_groups:
-                        raise ValueError(
-                            f"The technology/commodity pair {s0}/{ci} is not in a group"
-                        )
-                    group_name = reversed_commodity_groups[
-                        (s0, ci)
-                    ]  # get_group_for_tech_commodity(s0, ci)
-                    # if len(group_name) != 1:
-                    #     raise ValueError("have not accounted for this design yet")
-                    if group_name[0] != d[0]:
-                        if not simple_graph.has_edge(group_name[0], d[0]):
-                            # edge doesnt exist
-                            simple_graph.add_edge(group_name[0], d[0], commodity=ci)
-                        else:
-                            if simple_graph.edges[group_name[0], d[0]].get("commodity") != ci:
-                                simple_graph.add_edge(group_name[0], d[0], commodity=ci)
-                                raise ValueError("this shouldn't happen")
+                    # else:
+                    #     []
+                    #     # does have edge, check commodity
+                    #     # if simple_graph.edges[source_group, dest_group].get("commodity") != ci:
 
         non_converter_keys = set()
         converter_tech_names = {c[1] for c in converters}
@@ -1293,6 +1292,49 @@ class SystemLevelControlBase(om.ExplicitComponent):
         conversion_factor = total_input / np.abs(total_output)
         return conversion_factor
 
+    def _make_recipe_from_grouped_path(
+        self, simple_graph, grouped_techs, converter_tech_names, path
+    ):
+        compounding_conversion_factor_recipes = {}
+
+        reverse_path = path[::-1]
+        commodity_conversions = [
+            simple_graph.edges[p0, p1].get("commodity", None)
+            for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
+        ]
+        commodity_nodes = list(itertools.pairwise(commodity_conversions))
+        techs = reverse_path[1:]
+
+        commodity_graph = nx.DiGraph()  # nodes are commodities
+        for i, commod_node in enumerate(commodity_nodes):
+            # ammonia, hydrogen
+            down_cmod, up_cmod = commod_node
+            commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
+
+        commodity_edges = commodity_graph.edges(data="tech")
+
+        path_recipe = []
+
+        for edge in commodity_edges:
+            # in_cmod is demand of next tech
+            out_cmod, in_cmod, tech = edge
+            if tech in grouped_techs:
+                techs_in_group = list(grouped_techs[tech])
+
+                recipe = []
+                for t in techs_in_group:
+                    if t in converter_tech_names:
+                        recipe.append((in_cmod, t, out_cmod))
+                    else:
+                        recipe.append((out_cmod, t, out_cmod))
+                # TODO: add check if any other non-converter techs have a non-1 conversion factor
+            else:
+                recipe = [(in_cmod, tech, out_cmod)]
+
+            path_recipe.append(recipe)
+            compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe.copy()
+        return compounding_conversion_factor_recipes
+
     def _make_conversion_factor_recipes(self, converters, simple_graph, grouped_techs):
         """Make recipes to for compounding conversion factor calculations.
 
@@ -1323,48 +1365,55 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         for starting_tech in list(starting_techs):
             paths = list(nx.all_simple_paths(simple_graph, starting_tech, self.demand_tech))
-
-            if len(paths) > 1:
-                warnings.warn("There should only be one path", UserWarning, stacklevel=3)
-            path = paths[0]
-            reverse_path = path[::-1]
-            commodity_conversions = [
-                simple_graph.edges[p0, p1].get("commodity", None)
-                for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
-            ]
-            commodity_nodes = list(itertools.pairwise(commodity_conversions))
-            techs = reverse_path[1:]
-
-            commodity_graph = nx.DiGraph()  # nodes are commodities
-            for i, commod_node in enumerate(commodity_nodes):
-                # ammonia, hydrogen
-                down_cmod, up_cmod = commod_node
-                commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
-
-            commodity_edges = commodity_graph.edges(data="tech")
-
-            path_recipe = []
-
-            for edge in commodity_edges:
-                # in_cmod is demand of next tech
-                out_cmod, in_cmod, tech = edge
-                if tech in grouped_techs:
-                    techs_in_group = list(grouped_techs[tech])
-
-                    recipe = []
-                    for t in techs_in_group:
-                        if t in converter_tech_names:
-                            recipe.append((in_cmod, t, out_cmod))
-                        else:
-                            recipe.append((out_cmod, t, out_cmod))
-                    # TODO: add check if any other non-converter techs have a non-1 conversion factor
-                else:
-                    recipe = [(in_cmod, tech, out_cmod)]
-
-                path_recipe.append(recipe)
-                compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
-                    path_recipe.copy()
+            for path in paths:
+                res = self._make_recipe_from_grouped_path(
+                    simple_graph, grouped_techs, converter_tech_names, path
                 )
+                if set(res) & set(compounding_conversion_factor_recipes):
+                    warnings.warn("Duplicate recipes", UserWarning, stacklevel=3)
+                compounding_conversion_factor_recipes |= res
+
+            # if len(paths) > 1:
+            #     warnings.warn("There should only be one path", UserWarning, stacklevel=3)
+            # path = paths[0]
+            # reverse_path = path[::-1]
+            # commodity_conversions = [
+            #     simple_graph.edges[p0, p1].get("commodity", None)
+            #     for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
+            # ]
+            # commodity_nodes = list(itertools.pairwise(commodity_conversions))
+            # techs = reverse_path[1:]
+
+            # commodity_graph = nx.DiGraph()  # nodes are commodities
+            # for i, commod_node in enumerate(commodity_nodes):
+            #     # ammonia, hydrogen
+            #     down_cmod, up_cmod = commod_node
+            #     commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
+
+            # commodity_edges = commodity_graph.edges(data="tech")
+
+            # path_recipe = []
+
+            # for edge in commodity_edges:
+            #     # in_cmod is demand of next tech
+            #     out_cmod, in_cmod, tech = edge
+            #     if tech in grouped_techs:
+            #         techs_in_group = list(grouped_techs[tech])
+
+            #         recipe = []
+            #         for t in techs_in_group:
+            #             if t in converter_tech_names:
+            #                 recipe.append((in_cmod, t, out_cmod))
+            #             else:
+            #                 recipe.append((out_cmod, t, out_cmod))
+            #         # TODO: add check if any non-converter techs have a non-1 conversion factor
+            #     else:
+            #         recipe = [(in_cmod, tech, out_cmod)]
+
+            #     path_recipe.append(recipe)
+            #     compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
+            #         path_recipe.copy()
+            #     )
 
         return compounding_conversion_factor_recipes
 
