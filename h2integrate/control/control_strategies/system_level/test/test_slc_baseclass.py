@@ -168,10 +168,63 @@ def test_find_converter_techs_fake_system(subtests):
 
     slc._post_setup_multi_commodity()
 
-    # slc.rename_me_config.grouped_techs
-    # slc.rename_me_config.conversion_recipes
-    with subtests.test("Add in subbtests for conversion recipes"):
-        assert True
+    with subtests.test("12 distinct conversions"):
+        assert len(slc.rename_me_config.converters) == len(converters)
+        assert len(converters) == 12
+
+    with subtests.test("9 groups"):
+        assert len(slc.rename_me_config.grouped_techs) == 9
+
+    with subtests.test("17 conversion recipes"):
+        assert len(slc.rename_me_config.conversion_recipes) == 17
+
+    conversion_to_group_name = {}
+    for input_cmod, tech, output_cmod in list(slc.rename_me_config.converters):
+        group_name = [
+            k[2][1]
+            for k in slc.rename_me_config.conversion_recipes
+            if k[0] == output_cmod and k[1] == input_cmod
+        ]
+        conversion_to_group_name[(input_cmod, tech, output_cmod)] = list(set(group_name))[0]
+
+    grouped_tech_in_degrees = dict(slc.rename_me_config.simple_graph.in_degree())
+    grouped_tech_out_degrees = dict(slc.rename_me_config.simple_graph.out_degree())
+    electrolyzer_in_degs = [
+        grouped_tech_in_degrees[conversion_to_group_name[con]] for con in electrolyzer_conversions
+    ]
+    with subtests.test("electrolyzer in degrees"):
+        assert all(k == 2 for k in electrolyzer_in_degs)
+    hb_in_degs = [grouped_tech_in_degrees[conversion_to_group_name[con]] for con in hb_conversions]
+    with subtests.test("haber bosch in degrees"):
+        assert all(k == 5 for k in hb_in_degs)
+    multi_output_grouped_techs = [k for k, v in grouped_tech_out_degrees.items() if v > 1]
+    electrolyzer_groups = {conversion_to_group_name[con] for con in electrolyzer_conversions}
+    with subtests.test("3 electrolyzer groups"):
+        assert len(electrolyzer_groups) == 3
+    with subtests.test("out degrees are <1 except for electrolyzer upstream"):
+        for source_group in multi_output_grouped_techs:
+            assert all(
+                slc.rename_me_config.simple_graph.has_edge(source_group, dest_group)
+                for dest_group in electrolyzer_groups
+            )
+            assert grouped_tech_out_degrees[source_group] == 3
+
+    recipe_names_long = [
+        k
+        for k in slc.rename_me_config.conversion_recipes
+        if k[0] == "fresh_water" and k[1] == "salt_water"
+    ]
+    r0_partial = [("ammonia", "nh3_storage", "ammonia"), ("ammonia", "nh3_combiner", "ammonia")]
+    r2 = [("salt_water", "desalination", "fresh_water")]
+    with subtests.test("desalination recipes"):
+        for recipe_name in recipe_names_long:
+            recipe = slc.rename_me_config.conversion_recipes[recipe_name]
+
+            cmod_diff = list(set(recipe[0]) - set(r0_partial))
+            cmod = cmod_diff[0][0]
+            assert cmod in pem_output_cmod
+            assert ("fresh_water", "electrolyzer", cmod) in recipe[1]
+            assert recipe[2] == r2
 
 
 @pytest.mark.unit
@@ -302,19 +355,22 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
             assert input_tech_upstreams == v
 
     # Check simple_graph
-    # simple_graph = prob.model.slc.simple_graph
-    # edges = list(simple_graph.edges(data="commodity"))
-    # expected_edges = [
-    #     ("electricity-0", "hydrogen-2", "electricity"),
-    #     ("hydrogen-2", "ammonia-5", "hydrogen"),
-    #     ("ammonia-5", "nh3_load_demand", "ammonia"),
-    #     ("nitrogen-1", "ammonia-5", "nitrogen"),
-    #     ("electricity-3", "ammonia-5", "electricity"),
-    # ]
+    simple_graph = prob.model.slc.rename_me_config.simple_graph
+    edges = list(simple_graph.edges(data="commodity"))
+    with subtests.test("number of edges"):
+        assert len(edges) == 5
+    non_numbered_edges = [(k[0].split("-")[0], k[1].split("-")[0], k[2]) for k in edges]
+    expected_edges = [
+        ("electricity", "hydrogen", "electricity"),
+        ("hydrogen", "ammonia", "hydrogen"),
+        ("ammonia", "nh3_load_demand", "ammonia"),
+        ("nitrogen", "ammonia", "nitrogen"),
+        ("electricity", "ammonia", "electricity"),
+    ]
 
-    # with subtests.test("simple_graph edges"):
-    #     # assert not bool(set(edges) ^ set(expected_edges))
-    #     assert set(edges) == set(expected_edges)
+    with subtests.test("simple_graph edges"):
+        # assert not bool(set(edges) ^ set(expected_edges))
+        assert set(non_numbered_edges) == set(expected_edges)
 
     # Check grouped_techs
     grouped_techs = prob.model.slc.rename_me_config.grouped_techs

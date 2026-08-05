@@ -1335,7 +1335,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
             compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe.copy()
         return compounding_conversion_factor_recipes
 
-    def _make_conversion_factor_recipes(self, converters, simple_graph, grouped_techs):
+    def _make_conversion_factor_recipes(
+        self, converters, simple_graph, grouped_techs, use_complex_keys=False
+    ):
         """Make recipes to for compounding conversion factor calculations.
 
         Args:
@@ -1360,18 +1362,49 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # 6. Get the compounding conversion factors
         in_degs = dict(simple_graph.in_degree)
         starting_techs = {k for k, v in in_degs.items() if v == 0}
-
+        needs_complex_keys = False
         compounding_conversion_factor_recipes = {}
-
+        cnt = 0
         for starting_tech in list(starting_techs):
             paths = list(nx.all_simple_paths(simple_graph, starting_tech, self.demand_tech))
             for path in paths:
                 res = self._make_recipe_from_grouped_path(
                     simple_graph, grouped_techs, converter_tech_names, path
                 )
-                if set(res) & set(compounding_conversion_factor_recipes):
-                    warnings.warn("Duplicate recipes", UserWarning, stacklevel=3)
-                compounding_conversion_factor_recipes |= res
+
+                if duplicate_recipe := set(res) & set(compounding_conversion_factor_recipes):
+                    mismatched_recipes = []
+
+                    for recipe_name in list(duplicate_recipe):
+                        recipe_1 = compounding_conversion_factor_recipes[recipe_name]
+                        recipe_2 = res[recipe_name]
+                        if len(recipe_1) != len(recipe_2):
+                            mismatched_recipes.append(recipe_name)
+
+                            continue
+                        # have the same length of recipes
+                        for i in range(len(recipe_1)):
+                            if len(recipe_1[i]) != len(recipe_2[i]):
+                                mismatched_recipes.append(recipe_name)
+
+                                continue
+                            if set(recipe_1[i]) != set(recipe_2[i]):
+                                mismatched_recipes.append(recipe_name)
+
+                        if mismatched_recipes:
+                            needs_complex_keys = True
+
+                # if needs_complex_keys:
+                #     break
+
+                if use_complex_keys:
+                    new_res = {
+                        (k[0], k[1], (cnt + 1, k[2])): v for i, (k, v) in enumerate(res.items())
+                    }
+                    compounding_conversion_factor_recipes |= new_res
+                    cnt += len(res)
+                else:
+                    compounding_conversion_factor_recipes |= res
 
             # if len(paths) > 1:
             #     warnings.warn("There should only be one path", UserWarning, stacklevel=3)
@@ -1414,6 +1447,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
             #     compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
             #         path_recipe.copy()
             #     )
+        if needs_complex_keys and use_complex_keys:
+            warnings.warn(
+                "Duplicate recipes still exist with complex keys", UserWarning, stacklevel=3
+            )
+
+        if needs_complex_keys and not use_complex_keys:
+            compounding_conversion_factor_recipes = self._make_conversion_factor_recipes(
+                converters, simple_graph, grouped_techs, use_complex_keys=True
+            )
+            return compounding_conversion_factor_recipes
 
         return compounding_conversion_factor_recipes
 
