@@ -962,43 +962,35 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # conversion fator recipes requires simple_graph, converters, demand_tech, grouped_techs
         # grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
         # alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
-        grouped_techs = {f"{k[0][0]}-{i}": k[1] for i, k in enumerate(converter_upstreams.items())}
-        alt_grouped_techs = {
-            (f"{k[0][0]}", f"{i}"): k[1] for i, k in enumerate(converter_upstreams.items())
-        }
-        # last_converter = [k for k in demand_group_techs if k in converter_techs]
+
+        grouped_techs = {}
+        groups_to_commodities = {}
+
+        for i, k in enumerate(converter_upstreams.items()):
+            grouped_techs[f"{k[0][0]}-{i}"] = k[1]
+            groups_to_commodities[f"{k[0][0]}-{i}"] = k[0][0]
+
         reversed_grouped_techs = {}
-        for k, v in grouped_techs.items():
-            for vv in list(v):
-                if vv in reversed_grouped_techs:
-                    # if isinstance(reversed_grouped_techs[vv], str):
-                    #     reversed_grouped_techs[vv] = [reversed_grouped_techs[vv], k]
-                    # else:
-                    reversed_grouped_techs[vv] = reversed_grouped_techs[vv] + [k]
+        reversed_commodity_groups = {}
+        for group_name, techs_in_group in grouped_techs.items():
+            group_commodity = groups_to_commodities[group_name]
+
+            for tech_name in list(techs_in_group):
+                if (tech_name, group_commodity) in reversed_commodity_groups:
+                    msg = (
+                        f"The tech/commodity pair {tech_name}/{group_commodity} "
+                        "should not be duplicated"
+                    )
+                    raise ValueError(msg)
+
+                reversed_commodity_groups[(tech_name, group_commodity)] = group_name
+
+                if tech_name in reversed_grouped_techs:
+                    reversed_grouped_techs[tech_name] = reversed_grouped_techs[tech_name] + [
+                        group_name
+                    ]
                 else:
-                    reversed_grouped_techs[vv] = [k]
-
-        def get_group_for_tech_commodity(tech_name, output_cmod):
-            possible_converter_grp = [k for k in converter_upstreams if k[0] == output_cmod]
-            if not possible_converter_grp and output_cmod == self.commodity:
-                groups = {f"{k[0]}-{k[1]}" for k, v in alt_grouped_techs.items() if tech_name in v}
-                return list(groups)
-            if possible_converter_grp:
-                possible_groups = []
-                for grp in possible_converter_grp:
-                    if tech_name in converter_upstreams[grp]:
-                        possible_groups += [
-                            f"{k[0]}-{k[1]}"
-                            for k, v in alt_grouped_techs.items()
-                            if k[0] == output_cmod and tech_name in v
-                        ]
-
-                return possible_groups
-            warnings.warn(
-                f"Couldn't find group for {tech_name} producing {output_cmod}",
-                UserWarning,
-                stacklevel=3,
-            )
+                    reversed_grouped_techs[tech_name] = [group_name]
 
         simple_graph = nx.DiGraph()
         for e in list(self.technology_graph.edges(data="commodity")):
@@ -1016,9 +1008,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 if len(d) > 1:
                     raise ValueError("have not accounted for this design yet")
                 for ci in c:
-                    group_name = get_group_for_tech_commodity(s0, ci)
-                    if len(group_name) != 1:
-                        raise ValueError("have not accounted for this design yet")
+                    if (s0, ci) not in reversed_commodity_groups:
+                        raise ValueError(
+                            f"The technology/commodity pair {s0}/{ci} is not in a group"
+                        )
+                    group_name = reversed_commodity_groups[
+                        (s0, ci)
+                    ]  # get_group_for_tech_commodity(s0, ci)
+                    # if len(group_name) != 1:
+                    #     raise ValueError("have not accounted for this design yet")
                     if group_name[0] != d[0]:
                         if not simple_graph.has_edge(group_name[0], d[0]):
                             # edge doesnt exist

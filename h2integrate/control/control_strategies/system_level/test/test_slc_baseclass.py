@@ -166,6 +166,13 @@ def test_find_converter_techs_fake_system(subtests):
     with subtests.test("Converter upstreams"):
         assert len(mismatched_upstreams) == 0
 
+    slc._post_setup_multi_commodity()
+
+    # slc.rename_me_config.grouped_techs
+    # slc.rename_me_config.conversion_recipes
+    with subtests.test("Add in subbtests for conversion recipes"):
+        assert True
+
 
 @pytest.mark.unit
 def test_find_converter_techs_nh3_system(subtests):
