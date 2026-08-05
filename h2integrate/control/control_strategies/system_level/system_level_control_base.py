@@ -953,18 +953,21 @@ class SystemLevelControlBase(om.ExplicitComponent):
         heterogeneous commodity hybrid system (HCHS). Below is a summary of what this method does:
 
         1. Find the converter technologies and the technologies upstream of them.
-            This is done by calling the method ``_find_converter_techs()``.
-        2. Use the ``converter_upstreams`` made in Step 1 to group together technologies
-            with the same output commodity and the same downstream converter. A single
-            technology may exist in multiple groups if it has multiple commodities
-            connected to another component.
-        3. Create ``simple_graph`` - a directional graph representation of the
-            grouped technologies from Step 2.
-        4. Create keys for a conversion recipe based on the technologies that
-            are do not convert one commodity to another.
-        5. Create recipes to convert from the demand to the demand for each group
-            of technologies/commodities, using ``_make_conversion_factor_recipes()``
+        This is done by calling the method ``_find_converter_techs()``.
 
+        2. Use the ``converter_upstreams`` made in Step 1 to group together technologies
+        with the same output commodity and the same downstream converter. A single
+        technology may exist in multiple groups if it has multiple commodities
+        connected to another component.
+
+        3. Create ``simple_graph`` - a directional graph representation of the
+        grouped technologies from Step 2.
+
+        4. Create keys for a conversion recipe based on the technologies that
+        are do not convert one commodity to another.
+
+        5. Create recipes to convert from the demand to the demand for each group
+        of technologies/commodities, using ``_make_conversion_factor_recipes()``
 
         """
         if not self.multi_commodity_system:
@@ -1129,7 +1132,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Returns:
             list[str]: Controller-managed technologies upstream of ``tech``
-                that produce ``commodity``.
+            that produce ``commodity``.
         """
         in_flows = dict(self.technology_graph.in_degree)
         if in_flows[tech] < 1:
@@ -1168,8 +1171,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             2-element tuple containing:
 
             - **converters** *(set[tuple])*: Set of tuples formatted as
-                ``(input_commodity, tech_name, output_commodity)`` tuples. An
-                example of this variable is shown below:
+            ``(input_commodity, tech_name, output_commodity)`` tuples. An
+            example of this variable is shown below:
 
                 >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
                 {
@@ -1180,9 +1183,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 }
 
             - **converter_upstreams** *(dict[tuple[str,str], list[str]])*: Keys are set of
-                ``(input_commodity, tech_name)`` and the values are a set of
-                upstream technologies that output the `input_commodity` to `tech_name`. An
-                example of this variable is shown below:
+            ``(input_commodity, tech_name)`` and the values are a set of
+            upstream technologies that output the `input_commodity` to `tech_name`. An
+            example of this variable is shown below:
 
                 >>> converter_upstreams  # keys formatted as (input_commodity, tech)
                 {
@@ -1262,7 +1265,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 that produce ``in_cmod`` to the ``converter_tech``
 
         Returns:
-            float | np.ndarray: capacity ratio of `in_cmod/out_cmod`.
+            float | np.ndarray: capacity ratio of ``in_cmod/out_cmod``.
         """
         rated_name_fmt = "{tech}_rated_{commod}_production"
         feedstock_name_fmt = "{tech}_{commod}_out"
@@ -1298,7 +1301,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 that produce ``in_cmod`` to the ``converter_tech``
 
         Returns:
-            np.ndarray: conversion ratio of `in_cmod/out_cmod`.
+            np.ndarray: conversion ratio of ``in_cmod/out_cmod``.
         """
         input_name_fmt = "{tech}_{commod}_out"
         in_names = [input_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
@@ -1389,32 +1392,32 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Returns:
             dict[tuple[str], list[list]]: recipes to calculate the conversion ratio from
-                the demand commodity to all upstream subsystems. Keys are the recipe name, which
-                are tuples ``(output_commodity, input_commodity, converter_tech_group)``.
+            the demand commodity to all upstream subsystems. Keys are the recipe name, which
+            are tuples ``(output_commodity, input_commodity, converter_tech_group)``.
 
-                Values are embedded lists. Each list defines the technologies in a
-                step of the conversion. Each element of a list is a tuple formatted as
-                ``(input_commodity, technology, output_commodity)``. An example is shown below.
+            Values are embedded lists. Each list defines the technologies in a
+            step of the conversion. Each element of a list is a tuple formatted as
+            ``(input_commodity, technology, output_commodity)``. An example is shown below.
 
-                >>> conversion_recipes[("hydrogen", "electricity", "hydrogen-2")]
+            >>> conversion_recipes[("hydrogen", "electricity", "hydrogen-2")]
+            [
                 [
-                    [
-                        ('ammonia', 'nh3_combiner', 'ammonia'),
-                        ('ammonia', 'nh3_storage', 'ammonia'),
-                        ('hydrogen', 'haber_bosch', 'ammonia')
-                    ],
-                    [
-                        ('electricity', 'electrolyzer', 'hydrogen'),
-                        ('hydrogen', 'h2_combiner', 'hydrogen'),
-                        ('hydrogen', 'h2_storage', 'hydrogen')
-                    ]
+                    ('ammonia', 'nh3_combiner', 'ammonia'),
+                    ('ammonia', 'nh3_storage', 'ammonia'),
+                    ('hydrogen', 'haber_bosch', 'ammonia')
+                ],
+                [
+                    ('electricity', 'electrolyzer', 'hydrogen'),
+                    ('hydrogen', 'h2_combiner', 'hydrogen'),
+                    ('hydrogen', 'h2_storage', 'hydrogen')
                 ]
+            ]
 
-                Note:
-                    For more complext system architecturs, the conversion recipe keys
-                    may be formatted as
-                    ``(output_commodity, input_commodity, (i, converter_tech_group))``
-                    where ``i`` is a unique number to distinguish the recipe.
+            Note:
+                For more complext system architecturs, the conversion recipe keys
+                may be formatted as
+                ``(output_commodity, input_commodity, (i, converter_tech_group))``
+                where ``i`` is a unique number to distinguish the recipe.
 
         """
         if not self.multi_commodity_system:
@@ -1487,15 +1490,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
         outputs ``input_commodity`` to the ``tech_group_name``.
 
         Args:
-            recipe_name (tuple[str,str,str]): name of recipe formatted as a tuple of
-                ``(input_commodity, output_commodity, tech_group_name)``
+            recipe_name (tuple): name of recipe formatted as a tuple of
+            ``(input_commodity, output_commodity, tech_group_name)`` or
+            ``(input_commodity, output_commodity, (i,tech_group_name))``.
+            This should be a key from the dictionary returned from
+            ``_make_conversion_factor_recipes()``.
 
         Raises:
             ValueError: there are multiple techs
 
         Returns:
             list[str]: list of technologies that output the ``input_commodity``
-                and are connected upstream of ``tech_group_name``
+            and are connected upstream of ``tech_group_name``
         """
         _, input_cmod, tech_group = recipe_name
         if isinstance(tech_group, tuple):
@@ -1520,14 +1526,41 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Args:
             conversion_factors (dict): dictionary with keys of 3 element tuples
-                formatted as ``(input_commodity, tech, output_commodity)``.
-                Values are an array or float of the conversion factor
-                ``input_commodity/output_commodity``
+            formatted as ``(input_commodity, tech, output_commodity)``.
+            Values are an array or float of the conversion factor
+            ``input_commodity/output_commodity``. An example is shown below:
+
+                >>> conversion_factors
+                {
+                    ('electricity','electrolyzer','hydrogen'): 55.5,
+                    ('water','electrolyzer','hydrogen'): 40.0,
+                    ('electricity','electrolyzer','oxygen'): 60.0
+                }
+
             recipe (list[list[tuples]]): embedded list of conversions,
-                a value from from the `conversion_recipes` attribute.
+            a value from from the ``conversion_recipes`` attribute.
+            This should be a value from the dictionary returned from
+            ``_make_conversion_factor_recipes()``.
+
+                >>> recipe
+                [
+                    [
+                        ('ammonia', 'nh3_combiner', 'ammonia'),
+                        ('ammonia', 'nh3_storage', 'ammonia'),
+                        ('hydrogen', 'haber_bosch', 'ammonia')
+                    ],
+                    [
+                        ('electricity', 'electrolyzer', 'hydrogen'),
+                        ('hydrogen', 'h2_combiner', 'hydrogen'),
+                        ('hydrogen', 'h2_storage', 'hydrogen')
+                    ]
+                ]
+
 
         Returns:
             float | np.ndarray: conversion factor created from the recipe.
+
+
         """
         path_conversion = 1.0
         # TODO: update to handle more complex systems
