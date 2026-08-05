@@ -62,38 +62,14 @@ def _build_slc_topology(
     demand_commodity_rate_units: str = "kW",
     storage_techs_with_control: list = [],
 ):
-    model = object.__new__(H2IntegrateModel)
-    model.technology_graph = technology_graph
-    model.tech_control_classifiers = tech_control_classifiers
-    model.technology_config = {
-        "technologies": {
-            demand_tech: {
-                "performance_model": {"model": "DemandComponent"},
-                "model_inputs": {
-                    "performance_parameters": {
-                        "commodity": demand_commodity,
-                        "commodity_rate_units": demand_commodity_rate_units,
-                    }
-                },
-            }
-        }
-    }
-    tech_graph_edges = technology_graph.edges(data="commodity")
-    # make a mock-up of the technology interconnections, this is intended for use with only systems
-    # where one commodity is passed from each source tech to each destination tech directly
-    tech_interconnections = [[e[0], e[1], e[2][0], "transport"] for e in tech_graph_edges]
-    model.plant_config = {
-        "system_level_control": {"demand_component": demand_tech},
-        "technology_interconnections": tech_interconnections,
-    }
-    slc_topo = model._classify_slc_technologies()
-    # sources_to_commodities = {
-    #     (e[0], e[-1]) for e in technology_graph.edges(data="commodity") if e[-1] is not None
-    # }
+    sources_to_commodities = set()
+    for source, _, commodities in technology_graph.edges(data="commodity"):
+        if commodities is not None:
+            sources_to_commodities.update((source, commodity) for commodity in commodities)
 
-    # tech_to_commodities = {
-    #     (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers
-    # }
+    tech_to_commodities = {
+        (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers
+    }
 
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     storage_techs_to_control = {
@@ -104,7 +80,7 @@ def _build_slc_topology(
         "demand_commodity": demand_commodity,
         "demand_commodity_rate_units": demand_commodity_rate_units,
         "demand_tech": demand_tech,
-        "tech_to_commodity": slc_topo["tech_to_commodity"],
+        "tech_to_commodity": tech_to_commodities,
         "storage_techs_to_control": storage_techs_to_control,
         "technology_graph": technology_graph,
         "tech_control_classifiers": tech_control_classifiers,
