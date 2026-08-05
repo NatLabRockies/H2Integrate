@@ -1007,11 +1007,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
             s = reversed_grouped_techs.get(s0, [s0])
             d = reversed_grouped_techs.get(d0, [d0])
 
-            if isinstance(c, str):
+            if len(c) == 1:
                 for si in s:
                     for di in d:
                         if si != di:
-                            simple_graph.add_edge(si, di, commodity=c)
+                            simple_graph.add_edge(si, di, commodity=c[0])
             else:
                 if len(d) > 1:
                     raise ValueError("have not accounted for this design yet")
@@ -1019,7 +1019,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     group_name = get_group_for_tech_commodity(s0, ci)
                     if len(group_name) != 1:
                         raise ValueError("have not accounted for this design yet")
-                    simple_graph.add_edge(group_name[0], d[0], commodity=ci)
+                    if group_name[0] != d[0]:
+                        if not simple_graph.has_edge(group_name[0], d[0]):
+                            # edge doesnt exist
+                            simple_graph.add_edge(group_name[0], d[0], commodity=ci)
+                        else:
+                            if simple_graph.edges[group_name[0], d[0]].get("commodity") != ci:
+                                simple_graph.add_edge(group_name[0], d[0], commodity=ci)
+                                raise ValueError("this shouldn't happen")
 
         non_converter_keys = set()
         converter_tech_names = {c[1] for c in converters}
