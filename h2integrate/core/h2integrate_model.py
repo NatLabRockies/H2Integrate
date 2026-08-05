@@ -568,11 +568,12 @@ class H2IntegrateModel:
             tech for tech in upstream_techs if nx.has_path(self.technology_graph, tech, demand_tech)
         }
 
-        sources_to_commodities = {
-            (e[0], e[-1])
-            for e in self.technology_graph.edges(data="commodity")
-            if (e[-1] is not None) and (e[0] in upstream_controllable_techs)
-        }
+        sources_to_commodities = set()
+        for source, _, commodities in self.technology_graph.edges(data="commodity"):
+            if source not in upstream_controllable_techs or commodities is None:
+                continue
+
+            sources_to_commodities.update((source, commodity) for commodity in commodities)
 
         # re-make technology interconnections using only technologies
         # upstream of the demand component
@@ -581,12 +582,21 @@ class H2IntegrateModel:
             for connection in tech_interconnections
             if connection[0] in upstream_controllable_techs
         ]
+
         upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
         slc_topology["technology_graph"] = upstream_tech_graph
 
+        # downselect the technology control classifiers to only include those upstream
+        # of the demand
+        upstream_tech_control_classifiers = {
+            k: v
+            for k, v in self.tech_control_classifiers.items()
+            if k in upstream_controllable_techs
+        }
+
         # Check if storage models have a controller
         storage_tech_to_control = {}
-        for tech, classifier in self.tech_control_classifiers.items():
+        for tech, classifier in upstream_tech_control_classifiers.items():
             if classifier == "storage":
                 control_model = (
                     self.technology_config["technologies"][tech]
@@ -611,7 +621,7 @@ class H2IntegrateModel:
         tech_to_commodity = {
             (e[0], e[-1])
             for e in sources_to_commodities
-            if self.tech_control_classifiers[e[0]] in control_classifiers_to_connect
+            if upstream_tech_control_classifiers.get(e[0]) in control_classifiers_to_connect
         }
         slc_topology["tech_to_commodity"] = tech_to_commodity
 
@@ -620,7 +630,7 @@ class H2IntegrateModel:
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
 
-        slc_topology["tech_control_classifiers"] = self.tech_control_classifiers
+        slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
         return slc_topology
 
@@ -2173,11 +2183,37 @@ class H2IntegrateModel:
         """
         technology_graph = nx.DiGraph()
 
+        def _as_commodity_list(commodity):
+            """Coerce a commodity definition to a list."""
+            if commodity is None:
+                return []
+            if isinstance(commodity, str):
+                return [commodity]
+            return list(commodity)
+
         for connection in tech_interconnections:
             source = connection[0]
             destination = connection[1]
             if len(connection) == 4:
-                technology_graph.add_edge(source, destination, commodity=connection[2])
+                new_commodities = _as_commodity_list(connection[2])
+
+                # Commodity is defined in connection. Keep edge commodities
+                # as a list, even for a single commodity.
+                if technology_graph.has_edge(source, destination):
+                    connected_cmods = technology_graph.edges[source, destination].get("commodity")
+                    existing_commodities = _as_commodity_list(connected_cmods)
+                    merged_commodities = list(set(existing_commodities + new_commodities))
+                    technology_graph.add_edge(
+                        source,
+                        destination,
+                        commodity=merged_commodities,
+                    )
+                else:
+                    technology_graph.add_edge(
+                        source,
+                        destination,
+                        commodity=new_commodities,
+                    )
             else:
                 technology_graph.add_edge(source, destination)
 
@@ -2234,13 +2270,15 @@ class H2IntegrateModel:
         # Validate commodity connections
         invalid_outputs = set()  # (tech, commodity) pairs where source lacks _out param
         invalid_inputs = set()  # (tech, commodity) pairs where dest lacks _in param
-        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if commodity is None:
+        for source, dest, commodities in self.technology_graph.edges(data="commodity"):
+            if commodities is None:
                 continue  # length-3 connections have no commodity to check
-            if not _has_commodity_param(tech_io[source], commodity, "out"):
-                invalid_outputs.add((source, commodity))
-            if not _has_commodity_param(tech_io[dest], commodity, "in"):
-                invalid_inputs.add((dest, commodity))
+
+            for commodity in commodities:
+                if not _has_commodity_param(tech_io[source], commodity, "out"):
+                    invalid_outputs.add((source, commodity))
+                if not _has_commodity_param(tech_io[dest], commodity, "in"):
+                    invalid_inputs.add((dest, commodity))
 
         # Build a single error message grouping output and input issues separately
         if invalid_outputs or invalid_inputs:
@@ -2259,27 +2297,6 @@ class H2IntegrateModel:
             # Point user to the file that needs fixing
             parts.append(f"Update `technology_interconnections` in {self.plant_config_path}.")
             raise ValueError("\n".join(parts))
-
-    def _get_commodity_for_tech(self, tech_name):
-        """Get a list of the commodities produced for a technology.
-
-        Args:
-            tech_name (str): name of technology
-
-        Returns:
-            list[str]: list of commodities produced by the tech_name
-        """
-        # Define the commodities produced by each technology from technology_interconnections
-        # Each element of the set is a tuple of (source_tech, commodity_produced)
-        self.techs_to_commodities = {
-            (e[0], e[-1])
-            for e in self.technology_graph.edges(data="commodity")
-            if e[-1] is not None
-        }
-
-        tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
-
-        return tech_commodities
 
     @staticmethod
     def _split_indices_from_connected_parameter_definition(connected_parameter):
