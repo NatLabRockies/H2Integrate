@@ -141,7 +141,7 @@ class DemandFollowingControl(SystemLevelControlBase):
                     nan_indices = np.argwhere(~np.isnan(conversion_ratio)).flatten()
                     bad_indices = list(set(inf_indices) | set(nan_indices))
 
-                capacity_ratio = self.get_converter_capacity_conversion_ratio(
+                capacity_ratio = self.get_converter_capacity_ratio(
                     inputs,
                     input_cmod,
                     output_cmod,
@@ -195,8 +195,8 @@ class DemandFollowingControl(SystemLevelControlBase):
         conversion_factors_tracker = {}
         for recipe_name, recipe in self.rename_me_config.conversion_recipes.items():
             commodity_to_demand = recipe_name[1]
-            techs_to_demand = self._get_techs_to_demand_from_recipe(recipe_name)
-            conversion_factor = self._get_conversion_from_recipe(conversion_factors, recipe)
+            techs_to_demand = self.get_techs_to_demand_from_recipe(recipe_name)
+            conversion_factor = self.get_conversion_from_recipe(conversion_factors, recipe)
             demand = inputs[self.demand_input_name].copy() * conversion_factor
             outputs = self.get_setpoints_for_commodity_subset(
                 inputs,

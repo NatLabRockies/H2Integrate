@@ -466,10 +466,10 @@ def test_multi_commodity_post_setup_nh3_system(subtests):
 
 
 # Test methods used by Demand Following
-# `get_converter_capacity_conversion_ratio`
+# `get_converter_capacity_ratio`
 # `get_converter_conversion_ratio`
-# `_get_conversion_from_recipe`
-# `_get_techs_to_demand_from_recipe`
+# `get_conversion_from_recipe`
+# `get_techs_to_demand_from_recipe`
 
 
 @pytest.mark.unit
@@ -543,12 +543,12 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
         "electricity_feedstock_electricity_out": np.full(8760, 13.0),
     }
 
-    # Test `get_converter_capacity_conversion_ratio` and `get_converter_conversion_ratio`
+    # Test `get_converter_capacity_ratio` and `get_converter_conversion_ratio`
     # Electricity to hydrogen
     elec_per_h2_ratio = prob.model.slc.get_converter_conversion_ratio(
         fake_inputs, "electricity", "hydrogen", "electrolyzer", ["battery", "wind", "solar"]
     )
-    elec_per_h2_capac_ratio = prob.model.slc.get_converter_capacity_conversion_ratio(
+    elec_per_h2_capac_ratio = prob.model.slc.get_converter_capacity_ratio(
         fake_inputs, "electricity", "hydrogen", "electrolyzer", ["battery", "wind", "solar"]
     )
     elec_capac = 30.0 + 25.0 + 16.0
@@ -562,7 +562,7 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     h2_per_nh3_ratio = prob.model.slc.get_converter_conversion_ratio(
         fake_inputs, "hydrogen", "ammonia", "haber_bosch", ["electrolyzer", "h2_storage"]
     )
-    h2_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_conversion_ratio(
+    h2_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_ratio(
         fake_inputs, "hydrogen", "ammonia", "haber_bosch", ["electrolyzer", "h2_storage"]
     )
     h2_capac = 71.0 + 14.0
@@ -576,7 +576,7 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     n2_per_nh3_ratio = prob.model.slc.get_converter_conversion_ratio(
         fake_inputs, "nitrogen", "ammonia", "haber_bosch", ["n2_feedstock"]
     )
-    n2_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_conversion_ratio(
+    n2_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_ratio(
         fake_inputs, "nitrogen", "ammonia", "haber_bosch", ["n2_feedstock"]
     )
     with subtests.test("Nitrogen/Ammonia conversion ratio"):
@@ -588,7 +588,7 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     elec_per_nh3_ratio = prob.model.slc.get_converter_conversion_ratio(
         fake_inputs, "electricity", "ammonia", "haber_bosch", ["electricity_feedstock"]
     )
-    elec_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_conversion_ratio(
+    elec_per_nh3_capac_ratio = prob.model.slc.get_converter_capacity_ratio(
         fake_inputs, "electricity", "ammonia", "haber_bosch", ["electricity_feedstock"]
     )
     with subtests.test("Electricity/Ammonia conversion ratio"):
@@ -596,7 +596,7 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     with subtests.test("Electricity/Ammonia capacity ratio"):
         assert pytest.approx(13.0 / 50.0, rel=1e-6) == elec_per_nh3_capac_ratio
 
-    # Test `_get_conversion_from_recipe` and `_get_techs_to_demand_from_recipe`
+    # Test `get_conversion_from_recipe` and `get_techs_to_demand_from_recipe`
     conversion_factors = {
         ("electricity", "electrolyzer", "hydrogen"): elec_gen / 39.0,
         ("hydrogen", "haber_bosch", "ammonia"): (h2_gen / 40).mean(),
@@ -616,12 +616,12 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     n2_recipe_name = [k for k in conversion_recipes if k[0] == "ammonia" and k[1] == "nitrogen"][0]
     # n2_recipe_name = ("ammonia", "nitrogen", "ammonia-5")
     with subtests.test("Nitrogen/Ammonia Conversion Factor"):
-        conversion_factor = prob.model.slc._get_conversion_from_recipe(
+        conversion_factor = prob.model.slc.get_conversion_from_recipe(
             all_conversion_factors, conversion_recipes[n2_recipe_name]
         )
         assert pytest.approx(2.5 / 40.0, rel=1e-6) == conversion_factor
     with subtests.test("Nitrogen/Ammonia Techs"):
-        techs_to_demand = prob.model.slc._get_techs_to_demand_from_recipe(n2_recipe_name)
+        techs_to_demand = prob.model.slc.get_techs_to_demand_from_recipe(n2_recipe_name)
         assert ["n2_feedstock"] == techs_to_demand
 
     # Electricity/Ammonia
@@ -630,25 +630,25 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     ][0]
     # elec_recipe_name = ("ammonia", "electricity", "ammonia-5")
     with subtests.test("Electricity/Ammonia Conversion Factor"):
-        conversion_factor = prob.model.slc._get_conversion_from_recipe(
+        conversion_factor = prob.model.slc.get_conversion_from_recipe(
             all_conversion_factors, conversion_recipes[elec_recipe_name]
         )
         assert pytest.approx(13.0 / 40.0, rel=1e-6) == conversion_factor
     with subtests.test("Electricity/Ammonia Techs"):
-        techs_to_demand = prob.model.slc._get_techs_to_demand_from_recipe(elec_recipe_name)
+        techs_to_demand = prob.model.slc.get_techs_to_demand_from_recipe(elec_recipe_name)
         assert ["electricity_feedstock"] == techs_to_demand
 
     # Hydrogen/Ammonia
     h2_recipe_name = [k for k in conversion_recipes if k[0] == "ammonia" and k[1] == "hydrogen"][0]
     # h2_recipe_name = ("ammonia", "hydrogen", "ammonia-5")
     with subtests.test("Hydrogen/Ammonia Conversion Factor"):
-        conversion_factor = prob.model.slc._get_conversion_from_recipe(
+        conversion_factor = prob.model.slc.get_conversion_from_recipe(
             all_conversion_factors, conversion_recipes[h2_recipe_name]
         )
         assert pytest.approx((h2_gen / 40).mean(), rel=1e-6) == conversion_factor
 
     with subtests.test("Hydrogen/Ammonia Techs"):
-        techs_to_demand = prob.model.slc._get_techs_to_demand_from_recipe(h2_recipe_name)
+        techs_to_demand = prob.model.slc.get_techs_to_demand_from_recipe(h2_recipe_name)
         expected_techs = ["h2_storage", "electrolyzer", "h2_combiner"]
         assert set(expected_techs) == set(techs_to_demand)
 
@@ -658,12 +658,12 @@ def test_multi_commodity_conversion_factor_nh3_system(subtests):
     ][0]
     # eh2_recipe_name = ("hydrogen", "electricity", "hydrogen-1")
     with subtests.test("Electricity/Hydrogen/Ammonia Conversion Factor"):
-        conversion_factor = prob.model.slc._get_conversion_from_recipe(
+        conversion_factor = prob.model.slc.get_conversion_from_recipe(
             all_conversion_factors, conversion_recipes[eh2_recipe_name]
         )
         expected_conversion_factor = (h2_gen / 40).mean() * (elec_gen / 39.0)
         assert pytest.approx(expected_conversion_factor, rel=1e-6) == conversion_factor
     with subtests.test("Electricity/Hydrogen/Ammonia Techs"):
-        techs_to_demand = prob.model.slc._get_techs_to_demand_from_recipe(eh2_recipe_name)
+        techs_to_demand = prob.model.slc.get_techs_to_demand_from_recipe(eh2_recipe_name)
         expected_techs = ["battery", "wind", "solar", "combiner", "elec_combiner"]
         assert set(expected_techs) == set(techs_to_demand)

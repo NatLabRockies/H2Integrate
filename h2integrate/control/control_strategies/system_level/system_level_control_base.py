@@ -1251,7 +1251,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return converter_info, converter_upstreams
 
-    def get_converter_capacity_conversion_ratio(
+    def get_converter_capacity_ratio(
         self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
     ):
         """Get capacity ratio of ``in_cmod/out_cmod`` for technology ``converter_tech``
@@ -1485,7 +1485,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return compounding_conversion_factor_recipes
 
-    def _get_techs_to_demand_from_recipe(self, recipe_name):
+    def get_techs_to_demand_from_recipe(self, recipe_name):
         """Get a list of technologies that are in a subsystem that
         outputs ``input_commodity`` to the ``tech_group_name``.
 
@@ -1521,7 +1521,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             techs_in_group = techs_to_demand[0]
         return techs_in_group
 
-    def _get_conversion_from_recipe(self, conversion_factors, recipe):
+    def get_conversion_from_recipe(self, conversion_factors, recipe):
         """Get the conversion factor from a recipe.
 
         Args:
