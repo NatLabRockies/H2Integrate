@@ -1399,54 +1399,13 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
                 if use_complex_keys:
                     new_res = {
-                        (k[0], k[1], (cnt + 1, k[2])): v for i, (k, v) in enumerate(res.items())
+                        (k[0], k[1], (cnt + i, k[2])): v for i, (k, v) in enumerate(res.items())
                     }
                     compounding_conversion_factor_recipes |= new_res
                     cnt += len(res)
                 else:
                     compounding_conversion_factor_recipes |= res
 
-            # if len(paths) > 1:
-            #     warnings.warn("There should only be one path", UserWarning, stacklevel=3)
-            # path = paths[0]
-            # reverse_path = path[::-1]
-            # commodity_conversions = [
-            #     simple_graph.edges[p0, p1].get("commodity", None)
-            #     for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
-            # ]
-            # commodity_nodes = list(itertools.pairwise(commodity_conversions))
-            # techs = reverse_path[1:]
-
-            # commodity_graph = nx.DiGraph()  # nodes are commodities
-            # for i, commod_node in enumerate(commodity_nodes):
-            #     # ammonia, hydrogen
-            #     down_cmod, up_cmod = commod_node
-            #     commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
-
-            # commodity_edges = commodity_graph.edges(data="tech")
-
-            # path_recipe = []
-
-            # for edge in commodity_edges:
-            #     # in_cmod is demand of next tech
-            #     out_cmod, in_cmod, tech = edge
-            #     if tech in grouped_techs:
-            #         techs_in_group = list(grouped_techs[tech])
-
-            #         recipe = []
-            #         for t in techs_in_group:
-            #             if t in converter_tech_names:
-            #                 recipe.append((in_cmod, t, out_cmod))
-            #             else:
-            #                 recipe.append((out_cmod, t, out_cmod))
-            #         # TODO: add check if any non-converter techs have a non-1 conversion factor
-            #     else:
-            #         recipe = [(in_cmod, tech, out_cmod)]
-
-            #     path_recipe.append(recipe)
-            #     compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = (
-            #         path_recipe.copy()
-            #     )
         if needs_complex_keys and use_complex_keys:
             warnings.warn(
                 "Duplicate recipes still exist with complex keys", UserWarning, stacklevel=3
@@ -1476,6 +1435,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 and are connected upstream of ``tech_group_name``
         """
         _, input_cmod, tech_group = recipe_name
+        if isinstance(tech_group, tuple):
+            _, tech_group = tech_group
+
         techs_to_demand = [
             s
             for s in list(self.rename_me_config.simple_graph.predecessors(tech_group))
@@ -1505,7 +1467,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             float | np.ndarray: conversion factor created from the recipe.
         """
         path_conversion = 1.0
-
+        # TODO: update to handle more complex systems
+        # (or maybe do it external to this method)
         for path in recipe:
             for tech_conversion in path:
                 path_conversion *= conversion_factors.get(tech_conversion, 1.0)
