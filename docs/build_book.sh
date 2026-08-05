@@ -33,4 +33,4 @@ python generate_class_hierarchy.py
 # rendered overview always matches what the package actually exposes.
 python generate_model_overview.py
 
-jupyter-book build --keep-going .
+jupyter-book build --keep-going --warningiserror .
