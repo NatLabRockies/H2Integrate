@@ -431,7 +431,7 @@ class PoseOptimization:
         if self.config["recorder"].get("flag", False):
             # Check that the output folder exists and create it if needed
             if not Path(folder_output).exists():
-                Path.mkdir(folder_output, parents=True, exist_ok=True)
+                Path.mkdir(Path(folder_output), parents=True, exist_ok=True)
 
             overwrite_recorder = self.config["recorder"].get("overwrite_recorder", False)
             recorder_path = Path(folder_output) / self.config["recorder"]["file"]
