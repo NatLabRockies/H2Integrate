@@ -247,6 +247,7 @@ ignore = [
 "*/__init__.py" = ["E501", "D104", "F401"]
 "*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
+"*/test/test_wave_pysam.py" = ["E501"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

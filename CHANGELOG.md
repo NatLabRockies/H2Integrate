@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR TBD]
 - Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)

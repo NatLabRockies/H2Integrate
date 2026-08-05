@@ -21,7 +21,7 @@ site:
   solar: false
   wind: false
   wave: true
-  wave_resource_file: ./weather_data/wave_lat43.81_lon-124.82__2010.csv
+  wave_resource_file: ../../../../resource_files/wave/wave_lat43.81_lon-124.82__2010.csv
   grid_resource_file: ''
 # Technologies
 technologies:
