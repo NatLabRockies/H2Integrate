@@ -2202,7 +2202,7 @@ class H2IntegrateModel:
                 if technology_graph.has_edge(source, destination):
                     connected_cmods = technology_graph.edges[source, destination].get("commodity")
                     existing_commodities = _as_commodity_list(connected_cmods)
-                    merged_commodities = list(dict.fromkeys(existing_commodities + new_commodities))
+                    merged_commodities = list(set(existing_commodities + new_commodities))
                     technology_graph.add_edge(
                         source,
                         destination,
@@ -2212,7 +2212,7 @@ class H2IntegrateModel:
                     technology_graph.add_edge(
                         source,
                         destination,
-                        commodity=list(dict.fromkeys(new_commodities)),
+                        commodity=new_commodities,
                     )
             else:
                 technology_graph.add_edge(source, destination)
@@ -2297,24 +2297,6 @@ class H2IntegrateModel:
             # Point user to the file that needs fixing
             parts.append(f"Update `technology_interconnections` in {self.plant_config_path}.")
             raise ValueError("\n".join(parts))
-
-    def _get_commodity_for_tech(self, tech_name):
-        """Get a list of the commodities produced for a technology.
-
-        Args:
-            tech_name (str): name of technology
-
-        Returns:
-            list[str]: list of commodities produced by the tech_name
-        """
-        tech_commodities = []
-        for source, _, commodities in self.technology_graph.edges(data="commodity"):
-            if source != tech_name or commodities is None:
-                continue
-
-            tech_commodities.extend(commodities)
-
-        return list(dict.fromkeys(tech_commodities))
 
     @staticmethod
     def _split_indices_from_connected_parameter_definition(connected_parameter):
