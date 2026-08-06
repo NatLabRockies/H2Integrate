@@ -44,9 +44,6 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
         default="electricity", validator=contains(["electricity", "price"])
     )
 
-    def __attrs_post_init__(self):
-        super().__attrs_post_init__()
-
 
 class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
@@ -68,8 +65,8 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
     # This controller reads the performance model's ``rated_<commodity>_production``
     # output as its command ceiling, which creates a controller<->performance data
-    # cycle within the technology group. h2integrate_model.py::_process_model() uses
-    # this flag to add a nonlinear solver so the cycle converges.
+    # cycle within the technology group. h2integrate_model.py::_process_model() checks
+    # this flag and adds a nonlinear solver so the cycle converges if needed.
     _reads_performance_outputs = True
 
     def setup(self):

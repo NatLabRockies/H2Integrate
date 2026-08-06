@@ -71,7 +71,7 @@ ax[0].axhline(
 ax[0].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[0].legend(frameon=True, ncol=3)
 
-ax[1].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[1].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand")
 ax[1].plot(
     time_plot,
     model.prob.get_val("fuel_cell.electricity_out", units="MW")[:n_plot],
@@ -80,13 +80,13 @@ ax[1].plot(
 ax[1].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[1].legend(frameon=False, ncol=2)
 
-ax[2].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand (MW)")
+ax[2].plot(time_plot, demand_profile[:n_plot] * 1e-3, label="Original demand")
 ax[2].plot(
     time_plot,
     model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="MW")[:n_plot],
     label="New demand profile",
 )
-ax[2].plot(time_plot, grid_output[:n_plot], label="Grid purchase (MW)", linestyle=":")
+ax[2].plot(time_plot, grid_output[:n_plot], label="Grid purchase", linestyle=":")
 
 ax[2].set(ylabel="Power (MW)", ylim=[-2, 2])
 ax[2].legend(frameon=False, ncol=3)
@@ -98,4 +98,4 @@ for axis in ax:
     axis.grid(True, which="minor", alpha=0.2, linewidth=0.5)
 
 plt.tight_layout()
-plt.savefig("example_peak_load_dispatch.png", transparent=False)
+plt.savefig("example_peak_load_dispatch.png", transparent=False, dpi=300)
