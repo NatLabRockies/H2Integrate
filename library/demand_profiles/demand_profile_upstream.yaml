@@ -1,3 +1,9 @@
+# Upstream (supervisory) demand profile for the peak-load-management example controllers.
+# Synthetically generated (not measured); intended for demonstration only.
+# Units: commodity rate units (kW in examples/33_peak_load_management_heuristics).
+# This profile is paired with demand_profile.yaml. The two profiles intentionally share
+# similar peak placements at some times and have deliberately different peak magnitudes
+# and peak timing at others, to exercise the upstream-vs-local dispatch heuristics.
 - 430
 - 390
 - 360
