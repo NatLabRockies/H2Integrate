@@ -78,7 +78,7 @@ finance_parameters:
     npv:
       finance_model: NumpyFinancialNPV
       model_inputs:
-        discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind
+        real_discount_rate: 0.09  # nominal return based on 2024 ATB baseline workbook for land-based wind
         commodity_sell_price: 0.078
         commodity_sell_price_units: USD/(kW*h)
         save_cost_breakdown: true
