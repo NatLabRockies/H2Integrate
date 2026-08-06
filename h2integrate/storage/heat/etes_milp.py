@@ -465,3 +465,31 @@ def solve_etes_milp(
         termination_condition=term,
         objective_value=float(pyo.value(m.obj)),
     )
+
+if __name__ == "__main__":
+    n = 8760
+
+    cfg = ETESMILPConfig(
+        etes_type="P-ETES",
+        eta_ch=0.95,
+        eta_dis=0.73,
+        f_loss=0.0068,
+        t_ch_min_h=10.0,
+        C_lin_TES=0.8045,
+        C_const_TES=1244461.0,
+        C_min_TES=1.5,
+        C_lin_ch=0.6,
+        C_const_ch=400000.0,
+        C_lin_dis=0.0,
+        C_const_dis=750000.0,
+        fixed_charge_rate=0.10,
+        opex_fraction=0.0,
+    )
+
+    price = np.repeat(np.array([0.02]*8 + [0.10]*8 + [0.05]*8), n // 24)  # $/kWh_e
+    load = np.full(n, 10_000.0)                       # kW_th
+
+    result = solve_etes_milp(cfg, price, load, dt_h=1.0)
+    print(result)
+    print(dir(result))
+    print(result.S_TES_kWh, result.S_ch_kW, result.S_dis_kW)
