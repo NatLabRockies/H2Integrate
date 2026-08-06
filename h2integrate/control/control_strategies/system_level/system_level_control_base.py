@@ -1192,33 +1192,32 @@ class SystemLevelControlBase(om.ExplicitComponent):
         produced by its upstream ancestors (e.g. an electrolyzer: electricity → hydrogen).
 
         Returns:
-            2-element tuple containing:
+            tuple[set, dict]: 2-element tuple containing ``converters`` and ``converter_upstreams``.
 
-            - **converters** *(set[tuple])*: Set of tuples formatted as
-            ``(input_commodity, tech_name, output_commodity)`` tuples. An
-            example of this variable is shown below:
+            **converters** *(set[tuple])*: Set of tuples formatted as
+            ``(input_commodity, tech_name, output_commodity)`` tuples.
 
-            >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
-            {
-                # (input_commodity, tech_name, output_commodity)
-                ("electricity", "electrolyzer", "hydrogen"),
-                ("electricity", "haber_bosch", "ammonia"),
-                ("hydrogen", "haber_bosch", "ammonia")
-            }
+                >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+                {
+                    # (input_commodity, tech_name, output_commodity)
+                    ("electricity", "electrolyzer", "hydrogen"),
+                    ("electricity", "haber_bosch", "ammonia"),
+                    ("hydrogen", "haber_bosch", "ammonia")
+                }
 
-            - **converter_upstreams** *(dict[tuple[str,str], list[str]])*: Keys are set of
+            **converter_upstreams** *(dict[tuple[str,str], list[str]])*: Keys are set of
             ``(input_commodity, tech_name)`` and the values are a set of
             upstream technologies that output the `input_commodity` to `tech_name`. An
-            example of this variable is shown below:
+            example of this variable is shown below.
 
-            >>> converter_upstreams  # keys formatted as (input_commodity, tech)
-            {
-                #  (input_commodity, tech) : [techs that provide input_commodity to tech]
-                ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
-                ("electricity", "haber_bosch"): ["electricity_feedstock"],
-                ("hydrogen", "haber_bosch"): ["electrolyzer"],
-                ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
-            }
+                >>> converter_upstreams  # keys formatted as (input_commodity, tech)
+                {
+                    #  (input_commodity, tech) : [techs that provide input_commodity to tech]
+                    ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+                    ("electricity", "haber_bosch"): ["electricity_feedstock"],
+                    ("hydrogen", "haber_bosch"): ["electrolyzer"],
+                    ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+                }
 
         """
         in_flows = dict(self.technology_graph.in_degree)
@@ -1515,10 +1514,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Args:
             recipe_name (tuple): name of recipe formatted as a tuple of
-            ``(input_commodity, output_commodity, tech_group_name)`` or
-            ``(input_commodity, output_commodity, (i,tech_group_name))``.
-            This should be a key from the dictionary returned from
-            ``_make_conversion_factor_recipes()``.
+                ``(input_commodity, output_commodity, tech_group_name)`` or
+                ``(input_commodity, output_commodity, (i,tech_group_name))``.
+                This should be a key from the dictionary returned from
+                ``_make_conversion_factor_recipes()``.
 
         Raises:
             ValueError: there are multiple techs
@@ -1550,9 +1549,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Args:
             conversion_factors (dict): dictionary with keys of 3 element tuples
-            formatted as ``(input_commodity, tech, output_commodity)``.
-            Values are an array or float of the conversion factor
-            ``input_commodity/output_commodity``. An example is shown below:
+                formatted as ``(input_commodity, tech, output_commodity)``.
+                Values are an array or float of the conversion factor
+                ``input_commodity/output_commodity``. An example is shown below:
 
                 >>> conversion_factors
                 {
@@ -1562,9 +1561,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 }
 
             recipe (list[list[tuples]]): embedded list of conversions,
-            a value from from the ``conversion_recipes`` attribute.
-            This should be a value from the dictionary returned from
-            ``_make_conversion_factor_recipes()``.
+                a value from from the ``conversion_recipes`` attribute.
+                This should be a value from the dictionary returned from
+                ``_make_conversion_factor_recipes()``.
 
                 >>> recipe
                 [
