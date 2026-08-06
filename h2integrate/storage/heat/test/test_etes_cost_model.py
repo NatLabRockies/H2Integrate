@@ -2,7 +2,7 @@ import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
-from h2integrate.converters.heat.etes_cost_model import ETESCostModel
+from h2integrate.storage.heat.etes_cost_model import ETESCostModel
 
 
 @fixture

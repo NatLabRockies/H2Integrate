@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pytest import approx
 
-from h2integrate.converters.heat.etes_milp import ETESMILPConfig, solve_etes_milp
+from h2integrate.storage.heat.etes_milp import ETESMILPConfig, solve_etes_milp
 
 
 def _peak_price_profile(n=24):

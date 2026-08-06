@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
-from h2integrate.converters.heat.etes import ETESPerformanceModel
+from h2integrate.storage.heat.etes import ETESPerformanceModel
 
 
 @fixture
