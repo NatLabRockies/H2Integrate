@@ -115,7 +115,6 @@ failing test cases.
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
   - [ ] Add the new model to the appropriate `__init__.py` file to ensure it is properly imported and used in `supported_models.py`
   - [ ] Added to `supported_models.py`
-  - [ ] If a new commodity_type is added, update `create_financial_model` in `h2integrate_model.py`
 - [ ] **Tests**: Unit tests have been added for the new model
   - [ ] [Pytest-style unit tests](https://realpython.com/pytest-python-testing/)
   - [ ] Unit tests are in a "test" folder within the folder a new model was added to
