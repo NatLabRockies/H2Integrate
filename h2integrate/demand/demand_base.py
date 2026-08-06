@@ -103,6 +103,20 @@ class DemandComponentBase(PerformanceModelBaseClass):
             desc=f"Pass-through of {self.commodity} demand profile",
         )
 
+        self.add_output(
+            "percent_load_missed",
+            val=0.0,
+            units="percent",
+            desc="Percent of total demand not met",
+        )
+
+        self.add_output(
+            "curtailment_percent",
+            val=0.0,
+            units="percent",
+            desc="Percent of total generation that was curtailed",
+        )
+
     def compute():
         """This method must be implemented by subclasses to define the
         demand component.
@@ -160,5 +174,22 @@ class DemandComponentBase(PerformanceModelBaseClass):
         )
 
         outputs["capacity_factor"] = outputs[f"{self.commodity}_out"].sum() / commodity_demand.sum()
+
+        total_demand = commodity_demand.sum()
+        total_gen = (
+            outputs[f"{self.commodity}_out"].sum() + outputs[f"unused_{self.commodity}_out"].sum()
+        )
+        if total_demand > 0:
+            outputs["percent_load_missed"] = (
+                100.0 * outputs[f"unmet_{self.commodity}_demand_out"].sum() / total_demand
+            )
+        else:
+            outputs["percent_load_missed"] = 0.0
+        if total_gen > 0:
+            outputs["curtailment_percent"] = (
+                100.0 * outputs[f"unused_{self.commodity}_out"].sum() / total_gen
+            )
+        else:
+            outputs["curtailment_percent"] = 0.0
 
         return outputs
