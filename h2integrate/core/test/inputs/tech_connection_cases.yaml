@@ -6,10 +6,13 @@ control_classifiers:
   grid_buy: dispatchable
   ng_feedstock: feedstock
   n2_feedstock: feedstock
+  ocean: feedstock
   h2_storage: storage
   battery: storage
+  nh3_storage: storage
   electrolyzer: dispatchable
   haber_bosch: dispatchable
+  desalination: dispatchable
 
 
 
@@ -151,6 +154,41 @@ ammonia_system_nh3_dmd_with_upstream_demand:
     - [n2_feedstock, haber_bosch, nitrogen, pipe]
     - [natural_gas_plant, haber_bosch, electricity, cable]
     - [haber_bosch, nh3_load_demand, ammonia, pipe]
+    # etc
+  system_level_control:
+    control_strategy: DemandFollowingControl
+    demand_component: nh3_load_demand
+
+fake_complex_system:
+  technology_interconnections:
+    # create a purified water system for the electrolyzer
+    - [ocean, desalination, salt_water, pipe]
+    - [desalination, electrolyzer, fresh_water, pipe]
+    # add ng feedstock to natural gas plant
+    - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
+    # connect renewable system
+    - [wind, combiner, electricity, cable]
+    - [solar, combiner, electricity, cable]
+    - [combiner, battery, electricity, cable]
+    # combine the battery output with the wind and solar generation
+    - [battery, elec_combiner, electricity, cable]
+    - [combiner, elec_combiner, electricity, cable]
+    # connect the electricity supply to the electrolyzer
+    - [elec_combiner, electrolyzer, electricity, cable]
+    # connect some fake outputs from the electrolyzer to the haber_bosch
+    - [electrolyzer, haber_bosch, hydrogen, pipe]
+    - [electrolyzer, haber_bosch, oxygen, pipe]
+    - [electrolyzer, haber_bosch, heat, pipe]
+    # connect other feedstocks to the ammonia plant
+    - [n2_feedstock, haber_bosch, nitrogen, pipe]
+    - [natural_gas_plant, haber_bosch, electricity, cable]
+    # connect haber_bosch to ammonia storage
+    - [haber_bosch, nh3_storage, ammonia, pipe]
+    # combine the ammonia production with ammonia storage
+    - [haber_bosch, ammonia_combiner, ammonia, pipe]
+    - [nh3_storage, ammonia_combiner, ammonia, pipe]
+    # connect the combined ammonia production to the demand
+    - [ammonia_combiner, nh3_load_demand, ammonia, pipe]
     # etc
   system_level_control:
     control_strategy: DemandFollowingControl
