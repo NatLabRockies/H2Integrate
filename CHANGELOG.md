@@ -2,7 +2,6 @@
 
 ## Unreleased
 - Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
-- Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models, and adds a `self.config` alias to `PYSAMSolarPlantPerformanceModel` for framework consistency. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
@@ -80,6 +79,7 @@
 - Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
 - Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
 - Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
+- Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
 
 ## 0.8 [April 15, 2026]
 
