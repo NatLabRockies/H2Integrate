@@ -6,7 +6,7 @@ jupytext:
     format_version: 0.13
     jupytext_version: 1.18.1
 kernelspec:
-  display_name: hopp
+    display_name: h2integrate
   language: python
   name: python3
 ---
@@ -129,7 +129,7 @@ class TechPerformanceModel(ResizeablePerformanceModelBaseClass):
 
 Here, there are three technologies in the the `tech_config.yaml`:
 
-1. A `hopp` plant producing electricity,
+1. A `renewable_electricity` source producing electricity,
 2. An `electrolyzer` producing hydrogen from that electricity, and
 3. An `ammonia` plant producing ammonia from that hydrogen.
 
@@ -140,13 +140,6 @@ The electrolyzer and ammonia technologies are resizeable. For starters, we will 
 driver_config = load_driver_yaml(EXAMPLE_DIR / "driver_config.yaml")
 plant_config = load_plant_yaml(EXAMPLE_DIR / "plant_config.yaml")
 tech_config = load_tech_yaml(EXAMPLE_DIR / "tech_config.yaml")
-
-# Replace a relative file in the example with a hard-coded reference for the docs version
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"][3:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"] = EXAMPLE_DIR.parent / fn
-
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"][3:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"] = EXAMPLE_DIR.parent / fn
 
 input_config = {
     "name": "H2Integrate_config",
@@ -200,9 +193,9 @@ for value in [
 
 ### `resize_by_max_feedstock` mode
 
-In this case, the electrolyzer will be sized to match the maximum `electricity_in` coming from HOPP.
-This increases the electrolyzer size to 1080 MW, the smallest multiple of 40 MW (the cluster size) matching the max HOPP power output of 1048 MW.
-This increases the LCOH to \$4.80/kg H2, and increases the LCOA to \$1.54/kg NH3, since electrolyzer is now oversized to utilize all of the HOPP electricity at peak output but thus has a lower hydrogen production capacity factor.
+In this case, the electrolyzer will be sized to match the maximum `electricity_in` from the upstream renewable electricity source.
+This increases the electrolyzer size to 1080 MW, the smallest multiple of 40 MW (the cluster size) matching the max upstream power of 1048 MW.
+This increases the LCOH to \$4.80/kg H2, and increases the LCOA to \$1.54/kg NH3, since electrolyzer is now oversized to utilize all of the peak electricity output but thus has a lower hydrogen production capacity factor.
 
 ```{code-cell} ipython3
 # Create a H2Integrate model, modifying tech_config as necessary
@@ -240,7 +233,7 @@ for value in [
 In this case, the electrolyzer will be sized to match the maximum hydrogen capacity of the ammonia plant.
 This requires the `technology_interconnections` entry to send the `max_hydrogen_capacity` from the ammonia plant to the electrolyzer.
 This decreases the electrolyzer size to 560 MW, the closest multiple of 40 MW (the cluster size) that will ensure an h2 production capacity that matches the ammonia plant's h2 intake at its max ammonia production capacity.
-This increases the LCOH to \$4.64/kg H2, but reduces the LCOA to \$1.30/kg NH3, since electrolyzer size was matched to ammonia production but not HOPP.
+This increases the LCOH to \$4.64/kg H2, but reduces the LCOA to \$1.30/kg NH3, since electrolyzer size was matched to ammonia production but not the upstream renewable source.
 
 ```{code-cell} ipython3
 # Create a H2Integrate model, modifying tech_config and plant_config as necessary
@@ -255,7 +248,7 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
+    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
@@ -308,7 +301,7 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
+    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
     ["electricity_feedstock", "ammonia", "electricity", "cable"],

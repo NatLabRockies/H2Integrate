@@ -278,7 +278,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
+    with subtests.test("Check renewable plant CapEx"):
         wind_pv_capex = (
             model.prob.get_val("wind.CapEx", units="USD")[0]
             + model.prob.get_val("solar.CapEx", units="USD")[0]
@@ -287,7 +287,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         re_capex = wind_pv_capex + battery_capex
         assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
+    with subtests.test("Check renewable plant OpEx"):
         wind_pv_opex = (
             model.prob.get_val("wind.OpEx", units="USD/yr")[0]
             + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
