@@ -1,7 +1,8 @@
 from attrs import field, define
+from attrs.validators import gt, lt
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt, lt, gt_zero, must_equal
+from h2integrate.core.validators import gt_zero, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
