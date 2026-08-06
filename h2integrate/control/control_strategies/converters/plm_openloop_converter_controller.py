@@ -44,16 +44,12 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
         default="electricity", validator=contains(["electricity", "price"])
     )
 
-    def __attrs_post_init__(self):
-        super().__attrs_post_init__()
-
 
 class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
 
     This controller computes a timestep-wise converter command that limits
     dispatch based on:
-
     1. A primary set-point peak cutoff
     2. An optional upstream signal cutoff (electricity demand or price)
     3. A converter capacity ceiling
@@ -69,8 +65,8 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
     # This controller reads the performance model's ``rated_<commodity>_production``
     # output as its command ceiling, which creates a controller<->performance data
-    # cycle within the technology group. h2integrate_model.py::_process_model() uses
-    # this flag to add a nonlinear solver so the cycle converges.
+    # cycle within the technology group. h2integrate_model.py::_process_model() checks
+    # this flag and adds a nonlinear solver so the cycle converges if needed.
     _reads_performance_outputs = True
 
     def setup(self):
@@ -79,10 +75,11 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         During setup:
         1. Loads controller configuration from tech_config model inputs
         2. Registers a rated-production input (auto-connected to the technology's
-           performance-model ``rated_<commodity>_production`` output via promotion)
+        performance-model ``rated_<commodity>_production`` output via promotion)
         3. Registers an upstream cutoff input with units based on
-           demand_profile_upstream_kind
+        demand_profile_upstream_kind
         4. Stores the simulation horizon length for use in compute()
+
         """
         self.config = PeakLoadManagementHeuristicOpenLoopConverterControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
@@ -113,14 +110,13 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         """Compute converter command profile using configured peak-cutoff heuristics.
 
         Dispatch logic per timestep:
-
         - If the primary set-point exceeds demand_profile_peak_cutoff,
-          dispatch may be activated.
+        dispatch may be activated.
         - For ``demand_profile_upstream_kind='electricity'``, the command tracks
-          the larger of primary and upstream exceedances, while respecting demand
-          and capacity limits.
+        the larger of primary and upstream exceedances, while respecting demand
+        and capacity limits.
         - For ``demand_profile_upstream_kind='price'``, dispatch is only enabled
-          when upstream price exceeds demand_profile_upstream_peak_cutoff.
+        when upstream price exceeds demand_profile_upstream_peak_cutoff.
 
         The command is clipped to remain between zero and both the instantaneous
         demand and converter capacity.

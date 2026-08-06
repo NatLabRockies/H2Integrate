@@ -126,7 +126,7 @@ The command at each timestep is determined by three limits:
   - `"price"` — the upstream signal is a price time series. Dispatch is only enabled on timesteps where the upstream price exceeds `demand_profile_upstream_peak_cutoff`.
 - **A converter capacity ceiling** — the command is clipped so it never exceeds the converter's `rated_{commodity}_production` (read from the performance model) or the instantaneous local demand.
 
-Because the controller reads the performance model's `rated_{commodity}_production` output as its command ceiling, a solver is automatically added to converge the controller/performance-model data cycle within the technology group.
+Because the controller reads the performance model's `rated_{commodity}_production` output as its command ceiling, a solver is automatically added at the technology group level to converge the controller/performance-model coupling.
 
 **Configuration parameters**
 
