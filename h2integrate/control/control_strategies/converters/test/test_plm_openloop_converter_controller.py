@@ -31,7 +31,7 @@ def test_compute_electricity_upstream_dispatch_expected_profile():
         commodity="hydrogen",
         demand_profile_peak_cutoff=90.0,
         demand_profile_upstream=[40.0, 80.0, 140.0, 110.0, 70.0],
-        demand_profile_upstream_kind="electricity",
+        demand_profile_upstream_kind="commodity",
     )
     controller = _controller_without_setup(config, n_timesteps=5)
 
@@ -162,7 +162,7 @@ def test_plm_converter_controller_integrates_with_h2_fuel_cell(subtests):
                 "demand_profile_peak_cutoff": 90.0,
                 "demand_profile_upstream": [40.0, 80.0, 140.0, 110.0, 70.0],
                 "demand_profile_upstream_peak_cutoff": 100.0,
-                "demand_profile_upstream_kind": "electricity",
+                "demand_profile_upstream_kind": "commodity",
             }
         }
     }

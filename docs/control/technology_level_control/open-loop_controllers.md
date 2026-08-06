@@ -122,7 +122,7 @@ The command at each timestep is determined by three limits:
 
 - **A primary set-point cutoff (`demand_profile_peak_cutoff`)** — dispatch is only considered when the local `{commodity}_set_point` exceeds this threshold. The desired dispatch is the amount by which the set-point exceeds the cutoff.
 - **An optional upstream signal and cutoff (`demand_profile_upstream` and `demand_profile_upstream_peak_cutoff`)** — a supervisory or upstream signal that can also trigger or shape dispatch. Its interpretation is controlled by `demand_profile_upstream_kind`:
-  - `"electricity"` (default) — the upstream signal is an upstream demand in commodity-amount units. The command tracks the larger exceedance of the local and upstream profiles.
+  - `"commodity"` (default) — the upstream signal is an upstream demand in commodity-amount units. The command tracks the larger exceedance of the local and upstream profiles.
   - `"price"` — the upstream signal is a price time series. Dispatch is only enabled on timesteps where the upstream price exceeds `demand_profile_upstream_peak_cutoff`.
 - **A converter capacity ceiling** — the command is clipped so it never exceeds the converter's `rated_{commodity}_production` (read from the performance model) or the instantaneous local demand.
 

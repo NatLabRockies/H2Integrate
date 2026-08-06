@@ -25,15 +25,15 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
             ``<commodity>_set_point`` exceeds this value.
         demand_profile_upstream (int | float | list | None): Secondary upstream profile
             used to trigger or shape dispatch decisions. For
-            ``demand_profile_upstream_kind='electricity'`` this is typically an
+            ``demand_profile_upstream_kind='commodity'`` this is typically an
             upstream demand signal in commodity amount units. For
             ``demand_profile_upstream_kind='price'`` this is a price time series.
         demand_profile_upstream_peak_cutoff (int | float | None): Threshold applied to
             ``demand_profile_upstream``. Units depend on
             ``demand_profile_upstream_kind``.
         demand_profile_upstream_kind (str): Interpretation mode for
-            ``demand_profile_upstream``. One of ``"electricity"`` or ``"price"``.
-            Defaults to ``"electricity"``.
+            ``demand_profile_upstream``. One of ``"commodity"`` or ``"price"``.
+            Defaults to ``"commodity"``.
 
     """
 
@@ -41,7 +41,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
     demand_profile_upstream: int | float | list | None = field()
     demand_profile_upstream_peak_cutoff: int | float | None = field()
     demand_profile_upstream_kind: str = field(
-        default="electricity", validator=contains(["electricity", "price"])
+        default="commodity", validator=contains(["commodity", "price"])
     )
 
 
@@ -112,7 +112,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
         Dispatch logic per timestep:
         - If the primary set-point exceeds demand_profile_peak_cutoff,
         dispatch may be activated.
-        - For ``demand_profile_upstream_kind='electricity'``, the command tracks
+        - For ``demand_profile_upstream_kind='commodity'``, the command tracks
         the larger of primary and upstream exceedances, while respecting demand
         and capacity limits.
         - For ``demand_profile_upstream_kind='price'``, dispatch is only enabled
@@ -129,7 +129,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
 
         Raises:
             ValueError: If demand_profile_upstream_kind is neither
-                ``"electricity"`` nor ``"price"``.
+                ``"commodity"`` nor ``"price"``.
         """
         commodity = self.config.commodity
         demand_profile = inputs[f"{commodity}_set_point"]
@@ -156,7 +156,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopCont
             ):
                 desired_dispatch = val - demand_profile_peak_cutoff
 
-                if self.config.demand_profile_upstream_kind == "electricity":
+                if self.config.demand_profile_upstream_kind == "commodity":
                     desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
 
                     self.command_value[idx] = min(
