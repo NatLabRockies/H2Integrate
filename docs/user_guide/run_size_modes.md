@@ -129,7 +129,7 @@ class TechPerformanceModel(ResizeablePerformanceModelBaseClass):
 
 Here, there are three technologies in the the `tech_config.yaml`:
 
-1. A `renewable_electricity` source producing electricity,
+1. A `electricity_feedstock` source producing electricity,
 2. An `electrolyzer` producing hydrogen from that electricity, and
 3. An `ammonia` plant producing ammonia from that hydrogen.
 
@@ -248,7 +248,7 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
@@ -301,7 +301,7 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
     ["electricity_feedstock", "ammonia", "electricity", "cable"],

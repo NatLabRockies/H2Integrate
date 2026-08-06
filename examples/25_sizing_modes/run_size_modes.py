@@ -136,7 +136,7 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
 ]
@@ -170,7 +170,7 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["renewable_electricity", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
 ]
 input_config["plant_config"] = plant_config

@@ -9,7 +9,7 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [renewable_electricity, electrolyzer, electricity, cable]
+  - [electricity_feedstock, electrolyzer, electricity, cable]
   - [electrolyzer, ammonia, hydrogen, pipe]
   - [n2_feedstock, ammonia, nitrogen, pipe]
   - [electricity_feedstock, ammonia, electricity, cable]
@@ -45,8 +45,8 @@ finance_parameters:
     h2:
       commodity: hydrogen
       commodity_stream: electrolyzer
-      technologies: [renewable_electricity, electrolyzer]
+      technologies: [electricity_feedstock, electrolyzer]
     nh3:
       commodity: ammonia
       commodity_stream: ammonia
-      technologies: [renewable_electricity, electrolyzer, ammonia]
+      technologies: [electricity_feedstock, electrolyzer, ammonia]

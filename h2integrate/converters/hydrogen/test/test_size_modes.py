@@ -66,7 +66,7 @@ def test_resize_by_max_commodity(input_config, subtests):
         "performance_parameters"
     ]["max_commodity_ratio"] = 1.0
     input_config["plant_config"]["technology_interconnections"] = [
-        ["renewable_electricity", "electrolyzer", "electricity", "cable"],
+        ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
         ["electrolyzer", "ammonia", "hydrogen", "pipe"],
         ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
         ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
