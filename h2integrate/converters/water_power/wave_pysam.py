@@ -236,23 +236,10 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
 
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
 
-        # annual_energy and capacity_factor are not available in time-series mode;
-        # compute them from the simulation output and the simulated year fraction.
-        fraction = self.fraction_of_year_simulated
-        if fraction > 0:
-            outputs["annual_electricity_produced"] = (
-                outputs["total_electricity_produced"] / fraction
-            )
-        else:
-            outputs["annual_electricity_produced"] = outputs["total_electricity_produced"]
-
-        annual_hours = 8760.0
-        if system_capacity_kw > 0:
-            outputs["capacity_factor"] = outputs["annual_electricity_produced"] / (
-                system_capacity_kw * annual_hours
-            )
-        else:
-            outputs["capacity_factor"] = 0.0
+        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+        outputs["capacity_factor"] = (
+            self.system_model.Outputs.capacity_factor / 100
+        )  # divide by 100 to make it unitless
 
         # Honor a system-level controller's set-point by curtailing
         # `electricity_out`. No-op when there is no system-level controller.

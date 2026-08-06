@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import openmdao.api as om
 
@@ -610,12 +611,25 @@ def test_wave_pysam_outputs(plant_config, wave_config, pysam_options, subtests):
             286 * 108, rel=1e-6
         )
 
-    with subtests.test("total_electricity_produced positive"):
-        assert prob.get_val("comp.total_electricity_produced") > 0
+    with subtests.test("mean electricity_out regression"):
+        assert np.mean(prob.get_val(f"comp.{commodity}_out")) == pytest.approx(
+            12586.456849, rel=1e-4
+        )
 
-    with subtests.test("capacity_factor range"):
-        cf = float(prob.get_val("comp.capacity_factor").flat[0])
-        assert 0 < cf <= 1
+    with subtests.test("total_electricity_produced regression"):
+        assert prob.get_val("comp.total_electricity_produced")[0] == pytest.approx(
+            110257362.0, rel=1e-4
+        )
+
+    with subtests.test("annual_electricity_produced regression"):
+        assert prob.get_val("comp.annual_electricity_produced")[0] == pytest.approx(
+            110257362.0, rel=1e-4
+        )
+
+    with subtests.test("capacity_factor regression"):
+        assert float(prob.get_val("comp.capacity_factor").flat[0]) == pytest.approx(
+            0.407487, rel=1e-4
+        )
 
 
 @pytest.mark.unit
