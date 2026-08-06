@@ -80,6 +80,7 @@
 - Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
 - Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
+- Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
 
 ## 0.8 [April 15, 2026]
 

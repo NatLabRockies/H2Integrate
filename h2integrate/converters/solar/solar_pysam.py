@@ -185,6 +185,9 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         self.design_dict = design_dict
         self.system_model.assign(design_dict)
+        # Expose config under the standard attribute name so framework utilities
+        # (e.g. check_inputs) can access configuration parameters consistently.
+        self.config = self.design_config
 
     def calc_tilt_angle(self, latitude):
         """
@@ -331,6 +334,16 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         return reformatted_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        if inputs["system_capacity_DC"][0] <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["system_capacity_AC"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
+
         # calculate the tilt angle based on site latitude (use 0 if site latitude is not input)
         tilt = self.calc_tilt_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
         # over-write the tilt angle if it was specified in the design dict

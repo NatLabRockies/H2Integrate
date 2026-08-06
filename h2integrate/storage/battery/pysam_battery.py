@@ -4,7 +4,7 @@ import PySAM.BatteryStateful as BatteryStateful
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val
+from h2integrate.core.validators import contains, gte_zero, range_val
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -51,8 +51,8 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
     """
 
-    max_capacity: float = field(validator=gt_zero)
-    max_charge_rate: float = field(validator=gt_zero)
+    max_capacity: float = field(validator=gte_zero)
+    max_charge_rate: float = field(validator=gte_zero)
 
     chemistry: str = field(
         validator=contains(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
@@ -122,6 +122,20 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         thermal properties, etc.), executes the simulation, and stores the
         results in OpenMDAO outputs.
         """
+
+        if inputs["max_charge_rate"][0] <= 0 or inputs["storage_capacity"][0] <= 0:
+            commodity = self.commodity
+            n_ts = self.n_timesteps
+            outputs[f"{commodity}_out"] = np.zeros(n_ts)
+            outputs["SOC"] = np.full(n_ts, self.config.init_soc_fraction * 100)
+            outputs[f"storage_{commodity}_discharge"] = np.zeros(n_ts)
+            outputs[f"storage_{commodity}_charge"] = np.zeros(n_ts)
+            outputs["storage_duration"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            return
 
         # Size the battery based on inputs -> method brought from HOPP
         module_specs = {
