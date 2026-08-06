@@ -27,36 +27,14 @@ The cost model will calculate capex costs based on the Stinn correlations and op
 
 ## Performance Model
 
-```{eval-rst}
-.. autoclass:: h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
+For API details, see:
 
-```{eval-rst}
-.. autoclass:: h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponent
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
+- [`HumbertEwinConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
+- [`HumbertEwinPerformanceComponent`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
 
 ## Cost Model
 
-```{eval-rst}
-.. autoclass:: h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
+For API details, see:
 
-```{eval-rst}
-.. autoclass:: h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
+- [`HumbertStinnEwinCostConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
+- [`HumbertStinnEwinCostComponent`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
