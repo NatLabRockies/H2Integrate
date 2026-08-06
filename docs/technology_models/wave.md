@@ -55,17 +55,3 @@ wave_power_matrix:
 ```
 
 The power matrix format follows the SAM convention and can be exported from SAM for any supported reference model.
-
-### API Reference
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceModel
-   :members:
-   :undoc-members:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceConfig
-   :members:
-   :undoc-members:
-```

@@ -48,17 +48,3 @@ resource_to_tech_connections:
   - [site.wave_resource, wave, significant_wave_height]
   - [site.wave_resource, wave, energy_period]
 ```
-
-## API Reference
-
-```{eval-rst}
-.. autoclass:: h2integrate.resource.wave.WaveResource
-   :members:
-   :undoc-members:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.resource.wave.WaveResourceConfig
-   :members:
-   :undoc-members:
-```
