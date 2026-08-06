@@ -48,6 +48,7 @@ dependencies = [
   "openmdao>=3.45.0",
   "openmeteo-requests",
   "pandas>=2.0.3",
+  "pint",
   "ProFAST",
   "Pyomo>=6.1.2",
   "rainflow",
