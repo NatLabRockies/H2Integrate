@@ -42,6 +42,7 @@ dependencies = [
   "jsonschema",
   "marine-carbon-management",
   "matplotlib",
+  "NREL-PySAM>=7.0.0",
   "numpy",
   "numpy-financial",
   "openmdao>=3.44.0",
