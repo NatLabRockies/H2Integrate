@@ -141,18 +141,13 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         """
         Returns a function fluid_fun(T_c) that uses CoolProp for fluid properties.
 
-        Parameters
-        ----------
-        fluid_name : str
-            CoolProp fluid name, e.g. 'Water', 'Ethanol', 'R134a', 'MEG', etc.
-        P_bar : float
-            Operating pressure in bar (absolute). Converted internally to Pa.
+        Inputs:
+            fluid_name (str): CoolProp fluid name, e.g. 'Water', 'Ethanol', 'R134a', 'MEG', etc.
+            P_bar (float): Operating pressure in bar (absolute). Converted internally to Pa.
 
-        Returns
-        -------
-        fluid_fun : callable
-            fluid_fun(T_c) -> dict(rho, mu, cp, k, Pr)
-            where T_c is in degC and properties are SI units:
+        Outputs:
+            fluid_fun (callable):  fluid_fun(T_c) -> dict(rho, mu, cp, k, Pr)
+                where T_c is in degC and properties are SI units:
                 - rho : density [kg/m^3]
                 - mu  : dynamic viscosity [Pa·s]
                 - cp  : specific heat at constant pressure [J/kg-K]
