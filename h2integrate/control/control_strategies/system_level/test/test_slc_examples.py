@@ -301,8 +301,13 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
     with subtests.test("natural gas dispatched"):
         assert ng_out.sum() > 0
 
-    with subtests.test("grid used when needed"):
-        assert grid_out.sum() > 0
+    with subtests.test("grid not dispatched when always unprofitable"):
+        # grid_buy_price = sell_price + 0.02 everywhere, so grid is never
+        # profitable to buy under ProfitMaximizationControl. After the
+        # buy_price input-to-input connection fix, the SLC sees the actual
+        # per-timestep buy price (not the constant default from the tech
+        # config), so the merit-order check correctly skips grid.
+        assert grid_out.sum() == 0
 
 
 @pytest.mark.unit

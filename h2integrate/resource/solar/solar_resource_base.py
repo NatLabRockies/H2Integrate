@@ -51,7 +51,7 @@ class SolarResourceBaseAPIModel(ResourceBaseAPIModel):
             - **data_units** (*dict*): updated units of data in ``data``.
         """
         for data_col, orig_units in data_units.items():
-            if data_col in self.output_vars_to_units:
+            if (data_col in self.output_vars_to_units) and (data_col in data):
                 desired_units = self.output_vars_to_units[data_col]
                 if desired_units != orig_units:
                     data[data_col] = units.convert_units(data[data_col], orig_units, desired_units)

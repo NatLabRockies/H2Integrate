@@ -3,6 +3,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.finances.profast_lco import ProFastLCO
+from h2integrate.finances.profast_base import BasicProFASTParameterConfig
 
 
 @fixture
@@ -57,6 +58,34 @@ def fake_cost_dict():
         "varopex_adjusted_natural_gas": [65458026.9] * 30,
     }
     return fake_costs
+
+
+@pytest.mark.unit
+def test_profast_params_config(profast_inputs_no1, subtests):
+    profast_params = profast_inputs_no1["params"]
+    profast_params["plant_life"] = 30
+    profast_params["inflation_rate"] = 0.02
+    profast_params["incidental_revenue"] = {"value": 0.0, "escalation": 0.03}
+    profast_params["road_tax"] = {"value": 0.0, "escalation": 0.0}
+    pf_config = BasicProFASTParameterConfig.from_dict(profast_params)
+    pf_params = pf_config.as_dict()
+    with subtests.test("Incidental revenue escalation rate"):
+        assert pf_params["incidental revenue"]["escalation"] == 0.03
+
+    with subtests.test("Road tax escalation rate"):
+        assert pf_params["road tax"]["escalation"] == 0.0
+
+    with subtests.test("Commodity escalation rate"):
+        assert pf_params["commodity"]["escalation"] == 0.02
+
+    with subtests.test("General inflation rate"):
+        assert pf_params["general inflation rate"] == 0.02
+
+    with subtests.test("Labor escalation rate"):
+        assert pf_params["labor"]["escalation"] == 0.02
+
+    with subtests.test("Maintenance escalation rate"):
+        assert pf_params["maintenance"]["escalation"] == 0.02
 
 
 @pytest.mark.regression

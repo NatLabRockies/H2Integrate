@@ -214,7 +214,7 @@ class BasicProFASTParameterConfig(BaseConfig):
             "name": None,
             "unit": None,
             "initial price": 100,
-            "escalation": 0.0,
+            "escalation": None,
         }
     )
 
@@ -243,12 +243,12 @@ class BasicProFASTParameterConfig(BaseConfig):
             "taxable": True,
         }
     )
-    incidental_revenue: dict = field(default={"value": 0.0, "escalation": 0.0})
-    road_tax: dict = field(default={"value": 0.0, "escalation": 0.0})
-    labor: dict = field(default={"value": 0.0, "rate": 0.0, "escalation": 0.0})
-    maintenance: dict = field(default={"value": 0.0, "escalation": 0.0})
-    rent: dict = field(default={"value": 0.0, "escalation": 0.0})
-    license_and_permit: dict = field(default={"value": 0.0, "escalation": 0.0})
+    incidental_revenue: dict = field(default={"value": 0.0, "escalation": None})
+    road_tax: dict = field(default={"value": 0.0, "escalation": None})
+    labor: dict = field(default={"value": 0.0, "rate": 0.0, "escalation": None})
+    maintenance: dict = field(default={"value": 0.0, "escalation": None})
+    rent: dict = field(default={"value": 0.0, "escalation": None})
+    license_and_permit: dict = field(default={"value": 0.0, "escalation": None})
     one_time_cap_inct: dict = field(
         default={"value": 0.0, "depr type": "MACRS", "depr period": 3, "depreciable": False}
     )
@@ -269,8 +269,19 @@ class BasicProFASTParameterConfig(BaseConfig):
         # Rename underscores to spaces for ProFAST compatibility
         pf_params = {k.replace("_", " "): v for k, v in pf_params_init.items()}
 
+        # If a user provides a non-default escalation value, track it before
+        # updating it to the inflation rate
+        input_escalation_params = {}
+        for k, v in pf_params.items():
+            if isinstance(v, dict) and ("escalation" in v):
+                if v.get("escalation", None) is not None:
+                    input_escalation_params[k] = v.copy()
+
         # Apply inflation rate defaults to escalation fields
         pf_params = update_defaults(pf_params, "escalation", self.inflation_rate)
+        # Ensure that user-specified escalation values are not over-written to `inflation_rate``
+        # when `update_defaults` is called
+        pf_params |= input_escalation_params
 
         # Remap finance keys to ProFAST names where applicable
         params = {}

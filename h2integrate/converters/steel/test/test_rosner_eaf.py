@@ -62,7 +62,7 @@ def ng_feedstock_availability_costs():
         },
         "water": {
             "rated_capacity": 10000.0,  # need 9082.97025163801 galUS/h
-            "units": "galUS",
+            "units": "galUS/h",
             "price": 1670.0,  # cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
         "sponge_iron": {
@@ -100,7 +100,7 @@ def h2_feedstock_availability_costs():
         },
         "water": {
             "rated_capacity": 6000.0,  # need 5766.528266260271 galUS/h
-            "units": "galUS",
+            "units": "galUS/h",
             "price": 1670.0,  # TODO: update cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
         "sponge_iron": {
