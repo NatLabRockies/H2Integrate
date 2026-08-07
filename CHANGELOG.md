@@ -79,6 +79,7 @@
 - Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
 - Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
 - Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
+- Renamed OpenLoopStorageControlBase to OpenLoopControlBase and OpenLoopStorageControlBaseConfig to OpenLoopControlBaseConfig and moved them out of the control storage sub-directory. [PR 828](https://github.com/NatLabRockies/H2Integrate/pull/828)
 
 ## 0.8 [April 15, 2026]
 
