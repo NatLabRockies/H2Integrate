@@ -133,7 +133,10 @@ class NGCT:
             )  # use static method
 
             ### PACK THE RESULT
-            result = ThermodynamicCycleResult()
+            result = ThermodynamicCycleResult(
+                "Brayton cycle combustion turbine",
+                closed=True,
+            )
 
             # add mass flowrate
             result.mass_flowrate = mass_flowrate
