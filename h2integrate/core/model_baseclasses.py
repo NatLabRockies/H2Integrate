@@ -150,6 +150,25 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
 
+class ReliabilityModelBaseClass(om.ExplicitComponent):
+    def initialize(self):
+        self.options.declare("driver_config", types=dict)
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("tech_config", types=dict)
+
+    def setup(self):
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.availability = np.ones(self.n_timesteps, dtype=float)
+
+        self.add_output(
+            f"{self.commodity}_availability",
+            val=self.availability,
+            shape=self.n_timesteps,
+            units="unitless",
+            desc="Production-based availability for a commodity.",
+        )
+
+
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
@@ -543,5 +562,38 @@ class CacheBaseClass(om.ExplicitComponent):
 
         # # 3. Save outputs to cache directory
         # self.cache_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+    def apply_curtailment(self, outputs):
+        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+
+        Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
+        then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
+
+        Only operates when the model has ``_control_classifier == "flexible"``.
+        Should be called at the end of each flexible model's ``compute()`` method
+        after the raw production has been written to ``outputs[f"{commodity}_out"]``.
+        """
+        if "system_level_control" in self.options["plant_config"]:
+            if getattr(self, "_control_classifier", None) != "flexible":
+                return
+
+            commodity_out_key = f"{self.commodity}_out"
+            uncurtailed_key = f"uncurtailed_{self.commodity}_out"
+            command_value_key = f"{self.commodity}_command_value"
+
+            uncurtailed = np.array(outputs[commodity_out_key])
+            outputs[uncurtailed_key] = uncurtailed
+
+            command_value = self._inputs[command_value_key]
+            outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):  # noqa: F811
+        """
+        Computation for the OM component.
+
+        For a template class this is not implement and raises an error.
+        """
 
         raise NotImplementedError("This method should be implemented in a subclass.")
