@@ -180,6 +180,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # figure out if we can re-use the cache
         if not all(a == b for a, b in zip(wx_checksums, self.wx_checksums)):
+            # recompute the unit-mass cycle because ambient fluid states are new
             self.wx_checksums = None  # break everything that will be recomputed
             self.ambient_fluid_list = None  # break everything that will be recomputed
             self.fundamental_cycle = None  # break everything that will be recomputed
@@ -193,10 +194,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
                 for T, P in wx_data
             ]
             self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
-            # print("DEBUG!!!!! RE-COMPUTING UNIT-MASS CYCLE B/C AMBIENT FLUID STATES CHANGED")
-        else:
-            pass
-            # print("DEBUG!!!!! RE-USING ORIGINAL CYCLE (NO AMBIENT FLUID CHANGE)")
+        # if the above didn't run, the weather checksums matched and we just use the cache
 
         # extract the net unit mass net work
         unit_mass_net_work_vec = [
