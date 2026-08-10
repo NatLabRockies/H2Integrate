@@ -9,9 +9,9 @@ from h2integrate.core.validators import gte_zero, range_val_or_none
 
 
 @define(kw_only=True)
-class StorageOpenLoopControlBaseConfig(BaseConfig):
+class OpenLoopControlBaseConfig(BaseConfig):
     """
-    Configuration class for the open-loop storage control models.
+    Configuration class for the open-loop storage and converter control models.
 
     Attributes:
         commodity (str): Name of the commodity being stored (e.g., "hydrogen").
@@ -102,7 +102,7 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
 
     def common_post_init_operations(self):
         """
-        Post-initialization logic to validate and calculate efficiencies.
+        Post-initialization logic to validate and calculate efficiencies for storage technologies.
 
         Ensures that either `charge_efficiency` and `discharge_efficiency` are provided,
         or `round_trip_efficiency` is provided. If `round_trip_efficiency` is provided,
@@ -137,8 +137,10 @@ class StorageOpenLoopControlBaseConfig(BaseConfig):
             self.max_discharge_rate = self.max_charge_rate
 
 
-class StorageOpenLoopControlBase(om.ExplicitComponent):
-    """Base OpenMDAO component for open-loop demand tracking.
+class OpenLoopControlBase(om.ExplicitComponent):
+    """
+    Base OpenMDAO component for open-loop demand tracking for both storage and
+    converter technologies.
 
     This component defines the interfaces required for open-loop demand
     controllers, including inputs for set-point, available commodity, and outputs
