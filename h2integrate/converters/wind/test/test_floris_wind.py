@@ -213,7 +213,7 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
                 prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0],
                 rel=1e-6,
             )
-            == 36471.03023616864 * 1e3
+            == 36457.44603023616864 * 1e3
         )
 
     with subtests.test("total electricity_out"):

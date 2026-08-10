@@ -9,7 +9,13 @@ import pytest
 import openmdao.api as om
 from attrs import field, define
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR, load_tech_yaml
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    RESOURCE_DEFAULT_DIR,
+    load_tech_yaml,
+    load_driver_yaml,
+)
 from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
 from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
 from h2integrate.core.file_utils import (
@@ -21,6 +27,15 @@ from h2integrate.core.file_utils import (
     make_unique_case_name,
 )
 from h2integrate.core.supported_models import supported_models
+
+
+@pytest.mark.unit
+def test_driver_schema_path_validator(subtests):
+    driver_config = load_yaml(EXAMPLE_DIR / "16_natural_gas" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = EXAMPLE_DIR / "16_natural_gas" / "outputs"
+    driver_config_validated = load_driver_yaml(driver_config)
+    with subtests.test("folder output is a path object"):
+        assert isinstance(driver_config_validated["general"]["folder_output"], Path)
 
 
 @pytest.fixture(scope="function")
