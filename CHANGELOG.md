@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased [TBD]
+
+- Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
+
 ## 0.9 [August 10, 2026]
 
 ### New Features
@@ -79,6 +83,7 @@
 - Corrected water rate units in pipe feedstock from galUS to galUS/h [PR 813](https://github.com/NatLabRockies/H2Integrate/pull/813)
 - Corrected timestamps in OpenMeteo resource downloads when resource data is downloaded in local time [PR #814](https://github.com/NatLabRockies/H2Integrate/pull/814)
 - Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
+- Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
 
 ## 0.8 [April 15, 2026]
 

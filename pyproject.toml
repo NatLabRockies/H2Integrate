@@ -42,6 +42,7 @@ dependencies = [
   "jsonschema",
   "marine-carbon-management",
   "matplotlib",
+  "NREL-PySAM>=7.0.0",
   "numpy",
   "numpy-financial",
   "openmdao>=3.44.0",
@@ -248,6 +249,7 @@ ignore = [
 "*/__init__.py" = ["E501", "D104", "F401"]
 "*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
+"*/test/test_wave_pysam.py" = ["E501"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true
