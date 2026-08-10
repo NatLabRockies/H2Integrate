@@ -83,12 +83,16 @@ SUBCATEGORY_LABELS: dict[str, tuple[str, str]] = {
     "h2integrate.resource.wind": ("wind", "wind resource data providers"),
     "h2integrate.resource.solar": ("solar", "solar resource data providers"),
     "h2integrate.resource.tidal": ("tidal", "tidal resource data providers"),
+    "h2integrate.resource.wave": ("wave", "wave resource data providers"),
     "h2integrate.resource.river": ("river", "river resource data providers"),
     # ---- Converters ----
     "h2integrate.converters": ("generic", "generic converter components"),
     "h2integrate.converters.wind": ("wind", "wind turbine plants"),
     "h2integrate.converters.solar": ("solar", "solar-PV panels"),
-    "h2integrate.converters.water_power": ("water_power", "tidal and run-of-river hydropower"),
+    "h2integrate.converters.water_power": (
+        "water_power",
+        "wave, tidal, and run-of-river hydropower",
+    ),
     "h2integrate.converters.hopp": ("hopp", "hybrid renewable plant via HOPP"),
     "h2integrate.converters.hydrogen": ("hydrogen", "hydrogen production"),
     "h2integrate.converters.hydrogen.geologic": (
