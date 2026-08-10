@@ -133,7 +133,7 @@ def compute_heat_transfer(
     state_outlet,
     mass_flow_fluid=1.0,  # by default unity, returns unit-mass kJ/kg
 ):
-    # heat transfer to a system should be positive
+    # sign convention: heat transfer _to_ a system should be positive
     return mass_flow_fluid * (state_outlet.enthalpy / 1.0e3 - state_inlet.enthalpy / 1.0e3)  # kJ/s
 
 
@@ -160,6 +160,26 @@ def compute_isentropic_expansion_outlet_state(
 
 
 class ThermodynamicCycleResult:
+    """
+    Container for thermodynamic cycle states, processes, and losses.
+
+    Stores per-state metadata together with specific work and heat transfer
+    values for each process in the cycle. Optional loss terms can also be
+    tracked by index.
+
+    Attributes:
+        closed (bool): whether the cycle is thermodynamically closed. `true` by default.
+        desc (str): description of the thermodynamic cycle.
+        mass_flowrate (np.ndarray): mass flow rate(s) of the system in kg/s.
+        states (dict[int, pyfluids AbstractFluid]): map from state indices to fluid states.
+        process_work_unit: map of process index pairs (from/to) to specific work in kJ/kg.
+        process_heat_unit: map of process index pairs (from/to) to specific heat transfer in kJ/kg.
+        loss_work_unit: map from loss indices to specific work losses.
+        state_names: map from state indices to state names.
+        process_names: map from process index pairs to process names.
+        loss_names: map from loss indices to loss names.
+    """
+
     closed: bool = True
     desc: str = ""
     mass_flowrate: np.ndarray  # kg/s

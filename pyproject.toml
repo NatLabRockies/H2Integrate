@@ -116,7 +116,7 @@ gis = [
 ]
 ard = ["ard-nrel"]
 thermo = ["pyfluids<4.0"]
-extras = ["h2integrate[gis,ard]"]
+extras = ["h2integrate[gis,ard,thermo]"]
 all = ["h2integrate[develop,extras,examples]"]
 
 [tool.setuptools]
