@@ -8,12 +8,11 @@ Warning: this may take some time (up to a few minutes) depending on your PC's pr
 
 """
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR
+from h2integrate import ROOT_DIR, EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Create H2Integrate model
@@ -42,7 +41,7 @@ shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
 # NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=case_results_filepath,
-    metric_to_plot="finance_subgroup_pig_iron.LCOP (USD/kg)",
+    metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/kg)",
     map_preferences={
         "figsize": (10, 8),
         "colorbar_label": "Levelized Cost of\nIron [$/kg]",

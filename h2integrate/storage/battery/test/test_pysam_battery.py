@@ -28,15 +28,18 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     # Set up the OpenMDAO problem
     prob = om.Problem()
 
-    n_control_window = tech_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
-        "n_control_window"
-    ]
+    n_control_window_hours = tech_config["technologies"]["battery"]["model_inputs"][
+        "control_parameters"
+    ]["n_control_window_hours"]
 
     electricity_in = np.concatenate(
-        (np.ones(int(n_control_window / 2)) * 1000.0, np.zeros(int(n_control_window / 2)))
+        (
+            np.ones(int(n_control_window_hours / 2)) * 1000.0,
+            np.zeros(int(n_control_window_hours / 2)),
+        )
     )
 
-    electricity_demand = np.ones(int(n_control_window)) * 1000.0
+    electricity_demand = np.ones(int(n_control_window_hours)) * 1000.0
 
     prob.model.add_subsystem(
         name="IVC1",
@@ -46,20 +49,22 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     prob.model.add_subsystem(
         name="IVC2",
-        subsys=om.IndepVarComp(name="time_step_duration", val=np.ones(n_control_window), units="h"),
+        subsys=om.IndepVarComp(
+            name="time_step_duration", val=np.ones(n_control_window_hours), units="h"
+        ),
         promotes=["*"],
     )
 
     prob.model.add_subsystem(
         name="IVC3",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
     prob.model.add_subsystem(
         name="IVC4",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -163,7 +168,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             1.5813561713279114,
         ]
     )
-    expected_unused_electricity = np.zeros(n_control_window)
+    expected_unused_electricity = np.zeros(n_control_window_hours)
 
     with subtests.test("expected_battery_power"):
         np.testing.assert_allclose(
@@ -196,6 +201,10 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             expected_unused_electricity,
             rtol=1e-2,
         )
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
 
 
 @pytest.mark.regression
@@ -317,7 +326,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             "shared_parameters": {
                 "max_charge_rate": init_charge_rate,
                 "max_capacity": init_capacity,
-                "n_control_window": 48,
+                "n_control_window_hours": 48,
                 "init_soc_fraction": 0.1,
                 "max_soc_fraction": 1.0,
                 "min_soc_fraction": 0.1,
@@ -329,7 +338,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init = om.Problem()
     prob_init.model.add_subsystem(
         name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
@@ -342,7 +351,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -388,11 +397,16 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             == init_charge_rate
         )
 
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob_init.get_val("pysam_battery.storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
+
     # Re-run and set the charge rate as half of what it was before
     prob = om.Problem()
     prob.model.add_subsystem(
         name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
@@ -405,7 +419,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -464,3 +478,8 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
             )
             == 2.5
         )
+
+    with subtests.test("Charge never exceeds available commodity"):
+        charge_profile = prob.get_val("pysam_battery.storage_electricity_charge", units="kW")
+        indx_charging = np.argwhere(charge_profile).flatten()
+        assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])

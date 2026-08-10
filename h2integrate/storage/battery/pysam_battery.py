@@ -83,16 +83,6 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     Attributes:
         system_model (``BatteryStateful``): Instance of the PySAM BatteryStateful model, initialized
             with the selected chemistry and configuration parameters.
-
-
-    Methods:
-        compute(inputs, outputs, discrete_inputs, discrete_outputs):
-            Runs the PySAM BatteryStateful model for a simulation timestep,
-            updating outputs such as SOC, charge/discharge limits, unmet
-            demand, and unused commodities.
-        _set_control_mode(control_mode=1.0, input_power=0.0, input_current=0.0,
-            control_variable="input_power"):
-            Sets the battery control mode (power or current).
     """
 
     _time_step_bounds = (
@@ -185,6 +175,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         charge_rate: float,
         discharge_rate: float,
         storage_capacity: float,
+        commodity_available=list | np.ndarray,
         sim_start_index: int = 0,
     ):
         """Run the PySAM BatteryStateful model over a control window.
@@ -204,7 +195,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         Args:
             storage_dispatch_commands : Sequence[float]
                 Commanded power per timestep (kW). Negative = charge, positive = discharge.
-                Length should be = ``config.n_control_window``.
+                Length should be = ``config.n_control_window_hours``.
             control_variable : str
                 PySAM control input to set each step ("input_power" or "input_current").
             sim_start_index : int, optional
@@ -241,15 +232,18 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # expressed as a rate (commodity_rate_units).
                 headroom = (soc_max - soc) * storage_capacity / self.dt_hr
 
+                # charge available based on the available input commodity
+                charge_available = commodity_available[sim_start_index + t]
+
                 # Calculate the max charge according to the charge rate and the simulation
                 max_charge_input = min([charge_rate, -self.system_model.value("P_chargeable")])
 
                 # Clip to the most restrictive limit,
                 # max(0, ...) guards against negative headroom when SOC
                 # slightly exceeds soc_max.
-                actual_charge = max(0.0, min(headroom, max_charge_input, -cmd))
+                actual_charge = max(0.0, min(headroom, max_charge_input, -cmd, charge_available))
 
-                # Update the charge command for the PySAM batttery
+                # Update the charge command for the PySAM battery
                 cmd = -actual_charge
 
             else:
@@ -266,7 +260,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 # Clip and apply discharge efficiency.
                 actual_discharge = max(0.0, min(headroom, max_discharge_input, cmd))
 
-                # Update the discharge command for the PySAM batttery
+                # Update the discharge command for the PySAM battery
                 cmd = actual_discharge
 
             # Set the input variable to the desired value

@@ -3,8 +3,9 @@
 H2I contains two steel electric arc furnace (EAF) models, one is for a facility that utilizes iron pellets from natural gas (NG) direct iron reduction and another facility that utilizes iron pellets from hydrogen (H2)direct iron reduction.
 
 The main difference is the required feedstocks for processing the pellets.
-- NG-EAF requires: natural gas, water, pig iron and electricity.
-- H2-EAF requires: natural gas, water, carbon, lime, pig iron and electricity.
+- NG-EAF requires: natural gas, water, sponge iron and electricity.
+- H2-EAF requires: natural gas, water, carbon, lime, sponge iron and electricity.
+
 
 The original models were constructed in Aspen Pro and translated into Python and added to H2I. The models were developed in conjunction with [Lawrence Berkeley National Laboratory (LBNL)](https://www.lbl.gov/).
 
@@ -15,6 +16,10 @@ The models implemented in H2I are:
 - Hydrogen Electric Arc Furnace
   - `HydrogenEAFPlantPerformanceComponent`
   - `HydrogenEAFPlantCostComponent`
+
+```{note}
+The EAF model use sponge iron as an input rather than pig iron, which is lower in carbon content. The LBNL model calls the input to the EAF pig iron, but that's typically produced using a blast furnace rather than through the DRI process and has higher carbon impurities.
+```
 
 Citation:
 ```bibtex

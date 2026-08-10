@@ -31,8 +31,7 @@ Below shows an example, similar to the [Wind Electrolyzer Example](https://githu
 finance_parameters:
   finance_groups:
     my_finance_model:
-      finance_model: simple_lco_finance #this is the key to give it in for supported models
-      finance_model_class_name: SimpleLCOFinance #name of the finance class
+      finance_model: SimpleLCOFinance #name of the finance class
       finance_model_location: user_finance_model/simple_lco.py #filepath of the finance model relative to the plant_config.yaml file
       model_inputs: #inputs for the finance model
         discount_rate: 0.09

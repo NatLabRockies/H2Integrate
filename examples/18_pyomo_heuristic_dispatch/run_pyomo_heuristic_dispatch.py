@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import H2IntegrateModel
 
 
 # Create an H2Integrate model
@@ -12,7 +12,7 @@ demand_profile = np.ones(8760) * 50.0
 
 # TODO: Update with demand module once it is developed
 model.setup()
-model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
 
 # Run the model
 model.run()

@@ -1,15 +1,15 @@
-"""Minimal working example from the DOE user guide docs."""
+"""Minimal working example from the parameter sweep user guide docs."""
 
+from h2integrate import H2IntegrateModel
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.core.file_utils import load_yaml, check_file_format_for_csv_generator
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 # Load the configurations and run the model
 config = load_yaml("20_solar_electrolyzer_doe.yaml")
 
 driver_config = load_yaml(config["driver_config"])
-csv_config_fn = driver_config["driver"]["design_of_experiments"]["filename"]
+csv_config_fn = driver_config["driver"]["parameter_sweep"]["filename"]
 
 try:
     model = H2IntegrateModel(config)
@@ -43,7 +43,7 @@ updated_driver = update_defaults(
     new_csv_filename.name,
 )
 driver_config["driver"].update(updated_driver)
-print(f"New DOE driver CSV file: {new_csv_filename}")
+print(f"New parameter sweep driver CSV file: {new_csv_filename}")
 
 # Step 3
 config["driver_config"] = driver_config

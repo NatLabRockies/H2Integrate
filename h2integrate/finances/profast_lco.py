@@ -1,7 +1,9 @@
+import warnings
 from pathlib import Path
 
 import numpy as np
 
+from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
 from h2integrate.tools.profast_tools import (
     run_profast,
@@ -41,13 +43,6 @@ class ProFastLCO(ProFastBase):
             as LCOx.
         ``<LCOx>_breakdown`` (dict): Annualized breakdown of LCO costs by category.
 
-    Methods:
-        add_model_specific_outputs(): Creates model outputs for the LCO and associated financial
-            metrics, including cost breakdowns.
-        compute(inputs, outputs, discrete_inputs, discrete_outputs): Runs the ProFAST simulation,
-            calculates the LCO and financial outputs, generates breakdowns, and optionally exports
-            configuration and results to files.
-
     Notes:
 
         - Outputs and file exports are governed by user-specified finance parameters in the plant
@@ -72,14 +67,15 @@ class ProFastLCO(ProFastBase):
         base = f"LCO{self.options['commodity_type'][0].upper()}"
         self.LCO_str = f"{base}_{desc}" if desc else base
 
-        self.add_output(self.LCO_str, val=0.0, units=self.price_units)
+        self.add_output(self.LCO_str, val=0.0, compute_units=_compute_price_units)
+        self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=_compute_price_units)
+
         self.outputs_to_units = {
             "wacc": "percent",
             "crf": "percent",
             "irr": "percent",
             "profit_index": "unitless",
             "investor_payback_period": "yr",
-            "price": self.price_units,
         }
         for output_var, units in self.outputs_to_units.items():
             self.add_output(f"{output_var}_{self.output_txt}", val=0.0, units=units)
@@ -104,18 +100,35 @@ class ProFastLCO(ProFastBase):
         Returns:
             None
         """
+
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[self.LCO_str]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+
         pf = self.populate_profast(inputs)
 
+        if "system_level_control" in self.options["plant_config"] and np.all(
+            inputs["capacity_factor"] == 0.0
+        ):
+            outputs[self.LCO_str] = 1e12
+            msg = (
+                f"Commodity stream for finance group has a zero capacity factor. "
+                "If you recieve this warning multiple times, there may be a problem "
+                "with your setup. ProFAST is not being run on this iteration and the "
+                f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+            )
+            warnings.warn(msg, UserWarning)
+            return
         # simulate ProFAST
         sol, summary, price_breakdown = run_profast(pf)
 
         # populate outputs
         # Output names based on naming convention for finance subgroups
         outputs[self.LCO_str] = sol["lco"]
+        outputs[f"price_{self.output_txt}"] = sol["price"]
         for output_var in self.outputs_to_units.keys():
             val = sol[output_var.replace("_", " ")]
             if isinstance(val, np.ndarray | list | tuple):  # only for IRR
-                # if len(val)>0:
                 val = val[-1]
             outputs[f"{output_var}_{self.output_txt}"] = val
 

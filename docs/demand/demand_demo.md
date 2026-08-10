@@ -68,16 +68,13 @@ We don't want to send more electricity to the electrolyzer than the electrolyzer
 :lines: 112-119
 ```
 
-
-
 We initialize and setup the H2I model
 
 ```{code-cell} ipython3
 from pathlib import Path
 from matplotlib import pyplot as plt
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+
+from h2integrate import H2IntegrateModel, EXAMPLE_DIR, load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 ex_dir = EXAMPLE_DIR / "13_dispatch_for_electrolyzer"
 tech_config = load_tech_yaml(ex_dir / "tech_config.yaml")
@@ -110,7 +107,7 @@ If we wanted to change the demand profiles for the battery (`battery`) or the de
 electrolyzer_capacity_MW = 60
 
 ## Set the battery demand equal to the minimum electricity needed to keep the electrolyzer on
-# h2i.prob.set_val("battery.electricity_demand", 0.1 * electrolyzer_capacity_MW, units="MW")
+# h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
 
 ## Set the demand of the demand component equal to the rated electrical capacity of the electrolyzer
 # h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
@@ -189,13 +186,13 @@ end_hour = 1000
 x = list(range(start_hour, end_hour))
 
 generation = h2i.prob.get_val("battery.electricity_in", units="MW")
-battery_demand = h2i.prob.get_val("battery.electricity_demand", units="MW")
+battery_demand = h2i.prob.get_val("battery.electricity_set_point", units="MW")
 battery_charge_discharge = h2i.prob.get_val("battery.electricity_out", units="MW")
 
 where_charge =  [True if d<0 else False for d in battery_charge_discharge[start_hour:end_hour]]
 where_discharge =  [True if d>0 else False for d in battery_charge_discharge[start_hour:end_hour]]
 
-ax.plot(x, battery_demand[start_hour:end_hour], color="tab:green", alpha=0.5, lw=1.5, ls='-.', zorder=2, label="battery.electricity_demand")
+ax.plot(x, battery_demand[start_hour:end_hour], color="tab:green", alpha=0.5, lw=1.5, ls='-.', zorder=2, label="battery.electricity_set_point")
 ax.plot(x, generation[start_hour:end_hour], color="tab:blue", alpha=1.0, lw=1.5, ls='--', zorder=3, label="battery.electricity_in")
 ax.plot(x, generation_with_battery[start_hour:end_hour], color="tab:pink", alpha=1.0, lw=1.5, ls='-', zorder=3, label="elec_combiner.electricity_out")
 ax.fill_between(x, generation[start_hour:end_hour], generation_with_battery[start_hour:end_hour], where=where_charge, color="tab:cyan", alpha=0.5, zorder=0, label="battery charging")
@@ -246,7 +243,7 @@ If we re-run H2I and set the battery demand equal to the electrolyzer capacity i
 ```{code-cell} ipython3
 
 # Set the battery demand equal to the rated electrical capacity of the electrolyzer
-h2i.prob.set_val("battery.electricity_demand",electrolyzer_capacity_MW, units="MW")
+h2i.prob.set_val("battery.electricity_set_point",electrolyzer_capacity_MW, units="MW")
 
 # Set the demand of the demand component equal to the rated electrical capacity of the electrolyzer
 h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")

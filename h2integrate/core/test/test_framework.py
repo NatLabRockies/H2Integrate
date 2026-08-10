@@ -9,9 +9,205 @@ import numpy as np
 import pytest
 
 import h2integrate.core.h2integrate_model as h2i_model_module
-from h2integrate import EXAMPLE_DIR
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-from h2integrate.core.inputs.validation import load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_missing_tech_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    # remove technology interconnections
+    plant_config.pop("technology_interconnections")
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    expected_error_start = (
+        "9 technologies have been defined in the technology config but are not connected"
+    )
+
+    with subtests.test("Commodity not input to destination"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(top_level_config)
+        err = str(excinfo.value)
+        assert expected_error_start in err
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
+)
+def test_use_commodity_stream_timeseries_finances_error(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+
+    # Remove commodity_stream_output from finace subgroup
+    plant_config["finance_parameters"]["finance_subgroups"]["electricity_doc"].pop(
+        "commodity_stream_output"
+    )
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    with pytest.raises(ValueError) as excinfo:
+        H2IntegrateModel(top_level_config)
+    err = str(excinfo.value)
+    with subtests.test("Commodity stream name is missing (commodity_stream_output is required)"):
+        assert "`commodity_stream_output` is a required input" in err
+    with subtests.test(
+        "Commodity stream name is missing (use_commodity_stream_timeseries is True)"
+    ):
+        assert "`use_commodity_stream_timeseries` is True" in err
+    with subtests.test("Commodity stream name is missing (finance subgroup `electricity_doc`)"):
+        assert "finance subgroup `electricity_doc`" in err
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_check_tech_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    tech_interconnections = plant_config["technology_interconnections"].copy()
+    idx_electrolyzer_connect = [
+        i
+        for i, connection in enumerate(tech_interconnections)
+        if connection[0] == "electrolyzer" and len(connection) == 4
+    ]
+    idx_electrolyzer_to_combiner = [
+        i for i in idx_electrolyzer_connect if tech_interconnections[i][1] == "h2_combiner"
+    ]
+    # update so that trying to connect oxygen out of electrolyzer to h2_combiner
+    # should get error because h2_combiner doesn't have an input for oxygen
+    tech_interconnections[idx_electrolyzer_to_combiner[0]] = [
+        "electrolyzer",
+        "h2_combiner",
+        "oxygen",
+        "pipe",
+    ]
+    plant_config["technology_interconnections"] = tech_interconnections
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+
+    with subtests.test("Commodity not input to destination"):
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "do not accept their specified input commodity" in err
+        assert "`h2_combiner` <- `oxygen`" in err
+        assert "Update `technology_interconnections`" in err
+
+    # Fix the plant config from the previous test
+    tech_interconnections[idx_electrolyzer_to_combiner[0]] = [
+        "electrolyzer",
+        "h2_combiner",
+        "hydrogen",
+        "pipe",
+    ]
+    idx_h2_storage_connect = [
+        i
+        for i, connection in enumerate(tech_interconnections)
+        if connection[0] == "h2_storage" and len(connection) == 4
+    ]
+    # update so that the battery is connected to the h2_combiner
+    tech_interconnections[idx_h2_storage_connect[0]] = [
+        "battery",
+        "h2_combiner",
+        "hydrogen",
+        "pipe",
+    ]
+    plant_config["technology_interconnections"] = tech_interconnections
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+
+    with subtests.test("Commodity not output from source"):
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "do not output their specified commodity" in err
+        assert "`battery` -> `hydrogen`" in err
+        assert "Update `technology_interconnections`" in err
+        assert "Update `technology_interconnections`" in err
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
+)
+def test_custom_resource_model(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    from h2integrate.resource.river import RiverResource
+
+    resource_model_fpath_parts = [ROOT_DIR] + RiverResource.__module__.split(".")[1:]
+    resource_model_fpath_parts[-1] = f"{resource_model_fpath_parts[-1]}.py"
+
+    # Make folder to hold custom resource model
+    custom_resource_model_dir = temp_copy_of_example / "user_defined_resource"
+    custom_resource_model_fpath = custom_resource_model_dir / "river_resource_model.py"
+    Path(custom_resource_model_dir).mkdir(exist_ok=True)
+
+    # Copy RiverResource model to custom resource model folder
+    h2i_resource_model_fpath = Path(*resource_model_fpath_parts)
+    shutil.copy(h2i_resource_model_fpath, custom_resource_model_fpath)
+
+    # Change the name of the copied RiverResource model
+    new_text = custom_resource_model_fpath.read_text().replace(
+        "RiverResource", "CustomRiverResource"
+    )
+    custom_resource_model_fpath.write_text(new_text, encoding="utf-8")
+
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+
+    # modify the plant config to use a custom resource
+    custom_resource_model_inputs = {
+        "resource_model": "CustomRiverResource",
+        "resource_model_location": str(custom_resource_model_fpath.absolute()),
+        "resource_parameters": plant_config["sites"]["site"]["resources"]["river_resource"][
+            "resource_parameters"
+        ],
+    }
+    plant_config["sites"]["site"]["resources"].update(
+        {"river_resource": custom_resource_model_inputs}
+    )
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+    assert len(h2i.prob.get_val("site.river_resource.discharge")) == 8760
 
 
 @pytest.mark.unit
@@ -57,7 +253,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
     with subtests.test("custom model name should not match built-in model names"):
         # Assert that a ValueError is raised with the expected message when running the model
         error_msg = (
-            r"Custom model_class_name or model_location specified for '"
+            r"Custom model or model_location specified for '"
             r"BasicElectrolyzerCostModel', but 'BasicElectrolyzerCostModel' is a built-in "
             r"H2Integrate model\. "
             r"Using built-in model instead is not allowed\. "
@@ -73,7 +269,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
         tech_config_data = load_tech_yaml(temp_tech_config)
 
         tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
 
@@ -81,8 +277,7 @@ def test_custom_model_name_clash(temp_dir, subtests):
             tech_config_data["technologies"]["electrolyzer"]
         )
         tech_config_data["technologies"]["electrolyzer2"]["cost_model"] = {
-            "model": "new_electrolyzer_cost",
-            "model_class_name": "DummyClass",
+            "model": "DummyClass",
             "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
         }
         # Save the modified tech_config YAML back
@@ -260,7 +455,7 @@ def test_technology_connections(temp_dir):
     h2i_model = H2IntegrateModel(temp_highlevel_yaml)
     demand_profile = np.ones(8760) * 720.0
     h2i_model.setup()
-    h2i_model.prob.set_val("battery.electricity_demand", demand_profile, units="MW")
+    h2i_model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     h2i_model.run()
 
 
@@ -490,6 +685,54 @@ def test_invalid_finance_group_combination(subtests):
             h2i = H2IntegrateModel(h2i_config)
             h2i.setup()
             assert expected_msg == str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_finance_subgroup_missing_commodity_stream_raises(subtests):
+    """A finance subgroup missing ``commodity_stream`` must raise a clear error.
+
+    ``commodity_stream`` is a required field on every finance subgroup; if it
+    is omitted the framework must raise ``ValueError`` with a clear message
+    rather than letting ``commodity_stream`` remain ``None`` (which would later
+    produce ``None.rated_*_production`` connection errors from OpenMDAO).
+    """
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+
+    expected_msg = (
+        r"Finance subgroup 'electricity' \(commodity 'electricity'\) is "
+        r"missing the required `commodity_stream` field\. Please specify "
+        r"which technology's output should be used as the commodity stream "
+        r"for this subgroup\."
+    )
+
+    scenarios = {
+        "no producing tech in subgroup": ["electrolyzer", "h2_storage"],
+        "multiple producing techs in subgroup": ["wind", "solar", "battery"],
+    }
+
+    for label, technologies in scenarios.items():
+        with subtests.test(label):
+            plant_config = load_plant_yaml(
+                EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
+            )
+            plant_config["finance_parameters"]["finance_subgroups"]["electricity"].pop(
+                "commodity_stream", None
+            )
+            plant_config["finance_parameters"]["finance_subgroups"]["electricity"][
+                "technologies"
+            ] = technologies
+
+            h2i_config = {
+                "name": "H2I",
+                "system_summary": "",
+                "driver_config": driver_config,
+                "technology_config": tech_config,
+                "plant_config": plant_config,
+            }
+
+            with pytest.raises(ValueError, match=expected_msg):
+                H2IntegrateModel(h2i_config)
 
 
 @pytest.mark.unit

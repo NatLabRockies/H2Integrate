@@ -12,6 +12,10 @@ The models implemented in H2I are:
   - `HydrogenIronReductionPlantPerformanceComponent`
   - `HydrogenIronReductionPlantCostComponent`
 
+```{note}
+The DRI model outputs sponge iron, which is low in carbon content. The LBNL model calls the outputs pig iron, but that's typically produced using a blast furnace rather than through the DRI process and has higher carbon impurities.
+```
+
 Citation:
 ```bibtex
 @article{rosner2023green,

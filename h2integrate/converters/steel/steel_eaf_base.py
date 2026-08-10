@@ -34,6 +34,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -43,8 +44,6 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 
     def setup(self):
         super().setup()
-
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = ElectricArcFurnacePerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -64,25 +63,25 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
 
-        # Default the steel demand input as the rated capacity
+        # Default the steel command value input as the rated capacity
         self.add_input(
-            "steel_demand",
+            "steel_command_value",
             val=self.config.steel_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Steel demand for steel plant",
+            desc="Steel command value for steel plant",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -111,21 +110,21 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 
         # H2 EAF needs natural gas, electricity, carbon, lime, water
         # NG EAF needs natural gas and electricity.
-        # add pig iron feedstock to dataframe
+        # add sponge iron feedstock to dataframe
         steel_plant_capacity = coeff_df[coeff_df["Name"] == "Steel Production"]["Value"].values[0]
         iron_plant_capacity = coeff_df[coeff_df["Name"] == "Pig Iron Production"]["Value"].values[0]
         iron_to_steel_ratio = iron_plant_capacity / steel_plant_capacity  # both in metric tons/year
         # add to dataframe
-        pig_iron_row = pd.DataFrame(
+        sponge_iron_row = pd.DataFrame(
             {
                 "Name": ["Pig Iron"],
                 "Type": ["feed"],
                 "Coeff": ["lin"],
-                "Unit": ["mt pig iron/mt steel"],
+                "Unit": ["mt sponge iron/mt steel"],
                 "Value": [iron_to_steel_ratio],
             }
         )
-        coeff_df = pd.concat([coeff_df, pig_iron_row], ignore_index=True)
+        coeff_df = pd.concat([coeff_df, sponge_iron_row], ignore_index=True)
 
         # capacity units units are mtpy
         unit_rename_mapper = {"mtpy": "t/yr", "%": "unitless"}
@@ -212,7 +211,7 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
             "water": feedstocks[feedstocks["Name"] == "Raw Water Withdrawal"][
                 "Value"
             ].sum(),  # galUS/t
-            "pig_iron": feedstocks[feedstocks["Name"] == "Pig Iron"]["Value"].sum(),  # t/t
+            "sponge_iron": feedstocks[feedstocks["Name"] == "Pig Iron"]["Value"].sum(),  # t/t
             "electricity": feedstocks[feedstocks["Unit"] == "(kW*h)/t"][
                 "Value"
             ].sum(),  # electricity
@@ -230,20 +229,20 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
                 "Value"
             ].sum()  # t/t
 
-        # steel demand, saturated at maximum rated system capacity
-        steel_demand = np.where(
-            inputs["steel_demand"] > inputs["system_capacity"],
+        # steel command value, saturated at maximum rated system capacity
+        steel_command_value = np.where(
+            inputs["steel_command_value"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["steel_demand"],
+            inputs["steel_command_value"],
         )
 
         # initialize an array of how much steel could be produced
-        # from the available feedstocks and the demand
+        # from the available feedstocks and the command value
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["steel_demand"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["steel_command_value"]))
         )
-        # first entry is the steel demand
-        steel_from_feedstocks[0] = steel_demand
+        # first entry is the steel command value
+        steel_from_feedstocks[0] = steel_command_value
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity
@@ -311,8 +310,6 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
 
         if "cost_year" in config_dict:
@@ -357,7 +354,7 @@ class ElectricArcFurnacePlantBaseCostComponent(CostModelBaseClass):
         self.add_input(
             "steel_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Steel produced",
         )

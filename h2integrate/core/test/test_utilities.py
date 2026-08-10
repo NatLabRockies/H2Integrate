@@ -4,16 +4,53 @@ from pathlib import Path
 
 import yaml
 import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
 from attrs import field, define
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR
-from h2integrate.core.utilities import BaseConfig
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    RESOURCE_DEFAULT_DIR,
+    load_tech_yaml,
+    load_driver_yaml,
+)
+from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
 from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
-from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
+from h2integrate.core.file_utils import (
+    get_path,
+    find_file,
+    load_yaml,
+    check_data_dir,
+    check_resource_dir,
+    make_unique_case_name,
+)
 from h2integrate.core.supported_models import supported_models
-from h2integrate.core.inputs.validation import load_tech_yaml
+
+
+@pytest.mark.unit
+def test_driver_schema_path_validator(subtests):
+    driver_config = load_yaml(EXAMPLE_DIR / "16_natural_gas" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = EXAMPLE_DIR / "16_natural_gas" / "outputs"
+    driver_config_validated = load_driver_yaml(driver_config)
+    with subtests.test("folder output is a path object"):
+        assert isinstance(driver_config_validated["general"]["folder_output"], Path)
+
+
+@pytest.fixture(scope="function")
+def temp_resource_dir_env():
+    """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
+    # NOTE: changes to this fixture can result in hard-to-debug test failures
+    # in tests for resource components. Please do not modify this fixture if possible!
+    resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
+    original = os.environ.get("RESOURCE_DIR")
+    os.environ["RESOURCE_DIR"] = resource_dir
+    yield resource_dir
+    os.environ.pop("RESOURCE_DIR", None)
+    assert os.getenv("RESOURCE_DIR") is None
+    if original is not None:
+        os.environ["RESOURCE_DIR"] = original
 
 
 @pytest.mark.unit
@@ -124,6 +161,63 @@ def test_make_unique_filename(subtests):
         assert len(py_files) == 0
     with subtests.test("Uniquely named .csv file"):
         assert len(csv_files) == 0
+
+
+@pytest.mark.unit
+def test_check_data_dir_no_dir(subtests):
+    output_dir = check_data_dir(data_type="resource")
+    output_resource_dir = check_resource_dir()
+    with subtests.test("No data_dir, no data_subdir"):
+        assert output_resource_dir == output_dir
+        assert output_resource_dir == RESOURCE_DEFAULT_DIR
+
+    output_dir = check_resource_dir(data_subdir="wind")
+    with subtests.test("No data_dir, with data_subdir"):
+        expected_output_dir = RESOURCE_DEFAULT_DIR / "wind"
+        assert output_dir == expected_output_dir
+
+
+@pytest.mark.unit
+def test_check_data_dir_relative_dir_exists(subtests):
+    os.chdir(EXAMPLE_DIR / "11_hybrid_energy_plant")
+    relative_dir = "tech_inputs/weather"
+    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    output_dir = check_resource_dir(data_dir=relative_dir)
+    with subtests.test("Relative data_dir, no data_subdir"):
+        assert output_dir == expected_dir
+
+    relative_dir = "tech_inputs/weather"
+    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather" / "wind"
+    output_dir = check_resource_dir(data_dir=relative_dir, data_subdir="wind")
+    with subtests.test("Relative data_dir, with data_subdir"):
+        assert output_dir == expected_dir
+
+
+@pytest.mark.unit
+def test_check_data_dir_full_dir_exists(subtests):
+    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    output_dir = check_resource_dir(data_dir=expected_dir)
+    with subtests.test("Full data_dir, no data_subdir"):
+        assert output_dir == expected_dir
+
+    output_dir = check_data_dir(data_type="resource", data_dir=expected_dir, data_subdir="wind")
+    with subtests.test("Full data_dir, with data_subdir"):
+        assert str(output_dir) == str(expected_dir / "wind")
+
+
+@pytest.mark.unit
+def test_check_resource_dir_environment_var(subtests, temp_resource_dir_env):
+    # NOTE: changes to this test can result in hard-to-debug test failures!
+    # Please do not modify this test if possible.
+
+    data_dir = temp_resource_dir_env
+    output_dir = check_resource_dir()
+    with subtests.test("Environment variable data_dir, no data_subdir"):
+        assert str(output_dir) == data_dir
+
+    output_dir = check_resource_dir(data_subdir="wind")
+    with subtests.test("Environment variable data_dir, with data_subdir"):
+        assert str(output_dir) == str(Path(data_dir) / "wind")
 
 
 @pytest.mark.unit
@@ -551,6 +645,34 @@ def test_yaml_no_duplicate_keys(subtests):
         load_tech_yaml(inputs / fn)
 
 
+@pytest.mark.unit
+def test_build_time_series_from_plant_config():
+    plant_config = {
+        "plant": {
+            "simulation": {
+                "n_timesteps": 5,
+                "dt": 1800,
+                "start_time": "2025-01-01 06:30:00",
+                "timezone": 0,
+            }
+        }
+    }
+
+    ts = build_time_series_from_plant_config(plant_config)
+
+    expected = pd.to_datetime(
+        [
+            "2025-01-01 06:30:00+00:00",
+            "2025-01-01 07:00:00+00:00",
+            "2025-01-01 07:30:00+00:00",
+            "2025-01-01 08:00:00+00:00",
+            "2025-01-01 08:30:00+00:00",
+        ]
+    ).to_pydatetime()
+
+    assert (ts == expected).all()
+
+
 def create_om_problem(tech_config):
     plant_config_base = {
         "plant": {
@@ -638,7 +760,8 @@ def test_check_inputs(subtests):
             with pytest.raises(AttributeError) as excinfo:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
                 expected_error = (
-                    "The parameter(s) ['n_control_window', 'system_commodity_interface_limit'] "
+                    "The parameter(s) ['n_control_window_hours', "
+                    "'system_commodity_interface_limit'] "
                     "found in shared_parameters but should be in control_parameters for "
                     f"the 'battery' section of {tech_config_fpath}"
                 )
@@ -659,7 +782,7 @@ def test_check_inputs(subtests):
                     " contained in the following sections for the 'battery' section of "
                     f"{tech_config_fpath}:"
                     "\n\tcontrol_parameters should contain"
-                    " ['n_control_window', 'system_commodity_interface_limit']"
+                    " ['n_control_window_hours', 'system_commodity_interface_limit']"
                     "\n\tcost_parameters should contain ['opex_fraction]"
                 )
                 assert expected_error == str(excinfo.value)
@@ -672,9 +795,9 @@ def test_check_inputs(subtests):
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
-    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
-        "shared_parameters"
-    ].pop("n_control_window")
+    control_parameters["n_control_window_hours"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("n_control_window_hours")
     control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
         "model_inputs"
     ]["shared_parameters"].pop("system_commodity_interface_limit")
@@ -715,9 +838,9 @@ def test_check_inputs(subtests):
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
-    control_parameters["n_control_window"] = tech_config["technologies"]["battery"]["model_inputs"][
-        "shared_parameters"
-    ].pop("n_control_window")
+    control_parameters["n_control_window_hours"] = tech_config["technologies"]["battery"][
+        "model_inputs"
+    ]["shared_parameters"].pop("n_control_window_hours")
     control_parameters["system_commodity_interface_limit"] = tech_config["technologies"]["battery"][
         "model_inputs"
     ]["shared_parameters"].pop("system_commodity_interface_limit")

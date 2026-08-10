@@ -63,6 +63,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def setup(self):
         self.config = ECOElectrolyzerPerformanceModelConfig.from_dict(
@@ -99,13 +100,14 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_output("oxygen_out", val=0, shape=self.n_timesteps, units="kg/h")
         self.add_output("rated_oxygen_production", val=0, shape=1, units="kg/h")
         self.add_output("annual_oxygen_produced", val=0, shape=self.plant_life, units="kg/yr")
+        self.add_output("electricity_consumed", val=0, shape=self.n_timesteps, units="kW")
+        self.add_output("water_consumed", val=0, shape=self.n_timesteps, units="galUS/h")
 
         self.add_input("cluster_size", val=-1.0, units="MW")
         self.add_input("max_hydrogen_capacity", val=1000.0, units="kg/h")
         # TODO: add feedstock inputs and consumption outputs
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        plant_life = self.options["plant_config"]["plant"]["plant_life"]
         electrolyzer_size_mw = inputs["n_clusters"][0] * self.config.cluster_rating_MW
         electrolyzer_capex_kw = self.config.electrolyzer_capex
 
@@ -157,7 +159,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         H2_Results, h2_ts, h2_tot, power_to_electrolyzer_kw = run_h2_PEM(
             electrical_generation_timeseries=energy_to_electrolyzer_kw,
             electrolyzer_size=electrolyzer_size_mw,
-            useful_life=plant_life,
+            useful_life=self.plant_life,
             n_pem_clusters=n_pem_clusters,
             electrolyzer_direct_cost_kw=electrolyzer_capex_kw,
             user_defined_pem_param_dictionary=pem_param_dict,
@@ -169,13 +171,27 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
 
         # Assuming `h2_results` includes hydrogen and oxygen rates per timestep
         outputs["hydrogen_out"] = H2_Results["Hydrogen Hourly Production [kg/hr]"]
+        outputs["electricity_consumed"] = h2_ts.loc["Power Consumed [kWh]"]
+        # 1 gal H2O = 3.79 kg H2O
+        outputs["water_consumed"] = 3.79 * H2_Results["Water Hourly Consumption [kg/hr]"]
         outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()
-        outputs["efficiency"] = H2_Results["Sim: Average Efficiency [%-HHV]"]
+
+        if not np.isfinite(H2_Results["Sim: Average Efficiency [%-HHV]"]).all():
+            # if no hydrogen is produced, then set efficiency to 0 rather than a NaN
+            outputs["efficiency"] = 0.0
+        else:
+            outputs["efficiency"] = H2_Results["Sim: Average Efficiency [%-HHV]"]
         refurb_schedule = np.zeros(self.plant_life)
+
         if np.isnan(H2_Results["Time Until Replacement [hrs]"]):
-            refurb_period = 80000 / (24 * 365)
+            # if electrolyzer is never turned on, then make the
+            # replacement outputs based on uptime hours until EOL
+            refurb_period = round(self.config.uptime_hours_until_eol / (24 * 365))
+            outputs["time_until_replacement"] = self.config.uptime_hours_until_eol
         else:
             refurb_period = round(float(H2_Results["Time Until Replacement [hrs]"]) / (24 * 365))
+            outputs["time_until_replacement"] = H2_Results["Time Until Replacement [hrs]"]
+
         refurb_schedule[refurb_period : self.plant_life : refurb_period] = 1
 
         # The replacement_schedule is the fraction of the total capacity that is replaced per year
@@ -188,9 +204,6 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         # ['Refurbishment Schedule [MW replaced/year]'].values
         # /electrolyzer_actual_capacity_MW
         # )
-
-        # TODO: remove time_until_replacement as output after finance model(s) have been updated to not use it
-        outputs["time_until_replacement"] = H2_Results["Time Until Replacement [hrs]"]
 
         outputs["rated_hydrogen_production"] = H2_Results["Rated BOL: H2 Production [kg/hr]"]
         outputs["electrolyzer_size_mw"] = electrolyzer_actual_capacity_MW
@@ -208,3 +221,9 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["annual_oxygen_produced"] = H2_Results["Performance Schedules"][
             "Annual O2 Production [kg/year]"
         ]
+
+        # Apply command_value from system-level controller if present
+        if "system_level_control" in self.options["plant_config"]:
+            command_value = inputs[f"{self.commodity}_command_value"]
+            commodity_out_key = f"{self.commodity}_out"
+            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], command_value)
