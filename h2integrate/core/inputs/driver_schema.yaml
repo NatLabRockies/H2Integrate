@@ -14,7 +14,7 @@ properties:
     type: object
     properties:
       folder_output:
-        type: string
+        type: [string, Path]
         description: Name of the folder for output files
         default: output
       create_om_reports:
