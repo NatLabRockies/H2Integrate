@@ -48,7 +48,6 @@ dependencies = [
   "openmeteo-requests",
   "pandas>=2.0.3",
   "ProFAST",
-  "pyfluids>=4.0.0",
   "Pyomo>=6.1.2",
   "rainflow",
   "requests",
@@ -116,7 +115,7 @@ gis = [
   "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
-thermo = ["pyfluids"]
+thermo = ["pyfluids<4.0"]
 extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 

@@ -166,8 +166,10 @@ class ThermodynamicCycleResult:
     states: dict[int, pyfluids.fluids.abstract_fluid.AbstractFluid]
     process_work_unit: dict[tuple[int, int], np.ndarray]
     process_heat_unit: dict[tuple[int, int], np.ndarray]
+    loss_work_unit: dict[int, np.ndarray]
     state_names: dict[int, str]
     process_names: dict[tuple[int, int], str]
+    loss_names: dict[int, str]
 
     def __init__(
         self,
@@ -183,8 +185,10 @@ class ThermodynamicCycleResult:
         self.states = {}
         self.process_work_unit = {}
         self.process_heat_unit = {}
+        self.loss_work_unit = {}
         self.state_names = {}
         self.process_names = {}
+        self.loss_names = {}
 
     def add_state(
         self,
@@ -206,8 +210,8 @@ class ThermodynamicCycleResult:
         self,
         index_in: int,
         index_out: int,
-        work_unit: np.ndarray,  # kJ/kg
-        heat_unit: np.ndarray,  # kJ/kg
+        work_unit: float,  # kJ/kg
+        heat_unit: float,  # kJ/kg
         name: str,
     ):
         process_index = (index_in, index_out)
@@ -232,9 +236,30 @@ class ThermodynamicCycleResult:
         self.process_heat_unit[process_index] = heat_unit
         self.process_names[process_index] = name
 
-    def get_net_work(self):
+    def add_loss(
+        self,
+        loss_index: int,
+        work_unit: float,  # kJ/kg
+        name: str,
+    ):
+        if loss_index in self.loss_names:
+            raise ValueError(f"loss {loss_index} already in losses")
+        if loss_index in self.loss_work_unit:
+            raise ValueError(f"loss {loss_index} already in loss work vector")
+
+        # add the loss
+        self.loss_work_unit[loss_index] = work_unit
+        self.loss_names[loss_index] = name
+
+    def get_net_work(
+        self,
+        losses=True,
+    ):
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
-        return mass_flowrate * sum(self.process_work_unit.values())  # kJ/s
+        total_work_unit = sum(self.process_work_unit.values())
+        if losses:
+            total_work_unit -= sum(self.loss_work_unit.values())
+        return mass_flowrate * total_work_unit  # kJ/s
 
     def get_net_heat_input(self):
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
@@ -279,26 +304,36 @@ class ThermodynamicCycleResult:
             print()
 
     def __str__(self):
-        output = f"\n{self.desc}\n" if self.desc else "\n"
-        output += "states:\n"
+        output = f"\n{self.desc}\n\n" if self.desc else "\n"
+        output += "\tstates:\n"
         for idx_state, state in self.states.items():
             state_name = self.state_names.get(idx_state, "")
             output += (
-                f"\t{idx_state} ({state_name}): "
-                f"T={state.temperature:.2f} C ({celsius_to_kelvin(state.temperature):.2f} K), "
+                f"\t\t{idx_state} ({state_name}): "
+                f"T={state.temperature:.2f}°C ({celsius_to_kelvin(state.temperature):.2f} K), "
                 f"h={state.enthalpy/1.0e3:.2f} MJ/kg, "
-                f"P={state.pressure/1.0e3:.2f} kPa\n"
+                f"P={state.pressure/1.0e3:.2f} kPa, "
                 f"rho={state.density:.2f} kg/m**3\n"
             )
 
         if len(self.process_names):
-            output += "\nprocesses:\n"
+            output += "\n\tprocesses:\n"
             for (idx_in, idx_out), work_unit in self.process_work_unit.items():
                 heat_unit = self.process_heat_unit.get((idx_in, idx_out), 0.0)
                 process_name = self.process_names.get((idx_in, idx_out), "")
                 output += (
-                    f"\t{idx_in} -> {idx_out} ({process_name}): "
-                    f"W={work_unit:.2f} kJ/kg, Q={heat_unit:.2f} kJ/kg\n"
+                    f"\t\t{idx_in} -> {idx_out} ({process_name}): "
+                    f"W={work_unit:.2f} {'kJ/kg' if self.mass_flowrate == 1.0 else 'kW'}, "
+                    f"Q={heat_unit:.2f} {'kJ/kg' if self.mass_flowrate == 1.0 else 'kW'}\n"
+                )
+
+        if len(self.loss_names):
+            output += "\n\tlosses:\n"
+            for idx_loss, work_unit in self.loss_work_unit.items():
+                loss_name = self.loss_names.get(idx_loss, "")
+                output += (
+                    f"\t\t{idx_loss} ({loss_name}): "
+                    f"W={work_unit:.2f} {'kJ/kg' if self.mass_flowrate == 1.0 else 'kW'}\n"
                 )
 
         return output
