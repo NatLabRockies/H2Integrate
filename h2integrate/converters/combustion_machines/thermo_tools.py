@@ -11,19 +11,26 @@ DRY_AIR_MASS_FRACTIONS = {
 }
 
 
-def celsius_to_kelvin(degC):
+def celsius_to_kelvin(degC: float) -> float:
+    """Convert from Celsius to Kelvin."""
     return degC + 273.15  # K
 
 
-def kelvin_to_celsius(degK):
+def kelvin_to_celsius(degK: float) -> float:
+    """Convert from Kelvin to Celsius."""
     return degK - 273.15  # C
 
 
 def humidity_ratio_to_water_mass_fraction(humidity_ratio: float) -> float:
+    """Convert from humidity ratio to water mass fraction."""
     return humidity_ratio / (1.0 + humidity_ratio)
 
 
-def enforce_gas_phase(fluid):
+def enforce_gas_phase(
+    fluid: pyfluids.fluids.abstract_fluid.AbstractFluid,
+) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """Enforce pyfluids substance remains in gas phase."""
+
     phases = getattr(pyfluids, "Phases", None)
     phase_gas = getattr(phases, "Gas", None) if phases is not None else None
     if phase_gas is None:
@@ -38,6 +45,30 @@ def make_humid_air_mixture(
     temp_rel: float,
     rel_humidity: float,
 ) -> pyfluids.Mixture:
+    """
+    Build a humid air gas mixture from pressure, temperature, and relative humidity.
+
+    The water content is first evaluated with ``pyfluids.HumidAir`` to obtain the
+    humidity ratio at the requested thermodynamic state. That ratio is then
+    converted to a water mass fraction and combined with the dry-air composition
+    defined in ``DRY_AIR_MASS_FRACTIONS`` to create a ``pyfluids.Mixture``.
+
+    Parameters
+    ----------
+    pressure : float
+        mixture pressure in Pa.
+    temp_rel : float
+        mixture temperature in C.
+    rel_humidity : float
+        relative humidity as a fraction between 0.0 and 1.0.
+
+    Returns
+    -------
+    pyfluids.Mixture
+        humid air mixture made of dry-air species and water vapor, constrained to
+        the gas phase when supported by ``pyfluids``.
+    """
+
     # get absolute mass humidity ratio using conditions w/ pyfluid humidair
     humidity_ratio = (
         pyfluids.HumidAir()
@@ -70,6 +101,29 @@ def compute_isentropic_compression_outlet_state(
     ratio_P: float | None = None,
     ratio_compression: float | None = None,
 ) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """
+    Compute the outlet state for an isentropic compression process.
+
+    The outlet state is determined from the inlet state by holding entropy
+    constant and specifying the compression with either a pressure ratio or a
+    compression ratio based on specific volume. Exactly one of
+    ``ratio_P`` or ``ratio_compression`` must be provided.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the fluid.
+        ratio_P: pressure ratio applied to the inlet pressure to obtain the
+            outlet pressure.
+        ratio_compression: compression ratio applied to the inlet specific
+            volume to obtain the outlet specific volume.
+
+    Returns:
+        The outlet fluid state after isentropic compression.
+
+    Raises:
+        ValueError: if neither or both of ``ratio_P`` and
+            ``ratio_compression`` are provided.
+    """
+
     if not (ratio_P or ratio_compression) or (ratio_P and ratio_compression):
         raise ValueError(
             "compression process must specify exactly one of pressure or compression ratio"
@@ -90,10 +144,30 @@ def compute_isentropic_compression_outlet_state(
 
 
 def compute_work_rate_isentropic(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity => returns unit-mass kJ/kg
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity => returns unit-mass kJ/kg
+) -> float:
+    """
+    Compute the ideal shaft work rate for an isentropic turbomachine process.
+
+    The work rate is computed from the enthalpy difference between the inlet
+    and outlet states and scaled by the fluid mass flow rate. A positive value
+    indicates work done by the fluid, consistent with turbine-style expansion.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state of the working fluid after the
+            isentropic process.
+        mass_flow_fluid: mass flow rate of the fluid in kg/s. Defaults to 1.0,
+            which yields a specific work-like value in kJ/kg.
+
+    Returns:
+        ideal isentropic work rate in kW, computed as
+        ``mass_flow_fluid * (h_in - h_out)`` with enthalpy converted from J/kg
+        to kJ/kg.
+    """
+
     # work done by a system should be positive
     return mass_flow_fluid * (
         state_inlet.enthalpy / 1.0e3 - state_outlet.enthalpy / 1.0e3
@@ -101,11 +175,33 @@ def compute_work_rate_isentropic(
 
 
 def compute_turbine_work_rate(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,
-    isentropic_efficiency=1.0,
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,
+    isentropic_efficiency: float = 1.0,
+) -> float:
+    """
+    Compute turbine work rate from an isentropic reference state.
+
+    The returned value follows the convention used in this module, where
+    turbine work is positive because work is produced by the system. The
+    actual turbine work is obtained by scaling the ideal isentropic work with
+    the turbine isentropic efficiency.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state of the working fluid after the
+            isentropic expansion.
+        mass_flow_fluid: mass flow rate of the fluid in kg/s. Defaults to 1.0,
+            which yields a specific work-like value in kJ/kg.
+        isentropic_efficiency: turbine isentropic efficiency as a fraction.
+            Defaults to 1.0.
+
+    Returns:
+        turbine work rate in kW, computed as the isentropic work rate
+        multiplied by the isentropic efficiency.
+    """
+
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -115,11 +211,33 @@ def compute_turbine_work_rate(
 
 
 def compute_compressor_work_rate(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity, returns unit-mass kJ/kg
-    isentropic_efficiency=1.0,
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity, returns unit-mass kJ/kg
+    isentropic_efficiency: float = 1.0,  # by default unity
+) -> float:
+    """
+    Compute compressor shaft work rate from an isentropic reference state.
+
+    The returned value follows the convention used in this module, where
+    compressor work is negative because work is supplied to the system. The
+    actual compressor work is obtained by scaling the isentropic work with the
+    inverse of the isentropic efficiency.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state corresponding to the
+            isentropic compression reference.
+        mass_flow_fluid: working-fluid mass flow rate in kg/s. Defaults to 1.0,
+            which returns a specific work rate in kJ/kg.
+        isentropic_efficiency: compressor isentropic efficiency as a fraction.
+            Defaults to 1.0.
+
+    Returns:
+        compressor work rate in kW, or specific compressor work in kJ/kg when
+        ``mass_flow_fluid`` is 1.0.
+    """
+
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -129,19 +247,46 @@ def compute_compressor_work_rate(
 
 
 def compute_heat_transfer(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity, returns unit-mass kJ/kg
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity, returns unit-mass kJ/kg
+) -> float:
+    """
+    Compute heat transfer from the enthalpy change between two states.
+    """
+
     # sign convention: heat transfer _to_ a system should be positive
     return mass_flow_fluid * (state_outlet.enthalpy / 1.0e3 - state_inlet.enthalpy / 1.0e3)  # kJ/s
 
 
 def compute_isentropic_expansion_outlet_state(
-    state_inlet,
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
     ratio_P: float | None = None,
     ratio_compression: float | None = None,
-):
+) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """
+    Compute the outlet state for an isentropic expansion process.
+
+    The outlet state is determined from the inlet state by holding entropy
+    constant and specifying the expansion with either a pressure ratio or an
+    expansion ratio based on specific volume. Exactly one of ``ratio_P`` or
+    ``ratio_compression`` must be provided.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the fluid.
+        ratio_P: pressure ratio used to reduce the inlet pressure to the outlet
+            pressure.
+        ratio_compression: expansion ratio applied to the inlet specific
+            volume to obtain the outlet specific volume.
+
+    Returns:
+        the outlet fluid state after isentropic expansion.
+
+    Raises:
+        ValueError: if neither or both of ``ratio_P`` and
+            ``ratio_compression`` are provided.
+    """
+
     if not (ratio_P or ratio_compression) or (ratio_P and ratio_compression):
         raise ValueError(
             "compression process must specify exactly one of pressure or compression ratio"

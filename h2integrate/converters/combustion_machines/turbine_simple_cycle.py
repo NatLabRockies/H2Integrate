@@ -235,24 +235,6 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             m * q for m, q in zip(mass_flowrates, unit_mass_net_heat_input_vec)
         ]  # kJ/s
 
-        # import matplotlib.pyplot as plt
-        # fig, axes = plt.subplots(5, 1, sharex=True)
-        # axes[0].plot(temperature_degC)
-        # axes[0].set_ylabel("Temperature (°C)")
-        # axes[1].plot(pressure_Pa)
-        # axes[1].set_ylabel("Pressure (Pa)")
-        # axes[2].plot(net_work_vec)
-        # axes[2].axhline(system_capacity_mw, c='r', linestyle="--")
-        # axes[2].set_ylabel("Net Work (MW)")
-        # axes[3].plot(volume_flowrates)
-        # axes[3].axhline(flowrate_max_fluid_m3_per_s, c='r', linestyle="--")
-        # axes[3].set_ylabel("Max Flowrate (m³/s)")
-        # axes[4].plot(mass_flowrates)
-        # axes[4].set_ylabel("Mass Flowrate (kg/s)")
-        # axes[4].set_xlabel("Time Step")
-        #
-        # plt.show()
-
         generator_efficiency = self.config.generator_efficiency
         electricity_out = generator_efficiency * np.array(net_work_vec)  # MW
 
@@ -273,6 +255,26 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         outputs[f"unmet_{self.commodity}_demand"] = (
             inputs["electricity_command_value"] - electricity_out
         )
+
+    # def show_plots(self):
+    #     import matplotlib.pyplot as plt
+    #
+    #     fig, axes = plt.subplots(5, 1, sharex=True)
+    #     axes[0].plot(temperature_degC)
+    #     axes[0].set_ylabel("Temperature (°C)")
+    #     axes[1].plot(pressure_Pa)
+    #     axes[1].set_ylabel("Pressure (Pa)")
+    #     axes[2].plot(net_work_vec)
+    #     axes[2].axhline(system_capacity_mw, c="r", linestyle="--")
+    #     axes[2].set_ylabel("Net Work (MW)")
+    #     axes[3].plot(volume_flowrates)
+    #     axes[3].axhline(flowrate_max_fluid_m3_per_s, c="r", linestyle="--")
+    #     axes[3].set_ylabel("Max Flowrate (m³/s)")
+    #     axes[4].plot(mass_flowrates)
+    #     axes[4].set_ylabel("Mass Flowrate (kg/s)")
+    #     axes[4].set_xlabel("Time Step")
+    #
+    #     plt.show()
 
 
 if __name__ == "__main__":
