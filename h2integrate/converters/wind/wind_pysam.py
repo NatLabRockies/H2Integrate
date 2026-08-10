@@ -484,6 +484,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                 self.system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
             )
 
+        # Override the 300-turbine maximum, if needed
+        if n_turbs > 300:
+            self.system_model.value("max_turbine_override", n_turbs)
+
         self.system_model.value("wind_farm_xCoordinates", tuple(x_pos))
         self.system_model.value("wind_farm_yCoordinates", tuple(y_pos))
 
