@@ -9,7 +9,6 @@ on:
       - ready_for_review
       - review_requested
       - enqueued
-      - auto_merge_enabled
     paths:
       - h2integrate/**.py
   schedule:
@@ -17,6 +16,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest

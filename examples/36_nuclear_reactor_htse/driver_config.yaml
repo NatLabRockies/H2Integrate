@@ -1,0 +1,52 @@
+name: driver_config
+description: Runs a thermal nuclear plant with simple optimization
+general:
+  folder_output: nuclear_thermal_plant
+### Use This For Parameter Sweep
+# driver:
+#   design_of_experiments:
+#     flag: true
+#     generator: "FullFact" #type of generator to use
+#     levels: 3  # input is specific to this generator
+#     debug_print: true
+driver:
+  optimization:
+    flag: false
+    solver: COBYLA
+    tol: 0.1
+    catol: 100000
+    max_iter: 100
+    rhobeg: 0.1
+    disp: 3
+    debug_print: true
+design_variables:
+  nuclear:
+    electricity_command_value:
+      flag: true
+      lower: 1000
+      upper: 500000
+      units: kW
+  htse:
+    n_clusters:
+      flag: true
+      lower: 2.0
+      upper: 40.0
+      units: unitless
+# Add constraints later to the code
+# constraints:
+  # nuclear:
+    # electricity_out:
+      # flag: true
+      # upper: 5000.0
+      # units: MW
+  #   ramping_rate:
+  #     flag: true
+  #     upper: 500
+  #     units: kW/hr
+  # electrolyzer:
+  #   total_hydrogen_produced:
+  #     flag: false
+  #     lower: 60500000.
+  #     units: kg/year
+objective:
+  name: finance_subgroup_hydrogen.LCOH
