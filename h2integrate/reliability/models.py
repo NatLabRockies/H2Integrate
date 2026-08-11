@@ -7,6 +7,16 @@ from h2integrate.core.utilities import BaseConfig
 N_TIMESTEPS = 8760
 
 
+def create_reliability(config: dict):
+    """Retrieves and initializes a matching reliability model."""
+    name = config.pop("reliability")
+    match name:
+        case "WeibullReliabilityModel":
+            return WeibullReliabilityModel.from_dict(config)
+        case _:
+            raise NotImplementedError(f"{name} is not a valid model name")
+
+
 @define(kw_only=True)
 class WeibullReliabilityModel(BaseConfig):
     r"""Basic reliability model for operating/not operating statuses.
