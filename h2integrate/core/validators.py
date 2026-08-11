@@ -20,7 +20,8 @@ def has_required_keys(required_keys):
         required_keys (list[str] | tuple[str, ...]): Keys that must be present
             in the input dictionary.
     """
-
+    if isinstance(required_keys, str):
+        required_keys = [required_keys]
     required_keys = tuple(required_keys)
 
     def validator(instance, attribute, value):
