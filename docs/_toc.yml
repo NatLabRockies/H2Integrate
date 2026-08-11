@@ -28,6 +28,7 @@ parts:
       - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river
       - file: technology_models/tidal
+      - file: technology_models/wave
       - file: technology_models/natural_gas
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
@@ -70,6 +71,7 @@ parts:
           - file: resource/meteosat_prime_meridian_v4_api
           - file: resource/openmeteo_solar_archive
           - file: resource/tidal_resource
+          - file: resource/wave_resource
   - caption: Control
     chapters:
       - file: control/system_level_control/system_level_control
