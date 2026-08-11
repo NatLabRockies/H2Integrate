@@ -150,25 +150,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
 
-class ReliabilityModelBaseClass(om.ExplicitComponent):
-    def initialize(self):
-        self.options.declare("driver_config", types=dict)
-        self.options.declare("plant_config", types=dict)
-        self.options.declare("tech_config", types=dict)
-
-    def setup(self):
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.availability = np.ones(self.n_timesteps, dtype=float)
-
-        self.add_output(
-            f"{self.commodity}_availability",
-            val=self.availability,
-            shape=self.n_timesteps,
-            units="unitless",
-            desc="Production-based availability for a commodity.",
-        )
-
-
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)

@@ -3,6 +3,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.validators import gt_zero, gte_zero
+from h2integrate.reliability.models import WeibullReliabilityModel
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -67,6 +68,8 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
+        self.reliability_model = None
+        self.use_reliability = False
 
     def setup(self):
         super().setup()
@@ -75,6 +78,12 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        if self.options["tech_config"]["model_inputs"]["reliability"]:
+            self.reliability_model = WeibullReliabilityModel.from_dict(
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability"),
+                additional_cls_name=self.__class__.__name__,
+            )
+            self.use_reliability = True
 
         # Add natural gas consumed output
         self.add_output(
@@ -154,6 +163,8 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             inputs["electricity_command_value"],
         )
         natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
+        if self.use_reliability:
+            natural_gas_demand * self.reliability_model.availability
 
         # available feedstock, saturated at maximum system feedstock consumption
         natural_gas_available = np.where(
