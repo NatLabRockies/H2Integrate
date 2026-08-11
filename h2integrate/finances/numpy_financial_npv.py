@@ -4,12 +4,11 @@ import numpy as np
 import pandas as pd
 import openmdao.api as om
 import numpy_financial as npf
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
-from h2integrate.core.validators import gte_zero, range_val
 
 
 @define(kw_only=True)
@@ -72,11 +71,11 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
             ``save_npv_breakdown`` is True. Defaults to 'default'.
     """
 
-    plant_life: int = field(converter=int, validator=gte_zero)
-    real_discount_rate: float = field(validator=range_val(0, 1))
-    debt_rate: float = field(default=0.0, validator=range_val(0, 1))
-    debt_equity_ratio: float = field(default=0.0, validator=gte_zero)
-    inflation_rate: float = field(default=0.0, validator=range_val(0, 1))
+    plant_life: int = field(converter=int, validator=validators.ge(0))
+    real_discount_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    debt_rate: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
+    debt_equity_ratio: float = field(default=0.0, validator=validators.ge(0))
+    inflation_rate: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
     commodity_sell_price: int | float = field(default=0.0)
     commodity_sell_price_units: str = field()
     save_cost_breakdown: bool = field(default=False)

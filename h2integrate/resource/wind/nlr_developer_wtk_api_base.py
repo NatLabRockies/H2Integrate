@@ -2,7 +2,9 @@ import warnings
 import urllib.parse
 
 import pandas as pd
+from attrs import field, define, validators
 
+from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
@@ -10,7 +12,41 @@ from h2integrate.resource.utilities.nlr_developer_api_keys import (
 )
 
 
-class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
+@define(kw_only=True)
+class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
+    """Configuration class to download wind resource data from
+    `Wind Toolkit Data V2 <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/>`_.
+
+    Args:
+        resource_year (int): Year to use for resource data.
+            Must been between 2007 and 2014 (inclusive).
+        resource_data (dict | object, optional): Dictionary of user-input resource data.
+            Defaults to an empty dictionary.
+        resource_dir (str | Path, optional): Folder to save resource files to or
+            load resource files from. Defaults to "".
+        resource_filename (str, optional): Filename to save resource data to or load
+            resource data from. Defaults to None.
+
+    Attributes:
+        dataset_desc (str): description of the dataset, used in file naming.
+            For this dataset, the `dataset_desc` is "wtk_v2".
+        resource_type (str): type of resource data downloaded, used in folder naming.
+            For this dataset, the `resource_type` is "wind".
+        valid_intervals (list[int]): time interval(s) in minutes that resource data can be
+            downloaded in. For this dataset, `valid_intervals` are 5, 15, 30, and 60 minutes.
+
+    """
+
+    resource_year: int = field(converter=int, validator=(validators.ge(2007), validators.le(2014)))
+    dataset_desc: str = "wtk_v2"
+    resource_type: str = "wind"
+    valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
+    resource_data: dict | object = field(default={})
+    resource_filename: Path | str = field(default="")
+    resource_dir: Path | str | None = field(default=None)
+
+
+class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
     def setup(self):
         super().setup()
 

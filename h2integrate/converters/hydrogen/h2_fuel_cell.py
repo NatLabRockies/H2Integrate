@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero, range_val
 from h2integrate.tools.constants import HHV_H2_MJ_PER_KG
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
@@ -23,9 +22,8 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
             end-of-life (EOL).
     """
 
-    system_capacity_kw: float = field(validator=gte_zero)
-    fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
-    uptime_hours_until_eol: int = field(validator=gt_zero)
+    system_capacity_kw: float = field(validator=validators.ge(0))
+    fuel_cell_efficiency_hhv: float = field(validator=(validators.ge(0), validators.le(1)))
 
 
 class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -216,10 +214,9 @@ class H2FuelCellCostConfig(CostModelBaseConfig):
             produced in USD/(kW*h).
     """
 
-    system_capacity_kw: float = field(validator=gte_zero)
-    capex_per_kw: float = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
-    variable_opex_per_kwh: float = field(validator=gte_zero)
+    system_capacity_kw: float = field(validator=validators.ge(0))
+    capex_per_kw: float = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float = field(validator=validators.ge(0))
 
 
 class H2FuelCellCostModel(CostModelBaseClass):

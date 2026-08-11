@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import contains, range_val
+from h2integrate.core.validators import contains
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
@@ -34,7 +34,7 @@ class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2005, 2022))
+    resource_year: int = field(converter=int, validator=(validators.ge(2005), validators.le(2022)))
     dataset_desc: str = "nsrdb_msg_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [15, 30, 60])

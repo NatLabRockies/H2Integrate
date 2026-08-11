@@ -1,8 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
+from h2integrate.core.validators import contains
 from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
@@ -42,10 +42,18 @@ class SimpleASUPerformanceConfig(BaseConfig):
     rated_N2_kg_pr_hr: float | None = field(default=None)
     ASU_rated_power_kW: float | None = field(default=None)
 
-    N2_fraction_in_air: float = field(default=0.7811, validator=range_val(0, 1))
-    O2_fraction_in_air: float = field(default=0.2096, validator=range_val(0, 1))
-    Ar_fraction_in_air: float = field(default=0.0093, validator=range_val(0, 1))
-    efficiency_kWh_pr_kg_N2: float = field(default=0.29, validator=range_val(0.10, 0.50))
+    N2_fraction_in_air: float = field(
+        default=0.7811, validator=(validators.ge(0), validators.le(1))
+    )
+    O2_fraction_in_air: float = field(
+        default=0.2096, validator=(validators.ge(0), validators.le(1))
+    )
+    Ar_fraction_in_air: float = field(
+        default=0.0093, validator=(validators.ge(0), validators.le(1))
+    )
+    efficiency_kWh_pr_kg_N2: float = field(
+        default=0.29, validator=(validators.ge(0.1), validators.le(0.5))
+    )
     # 0.29 is efficiency of pressure swing absorption
     # 0.119 is efficiency of cryogenic
 

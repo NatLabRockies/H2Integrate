@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import contains, range_val
+from h2integrate.core.validators import contains
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
@@ -33,7 +33,7 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(1998, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2024)))
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
@@ -82,7 +82,7 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
@@ -132,7 +132,7 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])

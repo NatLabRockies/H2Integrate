@@ -5,7 +5,7 @@ from attrs import field, define, validators
 from floris import TimeSeries, FlorisModel
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val
+from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
@@ -57,11 +57,11 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
             is not yet implemented. Will result in NotImplementedError if True.
     """
 
-    num_turbines: int = field(converter=int, validator=gt_zero)
+    num_turbines: int = field(converter=int, validator=validators.gt(0))
     floris_wake_config: dict = field()
     floris_turbine_config: dict = field()
     default_turbulence_intensity: float = field()
-    operational_losses: float = field(validator=range_val(0.0, 100.0))
+    operational_losses: float = field(validator=(validators.ge(0), validators.le(100)))
     hub_height: float = field(default=-1, validator=validators.ge(-1))
     adjust_air_density_for_elevation: bool = field(default=False)
     operation_model: str = field(default="cosine-loss")
