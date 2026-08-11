@@ -1,6 +1,5 @@
 """Tools for getting the EIA natural gas data that could be expanded into other EIA API data."""
 
-import os
 import json
 from pathlib import Path
 
@@ -8,6 +7,7 @@ import pandas as pd
 import requests
 
 from h2integrate.preprocess import geospatial
+from h2integrate.core.env_tools import get_environment_variables
 from h2integrate.core.file_utils import get_path, check_feedstock_dir
 
 
@@ -37,38 +37,34 @@ NG_PROCESS_NAME_MAP = {
 }
 
 
-def get_eia_api_key(api_key_file: Path | None) -> str:
+def get_eia_api_key(api_key_file: Path | None, set_vars: bool = True) -> str:
     """Retrieves the EIA API key from a file, and returns the key following "EIA_API_KEY:".
 
     Args:
         api_key_file (Path, optional): Full file path and name of where the EIA API key is located.
             If none is provided, then the API key is retrieved from the environment variables. Must
             be encoded as "EIA_API_KEY: xxxxxx"
+        set_vars (bool, optional): If True, set the environment variables if they
+            haven't already been set. Defaults to True.
 
     Raises:
-        ValueError: Raised either if no file is provided and an environment variable has not be
-            defined, or if a filename is provided but "EIA_API_KEY" is not found.
+        ValueError: Raised if "EIA_API_KEY" is not found or has not been previously set.
 
     Returns:
         str: The EIA API key.
     """
-    if api_key_file is None:
-        key = os.environ.get("EIA_API_KEY")
-        if key is None:
-            msg = (
-                "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY' is not defined as an"
-                " environment variable."
-            )
-            raise ValueError(msg)
-        return key
-
-    with api_key_file.open() as f:
-        for line in f.readlines():
-            if ":" in line:
-                name, val = line.strip().split(":")
-                if name == "EIA_API_KEY":
-                    return val.strip()
-    raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
+    eia_api_key = get_environment_variables(
+        "EIA_API_KEY", file_path=api_key_file, set_variables=set_vars
+    )
+    if not bool(eia_api_key):
+        raise ValueError(
+            "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
+        )
+    if (eia_key := eia_api_key.get("EIA_API_KEY")) is not None:
+        return eia_key
+    raise ValueError(
+        "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
+    )
 
 
 def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
