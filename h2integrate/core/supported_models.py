@@ -48,6 +48,7 @@ supported_models = _ModelRegistry(
     {
         # Resources
         "TidalResource": "resource.tidal:TidalResource",
+        "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
@@ -71,10 +72,13 @@ supported_models = _ModelRegistry(
         "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
         "ATBResComPVCostModel": "converters.solar:ATBResComPVCostModel",
         "PySAMTidalPerformanceModel": "converters.water_power:PySAMTidalPerformanceModel",
+        "PySAMWavePerformanceModel": "converters.water_power:PySAMWavePerformanceModel",
         "PySAMMarineCostModel": "converters.water_power:PySAMMarineCostModel",
         "RunOfRiverHydroPerformanceModel": "converters.water_power:RunOfRiverHydroPerformanceModel",
         "RunOfRiverHydroCostModel": "converters.water_power:RunOfRiverHydroCostModel",
         "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
+        "HTSEPerformanceModel": "converters.hydrogen:HTSEPerformanceModel",
+        "HTSECostModel": "converters.hydrogen:HTSECostModel",
         "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
         "BasicElectrolyzerCostModel": "converters.hydrogen:BasicElectrolyzerCostModel",
         "CustomElectrolyzerCostModel": "converters.hydrogen:CustomElectrolyzerCostModel",
@@ -128,6 +132,8 @@ supported_models = _ModelRegistry(
         "NaturalGasPerformanceModel": "converters.natural_gas:NaturalGasPerformanceModel",
         "QuinnNuclearPerformanceModel": "converters.nuclear:QuinnNuclearPerformanceModel",
         "QuinnNuclearCostModel": "converters.nuclear:QuinnNuclearCostModel",
+        "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
+        "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
@@ -188,11 +194,9 @@ supported_models = _ModelRegistry(
     }
 )
 
-
 # This next section is to demarcate specific models that belong to certain categories that are
 # relevant for processing in the model stackup. Right now, these designations are
 # used in `h2integrate_model.py`.
-
 
 # Model classes that do not contribute costs to the finance stackup because they are essentially
 # internal-only models that aren't categorized as a specific technology (e.g. a generic combiner

@@ -92,6 +92,10 @@ auto-generated API page.
   - other components:
     + {py:class}`~h2integrate.resource.tidal.TidalResource` - A resource component for processing tidal data from a CSV file.
 
+- `wave`
+  - other components:
+    + {py:class}`~h2integrate.resource.wave.WaveResource` - A resource component for processing wave data from a CSV file.
+
 - `wind`: wind resource data providers
   - other components:
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
@@ -150,12 +154,14 @@ auto-generated API page.
 - `hydrogen`: hydrogen production
   - performance models:
     + {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModel` - An OpenMDAO component that wraps the PEM electrolyzer model.
+    + {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModel` - A simplified high-temperature steam electrolysis (HTSE) model.
     + {py:class}`~h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceModel` - Performance model for a hydrogen fuel cell.
     + {py:class}`~h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerPerformanceModel` - Performance model for steam methane reforming (SMR) hydrogen production plants.
   - cost models:
     + {py:class}`~h2integrate.converters.hydrogen.basic_cost_model.BasicElectrolyzerCostModel` - An OpenMDAO component that computes the cost of a PEM electrolyzer.
     + {py:class}`~h2integrate.converters.hydrogen.custom_electrolyzer_cost_model.CustomElectrolyzerCostModel` - An OpenMDAO component that computes the cost of a PEM electrolyzer.
     + {py:class}`~h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellCostModel` - Cost model for a hydrogen fuel cell system.
+    + {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModel` - A simple size-based cost model for HTSE.
     + {py:class}`~h2integrate.converters.hydrogen.singlitico_cost_model.SingliticoCostModel` - An OpenMDAO component that computes the cost of a PEM electrolyzer.
     + {py:class}`~h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerCostModel` - Cost model for steam methane reforming hydrogen production plants.
   - combined performance and cost models:
@@ -202,8 +208,10 @@ auto-generated API page.
 - `nuclear`: nuclear power plants
   - performance models:
     + {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerformanceModel` - Simple nuclear performance model producing electricity.
+    + {py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorPerformanceModel` - Simple thermal nuclear reactor model with heat and electricity outputs.
   - cost models:
     + {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModel` - Cost model for nuclear power plants.
+    + {py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorCostModel` - Simple cost model for the thermal nuclear reactor.
 
 - `solar`: solar-PV panels
   - performance models:
@@ -226,9 +234,10 @@ auto-generated API page.
   - combined cost and financial models:
     + {py:class}`~h2integrate.converters.steel.steel.SteelCostAndFinancialModel` - An OpenMDAO component for calculating the costs associated with steel production.
 
-- `water_power`: tidal and run-of-river hydropower
+- `water_power`: wave, tidal, and run-of-river hydropower
   - performance models:
     + {py:class}`~h2integrate.converters.water_power.tidal_pysam.PySAMTidalPerformanceModel` - An OpenMDAO component that wraps the PySAM MhkTidal model.
+    + {py:class}`~h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceModel` - An OpenMDAO component that wraps the PySAM MhkWave model.
     + {py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceModel` - An OpenMDAO component for modeling the performance of a run-of-river hydropower plant.
   - cost models:
     + {py:class}`~h2integrate.converters.water_power.pysam_marine_cost.PySAMMarineCostModel` - An OpenMDAO component for calculating the costs associated with Marine Hydrokinetic (MHK) energy systems.
