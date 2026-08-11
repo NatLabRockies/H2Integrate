@@ -108,15 +108,15 @@ class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
     def compute(self, inputs, outputs):
         """Compute converter command profile using configured peak-cutoff heuristics.
 
-                Dispatch logic per timestep:
-                - Dispatch is based on primary demand exceedance above
-                    demand_profile_peak_cutoff.
+        Dispatch logic per timestep:
+
+        - Dispatch is based on primary demand exceedance above ``demand_profile_peak_cutoff``.
         - For ``demand_profile_upstream_kind='commodity'``, the command tracks
-        the larger of primary and upstream exceedances, while respecting demand
-        and capacity limits.
+            the larger of primary and upstream exceedances, while respecting
+            demand and capacity limits.
         - For ``demand_profile_upstream_kind='price'``, dispatch is only enabled
-                when upstream price exceeds demand_profile_upstream_peak_cutoff, and the
-                dispatched value remains constrained by primary exceedance.
+            when upstream price exceeds ``demand_profile_upstream_peak_cutoff``,
+            and the dispatched value remains constrained by primary exceedance.
 
         The command is clipped to remain between zero and both the instantaneous
         demand and converter capacity.
@@ -139,7 +139,7 @@ class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"][0]
         command_value = np.zeros(self.n_timesteps)
 
-        # Normalize upstream input into a 1D array aligned with demand_profile.
+        # Convert upstream input into a 1D array aligned with demand_profile.
         if demand_profile_upstream is None:
             demand_profile_upstream = np.zeros_like(demand_profile)
         else:
