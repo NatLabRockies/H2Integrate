@@ -259,6 +259,200 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
         assert "sources" in err
 
 
+# ---------------------------------------------------------------------------
+# Lightweight unit tests for _validate_technology_interconnections
+#
+# These tests bypass OpenMDAO setup entirely by constructing a minimal fake
+# model object that only carries the three attributes that the validator
+# reads: ``plant_config``, ``technology_graph``, and
+# ``tech_control_classifiers``.  This allows complex multi-commodity
+# topologies to be exercised without needing real H2I component classes.
+# ---------------------------------------------------------------------------
+
+import types
+
+
+def _make_fake_model(interconnections, classifiers):
+    """Build a minimal stub for testing _validate_technology_interconnections.
+
+    Args:
+        interconnections: list of technology interconnection entries (same
+            format as ``plant_config["technology_interconnections"]``).
+        classifiers: dict mapping tech name to its ``_control_classifier``
+            string (e.g. ``{"battery": "storage", "combiner": "combiner"}``).
+
+    Returns:
+        types.SimpleNamespace: object with ``plant_config``,
+            ``technology_graph``, and ``tech_control_classifiers`` set.
+    """
+    fake = types.SimpleNamespace()
+    fake.plant_config = {"technology_interconnections": interconnections}
+    # create_technology_graph does not access any other attribute of self,
+    # so passing the stub as ``self`` is safe.
+    fake.technology_graph = H2IntegrateModel.create_technology_graph(fake, interconnections)
+    fake.tech_control_classifiers = classifiers
+    return fake
+
+
+@pytest.mark.unit
+def test_validate_interconnections_multi_commodity_storage(subtests):
+    """Storage tech with two different-commodity inputs should be allowed.
+
+    Models a future storage that accepts both electricity (for charging) and
+    hydrogen (as the stored commodity) from two separate upstream technologies.
+    Each commodity has exactly one source, so no error should be raised.
+    """
+    interconnections = [
+        ["source_elec", "storage", "electricity", "cable"],
+        ["source_h2", "storage", "hydrogen", "pipe"],
+        ["storage", "h2_combiner", "hydrogen", "pipe"],
+    ]
+    classifiers = {
+        "storage": "storage",
+        "h2_combiner": "combiner",
+    }
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("two-commodity storage passes validation"):
+        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+
+    # Same commodity (hydrogen) from two different sources into storage must fail.
+    bad_interconnections = [
+        ["source_h2_a", "storage", "hydrogen", "pipe"],
+        ["source_h2_b", "storage", "hydrogen", "pipe"],
+    ]
+    bad = _make_fake_model(bad_interconnections, {"storage": "storage"})
+
+    with subtests.test("duplicate hydrogen sources into storage raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(bad)
+        err = str(excinfo.value)
+        assert "storage" in err
+        assert "hydrogen" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_multi_in_multi_out_converter(subtests):
+    """Converter with two different input commodities and two different output
+    commodities should pass validation.
+
+    Models an ammonia-synloop-style converter that consumes hydrogen and
+    nitrogen and produces both ammonia and a purge-gas stream.  Each commodity
+    flows from/to exactly one technology, so no topology error should occur.
+    """
+    interconnections = [
+        ["h2_source", "converter", "hydrogen", "pipe"],
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "ammonia_dest", "ammonia", "pipe"],
+        ["converter", "purge_dest", "purge_gas", "pipe"],
+    ]
+    classifiers = {"converter": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("two-in two-out converter passes validation"):
+        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+
+    # Same commodity to two destinations without a splitter must fail.
+    bad_interconnections = [
+        ["h2_source", "converter", "hydrogen", "pipe"],
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "dest_a", "ammonia", "pipe"],
+        ["converter", "dest_b", "ammonia", "pipe"],  # ammonia goes to two places
+    ]
+    bad = _make_fake_model(bad_interconnections, {"converter": "dispatchable"})
+
+    with subtests.test("same output commodity to two destinations raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(bad)
+        err = str(excinfo.value)
+        assert "converter" in err
+        assert "destinations" in err
+
+    # Same commodity from two sources into converter must also fail.
+    bad_interconnections_in = [
+        ["h2_source_a", "converter", "hydrogen", "pipe"],
+        ["h2_source_b", "converter", "hydrogen", "pipe"],  # duplicate hydrogen source
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "ammonia_dest", "ammonia", "pipe"],
+    ]
+    bad_in = _make_fake_model(bad_interconnections_in, {"converter": "dispatchable"})
+
+    with subtests.test("same input commodity from two sources raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(bad_in)
+        err = str(excinfo.value)
+        assert "converter" in err
+        assert "sources" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_splitter_combiner_exempt(subtests):
+    """Splitter and combiner technologies are exempt from the per-commodity
+    max-1 checks because by design they fan out or merge streams.
+
+    A splitter sending the same commodity to multiple destinations, and a
+    combiner receiving the same commodity from multiple sources, must both
+    pass without error.
+    """
+    interconnections = [
+        # splitter fans one hydrogen stream out to two consumers
+        ["h2_source", "h2_splitter", "hydrogen", "pipe"],
+        ["h2_splitter", "consumer_a", "hydrogen", "pipe"],
+        ["h2_splitter", "consumer_b", "hydrogen", "pipe"],
+        # combiner merges two electricity sources into one
+        ["wind", "elec_combiner", "electricity", "cable"],
+        ["solar", "elec_combiner", "electricity", "cable"],
+        ["elec_combiner", "electrolyzer", "electricity", "cable"],
+    ]
+    classifiers = {
+        "h2_splitter": "splitter",
+        "elec_combiner": "combiner",
+        "consumer_a": "dispatchable",
+        "consumer_b": "dispatchable",
+        "electrolyzer": "dispatchable",
+    }
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("splitter and combiner exempt from max-1 checks"):
+        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_validate_interconnections_storage_no_inputs_raises(subtests):
+    """Storage technology with no L4 inputs must raise a clear error."""
+    # Only an output connection; no input to storage
+    interconnections = [
+        ["storage", "combiner", "hydrogen", "pipe"],
+    ]
+    classifiers = {"storage": "storage", "combiner": "combiner"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("storage with no inputs raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake)
+        err = str(excinfo.value)
+        assert "storage" in err
+        assert "input connection" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_length3_commodity_pair_raises(subtests):
+    """A length-3 connection whose parameter list matches [X_out, X_in] must
+    raise an error directing the user to use the length-4 format."""
+    interconnections = [
+        ["wind", "electrolyzer", ["electricity_out", "electricity_in"]],
+    ]
+    classifiers = {"electrolyzer": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("length-3 _out/_in pair raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake)
+        err = str(excinfo.value)
+        assert "electricity" in err
+        assert "length-4 connection" in err
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]

@@ -610,7 +610,7 @@ class H2IntegrateModel:
                     storage_tech_to_control[tech] = True
         slc_topology["storage_techs_to_control"] = storage_tech_to_control
 
-        # Remove feedstocks and connectors
+        # Remove feedstocks, combiners, and splitters
         control_classifiers_to_connect = [
             "fixed",
             "flexible",
@@ -1122,7 +1122,7 @@ class H2IntegrateModel:
             return
 
         # Only flexible/dispatchable/storage techs accept an externally
-        # provided demand signal. Fixed, feedstock, and connector techs are
+        # provided demand signal. Fixed, feedstock, combiner, and splitter techs are
         # handled elsewhere (fixed/feedstock have no demand input) and must
         # not get a passthrough.
         classifier = getattr(perf_comp, "_control_classifier", None)
@@ -2301,11 +2301,22 @@ class H2IntegrateModel:
         storage_upstream_techs: set[str] = set()
         for storage_tech in storage_techs:
             n_in = in_degs_l4.get(storage_tech, 0)
-            if n_in != 1:
+            if n_in == 0:
                 raise ValueError(
-                    f"Storage technology {storage_tech!r} has {n_in} input connection(s) in "
-                    f"the technology graph but should have exactly 1."
+                    f"Storage technology {storage_tech!r} has no input connections in "
+                    f"the technology graph but should have at least 1."
                 )
+            # Per-commodity check: each commodity must arrive from exactly 1 source.
+            # A storage tech may accept multiple different commodities (e.g. electricity
+            # and hydrogen) from different upstream technologies; that is fine as long as
+            # no single commodity is supplied by more than one source.
+            for commodity, n_sources in in_commodity_sources.get(storage_tech, {}).items():
+                if n_sources > 1:
+                    raise ValueError(
+                        f"Storage technology {storage_tech!r} receives commodity "
+                        f"{commodity!r} from {n_sources} sources in the technology graph "
+                        f"but should receive it from at most 1."
+                    )
             n_out = out_degs_l4.get(storage_tech, 0)
             if n_out > 1:
                 raise ValueError(
@@ -2337,9 +2348,10 @@ class H2IntegrateModel:
         # direct upstream tech of a storage component, all of which have known exceptions).
         all_techs_in_l4 = set(in_commodity_sources) | set(out_commodity_dests)
         for tech in all_techs_in_l4:
-            if "splitter" in tech or "combiner" in tech:
+            classifier = self.tech_control_classifiers.get(tech)
+            if classifier in ("splitter", "combiner"):
                 continue
-            if self.tech_control_classifiers.get(tech) == "storage":
+            if classifier == "storage":
                 continue  # already validated in check 2
 
             for commodity, n_sources in in_commodity_sources.get(tech, {}).items():
