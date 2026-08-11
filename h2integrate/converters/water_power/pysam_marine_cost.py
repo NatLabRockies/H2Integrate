@@ -2,7 +2,7 @@ import PySAM.MhkCosts as MhkCost
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, must_equal
+from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -46,7 +46,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
 
     device_rating_kw: float = field(validator=validators.gt(0))
     num_devices: int = field(validator=validators.gt(0))
-    reference_model_number: int = field(validator=contains([1, 2, 3, 5, 6]))
+    reference_model_number: int = field(validator=validators.in_([1, 2, 3, 5, 6]))
     water_depth: float = field(validator=validators.gt(0))
     distance_to_shore: float = field(validator=validators.gt(0))
     number_rows: int = field(validator=validators.gt(0))

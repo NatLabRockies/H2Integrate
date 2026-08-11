@@ -1,7 +1,7 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, must_equal
+from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
@@ -19,7 +19,7 @@ class SingliticoCostModelConfig(CostModelBaseConfig):
             (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
     """
 
-    location: str = field(validator=contains(["onshore", "offshore"]))
+    location: str = field(validator=validators.in_(["onshore", "offshore"]))
     electrolyzer_capex: int = field()
     cost_year: int = field(default=2021, converter=int, validator=must_equal(2021))
 

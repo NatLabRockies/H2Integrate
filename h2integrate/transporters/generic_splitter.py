@@ -3,7 +3,6 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 
 
 @define(kw_only=True)
@@ -15,7 +14,8 @@ class GenericSplitterPerformanceConfig(BaseConfig):
     """
 
     split_mode: str = field(
-        converter=(str.lower, str.strip), validator=contains(["prescribed_commodity", "fraction"])
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["prescribed_commodity", "fraction"]),
     )
     commodity: str = field(converter=(str.lower, str.strip))
     commodity_rate_units: str = field()

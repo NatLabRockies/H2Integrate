@@ -4,7 +4,6 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 
 
 @define(kw_only=True)
@@ -29,7 +28,7 @@ class SLCSolverOptionsConfig(BaseConfig):
     """
 
     solver_name: str = field(
-        default="gauss_seidel", validator=contains(["gauss_seidel", "newton", "block_jacobi"])
+        default="gauss_seidel", validator=validators.in_(["gauss_seidel", "newton", "block_jacobi"])
     )
     max_iter: int = field(default=20, converter=int, validator=validators.ge(0))
     atol: float | None = field(default=None)

@@ -2,7 +2,6 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
-from h2integrate.core.validators import contains
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
@@ -133,7 +132,7 @@ class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
 
     resource_year: str = field(
         converter=str.lower,
-        validator=contains(
+        validator=validators.in_(
             [
                 "tmy-2020",
                 "tdy-2020",

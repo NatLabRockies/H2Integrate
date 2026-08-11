@@ -179,7 +179,7 @@ def test_splitter_invalid_mode(splitter_tech_config_electricity, plant_config):
 
     with pytest.raises(
         ValueError,
-        match="Item invalid_mode not found in list",
+        match="'split_mode' must be in ",
     ):
         prob = om.Problem()
         comp = GenericSplitterPerformanceModel(tech_config=tech_config, plant_config=plant_config)

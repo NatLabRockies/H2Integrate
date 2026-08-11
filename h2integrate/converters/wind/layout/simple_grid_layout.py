@@ -2,7 +2,6 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 
 
 @define(kw_only=True)
@@ -33,7 +32,7 @@ class BasicGridLayoutConfig(BaseConfig):
     layout_shape: str = field(
         default="square",
         converter=(str.lower, str.strip),
-        validator=contains(["square", "rectangle"]),
+        validator=validators.in_(["square", "rectangle"]),
     )
     turbine_aspect_ratio: float = field(default=1.0, validator=validators.ge(0))
 

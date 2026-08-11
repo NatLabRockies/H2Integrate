@@ -6,7 +6,6 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.core.validators import contains
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
 
 
@@ -206,7 +205,7 @@ class BasicProFASTParameterConfig(BaseConfig):
 
     # --- Debt configuration ---
     debt_type: str = field(
-        default="Revolving debt", validator=contains(["Revolving debt", "One time loan"])
+        default="Revolving debt", validator=validators.in_(["Revolving debt", "One time loan"])
     )
     loan_period_if_used: int = field(default=0, validator=validators.ge(0))
 
@@ -313,8 +312,10 @@ class ProFASTDefaultCapitalItem(BaseConfig):
 
     """
 
-    depr_period: int = field(converter=int, validator=contains([3, 5, 7, 10, 15, 20]))
-    depr_type: str = field(converter=str.strip, validator=contains(["MACRS", "Straight line"]))
+    depr_period: int = field(converter=int, validator=validators.in_([3, 5, 7, 10, 15, 20]))
+    depr_type: str = field(
+        converter=str.strip, validator=validators.in_(["MACRS", "Straight line"])
+    )
     refurb: int | float | list[float] = field(default=[0.0])
     replacement_cost_percent: float = field(
         default=0.0, validator=(validators.ge(0), validators.le(1))

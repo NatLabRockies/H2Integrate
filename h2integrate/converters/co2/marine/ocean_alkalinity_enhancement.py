@@ -2,7 +2,7 @@ from attrs import field, define, validators
 from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, must_equal
+from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -60,7 +60,7 @@ class OAEPerformanceConfig(BaseConfig):
     initial_pH: float = field(validator=validators.ge(0))
     initial_tank_volume_m3: float = field(validator=validators.ge(0))
     acid_disposal_method: str = field(
-        validator=contains(["sell acid", "sell rca", "acid disposal"])
+        validator=validators.in_(["sell acid", "sell rca", "acid disposal"])
     )
     save_outputs: bool = field(default=False)
     save_plots: bool = field(default=False)
