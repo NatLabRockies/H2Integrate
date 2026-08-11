@@ -11,7 +11,7 @@ plant:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [nuclear, htse, [heat_out, heat_in]]
+  - [nuclear, htse, heat, pipe]
   - [nuclear, electrical_load_demand, electricity, cable]
   - [htse, nuclear, [heat_demand, heat_command_value]]
   - [htse, electrical_load_demand, [electricity_demand, electricity_demand]]

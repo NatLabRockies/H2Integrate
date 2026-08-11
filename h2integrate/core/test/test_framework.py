@@ -240,12 +240,13 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "wind" in err
-        assert "output connection" in err
+        assert "destinations" in err
 
     # --- Check 3: non-splitter/combiner/storage tech with >1 inputs raises error ---
     with subtests.test("technology with 2 inputs raises error"):
         # Use h2_combiner as the second source so that the source itself (being a combiner)
-        # is excluded from check #3, allowing the n_in > 1 error to fire on electrolyzer.
+        # is excluded from check #3, allowing the per-commodity source check to fire on
+        # electrolyzer (which already receives electricity from elec_combiner).
         extra_input_connections = [
             *base_interconnections,
             ["h2_combiner", "electrolyzer", "electricity", "cable"],
@@ -255,7 +256,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "electrolyzer" in err
-        assert "input connection" in err
+        assert "sources" in err
 
 
 @pytest.mark.unit

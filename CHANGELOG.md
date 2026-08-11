@@ -3,7 +3,7 @@
 ## Unreleased [TBD]
 
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
-- Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`: (1) discouraged length-3 `[commodity_out, commodity_in]` connections are flagged with a suggestion to use a length-4 format; (2) storage technology topology is validated (exactly 1 input, at most 1 output, and the direct upstream tech has at most 2 outputs); (3) all other non-splitter, non-combiner, non-storage technologies connected via length-4 connections are checked for at most 1 input and 1 output stream. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled). [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`; see method for details. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled), added `heat` to `PipePerformanceModel` supported transport items, and updated examples 33 and 36 to use length-4 connections. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.9 [August 10, 2026]
 

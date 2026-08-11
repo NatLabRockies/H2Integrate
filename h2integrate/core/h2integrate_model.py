@@ -2237,7 +2237,11 @@ class H2IntegrateModel:
 
         3. For all other technologies connected via length-4 connections (excluding splitters,
            combiners, storage technologies, and direct predecessors of storage technologies),
-           each technology may have at most 1 input stream and 1 output stream.
+           each individual commodity may arrive from at most 1 source and be sent to at most
+           1 destination. Technologies with multiple inputs or outputs are fine as long as
+           each commodity comes from a single source and goes to a single destination
+           (e.g. an ammonia plant receiving hydrogen, nitrogen, and electricity from three
+           separate technologies is perfectly valid).
 
         Raises:
             ValueError: If any interconnection violates the topology rules.
@@ -2270,17 +2274,27 @@ class H2IntegrateModel:
                     )
 
         # --- Checks 2 and 3: topology checks using the technology graph ---
-        # Build degree counts using only length-4 connections (edges that carry commodity data).
-        # In the technology graph, merged edges (multiple L4 connections between the same pair)
-        # appear as a single edge with a list of commodities, so each unique (source, dest)
-        # pair counts as one stream.
+        # Build edge-count degree maps (L4 only) for the storage topology check,
+        # and per-commodity source/destination maps for the general stream check.
         in_degs_l4: dict[str, int] = {}
         out_degs_l4: dict[str, int] = {}
+        # in_commodity_sources[tech][commodity] = number of distinct sources
+        in_commodity_sources: dict[str, dict[str, int]] = {}
+        # out_commodity_dests[tech][commodity] = number of distinct destinations
+        out_commodity_dests: dict[str, dict[str, int]] = {}
+
         for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if commodity is None:
+            if not commodity:
                 continue  # length-3 connections carry no commodity; skip them
             out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
             in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
+            for c in commodity:
+                in_commodity_sources.setdefault(dest, {}).update(
+                    {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
+                )
+                out_commodity_dests.setdefault(source, {}).update(
+                    {c: out_commodity_dests.get(source, {}).get(c, 0) + 1}
+                )
 
         # --- Check 2: storage technology topology ---
         storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
@@ -2302,7 +2316,7 @@ class H2IntegrateModel:
             upstream_techs_l4 = [
                 t
                 for t in self.technology_graph.predecessors(storage_tech)
-                if self.technology_graph.edges[t, storage_tech].get("commodity") is not None
+                if self.technology_graph.edges[t, storage_tech].get("commodity")
             ]
             for upstream_tech in upstream_techs_l4:
                 storage_upstream_techs.add(upstream_tech)
@@ -2315,30 +2329,37 @@ class H2IntegrateModel:
                         f"(at most 2 output streams)."
                     )
 
-        # --- Check 3: max 1 in/out for general technologies connected via length-4 edges ---
-        all_techs_in_l4 = set(in_degs_l4) | set(out_degs_l4)
+        # --- Check 3: per-commodity max 1 source/destination for general technologies ---
+        # A technology may receive multiple different commodities from different sources
+        # (e.g. an ammonia plant accepting hydrogen, nitrogen, and electricity is valid),
+        # but each individual commodity must arrive from exactly 1 source and be sent to
+        # exactly 1 destination (unless the tech is a splitter, combiner, storage, or the
+        # direct upstream tech of a storage component, all of which have known exceptions).
+        all_techs_in_l4 = set(in_commodity_sources) | set(out_commodity_dests)
         for tech in all_techs_in_l4:
             if "splitter" in tech or "combiner" in tech:
                 continue
             if self.tech_control_classifiers.get(tech) == "storage":
                 continue  # already validated in check 2
 
-            n_in = in_degs_l4.get(tech, 0)
-            if n_in > 1:
-                raise ValueError(
-                    f"Technology {tech!r} has {n_in} input connections in the technology "
-                    f"graph but should have at most 1. Consider using a combiner component."
-                )
+            for commodity, n_sources in in_commodity_sources.get(tech, {}).items():
+                if n_sources > 1:
+                    raise ValueError(
+                        f"Technology {tech!r} receives commodity {commodity!r} from "
+                        f"{n_sources} sources in the technology graph but should receive "
+                        f"it from at most 1. Consider using a combiner component."
+                    )
 
             if tech in storage_upstream_techs:
-                continue  # n_out for storage upstream techs is validated in check 2 (max 2)
+                continue  # out-stream validation for storage upstream handled in check 2
 
-            n_out = out_degs_l4.get(tech, 0)
-            if n_out > 1:
-                raise ValueError(
-                    f"Technology {tech!r} has {n_out} output connections in the technology "
-                    f"graph but should have at most 1. Consider using a splitter component."
-                )
+            for commodity, n_dests in out_commodity_dests.get(tech, {}).items():
+                if n_dests > 1:
+                    raise ValueError(
+                        f"Technology {tech!r} sends commodity {commodity!r} to "
+                        f"{n_dests} destinations in the technology graph but should "
+                        f"send it to at most 1. Consider using a splitter component."
+                    )
 
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.
