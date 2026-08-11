@@ -294,7 +294,7 @@ auto-generated API page.
 
 - `control_strategies`
   - controllers:
-    + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PeakLoadManagementHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
+    + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
 
 - `pyomo_converter_dispatch`: Pyomo dispatch rules for converters
   - dispatch rules:

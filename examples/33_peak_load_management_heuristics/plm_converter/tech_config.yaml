@@ -23,7 +23,7 @@ technologies:
     cost_model:
       model: H2FuelCellCostModel
     control_strategy:
-      model: PeakLoadManagementHeuristicOpenLoopConverterController
+      model: PLMHeuristicOpenLoopConverterController
     model_inputs:
       shared_parameters:
         system_capacity_kw: 1000.0

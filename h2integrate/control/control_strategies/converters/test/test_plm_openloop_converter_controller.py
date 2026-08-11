@@ -6,12 +6,12 @@ import openmdao.api as om
 
 from h2integrate.converters.hydrogen.h2_fuel_cell import LinearH2FuelCellPerformanceModel
 from h2integrate.control.control_strategies.converters.plm_openloop_converter_controller import (
-    PeakLoadManagementHeuristicOpenLoopConverterController,
+    PLMHeuristicOpenLoopConverterController,
 )
 
 
 def _controller_without_setup(config, n_timesteps):
-    controller = object.__new__(PeakLoadManagementHeuristicOpenLoopConverterController)
+    controller = object.__new__(PLMHeuristicOpenLoopConverterController)
     controller.config = config
     controller.n_timesteps = n_timesteps
     return controller
@@ -19,7 +19,7 @@ def _controller_without_setup(config, n_timesteps):
 
 @pytest.mark.unit
 def test_plm_converter_controller_bounds_indicators():
-    assert PeakLoadManagementHeuristicOpenLoopConverterController._time_step_bounds == (
+    assert PLMHeuristicOpenLoopConverterController._time_step_bounds == (
         1e-12,
         np.inf,
     )
@@ -127,7 +127,7 @@ def test_setup_uses_price_units_for_upstream_peak_cutoff():
     prob = om.Problem()
     prob.model.add_subsystem(
         "controller",
-        PeakLoadManagementHeuristicOpenLoopConverterController(
+        PLMHeuristicOpenLoopConverterController(
             plant_config=plant_config,
             tech_config=tech_config,
         ),
@@ -197,7 +197,7 @@ def test_plm_converter_controller_integrates_with_h2_fuel_cell(subtests):
 
     prob.model.add_subsystem(
         "controller",
-        PeakLoadManagementHeuristicOpenLoopConverterController(
+        PLMHeuristicOpenLoopConverterController(
             plant_config=plant_config,
             tech_config=control_tech_config,
         ),

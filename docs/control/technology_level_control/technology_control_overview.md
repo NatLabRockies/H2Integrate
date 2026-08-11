@@ -24,7 +24,7 @@ Supported controllers:
 - [`SimpleStorageOpenLoopController`](#pass-through-controller)
 - [`DemandOpenLoopStorageController`](#demand-open-loop-storage-controller)
 - [`PeakLoadManagementHeuristicOpenLoopStorageController`](#peak-load-management-open-loop-storage-controller)
-- [`PeakLoadManagementHeuristicOpenLoopConverterController`](#peak-load-management-open-loop-converter-controller)
+- [`PLMHeuristicOpenLoopConverterController`](#peak-load-management-open-loop-converter-controller)
 
 (pyomo-control-framework)=
 ## Pyomo control framework

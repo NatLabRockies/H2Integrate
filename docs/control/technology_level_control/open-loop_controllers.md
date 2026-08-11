@@ -116,7 +116,7 @@ The open-loop converter controllers can be attached as the control strategy in t
 
 (peak-load-management-open-loop-converter-controller)=
 ### Peak Load Management Open-Loop Converter Controller
-The `PeakLoadManagementHeuristicOpenLoopConverterController` computes a per-timestep converter command that shaves demand peaks using threshold-based heuristics rather than storage state-of-charge dynamics or optimization. It is designed for dispatching a converter (such as a fuel cell) to reduce peak loads using either one or two demand profiles.
+The `PLMHeuristicOpenLoopConverterController` computes a per-timestep converter command that shaves demand peaks using threshold-based heuristics rather than storage state-of-charge dynamics or optimization. It is designed for dispatching a converter (such as a fuel cell) to reduce peak loads using either one or two demand profiles.
 
 The command at each timestep is determined by three limits:
 
@@ -130,7 +130,7 @@ Because the controller reads the performance model's `rated_{commodity}_producti
 
 **Configuration parameters**
 
-For an example of how to use the `PeakLoadManagementHeuristicOpenLoopConverterController`, see:
+For an example of how to use the `PLMHeuristicOpenLoopConverterController`, see:
 - `examples/33_peak_load_management_heuristics/plm_converter/`
 
-For API details, see the [`PeakLoadManagementHeuristicOpenLoopConverterController` API documentation](../../_autosummary/h2integrate.control.control_strategies.converters.plm_openloop_converter_controller).
+For API details, see the [`PLMHeuristicOpenLoopConverterController` API documentation](../../_autosummary/h2integrate.control.control_strategies.converters.plm_openloop_converter_controller).

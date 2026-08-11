@@ -10,12 +10,13 @@ from h2integrate.control.control_strategies.openloop_control_base import (
 
 
 @define(kw_only=True)
-class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
+class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
     """
-    Configuration class for the PeakLoadManagementHeuristicOpenLoopConverterController.
+    Configuration class for the PLMHeuristicOpenLoopConverterController.
 
     Defines the peak-cutoff heuristics used to compute an open-loop converter
-    command that shaves demand peaks from one or two demand profiles.
+    command that shaves peaks using a primary demand profile and an optional
+    upstream commodity or price signal.
 
     Attributes:
         demand_profile_peak_cutoff (int | float): Primary set-point threshold used to
@@ -24,7 +25,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(OpenLoopContr
         demand_profile_upstream (int | float | list | None): Secondary upstream profile
             used to trigger or shape dispatch decisions. For
             ``demand_profile_upstream_kind='commodity'`` this is typically an
-            upstream demand signal in commodity amount units. For
+            upstream demand signal in commodity rate units. For
             ``demand_profile_upstream_kind='price'`` this is a price time series.
         demand_profile_upstream_peak_cutoff (int | float | None): Threshold applied to
             ``demand_profile_upstream``. Units depend on
@@ -43,7 +44,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(OpenLoopContr
     )
 
 
-class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase):
+class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
 
     This controller computes a timestep-wise converter command that limits
@@ -79,7 +80,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase
         4. Stores the simulation horizon length for use in compute()
 
         """
-        self.config = PeakLoadManagementHeuristicOpenLoopConverterControllerConfig.from_dict(
+        self.config = PLMHeuristicOpenLoopConverterControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -107,14 +108,15 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase
     def compute(self, inputs, outputs):
         """Compute converter command profile using configured peak-cutoff heuristics.
 
-        Dispatch logic per timestep:
-        - If the primary set-point exceeds demand_profile_peak_cutoff,
-        dispatch may be activated.
+                Dispatch logic per timestep:
+                - Dispatch is based on primary demand exceedance above
+                    demand_profile_peak_cutoff.
         - For ``demand_profile_upstream_kind='commodity'``, the command tracks
         the larger of primary and upstream exceedances, while respecting demand
         and capacity limits.
         - For ``demand_profile_upstream_kind='price'``, dispatch is only enabled
-        when upstream price exceeds demand_profile_upstream_peak_cutoff.
+                when upstream price exceeds demand_profile_upstream_peak_cutoff, and the
+                dispatched value remains constrained by primary exceedance.
 
         The command is clipped to remain between zero and both the instantaneous
         demand and converter capacity.
@@ -135,8 +137,9 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase
         demand_profile_peak_cutoff = self.config.demand_profile_peak_cutoff
         demand_profile_upstream = self.config.demand_profile_upstream
         demand_profile_upstream_peak_cutoff = inputs["demand_profile_upstream_peak_cutoff"][0]
-        self.command_value = np.zeros(self.n_timesteps)
+        command_value = np.zeros(self.n_timesteps)
 
+        # Normalize upstream input into a 1D array aligned with demand_profile.
         if demand_profile_upstream is None:
             demand_profile_upstream = np.zeros_like(demand_profile)
         else:
@@ -146,38 +149,33 @@ class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase
                     demand_profile, float(demand_profile_upstream)
                 )
 
-        for idx, val in enumerate(demand_profile):
-            val_upstream = demand_profile_upstream[idx]
-            if (
-                val > demand_profile_peak_cutoff
-                or val_upstream > demand_profile_upstream_peak_cutoff
-            ):
-                desired_dispatch = val - demand_profile_peak_cutoff
+        desired_dispatch = demand_profile - demand_profile_peak_cutoff
 
-                if self.config.demand_profile_upstream_kind == "commodity":
-                    desired_dispatch_upstream = val_upstream - demand_profile_upstream_peak_cutoff
+        # Commodity mode combines primary and upstream exceedances; price mode
+        # uses upstream as a gating signal for primary-demand dispatch.
+        if self.config.demand_profile_upstream_kind == "commodity":
+            active_dispatch_mask = (demand_profile > demand_profile_peak_cutoff) | (
+                demand_profile_upstream > demand_profile_upstream_peak_cutoff
+            )
+            desired_dispatch_upstream = (
+                demand_profile_upstream - demand_profile_upstream_peak_cutoff
+            )
+            dispatch_floor = np.maximum(
+                np.maximum(desired_dispatch, 0.0),
+                np.maximum(desired_dispatch_upstream, 0.0),
+            )
+            dispatch_ceiling = np.minimum(demand_profile, rated_production)
+            dispatch_candidate = np.minimum(dispatch_floor, dispatch_ceiling)
+            command_value = np.where(active_dispatch_mask, dispatch_candidate, 0.0)
+        elif self.config.demand_profile_upstream_kind == "price":
+            dispatch_floor = np.maximum(desired_dispatch, 0.0)
+            dispatch_ceiling = np.minimum(demand_profile, rated_production)
+            dispatch_candidate = np.minimum(dispatch_floor, dispatch_ceiling)
+            price_dispatch_mask = demand_profile_upstream > demand_profile_upstream_peak_cutoff
+            command_value = np.where(price_dispatch_mask, dispatch_candidate, 0.0)
+        else:
+            raise ValueError(
+                f"Invalid demand_profile_upstream_kind '{self.config.demand_profile_upstream_kind}'"
+            )
 
-                    self.command_value[idx] = min(
-                        max(
-                            max(desired_dispatch, 0),
-                            max(desired_dispatch_upstream, 0),
-                        ),
-                        val,
-                        rated_production,
-                    )
-                elif self.config.demand_profile_upstream_kind == "price":
-                    if val_upstream > demand_profile_upstream_peak_cutoff:
-                        self.command_value[idx] = min(
-                            max(desired_dispatch, 0),
-                            val,
-                            rated_production,
-                        )
-                else:
-                    raise (
-                        ValueError(
-                            f"Invalid demand_profile_upstream_kind \
-                            '{self.config.demand_profile_upstream_kind}'"
-                        )
-                    )
-
-        outputs[f"{commodity}_command_value"] = self.command_value
+        outputs[f"{commodity}_command_value"] = command_value
