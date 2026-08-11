@@ -3,16 +3,14 @@ from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.validators import contains
-from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
-    StorageOpenLoopControlBase,
-    StorageOpenLoopControlBaseConfig,
+from h2integrate.control.control_strategies.openloop_control_base import (
+    OpenLoopControlBase,
+    OpenLoopControlBaseConfig,
 )
 
 
 @define(kw_only=True)
-class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
-    StorageOpenLoopControlBaseConfig
-):
+class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
     """
     Configuration class for the PeakLoadManagementHeuristicOpenLoopConverterController.
 
@@ -45,7 +43,7 @@ class PeakLoadManagementHeuristicOpenLoopConverterControllerConfig(
     )
 
 
-class PeakLoadManagementHeuristicOpenLoopConverterController(StorageOpenLoopControlBase):
+class PeakLoadManagementHeuristicOpenLoopConverterController(OpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
 
     This controller computes a timestep-wise converter command that limits

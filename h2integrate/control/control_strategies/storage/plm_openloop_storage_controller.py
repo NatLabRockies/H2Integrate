@@ -8,14 +8,14 @@ from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
 from h2integrate.core.validators import contains, has_required_keys
-from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
-    StorageOpenLoopControlBase,
-    StorageOpenLoopControlBaseConfig,
+from h2integrate.control.control_strategies.openloop_control_base import (
+    OpenLoopControlBase,
+    OpenLoopControlBaseConfig,
 )
 
 
 @define(kw_only=True)
-class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
+class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
     """
     Configuration class for the PeakLoadManagementHeuristicOpenLoopStorageController.
 
@@ -120,7 +120,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoop
                 )
 
 
-class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopControlBase):
+class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
     """
     Peak-load management storage controller implementing an open-loop control strategy.
 

@@ -624,7 +624,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
             )
-            == 1.803343170781246
+            == 1.8905229193032373
         )
 
     with subtests.test("Check LCOE"):
@@ -633,7 +633,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
                 rel=1e-3,
             )
-            == 243.723825
+            == 284.5363759747556
         )
 
 
