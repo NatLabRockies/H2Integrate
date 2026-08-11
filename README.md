@@ -35,7 +35,7 @@ This is a non-exhaustive list, and the library of available technologies is acti
 
 - **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), nuclear, grid
 - **Hydrogen production**: PEM electrolysis, NG-SMR
-- **Energy storage**: Li-ion batteries, long-duration energy storage (LDES), pumped storage hydropower (PSH)
+- **Energy storage**: Li-ion batteries, long-duration energy storage (LDES), pumped storage hydropower (PSH), hydrogen storage, compressed gas storage
 - **Fuel cells**: H2 PEM fuel cells
 - **Industrial processes**: ammonia synthesis, iron ore reduction, steel production, and more
 
