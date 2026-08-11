@@ -130,9 +130,12 @@ def test_check_tech_interconnections(subtests, temp_copy_of_example):
         for i, connection in enumerate(tech_interconnections)
         if connection[0] == "h2_storage" and len(connection) == 4
     ]
-    # update so that the battery is connected to the h2_combiner
+    # Update so that steel (which has no existing L4 connections and does not output
+    # hydrogen) is connected to h2_combiner. This tests that _check_tech_connections
+    # raises a commodity error without triggering the storage topology check that
+    # would fire if we used battery (a storage tech that already has an out-stream).
     tech_interconnections[idx_h2_storage_connect[0]] = [
-        "battery",
+        "steel",
         "h2_combiner",
         "hydrogen",
         "pipe",
@@ -150,9 +153,109 @@ def test_check_tech_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "do not output their specified commodity" in err
-        assert "`battery` -> `hydrogen`" in err
+        assert "`steel` -> `hydrogen`" in err
         assert "Update `technology_interconnections`" in err
-        assert "Update `technology_interconnections`" in err
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_validate_technology_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    base_interconnections = plant_config["technology_interconnections"].copy()
+
+    def _make_model(interconnections):
+        cfg = {
+            "plant_config": {**plant_config, "technology_interconnections": interconnections},
+            "technology_config": tech_config,
+            "driver_config": driver_config,
+        }
+        return H2IntegrateModel(cfg)
+
+    # --- Check 1: discouraged length-3 [commodity_out, commodity_in] connection ---
+    with subtests.test("length-3 _out/_in pair raises error"):
+        bad_connections = [
+            *base_interconnections,
+            ["electrolyzer", "steel", ["hydrogen_out", "hydrogen_in"]],
+        ]
+        h2i = _make_model(bad_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "length-4 connection" in err
+        assert "hydrogen" in err
+
+    # --- Check 2a: storage tech with 0 inputs raises error ---
+    with subtests.test("storage tech with no inputs raises error"):
+        # Remove the connection that feeds h2_storage
+        no_input_connections = [
+            c
+            for c in base_interconnections
+            if not (c[0] == "electrolyzer" and c[1] == "h2_storage")
+        ]
+        h2i = _make_model(no_input_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "h2_storage" in err
+        assert "input connection" in err
+
+    # --- Check 2b: storage tech with >1 outputs raises error ---
+    with subtests.test("storage tech with 2 outputs raises error"):
+        extra_out_connections = [
+            *base_interconnections,
+            ["h2_storage", "steel", "hydrogen", "pipe"],
+        ]
+        h2i = _make_model(extra_out_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "h2_storage" in err
+        assert "output connection" in err
+
+    # --- Check 2c: upstream of storage with >2 outputs raises error ---
+    with subtests.test("upstream tech of storage with >2 outputs raises error"):
+        extra_upstream_connections = [
+            *base_interconnections,
+            ["electrolyzer", "steel", "hydrogen", "pipe"],
+        ]
+        h2i = _make_model(extra_upstream_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "electrolyzer" in err
+        assert "output connection" in err
+
+    # --- Check 3: non-splitter/combiner/storage tech with >1 outputs raises error ---
+    with subtests.test("technology with 2 outputs (no storage) raises error"):
+        # Add a second output from wind (which is not a splitter and not upstream of storage)
+        extra_wind_connections = [
+            *base_interconnections,
+            ["wind", "h2_combiner", "electricity", "cable"],
+        ]
+        h2i = _make_model(extra_wind_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "output connection" in err
+
+    # --- Check 3: non-splitter/combiner/storage tech with >1 inputs raises error ---
+    with subtests.test("technology with 2 inputs raises error"):
+        # Use h2_combiner as the second source so that the source itself (being a combiner)
+        # is excluded from check #3, allowing the n_in > 1 error to fire on electrolyzer.
+        extra_input_connections = [
+            *base_interconnections,
+            ["h2_combiner", "electrolyzer", "electricity", "cable"],
+        ]
+        h2i = _make_model(extra_input_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "electrolyzer" in err
+        assert "input connection" in err
 
 
 @pytest.mark.unit
