@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Replaces all but `must_equal` from the `h2integrate.core.validators` with built in attrs validators.
+
 ## 0.9 [August 10, 2026]
 
 ### New Features
