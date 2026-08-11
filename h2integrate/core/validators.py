@@ -3,16 +3,6 @@ This module contains validator functions for use with `attrs` class definitions.
 """
 
 
-def contains(items):
-    """Validates that an item is part of a given list."""
-
-    def validator(instance, attribute, value):
-        if value not in items:
-            raise ValueError(f"Item {value} not found in list for {attribute}: {items}")
-
-    return validator
-
-
 def has_required_keys(required_keys):
     """Validates that a value is a dict containing all required keys.
 
