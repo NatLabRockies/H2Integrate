@@ -208,6 +208,7 @@ no_cost_models = {
     "GasStreamCombinerPerformanceModel",
     "CablePerformanceModel",
     "PipePerformanceModel",
+    "GenericTransporterPerformanceModel",
 }
 
 no_replacement_schedule_models = {

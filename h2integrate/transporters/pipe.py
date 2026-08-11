@@ -24,7 +24,6 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "wellhead_gas",
                 "water",
                 "oxygen",
-                "heat",
             ],
         )
         self.options.declare("plant_config", types=dict)
@@ -42,8 +41,6 @@ class PipePerformanceModel(om.ExplicitComponent):
             units = "galUS/h"
         elif transport_item == "co2":
             units = "kg/h"
-        elif transport_item == "heat":
-            units = "kW"
         else:
             units = "kg/s"
 
