@@ -3,7 +3,6 @@ from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
@@ -35,12 +34,14 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
     max_capacity: float | None = field(default=None)
     max_charge_rate: float | None = field(default=None)
     sizing_mode: str = field(
-        default="set", converter=(str.strip, str.lower), validator=contains(["auto", "set"])
+        default="set", converter=(str.strip, str.lower), validator=validators.in_(["auto", "set"])
     )
 
-    commodity_rate_units: str = field(default="kg/h", validator=contains(["kg/h", "g/h", "t/h"]))
+    commodity_rate_units: str = field(
+        default="kg/h", validator=validators.in_(["kg/h", "g/h", "t/h"])
+    )
 
-    cost_year: int = field(default=2018, converter=int, validator=contains([2018]))
+    cost_year: int = field(default=2018, converter=int, validator=validators.in_([2018]))
     labor_rate: float = field(default=37.39817, validator=validators.ge(0))
     insurance: float = field(default=0.01, validator=(validators.ge(0), validators.le(1)))
     property_taxes: float = field(default=0.01, validator=(validators.ge(0), validators.le(1)))

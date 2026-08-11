@@ -8,7 +8,6 @@ from geopy import distance
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
@@ -18,7 +17,7 @@ class IronTransportPerformanceConfig(BaseConfig):
     find_closest_ship_site: bool = field()
     shipment_site: str = field(
         converter=(str.lower, str.capitalize),
-        validator=contains(["None", "Duluth", "Chicago", "Cleveland", "Buffalo"]),
+        validator=validators.in_(["None", "Duluth", "Chicago", "Cleveland", "Buffalo"]),
     )
 
     #

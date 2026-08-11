@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -24,10 +23,12 @@ class MartinIronMinePerformanceConfig(BaseConfig):
     max_ore_production_rate_tonnes_per_hr: float = field()
 
     taconite_pellet_type: str = field(
-        converter=(str.lower, str.strip), validator=contains(["std", "drg"])
+        converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
 
-    mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    mine: str = field(
+        validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
+    )
 
 
 class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):

@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import contains, has_required_keys
+from h2integrate.core.validators import has_required_keys
 from h2integrate.control.control_strategies.openloop_control_base import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -61,7 +61,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControl
 
     demand_profile_upstream: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
-        validator=contains(["demand_profile", "demand_profile_upstream"]),
+        validator=validators.in_(["demand_profile", "demand_profile_upstream"]),
     )
     n_override_events: int | None = field(default=None)
     override_events_period: int | str | None = field(default=None)

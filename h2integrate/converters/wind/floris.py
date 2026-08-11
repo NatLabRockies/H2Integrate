@@ -5,7 +5,6 @@ from attrs import field, define, validators
 from floris import TimeSeries, FlorisModel
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
@@ -67,7 +66,8 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
     operation_model: str = field(default="cosine-loss")
     layout: dict = field(default={})
     resource_data_averaging_method: str = field(
-        default="weighted_average", validator=contains(["weighted_average", "average", "nearest"])
+        default="weighted_average",
+        validator=validators.in_(["weighted_average", "average", "nearest"]),
     )
     hybrid_turbine_design: bool = field(default=False)
 

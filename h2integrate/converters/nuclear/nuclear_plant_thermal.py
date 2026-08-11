@@ -2,7 +2,6 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -31,7 +30,7 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
             Defaults to ``0.0``.
     """
 
-    operating_mode: str = field(validator=contains(["heat", "electricity"]))
+    operating_mode: str = field(validator=validators.in_(["heat", "electricity"]))
     electricity_command_value: float = field(validator=validators.gt(0))
     high_pressure_electrical_efficiency: float = field(
         validator=(validators.ge(0), validators.le(1))

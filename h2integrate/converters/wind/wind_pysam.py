@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -46,7 +45,7 @@ class PySAMPowerCurveCalculationInputs(BaseConfig):
     wind_default_cut_in_speed: int | float = field(default=4)
     wind_default_cut_out_speed: int | float = field(default=25)
     wind_default_drive_train: int = field(
-        default=0, converter=int, validator=contains([0, 1, 2, 3])
+        default=0, converter=int, validator=validators.in_([0, 1, 2, 3])
     )
 
 
@@ -79,12 +78,14 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
     turbine_rating_kw: float = field(validator=validators.gt(0))
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="WindPowerSingleOwner",
-        validator=contains(
+        validator=validators.in_(
             [
                 "WindPowerAllEquityPartnershipFlip",
                 "WindPowerCommercial",

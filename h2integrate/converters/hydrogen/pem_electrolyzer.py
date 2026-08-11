@@ -4,7 +4,6 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
@@ -44,7 +43,7 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
     """
 
     n_clusters: int = field(validator=validators.gt(0))
-    location: str = field(validator=contains(["onshore", "offshore"]))
+    location: str = field(validator=validators.in_(["onshore", "offshore"]))
     cluster_rating_MW: float = field(validator=validators.gt(0))
     eol_eff_percent_loss: float = field(validator=validators.gt(0))
     uptime_hours_until_eol: int = field(validator=validators.gt(0))

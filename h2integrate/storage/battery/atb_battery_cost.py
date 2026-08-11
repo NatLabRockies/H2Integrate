@@ -2,7 +2,6 @@ from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -36,7 +35,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
     opex_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     max_capacity: float = field()
     max_charge_rate: float = field()
-    commodity_rate_units: str = field(validator=contains(["W", "kW", "MW", "GW", "TW"]))
+    commodity_rate_units: str = field(validator=validators.in_(["W", "kW", "MW", "GW", "TW"]))
     commodity_amount_units: str = field(default=None)
 
     def __attrs_post_init__(self):
