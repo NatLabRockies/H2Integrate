@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
-
+- Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 
 ## 0.9 [August 10, 2026]
