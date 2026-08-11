@@ -22,7 +22,7 @@ def make_tech_classifiers(tech_list):
     classifiers |= {k: "fixed" for k in fixed_techs}
 
     classifiers |= {k: "connector" for k in tech_list if "combiner" in k}
-    classifiers |= {k: "connector" for k in tech_list if "splitter" in k}
+    classifiers |= {k: "splitter" for k in tech_list if "splitter" in k}
     classifiers |= {k: "feedstock" for k in tech_list if "feedstock" in k}
     classifiers |= {k: "demand" for k in tech_list if "demand" in k}
 

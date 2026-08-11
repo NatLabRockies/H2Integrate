@@ -1031,8 +1031,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 if (tech_name, group_commodity) in reversed_commodity_groups:
                     msg = (
                         f"The tech/commodity pair {tech_name}/{group_commodity} "
-                        "should not be duplicated"
+                        "should not be duplicated. This may be due to a splitter "
+                        "in the system which is not currently supported."
                     )
+                    # this error will get raised if using a splitter.
                     raise ValueError(msg)
 
                 reversed_commodity_groups[(tech_name, group_commodity)] = group_name
@@ -1171,12 +1173,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 commod := self.technology_graph.edges[upstream_tech, tech].get("commodity")
             ) is not None:
                 if isinstance(commod, str) and commod == input_commodity:
+                    # this if-statement is outdated and could be removed
                     successor_techs_with_commod.add(upstream_tech)
                     produces_cmod = True
                 if isinstance(commod, list) and input_commodity in commod:
                     successor_techs_with_commod.add(upstream_tech)
                     produces_cmod = True
             if in_flows[upstream_tech] > 1 and produces_cmod:
+                # if only use >1, then it wouldn't catch splitters
+                # use `in_flows[upstream_tech] >= 1` to properly handle splitters
                 new_techs = self.get_successors_for_tech_with_input_cmod(
                     upstream_tech, input_commodity
                 )
