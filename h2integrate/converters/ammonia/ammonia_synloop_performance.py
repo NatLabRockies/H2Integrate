@@ -3,7 +3,6 @@ from attrs import field, define, validators
 
 from h2integrate.core.dynamics import apply_ramping_limits, startup_loss_multiplier
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, range_val
 from h2integrate.tools.constants import H_MW, N_MW, AR_MW
 from h2integrate.core.model_baseclasses import (
     ResizeablePerformanceModelBaseClass,
@@ -79,36 +78,48 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
 
     """
 
-    production_capacity: float = field(validator=gt_zero)
-    catalyst_consumption_rate: float = field(validator=gt_zero)
-    catalyst_replacement_interval: float = field(validator=gt_zero)
-    capacity_factor: float = field(validator=range_val(0, 1))
-    energy_demand: float = field(validator=gt_zero)
-    heat_output: float = field(validator=gt_zero)
-    feed_gas_t: float = field(validator=gt_zero)
-    feed_gas_p: float = field(validator=gt_zero)
-    feed_gas_x_n2: float = field(validator=range_val(0, 1))
-    feed_gas_x_h2: float = field(validator=range_val(0, 1))
-    feed_gas_mass_ratio: float = field(validator=gt_zero)
-    purge_gas_t: float = field(validator=gt_zero)
-    purge_gas_p: float = field(validator=gt_zero)
-    purge_gas_x_n2: float = field(validator=range_val(0, 1))
-    purge_gas_x_h2: float = field(validator=range_val(0, 1))
-    purge_gas_x_ar: float = field(validator=range_val(0, 1))
-    purge_gas_x_nh3: float = field(validator=range_val(0, 1))
-    purge_gas_mass_ratio: float = field(validator=gt_zero)
+    production_capacity: float = field(validator=validators.gt(0))
+    catalyst_consumption_rate: float = field(validator=validators.gt(0))
+    catalyst_replacement_interval: float = field(validator=validators.gt(0))
+    capacity_factor: float = field(validator=(validators.ge(0), validators.le(1)))
+    energy_demand: float = field(validator=validators.gt(0))
+    heat_output: float = field(validator=validators.gt(0))
+    feed_gas_t: float = field(validator=validators.gt(0))
+    feed_gas_p: float = field(validator=validators.gt(0))
+    feed_gas_x_n2: float = field(validator=(validators.ge(0), validators.le(1)))
+    feed_gas_x_h2: float = field(validator=(validators.ge(0), validators.le(1)))
+    feed_gas_mass_ratio: float = field(validator=validators.gt(0))
+    purge_gas_t: float = field(validator=validators.gt(0))
+    purge_gas_p: float = field(validator=validators.gt(0))
+    purge_gas_x_n2: float = field(validator=(validators.ge(0), validators.le(1)))
+    purge_gas_x_h2: float = field(validator=(validators.ge(0), validators.le(1)))
+    purge_gas_x_ar: float = field(validator=(validators.ge(0), validators.le(1)))
+    purge_gas_x_nh3: float = field(validator=(validators.ge(0), validators.le(1)))
+    purge_gas_mass_ratio: float = field(validator=validators.gt(0))
     # dynamics inputs
-    turndown_ratio: float = field(default=0.0, validator=range_val(0.0, 1.0))
-    ramp_up_rate_fraction: float = field(default=1.0, validator=range_val(0.0, 1.0))
-    ramp_down_rate_fraction: float = field(default=1.0, validator=range_val(0.0, 1.0))
+    turndown_ratio: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
+    ramp_up_rate_fraction: float = field(
+        default=1.0, validator=(validators.ge(0), validators.le(1))
+    )
+    ramp_down_rate_fraction: float = field(
+        default=1.0, validator=(validators.ge(0), validators.le(1))
+    )
 
     include_cold_start: bool = field(default=False)
-    off_hours_cold_start: float = field(default=None, validator=validators.optional(gt_zero))
-    cold_start_delay_hours: float = field(default=None, validator=validators.optional(gt_zero))
+    off_hours_cold_start: float = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )
+    cold_start_delay_hours: float = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )
 
     include_warm_start: bool = field(default=False)
-    off_hours_warm_start: float = field(default=None, validator=validators.optional(gt_zero))
-    warm_start_delay_hours: float = field(default=None, validator=validators.optional(gt_zero))
+    off_hours_warm_start: float = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )
+    warm_start_delay_hours: float = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()

@@ -2,9 +2,8 @@ import urllib.parse
 from pathlib import Path
 
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
@@ -38,7 +37,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2007, 2014))
+    resource_year: int = field(converter=int, validator=(validators.ge(2007), validators.le(2014)))
     dataset_desc: str = "wtk_v2"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])

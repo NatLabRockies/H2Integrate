@@ -2,11 +2,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 from pyomo.util.check_units import assert_units_consistent
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val
 from h2integrate.control.control_rules.plant_dispatch_model import PyomoDispatchPlantModel
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
@@ -64,13 +63,17 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
     """
 
     max_charge_rate: int | float = field()
-    charge_efficiency: float = field(validator=range_val(0, 1), default=None)
-    discharge_efficiency: float = field(validator=range_val(0, 1), default=None)
+    charge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=None)
+    discharge_efficiency: float = field(
+        validator=(validators.ge(0), validators.le(1)), default=None
+    )
     cost_per_production: float = field(default=None)
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
     commodity_met_value: float = field(default=None)
-    time_weighting_factor: float = field(validator=range_val(0, 1), default=0.995)
+    time_weighting_factor: float = field(
+        validator=(validators.ge(0), validators.le(1)), default=0.995
+    )
     time_duration: float = field(default=1.0)  # hours
 
     def make_dispatch_inputs(self):

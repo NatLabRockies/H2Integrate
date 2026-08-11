@@ -1,7 +1,7 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, must_equal
+from h2integrate.core.validators import contains, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.water.desal.desalination_baseclass import (
     DesalinationCostBaseClass,
@@ -21,9 +21,9 @@ class ReverseOsmosisPerformanceModelConfig(BaseConfig):
             Default = 997.
     """
 
-    freshwater_kg_per_hour: float = field(validator=gt_zero)
+    freshwater_kg_per_hour: float = field(validator=validators.gt(0))
     salinity: str = field(validator=contains(["seawater", "brackish"]))
-    freshwater_density: float = field(validator=gt_zero, default=997)
+    freshwater_density: float = field(validator=validators.gt(0), default=997)
 
 
 class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
@@ -127,8 +127,8 @@ class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
             Default = 997.
     """
 
-    freshwater_kg_per_hour: float = field(validator=gt_zero)
-    freshwater_density: float = field(validator=gt_zero)
+    freshwater_kg_per_hour: float = field(validator=validators.gt(0))
+    freshwater_density: float = field(validator=validators.gt(0))
     cost_year: int = field(default=2013, converter=int, validator=must_equal(2013))
 
 

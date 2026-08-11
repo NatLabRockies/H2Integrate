@@ -5,10 +5,10 @@ from typing import Any
 import numpy as np
 import PySAM.Windpower as Windpower
 import matplotlib.pyplot as plt
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.validators import contains
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -73,10 +73,10 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             power curve. defaults to True.
     """
 
-    num_turbines: int = field(converter=int, validator=gt_zero)
-    hub_height: float = field(validator=gt_zero)
-    rotor_diameter: float = field(validator=gt_zero)
-    turbine_rating_kw: float = field(validator=gt_zero)
+    num_turbines: int = field(converter=int, validator=validators.gt(0))
+    hub_height: float = field(validator=validators.gt(0))
+    rotor_diameter: float = field(validator=validators.gt(0))
+    turbine_rating_kw: float = field(validator=validators.gt(0))
 
     create_model_from: str = field(
         default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)

@@ -1,12 +1,12 @@
 import attrs
 import numpy as np
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val
+from h2integrate.core.validators import contains
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
 
 
@@ -172,41 +172,43 @@ class BasicProFASTParameterConfig(BaseConfig):
     """
 
     # --- Primary finance parameters ---
-    plant_life: int = field(converter=int, validator=gte_zero)
-    analysis_start_year: int = field(converter=int, validator=range_val(1000, 4000))
-    installation_time: int = field(converter=int, validator=gte_zero)
+    plant_life: int = field(converter=int, validator=validators.ge(0))
+    analysis_start_year: int = field(
+        converter=int, validator=(validators.ge(1000), validators.le(4000))
+    )
+    installation_time: int = field(converter=int, validator=validators.ge(0))
 
-    discount_rate: float = field(validator=range_val(0, 1))
-    debt_equity_ratio: float = field(validator=gt_zero)
-    property_tax_and_insurance: float = field(validator=range_val(0, 1))
+    discount_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    debt_equity_ratio: float = field(validator=validators.gt(0))
+    property_tax_and_insurance: float = field(validator=(validators.ge(0), validators.le(1)))
 
-    total_income_tax_rate: float = field(validator=range_val(0, 1))
-    capital_gains_tax_rate: float = field(validator=range_val(0, 1))
-    sales_tax_rate: float = field(validator=range_val(0, 1))
-    debt_interest_rate: float = field(validator=range_val(0, 1))
+    total_income_tax_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    capital_gains_tax_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    sales_tax_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    debt_interest_rate: float = field(validator=(validators.ge(0), validators.le(1)))
 
-    inflation_rate: float = field(validator=range_val(0, 1))
+    inflation_rate: float = field(validator=(validators.ge(0), validators.le(1)))
 
     cash_onhand_months: int = field(converter=int)  # int?
 
-    admin_expense: float = field(validator=range_val(0, 1))
+    admin_expense: float = field(validator=(validators.ge(0), validators.le(1)))
 
     # --- Optional parameters ---
-    non_depr_assets: float = field(default=0.0, validator=gte_zero)
-    end_of_proj_sale_non_depr_assets: float = field(default=0.0, validator=gte_zero)
+    non_depr_assets: float = field(default=0.0, validator=validators.ge(0))
+    end_of_proj_sale_non_depr_assets: float = field(default=0.0, validator=validators.ge(0))
 
-    tax_loss_carry_forward_years: int = field(default=0, validator=gte_zero)
+    tax_loss_carry_forward_years: int = field(default=0, validator=validators.ge(0))
     tax_losses_monetized: bool = field(default=True)
     sell_undepreciated_cap: bool = field(default=True)
 
     credit_card_fees: float = field(default=0.0)
-    demand_rampup: float = field(default=0.0, validator=gte_zero)
+    demand_rampup: float = field(default=0.0, validator=validators.ge(0))
 
     # --- Debt configuration ---
     debt_type: str = field(
         default="Revolving debt", validator=contains(["Revolving debt", "One time loan"])
     )
-    loan_period_if_used: int = field(default=0, validator=gte_zero)
+    loan_period_if_used: int = field(default=0, validator=validators.ge(0))
 
     # --- Nested dictionaries (financial categories) ---
     commodity: dict = field(
@@ -314,7 +316,9 @@ class ProFASTDefaultCapitalItem(BaseConfig):
     depr_period: int = field(converter=int, validator=contains([3, 5, 7, 10, 15, 20]))
     depr_type: str = field(converter=str.strip, validator=contains(["MACRS", "Straight line"]))
     refurb: int | float | list[float] = field(default=[0.0])
-    replacement_cost_percent: float = field(default=0.0, validator=range_val(0, 1))
+    replacement_cost_percent: float = field(
+        default=0.0, validator=(validators.ge(0), validators.le(1))
+    )
 
     def create_dict(self):
         """Create a ProFAST-compatible dictionary of attributes.
