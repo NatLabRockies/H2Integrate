@@ -7,7 +7,6 @@ import pandas as pd
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import has_required_keys
 from h2integrate.control.control_strategies.openloop_control_base import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -65,11 +64,47 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControl
     )
     n_override_events: int | None = field(default=None)
     override_events_period: int | str | None = field(default=None)
-    peak_range: dict = field(validator=has_required_keys(["start", "end"]))
-    advance_discharge_period: dict = field(validator=has_required_keys(["units", "val"]))
-    delay_charge_period: dict = field(validator=has_required_keys(["units", "val"]))
+    peak_range: dict = field(
+        validator=validators.deep_mapping(
+            key_validator=validators.in_(["start", "end"]),
+            mapping_validator=(
+                validators.instance_of(dict),
+                validators.min_len(2),
+                validators.max_len(2),
+            ),
+        )
+    )
+    advance_discharge_period: dict = field(
+        validator=validators.deep_mapping(
+            key_validator=validators.in_(["units", "val"]),
+            mapping_validator=(
+                validators.instance_of(dict),
+                validators.min_len(2),
+                validators.max_len(2),
+            ),
+        )
+    )
+    delay_charge_period: dict = field(
+        validator=validators.deep_mapping(
+            key_validator=validators.in_(["units", "val"]),
+            mapping_validator=(
+                validators.instance_of(dict),
+                validators.min_len(2),
+                validators.max_len(2),
+            ),
+        )
+    )
     allow_charge_in_peak_range: bool = field(default=True)
-    min_peak_proximity: dict = field(validator=has_required_keys(["units", "val"]))
+    min_peak_proximity: dict = field(
+        validator=validators.deep_mapping(
+            key_validator=validators.in_(["units", "val"]),
+            mapping_validator=(
+                validators.instance_of(dict),
+                validators.min_len(2),
+                validators.max_len(2),
+            ),
+        )
+    )
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
