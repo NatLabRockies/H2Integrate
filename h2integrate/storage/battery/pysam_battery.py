@@ -124,10 +124,12 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         """
 
         if inputs["max_charge_rate"][0] <= 0 or inputs["storage_capacity"][0] <= 0:
-            outputs[f"{self.commodity}_out"] = np.zeros(self.n_timesteps)
-            outputs["SOC"] = np.full(self.n_timesteps, self.config.init_soc_fraction * 100)
-            outputs[f"storage_{self.commodity}_discharge"] = np.zeros(self.n_timesteps)
-            outputs[f"storage_{self.commodity}_charge"] = np.zeros(self.n_timesteps)
+            commodity = self.commodity
+            n_ts = self.n_timesteps
+            outputs[f"{commodity}_out"] = np.zeros(n_ts)
+            outputs["SOC"] = np.full(n_ts, self.config.init_soc_fraction * 100)
+            outputs[f"storage_{commodity}_discharge"] = np.zeros(n_ts)
+            outputs[f"storage_{commodity}_charge"] = np.zeros(n_ts)
             outputs["storage_duration"] = 0.0
             outputs["rated_electricity_production"] = 0.0
             outputs["total_electricity_produced"] = 0.0

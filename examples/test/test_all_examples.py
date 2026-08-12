@@ -838,7 +838,7 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check LCOE"):
+    with subtests.test("Check LCOE is positive"):
         lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0]
         assert lcoe <= 69
 
