@@ -146,7 +146,7 @@ technologies:
       model: ExtraExpenseCostModel
     model_inputs:
       cost_parameters:
-        capital_cost_USD: 250000
-        variable_opex_cost_USD_per_year: 40000  # cost of $20/hr, and 2000 hrs/year
+        capital_cost_USD: 1e6
+        variable_opex_cost_USD_per_year: 400000  # cost of $40/hr, 2000 labor hrs/year, 5 people
         opex_cost_fraction_of_capex: 0.04
         cost_year: 2022

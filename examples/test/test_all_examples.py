@@ -908,6 +908,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     lcoe_sys = h2i.prob.get_val("finance_subgroup_electrical_system.LCOE", units="USD/(MW*h)")[0]
     lcoe_load = h2i.prob.get_val("finance_subgroup_electrical_load.LCOE", units="USD/(MW*h)")[0]
     lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
+    lcoh_with_fees = h2i.prob.get_val("finance_subgroup_hydrogen_with_fees.LCOH", units="USD/kg")[0]
 
     with subtests.test("LCOE of electricity generated"):
         assert pytest.approx(138.9378311, rel=1e-6) == lcoe_gen
@@ -920,6 +921,9 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
 
     with subtests.test("LCOH (battery for min power)"):
         assert pytest.approx(10.230507642864733, rel=1e-3) == lcoh
+
+    with subtests.test("LCOH (battery for min power, with extra fees)"):
+        assert pytest.approx(10.383254905804186, rel=1e-3) == lcoh_with_fees
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for min power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
