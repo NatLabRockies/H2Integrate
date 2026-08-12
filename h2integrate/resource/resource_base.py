@@ -345,7 +345,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 2a) check if file exists directly within resource directory
         # 2) Get valid resource_dir with the function check_resource_dir()
-        resource_dir = Path(data_dir=self.config.resource_dir)
+        resource_dir = Path(self.config.resource_dir)
         resource_dir = check_resource_dir(data_dir=resource_dir)
         # 3a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
