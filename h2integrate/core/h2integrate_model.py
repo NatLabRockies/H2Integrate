@@ -886,7 +886,6 @@ class H2IntegrateModel:
         self.tech_control_classifiers = {}  # for system-level control
 
         combined_performance_and_cost_models = [
-            "h2_storage",
             "WOMBATElectrolyzerModel",
             "IronComponent",
             "ArdWindPlantModel",

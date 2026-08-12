@@ -211,7 +211,7 @@ for examples of how to implement caching in your model.
 ### Models where the performance and cost are tightly coupled
 
 In some cases, the performance and cost models are tightly coupled, and it might make sense to combine them into a single model.
-This is currently the case for the `h2_storage`, `WOMBATElectrolyzerModel`, and `ArdWindPlantModel`
+This is currently the case for the `WOMBATElectrolyzerModel`, `IronComponent`, and `ArdWindPlantModel`
 components, where the performance and cost models are combined into a single component.
 If you're adding a technology where this makes sense, you can follow the same steps as above but you also need to modify the `h2integrate_model.py` file for this special logic.
 For now, modify a single  the `create_technology_models.py` file to include your new technology as such:
