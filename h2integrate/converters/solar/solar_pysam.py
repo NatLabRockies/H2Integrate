@@ -189,7 +189,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def calc_tilt_angle(self, latitude):
         """
         Calculates the tilt angle of the PV panel based on the tilt option described by
-        design_config.tilt_angle_func.
+        config.tilt_angle_func.
 
         Returns:
             float: tilt angle of the PV panel in degrees.
@@ -236,7 +236,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def calc_azimuth_angle(self, latitude):
         """
         Calculates the azimuth angle of the PV panel based on the site latitude and user inputs.
-        If a user specifies the azimuth angle in `design_config.pysam_options.SystemDesign.azimuth`,
+        If a user specifies the azimuth angle in `config.pysam_options.SystemDesign.azimuth`,
         that value will be returned. If the user-specified azimuth angle seems incorrect based on
         the site latitude, a UserWarning will be raised. If the user does not specify the azimuth
         angle explicitly, then the azimuth angle will be returned as:

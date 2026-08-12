@@ -345,8 +345,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 2a) check if file exists directly within resource directory
         # 2) Get valid resource_dir with the function check_resource_dir()
-        resource_dir = Path(self.config.resource_dir)
-        resource_dir = check_resource_dir(data_dir=resource_dir)
+        resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
         # 3a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
             # If a filename was input, use resource_filename as the filename.
@@ -363,10 +362,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 provided_dir
                 and Path(self.config.resource_dir).parts[-1] == self.config.resource_type
             ):
-                resource_dir = check_resource_dir(data_dir=resource_dir)
+                resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
             else:
                 resource_dir = check_resource_dir(
-                    data_dir=resource_dir, data_subdir=self.config.resource_type
+                    data_dir=self.config.resource_dir, data_subdir=self.config.resource_type
                 )
             # 3) Create a filename if resource_filename was input
             if provided_filename and not site_changed:
