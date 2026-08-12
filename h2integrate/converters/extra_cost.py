@@ -94,4 +94,4 @@ class ExtraExpenseCostModel(CostModelBaseClass):
         else:
             outputs["OpEx"] = inputs["fixed_opex_cost"]
 
-        outputs["VarOpEx"] = inputs["fixed_opex_cost"]
+        outputs["VarOpEx"] = inputs["varopex_cost"]

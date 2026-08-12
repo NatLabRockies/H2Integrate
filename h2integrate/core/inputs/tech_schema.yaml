@@ -33,24 +33,17 @@ properties:
                 description: Name of the cost model
             required: [model]
             description: Cost model details
-          resource:
+          finance_model:
             type: object
             properties:
-              type:
+              model:
                 type: string
-                description: Type of resource model
-              wind_speed:
-                type: number
-                description: Average wind speed in m/s
-            additionalProperties: true
-            description: Resource-related information (optional)
-          details:
+                description: Name of the technology finance model
+            required: [model]
+            description: Technology finance model details
+          model_inputs:
             type: object
             description: Detailed configuration parameters (optional)
             additionalProperties: true
-          financial_model:
-            type: object
-            description: Financial model details (optional)
-            additionalProperties: true
-        required: [performance_model]
+        required: [model_inputs]
 required: [name, description, technologies]

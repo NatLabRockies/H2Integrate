@@ -1837,7 +1837,7 @@ class H2IntegrateModel:
                 # Only connect technologies that are included in the finance stackup
                 for tech_name in tech_configs.keys():
                     # Skip technologies whose models doesn't add costs
-                    perf_model = tech_configs[tech_name].get("performance_model").get("model")
+                    perf_model = tech_configs[tech_name].get("performance_model", {}).get("model")
                     if perf_model in no_cost_models:
                         continue
 
@@ -1856,7 +1856,11 @@ class H2IntegrateModel:
                         f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                     )
 
-                    if is_system_finance_model and perf_model not in no_replacement_schedule_models:
+                    has_replacement_schedule = (
+                        perf_model is not None and perf_model not in no_replacement_schedule_models
+                    )
+
+                    if is_system_finance_model and has_replacement_schedule:
                         # connect replacement schedule to system-level finance models
                         self.plant.connect(
                             f"{tech_name}.replacement_schedule",
