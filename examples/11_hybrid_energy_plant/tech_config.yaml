@@ -84,7 +84,7 @@ technologies:
         min_soc_fraction: 0.2
       performance_parameters:
         chemistry: LFPGraphite
-        demand_profile: !include tech_inputs/desired_schedules/desired_schedule_hourly_kw.yaml
+        demand_profile: !include desired_schedule_hourly_kw.yaml
       cost_parameters:
         cost_year: 2022
         energy_capex: 245.692  # $/kWh, from 2024 ATB utility-scale battery year 2030
@@ -107,4 +107,4 @@ technologies:
       performance_parameters:
         commodity: electricity
         commodity_rate_units: kW
-        demand_profile: !include tech_inputs/desired_schedules/desired_schedule_hourly_kw.yaml
+        demand_profile: !include desired_schedule_hourly_kw.yaml

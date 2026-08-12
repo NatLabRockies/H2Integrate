@@ -9,13 +9,13 @@ sites:
         resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2013
-          resource_dir: tech_inputs/weather/wind
+          resource_dir: resource_files/wind/
           resource_filename: 30.6617_-101.7096_2013_wtk_v2_60min_utc_tz.csv
       solar_resource:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2013
-          resource_dir: tech_inputs/weather/solar
+          resource_dir: resource_files/solar/
           resource_filename: 30.6617_-101.7096_psmv3_60_2013.csv
 plant:
   plant_life: 30
