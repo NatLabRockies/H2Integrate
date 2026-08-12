@@ -153,31 +153,31 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def setup(self):
         super().setup()
 
-        self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
         )
         self.add_input(
             "system_capacity_DC",
-            val=self.design_config.pv_capacity_kWdc,
+            val=self.config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
         self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
-        if self.design_config.create_model_from == "default":
-            self.system_model = Pvwatts.default(self.design_config.config_name)
-        elif self.design_config.create_model_from == "new":
-            self.system_model = Pvwatts.new(self.design_config.config_name)
+        if self.config.create_model_from == "default":
+            self.system_model = Pvwatts.default(self.config.config_name)
+        elif self.config.create_model_from == "new":
+            self.system_model = Pvwatts.new(self.config.config_name)
 
-        design_dict = self.design_config.create_input_dict()
+        design_dict = self.config.create_input_dict()
 
         # update design_dict if user provides non-empty design information
-        if bool(self.design_config.pysam_options):
-            check_pysam_input_params(design_dict, self.design_config.pysam_options)
+        if bool(self.config.pysam_options):
+            check_pysam_input_params(design_dict, self.config.pysam_options)
 
-            for group, group_parameters in self.design_config.pysam_options.items():
+            for group, group_parameters in self.config.pysam_options.items():
                 if group in design_dict:
                     design_dict[group].update(group_parameters)
                 else:
@@ -189,41 +189,41 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def calc_tilt_angle(self, latitude):
         """
         Calculates the tilt angle of the PV panel based on the tilt option described by
-        design_config.tilt_angle_func.
+        config.tilt_angle_func.
 
         Returns:
             float: tilt angle of the PV panel in degrees.
         """
         # If tilt angle function is 'none', use the provided tilt value or default
-        if self.design_config.tilt_angle_func == "none":
+        if self.config.tilt_angle_func == "none":
             # If using a default PySAM model, get tilt from model if not specified
-            if self.design_config.create_model_from == "default":
-                if self.design_config.tilt is None:
+            if self.config.create_model_from == "default":
+                if self.config.tilt is None:
                     # Return the default tilt from the system model
                     return self.system_model.value("tilt")
                 else:
                     # Return user-specified tilt
-                    return self.design_config.tilt
+                    return self.config.tilt
 
             # If creating a new PySAM model, get tilt from pysam_options or default to 0
-            if self.design_config.create_model_from == "new":
-                if self.design_config.tilt is None:
+            if self.config.create_model_from == "new":
+                if self.config.tilt is None:
                     # Return tilt from pysam_options if provided, else 0
-                    return self.design_config.pysam_options.get("SystemDesign", {}).get("tilt", 0)
+                    return self.config.pysam_options.get("SystemDesign", {}).get("tilt", 0)
                 else:
                     # Return user-specified tilt
-                    return self.design_config.tilt
+                    return self.config.tilt
 
         # Use absolute value of latitude for tilt calculations
         # to support southern hemisphere (negative) latitudes
         abs_latitude = abs(latitude)
 
         # If tilt angle function is 'lat', use the latitude as the tilt
-        if self.design_config.tilt_angle_func == "lat":
+        if self.config.tilt_angle_func == "lat":
             return abs_latitude
 
         # If tilt angle function is 'lat-func', use empirical formulas based on latitude
-        if self.design_config.tilt_angle_func == "lat-func":
+        if self.config.tilt_angle_func == "lat-func":
             if abs_latitude <= 25:
                 # For latitudes <= 25, use 0.87 * latitude
                 return abs_latitude * 0.87
@@ -236,7 +236,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def calc_azimuth_angle(self, latitude):
         """
         Calculates the azimuth angle of the PV panel based on the site latitude and user inputs.
-        If a user specifies the azimuth angle in `design_config.pysam_options.SystemDesign.azimuth`,
+        If a user specifies the azimuth angle in `config.pysam_options.SystemDesign.azimuth`,
         that value will be returned. If the user-specified azimuth angle seems incorrect based on
         the site latitude, a UserWarning will be raised. If the user does not specify the azimuth
         angle explicitly, then the azimuth angle will be returned as:
@@ -252,7 +252,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         """
 
         if (
-            azimuth := self.design_config.pysam_options.get("SystemDesign", {}).get("azimuth", None)
+            azimuth := self.config.pysam_options.get("SystemDesign", {}).get("azimuth", None)
         ) is not None:
             # User did explicitly define azimuth angle
             if latitude < 0.0 and float(azimuth) == 180.0:
@@ -331,6 +331,16 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         return reformatted_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        if inputs["system_capacity_DC"][0] <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["system_capacity_AC"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
+
         # calculate the tilt angle based on site latitude (use 0 if site latitude is not input)
         tilt = self.calc_tilt_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
         # over-write the tilt angle if it was specified in the design dict

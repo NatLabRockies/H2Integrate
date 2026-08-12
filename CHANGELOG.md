@@ -1,8 +1,9 @@
 # Changelog
 
 ## Unreleased [TBD]
-
+- Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
+- Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
 
 ## 0.9 [August 10, 2026]
 
@@ -36,7 +37,6 @@
 - Added system-level-controller unit tests that confirm the `cost_per_tech: feedstock` mode correctly sums `VarOpEx` from all upstream feedstocks for a multi-feedstock dispatchable, including a fuel-cell-style hydrogen-plus-oxygen scenario and a case with feedstocks at different graph depths. [PR 793](https://github.com/NatLabRockies/H2Integrate/pull/793)
 - Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
 - Removed hard-coded logic of price units in finance models to be flexible to any type of commodity. Created helper functions `_compute_price_units` and `_compute_rate_units` in `h2integrate.finances.tools` and integrated usage of these functions into all finance models  (`numpy_financial_npv`, `profast_npv`, `profast_lco`) accordingly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
-- Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
 - Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
 - Updated `commodity_sell_price` input to `ProFastNPV` to be per year of the plant life. Also updated `BasicProFASTParameterConfig.as_dict()` so explicitly input escalation values are not overwritten to the general inflation rate [PR 799](https://github.com/NatLabRockies/H2Integrate/pull/799)
 - Added `calc_azimuth_angle()` to `PYSAMSolarPlantPerformanceModel` to provide default azimuth angle based on whether the site is in the northern or southern hemisphere [PR 806](https://github.com/NatLabRockies/H2Integrate/pull/806)

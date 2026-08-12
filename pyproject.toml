@@ -45,7 +45,7 @@ dependencies = [
   "NREL-PySAM>=7.0.0",
   "numpy",
   "numpy-financial",
-  "openmdao>=3.44.0",
+  "openmdao>=3.45.0",
   "openmeteo-requests",
   "pandas>=2.0.3",
   "ProFAST",

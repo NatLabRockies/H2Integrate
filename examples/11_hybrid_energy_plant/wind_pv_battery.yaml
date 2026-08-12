@@ -1,5 +1,5 @@
 name: H2Integrate_config
-system_summary: Wind, PV, Battery
+system_summary: Wind, PV, Battery hybrid plant (native H2I models)
 driver_config: driver_config.yaml
 technology_config: tech_config.yaml
 plant_config: plant_config.yaml
