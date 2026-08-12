@@ -1,11 +1,8 @@
+import warnings
 import urllib.parse
-from pathlib import Path
 
 import pandas as pd
-from attrs import field, define
 
-from h2integrate.core.validators import range_val
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
@@ -13,50 +10,9 @@ from h2integrate.resource.utilities.nlr_developer_api_keys import (
 )
 
 
-@define(kw_only=True)
-class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
-    """Configuration class to download wind resource data from
-    `Wind Toolkit Data V2 <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/>`_.
-
-    Args:
-        resource_year (int): Year to use for resource data.
-            Must been between 2007 and 2014 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
-
-    Attributes:
-        dataset_desc (str): description of the dataset, used in file naming.
-            For this dataset, the `dataset_desc` is "wtk_v2".
-        resource_type (str): type of resource data downloaded, used in folder naming.
-            For this dataset, the `resource_type` is "wind".
-        valid_intervals (list[int]): time interval(s) in minutes that resource data can be
-            downloaded in. For this dataset, `valid_intervals` are 5, 15, 30, and 60 minutes.
-
-    """
-
-    resource_year: int = field(converter=int, validator=range_val(2007, 2014))
-    dataset_desc: str = "wtk_v2"
-    resource_type: str = "wind"
-    valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
-
-
-class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
+class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
     def setup(self):
-        # create the input dictionary for WTKNLRDeveloperAPIConfig
-        resource_specs = self.helper_setup_method()
-
-        # create the resource config
-        self.config = WTKNLRDeveloperAPIConfig.from_dict(
-            resource_specs,
-            additional_cls_name=self.__class__.__name__,
-        )
+        super().setup()
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -72,8 +28,6 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
                 self.interval = int(max(self.config.valid_intervals))
             else:
                 self.interval = int(min(self.config.valid_intervals))
-
-        super().setup()
 
         # get the data dictionary
         data = self.get_data(self.config.latitude, self.config.longitude)
@@ -125,8 +79,7 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
             "api_key": get_nlr_developer_api_key(),
             "email": get_nlr_developer_api_email(),
         }
-        base_url = "https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download.csv?"
-        url = base_url + urllib.parse.urlencode(input_data, True)
+        url = self.base_url + urllib.parse.urlencode(input_data, True)
         return url
 
     def load_data(self, fpath):
@@ -210,6 +163,15 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
             if "surface" in c:
                 new_c += "_0m"
                 new_c = new_c.replace("surface", "").replace("__", "").strip("_")
+            if new_c == "skin_temperature":
+                new_c += "_0m"
+                units = "degC"
+            if ("specifichumidity" in c) and (units == c):
+                units = "%"
+            if units == c:
+                msg = f"Cannot determine units for wind resource data column {c}."
+                warnings.warn(msg, UserWarning, stacklevel=3)
+                continue
             data_rename_mapper.update({c: new_c})
             data_units.update({new_c: units})
         data = data.rename(columns=data_rename_mapper)
