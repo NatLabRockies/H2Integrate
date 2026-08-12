@@ -91,7 +91,7 @@ class WTKHRRRMETAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class HRRRMETToolkitAPI(NLRDeveloperAPIWindResourceBase):
+class HRRRMETToolkitWindAPI(NLRDeveloperAPIWindResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 

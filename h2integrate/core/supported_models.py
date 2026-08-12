@@ -51,6 +51,7 @@ supported_models = _ModelRegistry(
         "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
+        "HRRRMETToolkitWindAPI": "resource.wind:HRRRMETToolkitWindAPI",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
         "OpenMeteoHistoricalSolarResource": "resource.solar:OpenMeteoHistoricalSolarResource",
         "GOESAggregatedSolarAPI": "resource.solar:GOESAggregatedSolarAPI",
