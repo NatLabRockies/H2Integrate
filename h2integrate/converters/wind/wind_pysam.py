@@ -72,10 +72,10 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             power curve. defaults to True.
     """
 
-    num_turbines: int = field(converter=int, validator=validators.gt(0))
-    hub_height: float = field(validator=validators.gt(0))
-    rotor_diameter: float = field(validator=validators.gt(0))
-    turbine_rating_kw: float = field(validator=validators.gt(0))
+    num_turbines: int = field(converter=int, validator=validators.ge(0))
+    hub_height: float = field(validator=validators.ge(0))
+    rotor_diameter: float = field(validator=validators.ge(0))
+    turbine_rating_kw: float = field(validator=validators.ge(0))
 
     create_model_from: str = field(
         default="new",
