@@ -127,11 +127,13 @@ class TechPerformanceModel(ResizeablePerformanceModelBaseClass):
 
 ## Example plant setup
 
-Here, there are three technologies in the the `tech_config.yaml`:
+Here, there are five technologies in the the `tech_config.yaml`:
 
-1. A `electricity_feedstock` source producing electricity,
-2. An `electrolyzer` producing hydrogen from that electricity, and
-3. An `ammonia` plant producing ammonia from that hydrogen.
+1. An `electricity_feedstock` source producing electricity,
+2. An `electricity_splitter` that splits power between the electrolyzer and ammonia plant,
+3. An `electrolyzer` producing hydrogen from electricity, and
+4. An `ammonia` plant producing ammonia from hydrogen and nitrogen,
+5. An `n2_feedstock` source producing nitrogen.
 
 The electrolyzer and ammonia technologies are resizeable. For starters, we will set them up in `"normal"` mode
 
@@ -140,13 +142,6 @@ The electrolyzer and ammonia technologies are resizeable. For starters, we will 
 driver_config = load_driver_yaml(EXAMPLE_DIR / "driver_config.yaml")
 plant_config = load_plant_yaml(EXAMPLE_DIR / "plant_config.yaml")
 tech_config = load_tech_yaml(EXAMPLE_DIR / "tech_config.yaml")
-
-# Replace a relative file in the example with a hard-coded reference for the docs version
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"][6:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"] = EXAMPLE_DIR.parent.parent / fn
-
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"][6:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"] = EXAMPLE_DIR.parent.parent / fn
 
 input_config = {
     "name": "H2Integrate_config",
@@ -170,7 +165,7 @@ for tech in ["electrolyzer", "ammonia"]:
     )
 ```
 
-The `technology_interconnections` in the `plant_config` is set up to send electricity from the wind plant to the electrolyzer, then hydrogen from the electrolyzer to the ammonia plant. When set up to run in `resize_by_max_commodity` mode, there will also be an entry to send the `max_hydrogen_capacity` from the ammonia plant to the electrolyzer. Note: this will create a feedback loop within the OpenMDAO problem, which requires an iterative solver.
+The `technology_interconnections` in the `plant_config` is set up to send electricity from the feedstock source through a splitter to both the electrolyzer and ammonia plant, with hydrogen flowing from the electrolyzer to the ammonia plant, and nitrogen flowing from the nitrogen feedstock to the ammonia plant. When set up to run in `resize_by_max_commodity` mode, there will also be an entry to send the `max_hydrogen_capacity` from the ammonia plant to the electrolyzer. Note: this will create a feedback loop within the OpenMDAO problem, which requires an iterative solver.
 
 ```{code-cell} ipython3
 for connection in model.plant_config["technology_interconnections"]:
@@ -255,11 +250,12 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electricity_splitter", "electricity", "cable"],
+    ["electricity_splitter", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
-    ["electricity_feedstock", "ammonia", "electricity", "cable"],
+    ["electricity_splitter", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 
@@ -308,10 +304,11 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electricity_splitter", "electricity", "cable"],
+    ["electricity_splitter", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
-    ["electricity_feedstock", "ammonia", "electricity", "cable"],
+    ["electricity_splitter", "ammonia", "electricity", "cable"],
 ]
 input_config["plant_config"] = plant_config
 driver_config["driver"]["optimization"]["flag"] = True
