@@ -39,6 +39,15 @@ technologies:
         price: 0.0
         annual_cost: 0.0
         start_up_cost: 0.0
+  electricity_splitter:
+    performance_model:
+      model: GenericSplitterPerformanceModel
+    model_inputs:
+      performance_parameters:
+        split_mode: fraction
+        commodity: electricity
+        commodity_rate_units: MW
+        fraction_to_priority_tech: 0.99
   n2_feedstock:
     performance_model:
       model: FeedstockPerformanceModel
