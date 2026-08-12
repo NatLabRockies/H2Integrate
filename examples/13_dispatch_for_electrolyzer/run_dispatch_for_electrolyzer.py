@@ -42,3 +42,4 @@ lcoe_gen = h2i.prob.get_val("finance_subgroup_generated_electricity.LCOE", units
 lcoe_sys = h2i.prob.get_val("finance_subgroup_electrical_system.LCOE", units="USD/(MW*h)")[0]
 lcoe_load = h2i.prob.get_val("finance_subgroup_electrical_load.LCOE", units="USD/(MW*h)")[0]
 lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
+lcoh_with_fees = h2i.prob.get_val("finance_subgroup_hydrogen_with_fees.LCOH", units="USD/kg")[0]
