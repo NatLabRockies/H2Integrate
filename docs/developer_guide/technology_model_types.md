@@ -49,7 +49,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         super().setup()
 
         # Build a validated configuration object from user inputs.
-        self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -58,13 +58,13 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         # Register any extra I/O beyond what the baseclass already provides.
         self.add_input(
             "system_capacity_DC",
-            val=self.design_config.pv_capacity_kWdc,
+            val=self.config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
         self.add_output("system_capacity_AC", val=0.0, units="kW")
 
-        self.system_model = Pvwatts.new(self.design_config.config_name)
+        self.system_model = Pvwatts.new(self.config.config_name)
         # ...assign design parameters to ``self.system_model``...
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

@@ -50,8 +50,8 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
     """
 
-    max_capacity: float = field(validator=validators.gt(0))
-    max_charge_rate: float = field(validator=validators.gt(0))
+    max_capacity: float = field(validator=validators.ge(0))
+    max_charge_rate: float = field(validator=validators.ge(0))
 
     chemistry: str = field(
         validator=validators.in_(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
@@ -121,6 +121,18 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         thermal properties, etc.), executes the simulation, and stores the
         results in OpenMDAO outputs.
         """
+
+        if inputs["max_charge_rate"][0] <= 0 or inputs["storage_capacity"][0] <= 0:
+            outputs[f"{self.commodity}_out"] = np.zeros(self.n_timesteps)
+            outputs["SOC"] = np.full(self.n_timesteps, self.config.init_soc_fraction * 100)
+            outputs[f"storage_{self.commodity}_discharge"] = np.zeros(self.n_timesteps)
+            outputs[f"storage_{self.commodity}_charge"] = np.zeros(self.n_timesteps)
+            outputs["storage_duration"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            return
 
         # Size the battery based on inputs -> method brought from HOPP
         module_specs = {

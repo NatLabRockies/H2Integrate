@@ -1,13 +1,110 @@
 name: technology_config
-description: This plant is a simple passthrough wind+solar+battery hybrid energy plant within HOPP
+description: Wind, solar PV, and battery hybrid energy plant using native H2I models
 technologies:
-  hopp:
+  wind:
     performance_model:
-      model: HOPPComponent
+      model: PYSAMWindPlantPerformanceModel
+    cost_model:
+      model: ATBWindPlantCostModel
+    dispatch_rule_set:
+      model: PyomoDispatchGenericConverter
+    model_inputs:
+      performance_parameters:
+        num_turbines: 2
+        turbine_rating_kw: 1500.0  # kW per turbine, initial value (design variable)
+        rotor_diameter: 82.0
+        hub_height: 80.0
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        pysam_options: {}
+        run_recalculate_power_curve: true
+        layout:
+          layout_mode: basicgrid
+          layout_options:
+            row_D_spacing: 7.0
+            turbine_D_spacing: 7.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: square
+      cost_parameters:
+        capex_per_kW: 1228.308  # $/kW, from 2024 ATB land-based wind class 1 moderate year 2030
+        opex_per_kW_per_year: 29.2638  # $/kW/year, from 2024 ATB
+        cost_year: 2022
+      dispatch_rule_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  solar:
+    performance_model:
+      model: PYSAMSolarPlantPerformanceModel
+    cost_model:
+      model: ATBUtilityPVCostModel
+    dispatch_rule_set:
+      model: PyomoDispatchGenericConverter
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 2500.0  # kW-DC, initial value (design variable)
+        dc_ac_ratio: 1.3
+        create_model_from: default
+        config_name: PVWattsSingleOwner
+        tilt_angle_func: lat-func
+        pysam_options: {}
+      cost_parameters:
+        capex_per_kWac: 1043.702  # $/kW-AC, from 2024 ATB utility PV moderate year 2030
+        opex_per_kWac_per_year: 17.9907  # $/kW-AC/year, from 2024 ATB
+        cost_year: 2022
+      dispatch_rule_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    dispatch_rule_set:
+      model: PyomoDispatchGenericConverter
     model_inputs:
       shared_parameters:
-        cost_year: 2024
+        commodity: electricity
+        commodity_rate_units: kW
+  battery:
+    performance_model:
+      model: PySAMBatteryPerformanceModel
+    cost_model:
+      model: ATBBatteryCostModel
+    dispatch_rule_set:
+      model: PyomoRuleStorageBaseclass
+    control_strategy:
+      model: HeuristicLoadFollowingStorageController
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 2000.0  # kW, initial value (design variable)
+        max_capacity: 10000.0  # kWh, initial value (design variable)
+        init_soc_fraction: 0.9
+        max_soc_fraction: 1.0
+        min_soc_fraction: 0.2
       performance_parameters:
-        cache_dir: cache
-        enable_caching: true
-        hopp_config: !include tech_inputs/hopp_config.yaml
+        chemistry: LFPGraphite
+        demand_profile: !include tech_inputs/desired_schedules/desired_schedule_hourly_kw.yaml
+      cost_parameters:
+        cost_year: 2022
+        energy_capex: 245.692  # $/kWh, from 2024 ATB utility-scale battery year 2030
+        power_capex: 317.384  # $/kW, from 2024 ATB utility-scale battery year 2030
+        opex_fraction: 0.025
+      control_parameters:
+        system_commodity_interface_limit: 1.0e12
+        n_control_window_hours: 24
+  elec_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: !include tech_inputs/desired_schedules/desired_schedule_hourly_kw.yaml

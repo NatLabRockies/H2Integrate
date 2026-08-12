@@ -1,6 +1,6 @@
 import pytest
 
-from h2integrate import EXAMPLE_DIR
+from h2integrate import RESOURCE_DEFAULT_DIR
 
 from test.conftest import (  # noqa: F401
     temp_dir,
@@ -29,7 +29,7 @@ def plant_config():
 
 @pytest.fixture
 def solar_resource_dict():
-    pv_resource_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather" / "solar"
+    pv_resource_dir = RESOURCE_DEFAULT_DIR / "solar"
     pv_filename = "30.6617_-101.7096_psmv3_60_2013.csv"
     pv_resource_dict = {
         "resource_year": 2013,
