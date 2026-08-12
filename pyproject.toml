@@ -63,6 +63,7 @@ dependencies = [
   "timezonefinder==6.5.9",
   "turbine-models>=0.2.1",
   "wombat>=0.13.3",
+  "charset_normalizer==3.4.9",
 ]
 keywords = [
     "python3",
