@@ -6,7 +6,7 @@ jupytext:
     format_version: 0.13
     jupytext_version: 1.18.1
 kernelspec:
-    display_name: h2integrate
+  display_name: h2integrate
   language: python
   name: python3
 ---
