@@ -64,6 +64,7 @@ supported_models = _ModelRegistry(
         "HimawariTMYSolarAPI": "resource.solar:HimawariTMYSolarAPI",
         # Converters
         "GenericConverterCostModel": "converters:GenericConverterCostModel",
+        "ExtraExpenseCostModel": "converters:ExtraExpenseCostModel",
         "ATBWindPlantCostModel": "converters.wind:ATBWindPlantCostModel",
         "PYSAMWindPlantPerformanceModel": "converters.wind:PYSAMWindPlantPerformanceModel",
         "FlorisWindPlantPerformanceModel": "converters.wind:FlorisWindPlantPerformanceModel",

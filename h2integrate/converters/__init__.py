@@ -1,1 +1,2 @@
 from h2integrate.converters.generic_converter_cost import GenericConverterCostModel
+from h2integrate.converters.extra_cost import ExtraExpenseCostModel
