@@ -40,10 +40,10 @@ def test_driver_schema_path_validator(subtests):
 
 @pytest.fixture(scope="function")
 def temp_resource_dir_env():
-    """Temporarily set the `RESOURCE_DIR` environment variable to example 11's weather folder."""
+    """Temporarily set the `RESOURCE_DIR` environment variable to the default resource folder."""
     # NOTE: changes to this fixture can result in hard-to-debug test failures
     # in tests for resource components. Please do not modify this fixture if possible!
-    resource_dir = str(EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather")
+    resource_dir = str(RESOURCE_DEFAULT_DIR)
     original = os.environ.get("RESOURCE_DIR")
     os.environ["RESOURCE_DIR"] = resource_dir
     yield resource_dir
@@ -58,43 +58,41 @@ def test_get_path(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = (
-        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
-    )
+    file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = get_path(file_abs_path)
     with subtests.test("get_path: absolute filepath for file"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
+    file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = get_path(file_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for file"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = get_path(file_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for file"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 1. As an absolute path.
-    dir_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs"
+    dir_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture"
     dir_abs_out_path = get_path(dir_abs_path)
     with subtests.test("get_path: absolute filepath for folder"):
         assert dir_abs_out_path == dir_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    dir_cwd_rel_path = "tech_inputs"
+    dir_cwd_rel_path = "."
     dir_cwd_rel_out_path = get_path(dir_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for folder"):
         assert dir_cwd_rel_out_path == dir_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs"
+    dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture"
     dir_h2i_rel_out_path = get_path(dir_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for folder"):
         assert dir_h2i_rel_out_path == dir_abs_path
@@ -107,35 +105,33 @@ def test_find_file(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = (
-        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
-    )
+    file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = find_file(file_abs_path)
     with subtests.test("find_file: absolute filepath"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
+    file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = find_file(file_cwd_rel_path)
     with subtests.test("find_file: filepath relative to cwd"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR / "core" / "inputs")
-    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = find_file(file_h2i_rel_path)
     with subtests.test("find_file: filepath relative to H2I package"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 3. Relative to the root_folder (outside of it)
-    file_root_rel_path = "../examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_root_rel_path = "../examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_root_rel_out_path = find_file(file_root_rel_path, root_folder=ROOT_DIR)
     with subtests.test("find_file: filepath relative (outside) of root_folder"):
         assert file_root_rel_out_path.resolve() == file_abs_path
 
     # 4. Relative to the root_folder (inside of it)
-    file_root_in_rel_path = "tech_inputs/hopp_config.yaml"
+    file_root_in_rel_path = "tech_config.yaml"
     ex_root = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture"
     file_root_in_rel_out_path = find_file(file_root_in_rel_path, root_folder=ex_root)
     with subtests.test("find_file: filepath relative (inside) to root_folder"):
@@ -179,15 +175,15 @@ def test_check_data_dir_no_dir(subtests):
 
 @pytest.mark.unit
 def test_check_data_dir_relative_dir_exists(subtests):
-    os.chdir(EXAMPLE_DIR / "11_hybrid_energy_plant")
-    relative_dir = "tech_inputs/weather"
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    os.chdir(ROOT_DIR.parent)
+    relative_dir = "resource_files"
+    expected_dir = RESOURCE_DEFAULT_DIR
     output_dir = check_resource_dir(data_dir=relative_dir)
     with subtests.test("Relative data_dir, no data_subdir"):
         assert output_dir == expected_dir
 
-    relative_dir = "tech_inputs/weather"
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather" / "wind"
+    relative_dir = "resource_files"
+    expected_dir = RESOURCE_DEFAULT_DIR / "wind"
     output_dir = check_resource_dir(data_dir=relative_dir, data_subdir="wind")
     with subtests.test("Relative data_dir, with data_subdir"):
         assert output_dir == expected_dir
@@ -195,7 +191,7 @@ def test_check_data_dir_relative_dir_exists(subtests):
 
 @pytest.mark.unit
 def test_check_data_dir_full_dir_exists(subtests):
-    expected_dir = EXAMPLE_DIR / "11_hybrid_energy_plant" / "tech_inputs" / "weather"
+    expected_dir = RESOURCE_DEFAULT_DIR
     output_dir = check_resource_dir(data_dir=expected_dir)
     with subtests.test("Full data_dir, no data_subdir"):
         assert output_dir == expected_dir
