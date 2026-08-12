@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
+from h2integrate.core.validators import contains, gte_zero
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -73,10 +73,10 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             power curve. defaults to True.
     """
 
-    num_turbines: int = field(converter=int, validator=gt_zero)
-    hub_height: float = field(validator=gt_zero)
-    rotor_diameter: float = field(validator=gt_zero)
-    turbine_rating_kw: float = field(validator=gt_zero)
+    num_turbines: int = field(converter=int, validator=gte_zero)
+    hub_height: float = field(validator=gte_zero)
+    rotor_diameter: float = field(validator=gte_zero)
+    turbine_rating_kw: float = field(validator=gte_zero)
 
     create_model_from: str = field(
         default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
@@ -452,6 +452,15 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         turbine_rating_kw = inputs["wind_turbine_rating"][0]
         n_turbs = int(np.round(inputs["num_turbines"][0]))
 
+        if turbine_rating_kw <= 0 or n_turbs <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
+
         # format resource data and input into model
         data = self.format_resource_data(
             inputs["hub_height"][0], discrete_inputs["wind_resource_data"]
@@ -483,6 +492,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             x_pos, y_pos = make_basic_grid_turbine_layout(
                 self.system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
             )
+
+        # Override the 300-turbine maximum, if needed
+        if n_turbs > 300:
+            self.system_model.value("max_turbine_override", n_turbs)
 
         self.system_model.value("wind_farm_xCoordinates", tuple(x_pos))
         self.system_model.value("wind_farm_yCoordinates", tuple(y_pos))
