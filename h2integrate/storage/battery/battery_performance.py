@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-import pandas as pd
 from attrs import field, define
 from openmdao.utils import units as om_units
 from simses.degradation import DegradationModel
@@ -9,8 +8,10 @@ from simses.battery.state import BatteryState
 from simses.battery.battery import Battery
 from simses.thermal.ambient import AmbientThermalModel
 from simses.degradation.state import DegradationState
+from simses.converter.converter import Converter
 from simses.model.cell.sony_lfp import SonyLFP
 from simses.degradation.cycle_detector import HalfCycle
+from simses.model.converter.fix_efficiency import FixedEfficiency
 from simses.model.degradation.sony_lfp_cyclic import (
     A_RINC,
     B_RINC,
@@ -45,9 +46,15 @@ from h2integrate.storage.storage_baseclass import (
 
 
 class LFP280Ah(SonyLFP):
-    """280 Ah / 3.2 V prismatic LFP cell scaled from the SonyLFP OCV/resistance curves."""
+    """280 Ah / 3.2 V prismatic LFP cell scaled from the SonyLFP OCV/resistance curves.
 
-    _SCALE = 3.0 / 280.0  # resistance scales inversely with capacity
+    Resistance scaling:
+        Step 1 - capacity scaling: R scales as 1/Q, so the first factor is 3/280.
+        Step 2 - design correction for large-format prismatic multi-tab cells.
+        Combined: _SCALE = 0.003888, matching about 0.18 mOhm at SOC=0.5, T=25 C.
+    """
+
+    _SCALE = 0.18e-3 / ((0.044767041 + 0.047827935) / 2)
 
     def __init__(self):
         super().__init__()
@@ -63,14 +70,18 @@ class LFP280Ah(SonyLFP):
 
 
 class ScaledLFPCalendarDegradation(SonyLFPCalendarDegradation):
-    def update_capacity(
-        self, state: BatteryState, dt: float, accumulated_qloss: float, _DEG_SCALE
-    ) -> float:
+    def __init__(self, deg_scale: float):
+        super().__init__()
+        self._deg_scale = deg_scale
+
+    def update_capacity(self, state: BatteryState, dt: float, accumulated_qloss: float) -> float:
         if dt == 0.0:
             return 0.0
         T_K = state.T + 273.15
         T_REF_K = T_REF + 273.15
-        k_T_q = (K_REF_QLOSS * _DEG_SCALE) * math.exp(-EA_QLOSS / R * (1.0 / T_K - 1.0 / T_REF_K))
+        k_T_q = (K_REF_QLOSS * self._deg_scale) * math.exp(
+            -EA_QLOSS / R * (1.0 / T_K - 1.0 / T_REF_K)
+        )
         k_soc_q = CAL_C_QLOSS * (state.soc - 0.5) ** 3 + CAL_D_QLOSS
         stress_q = k_T_q * k_soc_q
         if stress_q > 0.0:
@@ -80,28 +91,33 @@ class ScaledLFPCalendarDegradation(SonyLFPCalendarDegradation):
             delta_q = 0.0
         return delta_q
 
-    def update_resistance(self, state: BatteryState, dt: float, _DEG_SCALE) -> float:
+    def update_resistance(self, state: BatteryState, dt: float) -> float:
         if dt == 0.0:
             return 0.0
         T_K = state.T + 273.15
         T_REF_K = T_REF + 273.15
-        k_T_r = (K_REF_RINC * _DEG_SCALE) * math.exp(-EA_RINC / R * (1.0 / T_K - 1.0 / T_REF_K))
+        k_T_r = (K_REF_RINC * self._deg_scale) * math.exp(
+            -EA_RINC / R * (1.0 / T_K - 1.0 / T_REF_K)
+        )
         k_soc_r = CAL_C_RINC * (state.soc - 0.5) ** 2 + CAL_D_RINC
         return k_T_r * k_soc_r * dt
 
 
 class ScaledLFPCyclicDegradation(SonyLFPCyclicDegradation):
+    def __init__(self, deg_scale: float):
+        super().__init__()
+        self._deg_scale = deg_scale
+
     def update_capacity(
         self,
         state: BatteryState,
         half_cycle: HalfCycle,
         accumulated_qloss: float,
-        _DEG_SCALE: float,
     ) -> float:
         delta_fec = half_cycle.full_equivalent_cycles
         if delta_fec == 0.0:
             return 0.0
-        k_crate_q = (A_QLOSS * _DEG_SCALE) * half_cycle.c_rate + (B_QLOSS * _DEG_SCALE)
+        k_crate_q = (A_QLOSS * self._deg_scale) * half_cycle.c_rate + (B_QLOSS * self._deg_scale)
         k_dod_q = CYC_C_QLOSS * (half_cycle.depth_of_discharge - 0.6) ** 3 + CYC_D_QLOSS
         stress_q = k_crate_q * k_dod_q
         if stress_q > 0.0:
@@ -111,13 +127,11 @@ class ScaledLFPCyclicDegradation(SonyLFPCyclicDegradation):
             delta_q = 0.0
         return delta_q
 
-    def update_resistance(
-        self, state: BatteryState, half_cycle: HalfCycle, _DEG_SCALE: float
-    ) -> float:
+    def update_resistance(self, state: BatteryState, half_cycle: HalfCycle) -> float:
         delta_fec = half_cycle.full_equivalent_cycles
         if delta_fec == 0.0:
             return 0.0
-        k_crate_r = (A_RINC * _DEG_SCALE) * half_cycle.c_rate + (B_RINC * _DEG_SCALE)
+        k_crate_r = (A_RINC * self._deg_scale) * half_cycle.c_rate + (B_RINC * self._deg_scale)
         k_dod_r = CYC_C_RINC * (half_cycle.depth_of_discharge - 0.5) ** 3 + CYC_D_RINC
         return k_crate_r * k_dod_r * delta_fec / 100.0
 
@@ -181,7 +195,13 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
 
-    _DEG_SCALE: float = field(default=0.4, validator=range_val(0, 1))
+    _DEG_SCALE: float = field(default=0.7056, validator=range_val(0, 1))
+    # TODO convert from power and energy ratings (see math in chat)
+    series_count: int = field(default=336, converter=int, validator=gt_zero)
+    parallel_count: int = field(default=16, converter=int, validator=gt_zero)
+    battery_temperature_c: float = field(default=25.0)
+    converter_efficiency: float = field(default=0.96, validator=range_val(0, 1))
+    converter_max_power: float = field(default=2400.0, validator=gt_zero)
 
     # TODO degradation: add additional parameters for degradation here
     cop: float = field(validator=gt_zero)
@@ -238,9 +258,15 @@ class BatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component for a storage component."""
 
     _time_step_bounds = (
-        1,
+        60,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    def initialize(self):
+        super().initialize()
+        self.commodity = "electricity"
+        self.commodity_rate_units = "kW"
+        self.commodity_amount_units = "kW*h"
 
     def setup(self):
         self.config = BatteryPerformanceModelConfig.from_dict(
@@ -280,81 +306,79 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             discharge_rate = inputs["max_charge_rate"][0]
         storage_capacity = inputs["storage_capacity"][0]
 
+        # H2I dispatch command: positive = discharge, negative = charge (commodity_rate_units)
         power_profile = inputs[f"{self.commodity}_command_value"]
+
         ### from Ankit
 
         # ---------------------------------------------------------------------------
-        # Battery pack: 239s x 18p  ->  764.8 V * 5040 Ah  ~  3855 kWh
+        # Battery pack + inverter (fixed Megapack-style topology, from config)
         # ---------------------------------------------------------------------------
         cell = LFP280Ah()
 
+        # TODO check sizing
         battery = Battery(
             cell=cell,
-            circuit=(239, 18),  # TODO update to be based on provided battery power and energy
+            circuit=(self.config.series_count, self.config.parallel_count),
             initial_states={
                 "start_soc": self.config.init_soc_fraction,
-                "start_T": 25.0,
-            },  # TODO should be user inputs
+                "start_T": self.config.battery_temperature_c,
+            },
             degradation=DegradationModel(
-                calendar=ScaledLFPCalendarDegradation(),
-                cyclic=ScaledLFPCyclicDegradation(),
+                calendar=ScaledLFPCalendarDegradation(self.config._DEG_SCALE),
+                cyclic=ScaledLFPCyclicDegradation(self.config._DEG_SCALE),
                 initial_soc=self.config.init_soc_fraction,
                 initial_state=DegradationState(qloss_cal=1e-4),
             ),
         )
 
-        summary = pd.Series(
-            {
-                "nominal_capacity [Ah]": battery.nominal_capacity,
-                "nominal_voltage [V]": battery.nominal_voltage,
-                "nominal_energy [kWh]": battery.nominal_energy_capacity / 1e3,
-                "max_charge_current [A]": battery.max_charge_current,
-                "max_discharge_current [A]": battery.max_discharge_current,
-                "thermal_capacity [kJ/K]": battery.thermal_capacity / 1e3,
-            }
+        converter = Converter(
+            loss_model=FixedEfficiency(self.config.converter_efficiency),
+            max_power=om_units.convert_units(
+                self.config.converter_max_power, self.commodity_rate_units, "W"
+            ),
+            storage=battery,
         )
-        print("Battery summary:")
-        print(summary.to_string())
-        print()
 
         # ---------------------------------------------------------------------------
-        # Thermal model: constant 25 °C ambient, battery registered as thermal node
+        # Thermal model: constant ambient, battery registered as thermal node
+        # #TODO check battery temp ambient
         # ---------------------------------------------------------------------------
-        thermal = AmbientThermalModel(T_ambient=25.0, components=[battery])
+        thermal = AmbientThermalModel(
+            T_ambient=self.config.battery_temperature_c, components=[battery]
+        )
 
         # ---------------------------------------------------------------------------
         # Simulation loop
         # ---------------------------------------------------------------------------
-        keys = ["soc", "v", "i", "T", "loss", "heat", "soh_Q", "soh_R", "power"]
+        keys = ["soc", "v", "i", "T", "loss", "heat", "soh_Q", "soh_R"]
         log = {k: np.empty(self.n_timesteps) for k in keys}
+        power_ac = np.empty(self.n_timesteps)
+        power_dc = np.empty(self.n_timesteps)
+        conv_loss = np.empty(self.n_timesteps)
 
         for i, p in enumerate(power_profile):
-            battery.step(float(p), self.dt)
+            # H2I sign (+discharge) -> SimSES AC sign (+charge)
+            converter.step(
+                -om_units.convert_units(float(p), self.commodity_rate_units, "W"), self.dt
+            )
             thermal.step(self.dt)  # update battery temperature after each step
             for k in keys:
                 log[k][i] = getattr(battery.state, k)
+            power_ac[i] = converter.state.power  # AC power (W), positive = charge
+            power_dc[i] = battery.state.power  # AC power (W), positive = charge
+            conv_loss[i] = converter.state.loss
 
-        index = pd.date_range("2026-01-01", periods=self.n_timesteps, freq=f"{int(self.dt)}s")
-        df = pd.DataFrame(log, index=index)
-
-        print("\nFirst rows:")
-        print(df.head().to_string())
-        # print(
-        #     f"\nFinal SOH_Q : {df['soh_Q'].iloc[-1]:.4f}  ({(1 - df['soh_Q'].iloc[-1])
-        # * 100:.2f} % capacity fade)"
-        # )
-        print(f"Final SOH_R : {df['soh_R'].iloc[-1]:.4f}")
         #############
 
-        # Populate all OpenMDAO outputs defined in this class and its parent classes,
-        # pulling the time-series results from the simses battery run (``df_bat``).
-
-        soc_ts = df["soc"].to_numpy()
-        # Convert battery power (W) into the desired commodity rate units.
-        # Sign convention: positive = discharge (out of storage), negative = charge.
-        power_ts = om_units.convert_units(df["power"].to_numpy(), "W", self.commodity_rate_units)
+        # Populate all OpenMDAO outputs defined in this class and its parent classes.
+        # Convert SimSES AC power (W, +charge) back to H2I convention
+        # (commodity_rate_units, +discharge).
+        soc_ts = log["soc"]
+        power_ts = -om_units.convert_units(power_ac, "W", self.commodity_rate_units)
 
         # --- BatteryPerformanceModel outputs ---
+        # TODO calc aux power
         outputs[f"{self.commodity}_auxiliary_demand"] = np.zeros(self.n_timesteps)
 
         # --- StoragePerformanceBase outputs ---
