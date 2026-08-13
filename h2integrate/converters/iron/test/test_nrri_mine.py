@@ -3,7 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.converters.iron.iron_mine import IronMinePerformanceComponent
+from h2integrate.converters.iron.nrri_iron_mine import IronMinePerformanceComponent
 
 
 @fixture
