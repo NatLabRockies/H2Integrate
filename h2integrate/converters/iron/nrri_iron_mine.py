@@ -7,13 +7,13 @@ from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.validators import contains, must_equal
+from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
-class IronMinePerformanceConfig(BaseConfig):
-    """Configuration class for IronMinePerformanceComponent.
+class NRRIIronMinePerformanceConfig(BaseConfig):
+    """Configuration class for NRRIIronMinePerformanceComponent.
 
     Attributes:
         mine (str): name of ore mine. Must be "Hibbing", "Northshore", "United",
@@ -26,7 +26,7 @@ class IronMinePerformanceConfig(BaseConfig):
     mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
 
 
-class IronMinePerformanceComponent(PerformanceModelBaseClass):
+class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,
         3600,
@@ -40,12 +40,12 @@ class IronMinePerformanceComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "t"
 
     def setup(self):
-        super().setup()
-        self.config = IronMinePerformanceConfig.from_dict(
+        self.config = NRRIIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
         )
+        super().setup()
 
         self.add_input(
             "system_capacity",
@@ -333,3 +333,114 @@ class IronMinePerformanceComponent(PerformanceModelBaseClass):
             sum(energy_per_process.values()) * processed_ore_production
         )
         outputs["fuel_consumed"] = sum(fuel_per_process.values()) * processed_ore_production
+
+
+@define(kw_only=True)
+class NRRIIronMineCostConfig(BaseConfig):
+    """Configuration class for NRRIIronMineCostComponent.
+
+    Attributes:
+        mine (str): name of ore mine. Must be "Hibbing", "Northshore", "United",
+            "Minorca" or "Tilden"
+        cost_year (int): target dollar year to convert costs to.
+    """
+
+    mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    cost_year: int = field(
+        converter=int, validator=must_equal(2025)
+    )  # TODO: check what year SEC reports are from
+
+
+class NRRIIronMineCostComponent(CostModelBaseClass):
+    _time_step_bounds = (
+        3600,
+        3600,
+    )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    def setup(self):
+        self.config = NRRIIronMineCostConfig.from_dict(
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            strict=True,
+            additional_cls_name=self.__class__.__name__,
+        )
+
+        super().setup()
+
+        self.add_input(
+            "annual_iron_ore_produced",
+            val=0.0,
+            units="t/yr",
+            desc="Annual iron ore production",
+        )
+
+        self.add_input(
+            "raw_ore",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="t/h",
+            desc="Raw ore mass flow",
+        )
+
+        coeff_fpath = ROOT_DIR / "converters" / "iron" / "nrri_ore" / "cost_coeffs.csv"
+        # nrri ore cost model
+        coeff_df = pd.read_csv(coeff_fpath)
+        self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)
+
+    def format_coeff_df(self, coeff_df, mine):
+        """Update the coefficient dataframe such that values are adjusted to standard units
+            and units are compatible with OpenMDAO units. Also filter the dataframe to include
+            only the data necessary for a given mine and pellet type.
+
+        Args:
+            coeff_df (pd.DataFrame): cost coefficient dataframe.
+            mine (str): name of mine that ore is extracted from.
+
+        Returns:
+            pd.DataFrame: cost coefficient dataframe
+        """
+        data_cols = ["units", "process", mine]
+        coeff_df = coeff_df[data_cols]
+        coeff_df = coeff_df.rename(columns={mine: "value"})
+
+        i_per_wlt = coeff_df[coeff_df["units"] == "USD/LTP"].index.to_list()
+        coeff_df.loc[i_per_wlt, "value"] = coeff_df.loc[i_per_wlt, "value"]
+        coeff_df.loc[i_per_wlt, "units"] = "USD/lt"
+
+        i_per_wlt = coeff_df[coeff_df["units"] == "USD/LT"].index.to_list()
+        coeff_df.loc[i_per_wlt, "value"] = coeff_df.loc[i_per_wlt, "value"]
+        coeff_df.loc[i_per_wlt, "units"] = "USD/lt"
+
+        # convert units to standardized units
+        unit_rename_mapper = {}
+        old_units = list(set(coeff_df["units"].to_list()))
+        for ii, old_unit in enumerate(old_units):
+            if "lt" in old_unit:  # dry long tons
+                old_unit = old_unit.replace("lt", "(2240*lb)")
+            unit_rename_mapper.update({old_units[ii]: old_unit})
+        coeff_df["units"] = coeff_df["units"].replace(to_replace=unit_rename_mapper)
+
+        convert_units_dict = {
+            "USD/(2240*lb)": "USD/t",
+        }
+        for i in coeff_df.index.to_list():
+            if coeff_df.loc[i, "units"] in convert_units_dict:
+                current_units = coeff_df.loc[i, "units"]
+                desired_units = convert_units_dict[current_units]
+                coeff_df.loc[i, "value"] = units.convert_units(
+                    coeff_df.loc[i, "value"], current_units, desired_units
+                )
+                coeff_df.loc[i, "units"] = desired_units
+
+        return coeff_df
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        outputs["CapEx"] = 0.0  # assumed that it's all included in annualized fixed operating costs
+
+        # OpEx is either on a per LT pellet basis or LT crude ore basis, depending on the mine
+        # Both are included in OpEx calculation, but only one will be non-zero depending on the mine
+        outputs["OpEx"] = (
+            inputs["annual_iron_ore_produced"]
+            * self.coeff_df.loc[self.coeff_df["process"] == "pellet", "value"].values
+            + sum(inputs["raw_ore"])
+            * self.coeff_df.loc[self.coeff_df["process"] == "mined", "value"].values
+        )

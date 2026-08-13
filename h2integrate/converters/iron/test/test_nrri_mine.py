@@ -3,30 +3,38 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.converters.iron.nrri_iron_mine import IronMinePerformanceComponent
+from h2integrate.converters.iron.nrri_iron_mine import (
+    NRRIIronMineCostComponent,
+    NRRIIronMinePerformanceComponent,
+)
 
 
 @fixture
 def iron_ore_config_martin_om():
     shared_params = {
         "mine": "Tilden",
-        "max_ore_production_rate_tonnes_per_hr": (7457805 * 0.98 * 1.016)
-        / 8760,  # convert from WLT/yr to LT/yr to t/yr and then hourly,
     }
     tech_config = {
         "model_inputs": {
             "shared_parameters": shared_params,
+            "performance_parameters": {
+                "max_ore_production_rate_tonnes_per_hr": (7457805 * 0.98 * 1.016)
+                / 8760,  # convert from WLT/yr to LT/yr to t/yr and then hourly,
+            },
+            "cost_parameters": {
+                "cost_year": 2025,
+            },
         }
     }
     return tech_config
 
 
-@pytest.mark.regression
+@pytest.mark.unit
 def test_iron_mine_performance_outputs(
     plant_config, driver_config, iron_ore_config_martin_om, subtests
 ):
     prob = om.Problem()
-    iron_ore_perf = IronMinePerformanceComponent(
+    iron_ore_perf = NRRIIronMinePerformanceComponent(
         plant_config=plant_config,
         tech_config=iron_ore_config_martin_om,
         driver_config=driver_config,
@@ -55,3 +63,48 @@ def test_iron_mine_performance_outputs(
     with subtests.test("pelletization elec"):
         pel_elec = prob.get_val("comp.pelletization_electricity", units="kW")
         assert np.sum(pel_elec) == pytest.approx(23.62080378 * 7457805 * 0.98, rel=1e-3)
+
+
+@pytest.mark.regression
+def test_iron_pellet_cost_outputs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    prob = om.Problem()
+    iron_ore_cost = NRRIIronMineCostComponent(
+        plant_config=plant_config,
+        tech_config=iron_ore_config_martin_om,
+        driver_config=driver_config,
+    )
+    prob.model.add_subsystem("comp", iron_ore_cost, promotes=["*"])
+    prob.setup()
+
+    prob.set_val("comp.annual_iron_ore_produced", [7457805 * 1.016], units="t/yr")
+    prob.set_val("comp.raw_ore", [1e6] * 8760, units="t/h")
+
+    prob.run_model()
+
+    # check total opex for year 1
+    with subtests.test("total_opex"):
+        total_opex = prob.get_val("comp.OpEx", units="USD/yr")
+        assert total_opex == pytest.approx(7457805 * 15.3, rel=1e-3)
+
+
+@pytest.mark.regression
+def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    iron_ore_config_martin_om["model_inputs"]["shared_parameters"]["mine"] = "United"
+    prob = om.Problem()
+    iron_ore_cost = NRRIIronMineCostComponent(
+        plant_config=plant_config,
+        tech_config=iron_ore_config_martin_om,
+        driver_config=driver_config,
+    )
+    prob.model.add_subsystem("comp", iron_ore_cost, promotes=["*"])
+    prob.setup()
+
+    prob.set_val("comp.annual_iron_ore_produced", [7457805 * 1.016], units="t/yr")
+    prob.set_val("comp.raw_ore", [10] * 8760, units="t/h")
+
+    prob.run_model()
+
+    # check total opex for year 1
+    with subtests.test("total_opex"):
+        total_opex = prob.get_val("comp.OpEx", units="USD/yr")
+        assert total_opex == pytest.approx(87600 * 3.72 / 1.016, rel=1e-3)
