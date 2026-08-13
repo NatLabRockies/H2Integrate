@@ -1,11 +1,15 @@
 import numpy as np
-import pyfluids
+
+
+try:
+    import pyfluids
+except ModuleNotFoundError:
+    pyfluids = None
 
 from h2integrate.converters.combustion_machines.thermo_tools import (
     ThermodynamicCycleResult,
     enforce_gas_phase,
     compute_heat_transfer,
-    make_humid_air_mixture,
     compute_turbine_work_rate,
     compute_compressor_work_rate,
     compute_isentropic_expansion_outlet_state,
@@ -306,30 +310,3 @@ class GE_7EA_NGCT_2014(NGCT):
             Q_fluid,
             design_conditions,
         )
-
-
-if __name__ == "__main__":
-    P_ambient = 101325.0  # Pa
-    Trel_ambient = 15.0  # Pa
-    rel_humidity_ambient = 60
-
-    working_fluid = make_humid_air_mixture(P_ambient, Trel_ambient, rel_humidity_ambient)
-    fluid_ambient = working_fluid.with_state(
-        pyfluids.Input.pressure(P_ambient),
-        pyfluids.Input.temperature(Trel_ambient),
-    )
-
-    ngct = GE_7EA_NGCT_2014()
-    # ngct = GE_7FA05_NGCT()
-
-    result = ngct.run_turbine_model(fluid_ambient)
-
-    net_work = result.get_net_work()
-    net_heat_input = result.get_net_heat_input()
-    efficiency = net_work / net_heat_input
-    exhaust_temperature = result.states[4].temperature
-
-    print(f"net work: {net_work}")
-    print(f"net heat input: {net_heat_input}")
-    print(f"efficiency: {efficiency}")
-    print(f"exhaust temperature: {exhaust_temperature}")
