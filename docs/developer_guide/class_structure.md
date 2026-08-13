@@ -44,7 +44,7 @@ Configuration classes use the [`attrs`](https://www.attrs.org) library and the
 `tech_config['model_inputs']` against the declared fields. This pattern is now
 standard for both performance and cost models in H2Integrate.
 
-For custom technology-level controllers, inherit from `StorageOpenLoopControlBase`
+For custom technology-level controllers, inherit from `OpenLoopControlBase`
 (open-loop) or `PyomoStorageControllerBaseClass` (pyomo-based). See
 [Technology-Level Control](../control/technology_level_control/technology_control_overview.md)
 for details.
