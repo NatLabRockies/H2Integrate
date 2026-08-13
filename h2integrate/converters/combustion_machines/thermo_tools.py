@@ -1,5 +1,10 @@
 import numpy as np
-import pyfluids
+
+
+try:
+    import pyfluids
+except ModuleNotFoundError:
+    pyfluids = None
 
 
 DRY_AIR_MASS_FRACTIONS = {
