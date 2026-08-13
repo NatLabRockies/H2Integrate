@@ -454,6 +454,24 @@ def test_validate_interconnections_length3_commodity_pair_raises(subtests):
 
 
 @pytest.mark.unit
+def test_validate_interconnections_length3_commodity_pair_with_slices_raises(subtests):
+    """A length-3 [X_out[...], X_in[...]] parameter pair must raise the
+    same guidance to use a length-4 commodity connection."""
+    interconnections = [
+        ["wind", "electrolyzer", ["electricity_out[0:4]", "electricity_in[0:4]"]],
+    ]
+    classifiers = {"electrolyzer": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("length-3 _out/_in pair with slices raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake)
+        err = str(excinfo.value)
+        assert "electricity" in err
+        assert "length-4 connection" in err
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
 )

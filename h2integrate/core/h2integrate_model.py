@@ -2258,9 +2258,11 @@ class H2IntegrateModel:
             source_param, dest_param = connected_parameter
             if not isinstance(source_param, str) or not isinstance(dest_param, str):
                 continue
-            if source_param.endswith("_out") and dest_param.endswith("_in"):
-                commodity_from_source = source_param[: -len("_out")]
-                commodity_from_dest = dest_param[: -len("_in")]
+            source_param_base = source_param.split("[", 1)[0]
+            dest_param_base = dest_param.split("[", 1)[0]
+            if source_param_base.endswith("_out") and dest_param_base.endswith("_in"):
+                commodity_from_source = source_param_base[: -len("_out")]
+                commodity_from_dest = dest_param_base[: -len("_in")]
                 if commodity_from_source == commodity_from_dest:
                     source_tech, dest_tech = connection[0], connection[1]
                     raise ValueError(
@@ -2269,8 +2271,9 @@ class H2IntegrateModel:
                         f"{commodity_from_source!r} between technologies using a "
                         f"length-3 format. Use a length-4 connection instead: "
                         f"[{source_tech!r}, {dest_tech!r}, {commodity_from_source!r}, "
-                        f"'<transport_tech>']. Use the generic transport component if "
-                        f"no specific transport is needed."
+                        f"'<transport_tech>']. You can use "
+                        f"'GenericTransporterPerformanceModel' to transport "
+                        f"{commodity_from_source!r}."
                     )
 
         # --- Checks 2 and 3: topology checks using the technology graph ---
