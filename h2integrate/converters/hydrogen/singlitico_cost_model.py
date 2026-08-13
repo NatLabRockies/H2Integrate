@@ -1,7 +1,6 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
@@ -21,7 +20,7 @@ class SingliticoCostModelConfig(CostModelBaseConfig):
 
     location: str = field(validator=validators.in_(["onshore", "offshore"]))
     electrolyzer_capex: int = field()
-    cost_year: int = field(default=2021, converter=int, validator=must_equal(2021))
+    cost_year: int = field(default=2021, converter=int, validator=validators.in_([2021]))
 
 
 class SingliticoCostModel(ElectrolyzerCostBaseClass):

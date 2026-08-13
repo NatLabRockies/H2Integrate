@@ -2,7 +2,6 @@ from attrs import field, define, validators
 from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
@@ -151,7 +150,7 @@ class DOCCostModelConfig(DOCPerformanceConfig):
     """
 
     infrastructure_type: str = field(validator=validators.in_(["desal", "swCool", "new"]))
-    cost_year: int = field(default=2023, converter=int, validator=must_equal(2023))
+    cost_year: int = field(default=2023, converter=int, validator=validators.in_([2023]))
 
 
 class DOCCostModel(CostModelBaseClass):

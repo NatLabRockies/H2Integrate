@@ -1,7 +1,6 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.water.desal.desalination_baseclass import (
     DesalinationCostBaseClass,
@@ -129,7 +128,7 @@ class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
 
     freshwater_kg_per_hour: float = field(validator=validators.gt(0))
     freshwater_density: float = field(validator=validators.gt(0))
-    cost_year: int = field(default=2013, converter=int, validator=must_equal(2013))
+    cost_year: int = field(default=2013, converter=int, validator=validators.in_([2013]))
 
 
 class ReverseOsmosisCostModel(DesalinationCostBaseClass):

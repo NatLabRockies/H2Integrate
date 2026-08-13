@@ -2,7 +2,6 @@ from attrs import field, define, validators
 from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -253,7 +252,7 @@ class OAECostModelConfig(CostModelBaseConfig):
         cost_year (int): dollar year corresponding to cost values
     """
 
-    cost_year: int = field(default=2024, converter=int, validator=must_equal(2024))
+    cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
 
 
 class OAECostModel(CostModelBaseClass):
