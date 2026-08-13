@@ -91,13 +91,24 @@ def test_load_env_vars_from_file(subtests, temp_dir):
 
     env_vars = load_env_vars_from_file(file_path=env_path)
 
-    with subtests.test("Environment variables loaded from supported separators"):
-        assert env_vars == {
-            "TEST_CREDENTIAL": "my_credential_value",
-            "TEST_CREDENTIAL_B": "testing@yahoo.fake",
-            "TEST_CREDENTIAL_D": "testingValue",
-            "TEST_CREDENTIAL_E": ": another_credential",
-        }
+    with subtests.test("Environment variable values"):
+        # Four valid entries are loaded
+        assert len(env_vars) == 4
+
+        # Credential using an equals separator
+        assert env_vars["TEST_CREDENTIAL"] == "my_credential_value"
+
+        # Credential containing an at sign
+        assert env_vars["TEST_CREDENTIAL_B"] == "testing@yahoo.fake"
+
+        # Line without a separator is skipped
+        assert "TEST_CREDENTIAL_C" not in env_vars
+
+        # Credential using a colon separator with spaces
+        assert env_vars["TEST_CREDENTIAL_D"] == "testingValue"
+
+        # Credential using consecutive delimiters
+        assert env_vars["TEST_CREDENTIAL_E"] == ": another_credential"
 
 
 @pytest.mark.unit
