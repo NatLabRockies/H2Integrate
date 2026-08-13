@@ -204,8 +204,8 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         # User warning if system capacity * 8760 is above ref pellets
         if system_capacity * 8760 > ref_pellets:
             msg = (
-                f"System capacity of {system_capacity} t/h exceeds the reference pellet"
-                f" production of {ref_pellets} t/h."
+                f"System capacity of {system_capacity} t/yr exceeds the reference pellet"
+                f" production of {ref_pellets} t/yr."
                 f" This may lead to unrealistic results."
             )
             warnings.warn(msg, UserWarning)

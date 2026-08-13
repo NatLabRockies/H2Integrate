@@ -42,22 +42,21 @@ def test_iron_mine_performance_outputs(
     prob.model.add_subsystem("comp", iron_ore_perf, promotes=["*"])
     prob.setup()
 
-    annual_electricity = 85795.22689
-    annual_fuel = 2134.768277
+    hourly_electricity = 85795.22689
+    hourly_fuel = 2134.768277
     ore_rated_capacity = 7457805 * 0.98 * 1.016
 
-    prob.set_val("comp.electricity_in", [annual_electricity] * 8760, units="kW")
-    prob.set_val("comp.fuel_in", [annual_fuel] * 8760, units="MMBtu/h")
+    prob.set_val("comp.electricity_in", [hourly_electricity] * 8760, units="kW")
+    prob.set_val("comp.fuel_in", [hourly_fuel] * 8760, units="MMBtu/h")
     prob.set_val("comp.iron_ore_command_value", [ore_rated_capacity], units="t/h")
 
     prob.run_model()
     commodity_rate_units = "t/h"
-    int(plant_config["plant"]["plant_life"])
-    int(plant_config["plant"]["simulation"]["n_timesteps"])
 
     # check pellet production
     with subtests.test("iron_ore_out"):
         iron_ore_out = prob.get_val("comp.iron_ore_out", units=commodity_rate_units)
+        # 0.98 is converting from WLT to LT, 1.016 is converting from LT to t
         assert np.sum(iron_ore_out) == pytest.approx(7457805 * 0.98 * 1.016, rel=1e-3)
 
     with subtests.test("pelletization elec"):
