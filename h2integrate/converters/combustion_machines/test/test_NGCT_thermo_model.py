@@ -1,3 +1,5 @@
+import importlib
+
 import numpy as np
 import pytest
 import pyfluids
@@ -83,6 +85,9 @@ def varied_ambient_state(request):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_humidity_ratio_to_water_mass_fraction_roundtrip():
     humidity_ratio = 0.015
     water_mass_fraction = humidity_ratio_to_water_mass_fraction(humidity_ratio)
@@ -93,6 +98,9 @@ def test_humidity_ratio_to_water_mass_fraction_roundtrip():
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_make_humid_air_mixture_builds_valid_state(iso_conditions):
     working_fluid = make_humid_air_mixture(
         iso_conditions["pressure"],
@@ -113,6 +121,9 @@ def test_make_humid_air_mixture_builds_valid_state(iso_conditions):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_compressor_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
     ratio_p = 12.6
     compressed = compute_isentropic_compression_outlet_state(iso_ambient_state, ratio_p)
@@ -123,6 +134,9 @@ def test_compressor_outlet_state_isentropic_preserves_entropy(iso_ambient_state)
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_turbine_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
     combusted = iso_ambient_state.with_state(
         pyfluids.Input.pressure(iso_ambient_state.pressure * 12.6),
@@ -136,6 +150,9 @@ def test_turbine_outlet_state_isentropic_preserves_entropy(iso_ambient_state):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_helper_sign_conventions(iso_ambient_state):
     compressed = compute_isentropic_compression_outlet_state(iso_ambient_state, 10.0)
     combusted = compressed.with_state(
@@ -158,6 +175,9 @@ def test_helper_sign_conventions(iso_ambient_state):
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_ngct_result_aggregates_cycle_quantities(iso_ambient_state):
     result = ThermodynamicCycleResult(desc="synthetic cycle")
     for index in range(1, 5):
@@ -177,6 +197,9 @@ def test_ngct_result_aggregates_cycle_quantities(iso_ambient_state):
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_run_turbine_model_singleton_matches_batch_result(ge_7ea_2014, iso_ambient_state):
     result_single = ge_7ea_2014.run_turbine_model(iso_ambient_state)
     result_batch = ge_7ea_2014.run_turbine_model([iso_ambient_state])[0]
@@ -188,6 +211,9 @@ def test_run_turbine_model_singleton_matches_batch_result(ge_7ea_2014, iso_ambie
 
 
 @pytest.mark.regression
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_run_turbine_model_applies_minimum_mass_flow_constraint(basic_ngct, iso_ambient_state):
     unconstrained = basic_ngct.run_turbine_model(iso_ambient_state)
     specific_net_work = unconstrained.get_net_work() / unconstrained.mass_flowrate
@@ -212,6 +238,9 @@ def test_run_turbine_model_applies_minimum_mass_flow_constraint(basic_ngct, iso_
 
 
 @pytest.mark.regression
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
     result = ge_7fa05.run_turbine_model(iso_ambient_state)
 
@@ -227,6 +256,10 @@ def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
 
 
 # @pytest.mark.regression
+# @pytest.mark.skipif(
+#     importlib.util.find_spec("pyfluids") is None,
+#     reason="thermo modules are not installed",
+# )
 # def test_ge_7ea_2014_iso_design_point_regression(ge_7ea_2014, iso_ambient_state):
 # 	result = ge_7ea_2014.run_turbine_model(iso_ambient_state)
 #
@@ -242,6 +275,9 @@ def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_ideal_brayton_cycle_energy_balance(iso_ambient_state):
     ideal_ngct = NGCT(
         ratio_P=15.0,
@@ -257,6 +293,9 @@ def test_ideal_brayton_cycle_energy_balance(iso_ambient_state):
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
 def test_varied_ambient_conditions_produce_finite_outputs(ge_7ea_2014, varied_ambient_state):
     result = ge_7ea_2014.run_turbine_model(varied_ambient_state)
 
