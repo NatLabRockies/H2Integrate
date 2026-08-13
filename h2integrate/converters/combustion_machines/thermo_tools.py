@@ -53,20 +53,14 @@ def make_humid_air_mixture(
     converted to a water mass fraction and combined with the dry-air composition
     defined in ``DRY_AIR_MASS_FRACTIONS`` to create a ``pyfluids.Mixture``.
 
-    Parameters
-    ----------
-    pressure : float
-        mixture pressure in Pa.
-    temp_rel : float
-        mixture temperature in C.
-    rel_humidity : float
-        relative humidity as a fraction between 0.0 and 1.0.
+    Args:
+        pressure: mixture pressure in Pa.
+        temp_rel: mixture temperature in C.
+        rel_humidity: relative humidity as a fraction between 0.0 and 1.0.
 
-    Returns
-    -------
-    pyfluids.Mixture
-        humid air mixture made of dry-air species and water vapor, constrained to
-        the gas phase when supported by ``pyfluids``.
+    Returns:
+        pyfluids.Mixture: humid air mixture made of dry-air species and water vapor,
+            constrained to the gas phase when supported by ``pyfluids``.
     """
 
     # get absolute mass humidity ratio using conditions w/ pyfluid humidair
@@ -117,7 +111,7 @@ def compute_isentropic_compression_outlet_state(
             volume to obtain the outlet specific volume.
 
     Returns:
-        The outlet fluid state after isentropic compression.
+        the outlet fluid state after isentropic compression.
 
     Raises:
         ValueError: if neither or both of ``ratio_P`` and
