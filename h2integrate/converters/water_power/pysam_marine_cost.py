@@ -2,7 +2,6 @@ import PySAM.MhkCosts as MhkCost
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -55,7 +54,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
     cable_system_overbuild: float = field(validator=(validators.ge(0), validators.le(100)))
     pysam_cost_options: dict = field(default={})
     cost_year: int = field(
-        default=2022, converter=int, validator=must_equal(2022)
+        default=2022, converter=int, validator=validators.in_([2022])
     )  # TODO update based on feedback from SAM team
 
     def __attrs_post_init__(self):
