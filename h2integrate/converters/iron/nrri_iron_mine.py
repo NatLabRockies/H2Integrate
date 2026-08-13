@@ -72,16 +72,6 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             desc="Fuel feedstock into iron mine",
         )
 
-        # Default the ore command value input as the rated capacity
-        # TODO: getting weird error when this is uncommented, but it should be here. Need to investigate.
-        # self.add_input(
-        #     "iron_ore_command_value",
-        #     val=self.config.max_ore_production_rate_tonnes_per_hr,
-        #     shape=self.n_timesteps,
-        #     units="t/h",
-        #     desc="Iron ore command value for iron mine",
-        # )
-
         self.add_output(
             "electricity_consumed",
             val=0.0,
@@ -263,13 +253,6 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         max_elec_consumed = sum(energy_per_process.values()) * system_capacity  # kW
         max_fuel_consumed = sum(fuel_per_process.values()) * system_capacity  # MMBtu
 
-        # iron ore command value, saturated at maximum rated system capacity
-        processed_ore_command_value = np.where(
-            inputs["iron_ore_command_value"] > system_capacity,
-            system_capacity,
-            inputs["iron_ore_command_value"],
-        )
-
         # available feedstocks, saturated at maximum system feedstock consumption
         electricity_available = np.where(
             inputs["electricity_in"] > max_elec_consumed,
@@ -295,7 +278,6 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             [
                 processed_ore_from_fuel,
                 processed_ore_from_electricity,
-                processed_ore_command_value,
             ]
         )
         outputs["iron_ore_out"] = processed_ore_production
@@ -333,6 +315,9 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             sum(energy_per_process.values()) * processed_ore_production
         )
         outputs["fuel_consumed"] = sum(fuel_per_process.values()) * processed_ore_production
+
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)
 
 
 @define(kw_only=True)

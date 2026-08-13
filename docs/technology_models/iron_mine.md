@@ -1,6 +1,8 @@
 # Iron mine model
 
-H2I contains an iron mine model that simulates the extraction of crude ore and its processing into iron ore pellets.
+H2I contains 2 iron mine models that simulates the extraction of crude ore and its processing into iron ore pellets.
+
+## Martin Iron Mine
 The main input feedstock is `crude_ore`, i.e. the unprocessed ore in the earth containing iron oxide.
 The output commodity is `iron_ore` in the form of pellets that can be shipped to other plants (e.g. `iron_plant`) for further processing.
 
@@ -32,3 +34,13 @@ Currently, no complex calculations occur beyond importing performance and costs.
 In the performance model, the "wet long tons" (wlt) that ore production is typically reported in are converted to dry metric tons for use in H2I.
 In the cost model, the total capex costs for a plant are scaled by the amount of are produced annually.
 Besides these calculations, previously-calculated performance and cost metrics are simply loaded from the input spreadsheets.
+
+## NRRI Iron Mine
+The main inputs are `electricity` and `fuel`.
+The output commodity is `iron_ore` in the form of pellets that can be shipped to other plants (e.g. `iron_plant`) for further processing.
+
+This model was developed in conjunction with the [University of Minnesota's Natural Resource Research Institute (NRRI)](https://www.nrri.umn.edu/).
+
+This model splits out the separate processes to produce iron ore pellets at a mine (mining, comminution, beneficiation, pelletization) and tracks the material flows.
+
+If you'd like the original source data for these models please contact jonathan.martin@nlr.gov

@@ -90,6 +90,8 @@ supported_models = _ModelRegistry(
         "HOPPComponent": "converters.hopp:HOPPComponent",
         "MartinIronMinePerformanceComponent": "converters.iron:MartinIronMinePerformanceComponent",
         "MartinIronMineCostComponent": "converters.iron:MartinIronMineCostComponent",
+        "NRRIIronMinePerformanceComponent": "converters.iron:NRRIIronMinePerformanceComponent",
+        "NRRIIronMineCostComponent": "converters.iron:NRRIIronMineCostComponent",
         "NaturalGasIronReductionPlantPerformanceComponent": "converters.iron:NaturalGasIronReductionPlantPerformanceComponent",
         "NaturalGasIronReductionPlantCostComponent": "converters.iron:NaturalGasIronReductionPlantCostComponent",
         "HydrogenIronReductionPlantPerformanceComponent": "converters.iron:HydrogenIronReductionPlantPerformanceComponent",
