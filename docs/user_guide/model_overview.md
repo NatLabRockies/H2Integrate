@@ -98,8 +98,9 @@ auto-generated API page.
 
 - `wind`: wind resource data providers
   - other components:
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI`
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
-    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api.WTKNLRDeveloperAPIWindResource`
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=
 ## Converter models
