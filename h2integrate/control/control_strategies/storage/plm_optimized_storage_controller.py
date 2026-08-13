@@ -623,13 +623,13 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             m.T,
             domain=pyomo.NonNegativeReals,
             bounds=(0, P_max),
-            doc="Discharge power (kW) to G&T at timestep t",
+            doc="Discharge power (kW) due to G&T at timestep t",
         )
         m.p_discharge_coop = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
             bounds=(0, P_max),
-            doc="Discharge power to Co-Op (kW) at timestep t",
+            doc="Discharge power due to Co-Op (kW) at timestep t",
         )
         m.p_charge = pyomo.Var(
             m.T,
@@ -720,7 +720,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         m.soc_evolution = pyomo.Constraint(m.T, rule=soc_evolution_rule)
 
-        # Can't charge to both G&T and CoOp or discharge at the same time.
+        # Can't simultaneously discharge according to both G&T and COOP, or charge and discharge
+        # at the same time.
         m.no_simultaneous = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: mdl.discharge_gt[t] + mdl.discharge_coop[t] + mdl.charge[t] <= 1,
@@ -734,7 +735,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ),
         )
 
-        # Can't discharge to CoOp in the dispatch window.
+        # Can't follow discharge commands from the COOP in the dispatch window.
         m.no_discharge_coop_in_window = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
