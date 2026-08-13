@@ -18,7 +18,6 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
     for ambient conditions.
 
     Attributes:
-    -----------
         flowrate_max_fluid_cubic_m_per_s (float): maximum volumetric flowrate of
             working fluid through the turbine in m^3/s.
 
