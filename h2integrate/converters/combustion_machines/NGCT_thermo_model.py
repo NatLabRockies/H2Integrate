@@ -1,10 +1,5 @@
 import numpy as np
-
-
-try:
-    import pyfluids
-except ModuleNotFoundError:
-    pyfluids = None
+import pyfluids
 
 from h2integrate.converters.combustion_machines.thermo_tools import (
     ThermodynamicCycleResult,
