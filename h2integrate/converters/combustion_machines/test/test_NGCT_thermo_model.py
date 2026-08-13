@@ -2,23 +2,28 @@ import importlib
 
 import numpy as np
 import pytest
-import pyfluids
 
-from h2integrate.converters.combustion_machines.thermo_tools import (
-    ThermodynamicCycleResult,
-    compute_heat_transfer,
-    make_humid_air_mixture,
-    compute_turbine_work_rate,
-    compute_compressor_work_rate,
-    humidity_ratio_to_water_mass_fraction,
-    compute_isentropic_expansion_outlet_state,
-    compute_isentropic_compression_outlet_state,
-)
-from h2integrate.converters.combustion_machines.NGCT_thermo_model import (
-    NGCT,
-    GE_7FA05_NGCT,
-    GE_7EA_NGCT_2014,
-)
+
+try:
+    import pyfluids
+
+    from h2integrate.converters.combustion_machines.thermo_tools import (
+        ThermodynamicCycleResult,
+        compute_heat_transfer,
+        make_humid_air_mixture,
+        compute_turbine_work_rate,
+        compute_compressor_work_rate,
+        humidity_ratio_to_water_mass_fraction,
+        compute_isentropic_expansion_outlet_state,
+        compute_isentropic_compression_outlet_state,
+    )
+    from h2integrate.converters.combustion_machines.NGCT_thermo_model import (
+        NGCT,
+        GE_7FA05_NGCT,
+        GE_7EA_NGCT_2014,
+    )
+except ModuleNotFoundError:
+    pass
 
 
 @pytest.fixture(scope="module")
