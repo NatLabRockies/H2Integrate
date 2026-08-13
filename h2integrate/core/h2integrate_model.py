@@ -2320,12 +2320,12 @@ class H2IntegrateModel:
                         f"{commodity!r} from {n_sources} sources in the technology graph "
                         f"but should receive it from at most 1."
                     )
-            n_out = out_degs_l4.get(storage_tech, 0)
-            if n_out > 1:
-                raise ValueError(
-                    f"Storage technology {storage_tech!r} has {n_out} output connection(s) in "
-                    f"the technology graph but should have at most 1."
-                )
+            for commodity, n_out in out_commodity_dests.get(storage_tech, {}).items():
+                if n_out > 1:
+                    raise ValueError(
+                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) in "
+                        f"of commodity {commodity} but should have at most 1."
+                    )
             # Identify the upstream technology (connected via a length-4 edge)
             upstream_techs_l4 = [
                 t
@@ -2334,14 +2334,17 @@ class H2IntegrateModel:
             ]
             for upstream_tech in upstream_techs_l4:
                 storage_upstream_techs.add(upstream_tech)
-                n_out_upstream = out_degs_l4.get(upstream_tech, 0)
-                if n_out_upstream > 2:
-                    raise ValueError(
-                        f"Technology {upstream_tech!r} feeds storage technology "
-                        f"{storage_tech!r} but has {n_out_upstream} output connection(s). "
-                        f"It should connect only to {storage_tech!r} and a combiner "
-                        f"(at most 2 output streams)."
-                    )
+                for commodity in self.technology_graph.edges[upstream_tech, storage_tech].get(
+                    "commodity"
+                ):
+                    n_out_upstream = out_commodity_dests.get(upstream_tech, {}).get(commodity, 0)
+                    if n_out_upstream > 2:
+                        raise ValueError(
+                            f"Technology {upstream_tech!r} feeds storage technology "
+                            f"{storage_tech!r} but has {n_out_upstream} output connection(s). "
+                            f"It should connect only to {storage_tech!r} and a combiner "
+                            f"(at most 2 output streams)."
+                        )
 
         # --- Check 3: per-commodity max 1 source/destination for general technologies ---
         # A technology may receive multiple different commodities from different sources
