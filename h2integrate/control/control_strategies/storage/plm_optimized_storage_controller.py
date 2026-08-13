@@ -73,6 +73,9 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             ``event_duration``. When set, the eligible timesteps identified
             by ``signal_threshold_percentile`` are treated as peaks and
             the first peak is chosen as eligible.
+        pyomo_solver (str): Name of the solver used by pyomo to solve the MILP.
+            Can be any of 'highs' or 'glpk'. Default is ``highs``.
+        pyomo_solver_options (dict): A dictionary containing options for pyomo solver.
     """
 
     max_charge_rate: float = field()
@@ -89,6 +92,8 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     signal_threshold_percentile: float = field(default=0.0, validator=range_val(0, 100))
     event_duration: dict = field(default=None)
     min_peak_separation: dict = field(default=None)
+    pyomo_solver: str =  field(default="highs")
+    pyomo_solver_options: dict =  field(default={})
 
     def __attrs_post_init__(self):
         # Make sure n_control_window_hours is an int
@@ -772,7 +777,9 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 unacceptable termination condition.
         """
 
-        solver_results = self.pyomosolver_solve_call(self.dr_model)
+        solver_results = self.pyomosolver_solve_call(
+            self.dr_model, self.config.pyomo_solver, self.config.pyomo_solver_options
+        )
 
         status = solver_results.solver.status
         tc = solver_results.solver.termination_condition
@@ -799,6 +806,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
     @staticmethod
     def pyomosolver_solve_call(
         pyomo_model: pyomo.ConcreteModel,
+        pyomo_solver: str = "highs",
+        pyomo_solver_options: dict = {},
         log_name: str = "",
         user_solver_options: dict | None = None,
     ):
@@ -814,9 +823,21 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         Returns:
             pyomo.opt.SolverResults: Raw results object from highs.
         """
-        highs_solver_options = {"time_limit": 300}
-        solver_options = SolverOptions(highs_solver_options, log_name, user_solver_options, "log")
-        with pyomo.SolverFactory("highs") as solver:
+        default_solver_specs = {
+            "highs": {
+                "time_limit": 300,
+                "presolve": "on",
+            },
+            "glpk": {"cuts": None, "presol": None, "tmlim": 300},
+        }
+        default_solver_spec_options = default_solver_specs[pyomo_solver]
+        # Update the default_solver_spec_options with pyomo_solver_options from input configuration
+        # Note that the syntax `A|B` uses values from B for keys that exist in both A and B.
+        solver_spec_options = default_solver_spec_options | pyomo_solver_options
+
+        solver_options = SolverOptions(solver_spec_options, log_name, user_solver_options, "log")
+
+        with pyomo.SolverFactory(pyomo_solver) as solver:
             results = solver.solve(pyomo_model, options=solver_options.constructed, tee=False)
         return results
 
@@ -834,7 +855,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             for t in self.dr_model.T
         ]
 
-    def _GnT_pricingfunction(self,lmp: float) -> float:
+    def _GnT_pricingfunction(self, lmp: float) -> float:
         """Compute the cost a G&T charges to a CoOp based on the current grid price.
 
         Args:
