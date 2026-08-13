@@ -354,6 +354,7 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         self.add_input(
             "annual_iron_ore_produced",
             val=0.0,
+            shape=self.plant_life,
             units="t/yr",
             desc="Annual iron ore production",
         )
@@ -424,7 +425,7 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         # OpEx is either on a per LT pellet basis or LT crude ore basis, depending on the mine
         # Both are included in OpEx calculation, but only one will be non-zero depending on the mine
         outputs["OpEx"] = (
-            inputs["annual_iron_ore_produced"]
+            inputs["annual_iron_ore_produced"][0]
             * self.coeff_df.loc[self.coeff_df["process"] == "pellet", "value"].values
             + sum(inputs["raw_ore"])
             * self.coeff_df.loc[self.coeff_df["process"] == "mined", "value"].values

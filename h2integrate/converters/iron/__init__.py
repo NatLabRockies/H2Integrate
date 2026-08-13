@@ -14,3 +14,7 @@ from h2integrate.converters.iron.iron_transport import (
     IronTransportPerformanceComponent,
     IronTransportCostComponent,
 )
+from h2integrate.converters.iron.nrri_iron_mine import (
+    NRRIIronMinePerformanceComponent,
+    NRRIIronMineCostComponent,
+)
