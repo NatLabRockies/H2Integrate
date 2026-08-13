@@ -128,7 +128,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=self.n_timesteps,
             units="kJ/s",
-            desc="fuel input energy to the turbine/plant in MMBtu/h",
+            desc="fuel input energy to the turbine/plant",
         )
 
         self.add_output(
@@ -136,7 +136,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="unmet demand for electricity from the turbine/plant in MW",
+            desc="unmet demand for electricity from the turbine/plant",
         )
 
         self.ngct = NGCT.NGCT(
@@ -299,7 +299,7 @@ if __name__ == "__main__":
                 "model_inputs": {
                     "shared_parameters": {
                         "commodity": "natural_gas",
-                        "commodity_rate_units": "MMBtu/h",
+                        "commodity_rate_units": "kJ/s",
                     },
                     "performance_parameters": {
                         "rated_capacity": 3000.0,
