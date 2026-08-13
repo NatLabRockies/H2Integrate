@@ -7,9 +7,11 @@ properties:
   name:
     type: string
     description: Name of the configuration
+    default: driver_config
   description:
     type: string
     description: Description of the configuration
+    default: driver configuration file
   general:
     type: object
     properties:
@@ -84,4 +86,19 @@ properties:
       ref:
         type: number
         description: Reference value for normalization
+  recorder:
+    type: object
+    properties:
+      flag:
+        type: boolean
+        description: whether to save the data to a .sql file
+      file:
+        type: string
+        description: filename to save the .sql file to
+      overwrite_recorder:
+        type: boolean
+        description: whether to overwrite any previous .sql files with the name specified by file
+      recorder_attachment:
+        type: string
+        description: whether to attach the recorder to the driver or model
 required: [name, description, general]

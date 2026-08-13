@@ -7,9 +7,11 @@ properties:
   name:
     type: string
     description: Name of the plant configuration
+    default: plant_config
   description:
     type: string
     description: Description of the plant configuration
+    default: plant configuration
   sites:
     type: object
     properties:
@@ -73,4 +75,13 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
+  resource_to_tech_connections:
+    type: array
+    description: Array of arrays representing resource to technology connections
+    items:
+      type: array
+      items:
+        type: [string, array]
+        description: Connecting resource data from a site to a performance model
+  # should we add in finance_parameters, finance_subgroups, and cost_adjustment_parameters?
 required: [name, description]
