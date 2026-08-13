@@ -255,6 +255,47 @@ def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
     assert result.states[4].temperature > iso_ambient_state.temperature
 
 
+@pytest.mark.regression
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
+)
+def test_demo_case():
+    P_ambient = 101325.0  # Pa
+    Trel_ambient = 15.0  # Pa
+    rel_humidity_ambient = 60
+
+    working_fluid = make_humid_air_mixture(P_ambient, Trel_ambient, rel_humidity_ambient)
+    fluid_ambient = working_fluid.with_state(
+        pyfluids.Input.pressure(P_ambient),
+        pyfluids.Input.temperature(Trel_ambient),
+    )
+
+    ngct = GE_7EA_NGCT_2014()
+    # ngct = GE_7FA05_NGCT()
+
+    result = ngct.run_turbine_model(fluid_ambient)
+
+    net_work = result.get_net_work()
+    net_heat_input = result.get_net_heat_input()
+    efficiency = net_work / net_heat_input
+    exhaust_temperature = result.states[4].temperature
+
+    print(f"net work: {net_work}")
+    print(f"net heat input: {net_heat_input}")
+    print(f"efficiency: {efficiency}")
+    print(f"exhaust temperature: {exhaust_temperature}")
+
+    net_work_ref = 119869.90666935727
+    net_heat_input_ref = 331489.32714693167
+    efficiency_ref = 0.3616101540917041
+    exhaust_temperature_ref = 571.4635913592466
+
+    assert net_work == pytest.approx(net_work_ref, rel=1.0e-6)
+    assert net_heat_input == pytest.approx(net_heat_input_ref, rel=1.0e-6)
+    assert efficiency == pytest.approx(efficiency_ref, rel=1.0e-6)
+    assert exhaust_temperature == pytest.approx(exhaust_temperature_ref, rel=1.0e-6)
+
+
 # @pytest.mark.regression
 # @pytest.mark.skipif(
 #     importlib.util.find_spec("pyfluids") is None,
