@@ -23,6 +23,14 @@ class GenericConverterCostConfig(CostModelBaseConfig):
         cost_year (int): dollar year of input costs
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., "kW*h" or "kg"). If not provided, defaults to `commodity_rate_units*h`.
+        additional_capex_USD (float | int, optional): additional capital expense that does not
+            scale with the input commodity rated production. In units of USD. Defaults to 0.
+        additional_opex_USD_per_year (float | int, optional): additional annual fixed operating
+            expense that does not scale with the input commodity rated production.
+            In units of USD/year. Defaults to 0.
+        additional_varopex_USD_per_year (float | int, optional): additional annual variable
+            operating expense that does not scale with the input commodity annual production.
+            In units of USD/year. Defaults to 0.
     """
 
     commodity: str = field(converter=str.strip)
@@ -33,6 +41,10 @@ class GenericConverterCostConfig(CostModelBaseConfig):
     unit_opex: float | int | None = field(default=None)
     opex_fraction: float | None = field(default=None, validator=range_val_or_none(0, 1))
     commodity_amount_units: str = field(default=None)
+
+    additional_capex_USD: float | int = field(default=0.0)
+    additional_opex_USD_per_year: float | int = field(default=0.0)
+    additional_varopex_USD_per_year: float | int = field(default=0.0)
 
     def __attrs_post_init__(self):
         # If both or neither OpEx value was input, raise an error
@@ -92,6 +104,26 @@ class GenericConverterCostModel(CostModelBaseClass):
             desc="Unit Variable O&M",
         )
 
+        self.add_input(
+            "extra_capex",
+            val=self.config.additional_capex_USD,
+            units="USD",
+            desc="Additional capital expense",
+        )
+        self.add_input(
+            "extra_opex",
+            val=self.config.additional_opex_USD_per_year,
+            units="USD/year",
+            desc="Additional annual fixed operating expense",
+        )
+        self.add_input(
+            "extra_varopex",
+            val=self.config.additional_varopex_USD_per_year,
+            shape=self.plant_life,
+            units="USD/year",
+            desc="Additional annual variable operating expense",
+        )
+
         if self.config.opex_fraction is not None:
             # opex is expressed as a fraction of CapEx
             self.add_input(
@@ -111,13 +143,13 @@ class GenericConverterCostModel(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         tot_capex = inputs[f"rated_{self.config.commodity}_production"] * inputs["unit_capex"]
-        outputs["CapEx"] = tot_capex
+        outputs["CapEx"] = tot_capex + inputs["extra_capex"]
         if "unit_opex" in inputs:
-            outputs["OpEx"] = (
-                inputs[f"rated_{self.config.commodity}_production"] * inputs["unit_opex"]
-            )
+            opex = inputs[f"rated_{self.config.commodity}_production"] * inputs["unit_opex"]
         else:
-            outputs["OpEx"] = tot_capex * inputs["fixed_opex_ratio"]
+            opex = tot_capex * inputs["fixed_opex_ratio"]
+
+        outputs["OpEx"] = opex + inputs["extra_opex"]
         outputs["VarOpEx"] = (
             inputs[f"annual_{self.config.commodity}_produced"] * inputs["unit_varopex"]
-        )
+        ) + inputs["extra_varopex"]
