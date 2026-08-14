@@ -1,3 +1,6 @@
+import warnings
+from collections import defaultdict
+
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -201,6 +204,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
+
+        # Detect commodity converters and load their static conversion ratios
+        # (Phase 1: static ratios from tech_config). Enables backward demand
+        # propagation across converter boundaries for heterogeneous-commodity
+        # systems.
+        self._build_conversion_ratios()
 
     def _setup_commodity(
         self,
@@ -587,6 +596,313 @@ class SystemLevelControlBase(om.ExplicitComponent):
         tech_commodities = [e[1] for e in self.techs_to_commodities if e[0] == tech_name]
 
         return tech_commodities
+
+    # ------------------------------------------------------------------
+    # Heterogeneous-commodity dispatch (backward demand propagation)
+    # ------------------------------------------------------------------
+
+    def _build_conversion_ratios(self):
+        """Detect commodity converters and read their static conversion ratios.
+
+        A converter is a controller-managed technology that produces a commodity
+        it does not itself consume (for example an electrolyzer:
+        electricity -> hydrogen, or an ammonia synloop: hydrogen -> ammonia).
+        Consumed commodities are read directly from each technology's incoming
+        graph edges and produced commodities from ``techs_to_commodities``; this
+        direct-edge definition is robust for converter chains (A -> B -> C,
+        where B and C both convert).
+
+        Populates three attributes used by ``_run_dispatch`` to translate demand
+        for one commodity into demand for an upstream (input) commodity:
+
+        - ``self._converters``: set of ``(in_commodity, tech_name,
+          out_commodity)`` tuples (empty for single-commodity systems).
+        - ``self.conversion_ratios``: mapping of ``(tech_name, in_commodity,
+          out_commodity)`` to a float ratio read from the tech config at
+          ``technologies.<tech>.model_inputs.control_parameters.
+          conversion_ratios.<in_commodity>_per_<out_commodity>``.
+        - ``self._missing_ratio_warned``: set used to emit the "missing ratio"
+          warning at most once per converter.
+
+        Ratios are interpreted such that ``input_rate = output_rate * ratio``
+        in each commodity's rate units (for example ``51 kWh/kg`` translates a
+        hydrogen production rate in ``kg/h`` into an electricity demand in
+        ``kW``). Converters whose input commodity has no controller-managed
+        producer (e.g. a feedstock-supplied nitrogen stream) do not
+        require a ratio.
+        """
+
+        def _as_list(commodity):
+            if commodity is None:
+                return []
+            if isinstance(commodity, str):
+                return [commodity]
+            return list(commodity)
+
+        # Detect converters: techs that produce a commodity they do not consume
+        self._converters = set()
+        for tech_name in self.input_techs:
+            produced_commodities = set(self._get_commodity_for_tech(tech_name))
+            if not produced_commodities:
+                continue
+
+            consumed_commodities = set()
+            for _src, _dst, edge_commodity in self.technology_graph.in_edges(
+                tech_name, data="commodity"
+            ):
+                consumed_commodities.update(_as_list(edge_commodity))
+
+            for out_commodity in produced_commodities - consumed_commodities:
+                for in_commodity in consumed_commodities - produced_commodities:
+                    self._converters.add((in_commodity, tech_name, out_commodity))
+
+        # Read each converter's static input-per-output ratio from the tech config
+        self.conversion_ratios = {}
+        self._missing_ratio_warned = set()
+        technologies = self.options["tech_config"].get("technologies", {})
+        for in_commodity, tech_name, out_commodity in self._converters:
+            control_params = (
+                technologies.get(tech_name, {})
+                .get("model_inputs", {})
+                .get("control_parameters", {})
+            )
+            ratios = control_params.get("conversion_ratios", {})
+            key = f"{in_commodity}_per_{out_commodity}"
+            if key in ratios:
+                self.conversion_ratios[(tech_name, in_commodity, out_commodity)] = float(
+                    ratios[key]
+                )
+
+    def _run_dispatch(self, inputs, outputs):
+        """Dispatch every commodity level required to meet the demand profile.
+
+        The demand commodity is dispatched first. For each converter that
+        produces a just-dispatched commodity, the converter's committed output
+        set-point is translated into demand for its input commodity (via its
+        static conversion ratio) and accumulated. Commodities are processed in
+        topological order of this demand-flow graph so that all contributions
+        to an input commodity are gathered before it is dispatched.
+
+        Subclasses implement the strategy-specific dispatchable step by
+        overriding ``_dispatch_dispatchables``; the fixed, flexible, and
+        storage steps are shared across all strategies.
+        """
+        # Flexible techs can only curtail, so they always run at their rated
+        # production for every commodity they produce. Commanding them here
+        # guarantees they are set even when their commodity is not explicitly
+        # dispatched below (commodity-level dispatch may re-issue the value).
+        for tech_name in self.flexible_techs:
+            for commodity in self._get_commodity_for_tech(tech_name):
+                rated_name = f"{tech_name}_rated_{commodity}_production"
+                set_point_name = f"{tech_name}_{commodity}_set_point"
+                if rated_name in inputs and set_point_name in outputs:
+                    outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
+
+        converters = getattr(self, "_converters", None) or set()
+
+        # Single-commodity system: dispatch the demand commodity and return
+        if not converters:
+            self._dispatch_commodity(
+                self.commodity, inputs[self.demand_input_name].copy(), inputs, outputs
+            )
+            return
+
+        # Build the demand-flow graph (out_commodity -> in_commodity) and group
+        # converters by the commodity they output
+        demand_flow = nx.DiGraph()
+        demand_flow.add_node(self.commodity)
+        converters_by_output = defaultdict(list)
+        for in_commodity, tech_name, out_commodity in converters:
+            demand_flow.add_edge(out_commodity, in_commodity)
+            converters_by_output[out_commodity].append((in_commodity, tech_name, out_commodity))
+
+        try:
+            commodity_order = list(nx.topological_sort(demand_flow))
+        except nx.NetworkXUnfeasible:
+            # Commodity cycle (unusual): process the demand commodity first,
+            # then the remaining commodities in arbitrary order
+            commodity_order = [self.commodity] + [
+                c for c in demand_flow.nodes if c != self.commodity
+            ]
+
+        derived_demand = {self.commodity: inputs[self.demand_input_name].copy()}
+
+        for commodity in commodity_order:
+            demand = derived_demand.get(commodity)
+            if demand is None:
+                continue
+
+            self._dispatch_commodity(commodity, demand.copy(), inputs, outputs)
+
+            # Translate committed converter output into upstream input demand
+            for in_commodity, tech_name, out_commodity in converters_by_output.get(commodity, []):
+                self._accumulate_derived_demand(
+                    derived_demand, tech_name, in_commodity, out_commodity, inputs, outputs
+                )
+
+    def _dispatch_commodity(self, commodity, demand, inputs, outputs):
+        """Dispatch all technologies producing ``commodity`` to meet ``demand``.
+
+        Applies the shared four-step priority order (fixed, flexible, storage,
+        dispatchable) for a single commodity. Only technologies that produce
+        ``commodity`` participate. The dispatchable step is delegated to
+        ``_dispatch_dispatchables`` so cost-aware subclasses can override it.
+
+        Args:
+            commodity (str): Commodity to dispatch (demand or a derived input).
+            demand (np.ndarray): Demand profile for ``commodity`` (may be mutated).
+            inputs: OpenMDAO inputs.
+            outputs: OpenMDAO outputs.
+
+        Returns:
+            np.ndarray: Remaining unmet demand after dispatchables.
+        """
+        # 1. Fixed techs: always produce, subtract from demand
+        for fixed_tech in self.fixed_techs:
+            if commodity in self._get_commodity_for_tech(fixed_tech):
+                demand = self._subtract_fixed(fixed_tech, demand, commodity, inputs)
+
+        # 2. Flexible techs: run at rated production, subtract from demand
+        for flexible_tech in self.flexible_techs:
+            if commodity in self._get_commodity_for_tech(flexible_tech):
+                updated = self._subtract_flexible(flexible_tech, demand, commodity, inputs, outputs)
+                if updated is not None:
+                    demand = updated
+
+        # 3. Storage techs: split residual demand evenly and dispatch
+        n_storage = len(
+            [s for s in self.storage_techs if commodity in self._get_commodity_for_tech(s)]
+        )
+        for storage_tech in self.storage_techs:
+            if commodity in self._get_commodity_for_tech(storage_tech):
+                updated = self._dispatch_storage(
+                    storage_tech, demand / n_storage, commodity, inputs, outputs
+                )
+                if updated is not None:
+                    demand = updated
+
+        # 4. Dispatchable techs: strategy-specific (subclass hook)
+        remaining = np.maximum(demand, 0.0)
+        return self._dispatch_dispatchables(commodity, remaining, inputs, outputs)
+
+    def _dispatch_dispatchables(self, commodity, remaining_demand, inputs, outputs):
+        """Split remaining demand evenly across dispatchables producing ``commodity``.
+
+        This is the default (cost-agnostic) dispatchable step used by
+        ``DemandFollowingControl``. Cost-aware controllers override this method
+        to apply merit-order or profit-aware dispatch.
+
+        Returns:
+            np.ndarray: Remaining unmet demand (zeros under the even-split
+            assumption that dispatchables absorb their full share).
+        """
+        dispatchables = [
+            t for t in self.dispatchable_techs if commodity in self._get_commodity_for_tech(t)
+        ]
+        n_dispatchable = len(dispatchables)
+        if n_dispatchable == 0:
+            return remaining_demand
+
+        for tech_name in dispatchables:
+            outputs[f"{tech_name}_{commodity}_set_point"] = remaining_demand / n_dispatchable
+
+        return np.zeros(self.n_timesteps)
+
+    def _merit_order_dispatch(self, commodity, remaining_demand, inputs, outputs, sell_price=None):
+        """Dispatch dispatchables producing ``commodity`` in ascending marginal-cost order.
+
+        Each technology is dispatched up to its rated production until demand
+        is met. When ``sell_price`` is provided, a technology is only
+        dispatched at timesteps where its marginal cost is below the sell price
+        (profit gating); demand may then go unmet.
+
+        Marginal costs come from ``_compute_marginal_costs`` and are aligned
+        with ``self.dispatchable_techs``. Requires ``_setup_marginal_costs`` to
+        have been called in the subclass ``setup``.
+
+        Returns:
+            np.ndarray: Remaining unmet demand after dispatch.
+        """
+        dispatchables = [
+            t for t in self.dispatchable_techs if commodity in self._get_commodity_for_tech(t)
+        ]
+
+        # Initialize set-points for these dispatchables to zero
+        for tech_name in dispatchables:
+            outputs[f"{tech_name}_{commodity}_set_point"] = np.zeros(self.n_timesteps)
+
+        if not dispatchables:
+            return remaining_demand
+
+        marginal_cost_by_tech = dict(
+            zip(self.dispatchable_techs, self._compute_marginal_costs(inputs))
+        )
+
+        # Merit order: cheapest mean marginal cost first
+        dispatch_order = sorted(dispatchables, key=lambda t: marginal_cost_by_tech[t].mean())
+
+        remaining = np.array(remaining_demand, dtype=float)
+        for tech_name in dispatch_order:
+            rated = inputs[f"{tech_name}_rated_{commodity}_production"]
+            if sell_price is not None:
+                profitable = marginal_cost_by_tech[tech_name] < sell_price
+                dispatch = np.where(profitable, np.minimum(remaining, rated), 0.0)
+            else:
+                dispatch = np.minimum(remaining, rated)
+            outputs[f"{tech_name}_{commodity}_set_point"] = dispatch
+            remaining = remaining - dispatch
+
+        return remaining
+
+    def _accumulate_derived_demand(
+        self, derived_demand, tech_name, in_commodity, out_commodity, inputs, outputs
+    ):
+        """Add a converter's induced input-commodity demand to ``derived_demand``.
+
+        The converter's committed output (its ``{tech}_{out}_set_point``) is
+        multiplied by the input-per-output conversion ratio to obtain the demand
+        it places on its input commodity. Converters whose input commodity has
+        no controller-managed producer (for example a feedstock-supplied stream)
+        are skipped.
+
+        Backward propagation is opt-in: if no conversion ratio is configured for
+        a converter whose input commodity does have controllable producers, the
+        propagation is skipped (upstream techs keep their default dispatch, the
+        legacy behavior) and a one-time warning is emitted so the missing ratio
+        is discoverable when heterogeneous-commodity control is intended.
+        """
+        has_producers = any(
+            in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
+        )
+        if not has_producers:
+            return
+
+        key = (tech_name, in_commodity, out_commodity)
+        if key not in self.conversion_ratios:
+            if key not in self._missing_ratio_warned:
+                self._missing_ratio_warned.add(key)
+                warnings.warn(
+                    f"No conversion ratio defined for converter '{tech_name}' "
+                    f"('{in_commodity}' -> '{out_commodity}'); system-level control will "
+                    f"not translate '{out_commodity}' demand into '{in_commodity}' demand, "
+                    f"and upstream '{in_commodity}' technologies keep their default "
+                    f"dispatch. Define technologies.{tech_name}.model_inputs."
+                    f"control_parameters.conversion_ratios.{in_commodity}_per_{out_commodity} "
+                    f"in the tech config to enable heterogeneous-commodity control.",
+                    stacklevel=2,
+                )
+            return
+
+        # ``key`` is guaranteed present here (checked above); apply the static
+        # input-per-output ratio to the converter's committed output
+        ratio = np.full(self.n_timesteps, self.conversion_ratios[key])
+        set_point = np.asarray(outputs[f"{tech_name}_{out_commodity}_set_point"], dtype=float)
+        contribution = np.maximum(set_point, 0.0) * ratio
+
+        if in_commodity in derived_demand:
+            derived_demand[in_commodity] = derived_demand[in_commodity] + contribution
+        else:
+            derived_demand[in_commodity] = contribution
 
     # ------------------------------------------------------------------
     # Marginal-cost helpers for cost-aware controllers
