@@ -324,24 +324,24 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                 if len(unnecessary_shared) == 1:
                     unshared_params, other_key = unnecessary_shared[0]
                     msg = (
-                        f"The parameter(s): {list(unshared_params)} found in shared_parameters"
+                        f"The parameter(s): {sorted(unshared_params)} found in shared_parameters"
                         f" but should be in {other_key} for {tech_location}"
                     )
                     raise AttributeError(msg)
                 else:
                     mapping = "\n\t".join(
-                        f"{level} should contain: {list(keys)}"
+                        f"{level} should contain {sorted(keys)}"
                         for keys, level in unnecessary_shared
                     )
                     msg = (
                         f"The following parameter sets were found in shared_parameters but should"
-                        f" be in the following sections for {tech_location}:"
+                        f" be contained in the following sections for {tech_location}:"
                         f"\n\t{mapping}"
                     )
                     raise AttributeError(msg)
             else:
                 msg = (
-                    f"The parameter(s): {list(user_extras)} found in shared_parameters"
+                    f"The parameter(s): {sorted(user_extras)} found in shared_parameters"
                     f" are not used by any of the models for {tech_location}"
                 )
                 raise AttributeError(msg)
@@ -354,7 +354,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
             )
             raise AttributeError(msg)
         msg = (
-            f"The parameter(s) {list(user_extras)} found in {param_key} are not used for "
+            f"The parameter(s) {sorted(user_extras)} found in {param_key} are not used for "
             f"{tech_location}"
         )
         raise AttributeError(msg)

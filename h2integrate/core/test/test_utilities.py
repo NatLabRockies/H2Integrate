@@ -796,7 +796,7 @@ def test_check_inputs(subtests):
     prob = create_om_problem(tech_config)
 
     expected_error_02 = (
-        "The parameter(s) ['n_control_window_hours', "
+        "The parameter(s): ['n_control_window_hours', "
         "'system_commodity_interface_limit'] "
         "found in shared_parameters but should be in control_parameters for "
         f"the 'battery' section of {tech_config_fpath}"
@@ -824,7 +824,7 @@ def test_check_inputs(subtests):
         f"{tech_config_fpath}:"
         "\n\tcontrol_parameters should contain"
         " ['n_control_window_hours', 'system_commodity_interface_limit']"
-        "\n\tcost_parameters should contain ['opex_fraction]"
+        "\n\tcost_parameters should contain ['opex_fraction']"
     )
 
     with subtests.test("Situation #3"):
@@ -904,7 +904,7 @@ def test_check_inputs(subtests):
     prob = create_om_problem(tech_config)
 
     expected_error_05 = (
-        "The parameter(s) ['commodity', 'commodity_rate_units] found in "
+        "The parameter(s) ['commodity', 'commodity_rate_units'] found in "
         "performance_parameters should be under shared_parameters for "
         f"the 'combiner' section of {tech_config_fpath}"
     )
