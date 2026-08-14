@@ -204,7 +204,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
 
-    _DEG_SCALE: float = field(default=0.7056, validator=range_val(0, 1))
+    deg_scale: float = field(default=0.7056, validator=range_val(0, 1))
     eol_soh_capacity: float = field(default=0.8, validator=range_val(0, 1))
     # TODO convert from power and energy ratings (see math in chat)
     series_count: int = field(default=336, converter=int, validator=gt_zero)
@@ -374,8 +374,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
                 "start_T": self.config.battery_temperature_c,
             },
             degradation=DegradationModel(
-                calendar=ScaledLFPCalendarDegradation(self.config._DEG_SCALE),
-                cyclic=ScaledLFPCyclicDegradation(self.config._DEG_SCALE),
+                calendar=ScaledLFPCalendarDegradation(self.config.deg_scale),
+                cyclic=ScaledLFPCyclicDegradation(self.config.deg_scale),
                 initial_soc=self.config.init_soc_fraction,
                 initial_state=DegradationState(qloss_cal=1e-4),
             ),
