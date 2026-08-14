@@ -279,6 +279,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = self.config.commodity_amount_units
 
+        super().setup()
+
         self.add_discrete_input(
             "solar_resource_data",
             val={},
@@ -292,8 +294,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         )
 
         # TODO degradation: adjustments for degradation
-
-        super().setup()
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
@@ -370,6 +370,22 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             conv_loss[i] = converter.state.loss
 
         #############
+
+        # Store the full SimSES timeseries for downstream diagnostics/plotting
+        # (e.g. example 98 degradation, temperature, voltage, and loss plots).
+        self.results = {
+            "soc": log["soc"],
+            "voltage": log["v"],
+            "current": log["i"],
+            "temperature": log["T"],
+            "battery_loss": log["loss"],
+            "battery_heat": log["heat"],
+            "soh_capacity": log["soh_Q"],
+            "soh_resistance": log["soh_R"],
+            "power_ac": power_ac,
+            "power_dc": power_dc,
+            "converter_loss": conv_loss,
+        }
 
         # Populate all OpenMDAO outputs defined in this class and its parent classes.
         # Convert SimSES AC power (W, +charge) back to H2I convention
