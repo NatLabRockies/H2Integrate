@@ -1605,7 +1605,9 @@ class H2IntegrateModel:
                     connection_name = f"{transport_type}"
                 else:
                     # make the connection_name based on source, dest, item, type
-                    connection_name = f"{source_tech}_to_{dest_tech}_{transport_type}"
+                    connection_name = (
+                        f"{transport_item}_{source_tech}_to_{dest_tech}_{transport_type}"
+                    )
 
                 # Get the performance model of the source_tech
                 source_tech_config = self.technology_config["technologies"].get(source_tech, {})
