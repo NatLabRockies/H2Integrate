@@ -252,7 +252,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
     if not overlap.difference(minimal_keys):
         return
 
-    msg = None
+    # msg = None
     control_sys = None
     dispatch_sys = None
     cost_sys = None
@@ -324,9 +324,10 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                 if len(unnecessary_shared) == 1:
                     unshared_params, other_key = unnecessary_shared[0]
                     msg = (
-                        f"The parameter(s): {unnecessary_shared} found in shared_parameters"
+                        f"The parameter(s): {list(unshared_params)} found in shared_parameters"
                         f" but should be in {other_key} for {tech_location}"
                     )
+                    raise AttributeError(msg)
                 else:
                     mapping = "\n\t".join(
                         f"{level} should contain: {keys}" for keys, level in unnecessary_shared
@@ -336,12 +337,13 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                         f" be in the following sections for {tech_location}:"
                         f"\n\t{mapping}"
                     )
+                    raise AttributeError(msg)
             else:
                 msg = (
                     f"The parameter(s): {user_extras} found in shared_parameters"
                     f" are not used by any of the models for {tech_location}"
                 )
-            raise AttributeError(msg)
+                raise AttributeError(msg)
 
         shared_overlap = user_extras.intersection(restructured_params.get("shared_parameters", {}))
         if shared_overlap:
@@ -349,6 +351,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                 f"The parameter(s) {shared_overlap} found in {param_key}"
                 f" should be under shared_parameters for {tech_location}"
             )
+            raise AttributeError(msg)
         msg = (
             f"The parameter(s) {user_extras} found in {param_key} are not used for "
             f"{tech_location}"

@@ -1,0 +1,26 @@
+battery:
+  performance_model:
+    model: PySAMBatteryPerformanceModel
+  cost_model:
+    model: ATBBatteryCostModel
+  control_strategy:
+    model: SimpleStorageOpenLoopController
+  model_inputs:
+    shared_parameters:
+      commodity: electricity # this should be under control_parameters
+      demand_profile: 500.0
+      commodity_rate_units: kW
+      max_charge_rate: 1000.0  # kW, 1000 MW
+      max_capacity: 1000.0  # kWh, ~9.7 GWh
+      max_soc_fraction: 0.9
+      min_soc_fraction: 0.1
+      init_soc_fraction: 0.1
+    performance_parameters:
+      chemistry: LFPGraphite
+    control_parameters:
+      set_demand_as_avg_commodity_in: false
+    cost_parameters:
+      cost_year: 2022
+      energy_capex: 297.00
+      power_capex: 312.00
+      opex_fraction: 0.025
