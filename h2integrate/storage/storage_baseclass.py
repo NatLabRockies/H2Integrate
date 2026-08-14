@@ -111,7 +111,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Storage design outputs:
         default_storage_duration = 0.0
         if hasattr(self.config, "max_charge_rate") and hasattr(self.config, "max_capacity"):
-            default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
+            if self.config.max_charge_rate > 0:
+                default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
 
         self.add_output(
             "storage_duration",
