@@ -1,0 +1,44 @@
+name: technology_config
+description: >
+  Single battery technology using the SimSES-backed BatteryPerformanceModel. No
+  control strategy is defined, so a passthrough controller forwards the
+  electricity_set_point profile to the battery as its dispatch command
+  (positive = discharge, negative = charge).
+technologies:
+  battery:
+    performance_model:
+      model: BatteryPerformanceModel
+    cost_model:
+      model: ATBBatteryCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 2000.0  # kW
+        max_discharge_rate: 2000.0  # kW
+        charge_equals_discharge: true
+        max_capacity: 3854.0  # kWh (usable, 10-90 % of the 4817 kWh nominal pack)
+        max_soc_fraction: 0.9  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.9  # fraction (0-1)
+        charge_efficiency: 1.0  # fraction (0-1)
+        discharge_efficiency: 1.0  # fraction (0-1)
+        demand_profile: 0.0  # kW (unused; battery is driven by electricity_set_point)
+        series_count: 336
+        parallel_count: 16
+        battery_temperature_c: 25.0
+        converter_efficiency: 0.96
+        converter_max_power: 2400.0  # kW
+      performance_parameters:
+        cop: 3.0
+        eol_soh_capacity: 0.8  # capacity SOH at which the battery is replaced (0.8 = 20 % fade)
+      cost_parameters:
+        cost_year: 2022
+        energy_capex: 300.0  # $/kWh (ATB utility-scale battery, energy component)
+        power_capex: 100.0  # $/kW (ATB utility-scale battery, power component)
+        opex_fraction: 0.025  # annual fixed O&M as a fraction of total system CapEx
+      financial_parameters:
+        capital_items:
+          # Each end-of-life replacement (from the model's replacement_schedule) costs a
+          # full new battery. Depreciation defaults come from the plant-level capital_items.
+          replacement_cost_percent: 1.0
