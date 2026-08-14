@@ -752,16 +752,16 @@ def test_check_inputs_example01(subtests):
 
     h2i.prob.setup()
 
+    expected_error = (
+        "The parameter(s): ['commodity'] found in shared_parameters"
+        " but should be in control_parameters for the 'battery' "
+        f"section of {tech_config_fpath}"
+    )
+
     with pytest.raises(AttributeError) as excinfo:
         check_inputs(h2i.prob, "battery", tech_config["technologies"]["battery"], tech_config_fpath)
 
-        expected_error = (
-            "The parameter(s): ['commodity'] found in shared_parameters"
-            " but should be in control_parameters for the 'battery' "
-            f"section of {tech_config_fpath}"
-        )
-        print(str(excinfo.value))
-        assert expected_error == str(excinfo.value)
+    assert expected_error == str(excinfo.value)
 
 
 @pytest.mark.unit
@@ -769,63 +769,76 @@ def test_check_inputs(subtests):
     tech_config_fpath = Path(__file__).parent / "inputs" / "no_duplicates.yaml"
 
     # 1: check for an unused parameter under performance_parameters
+    # Tests the message thrown if `if shared_overlap` is False
     tech_config = load_tech_yaml(tech_config_fpath)
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_01 = (
+        "The parameter(s) ['system_model_source'] found in performance_parameters "
+        f"are not used for the 'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #1"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+                assert expected_error_01 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['system_model_source'] found in performance_parameters "
-                    f"are not used for the 'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 2: check when not-shared parameters are under shared_parameters
+    # Tests the message thrown in ``if len(unnecessary_shared) == 1``
     tech_config = load_tech_yaml(tech_config_fpath)
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_02 = (
+        "The parameter(s) ['n_control_window_hours', "
+        "'system_commodity_interface_limit'] "
+        "found in shared_parameters but should be in control_parameters for "
+        f"the 'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #2"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_02 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['n_control_window_hours', "
-                    "'system_commodity_interface_limit'] "
-                    "found in shared_parameters but should be in control_parameters for "
-                    f"the 'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 3: check when multiple unshared parameters from different categories are under shared\
+    # Tests the message thrown in the else statement of ``if len(unnecessary_shared) == 1``
     key = "opex_fraction"
     val = tech_config["technologies"]["battery"]["model_inputs"]["cost_parameters"].pop(key)
     tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][key] = val
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+
+    expected_error_03 = (
+        "The following parameter sets were found in shared_parameters but should be"
+        " contained in the following sections for the 'battery' section of "
+        f"{tech_config_fpath}:"
+        "\n\tcontrol_parameters should contain"
+        " ['n_control_window_hours', 'system_commodity_interface_limit']"
+        "\n\tcost_parameters should contain ['opex_fraction]"
+    )
+
+    with subtests.test("Situation #3"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_03 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The following parameter sets were found in shared_parameters but should be"
-                    " contained in the following sections for the 'battery' section of "
-                    f"{tech_config_fpath}:"
-                    "\n\tcontrol_parameters should contain"
-                    " ['n_control_window_hours', 'system_commodity_interface_limit']"
-                    "\n\tcost_parameters should contain ['opex_fraction]"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 4: check when an unused parameter is under shared_parameters
+    # Tests the message thrown in the else statement of ``if unnecessary_shared``
     tech_config = load_tech_yaml(tech_config_fpath)
     control_parameters = {}
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
@@ -846,20 +859,24 @@ def test_check_inputs(subtests):
     )
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_04 = (
+        "The parameter(s): ['test_unused_input'] found in "
+        f"shared_parameters are not used by any of the models for the "
+        f"'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #4"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_04 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['test_unused_input'] found in "
-                    f"shared_parameters are not used by any of the models for the "
-                    f"'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 5: check when parameters are shared but specified individually
+    # Tests the `if shared_overlap` message
     combiner_tech = {
         "performance_model": {"model": "GenericCombinerPerformanceModel"},
         "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
@@ -886,15 +903,17 @@ def test_check_inputs(subtests):
     tech_config["technologies"].update({"combiner": combiner_tech})
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "combiner":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_05 = (
+        "The parameter(s) ['commodity', 'commodity_rate_units] found in "
+        "performance_parameters should be under shared_parameters for "
+        f"the 'combiner' section of {tech_config_fpath}"
+    )
+    with subtests.test("Situation #5"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "combiner":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_05 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['commodity', 'commodity_rate_units] found in "
-                    "performance_parameters should be under shared_parameter(s) for "
-                    f"the 'combiner' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)

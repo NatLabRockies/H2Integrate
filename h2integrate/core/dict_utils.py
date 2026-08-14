@@ -330,7 +330,8 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                     raise AttributeError(msg)
                 else:
                     mapping = "\n\t".join(
-                        f"{level} should contain: {keys}" for keys, level in unnecessary_shared
+                        f"{level} should contain: {list(keys)}"
+                        for keys, level in unnecessary_shared
                     )
                     msg = (
                         f"The following parameter sets were found in shared_parameters but should"
@@ -340,7 +341,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                     raise AttributeError(msg)
             else:
                 msg = (
-                    f"The parameter(s): {user_extras} found in shared_parameters"
+                    f"The parameter(s): {list(user_extras)} found in shared_parameters"
                     f" are not used by any of the models for {tech_location}"
                 )
                 raise AttributeError(msg)
@@ -348,12 +349,12 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
         shared_overlap = user_extras.intersection(restructured_params.get("shared_parameters", {}))
         if shared_overlap:
             msg = (
-                f"The parameter(s) {shared_overlap} found in {param_key}"
+                f"The parameter(s) {list(shared_overlap)} found in {param_key}"
                 f" should be under shared_parameters for {tech_location}"
             )
             raise AttributeError(msg)
         msg = (
-            f"The parameter(s) {user_extras} found in {param_key} are not used for "
+            f"The parameter(s) {list(user_extras)} found in {param_key} are not used for "
             f"{tech_location}"
         )
         raise AttributeError(msg)
