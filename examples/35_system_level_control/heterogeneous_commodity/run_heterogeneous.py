@@ -197,7 +197,7 @@ def make_plots(figure_dir):
     fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
 
     axes[0].plot(hours, electricity_per_hydrogen, color="#3B7DD8", lw=0.8)
-    axes[0].axhline(51.0, color="black", ls=":", lw=1.0, label="Static seed (51 kWh/kg)")
+    # axes[0].axhline(51.0, color="black", ls=":", lw=1.0, label="Static seed (51 kWh/kg)")
     axes[0].set_ylabel("kWh / kg H2")
     axes[0].set_title(
         "Electrolyzer measured ratio (electricity per hydrogen) drifts up with degradation"

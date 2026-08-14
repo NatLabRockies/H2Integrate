@@ -729,23 +729,24 @@ class TestProfitMaximizationControl:
 # ---------------------------------------------------------------------------
 # Heterogeneous-commodity dispatch (backward demand propagation)
 # ---------------------------------------------------------------------------
-def _tech_config_with_ratios(ratios_by_tech):
-    """Build a tech_config carrying static conversion ratios.
+def _plant_config_with_conversion_parameters(plant_config, conversion_parameters):
+    """Attach static conversion ratios to a plant config.
 
     Args:
-        ratios_by_tech (dict): Mapping of ``tech_name`` to a dict of
+        plant_config (dict): Plant config to extend in place.
+        conversion_parameters (dict): Mapping of ``tech_name`` to a dict of
             ``{"<in>_per_<out>": ratio}`` entries.
 
     Returns:
-        dict: A ``tech_config`` with the nested ``model_inputs.
-        control_parameters.conversion_ratios`` structure the base class reads.
+        dict: The same ``plant_config`` with the ``system_level_control.
+        control_parameters.conversion_parameters`` structure the base class
+        reads.
     """
-    return {
-        "technologies": {
-            tech: {"model_inputs": {"control_parameters": {"conversion_ratios": ratios}}}
-            for tech, ratios in ratios_by_tech.items()
-        }
-    }
+    control_parameters = plant_config.setdefault("system_level_control", {}).setdefault(
+        "control_parameters", {}
+    )
+    control_parameters["conversion_parameters"] = conversion_parameters
+    return plant_config
 
 
 def _build_hetero_problem(
@@ -829,17 +830,18 @@ class TestHeterogeneousCommodityControl:
         slc_topology = _build_slc_topology(
             tech_graph, classifiers, demand_commodity="ammonia", demand_commodity_rate_units="kg/h"
         )
-        tech_config = _tech_config_with_ratios(
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config,
             {
                 "electrolyzer": {"electricity_per_hydrogen": 51.0},
                 "synloop": {"hydrogen_per_ammonia": 0.18},
-            }
+            },
         )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
@@ -863,12 +865,14 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 51.0}})
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 51.0}}
+        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
@@ -897,17 +901,18 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="ammonia",
             demand_commodity_rate_units="kg/h",
         )
-        tech_config = _tech_config_with_ratios(
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config,
             {
                 "electrolyzer": {"electricity_per_hydrogen": 51.0},
                 "synloop": {"hydrogen_per_ammonia": 0.18},
-            }
+            },
         )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
@@ -942,12 +947,14 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
+        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             upstream_out={("wind", "electricity"): 1000.0},
             commodity_units={"electricity": "kW"},
@@ -1016,12 +1023,14 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
+        )
         prob = _build_hetero_problem(
             CostMinimizationControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
@@ -1051,12 +1060,14 @@ class TestHeterogeneousCommodityControl:
             demand_commodity_rate_units="kg/h",
         )
         # Static ratio is 50, but the measured ratio (5100 / 100 = 51) should win.
-        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
+        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
@@ -1083,12 +1094,14 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        plant_config = _plant_config_with_conversion_parameters(
+            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
+        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
             slc_topology,
-            tech_config,
+            {},
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )

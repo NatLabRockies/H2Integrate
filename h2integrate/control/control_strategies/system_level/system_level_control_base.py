@@ -670,9 +670,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         - ``self._converters``: set of ``(in_commodity, tech_name,
           out_commodity)`` tuples (empty for single-commodity systems).
         - ``self.conversion_ratios``: mapping of ``(tech_name, in_commodity,
-          out_commodity)`` to a float static ratio read from the tech config at
-          ``technologies.<tech>.model_inputs.control_parameters.
-          conversion_ratios.<in_commodity>_per_<out_commodity>``.
+          out_commodity)`` to a float static ratio read from the plant config at
+          ``system_level_control.control_parameters.conversion_parameters.
+          <tech>.<in_commodity>_per_<out_commodity>``.
         - ``self._converter_consumed_names``: mapping of the same key to the
           ``{tech}_{in_commodity}_consumed`` input registered for the dynamic
           (measured) ratio path.
@@ -699,17 +699,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
             )
         self._converters = set(converters)
 
-        # Read each converter's static input-per-output ratio from the tech config
+        # Read each converter's static input-per-output ratio from the plant
+        # config's system-level-control ``conversion_parameters`` block, keyed by
+        # tech name with ``<in_commodity>_per_<out_commodity>`` entries.
         self.conversion_ratios = {}
         self._missing_ratio_warned = set()
-        technologies = self.options["tech_config"].get("technologies", {})
+        conversion_parameters = (
+            self.options["plant_config"]["system_level_control"]
+            .get("control_parameters", {})
+            .get("conversion_parameters", {})
+        )
         for in_commodity, tech_name, out_commodity in self._converters:
-            control_params = (
-                technologies.get(tech_name, {})
-                .get("model_inputs", {})
-                .get("control_parameters", {})
-            )
-            ratios = control_params.get("conversion_ratios", {})
+            ratios = conversion_parameters.get(tech_name, {})
             key = f"{in_commodity}_per_{out_commodity}"
             if key in ratios:
                 self.conversion_ratios[(tech_name, in_commodity, out_commodity)] = float(
@@ -967,8 +968,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     f"not translate '{out_commodity}' demand into '{in_commodity}' demand, "
                     f"and upstream '{in_commodity}' technologies keep their default "
                     f"dispatch. Connect the converter's '{in_commodity}_consumed' output or "
-                    f"define technologies.{tech_name}.model_inputs.control_parameters."
-                    f"conversion_ratios.{in_commodity}_per_{out_commodity} in the tech config "
+                    f"define system_level_control.control_parameters.conversion_parameters."
+                    f"{tech_name}.{in_commodity}_per_{out_commodity} in the plant config "
                     f"to enable heterogeneous-commodity control.",
                     stacklevel=2,
                 )

@@ -75,7 +75,7 @@ technologies:
         size_mode: normal
         n_clusters: 15  # 15 x 3 MW = 45 MW, sized so the load sits within the wind's reach
         cluster_rating_MW: 3
-        eol_eff_percent_loss: 10  # eol defined as x% change in efficiency from bol
+        eol_eff_percent_loss: 30  # big degradation to demonstrate the changing conversion ratios
         uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: true  # include degradation
         turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
@@ -83,13 +83,6 @@ technologies:
         capital_items:
           depr_period: 7
           replacement_cost_percent: 0.15  # percent of capex - H2A default case
-      # Static seed ratio for the electricity -> hydrogen converter. The controller
-      # prefers the measured ratio (electricity_consumed / hydrogen_out) once the
-      # solver has values and uses this seed on iteration zero and for zero-output
-      # timesteps.
-      control_parameters:
-        conversion_ratios:
-          electricity_per_hydrogen: 51.0  # kWh electricity per kg hydrogen
   h2_storage:
     performance_model:
       model: StoragePerformanceModel
@@ -200,13 +193,6 @@ technologies:
         ramp_down_rate_fraction: 1.0
         include_cold_start: false
         include_warm_start: false
-      # Static seed ratios for the two controllable inputs of the synloop
-      # (hydrogen and electricity). Nitrogen is supplied by a feedstock and is not
-      # controller-managed, so it needs no ratio.
-      control_parameters:
-        conversion_ratios:
-          hydrogen_per_ammonia: 0.2  # kg hydrogen per kg ammonia
-          electricity_per_ammonia: 0.530645243  # kWh electricity per kg ammonia
       cost_parameters:
         baseline_capacity: 52777.6
         base_cost_year: 2016

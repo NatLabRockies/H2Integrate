@@ -470,6 +470,6 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         )
 
     with subtests.test("LCOA"):
-        assert pytest.approx(2.0024798555505585, rel=1e-5) == model.prob.get_val(
+        assert pytest.approx(2.00231927, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )
