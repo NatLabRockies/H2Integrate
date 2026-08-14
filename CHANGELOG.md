@@ -5,6 +5,7 @@
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
 - Add heterogeneous-commodity system-level control that translates demand for one commodity into upstream set-points across converters using static per-technology conversion ratios defined in the tech config. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+  - Extend the heterogeneous-commodity control to prefer measured conversion ratios computed from each converter's consumed and produced streams per timestep, falling back to the static ratio when a measurement is unavailable. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.9 [August 10, 2026]
 

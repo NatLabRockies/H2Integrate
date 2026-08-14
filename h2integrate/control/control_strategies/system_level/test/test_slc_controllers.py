@@ -1,5 +1,7 @@
 """Unit tests for system-level control base class and all controller strategies."""
 
+import warnings
+
 import numpy as np
 import pytest
 import networkx as nx
@@ -1032,3 +1034,107 @@ class TestHeterogeneousCommodityControl:
         np.testing.assert_allclose(prob.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0)
         np.testing.assert_allclose(prob.get_val("slc.cheap_electricity_set_point"), 3000.0)
         np.testing.assert_allclose(prob.get_val("slc.expensive_electricity_set_point"), 2000.0)
+
+    def test_dynamic_ratio_overrides_static(self):
+        """Measured consumption drives the ratio, overriding the static tech-config value."""
+        tech_connections = [
+            ["grid", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "demand", "hydrogen", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="hydrogen",
+            demand_commodity_rate_units="kg/h",
+        )
+        # Static ratio is 50, but the measured ratio (5100 / 100 = 51) should win.
+        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            tech_config,
+            demand=100.0,
+            commodity_units={"electricity": "kW"},
+        )
+        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        prob.set_val("slc.electrolyzer_hydrogen_out", 100.0)
+        prob.set_val("slc.electrolyzer_electricity_consumed", 5100.0)
+        prob.run_model()
+
+        np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 100.0 * 51.0)
+
+    def test_dynamic_ratio_time_varying_with_zero_output_fallback(self):
+        """Per-timestep measured ratios apply; a zero-output timestep falls back to static."""
+        tech_connections = [
+            ["grid", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "demand", "hydrogen", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="hydrogen",
+            demand_commodity_rate_units="kg/h",
+        )
+        tech_config = _tech_config_with_ratios({"electrolyzer": {"electricity_per_hydrogen": 50.0}})
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            tech_config,
+            demand=100.0,
+            commodity_units={"electricity": "kW"},
+        )
+        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        # Third timestep produces no hydrogen, so its ratio falls back to the static 50.
+        prob.set_val("slc.electrolyzer_hydrogen_out", [100.0, 100.0, 0.0, 100.0])
+        prob.set_val("slc.electrolyzer_electricity_consumed", [5100.0, 4000.0, 9999.0, 6000.0])
+        prob.run_model()
+
+        # ratio = [51, 40, 50 (fallback), 60]; derived electricity = 100 * ratio
+        np.testing.assert_allclose(
+            prob.get_val("slc.grid_electricity_set_point"), [5100.0, 4000.0, 5000.0, 6000.0]
+        )
+
+    def test_dynamic_ratio_without_static_does_not_warn(self):
+        """A connected consumption signal enables propagation with no static ratio or warning."""
+        tech_connections = [
+            ["grid", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "demand", "hydrogen", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="hydrogen",
+            demand_commodity_rate_units="kg/h",
+        )
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            tech_config={},
+            demand=100.0,
+            commodity_units={"electricity": "kW"},
+        )
+        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        prob.set_val("slc.electrolyzer_hydrogen_out", 100.0)
+        prob.set_val("slc.electrolyzer_electricity_consumed", 5100.0)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            prob.run_model()
+
+        assert not any("No conversion ratio" in str(w.message) for w in caught)
+        np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 100.0 * 51.0)

@@ -84,6 +84,58 @@ def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_
     return 0.0, n_timesteps
 
 
+def detect_commodity_converters(technology_graph, input_techs, produced_by_tech):
+    """Detect commodity converters from the technology graph.
+
+    A converter is a controller-managed technology that produces a commodity it
+    does not itself consume (for example an electrolyzer: electricity ->
+    hydrogen, or an ammonia synloop: hydrogen -> ammonia). Consumed commodities
+    are read directly from each technology's incoming graph edges and produced
+    commodities from ``produced_by_tech``; this direct-edge definition is robust
+    for converter chains (A -> B -> C, where B and C both convert).
+
+    This module-level helper is shared by the controller component (which calls
+    it with its own graph and classification) and ``H2IntegrateModel`` (which
+    calls it during classification so the same converter set drives the
+    consumption-signal connections).
+
+    Args:
+        technology_graph (nx.DiGraph): Directed technology graph with a
+            ``commodity`` attribute on each edge.
+        input_techs (Iterable[str]): Controller-managed technologies that may
+            produce a commodity (fixed, flexible, dispatchable, storage).
+        produced_by_tech (Mapping[str, Iterable[str]]): Mapping of technology
+            name to the commodities it produces.
+
+    Returns:
+        set[tuple[str, str, str]]: ``(in_commodity, tech_name, out_commodity)``
+        tuples, one per detected conversion.
+    """
+
+    def _as_list(commodity):
+        if commodity is None:
+            return []
+        if isinstance(commodity, str):
+            return [commodity]
+        return list(commodity)
+
+    converters = set()
+    for tech_name in input_techs:
+        produced_commodities = set(produced_by_tech.get(tech_name, ()))
+        if not produced_commodities:
+            continue
+
+        consumed_commodities = set()
+        for _src, _dst, edge_commodity in technology_graph.in_edges(tech_name, data="commodity"):
+            consumed_commodities.update(_as_list(edge_commodity))
+
+        for out_commodity in produced_commodities - consumed_commodities:
+            for in_commodity in consumed_commodities - produced_commodities:
+                converters.add((in_commodity, tech_name, out_commodity))
+
+    return converters
+
+
 class SystemLevelControlBase(om.ExplicitComponent):
     """Base class for system-level controllers.
 
@@ -602,59 +654,50 @@ class SystemLevelControlBase(om.ExplicitComponent):
     # ------------------------------------------------------------------
 
     def _build_conversion_ratios(self):
-        """Detect commodity converters and read their static conversion ratios.
+        """Detect commodity converters and read their conversion ratios.
 
         A converter is a controller-managed technology that produces a commodity
         it does not itself consume (for example an electrolyzer:
         electricity -> hydrogen, or an ammonia synloop: hydrogen -> ammonia).
-        Consumed commodities are read directly from each technology's incoming
-        graph edges and produced commodities from ``techs_to_commodities``; this
-        direct-edge definition is robust for converter chains (A -> B -> C,
-        where B and C both convert).
+        Converters are taken from ``slc_topology["converters"]`` when
+        ``H2IntegrateModel`` provides them, and otherwise detected here with
+        ``detect_commodity_converters`` so the component remains usable
+        standalone (for example in unit tests).
 
-        Populates three attributes used by ``_run_dispatch`` to translate demand
+        Populates the attributes used by ``_run_dispatch`` to translate demand
         for one commodity into demand for an upstream (input) commodity:
 
         - ``self._converters``: set of ``(in_commodity, tech_name,
           out_commodity)`` tuples (empty for single-commodity systems).
         - ``self.conversion_ratios``: mapping of ``(tech_name, in_commodity,
-          out_commodity)`` to a float ratio read from the tech config at
+          out_commodity)`` to a float static ratio read from the tech config at
           ``technologies.<tech>.model_inputs.control_parameters.
           conversion_ratios.<in_commodity>_per_<out_commodity>``.
+        - ``self._converter_consumed_names``: mapping of the same key to the
+          ``{tech}_{in_commodity}_consumed`` input registered for the dynamic
+          (measured) ratio path.
         - ``self._missing_ratio_warned``: set used to emit the "missing ratio"
           warning at most once per converter.
 
-        Ratios are interpreted such that ``input_rate = output_rate * ratio``
-        in each commodity's rate units (for example ``51 kWh/kg`` translates a
-        hydrogen production rate in ``kg/h`` into an electricity demand in
-        ``kW``). Converters whose input commodity has no controller-managed
-        producer (e.g. a feedstock-supplied nitrogen stream) do not
-        require a ratio.
+        Static ratios are interpreted such that ``input_rate = output_rate *
+        ratio`` in each commodity's rate units (for example ``51 kWh/kg``
+        translates a hydrogen production rate in ``kg/h`` into an electricity
+        demand in ``kW``). When a converter reports its consumption via a
+        ``{in_commodity}_consumed`` output (wired by ``H2IntegrateModel``), the
+        ratio is measured per timestep as ``consumed / produced`` and the static
+        ratio is used only as the zero-output fallback. Converters whose input
+        commodity has no controller-managed producer (for example a
+        feedstock-supplied nitrogen stream) do not require a ratio.
         """
-
-        def _as_list(commodity):
-            if commodity is None:
-                return []
-            if isinstance(commodity, str):
-                return [commodity]
-            return list(commodity)
-
-        # Detect converters: techs that produce a commodity they do not consume
-        self._converters = set()
-        for tech_name in self.input_techs:
-            produced_commodities = set(self._get_commodity_for_tech(tech_name))
-            if not produced_commodities:
-                continue
-
-            consumed_commodities = set()
-            for _src, _dst, edge_commodity in self.technology_graph.in_edges(
-                tech_name, data="commodity"
-            ):
-                consumed_commodities.update(_as_list(edge_commodity))
-
-            for out_commodity in produced_commodities - consumed_commodities:
-                for in_commodity in consumed_commodities - produced_commodities:
-                    self._converters.add((in_commodity, tech_name, out_commodity))
+        converters = self.options["slc_topology"].get("converters")
+        if converters is None:
+            produced_by_tech = defaultdict(set)
+            for tech_name, commodity in self.techs_to_commodities:
+                produced_by_tech[tech_name].add(commodity)
+            converters = detect_commodity_converters(
+                self.technology_graph, self.input_techs, produced_by_tech
+            )
+        self._converters = set(converters)
 
         # Read each converter's static input-per-output ratio from the tech config
         self.conversion_ratios = {}
@@ -673,15 +716,50 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     ratios[key]
                 )
 
+        # Register a measured-consumption input for every converter whose input
+        # commodity has a controller-managed producer. H2IntegrateModel wires
+        # the converter's ``{in_commodity}_consumed`` output to this input so
+        # the ratio can be measured per timestep. The NaN default marks the
+        # input as unconnected (dynamic ratio unavailable) when running the
+        # component standalone
+        self._converter_consumed_names = {}
+        for in_commodity, tech_name, out_commodity in self._converters:
+            has_producers = any(
+                in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
+            )
+            if not has_producers:
+                continue
+
+            if in_commodity in self.commodities_to_units:
+                unit_kwargs = {"units": self.commodities_to_units[in_commodity]}
+            elif in_commodity in self.commodities_to_ref_var:
+                unit_kwargs = {
+                    "units": None,
+                    "copy_units": self.commodities_to_ref_var[in_commodity],
+                }
+            else:
+                unit_kwargs = {"units": None}
+
+            consumed_name = f"{tech_name}_{in_commodity}_consumed"
+            self.add_input(
+                consumed_name,
+                val=np.full(self.n_timesteps, np.nan),
+                shape=self.n_timesteps,
+                desc=f"Measured {in_commodity} consumed by converter {tech_name}",
+                **unit_kwargs,
+            )
+            self._converter_consumed_names[(tech_name, in_commodity, out_commodity)] = consumed_name
+
     def _run_dispatch(self, inputs, outputs):
         """Dispatch every commodity level required to meet the demand profile.
 
         The demand commodity is dispatched first. For each converter that
         produces a just-dispatched commodity, the converter's committed output
         set-point is translated into demand for its input commodity (via its
-        static conversion ratio) and accumulated. Commodities are processed in
-        topological order of this demand-flow graph so that all contributions
-        to an input commodity are gathered before it is dispatched.
+        conversion ratio, measured when available and otherwise static) and
+        accumulated. Commodities are processed in topological order of this
+        demand-flow graph so that all contributions to an input commodity are
+        gathered before it is dispatched.
 
         Subclasses implement the strategy-specific dispatchable step by
         overriding ``_dispatch_dispatchables``; the fixed, flexible, and
@@ -865,11 +943,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         no controller-managed producer (for example a feedstock-supplied stream)
         are skipped.
 
-        Backward propagation is opt-in: if no conversion ratio is configured for
-        a converter whose input commodity does have controllable producers, the
-        propagation is skipped (upstream techs keep their default dispatch, the
-        legacy behavior) and a one-time warning is emitted so the missing ratio
-        is discoverable when heterogeneous-commodity control is intended.
+        Backward propagation is opt-in: if a converter whose input commodity has
+        controllable producers exposes neither a static ratio nor a connected
+        consumption signal, the propagation is skipped (upstream techs keep their
+        default dispatch, the legacy behavior) and a one-time warning is emitted
+        so the missing ratio is discoverable when heterogeneous-commodity control
+        is intended.
         """
         has_producers = any(
             in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
@@ -877,25 +956,24 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if not has_producers:
             return
 
-        key = (tech_name, in_commodity, out_commodity)
-        if key not in self.conversion_ratios:
+        ratio = self._conversion_ratio(tech_name, in_commodity, out_commodity, inputs)
+        if ratio is None:
+            key = (tech_name, in_commodity, out_commodity)
             if key not in self._missing_ratio_warned:
                 self._missing_ratio_warned.add(key)
                 warnings.warn(
-                    f"No conversion ratio defined for converter '{tech_name}' "
+                    f"No conversion ratio available for converter '{tech_name}' "
                     f"('{in_commodity}' -> '{out_commodity}'); system-level control will "
                     f"not translate '{out_commodity}' demand into '{in_commodity}' demand, "
                     f"and upstream '{in_commodity}' technologies keep their default "
-                    f"dispatch. Define technologies.{tech_name}.model_inputs."
-                    f"control_parameters.conversion_ratios.{in_commodity}_per_{out_commodity} "
-                    f"in the tech config to enable heterogeneous-commodity control.",
+                    f"dispatch. Connect the converter's '{in_commodity}_consumed' output or "
+                    f"define technologies.{tech_name}.model_inputs.control_parameters."
+                    f"conversion_ratios.{in_commodity}_per_{out_commodity} in the tech config "
+                    f"to enable heterogeneous-commodity control.",
                     stacklevel=2,
                 )
             return
 
-        # ``key`` is guaranteed present here (checked above); apply the static
-        # input-per-output ratio to the converter's committed output
-        ratio = np.full(self.n_timesteps, self.conversion_ratios[key])
         set_point = np.asarray(outputs[f"{tech_name}_{out_commodity}_set_point"], dtype=float)
         contribution = np.maximum(set_point, 0.0) * ratio
 
@@ -903,6 +981,55 @@ class SystemLevelControlBase(om.ExplicitComponent):
             derived_demand[in_commodity] = derived_demand[in_commodity] + contribution
         else:
             derived_demand[in_commodity] = contribution
+
+    def _conversion_ratio(self, tech_name, in_commodity, out_commodity, inputs):
+        """Return a per-timestep input-per-output conversion ratio, or ``None``.
+
+        Ratio precedence:
+
+        1. Dynamic (measured): where the converter reports its consumption via a
+           connected ``{tech}_{in_commodity}_consumed`` input, the ratio is
+           ``consumed / produced`` at every timestep with nonzero production.
+           This is the general, nonlinear-aware path; the plant solver resolves
+           the resulting feedback without an analytic Jacobian.
+        2. Static (fallback): the constant ratio from the tech config, used at
+           zero-output timesteps and when no consumption is measured. When no
+           static ratio is configured, the mean measured ratio is used as the
+           zero-output fallback.
+
+        Returns ``None`` when neither a static ratio nor a connected consumption
+        signal is available, signalling the caller to skip propagation.
+        """
+        key = (tech_name, in_commodity, out_commodity)
+        static = self.conversion_ratios.get(key)
+
+        consumed = None
+        consumed_name = self._converter_consumed_names.get(key)
+        if consumed_name is not None:
+            measured = np.asarray(inputs[consumed_name], dtype=float)
+            # A registered but unconnected input keeps its NaN sentinel; treat it
+            # as "no measurement" so the static ratio (or the warning) applies
+            if np.any(np.isfinite(measured)):
+                consumed = measured
+
+        if static is None and consumed is None:
+            return None
+
+        if consumed is None:
+            return np.full(self.n_timesteps, float(static))
+
+        produced = np.asarray(inputs[f"{tech_name}_{out_commodity}_out"], dtype=float)
+        valid = np.isfinite(consumed) & (produced != 0.0)
+        dynamic = np.divide(consumed, produced, out=np.zeros_like(produced), where=valid)
+
+        if static is not None:
+            nominal = float(static)
+        elif np.any(valid):
+            nominal = float(dynamic[valid].mean())
+        else:
+            nominal = 0.0
+
+        return np.where(valid, dynamic, nominal)
 
     # ------------------------------------------------------------------
     # Marginal-cost helpers for cost-aware controllers

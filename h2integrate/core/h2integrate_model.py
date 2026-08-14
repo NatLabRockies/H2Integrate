@@ -1,6 +1,7 @@
 import re
 import importlib.util
 from enum import IntEnum
+from collections import defaultdict
 
 import numpy as np
 import networkx as nx
@@ -20,6 +21,7 @@ from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+    detect_commodity_converters,
     _get_tech_buy_price_input_name,
 )
 
@@ -632,6 +634,22 @@ class H2IntegrateModel:
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
+        # Detect commodity converters (e.g. electrolyzer: electricity -> hydrogen)
+        # so the same converter set drives backward demand propagation in the
+        # controller and the consumption-signal connections made below
+        converter_input_classifiers = {"fixed", "flexible", "dispatchable", "storage"}
+        converter_input_techs = {
+            tech
+            for tech, classifier in upstream_tech_control_classifiers.items()
+            if classifier in converter_input_classifiers
+        }
+        produced_by_tech = defaultdict(set)
+        for tech, commodity in tech_to_commodity:
+            produced_by_tech[tech].add(commodity)
+        slc_topology["converters"] = detect_commodity_converters(
+            upstream_tech_graph, converter_input_techs, produced_by_tech
+        )
+
         return slc_topology
 
     def add_system_level_controller(self, slc_topology):
@@ -804,6 +822,30 @@ class H2IntegrateModel:
             self.plant.connect(
                 f"system_level_controller.{tech_name}_{commodity}_set_point",
                 f"{tech_name}.{commodity}_set_point",
+            )
+
+        # --- Step 3b: Connect converter consumption signals ---------------
+        # For each detected converter whose input commodity has a
+        # controller-managed producer, wire the converter's measured
+        # ``{in_commodity}_consumed`` output to the controller so it can derive
+        # a per-timestep conversion ratio (heterogeneous-commodity control).
+        converters = slc_topology.get("converters", set())
+        classifiers = slc_topology["tech_control_classifiers"]
+        converter_input_classifiers = {"fixed", "flexible", "dispatchable", "storage"}
+        produced_by_tech = defaultdict(set)
+        for tech_name, commodity in slc_topology["tech_to_commodity"]:
+            produced_by_tech[tech_name].add(commodity)
+        for in_commodity, converter_tech, _out_commodity in converters:
+            has_producers = any(
+                in_commodity in produced_by_tech[tech]
+                for tech, classifier in classifiers.items()
+                if classifier in converter_input_classifiers
+            )
+            if not has_producers:
+                continue
+            self.plant.connect(
+                f"{converter_tech}.{in_commodity}_consumed",
+                f"system_level_controller.{converter_tech}_{in_commodity}_consumed",
             )
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
