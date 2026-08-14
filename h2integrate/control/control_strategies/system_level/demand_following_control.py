@@ -1,5 +1,3 @@
-import numpy as np
-
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
     SystemLevelControlBase,
 )
@@ -29,57 +27,14 @@ class DemandFollowingControl(SystemLevelControlBase):
        storage. The remaining demand (floored at zero) is split **evenly**
        across all dispatchable techs that produce the demanded commodity
        (each receives ``remaining_demand / n_dispatchable``).
+
+    For heterogeneous-commodity systems, this four-step order is applied at
+    each commodity level: after the demand commodity is dispatched, the demand
+    placed on upstream converters (for example a hydrogen electrolyzer feeding
+    an ammonia synloop) is translated into demand for their input commodity via
+    the configured conversion ratios and the same dispatch is repeated. See
+    ``SystemLevelControlBase._run_dispatch``.
     """
 
     def compute(self, inputs, outputs):
-        commodity = self.commodity
-        demand = inputs[self.demand_input_name].copy()
-
-        # 1. Fixed techs: always produce, subtract from demand
-        for fixed_tech in self.fixed_techs:
-            commodity_from_tech = self._get_commodity_for_tech(fixed_tech)
-            for tech_commodity in commodity_from_tech:
-                if tech_commodity == commodity:
-                    demand = self._subtract_fixed(fixed_tech, demand, commodity, inputs)
-
-        # 2. Flexible techs: operate at full production
-        for flexible_tech in self.flexible_techs:
-            commodity_from_tech = self._get_commodity_for_tech(flexible_tech)
-            for tech_commodity in commodity_from_tech:
-                if tech_commodity == commodity:
-                    demand = self._subtract_flexible(
-                        flexible_tech, demand, commodity, inputs, outputs
-                    )
-                else:
-                    if f"{flexible_tech}_rated_{tech_commodity}_production" in inputs:
-                        # set the per-tech set-point as the rated production
-                        outputs[f"{flexible_tech}_{tech_commodity}_set_point"] = inputs[
-                            f"{flexible_tech}_rated_{tech_commodity}_production"
-                        ] * np.ones(self.n_timesteps)
-
-        # 3. Storage dispatch
-        # number of storage components that produce the demanded commodity
-        n_storage = len(
-            [s for s in self.storage_techs if commodity in self._get_commodity_for_tech(s)]
-        )
-        for storage_tech in self.storage_techs:
-            commodity_from_tech = self._get_commodity_for_tech(storage_tech)
-            if commodity in commodity_from_tech:
-                demand = self._dispatch_storage(
-                    storage_tech, demand / n_storage, commodity, inputs, outputs
-                )
-
-        # 4. Dispatchable techs
-        remaining_demand = np.maximum(demand, 0.0)
-
-        # calculate the number of dispatchable technologies that
-        # produce the demanded commodity
-        n_dispatchable = len(
-            [s for s in self.dispatchable_techs if commodity in self._get_commodity_for_tech(s)]
-        )
-        for dispatchable_tech in self.dispatchable_techs:
-            commodity_from_tech = self._get_commodity_for_tech(dispatchable_tech)
-            if commodity in commodity_from_tech:
-                outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
-                    remaining_demand / n_dispatchable
-                )
+        self._run_dispatch(inputs, outputs)

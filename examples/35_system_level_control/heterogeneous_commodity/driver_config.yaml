@@ -1,0 +1,4 @@
+name: driver_config
+description: This analysis runs a wind and battery powered green ammonia plant under system-level control
+general:
+  folder_output: outputs
