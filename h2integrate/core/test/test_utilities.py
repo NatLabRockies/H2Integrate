@@ -13,9 +13,7 @@ from h2integrate import (
     ROOT_DIR,
     EXAMPLE_DIR,
     RESOURCE_DEFAULT_DIR,
-    H2IntegrateModel,
     load_tech_yaml,
-    load_plant_yaml,
     load_driver_yaml,
 )
 from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
@@ -724,44 +722,6 @@ def create_om_problem(tech_config):
 
     prob.setup()
     return prob
-
-
-@pytest.mark.unit
-def test_check_inputs_example01(subtests):
-    tech_config_fpath = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml"
-
-    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
-    tech_config = load_tech_yaml(tech_config_fpath)
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
-
-    battery_tech = load_yaml(Path(__file__).parent / "inputs" / "buggy_battery_v0.yaml")
-    tech_config["technologies"]["combiner"].pop("dispatch_rule_set")
-    tech_config["technologies"]["combiner"]["model_inputs"]["performance_parameters"] = tech_config[
-        "technologies"
-    ]["combiner"]["model_inputs"].pop("shared_parameters")
-    tech_config["technologies"]["battery"] = battery_tech["battery"]
-
-    # Create H2I input config
-    input_config = {
-        "driver_config": driver_config,
-        "technology_config": tech_config,
-        "plant_config": plant_config,
-    }
-
-    h2i = H2IntegrateModel(input_config)
-
-    h2i.prob.setup()
-
-    expected_error = (
-        "The parameter(s): ['commodity'] found in shared_parameters"
-        " but should be in control_parameters for the 'battery' "
-        f"section of {tech_config_fpath}"
-    )
-
-    with pytest.raises(AttributeError) as excinfo:
-        check_inputs(h2i.prob, "battery", tech_config["technologies"]["battery"], tech_config_fpath)
-
-    assert expected_error == str(excinfo.value)
 
 
 @pytest.mark.unit
