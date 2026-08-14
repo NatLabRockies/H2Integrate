@@ -48,6 +48,7 @@ supported_models = _ModelRegistry(
     {
         # Resources
         "TidalResource": "resource.tidal:TidalResource",
+        "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
@@ -71,6 +72,7 @@ supported_models = _ModelRegistry(
         "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
         "ATBResComPVCostModel": "converters.solar:ATBResComPVCostModel",
         "PySAMTidalPerformanceModel": "converters.water_power:PySAMTidalPerformanceModel",
+        "PySAMWavePerformanceModel": "converters.water_power:PySAMWavePerformanceModel",
         "PySAMMarineCostModel": "converters.water_power:PySAMMarineCostModel",
         "RunOfRiverHydroPerformanceModel": "converters.water_power:RunOfRiverHydroPerformanceModel",
         "RunOfRiverHydroCostModel": "converters.water_power:RunOfRiverHydroCostModel",

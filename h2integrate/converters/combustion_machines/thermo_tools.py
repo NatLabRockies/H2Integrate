@@ -1,5 +1,10 @@
 import numpy as np
-import pyfluids
+
+
+try:
+    import pyfluids
+except ModuleNotFoundError:
+    pyfluids = None
 
 
 DRY_AIR_MASS_FRACTIONS = {
@@ -11,19 +16,26 @@ DRY_AIR_MASS_FRACTIONS = {
 }
 
 
-def celsius_to_kelvin(degC):
+def celsius_to_kelvin(degC: float) -> float:
+    """Convert from Celsius to Kelvin."""
     return degC + 273.15  # K
 
 
-def kelvin_to_celsius(degK):
+def kelvin_to_celsius(degK: float) -> float:
+    """Convert from Kelvin to Celsius."""
     return degK - 273.15  # C
 
 
 def humidity_ratio_to_water_mass_fraction(humidity_ratio: float) -> float:
+    """Convert from humidity ratio to water mass fraction."""
     return humidity_ratio / (1.0 + humidity_ratio)
 
 
-def enforce_gas_phase(fluid):
+def enforce_gas_phase(
+    fluid: pyfluids.fluids.abstract_fluid.AbstractFluid,
+) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """Enforce pyfluids substance remains in gas phase."""
+
     phases = getattr(pyfluids, "Phases", None)
     phase_gas = getattr(phases, "Gas", None) if phases is not None else None
     if phase_gas is None:
@@ -38,6 +50,24 @@ def make_humid_air_mixture(
     temp_rel: float,
     rel_humidity: float,
 ) -> pyfluids.Mixture:
+    """
+    Build a humid air gas mixture from pressure, temperature, and relative humidity.
+
+    The water content is first evaluated with ``pyfluids.HumidAir`` to obtain the
+    humidity ratio at the requested thermodynamic state. That ratio is then
+    converted to a water mass fraction and combined with the dry-air composition
+    defined in ``DRY_AIR_MASS_FRACTIONS`` to create a ``pyfluids.Mixture``.
+
+    Args:
+        pressure: mixture pressure in Pa.
+        temp_rel: mixture temperature in C.
+        rel_humidity: relative humidity as a fraction between 0.0 and 1.0.
+
+    Returns:
+        pyfluids.Mixture: humid air mixture made of dry-air species and water vapor,
+            constrained to the gas phase when supported by ``pyfluids``.
+    """
+
     # get absolute mass humidity ratio using conditions w/ pyfluid humidair
     humidity_ratio = (
         pyfluids.HumidAir()
@@ -70,6 +100,29 @@ def compute_isentropic_compression_outlet_state(
     ratio_P: float | None = None,
     ratio_compression: float | None = None,
 ) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """
+    Compute the outlet state for an isentropic compression process.
+
+    The outlet state is determined from the inlet state by holding entropy
+    constant and specifying the compression with either a pressure ratio or a
+    compression ratio based on specific volume. Exactly one of
+    ``ratio_P`` or ``ratio_compression`` must be provided.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the fluid.
+        ratio_P: pressure ratio applied to the inlet pressure to obtain the
+            outlet pressure.
+        ratio_compression: compression ratio applied to the inlet specific
+            volume to obtain the outlet specific volume.
+
+    Returns:
+        the outlet fluid state after isentropic compression.
+
+    Raises:
+        ValueError: if neither or both of ``ratio_P`` and
+            ``ratio_compression`` are provided.
+    """
+
     if not (ratio_P or ratio_compression) or (ratio_P and ratio_compression):
         raise ValueError(
             "compression process must specify exactly one of pressure or compression ratio"
@@ -90,10 +143,30 @@ def compute_isentropic_compression_outlet_state(
 
 
 def compute_work_rate_isentropic(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity => returns unit-mass kJ/kg
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity => returns unit-mass kJ/kg
+) -> float:
+    """
+    Compute the ideal shaft work rate for an isentropic turbomachine process.
+
+    The work rate is computed from the enthalpy difference between the inlet
+    and outlet states and scaled by the fluid mass flow rate. A positive value
+    indicates work done by the fluid, consistent with turbine-style expansion.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state of the working fluid after the
+            isentropic process.
+        mass_flow_fluid: mass flow rate of the fluid in kg/s. Defaults to 1.0,
+            which yields a specific work-like value in kJ/kg.
+
+    Returns:
+        ideal isentropic work rate in kW, computed as
+        ``mass_flow_fluid * (h_in - h_out)`` with enthalpy converted from J/kg
+        to kJ/kg.
+    """
+
     # work done by a system should be positive
     return mass_flow_fluid * (
         state_inlet.enthalpy / 1.0e3 - state_outlet.enthalpy / 1.0e3
@@ -101,11 +174,33 @@ def compute_work_rate_isentropic(
 
 
 def compute_turbine_work_rate(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,
-    isentropic_efficiency=1.0,
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,
+    isentropic_efficiency: float = 1.0,
+) -> float:
+    """
+    Compute turbine work rate from an isentropic reference state.
+
+    The returned value follows the convention used in this module, where
+    turbine work is positive because work is produced by the system. The
+    actual turbine work is obtained by scaling the ideal isentropic work with
+    the turbine isentropic efficiency.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state of the working fluid after the
+            isentropic expansion.
+        mass_flow_fluid: mass flow rate of the fluid in kg/s. Defaults to 1.0,
+            which yields a specific work-like value in kJ/kg.
+        isentropic_efficiency: turbine isentropic efficiency as a fraction.
+            Defaults to 1.0.
+
+    Returns:
+        turbine work rate in kW, computed as the isentropic work rate
+        multiplied by the isentropic efficiency.
+    """
+
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -115,11 +210,33 @@ def compute_turbine_work_rate(
 
 
 def compute_compressor_work_rate(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity, returns unit-mass kJ/kg
-    isentropic_efficiency=1.0,
-):
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity, returns unit-mass kJ/kg
+    isentropic_efficiency: float = 1.0,  # by default unity
+) -> float:
+    """
+    Compute compressor shaft work rate from an isentropic reference state.
+
+    The returned value follows the convention used in this module, where
+    compressor work is negative because work is supplied to the system. The
+    actual compressor work is obtained by scaling the isentropic work with the
+    inverse of the isentropic efficiency.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the working fluid.
+        state_outlet: outlet thermodynamic state corresponding to the
+            isentropic compression reference.
+        mass_flow_fluid: working-fluid mass flow rate in kg/s. Defaults to 1.0,
+            which returns a specific work rate in kJ/kg.
+        isentropic_efficiency: compressor isentropic efficiency as a fraction.
+            Defaults to 1.0.
+
+    Returns:
+        compressor work rate in kW, or specific compressor work in kJ/kg when
+        ``mass_flow_fluid`` is 1.0.
+    """
+
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -129,19 +246,46 @@ def compute_compressor_work_rate(
 
 
 def compute_heat_transfer(
-    state_inlet,
-    state_outlet,
-    mass_flow_fluid=1.0,  # by default unity, returns unit-mass kJ/kg
-):
-    # heat transfer to a system should be positive
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    state_outlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
+    mass_flow_fluid: float = 1.0,  # by default unity, returns unit-mass kJ/kg
+) -> float:
+    """
+    Compute heat transfer from the enthalpy change between two states.
+    """
+
+    # sign convention: heat transfer _to_ a system should be positive
     return mass_flow_fluid * (state_outlet.enthalpy / 1.0e3 - state_inlet.enthalpy / 1.0e3)  # kJ/s
 
 
 def compute_isentropic_expansion_outlet_state(
-    state_inlet,
+    state_inlet: pyfluids.fluids.abstract_fluid.AbstractFluid,
     ratio_P: float | None = None,
     ratio_compression: float | None = None,
-):
+) -> pyfluids.fluids.abstract_fluid.AbstractFluid:
+    """
+    Compute the outlet state for an isentropic expansion process.
+
+    The outlet state is determined from the inlet state by holding entropy
+    constant and specifying the expansion with either a pressure ratio or an
+    expansion ratio based on specific volume. Exactly one of ``ratio_P`` or
+    ``ratio_compression`` must be provided.
+
+    Args:
+        state_inlet: inlet thermodynamic state of the fluid.
+        ratio_P: pressure ratio used to reduce the inlet pressure to the outlet
+            pressure.
+        ratio_compression: expansion ratio applied to the inlet specific
+            volume to obtain the outlet specific volume.
+
+    Returns:
+        the outlet fluid state after isentropic expansion.
+
+    Raises:
+        ValueError: if neither or both of ``ratio_P`` and
+            ``ratio_compression`` are provided.
+    """
+
     if not (ratio_P or ratio_compression) or (ratio_P and ratio_compression):
         raise ValueError(
             "compression process must specify exactly one of pressure or compression ratio"
@@ -160,6 +304,26 @@ def compute_isentropic_expansion_outlet_state(
 
 
 class ThermodynamicCycleResult:
+    """
+    Container for thermodynamic cycle states, processes, and losses.
+
+    Stores per-state metadata together with specific work and heat transfer
+    values for each process in the cycle. Optional loss terms can also be
+    tracked by index.
+
+    Attributes:
+        closed (bool): whether the cycle is thermodynamically closed. `true` by default.
+        desc (str): description of the thermodynamic cycle.
+        mass_flowrate (np.ndarray): mass flow rate(s) of the system in kg/s.
+        states (dict[int, pyfluids AbstractFluid]): map from state indices to fluid states.
+        process_work_unit: map of process index pairs (from/to) to specific work in kJ/kg.
+        process_heat_unit: map of process index pairs (from/to) to specific heat transfer in kJ/kg.
+        loss_work_unit: map from loss indices to specific work losses.
+        state_names: map from state indices to state names.
+        process_names: map from process index pairs to process names.
+        loss_names: map from loss indices to loss names.
+    """
+
     closed: bool = True
     desc: str = ""
     mass_flowrate: np.ndarray  # kg/s
@@ -176,6 +340,14 @@ class ThermodynamicCycleResult:
         desc: str | None = None,
         closed: bool | None = None,
     ):
+        """
+        Initialize a thermodynamic cycle result container.
+
+        Args:
+            desc: optional description of the thermodynamic cycle.
+            closed: optional flag indicating whether the cycle is
+                thermodynamically closed.
+        """
         if closed:
             self.closed = closed
         if desc:
@@ -196,6 +368,18 @@ class ThermodynamicCycleResult:
         state: pyfluids.fluids.abstract_fluid.AbstractFluid,
         name: str,
     ):
+        """
+        Add a thermodynamic state to the cycle.
+
+        Args:
+            index: integer identifier for the state.
+            state: fluid state object to store.
+            name: descriptive name for the state.
+
+        Raises:
+            ValueError: if ``index`` is already present in the stored
+                states or state names.
+        """
         # validations
         if index in self.states:
             raise ValueError(f"index {index} already in states")
@@ -214,6 +398,20 @@ class ThermodynamicCycleResult:
         heat_unit: float,  # kJ/kg
         name: str,
     ):
+        """
+        Add a process connecting two existing states.
+
+        Args:
+            index_in: index of the inlet state.
+            index_out: index of the outlet state.
+            work_unit: specific work for the process in kJ/kg.
+            heat_unit: specific heat transfer for the process in kJ/kg.
+            name: descriptive name for the process.
+
+        Raises:
+            ValueError: if either state index has not been added yet, or
+                if the process index pair already exists.
+        """
         process_index = (index_in, index_out)
         # validations
         if (index_in not in self.states) or (index_in not in self.state_names):
@@ -242,6 +440,18 @@ class ThermodynamicCycleResult:
         work_unit: float,  # kJ/kg
         name: str,
     ):
+        """
+        Add a work loss term to the cycle.
+
+        Args:
+            loss_index: integer identifier for the loss term.
+            work_unit: specific work loss in kJ/kg.
+            name: descriptive name for the loss term.
+
+        Raises:
+            ValueError: if ``loss_index`` already exists in the loss
+                metadata or loss work mapping.
+        """
         if loss_index in self.loss_names:
             raise ValueError(f"loss {loss_index} already in losses")
         if loss_index in self.loss_work_unit:
@@ -255,6 +465,17 @@ class ThermodynamicCycleResult:
         self,
         losses=True,
     ):
+        """
+        Compute the net cycle work.
+
+        Args:
+            losses: whether to subtract registered work losses from the
+                total process work.
+
+        Returns:
+            net work rate in kJ/s when ``mass_flowrate`` is set, otherwise
+            net specific work in kJ/kg.
+        """
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
         total_work_unit = sum(self.process_work_unit.values())
         if losses:
@@ -262,24 +483,62 @@ class ThermodynamicCycleResult:
         return mass_flowrate * total_work_unit  # kJ/s
 
     def get_net_heat_input(self):
+        """
+        Compute the total positive heat input to the cycle.
+
+        Returns:
+            heat input rate in kJ/s when ``mass_flowrate`` is set,
+            otherwise specific heat input in kJ/kg.
+        """
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
         return mass_flowrate * sum(np.maximum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_net_heat_rejection(self):
+        """
+        Compute the total heat rejected by the cycle.
+
+        Returns:
+            heat rejection rate in kJ/s when ``mass_flowrate`` is set,
+            otherwise specific heat rejection in kJ/kg.
+        """
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
         return mass_flowrate * sum(np.minimum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_back_work_ratio(self):
+        """
+        Compute the ratio of back work to forward work.
+
+        Returns:
+            dimensionless back work ratio.
+        """
         back_work = -sum(np.minimum(0.0, list(self.process_work_unit.values())))  # kJ/s
         forward_work = sum(np.maximum(0.0, list(self.process_work_unit.values())))  # kJ/s
         return back_work / forward_work  # -
 
     def get_efficiency(self):
+        """
+        Compute the thermal efficiency of the cycle.
+
+        Returns:
+            dimensionless cycle efficiency defined as net work divided by
+            net heat input.
+        """
         net_work = self.get_net_work()  # kJ/kg
         net_heat_input = self.get_net_heat_input()  # kJ/kg
         return net_work / net_heat_input  # -
 
     def get_fuel_mass_flow(self, LHV_fuel, heating_process=(2, 3)):
+        """
+        Compute the fuel mass flow rate required by a heating process.
+
+        Args:
+            LHV_fuel: lower heating value of the fuel in J/kg.
+            heating_process: process index pair associated with the
+                combustor or heat addition step.
+
+        Returns:
+            fuel mass flow rate in kg/s.
+        """
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
         combustor_heat_input_rate = (
             mass_flowrate * self.process_heat_unit[heating_process]
@@ -288,6 +547,17 @@ class ThermodynamicCycleResult:
         return mass_flowrate_fuel
 
     def get_fuel_air_ratio(self, LHV_fuel, heating_process=(2, 3)):
+        """
+        Compute the fuel-to-air mass ratio for a heating process.
+
+        Args:
+            LHV_fuel: lower heating value of the fuel in J/kg.
+            heating_process: process index pair associated with the
+                combustor or heat addition step.
+
+        Returns:
+            dimensionless fuel-to-air mass ratio.
+        """
         mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
         mass_flowrate_fuel = self.get_fuel_mass_flow(LHV_fuel, heating_process=heating_process)
         return mass_flowrate_fuel / mass_flowrate
@@ -295,6 +565,9 @@ class ThermodynamicCycleResult:
     def print_states(
         self,
     ):
+        """
+        Print a formatted summary of all stored thermodynamic states.
+        """
         for idx_state, state in self.states.items():
             print(f"{(idx_state):>3d}:", end="")
             print(f" T={state.temperature:.2f}°C;", end="")
@@ -304,6 +577,12 @@ class ThermodynamicCycleResult:
             print()
 
     def __str__(self):
+        """
+        Build a human-readable summary of the cycle contents.
+
+        Returns:
+            formatted string containing state, process, and loss data.
+        """
         output = f"\n{self.desc}\n\n" if self.desc else "\n"
         output += "\tstates:\n"
         for idx_state, state in self.states.items():

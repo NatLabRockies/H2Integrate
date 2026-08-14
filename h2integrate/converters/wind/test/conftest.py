@@ -77,7 +77,7 @@ def wind_plant_config():
             "ops_strategies_loss": 10.0,
         },
     }
-    design_config = {
+    config = {
         "num_turbines": 50,
         "hub_height": 115,
         "rotor_diameter": 170,
@@ -87,4 +87,4 @@ def wind_plant_config():
         "pysam_options": pysam_config,
         "layout": layout_config,
     }
-    return design_config
+    return config

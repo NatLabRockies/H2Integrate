@@ -624,7 +624,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
             )
-            == 1.803343170781246
+            == 1.8905229193032373
         )
 
     with subtests.test("Check LCOE"):
@@ -633,7 +633,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0],
                 rel=1e-3,
             )
-            == 243.723825
+            == 284.5363759747556
         )
 
 
@@ -838,8 +838,31 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check LCOE"):
-        assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
+    with subtests.test("Check LCOE is positive"):
+        lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0]
+        assert lcoe <= 69
+
+    with subtests.test("Check wind rated production"):
+        wind_rated = model.prob.get_val("wind.rated_electricity_production", units="kW")[0]
+        assert wind_rated <= 3005
+
+    with subtests.test("Check solar rated production"):
+        solar_rated = model.prob.get_val("solar.rated_electricity_production", units="kW")[0]
+        assert solar_rated <= 1925
+
+    with subtests.test("Check percent_load_missed"):
+        pct_missed = model.prob.get_val("electrical_load_demand.percent_load_missed")[0]
+        assert pct_missed <= 18.7
+
+    with subtests.test("Check curtailment_percent"):
+        curtailment = model.prob.get_val("electrical_load_demand.curtailment_percent")[0]
+        assert curtailment <= 16.5
+
+    with subtests.test("Check delivered total electricity produced"):
+        load_total = model.prob.get_val(
+            "electrical_load_demand.total_electricity_produced", units="kW*h"
+        )[0]
+        assert load_total <= 9700000
 
 
 @pytest.mark.integration

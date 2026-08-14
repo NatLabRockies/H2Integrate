@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from attrs.validators import in_
 
 import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
@@ -18,7 +19,6 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
     for ambient conditions.
 
     Attributes:
-    -----------
         flowrate_max_fluid_cubic_m_per_s (float): maximum volumetric flowrate of
             working fluid through the turbine in m^3/s.
 
@@ -42,6 +42,13 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
     firing_temp_C: float = field(validator=gt_zero)
     isentropic_efficiency_compressor: float = field(validator=gt_zero)
     isentropic_efficiency_turbine: float = field(validator=gt_zero)
+    fuel_source: str = field(
+        validator=in_(
+            [
+                "natural_gas",
+            ]
+        )
+    )  # TODO: add more here...
 
 
 class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
@@ -66,13 +73,11 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "dispatchable"
 
-    def initialize(self, fuel_source="natural_gas"):
+    def initialize(self):
         super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
-
-        self.fuel_source = fuel_source
 
     def setup(self):
         super().setup()
@@ -91,7 +96,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add natural gas consumed output
         self.add_output(
-            f"{self.fuel_source}_consumed",
+            f"{self.config.fuel_source}_consumed",
             val=0.0,
             shape=self.n_timesteps,
             units="kJ/s",
@@ -125,11 +130,11 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add fuel input, default to 0 --> set using feedstock component
         self.add_input(
-            f"{self.fuel_source}_in",
+            f"{self.config.fuel_source}_in",
             val=0.0,
             shape=self.n_timesteps,
             units="kJ/s",
-            desc="fuel input energy to the turbine/plant in MMBtu/h",
+            desc="fuel input energy to the turbine/plant",
         )
 
         self.add_output(
@@ -137,7 +142,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             val=0.0,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="unmet demand for electricity from the turbine/plant in MW",
+            desc="unmet demand for electricity from the turbine/plant",
         )
 
         self.ngct = NGCT.NGCT(
@@ -168,7 +173,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         # working variables for inputs
         system_capacity_mw = float(inputs["system_capacity"][0])
         flowrate_max_fluid_m3_per_s = float(inputs["flowrate_max_fluid"][0])
-        fuel_source_heating_in_kJ_per_s = inputs[f"{self.fuel_source}_in"]
+        fuel_source_heating_in_kJ_per_s = inputs[f"{self.config.fuel_source}_in"]
 
         # extract from the solar resource data
         temperature_degC = discrete_inputs["solar_resource_data"]["temperature"]
@@ -180,6 +185,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # figure out if we can re-use the cache
         if not all(a == b for a, b in zip(wx_checksums, self.wx_checksums)):
+            # recompute the unit-mass cycle because ambient fluid states are new
             self.wx_checksums = None  # break everything that will be recomputed
             self.ambient_fluid_list = None  # break everything that will be recomputed
             self.fundamental_cycle = None  # break everything that will be recomputed
@@ -193,10 +199,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
                 for T, P in wx_data
             ]
             self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
-            # print("DEBUG!!!!! RE-COMPUTING UNIT-MASS CYCLE B/C AMBIENT FLUID STATES CHANGED")
-        else:
-            pass
-            # print("DEBUG!!!!! RE-USING ORIGINAL CYCLE (NO AMBIENT FLUID CHANGE)")
+        # if the above didn't run, the weather checksums matched and we just use the cache
 
         # extract the net unit mass net work
         unit_mass_net_work_vec = [
@@ -237,29 +240,11 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             m * q for m, q in zip(mass_flowrates, unit_mass_net_heat_input_vec)
         ]  # kJ/s
 
-        # import matplotlib.pyplot as plt
-        # fig, axes = plt.subplots(5, 1, sharex=True)
-        # axes[0].plot(temperature_degC)
-        # axes[0].set_ylabel("Temperature (°C)")
-        # axes[1].plot(pressure_Pa)
-        # axes[1].set_ylabel("Pressure (Pa)")
-        # axes[2].plot(net_work_vec)
-        # axes[2].axhline(system_capacity_mw, c='r', linestyle="--")
-        # axes[2].set_ylabel("Net Work (MW)")
-        # axes[3].plot(volume_flowrates)
-        # axes[3].axhline(flowrate_max_fluid_m3_per_s, c='r', linestyle="--")
-        # axes[3].set_ylabel("Max Flowrate (m³/s)")
-        # axes[4].plot(mass_flowrates)
-        # axes[4].set_ylabel("Mass Flowrate (kg/s)")
-        # axes[4].set_xlabel("Time Step")
-        #
-        # plt.show()
-
         generator_efficiency = self.config.generator_efficiency
         electricity_out = generator_efficiency * np.array(net_work_vec)  # MW
 
         outputs["electricity_out"] = electricity_out
-        outputs[f"{self.fuel_source}_consumed"] = net_heat_input_vec
+        outputs[f"{self.config.fuel_source}_consumed"] = net_heat_input_vec
 
         outputs["rated_electricity_production"] = (
             system_capacity_mw  # QUESTION!!!!! WHAT IS RATED???
@@ -276,124 +261,22 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             inputs["electricity_command_value"] - electricity_out
         )
 
-
-if __name__ == "__main__":
-    from h2integrate import H2IntegrateModel
-
-    # Create an H2I model
-    driver_config = {
-        "name": "driver_config",
-        "description": "this analysis runs a brayton-cycle NG power plant",
-        "general": {"folder_output": "outputs"},
-    }
-    technology_config = {
-        "name": "detailed NG plant",
-        "description": "a detailed NG plant for brayton-cycle analysis",
-        "technologies": {
-            "ng_feedstock": {
-                "performance_model": {
-                    "model": "FeedstockPerformanceModel",
-                },
-                "cost_model": {
-                    "model": "FeedstockCostModel",
-                },
-                "model_inputs": {
-                    "shared_parameters": {
-                        "commodity": "natural_gas",
-                        "commodity_rate_units": "MMBtu/h",
-                    },
-                    "performance_parameters": {
-                        "rated_capacity": 3000.0,
-                    },
-                    "cost_parameters": {
-                        "cost_year": 2023,
-                        "commodity_amount_units": "MMBtu",
-                        "price": 4.2,
-                        "annual_cost": 0.0,
-                        "start_up_cost": 100000.0,
-                    },
-                },
-            },
-            "ng": {
-                "performance_model": {
-                    "model": "SimpleCycleTurbinePerformanceModel",
-                },
-                # "cost_model": {
-                #     "model": "NaturalGasCostModel",
-                # },
-                "model_inputs": {
-                    "performance_parameters": {
-                        "system_capacity_mw": 239.0,
-                        "firing_temp_C": 1300.0,
-                        "pressure_ratio": 18.712850988834695,
-                        "flowrate_max_fluid_cubic_m_per_s": 477.78734437019483,
-                        "isentropic_efficiency_compressor": 0.85,
-                        "isentropic_efficiency_turbine": 0.90,
-                        "generator_efficiency": 1.0,
-                    },
-                    "cost_parameters": {
-                        "capex_per_kw": 1000,  # $/kW - typical for NGCC; stolen from ex. 16
-                        "fixed_opex_per_kw_per_year": 10.0,  # $/kW/year; stolen from ex. 16
-                        "variable_opex_per_mwh": 2.5,  # $/MWh; stolen from ex. 16
-                        "cost_year": 2023,  # stolen from ex. 16
-                    },
-                },
-            },
-        },
-    }
-    plant_config = {
-        "name": "brayton plant",
-        "description": "a brayton-cycle plant located somewhere in Texas",
-        "sites": {
-            "site": {
-                "latitude": 34.382308,
-                "longitude": -101.816607,
-                "resources": {
-                    "solar_resource": {
-                        "resource_model": "GOESAggregatedSolarAPI",
-                        "resource_parameters": {
-                            "resource_year": 2024,
-                            "resource_dir": "../../../examples/11_hybrid_energy_plant/"
-                            "tech_inputs/weather/solar",
-                            "resource_filename": "30.6617_-101.7096_psmv3_60_2013.csv",
-                        },
-                    },
-                },
-            },
-        },
-        "plant": {
-            "plant_life": 30,
-            "simulation": {
-                "n_timesteps": 8760,
-                "dt": 3600,
-            },
-        },
-        "technology_interconnections": [
-            ["ng_feedstock", "ng", "natural_gas", "pipe"],
-        ],
-        "resource_to_tech_connections": [
-            ["site.solar_resource", "ng", "solar_resource_data"],
-        ],
-    }
-
-    h2i = H2IntegrateModel(
-        {
-            "name": "brayton",
-            "system_summary": "a Brayton-cycle NG plant sim using real time ambient condition data",
-            "driver_config": driver_config,
-            "technology_config": technology_config,
-            "plant_config": plant_config,
-        }
-    )
-
-    # Run the model
-    h2i.run()
-
-    # show N2 diagram
-    if False:
-        import openmdao.api as om
-
-        om.n2(h2i.model)
-
-    # Post-process the results
-    h2i.post_process()
+    # def show_plots(self):
+    #     import matplotlib.pyplot as plt
+    #
+    #     fig, axes = plt.subplots(5, 1, sharex=True)
+    #     axes[0].plot(temperature_degC)
+    #     axes[0].set_ylabel("Temperature (°C)")
+    #     axes[1].plot(pressure_Pa)
+    #     axes[1].set_ylabel("Pressure (Pa)")
+    #     axes[2].plot(net_work_vec)
+    #     axes[2].axhline(system_capacity_mw, c="r", linestyle="--")
+    #     axes[2].set_ylabel("Net Work (MW)")
+    #     axes[3].plot(volume_flowrates)
+    #     axes[3].axhline(flowrate_max_fluid_m3_per_s, c="r", linestyle="--")
+    #     axes[3].set_ylabel("Max Flowrate (m³/s)")
+    #     axes[4].plot(mass_flowrates)
+    #     axes[4].set_ylabel("Mass Flowrate (kg/s)")
+    #     axes[4].set_xlabel("Time Step")
+    #
+    #     plt.show()

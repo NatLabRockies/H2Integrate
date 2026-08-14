@@ -14,10 +14,10 @@ from h2integrate.core.file_utils import make_unique_case_name, check_file_format
 class PoseOptimization:
     """
     This class contains a collection of methods for setting up an OpenMDAO
-    optimization problem for a H2Integrate simulation.
+    optimization problem for an H2Integrate simulation.
 
     Args:
-        config: instance of a H2Integrate config containing all desired simulation set up
+        config: instance of an H2Integrate config containing all desired simulation set up
     """
 
     def __init__(self, config):

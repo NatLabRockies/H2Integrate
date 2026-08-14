@@ -357,3 +357,18 @@ def test_wind_plant_pysam_change_n_turbines(plant_config_wtk, wind_plant_config,
             )
             == 2027210.444644157
         )
+
+    # Set a number of turbines exceeding the previous 300-turbine limit
+    new_num_turbines = 400
+    prob.set_val("wind_plant.num_turbines", new_num_turbines)
+    prob.run_model()
+
+    expected_farm_capacity_MW = new_num_turbines * wind_plant_config["turbine_rating_kw"] / 1e3
+
+    with subtests.test("wind farm capacity with >300 turbines"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
+            == expected_farm_capacity_MW
+        )

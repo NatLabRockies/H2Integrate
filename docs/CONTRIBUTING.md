@@ -131,14 +131,15 @@ met the following steps should be taken to create a new release
 1. On `develop`, bump the version appropriately, see the
    [semantic versioning guidelines](https://semver.org/) for details.
 2. Open a pull request from `develop` into `main`.
-3. When all CI tests pass, and the PR has been approved, merge the PR into main.
+3. When all CI tests pass, and the PR has been approved, merge the PR into main **and don't squash commits**.
 4. Pull the latest changes from GitHub into the local copy of the main branch.
 5. Tag the latest commit to match the version bump in step 1 (replace "v0.1" in all instances below),
-   and push it to the repository.
+   and push it to the repository. Assuming you have the upstream remote set to the main repository,
+   you can do this with the following commands:
 
     ```bash
     git tag -a v0.1 -m "v0.1 release"
-    git push --origin v0.1
+    git push upstream v0.1
     ```
 
 6. Check that the

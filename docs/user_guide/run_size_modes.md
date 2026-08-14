@@ -142,11 +142,11 @@ plant_config = load_plant_yaml(EXAMPLE_DIR / "plant_config.yaml")
 tech_config = load_tech_yaml(EXAMPLE_DIR / "tech_config.yaml")
 
 # Replace a relative file in the example with a hard-coded reference for the docs version
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"][3:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"] = EXAMPLE_DIR.parent / fn
+fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"][6:]
+tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["solar_resource_file"] = EXAMPLE_DIR.parent.parent / fn
 
-fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"][3:]
-tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"] = EXAMPLE_DIR.parent / fn
+fn = tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"][6:]
+tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["hopp_config"]["site"]["wind_resource_file"] = EXAMPLE_DIR.parent.parent / fn
 
 input_config = {
     "name": "H2Integrate_config",

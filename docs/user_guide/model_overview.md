@@ -92,6 +92,10 @@ auto-generated API page.
   - other components:
     + {py:class}`~h2integrate.resource.tidal.TidalResource` - A resource component for processing tidal data from a CSV file.
 
+- `wave`
+  - other components:
+    + {py:class}`~h2integrate.resource.wave.WaveResource` - A resource component for processing wave data from a CSV file.
+
 - `wind`: wind resource data providers
   - other components:
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
@@ -230,9 +234,10 @@ auto-generated API page.
   - combined cost and financial models:
     + {py:class}`~h2integrate.converters.steel.steel.SteelCostAndFinancialModel` - An OpenMDAO component for calculating the costs associated with steel production.
 
-- `water_power`: tidal and run-of-river hydropower
+- `water_power`: wave, tidal, and run-of-river hydropower
   - performance models:
     + {py:class}`~h2integrate.converters.water_power.tidal_pysam.PySAMTidalPerformanceModel` - An OpenMDAO component that wraps the PySAM MhkTidal model.
+    + {py:class}`~h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceModel` - An OpenMDAO component that wraps the PySAM MhkWave model.
     + {py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceModel` - An OpenMDAO component for modeling the performance of a run-of-river hydropower plant.
   - cost models:
     + {py:class}`~h2integrate.converters.water_power.pysam_marine_cost.PySAMMarineCostModel` - An OpenMDAO component for calculating the costs associated with Marine Hydrokinetic (MHK) energy systems.
