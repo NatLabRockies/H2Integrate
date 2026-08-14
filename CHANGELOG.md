@@ -44,6 +44,7 @@
 
 
 #### Infrastructure
+- Grouped closely related test assertions into behavior-focused subtests and documented when to use subtests in the developer coding guidelines. [PR 839](https://github.com/NatLabRockies/H2Integrate/pull/839)
 - Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
 - `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks` [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
