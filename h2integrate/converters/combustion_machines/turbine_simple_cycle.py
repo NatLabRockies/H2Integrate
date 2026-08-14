@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from attrs.validators import in_
 
 import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
@@ -41,6 +42,13 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
     firing_temp_C: float = field(validator=gt_zero)
     isentropic_efficiency_compressor: float = field(validator=gt_zero)
     isentropic_efficiency_turbine: float = field(validator=gt_zero)
+    fuel_source: str = field(
+        validator=in_(
+            [
+                "natural_gas",
+            ]
+        )
+    )  # TODO: add more here...
 
 
 class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
@@ -65,13 +73,11 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "dispatchable"
 
-    def initialize(self, fuel_source="natural_gas"):
+    def initialize(self):
         super().initialize()
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
-
-        self.fuel_source = fuel_source
 
     def setup(self):
         super().setup()
@@ -90,7 +96,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add natural gas consumed output
         self.add_output(
-            f"{self.fuel_source}_consumed",
+            f"{self.config.fuel_source}_consumed",
             val=0.0,
             shape=self.n_timesteps,
             units="kJ/s",
@@ -124,7 +130,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         # add fuel input, default to 0 --> set using feedstock component
         self.add_input(
-            f"{self.fuel_source}_in",
+            f"{self.config.fuel_source}_in",
             val=0.0,
             shape=self.n_timesteps,
             units="kJ/s",
@@ -167,7 +173,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         # working variables for inputs
         system_capacity_mw = float(inputs["system_capacity"][0])
         flowrate_max_fluid_m3_per_s = float(inputs["flowrate_max_fluid"][0])
-        fuel_source_heating_in_kJ_per_s = inputs[f"{self.fuel_source}_in"]
+        fuel_source_heating_in_kJ_per_s = inputs[f"{self.config.fuel_source}_in"]
 
         # extract from the solar resource data
         temperature_degC = discrete_inputs["solar_resource_data"]["temperature"]
@@ -238,7 +244,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         electricity_out = generator_efficiency * np.array(net_work_vec)  # MW
 
         outputs["electricity_out"] = electricity_out
-        outputs[f"{self.fuel_source}_consumed"] = net_heat_input_vec
+        outputs[f"{self.config.fuel_source}_consumed"] = net_heat_input_vec
 
         outputs["rated_electricity_production"] = (
             system_capacity_mw  # QUESTION!!!!! WHAT IS RATED???
@@ -322,6 +328,7 @@ if __name__ == "__main__":
                 # },
                 "model_inputs": {
                     "performance_parameters": {
+                        "fuel_source": "natural_gas",
                         "system_capacity_mw": 239.0,
                         "firing_temp_C": 1300.0,
                         "pressure_ratio": 18.712850988834695,
