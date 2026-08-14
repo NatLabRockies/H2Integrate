@@ -79,6 +79,8 @@ technologies:
         uptime_hours_until_eol: 80000.  # number of 'on' hours until electrolyzer reaches eol
         include_degradation_penalty: true  # include degradation
         turndown_ratio: 0.1  # turndown_ratio = minimum_cluster_power/cluster_rating_MW
+        ramp_up_rate_fraction: 0.2  # fraction of electrolyzer rating per timestep
+        ramp_down_rate_fraction: 0.2  # fraction of electrolyzer rating per timestep
       financial_parameters:
         capital_items:
           depr_period: 7
@@ -187,10 +189,9 @@ technologies:
         purge_gas_x_ar: 0.02
         purge_gas_x_nh3: 0.04
         purge_gas_mass_ratio: 0.07
-        # Dynamics disabled for a well-behaved system-level control fixed-point loop.
-        turndown_ratio: 0.0
-        ramp_up_rate_fraction: 1.0
-        ramp_down_rate_fraction: 1.0
+        turndown_ratio: 0.2
+        ramp_up_rate_fraction: 0.2
+        ramp_down_rate_fraction: 0.2
         include_cold_start: false
         include_warm_start: false
       cost_parameters:
