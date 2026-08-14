@@ -18,7 +18,27 @@ Setup I/O for SLC controllers.
 - `_setup_tech_category()`
 - `_setup_feedstock_category()`
 - `find_converter_techs()`
-    - Note: this method is currently is not used but will be used for heterogeneous commodity systems.
+
+Heterogeneous-commodity conversion. These methods let a controller translate demand
+for one commodity into demand for the upstream commodities that a converter consumes
+to produce it (for example, translating ammonia demand into hydrogen demand across a
+synthesis loop, and then into electricity demand across an electrolyzer).
+- `detect_commodity_converters()`
+    - Module-level helper that identifies converter technologies (technologies whose
+      output commodity differs from an input commodity) that have a controllable
+      producer for that input commodity, so demand can propagate backward across them.
+- `_build_conversion_ratios()`
+    - Registers each converter's `{commodity}_consumed` inputs and reads any static
+      conversion ratios supplied under
+      `technologies.<tech>.model_inputs.control_parameters.conversion_ratios`.
+- `_conversion_ratio()`
+    - Returns the per-timestep conversion ratio for a converter. It prefers a measured
+      ratio computed from the converter's consumed and produced streams, and falls back
+      to the static ratio from the technology config when a measurement is unavailable.
+- `_accumulate_derived_demand()`
+    - Adds the demand derived through a converter (output demand times conversion ratio)
+      to the upstream commodity's demand, warning only when neither a measured nor a
+      static ratio is available.
 
 Functions for controlling components based on assigned control classifier.
 - `_subtract_curtailable()`

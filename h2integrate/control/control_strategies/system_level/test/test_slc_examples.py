@@ -403,3 +403,73 @@ def test_slc_upstream_demand(subtests, temp_copy_of_example):
             # check that no hydrogen systems are in
             model.prob.get_val(slc_h2s_output_var, units="kg/h")
         assert f"Variable '{slc_h2s_output_var}' not found. " in str(excinfo.value)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("35_system_level_control/heterogeneous_commodity", None)],
+)
+def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "heterogeneous_commodity.yaml")
+
+    model.run()
+
+    with subtests.test("Ammonia set point follows demand"):
+        assert np.all(
+            model.prob.get_val("system_level_controller.ammonia_ammonia_set_point", units="kg/h")
+            == model.prob.get_val("ammonia_load_demand.ammonia_demand_out", units="kg/h")
+        )
+
+    with subtests.test("Hydrogen demand propagated from ammonia"):
+        # The converter's ammonia set point drives a nonzero electrolyzer hydrogen set point.
+        assert (
+            model.prob.get_val(
+                "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
+            ).sum()
+            > 0.0
+        )
+
+    with subtests.test("Electricity demand propagated to wind and battery"):
+        # Hydrogen demand across the electrolyzer propagates to an electricity demand, so the
+        # electricity producers appear in the controller as set-point outputs.
+        assert (
+            model.prob.get_val(
+                "system_level_controller.wind_electricity_set_point", units="kW"
+            ).sum()
+            > 0.0
+        )
+        assert (
+            model.prob.get_val(
+                "system_level_controller.battery_electricity_set_point", units="kW"
+            ).size
+            > 0
+        )
+
+    with subtests.test("Ammonia production does not exceed demand"):
+        assert (
+            model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
+            <= model.prob.get_val("ammonia_load_demand.ammonia_demand_out", units="kg/h").sum()
+            + 1e-6
+        )
+
+    with subtests.test("Ammonia annual production"):
+        assert (
+            pytest.approx(35036000.0, rel=1e-5)
+            == model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
+        )
+
+    with subtests.test("Electrolyzer hydrogen set point total"):
+        assert (
+            pytest.approx(7030464.51294698, rel=1e-5)
+            == model.prob.get_val(
+                "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
+            ).sum()
+        )
+
+    with subtests.test("LCOA"):
+        assert pytest.approx(2.0024798555505585, rel=1e-5) == model.prob.get_val(
+            "finance_subgroup_ammonia.LCOA", units="USD/kg"
+        )
