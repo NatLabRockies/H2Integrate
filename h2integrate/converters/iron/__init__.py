@@ -1,7 +1,7 @@
-from h2integrate.converters.iron.martin_mine_perf_model import (
-    MartinIronMinePerformanceComponent,
+from h2integrate.converters.iron.simple_mine_perf_model import (
+    SimpleIronMinePerformanceComponent,
 )
-from h2integrate.converters.iron.martin_mine_cost_model import MartinIronMineCostComponent
+from h2integrate.converters.iron.simple_mine_cost_model import SimpleIronMineCostComponent
 from h2integrate.converters.iron.iron_dri_plant import (
     NaturalGasIronReductionPlantPerformanceComponent,
     NaturalGasIronReductionPlantCostComponent,

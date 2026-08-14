@@ -2275,7 +2275,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_dir = example_folder
     ex_out_dir = ex_dir / "ex_out"
     ore_prices_filepath = ex_dir / "example_ore_prices.csv"
-    shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+    shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
     shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
     cases_csv_fpath = ex_out_dir / "cases.csv"
     ex_png_fpath = ex_out_dir / "example_iron_map.png"
