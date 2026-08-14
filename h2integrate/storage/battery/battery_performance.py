@@ -1,6 +1,15 @@
+"""
+# NOTE: ``simses.battery`` must be imported before ``simses.degradation`` to avoid a
+# circular import within simses (>=2.1.1): importing ``simses.degradation`` first leaves
+# ``simses.degradation.calendar`` partially initialized when ``simses.battery.cell`` pulls
+# in ``simses.degradation.degradation``. Importing the battery package first fully loads
+# both sub-packages in a safe order. (Plain ``import`` sorts above ``from`` imports.)
+"""
+
 import math
 
 import numpy as np
+import simses.battery  # noqa: F401  (import-order side effect; see note above)
 from attrs import field, define
 from openmdao.utils import units as om_units
 from simses.degradation import DegradationModel
@@ -196,6 +205,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
 
     _DEG_SCALE: float = field(default=0.7056, validator=range_val(0, 1))
+    eol_soh_capacity: float = field(default=0.8, validator=range_val(0, 1))
     # TODO convert from power and energy ratings (see math in chat)
     series_count: int = field(default=336, converter=int, validator=gt_zero)
     parallel_count: int = field(default=16, converter=int, validator=gt_zero)
@@ -293,6 +303,47 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             desc="Electricity demand for running battery auxiliary systems",
         )
 
+        # Internal SimSES timeseries exposed as OpenMDAO outputs (one per quantity) for
+        # downstream diagnostics/plotting.
+        self.add_output(
+            "voltage", shape=self.n_timesteps, units="V", desc="Battery terminal voltage"
+        )
+        self.add_output("current", shape=self.n_timesteps, units="A", desc="Battery current")
+        self.add_output(
+            "temperature", shape=self.n_timesteps, units="degC", desc="Battery temperature"
+        )
+        self.add_output(
+            "battery_loss", shape=self.n_timesteps, units="W", desc="Battery internal loss"
+        )
+        self.add_output(
+            "battery_heat", shape=self.n_timesteps, units="W", desc="Battery heat generation"
+        )
+        self.add_output(
+            "soh_capacity",
+            shape=self.n_timesteps,
+            units="unitless",
+            desc="State of health, capacity (fraction of nominal capacity)",
+        )
+        self.add_output(
+            "soh_resistance",
+            shape=self.n_timesteps,
+            units="unitless",
+            desc="State of health, resistance (multiple of nominal resistance)",
+        )
+        self.add_output(
+            "power_ac",
+            shape=self.n_timesteps,
+            units="W",
+            desc="AC-side power (positive = charge)",
+        )
+        self.add_output(
+            "power_dc",
+            shape=self.n_timesteps,
+            units="W",
+            desc="DC-side power (positive = charge)",
+        )
+        self.add_output("converter_loss", shape=self.n_timesteps, units="W", desc="Converter loss")
+
         # TODO degradation: adjustments for degradation
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
@@ -308,8 +359,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
 
         # H2I dispatch command: positive = discharge, negative = charge (commodity_rate_units)
         power_profile = inputs[f"{self.commodity}_command_value"]
-
-        ### from Ankit
 
         # ---------------------------------------------------------------------------
         # Battery pack + inverter (fixed Megapack-style topology, from config)
@@ -371,37 +420,30 @@ class BatteryPerformanceModel(StoragePerformanceBase):
 
         #############
 
-        # Store the full SimSES timeseries for downstream diagnostics/plotting
-        # (e.g. example 98 degradation, temperature, voltage, and loss plots).
-        self.results = {
-            "soc": log["soc"],
-            "voltage": log["v"],
-            "current": log["i"],
-            "temperature": log["T"],
-            "battery_loss": log["loss"],
-            "battery_heat": log["heat"],
-            "soh_capacity": log["soh_Q"],
-            "soh_resistance": log["soh_R"],
-            "power_ac": power_ac,
-            "power_dc": power_dc,
-            "converter_loss": conv_loss,
-        }
-
         # Populate all OpenMDAO outputs defined in this class and its parent classes.
         # Convert SimSES AC power (W, +charge) back to H2I convention
         # (commodity_rate_units, +discharge).
-        soc_ts = log["soc"]
         power_ts = -om_units.convert_units(power_ac, "W", self.commodity_rate_units)
 
         # --- BatteryPerformanceModel outputs ---
         # TODO calc aux power
         outputs[f"{self.commodity}_auxiliary_demand"] = np.zeros(self.n_timesteps)
+        outputs["voltage"] = log["v"]
+        outputs["current"] = log["i"]
+        outputs["temperature"] = log["T"]
+        outputs["battery_loss"] = log["loss"]
+        outputs["battery_heat"] = log["heat"]
+        outputs["soh_capacity"] = log["soh_Q"]
+        outputs["soh_resistance"] = log["soh_R"]
+        outputs["power_ac"] = power_ac
+        outputs["power_dc"] = power_dc
+        outputs["converter_loss"] = conv_loss
 
         # --- StoragePerformanceBase outputs ---
         outputs["storage_duration"] = (
             storage_capacity / discharge_rate if discharge_rate > 0 else 0.0
         )
-        outputs["SOC"] = soc_ts * 100.0  # fraction -> percent
+        outputs["SOC"] = log["soc"] * 100.0  # fraction -> percent
         outputs[f"storage_{self.commodity}_charge"] = np.where(power_ts < 0, power_ts, 0.0)
         outputs[f"storage_{self.commodity}_discharge"] = np.where(power_ts > 0, power_ts, 0.0)
 
@@ -419,12 +461,96 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             outputs["capacity_factor"] = 0.0
             outputs["standard_capacity_factor"] = 0.0
         else:
-            outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                discharge_rate * self.n_timesteps * self.dt_amount
-            )
-            total_commodity_discharged = (
-                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
-            )
+            # Gross discharge timeseries (commodity_rate_units, discharge only).
+            discharge_ts = outputs[f"storage_{self.commodity}_discharge"]
+            total_commodity_discharged = discharge_ts.sum() * self.dt_amount
+
+            # Scalar average discharge capacity factor over the whole simulation.
             outputs["standard_capacity_factor"] = total_commodity_discharged / (
                 discharge_rate * self.n_timesteps * self.dt_amount
             )
+
+            # Per-year discharge capacity factor and year-end capacity state-of-health over
+            # the simulated horizon. The simulation may span whole years plus an optional
+            # partial trailing year; each simulated year gets its own capacity factor and
+            # end-of-year SOH.
+            steps_per_year = round(31_536_000 / self.dt)  # timesteps in one year
+            n_sim_years = math.ceil(self.n_timesteps / steps_per_year)
+            soh_capacity_ts = log["soh_Q"]
+            sim_cf = np.zeros(n_sim_years)
+            sim_soh_year_end = np.zeros(n_sim_years)
+            for year in range(n_sim_years):
+                start = year * steps_per_year
+                end = min(start + steps_per_year, self.n_timesteps)
+                segment_hours = (end - start) * self.dt_amount
+                sim_cf[year] = (discharge_ts[start:end].sum() * self.dt_amount) / (
+                    discharge_rate * segment_hours
+                )
+                sim_soh_year_end[year] = soh_capacity_ts[end - 1]
+
+            # Annual capacity-SOH degradation rate used to project SOH beyond the simulated
+            # horizon (i.e. once the simulated years are exhausted before the battery hits
+            # end-of-life):
+            #   - Less than one year simulated: extrapolate the average degradation over the
+            #     whole simulation to a per-year rate.
+            #   - One year or more simulated: use the degradation over the last full
+            #     simulated year.
+            years_simulated = self.n_timesteps / steps_per_year
+            soh_start = soh_capacity_ts[0]
+            if years_simulated < 1.0:
+                annual_deg_rate = (soh_start - sim_soh_year_end[-1]) / years_simulated
+            else:
+                n_full_years = int(self.n_timesteps // steps_per_year)
+                idx_after = n_full_years * steps_per_year - 1
+                idx_before = (n_full_years - 1) * steps_per_year - 1
+                soh_before = soh_capacity_ts[idx_before] if idx_before >= 0 else soh_start
+                annual_deg_rate = soh_before - soh_capacity_ts[idx_after]
+            annual_deg_rate = max(float(annual_deg_rate), 0.0)
+
+            # Build one battery-life cycle of per-year year-end SOH and capacity factor,
+            # long enough to cover the whole plant life. Within the simulated years the
+            # actual per-year values are used. Beyond the simulated horizon the SOH keeps
+            # degrading at annual_deg_rate and the capacity factor is scaled down in
+            # proportion to the declining SOH (relative to the last simulated year), so the
+            # capacity factor tracks degradation rather than being held constant.
+            if years_simulated < 1.0:
+                # A sub-year simulation never completes a full year, so project every year
+                # from the start-of-life SOH at the extrapolated annual rate.
+                cycle_soh_end = soh_start - annual_deg_rate * (np.arange(self.plant_life) + 1)
+            else:
+                cycle_soh_end = np.array(
+                    [
+                        sim_soh_year_end[y]
+                        if y < n_sim_years
+                        else sim_soh_year_end[-1] - annual_deg_rate * (y - (n_sim_years - 1))
+                        for y in range(self.plant_life)
+                    ]
+                )
+
+            soh_ref = sim_soh_year_end[-1]
+            cycle_cf = np.array(
+                [
+                    sim_cf[y]
+                    if y < n_sim_years
+                    else sim_cf[-1] * max(cycle_soh_end[y], 0.0) / soh_ref
+                    for y in range(self.plant_life)
+                ]
+            )
+
+            # Walk the plant life. When the projected year-end SOH reaches the user-specified
+            # end-of-life threshold, the battery is replaced (fresh unit) at the start of the
+            # following year and the degradation / capacity-factor cycle restarts.
+            eol_soh = self.config.eol_soh_capacity
+            cf_per_year = np.zeros(self.plant_life)
+            replacement_schedule = np.zeros(self.plant_life)
+            cycle_year = 0
+            for plant_year in range(self.plant_life):
+                cf_per_year[plant_year] = cycle_cf[cycle_year]
+                if cycle_soh_end[cycle_year] <= eol_soh:
+                    if plant_year + 1 < self.plant_life:
+                        replacement_schedule[plant_year + 1] = 1.0
+                    cycle_year = 0
+                else:
+                    cycle_year += 1
+            outputs["capacity_factor"] = cf_per_year
+            outputs["replacement_schedule"] = replacement_schedule
