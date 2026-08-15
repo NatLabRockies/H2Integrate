@@ -349,7 +349,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
         shared_overlap = user_extras.intersection(restructured_params.get("shared_parameters", {}))
         if shared_overlap:
             msg = (
-                f"The parameter(s) {list(shared_overlap)} found in {param_key}"
+                f"The parameter(s) {sorted(shared_overlap)} found in {param_key}"
                 f" should be under shared_parameters for {tech_location}"
             )
             raise AttributeError(msg)
