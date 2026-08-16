@@ -370,9 +370,9 @@ def test_power_zero_when_binary_zero(subtests, base_config):
                 assert pd_gt < 1e-6, f"p_discharge_gt[{t}]={pd_gt} but discharge_gt[{t}]={u_gt}"
         with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
             if u_coop < 0.5:
-                assert pd_coop < 1e-6, (
-                    f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
-                )
+                assert (
+                      pd_coop < 1e-6
+                ), f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
@@ -548,9 +548,9 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
         expected_soc[t] = expected_soc[t - 1] + charge[t] / E_max - discharge[t] / E_max
     for t in range(n):
         with subtests.test(f"SOC evolution at t={t}"):
-            assert abs(soc[t] - expected_soc[t]) < 1e-4, (
-                f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
-            )
+            assert (
+                abs(soc[t] - expected_soc[t]) < 1e-4
+            ), f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
 
 
 @pytest.mark.regression
