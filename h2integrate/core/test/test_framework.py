@@ -68,13 +68,9 @@ def test_use_commodity_stream_timeseries_finances_error(subtests, temp_copy_of_e
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel(top_level_config)
     err = str(excinfo.value)
-    with subtests.test("Commodity stream name is missing (commodity_stream_output is required)"):
+    with subtests.test("Commodity stream name is missing error message parts"):
         assert "`commodity_stream_output` is a required input" in err
-    with subtests.test(
-        "Commodity stream name is missing (use_commodity_stream_timeseries is True)"
-    ):
         assert "`use_commodity_stream_timeseries` is True" in err
-    with subtests.test("Commodity stream name is missing (finance subgroup `electricity_doc`)"):
         assert "finance subgroup `electricity_doc`" in err
 
 
@@ -754,21 +750,21 @@ def test_system_order(subtests):
 
     expected_names = [
         "wind",
-        "wind_to_combiner_cable",
+        "electricity_wind_to_combiner_cable",
         "solar",
-        "solar_to_combiner_cable",
+        "electricity_solar_to_combiner_cable",
         "combiner",
-        "combiner_to_elec_combiner_cable",
-        "combiner_to_battery_cable",
+        "electricity_combiner_to_elec_combiner_cable",
+        "electricity_combiner_to_battery_cable",
         "battery",
-        "battery_to_elec_combiner_cable",
+        "electricity_battery_to_elec_combiner_cable",
         "elec_combiner",
-        "elec_combiner_to_electrolyzer_cable",
+        "electricity_elec_combiner_to_electrolyzer_cable",
         "electrolyzer",
-        "electrolyzer_to_h2_combiner_pipe",
-        "electrolyzer_to_h2_storage_pipe",
+        "hydrogen_electrolyzer_to_h2_combiner_pipe",
+        "hydrogen_electrolyzer_to_h2_storage_pipe",
         "h2_storage",
-        "h2_storage_to_h2_combiner_pipe",
+        "hydrogen_h2_storage_to_h2_combiner_pipe",
         "h2_combiner",
         "steel",
         "finance_subgroup_electricity",
