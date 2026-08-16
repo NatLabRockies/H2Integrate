@@ -93,9 +93,9 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     signal_threshold_percentile: float = field(default=0.0, validator=range_val(0, 100))
     event_duration: dict = field(default=None)
     min_peak_separation: dict = field(default=None)
-    pyomo_solver: str =  field(default="highs")
-    pyomo_solver_options: dict =  field(default={})
-    gt2coop_limit: float =  field(default=None)
+    pyomo_solver: str = field(default="highs")
+    pyomo_solver_options: dict = field(default={})
+    gt2coop_limit: float = field(default=None)
 
     def __attrs_post_init__(self):
         # Make sure n_control_window_hours is an int

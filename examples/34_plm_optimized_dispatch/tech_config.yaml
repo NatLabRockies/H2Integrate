@@ -25,7 +25,7 @@ technologies:
         system_commodity_interface_limit: 1.0e9
         lmp_signal: !include demand_profiles/lmp.yaml
         demand_signal: !include demand_profiles/demand.yaml
-        GnT_pricingfunction_coeffs: [1.05,20]
+        GnT_pricingfunction_coeffs: [1.05, 20]
         peak_window:
           start: 12:00:00
           end: 20:00:00

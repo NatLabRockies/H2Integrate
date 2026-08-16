@@ -60,7 +60,7 @@ def base_config():
         lmp_signal=list(range(n)),
         demand_signal=list(range(n)),
         peak_window={"start": "08:00:00", "end": "18:00:00"},
-        GnT_pricingfunction_coeffs=[1.05,20],
+        GnT_pricingfunction_coeffs=[1.05, 20],
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
@@ -370,9 +370,9 @@ def test_power_zero_when_binary_zero(subtests, base_config):
                 assert pd_gt < 1e-6, f"p_discharge_gt[{t}]={pd_gt} but discharge_gt[{t}]={u_gt}"
         with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
             if u_coop < 0.5:
-                assert (
-                    pd_coop < 1e-6
-                ), f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
+                assert pd_coop < 1e-6, (
+                    f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
+                )
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
@@ -399,7 +399,7 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         "max_charge_rate": 1.0,
         "lmp_signal": list(range(24)),
         "demand_signal": list(range(24)),
-        "GnT_pricingfunction_coeffs":[1.05,20],
+        "GnT_pricingfunction_coeffs": [1.05, 20],
         "peak_window": {"start": "08:00:00", "end": "18:00:00"},
         "n_max_events": 24,
         "signal_threshold_percentile": 0.0,
@@ -475,7 +475,7 @@ def om_tech_config():
                 "system_commodity_interface_limit": 1.0e9,
                 "lmp_signal": np.ones(n).tolist(),
                 "demand_signal": np.ones(n).tolist(),
-                "GnT_pricingfunction_coeffs":[1.05,20],
+                "GnT_pricingfunction_coeffs": [1.05, 20],
                 "peak_window": {"start": "02:00:00", "end": "04:00:00"},
                 "performance_incentive": 10.0,
                 "n_max_events": 24,
@@ -548,9 +548,9 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
         expected_soc[t] = expected_soc[t - 1] + charge[t] / E_max - discharge[t] / E_max
     for t in range(n):
         with subtests.test(f"SOC evolution at t={t}"):
-            assert (
-                abs(soc[t] - expected_soc[t]) < 1e-4
-            ), f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
+            assert abs(soc[t] - expected_soc[t]) < 1e-4, (
+                f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
+            )
 
 
 @pytest.mark.regression
