@@ -134,6 +134,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $E_{\max} :=$ `max_capacity` $\times$ (`max_soc_fraction` $-$ `min_soc_fraction`): usable energy capacity (kWh)
 - $\eta_c$ := `charge_efficiency`, $\quad \eta_d$ := `discharge_efficiency`
 - $\text{SoC}_{\max}$ := `max_soc_fraction`, $\quad \text{SoC}_{\min}$ := `min_soc_fraction`
+- $\text{gt2coop_limit}$ := upper limit on power transmitted from G&T to Co-Op.
 - `n_control_window_hours` := rolling horizon length in hours; converted to $T =$ `n_control_window_hours` / $\Delta t$ timesteps
 - $\mathcal{T} := \{0, 1, \ldots, T-1\}$: timesteps in the current rolling window
 - $\mathcal{M}_m$ := set of timesteps in month $m$, for $m = 1, \ldots, 12$
@@ -238,6 +239,10 @@ $$
 
 $$
 p^d_{gt,t},\,p^d_{coop,t},\, p_{c,t} \in [0,\, P_{\max}] \qquad \forall\, t
+$$
+
+$$
+\quad p_{gt2coop,t} \in [0,\, \text{gt2coop_limit}] \qquad \forall\, t
 $$
 
 $$

@@ -74,8 +74,9 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             by ``signal_threshold_percentile`` are treated as peaks and
             the first peak is chosen as eligible.
         pyomo_solver (str): Name of the solver used by pyomo to solve the MILP.
-            Can be any of 'highs' or 'glpk'. Default is ``highs``.
+            Can be any of ``highs`` or ``glpk``. Default is ``highs``.
         pyomo_solver_options (dict): A dictionary containing options for pyomo solver.
+        gt2coop_limit (float): Upper limit of power transferred by G&T to CoOp (kW)
     """
 
     max_charge_rate: float = field()
@@ -94,6 +95,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     min_peak_separation: dict = field(default=None)
     pyomo_solver: str =  field(default="highs")
     pyomo_solver_options: dict =  field(default={})
+    gt2coop_limit: float =  field(default=None)
 
     def __attrs_post_init__(self):
         # Make sure n_control_window_hours is an int
@@ -654,7 +656,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         m.p_tocoop = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
-            bounds=(0, None),
+            bounds=(0, self.config.gt2coop_limit),
             doc="Power supplied by G&T to Co-Op (kW)",
         )
 
