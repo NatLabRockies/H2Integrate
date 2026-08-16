@@ -371,7 +371,7 @@ def test_power_zero_when_binary_zero(subtests, base_config):
         with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
             if u_coop < 0.5:
                 assert (
-                      pd_coop < 1e-6
+                    pd_coop < 1e-6
                 ), f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
