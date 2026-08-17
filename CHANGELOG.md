@@ -9,6 +9,8 @@
 - Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
 - Added a new NLR wind resource model: HRRR MET Toolkit [PR 837](https://github.com/NatLabRockies/H2Integrate/pull/837)
 - Updated EIA feedstock API call and getting user-specified directories (for feedstock and resource data) to use `get_environment_variables()` [PR #834](https://github.com/NatLabRockies/H2Integrate/pull/834)
+- Fixed error message that is thrown in `check_inputs` and updated testing of `check_inputs` to actually test the error messages [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
+- Fixed several tests where the assert statements paired with `pytest.raises` were indented inside the context manager block and never ran, and corrected the now-active expected error strings. [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
 
 ## 0.9 [August 10, 2026]
 
