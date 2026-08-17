@@ -847,7 +847,7 @@ def test_resource_connection_error_missing_resource(temp_dir):
 
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel(temp_highlevel_yaml)
-        assert "Missing resource(s) are ['wind_resource']." in str(excinfo.value)
+    assert "Missing resource(s) are ['site.wind_resource']." in str(excinfo.value)
 
     # Clean up temporary YAML files
     temp_plant_config.unlink(missing_ok=True)
@@ -964,6 +964,7 @@ def test_invalid_finance_group_combination(subtests):
 
     invalid_finance_subgroup = {
         "commodity": "steel",
+        "commodity_stream": "steel",
         "finance_groups": ["steel", "profast_model"],
         "technologies": ["steel"],
     }
@@ -991,7 +992,7 @@ def test_invalid_finance_group_combination(subtests):
         with pytest.raises(ValueError) as excinfo:
             h2i = H2IntegrateModel(h2i_config)
             h2i.setup()
-            assert expected_msg == str(excinfo.value)
+        assert expected_msg == str(excinfo.value)
 
 
 @pytest.mark.unit
