@@ -1,7 +1,14 @@
+from abc import ABC, abstractmethod
+from typing import Any
+
 import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
+
+
+# generated from np.random.SeedSequence().entropy
+rng = np.random.default_rng(279299947538423226929715083173412195503)
 
 
 N_TIMESTEPS = 8760
@@ -11,14 +18,49 @@ def create_reliability(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config.pop("reliability")
     match name:
-        case "WeibullReliabilityModel":
-            return WeibullReliabilityModel.from_dict(config)
+        case "WeibullReliability":
+            return WeibullReliability.from_dict(config)
+        case _:
+            raise NotImplementedError(f"{name} is not a valid model name")
+
+
+def generate_downtime_model(config: dict):
+    name = config.pop("model")
+    match name:
+        case "LogNormalDowntime":
+            return LogNormalDowntime.from_dict(config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
 
 @define(kw_only=True)
-class WeibullReliabilityModel(BaseConfig):
+class BaseDowntime(ABC, BaseConfig):
+    @abstractmethod
+    def sample_downtime(self) -> np.ndarray: ...
+
+
+@define(kw_only=True)
+class LogNormalDowntime(BaseDowntime):
+    """Basic log-normal downtime model for generating the length of downtime for a given event.
+
+    Args:
+        mean (float): Average length of downtime per event, in hours.
+        sigma (float): Standard deviation of the distribution(s), in hours.
+        n_components (int): Number of identical components to sample. Primarily for convenience.
+            Defaults to 1.
+    """
+
+    mean: float = field(validator=(validators.instance_of(float), validators.ge(0)))
+    sigma: float = field(validator=(validators.instance_of(float), validators.ge(0)))
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
+
+    def sample_downtime(self) -> np.ndarray:
+        size = (self.n_components, 100) if isinstance(self.mean, int | float) else 100
+        return rng.lognormal(self.mean, self.sigma, size=size)
+
+
+@define(kw_only=True)
+class WeibullReliability(BaseConfig):
     r"""Basic reliability model for operating/not operating statuses.
 
     Assumes a full operational shutdown with zero ramping of production for an hourly, 1 year
@@ -45,17 +87,10 @@ class WeibullReliabilityModel(BaseConfig):
 
     scale: float = field(validator=validators.instance_of(float))
     shape: float = field(validator=validators.instance_of(float))
-    downtime: float = field(validator=validators.gt(1))
-    rng: np.random._generator.Generator = field(
-        default=np.random.default_rng(),
-        init=False,
-        validator=validators.instance_of(np.random._generator.Generator),
-    )
+    downtime: Any = field(converter=generate_downtime_model)
+    downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     availability: np.ndarray = field(
         default=np.ones(N_TIMESTEPS), init=False, validator=validators.instance_of(np.ndarray)
-    )
-    downtime_per_event: np.ndarray = field(
-        default=np.zeros(N_TIMESTEPS), init=False, validator=validators.instance_of(np.ndarray)
     )
 
     def __attrs_post_init__(self):
@@ -63,16 +98,51 @@ class WeibullReliabilityModel(BaseConfig):
         self.calculate_availability()
 
     def create_downtime_events(self):
-        """Creates a ``time_to_failure`` and ``downtime_per_event`` array based on the distributions
-        described in ``WeibullReliabilityConfig``.
-        """
+        """Creates a ``time_to_failure`` and ``downtime_per_event``."""
         # NOTE: Arrays are default length 30 to ensure enough events are created for a 1-year
         # simulation without burdening the memory usage.
         self.time_to_failures = np.ceil(
-            self.config.rng.weibul(self.config.shape, size=30) * self.config.scale * N_TIMESTEPS
+            self.rng.weibul(self.shape, size=100) * self.scale * N_TIMESTEPS
         ).astype(int)
-        downtime_per_event = np.ceil(np.rng.normal(loc=self.config.downtime, size=30)).astype(int)
-        self.downtime_per_event = np.where(downtime_per_event >= 1, downtime_per_event, 1)
+        self.downtime_per_event = self.downtime.sample_downtime()
+
+    def calculate_availability(self):
+        """Determine the timing and duration of outages for a single year of simulation time."""
+        accumulated = 0
+        while accumulated < N_TIMESTEPS:
+            event, self.time_to_failures = self.time_to_failures[0], self.time_to_failures[1:]
+            duration, self.downtime_per_event = (
+                self.downtime_per_event[0],
+                self.downtime_per_event[1:],
+            )
+            if event + accumulated > N_TIMESTEPS:
+                break
+
+            start = accumulated + event
+            end = start + duration
+            self.availability[start:end] = 0
+            accumulated = start
+            if not self.time_to_failures:
+                self.create_downtime_events()
+
+
+@define(kw_only=True)
+class FixedIntervalReliability(BaseConfig):
+    frequency: float = field(validator=(validators.instance_of((float, int)), validators.gt(0)))
+    downtime: Any = field(converter=generate_downtime_model)
+    downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
+    availability: np.ndarray = field(
+        default=np.ones(N_TIMESTEPS), init=False, validator=validators.instance_of(np.ndarray)
+    )
+
+    def __attrs_post_init__(self):
+        self.create_downtime_events()
+        self.calculate_availability()
+
+    def create_downtime_events(self):
+        """Creates a ``time_to_failure`` and ``downtime_per_event``."""
+        self.time_to_failures = ...  # TODO
+        self.downtime_per_event = self.downtime.sample_downtime()
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
