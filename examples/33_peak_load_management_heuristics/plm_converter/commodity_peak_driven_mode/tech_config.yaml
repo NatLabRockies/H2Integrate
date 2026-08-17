@@ -1,0 +1,66 @@
+name: technology_config
+description: This plant dispatches a fuel cell to reduce peak demand
+technologies:
+  hydrogen_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: hydrogen
+        commodity_rate_units: kg/h
+      performance_parameters:
+        rated_capacity: 50.0  # kg of H2/hour
+      cost_parameters:
+        cost_year: 2022
+        price: 5.0  # USD/kg H2
+        annual_cost: 0.
+        start_up_cost: 0.0
+  fuel_cell:
+    performance_model:
+      model: LinearH2FuelCellPerformanceModel
+    cost_model:
+      model: H2FuelCellCostModel
+    control_strategy:
+      model: PLMHeuristicOpenLoopConverterController
+    model_inputs:
+      shared_parameters:
+        system_capacity_kw: 1000.0
+      performance_parameters:
+        fuel_cell_efficiency_hhv: 0.50
+        uptime_hours_until_eol: 80000
+      cost_parameters:
+        capex_per_kw: 200.0
+        fixed_opex_per_kw_per_year: 10.0
+        variable_opex_per_kwh: 0.0
+        cost_year: 2018
+      control_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: !include demand_profiles/demand_profile.yaml  # found in library/demand_profiles
+        demand_profile_upstream: !include demand_profiles/demand_profile_upstream.yaml  # found in library/demand_profiles
+        demand_profile_peak_cutoff: 400.0
+        demand_profile_upstream_peak_cutoff: 1000.0
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: !include demand_profiles/demand_profile.yaml  # found in library/demand_profiles
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 100000
+      cost_parameters:
+        cost_year: 2024
+        fixed_interconnection_cost: 0.0
+        interconnection_capex_per_kw: 0.0
+        interconnection_opex_per_kw: 0.0
+        electricity_buy_price: 0.09
