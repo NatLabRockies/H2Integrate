@@ -159,6 +159,14 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             desc="unmet demand for electricity from the turbine/plant",
         )
 
+        self.add_output(
+            f"{self.commodity}_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="MW",
+            desc="accessible reserve headroom for the system",
+        )
+
         self.ngct = NGCT.NGCT(
             ratio_P=self.config.pressure_ratio,
             Trel_firing=self.config.firing_temp_C,
@@ -257,20 +265,20 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         )
 
         # get the net work and heat input related to the mass flowrates
-        net_work_vec = [
-            m * w / 1000.0 for m, w in zip(mass_flowrates, unit_mass_net_work_vec)
-        ]  # MW
+        net_work_vec = np.array(
+            [m * w / 1000.0 for m, w in zip(mass_flowrates, unit_mass_net_work_vec)]
+        )  # MW
         net_heat_input_vec = [
             m * q for m, q in zip(mass_flowrates, unit_mass_net_heat_input_vec)
         ]  # kJ/s
 
         # get the maximum net work the system could do given current conditions
-        max_net_work_vec = [
-            m * w / 1000.0 for m, w in zip(mass_flowrates_max, unit_mass_net_work_vec)
-        ]  # MW
+        max_net_work_vec = np.array(
+            [m * w / 1000.0 for m, w in zip(mass_flowrates_max, unit_mass_net_work_vec)]
+        )  # MW
 
         # compute the electricity out and package work and heat outputs
-        electricity_out = generator_efficiency * np.array(net_work_vec)  # MW
+        electricity_out = generator_efficiency * net_work_vec  # MW
         outputs["electricity_out"] = electricity_out
         outputs[f"{self.config.fuel_source}_consumed"] = net_heat_input_vec
 
