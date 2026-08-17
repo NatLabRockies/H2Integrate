@@ -56,15 +56,12 @@ def get_eia_api_key(api_key_file: Path | None, set_vars: bool = True) -> str:
     eia_api_key = get_environment_variables(
         "EIA_API_KEY", file_path=api_key_file, set_variables=set_vars
     )
+    msg = "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
     if not bool(eia_api_key):
-        raise ValueError(
-            "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
-        )
+        raise ValueError(msg)
     if (eia_key := eia_api_key.get("EIA_API_KEY")) is not None:
         return eia_key
-    raise ValueError(
-        "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
-    )
+    raise ValueError(msg)
 
 
 def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
