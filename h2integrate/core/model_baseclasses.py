@@ -505,7 +505,7 @@ class CacheBaseClass(om.ExplicitComponent):
             Path: filepath to pickle file with filename as unique cache key.
         """
         # NOTE: maybe would be good to add a string input that can specify what model this
-        # cache is for (like "hopp" or "floris"), this could be used in the cache
+        # cache is for (for example a technology name), this could be used in the cache
         # filename but perhaps unnecessary
 
         if not isinstance(config, dict):

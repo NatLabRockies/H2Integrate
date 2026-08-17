@@ -51,6 +51,7 @@ supported_models = _ModelRegistry(
         "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
+        "HRRRMETToolkitWindAPI": "resource.wind:HRRRMETToolkitWindAPI",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
         "OpenMeteoHistoricalSolarResource": "resource.solar:OpenMeteoHistoricalSolarResource",
         "GOESAggregatedSolarAPI": "resource.solar:GOESAggregatedSolarAPI",
@@ -89,7 +90,6 @@ supported_models = _ModelRegistry(
         "SteamMethaneReformerCostModel": "converters.hydrogen:SteamMethaneReformerCostModel",
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
-        "HOPPComponent": "converters.hopp:HOPPComponent",
         "MartinIronMinePerformanceComponent": "converters.iron:MartinIronMinePerformanceComponent",
         "MartinIronMineCostComponent": "converters.iron:MartinIronMineCostComponent",
         "NaturalGasIronReductionPlantPerformanceComponent": "converters.iron:NaturalGasIronReductionPlantPerformanceComponent",
@@ -209,6 +209,7 @@ no_cost_models = {
     "GasStreamCombinerPerformanceModel",
     "CablePerformanceModel",
     "PipePerformanceModel",
+    "GenericTransporterPerformanceModel",
 }
 
 no_replacement_schedule_models = {
