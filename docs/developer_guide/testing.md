@@ -147,7 +147,7 @@ the `plant_simulation` fixture.
 
 ## Using temporary directories to avoid saving output data
 
-For tests that utilize caching (similar to the HOPP) or non-openmdao ouputs (i.e., plots, data, etc.),
+For tests that utilize caching or non-openmdao ouputs (i.e., plots, data, etc.),
 the `temp_dir` fixture should be utilized for 2 reasons.
 
 1. The `temp_dir` fixture successfully removes the temporarily created files after running a module,

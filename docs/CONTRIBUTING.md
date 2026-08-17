@@ -89,7 +89,7 @@ pytest tests/h2integrate/test_hybrid.py::test_h2integrate_system
 ```
 
 When you push to your fork, or open a PR, your tests will be run against the
-[Continuous Integration (CI)](https://github.com/NatLabRockies/HOPP/actions) suite. This will start a build
+[Continuous Integration (CI)](https://github.com/NatLabRockies/H2Integrate/actions) suite. This will start a build
 that runs all tests on your branch against multiple Python versions, and will also test
 documentation builds.
 
