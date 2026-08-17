@@ -9,7 +9,6 @@ sites:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2013
-          resource_dir: ../11_hybrid_energy_plant/tech_inputs/weather/solar
           resource_filename: 30.6617_-101.7096_psmv3_60_2013.csv
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
@@ -30,8 +29,8 @@ technology_interconnections:
   - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
   # connect surplus generation to grid selling
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
-  # combine electricity generated from solar and electricity bought from grid
-  - [solar, combiner, electricity, cable]
+  # combine electricity generated from solar+battery and electricity bought from grid
+  - [bat_combiner, combiner, electricity, cable]
   - [grid_buy, combiner, electricity, cable]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology

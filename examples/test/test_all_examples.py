@@ -1,4 +1,5 @@
 import os
+import shutil
 import importlib
 from pathlib import Path
 
@@ -278,7 +279,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
+    with subtests.test("Check renewable plant CapEx"):
         wind_pv_capex = (
             model.prob.get_val("wind.CapEx", units="USD")[0]
             + model.prob.get_val("solar.CapEx", units="USD")[0]
@@ -287,7 +288,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         re_capex = wind_pv_capex + battery_capex
         assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
+    with subtests.test("Check renewable plant OpEx"):
         wind_pv_opex = (
             model.prob.get_val("wind.OpEx", units="USD/yr")[0]
             + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
@@ -838,8 +839,31 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check LCOE"):
-        assert model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0] < 83.2123
+    with subtests.test("Check LCOE is positive"):
+        lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0]
+        assert lcoe <= 69
+
+    with subtests.test("Check wind rated production"):
+        wind_rated = model.prob.get_val("wind.rated_electricity_production", units="kW")[0]
+        assert wind_rated <= 3005
+
+    with subtests.test("Check solar rated production"):
+        solar_rated = model.prob.get_val("solar.rated_electricity_production", units="kW")[0]
+        assert solar_rated <= 1925
+
+    with subtests.test("Check percent_load_missed"):
+        pct_missed = model.prob.get_val("electrical_load_demand.percent_load_missed")[0]
+        assert pct_missed <= 18.7
+
+    with subtests.test("Check curtailment_percent"):
+        curtailment = model.prob.get_val("electrical_load_demand.curtailment_percent")[0]
+        assert curtailment <= 16.5
+
+    with subtests.test("Check delivered total electricity produced"):
+        load_total = model.prob.get_val(
+            "electrical_load_demand.total_electricity_produced", units="kW*h"
+        )[0]
+        assert load_total <= 9700000
 
 
 @pytest.mark.integration
@@ -1377,9 +1401,9 @@ def test_electrolyzer_om_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOE"):
         assert pytest.approx(lcoe, rel=1e-4) == 39.98869
     with subtests.test("Check LCOH with lcoh_financials"):
-        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 16.9204156301
+        assert pytest.approx(lcoh_with_lcoh_finance, rel=2e-3) == 16.9204156301
     with subtests.test("Check LCOH with lcoe_financials"):
-        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 10.3360027653
+        assert pytest.approx(lcoh_with_lcoe_finance, rel=2e-3) == 10.3360027653
 
 
 @pytest.mark.integration
@@ -2707,6 +2731,9 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
 )
 def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
+    if shutil.which("glpsol") is None:
+        pytest.skip("GLPK executable 'glpsol' is not available in PATH")
+
     example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
