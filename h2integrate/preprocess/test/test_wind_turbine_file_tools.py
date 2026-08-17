@@ -17,11 +17,11 @@ def test_turbine_export_error(subtests):
     invalid_turbine_name = "NREL_1.5MW"
     with pytest.raises(ValueError) as excinfo:
         export_turbine_to_pysam_format(invalid_turbine_name)
-        assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
+    assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
         export_turbine_to_floris_format(invalid_turbine_name)
-        assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
+    assert f"Turbine {invalid_turbine_name} was not found" in str(excinfo.value)
 
 
 @pytest.mark.regression

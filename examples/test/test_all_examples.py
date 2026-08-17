@@ -1796,7 +1796,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
 
     with pytest.raises(UserWarning) as excinfo:
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
-        assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
+    assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
     from h2integrate import write_yaml, load_driver_yaml
     from h2integrate.core.dict_utils import update_defaults

@@ -252,7 +252,6 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
     if not overlap.difference(minimal_keys):
         return
 
-    # msg = None
     control_sys = None
     dispatch_sys = None
     cost_sys = None
