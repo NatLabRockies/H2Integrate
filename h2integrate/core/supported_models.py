@@ -146,6 +146,7 @@ supported_models = _ModelRegistry(
         "GenericSummerPerformanceModel": "transporters:GenericSummerPerformanceModel",
         # Storage
         "PySAMBatteryPerformanceModel": "storage.battery:PySAMBatteryPerformanceModel",
+        "BatteryPerformanceModel": "storage.battery:BatteryPerformanceModel",
         "StoragePerformanceModel": "storage:StoragePerformanceModel",
         "StorageAutoSizingModel": "storage:StorageAutoSizingModel",
         "LinedRockCavernStorageCostModel": "storage.hydrogen:LinedRockCavernStorageCostModel",

@@ -1,0 +1,5 @@
+name: H2Integrate_config
+system_summary: Battery degradation study driven by a fixed daily charge/discharge cycle
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

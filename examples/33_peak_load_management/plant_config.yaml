@@ -2,14 +2,24 @@ name: plant_config
 description: Demonstrates multivariable streams with a gas combiner
 plant:
   plant_life: 30
+  latitude: 30.6617
+  longitude: -101.7096
   simulation:
     n_timesteps: 8760
     dt: 3600
     timezone: -6
     start_time: 2025/07/01 00:00:00
+  resources:
+    solar_resource:
+      resource_model: GOESAggregatedSolarAPI
+      resource_parameters:
+        resource_year: 2025
 technology_interconnections:
   - [grid_buy, battery, electricity, cable]
   # include battery charge/discharge in the load
   - [battery, electrical_load_demand, [electricity_out, electricity_in]]
   # buy power from the grid to fulfill demand including to accommodate battery operation
   - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
+resource_to_tech_connections:
+  # connect the solar resource to the battery technology
+  - [site.solar_resource, battery, solar_resource_data]

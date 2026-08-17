@@ -358,20 +358,32 @@ def test_unsupported_simulation_parameters(temp_dir):
     plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
     # docs fencepost end: DO NOT REMOVE
 
-    # Modify the n_timesteps entry for the temp_plant_config_ntimesteps
-    plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 8759
-    # Modify the dt entry for the temp_plant_config_dt
-    plant_config_data_dt["plant"]["simulation"]["dt"] = 3601
+    plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
-    # Save the modified plant_configs YAML back
+    # Sub-year and multi-year horizons are now supported as long as they are positive
+    # and do not exceed the plant life. A ~half-year horizon should load without error.
+    plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
     with temp_plant_config_ntimesteps.open("w") as f:
         yaml.safe_dump(plant_config_data_ntimesteps, f)
+    load_plant_yaml(temp_plant_config_ntimesteps)
+
+    # A multi-year horizon (2 years of hourly data) should also load without error.
+    plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
     with temp_plant_config_dt.open("w") as f:
         yaml.safe_dump(plant_config_data_dt, f)
+    load_plant_yaml(temp_plant_config_dt)
 
-    # check that error is thrown when loading config with invalid number of timesteps
-    with pytest.raises(ValueError, match="greater than 1-year"):
-        load_plant_yaml(plant_config_data_ntimesteps)
+    # A horizon longer than the plant life is not supported and must raise.
+    over_life = deepcopy(plant_config_data_dt)
+    over_life["plant"]["simulation"]["n_timesteps"] = (plant_life + 1) * 8760
+    with pytest.raises(ValueError, match="longer than the plant"):
+        load_plant_yaml(over_life)
+
+    # A non-positive horizon is invalid and must raise.
+    non_positive = deepcopy(plant_config_data_dt)
+    non_positive["plant"]["simulation"]["dt"] = 0
+    with pytest.raises(ValueError, match="must be positive"):
+        load_plant_yaml(non_positive)
 
 
 @pytest.mark.unit

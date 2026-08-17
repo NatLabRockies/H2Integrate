@@ -1,4 +1,5 @@
 from attrs import field, define
+from numpy import inf
 from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
@@ -62,9 +63,11 @@ class ATBBatteryCostModel(CostModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
-    )  # (min, max) time step lengths (in seconds) compatible with this model
+        1e-6,
+        inf,
+    )  # (min, max) time step lengths (in seconds) compatible with this model. The ATB
+    # cost model is time-step independent (it only uses storage capacity and charge
+    # rate), so it accepts any sub-hourly-to-hourly time step.
 
     def setup(self):
         self.config = ATBBatteryCostConfig.from_dict(
@@ -105,8 +108,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
             storage_duration_hrs = max_capacity_kWh / max_charge_rate_kW
         if max_charge_rate_kW < 0:
             msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{max_charge_rate_kW} kW"
+                f"max_charge_rate cannot be less than zero and has value of {max_charge_rate_kW} kW"
             )
             raise UserWarning(msg)
         # CapEx equation from Cell E29
