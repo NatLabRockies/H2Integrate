@@ -1,0 +1,8 @@
+fuel_source: natural_gas
+system_capacity_mw: 239.0
+firing_temp_C: 1300.0
+pressure_ratio: 18.712850988834695
+flowrate_max_fluid_cubic_m_per_s: 477.78734437019483
+isentropic_efficiency_compressor: 0.85
+isentropic_efficiency_turbine: 0.90
+generator_efficiency: 1.0
