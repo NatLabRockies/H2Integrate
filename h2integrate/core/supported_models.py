@@ -89,7 +89,6 @@ supported_models = _ModelRegistry(
         "SteamMethaneReformerCostModel": "converters.hydrogen:SteamMethaneReformerCostModel",
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
-        "HOPPComponent": "converters.hopp:HOPPComponent",
         "MartinIronMinePerformanceComponent": "converters.iron:MartinIronMinePerformanceComponent",
         "MartinIronMineCostComponent": "converters.iron:MartinIronMineCostComponent",
         "NaturalGasIronReductionPlantPerformanceComponent": "converters.iron:NaturalGasIronReductionPlantPerformanceComponent",
