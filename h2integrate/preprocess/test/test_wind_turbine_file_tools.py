@@ -3,13 +3,13 @@ import pytest
 import openmdao.api as om
 
 from h2integrate import EXAMPLE_DIR, load_yaml, load_tech_yaml, load_plant_yaml
+from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.preprocess.wind_turbine_file_tools import (
     export_turbine_to_pysam_format,
     export_turbine_to_floris_format,
 )
-from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 
 
 @pytest.mark.unit
