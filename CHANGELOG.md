@@ -5,6 +5,7 @@
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
 - Fully remove HOPP and its integration into H2I now that all relevant capabilities have been ported to H2I. [PR 827](https://github.com/NatLabRockies/H2Integrate/pull/827)
+- Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
 
 ## 0.9 [August 10, 2026]
 
@@ -45,6 +46,7 @@
 
 
 #### Infrastructure
+- Grouped closely related test assertions into behavior-focused subtests and documented when to use subtests in the developer coding guidelines. [PR 839](https://github.com/NatLabRockies/H2Integrate/pull/839)
 - Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
 - `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks` [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
