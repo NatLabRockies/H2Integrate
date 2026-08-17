@@ -2323,8 +2323,8 @@ class H2IntegrateModel:
             for commodity, n_out in out_commodity_dests.get(storage_tech, {}).items():
                 if n_out > 1:
                     raise ValueError(
-                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) in "
-                        f"of commodity {commodity} but should have at most 1."
+                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) "
+                        f"for commodity {commodity!r} but should have at most 1."
                     )
             # Identify the upstream technology (connected via a length-4 edge)
             upstream_techs_l4 = [

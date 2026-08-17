@@ -180,7 +180,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
         with pytest.raises(ValueError) as excinfo:
             h2i.setup()
         err = str(excinfo.value)
-        assert "length-4 connection" in err
+        assert "Use a length-4 connection instead" in err
         assert "hydrogen" in err
 
     # --- Check 2a: storage tech with 0 inputs raises error ---
@@ -196,9 +196,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "h2_storage" in err
-        assert "input connection" in err
-
-    # --- Check 2b: storage tech with >1 outputs raises error ---
+        assert "has no input connections in" in err
     with subtests.test("storage tech with 2 outputs raises error"):
         extra_out_connections = [
             *base_interconnections,
@@ -209,7 +207,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "h2_storage" in err
-        assert "output connection" in err
+        assert "but should have at most 1." in err
 
     # --- Check 2c: upstream of storage with >2 outputs raises error ---
     with subtests.test("upstream tech of storage with >2 outputs raises error"):
@@ -222,9 +220,8 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "electrolyzer" in err
-        assert "output connection" in err
-
-    # --- Check 3: non-splitter/combiner/storage tech with >1 outputs raises error ---
+        assert "feeds storage technology" in err
+        assert "at most 2 output streams" in err
     with subtests.test("technology with 2 outputs (no storage) raises error"):
         # Add a second output from wind (which is not a splitter and not upstream of storage)
         extra_wind_connections = [
@@ -236,9 +233,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "wind" in err
-        assert "destinations" in err
-
-    # --- Check 3: non-splitter/combiner/storage tech with >1 inputs raises error ---
+        assert "Consider using a splitter component." in err
     with subtests.test("technology with 2 inputs raises error"):
         # Use h2_combiner as the second source so that the source itself (being a combiner)
         # is excluded from check #3, allowing the per-commodity source check to fire on
@@ -252,7 +247,7 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "electrolyzer" in err
-        assert "sources" in err
+        assert "Consider using a combiner component." in err
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +319,7 @@ def test_validate_interconnections_multi_commodity_storage(subtests):
             H2IntegrateModel._validate_technology_interconnections(bad)
         err = str(excinfo.value)
         assert "storage" in err
-        assert "hydrogen" in err
+        assert "but should receive it from at most 1." in err
 
 
 @pytest.mark.unit
@@ -362,7 +357,7 @@ def test_validate_interconnections_multi_in_multi_out_converter(subtests):
             H2IntegrateModel._validate_technology_interconnections(bad)
         err = str(excinfo.value)
         assert "converter" in err
-        assert "destinations" in err
+        assert "Consider using a splitter component." in err
 
     # Same commodity from two sources into converter must also fail.
     bad_interconnections_in = [
@@ -378,7 +373,7 @@ def test_validate_interconnections_multi_in_multi_out_converter(subtests):
             H2IntegrateModel._validate_technology_interconnections(bad_in)
         err = str(excinfo.value)
         assert "converter" in err
-        assert "sources" in err
+        assert "Consider using a combiner component." in err
 
 
 @pytest.mark.unit
@@ -428,7 +423,7 @@ def test_validate_interconnections_storage_no_inputs_raises(subtests):
             H2IntegrateModel._validate_technology_interconnections(fake)
         err = str(excinfo.value)
         assert "storage" in err
-        assert "input connection" in err
+        assert "has no input connections in" in err
 
 
 @pytest.mark.unit
@@ -446,7 +441,7 @@ def test_validate_interconnections_length3_commodity_pair_raises(subtests):
             H2IntegrateModel._validate_technology_interconnections(fake)
         err = str(excinfo.value)
         assert "electricity" in err
-        assert "length-4 connection" in err
+        assert "Use a length-4 connection instead" in err
 
 
 @pytest.mark.unit
@@ -464,7 +459,7 @@ def test_validate_interconnections_length3_commodity_pair_with_slices_raises(sub
             H2IntegrateModel._validate_technology_interconnections(fake)
         err = str(excinfo.value)
         assert "electricity" in err
-        assert "length-4 connection" in err
+        assert "Use a length-4 connection instead" in err
 
 
 @pytest.mark.unit
