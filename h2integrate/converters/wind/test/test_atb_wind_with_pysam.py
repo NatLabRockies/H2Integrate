@@ -1,9 +1,9 @@
 import pytest
 import openmdao.api as om
 
+from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 from h2integrate.converters.wind.atb_wind_cost import ATBWindPlantCostModel
-from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 
 
 @pytest.mark.regression

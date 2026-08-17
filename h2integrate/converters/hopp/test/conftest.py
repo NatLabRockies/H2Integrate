@@ -1,5 +1,0 @@
-from test.conftest import (  # noqa: F401
-    temp_dir,
-    temp_copy_of_example,
-    pytest_collection_modifyitems,
-)

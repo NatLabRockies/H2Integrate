@@ -205,17 +205,23 @@ If your technology involves computationally expensive calculations, you can leve
 This allows you to save the results of expensive computations to disk and load them in future runs, avoiding the need to recompute them.
 To use this functionality, you need to ensure that your model inherits from the appropriate baseclass (`CacheBaseClass`) and that caching is enabled in your model's configuration.
 You can then enable caching by setting the `enable_caching` flag to `True` in your model's `tech_config` file.
-Please see the `hopp_wrapper.py` file for an example of how to implement caching in your model.
+Please see models that inherit from `CacheBaseClass` (for example, wind and resource models)
+for examples of how to implement caching in your model.
 
 ### Models where the performance and cost are tightly coupled
 
 In some cases, the performance and cost models are tightly coupled, and it might make sense to combine them into a single model.
-This is currently the case for the `HOPP` and `h2_storage` wrappers, where the performance and cost models are combined into a single component.
+This is currently the case for the `WOMBATElectrolyzerModel`, `IronComponent`, and `ArdWindPlantModel`
+components, where the performance and cost models are combined into a single component.
 If you're adding a technology where this makes sense, you can follow the same steps as above but you also need to modify the `h2integrate_model.py` file for this special logic.
 For now, modify a single  the `create_technology_models.py` file to include your new technology as such:
 
 ```python
-combined_performance_and_cost_model_technologies = ['HOPPComponent', 'h2_storage', '<your_tech_here>']
+combined_performance_and_cost_model_technologies = [
+    'WOMBATElectrolyzerModel',
+    'ArdWindPlantModel',
+    '<your_tech_here>',
+]
 
 # Create a technology group for each technology
 for tech_name, individual_tech_config in self.technology_config['technologies'].items():
@@ -233,7 +239,7 @@ For example, you might have a performance model that instantiates a data class t
 If the computational burden is low, you can simply instantiate the data class in both models using a single function that returns the data class as done in the `direct_ocean_capture.py` file.
 In the middle-ground case where the models might use a shared object that is computationally expensive to create, you can create and cache the object in a pickle file and load it in both models.
 This would require additional logic to first check if the cached object exists and is valid before attempting to load it, otherwise it would create the object from scratch.
-There is an example of this in the `hopp_wrapper.py` file.
+There are examples of this pattern in components that inherit from `CacheBaseClass`.
 
 ### Other cases
 

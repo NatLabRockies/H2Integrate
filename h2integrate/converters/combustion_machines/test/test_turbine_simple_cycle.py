@@ -62,6 +62,7 @@ def test_demo_case(subtests):
                         "isentropic_efficiency_compressor": 0.85,
                         "isentropic_efficiency_turbine": 0.90,
                         "generator_efficiency": 1.0,
+                        "generator_nameplate_power_mw": 255.0,  # 300 MVA @ 0.85 PF
                     },
                     "cost_parameters": {
                         "capex_per_kw": 1000,  # $/kW - typical for NGCC; stolen from ex. 16
@@ -133,8 +134,8 @@ def test_demo_case(subtests):
         "generator_efficiency": 1.0,
         "electricity_set_point": 1.0e9,  # MW, default value
         "natural_gas_in": 3000.0,  # MMBtu/h
-        "natural_gas_consumed": 1921.4675,  # MMBtu/h
-        "electricity_out": 215.4859,  # MW
+        "natural_gas_consumed": 1928.089814235099,  # MMBtu/h
+        "electricity_out": 216.2495760842288,  # MW
     }
 
     with subtests.test("config_value_fuel_set"):

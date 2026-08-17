@@ -19,15 +19,16 @@ Here is a snippet of the output from a simulation:
 varname                               val                  units     prom_name
 ------------------------------------  -------------------  --------  -----------------------------------------------
 plant
-  HOPPComponent
-    HOPPComponent
-      electricity_out                 |85694382.72934064|   kW         HOPPComponent.electricity_out
-      CapEx                           [4.00631628e+09]      USD        HOPPComponent.CapEx
-      OpEx                            [70417369.71000001]   USD/year   HOPPComponent.OpEx
-  hopp_to_steel_cable
-    electricity_out                   |85694382.72934064|   kW         hopp_to_steel_cable.electricity_out
-  hopp_to_electrolyzer_cable
-    electricity_out                   |85694382.72934064|   kW         hopp_to_electrolyzer_cable.electricity_out
+  wind
+    PYSAMWindPlantPerformanceModel
+      electricity_out                 |85694382.72934064|   kW         wind.electricity_out
+    ATBWindPlantCostModel
+      CapEx                           [4.00631628e+09]      USD        wind.CapEx
+      OpEx                            [70417369.71000001]   USD/year   wind.OpEx
+  wind_to_steel_cable
+    electricity_out                   |85694382.72934064|   kW         wind_to_steel_cable.electricity_out
+  wind_to_electrolyzer_cable
+    electricity_out                   |85694382.72934064|   kW         wind_to_electrolyzer_cable.electricity_out
   electrolyzer
     ECOElectrolyzerPerformanceModel
       hydrogen_out                    |1100221.2561732|     kg/h       electrolyzer.hydrogen_out
@@ -121,7 +122,7 @@ When providing a list of variable names, the function uses the default units for
 # Get a subset of timeseries data using a list of variable names
 output_vars = [
     "electrolyzer.hydrogen_out",
-    "HOPPComponent.electricity_out",
+  "wind.electricity_out",
     "ammonia.ammonia_out",
     "h2_storage.hydrogen_out",
 ]
@@ -157,7 +158,7 @@ When providing a dictionary with variable names as keys and dictionaries as valu
 # Specify variables with alternative names and/or units
 vars_with_options = {
     "electrolyzer.hydrogen_out": {"alternative_name": "Electrolyzer Hydrogen Output"},
-    "HOPPComponent.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
+  "wind.electricity_out": {"units": "kW", "alternative_name": "Plant Electricity Output"},
     "ammonia.ammonia_out": {"alternative_name": None},  # Uses default variable name
     "h2_storage.hydrogen_out": {"alternative_name": "H2 Storage Hydrogen Output"},
 }

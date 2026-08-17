@@ -17,7 +17,7 @@ H2Integrate is designed to be flexible and extensible, allowing users to create 
 The tool currently includes renewable energy generation (land-based wind, offshore wind, solar PV, wave, tidal), conventional generation (natural gas combined cycle, combustion turbines, grid electricity), hydrogen production (PEM electrolysis, NG-SMR), energy storage (Li-ion batteries, long-duration energy storage, pumped storage hydropower), fuel cells, and industrial processes (ammonia synthesis, iron ore reduction, steel production, methanol, and more).
 Other elements can also be included as developed by users.
 H2Integrate is continually expanding to serve additional hybrid applications -- if you're interested in seeing what's being actively developed, please see the [current pull requests in the GitHub repository](https://github.com/NatLabRockies/H2Integrate/pulls).
-Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [HOPP](https://github.com/NatLabRockies/HOPP), [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
+Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
 The H2Integrate tool is built on top of [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/), which provides a powerful and flexible environment for modeling and optimization.
 
 ```{note}

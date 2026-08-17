@@ -24,6 +24,8 @@ def get_nlr_developer_api_credential(
             retrieved.
         env_path (None | Path | str, optional): Filepath to file containing NLR API credentials.
             Defaults to None.
+        set_vars (bool, optional): If True, set the environment variables if they
+            haven't already been set. Defaults to True.
 
     Raises:
         ValueError: Raised if an invalid value was passed to :py:attr:`which`.

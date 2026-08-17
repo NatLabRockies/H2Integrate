@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 from pytest import fixture
-from hopp.utilities.utilities import load_yaml
 
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.tools.profast_tools import (
     run_profast,
     convert_pf_to_dict,

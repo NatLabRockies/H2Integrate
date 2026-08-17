@@ -52,7 +52,7 @@ class SingliticoCostModel(ElectrolyzerCostBaseClass):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         electrolyzer_size_mw = float(inputs["electrolyzer_size_mw"][0])
 
-        # run hydrogen production cost model - from hopp examples
+        # run hydrogen production cost model
         if self.config.location == "onshore":
             elec_location = 0
         else:

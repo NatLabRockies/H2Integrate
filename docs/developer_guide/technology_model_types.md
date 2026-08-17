@@ -186,7 +186,7 @@ You only need to write a control model if you want to override that default — 
 
 ```{note}
 It is possible to have a combined performance, cost, and financial model within a single OpenMDAO system, provided that it returns all the necessary values.
-For example, in the HOPP wrapper, we use a combined performance and cost model to reduce computational cost.
+For example, `WOMBATElectrolyzerModel` uses a combined performance and cost model to reduce computational cost.
 ```
 
 ## Financial model (optional)

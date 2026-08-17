@@ -41,7 +41,10 @@ def model_inputs():
 
 @pytest.mark.unit
 def test_generic_converter_cost_config(model_inputs, subtests):
-    expected_msg = "Please provide either a value for unit_opex or a value for opex_fraction"
+    expected_msg = (
+        "Please provide either a value for `unit_opex` or a value for `opex_fraction` "
+        "in the generic converter cost config, but not both."
+    )
 
     model_inputs["cost_parameters"]["unit_opex"] = 10.0
     model_inputs["cost_parameters"]["opex_fraction"] = 0.1
@@ -52,7 +55,7 @@ def test_generic_converter_cost_config(model_inputs, subtests):
                 strict=True,
                 additional_cls_name="test",
             )
-            assert str(excinfo.value) == expected_msg
+        assert expected_msg in str(excinfo.value)
 
     model_inputs["cost_parameters"]["unit_opex"] = None
     model_inputs["cost_parameters"]["opex_fraction"] = None
@@ -63,7 +66,7 @@ def test_generic_converter_cost_config(model_inputs, subtests):
                 strict=True,
                 additional_cls_name="test",
             )
-            assert str(excinfo.value) == expected_msg
+        assert expected_msg in str(excinfo.value)
 
     model_inputs["cost_parameters"]["unit_opex"] = None
     model_inputs["cost_parameters"]["opex_fraction"] = 0.1

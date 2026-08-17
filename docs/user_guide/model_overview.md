@@ -98,8 +98,9 @@ auto-generated API page.
 
 - `wind`: wind resource data providers
   - other components:
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI`
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
-    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api.WTKNLRDeveloperAPIWindResource`
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=
 ## Converter models
@@ -146,10 +147,6 @@ auto-generated API page.
     + {py:class}`~h2integrate.converters.grid.grid.GridPerformanceModel` - Model a grid interconnection point.
   - cost models:
     + {py:class}`~h2integrate.converters.grid.grid.GridCostModel` - An OpenMDAO component that computes costs for grid connections.
-
-- `hopp`: hybrid renewable plant via HOPP
-  - combined performance and cost models:
-    + {py:class}`~h2integrate.converters.hopp.hopp_wrapper.HOPPComponent` - A simple OpenMDAO component that represents a HOPP model.
 
 - `hydrogen`: hydrogen production
   - performance models:

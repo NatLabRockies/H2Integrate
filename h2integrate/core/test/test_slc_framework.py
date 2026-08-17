@@ -29,13 +29,13 @@ def tech_control_classifiers(connection_case):
         if (classifier := config["control_classifiers"].get(tech, None)) is not None:
             tech_control_classification[tech] = classifier
             continue
-        if "combiner" in tech or "splitter" in tech:
-            tech_control_classification[tech] = "connector"
+        if "combiner" in tech:
+            tech_control_classification[tech] = "combiner"
             continue
-
-    tech_control_classification = {
-        tech: config["control_classifiers"].get(tech, "connector") for tech in all_techs
-    }
+        if "splitter" in tech:
+            tech_control_classification[tech] = "splitter"
+            continue
+        tech_control_classification[tech] = "connector"
     return tech_control_classification
 
 
@@ -78,9 +78,9 @@ def test_slc_topology_missing_demand(plant_config, tech_control_classifiers, sub
     with subtests.test("Error raised when missing demand_component"):
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert "Please specify the technology name for the demand component in" in str(
-                excinfo.value
-            )
+        assert "Please specify the technology name for the demand component in" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit
@@ -102,9 +102,9 @@ def test_slc_topology_demand_not_in_tech(plant_config, tech_control_classifiers,
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert f"``{demand_tech}`` not defined in the tech configuration file." in str(
-                excinfo.value
-            )
+        assert f"``{demand_tech}``,not defined in the tech configuration file." in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit
@@ -127,10 +127,10 @@ def test_slc_topology_invalid_demand_tech(plant_config, tech_control_classifiers
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert (
-                "Demand component ``AmmoniaPlant`` is not a supported model for the system level"
-                in str(excinfo.value)
-            )
+        assert (
+            "Demand component ``AmmoniaPlant`` is not a supported model for the system level"
+            in str(excinfo.value)
+        )
 
 
 @pytest.mark.unit
@@ -158,10 +158,9 @@ def test_slc_topology_unconnected_demand(plant_config, tech_control_classifiers,
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert (
-                f"Please ensure that the demand technology ``{demand_tech}`` is connected"
-                in str(excinfo.value)
-            )
+        assert f"Please ensure that the demand technology ``{demand_tech}`` is connected" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit

@@ -171,12 +171,12 @@ def test_get_eia_api_key(subtests, EIA_API_key_file):
         del os.environ["EIA_API_KEY"]
 
     with subtests.test("Error is raised for no file nor env variable"):
-        msg = "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY'"
+        msg = "`EIA_API_KEY` has not been set. "
         with pytest.raises(ValueError, match=msg):
             eia.get_eia_api_key(None)
 
     with subtests.test("Error is raised for file with bad key name"):
-        msg = "No 'EIA_API_KEY' defined"
+        msg = "`EIA_API_KEY` has not been set. "
         with pytest.raises(ValueError, match=msg):
             eia.get_eia_api_key(bad_api_fn)
 
