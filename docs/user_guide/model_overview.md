@@ -147,10 +147,6 @@ auto-generated API page.
   - cost models:
     + {py:class}`~h2integrate.converters.grid.grid.GridCostModel` - An OpenMDAO component that computes costs for grid connections.
 
-- `hopp`: hybrid renewable plant via HOPP
-  - combined performance and cost models:
-    + {py:class}`~h2integrate.converters.hopp.hopp_wrapper.HOPPComponent` - A simple OpenMDAO component that represents a HOPP model.
-
 - `hydrogen`: hydrogen production
   - performance models:
     + {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModel` - An OpenMDAO component that wraps the PEM electrolyzer model.

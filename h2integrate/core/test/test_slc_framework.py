@@ -29,13 +29,13 @@ def tech_control_classifiers(connection_case):
         if (classifier := config["control_classifiers"].get(tech, None)) is not None:
             tech_control_classification[tech] = classifier
             continue
-        if "combiner" in tech or "splitter" in tech:
-            tech_control_classification[tech] = "connector"
+        if "combiner" in tech:
+            tech_control_classification[tech] = "combiner"
             continue
-
-    tech_control_classification = {
-        tech: config["control_classifiers"].get(tech, "connector") for tech in all_techs
-    }
+        if "splitter" in tech:
+            tech_control_classification[tech] = "splitter"
+            continue
+        tech_control_classification[tech] = "connector"
     return tech_control_classification
 
 
