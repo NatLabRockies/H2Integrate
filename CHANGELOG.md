@@ -7,6 +7,7 @@
 - Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`; see method for details. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled), added `heat` to `PipePerformanceModel` supported transport items, and updated examples 33 and 36 to use length-4 connections. [PR 832](https://github.com/NatLabRockies/H2Integrate/pull/832)
 - Fully remove HOPP and its integration into H2I now that all relevant capabilities have been ported to H2I. [PR 827](https://github.com/NatLabRockies/H2Integrate/pull/827)
 - Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
+- Updated EIA feedstock API call and getting user-specified directories (for feedstock and resource data) to use `get_environment_variables()` [PR #834](https://github.com/NatLabRockies/H2Integrate/pull/834)
 
 ## 0.9 [August 10, 2026]
 
