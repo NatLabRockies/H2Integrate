@@ -68,7 +68,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    _control_classifier = "connector"
+    _control_classifier = "splitter"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})

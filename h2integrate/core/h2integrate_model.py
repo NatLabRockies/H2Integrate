@@ -610,7 +610,7 @@ class H2IntegrateModel:
                     storage_tech_to_control[tech] = True
         slc_topology["storage_techs_to_control"] = storage_tech_to_control
 
-        # Remove feedstocks and connectors
+        # Remove feedstocks, combiners, and splitters
         control_classifiers_to_connect = [
             "fixed",
             "flexible",
@@ -1012,8 +1012,8 @@ class H2IntegrateModel:
                         if model_type == "performance_model":
                             perf_om_object = om_model_object
 
-                        # Collect control classifier for system-level control
-                        if model_type == "performance_model" and self.slc:
+                        # Collect control classifier for topology validation and SLC
+                        if model_type == "performance_model":
                             perf_cls = self.supported_models.get(perf_model)
                             if perf_cls is not None:
                                 classifier = getattr(perf_cls, "_control_classifier", None)
@@ -1120,7 +1120,7 @@ class H2IntegrateModel:
             return
 
         # Only flexible/dispatchable/storage techs accept an externally
-        # provided demand signal. Fixed, feedstock, and connector techs are
+        # provided demand signal. Fixed, feedstock, combiner, and splitter techs are
         # handled elsewhere (fixed/feedstock have no demand input) and must
         # not get a passthrough.
         classifier = getattr(perf_comp, "_control_classifier", None)
@@ -1923,6 +1923,7 @@ class H2IntegrateModel:
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
+        self._validate_technology_interconnections()
         self._check_tech_connections()
 
     def run(self):
@@ -2218,6 +2219,165 @@ class H2IntegrateModel:
                 technology_graph.add_edge(source, destination)
 
         return technology_graph
+
+    def _validate_technology_interconnections(self):
+        """Validate technology interconnections for common errors and discouraged patterns.
+
+        Performs the following checks:
+
+        1. Length-3 connections that pass a commodity via a ``[commodity_out, commodity_in]``
+           pair should instead use a length-4 connection with an explicit commodity name and
+           transport component. An error is raised when source and destination parameter names
+           differ only by their ``_out`` / ``_in`` suffix (i.e. the commodity could be inferred).
+
+        2. Storage technology topology: each storage technology must have exactly 1 input
+           connection (length-4) and at most 1 output connection (length-4). The technology
+           directly upstream of the storage component is allowed at most 2 output connections
+           (one to the storage tech and one to a combiner).
+
+        3. For all other technologies connected via length-4 connections (excluding splitters,
+           combiners, storage technologies, and direct predecessors of storage technologies),
+           each individual commodity may arrive from at most 1 source and be sent to at most
+           1 destination. Technologies with multiple inputs or outputs are fine as long as
+           each commodity comes from a single source and goes to a single destination
+           (e.g. an ammonia plant receiving hydrogen, nitrogen, and electricity from three
+           separate technologies is perfectly valid).
+
+        Raises:
+            ValueError: If any interconnection violates the topology rules.
+        """
+        technology_interconnections = self.plant_config.get("technology_interconnections", [])
+
+        # --- Check 1: discouraged length-3 [commodity_out, commodity_in] connections ---
+        for connection in technology_interconnections:
+            if len(connection) != 3:
+                continue
+            connected_parameter = connection[2]
+            if not isinstance(connected_parameter, list | tuple) or len(connected_parameter) != 2:
+                continue
+            source_param, dest_param = connected_parameter
+            if not isinstance(source_param, str) or not isinstance(dest_param, str):
+                continue
+            source_param_base = source_param.split("[", 1)[0]
+            dest_param_base = dest_param.split("[", 1)[0]
+            if source_param_base.endswith("_out") and dest_param_base.endswith("_in"):
+                commodity_from_source = source_param_base[: -len("_out")]
+                commodity_from_dest = dest_param_base[: -len("_in")]
+                if commodity_from_source == commodity_from_dest:
+                    source_tech, dest_tech = connection[0], connection[1]
+                    raise ValueError(
+                        f"Connection [{source_tech!r}, {dest_tech!r}, "
+                        f"[{source_param!r}, {dest_param!r}]] passes commodity "
+                        f"{commodity_from_source!r} between technologies using a "
+                        f"length-3 format. Use a length-4 connection instead: "
+                        f"[{source_tech!r}, {dest_tech!r}, {commodity_from_source!r}, "
+                        f"'<transport_tech>']. You can use "
+                        f"'GenericTransporterPerformanceModel' to transport "
+                        f"{commodity_from_source!r}."
+                    )
+
+        # --- Checks 2 and 3: topology checks using the technology graph ---
+        # Build edge-count degree maps (L4 only) for the storage topology check,
+        # and per-commodity source/destination maps for the general stream check.
+        in_degs_l4: dict[str, int] = {}
+        out_degs_l4: dict[str, int] = {}
+        # in_commodity_sources[tech][commodity] = number of distinct sources
+        in_commodity_sources: dict[str, dict[str, int]] = {}
+        # out_commodity_dests[tech][commodity] = number of distinct destinations
+        out_commodity_dests: dict[str, dict[str, int]] = {}
+
+        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
+            if not commodity:
+                continue  # length-3 connections carry no commodity; skip them
+            out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
+            in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
+            for c in commodity:
+                in_commodity_sources.setdefault(dest, {}).update(
+                    {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
+                )
+                out_commodity_dests.setdefault(source, {}).update(
+                    {c: out_commodity_dests.get(source, {}).get(c, 0) + 1}
+                )
+
+        # --- Check 2: storage technology topology ---
+        storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
+        storage_upstream_techs: set[str] = set()
+        for storage_tech in storage_techs:
+            n_in = in_degs_l4.get(storage_tech, 0)
+            if n_in == 0:
+                raise ValueError(
+                    f"Storage technology {storage_tech!r} has no input connections in "
+                    f"the technology graph but should have at least 1."
+                )
+            # Per-commodity check: each commodity must arrive from exactly 1 source.
+            # A storage tech may accept multiple different commodities (e.g. electricity
+            # and hydrogen) from different upstream technologies; that is fine as long as
+            # no single commodity is supplied by more than one source.
+            for commodity, n_sources in in_commodity_sources.get(storage_tech, {}).items():
+                if n_sources > 1:
+                    raise ValueError(
+                        f"Storage technology {storage_tech!r} receives commodity "
+                        f"{commodity!r} from {n_sources} sources in the technology graph "
+                        f"but should receive it from at most 1."
+                    )
+            for commodity, n_out in out_commodity_dests.get(storage_tech, {}).items():
+                if n_out > 1:
+                    raise ValueError(
+                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) "
+                        f"for commodity {commodity!r} but should have at most 1."
+                    )
+            # Identify the upstream technology (connected via a length-4 edge)
+            upstream_techs_l4 = [
+                t
+                for t in self.technology_graph.predecessors(storage_tech)
+                if self.technology_graph.edges[t, storage_tech].get("commodity")
+            ]
+            for upstream_tech in upstream_techs_l4:
+                storage_upstream_techs.add(upstream_tech)
+                for commodity in self.technology_graph.edges[upstream_tech, storage_tech].get(
+                    "commodity"
+                ):
+                    n_out_upstream = out_commodity_dests.get(upstream_tech, {}).get(commodity, 0)
+                    if n_out_upstream > 2:
+                        raise ValueError(
+                            f"Technology {upstream_tech!r} feeds storage technology "
+                            f"{storage_tech!r} but has {n_out_upstream} output connection(s). "
+                            f"It should connect only to {storage_tech!r} and a combiner "
+                            f"(at most 2 output streams)."
+                        )
+
+        # --- Check 3: per-commodity max 1 source/destination for general technologies ---
+        # A technology may receive multiple different commodities from different sources
+        # (e.g. an ammonia plant accepting hydrogen, nitrogen, and electricity is valid),
+        # but each individual commodity must arrive from exactly 1 source and be sent to
+        # exactly 1 destination (unless the tech is a splitter, combiner, storage, or the
+        # direct upstream tech of a storage component, all of which have known exceptions).
+        all_techs_in_l4 = set(in_commodity_sources) | set(out_commodity_dests)
+        for tech in all_techs_in_l4:
+            classifier = self.tech_control_classifiers.get(tech)
+            if classifier in ("splitter", "combiner"):
+                continue
+            if classifier == "storage":
+                continue  # already validated in check 2
+
+            for commodity, n_sources in in_commodity_sources.get(tech, {}).items():
+                if n_sources > 1:
+                    raise ValueError(
+                        f"Technology {tech!r} receives commodity {commodity!r} from "
+                        f"{n_sources} sources in the technology graph but should receive "
+                        f"it from at most 1. Consider using a combiner component."
+                    )
+
+            if tech in storage_upstream_techs:
+                continue  # out-stream validation for storage upstream handled in check 2
+
+            for commodity, n_dests in out_commodity_dests.get(tech, {}).items():
+                if n_dests > 1:
+                    raise ValueError(
+                        f"Technology {tech!r} sends commodity {commodity!r} to "
+                        f"{n_dests} destinations in the technology graph but should "
+                        f"send it to at most 1. Consider using a splitter component."
+                    )
 
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.
