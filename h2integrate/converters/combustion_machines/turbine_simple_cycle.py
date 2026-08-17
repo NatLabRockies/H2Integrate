@@ -282,9 +282,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         outputs["electricity_out"] = electricity_out
         outputs[f"{self.config.fuel_source}_consumed"] = net_heat_input_vec
 
-        outputs["rated_electricity_production"] = (
-            system_capacity_mw  # QUESTION!!!!! WHAT IS RATED???
-        )
+        outputs["rated_electricity_production"] = system_capacity_mw
 
         max_production = inputs["system_capacity"] * len(electricity_out) * self.dt / 3600.0
 
