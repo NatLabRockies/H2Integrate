@@ -218,7 +218,6 @@ For now, modify a single  the `create_technology_models.py` file to include your
 
 ```python
 combined_performance_and_cost_model_technologies = [
-    'h2_storage',
     'WOMBATElectrolyzerModel',
     'ArdWindPlantModel',
     '<your_tech_here>',

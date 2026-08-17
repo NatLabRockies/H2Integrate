@@ -24,8 +24,7 @@ class DispatchProblemState:
         The outputs of this method are not actively used in the H2I simulation, but they are useful
         for debugging and tracking solver performance over time.
 
-        NOTE: this method originated from an earlier dispatch implementation and
-        has since been adapted for H2Integrate.
+        NOTE: this method originated from HOPP and has since been adapted for H2Integrate.
 
 
         Args:

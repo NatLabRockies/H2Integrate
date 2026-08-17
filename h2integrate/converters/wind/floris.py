@@ -157,7 +157,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
 
     def format_resource_data(self, hub_height, wind_resource_data):
         # NOTE: could weight resource data of bounding heights like
-        # `weighted_parse_resource_data` used in earlier wind workflows
+        # `weighted_parse_resource_data` used in HOPP
 
         bounding_heights = self.calculate_bounding_heights_from_resource_data(
             hub_height, wind_resource_data, resource_vars=["wind_speed", "wind_direction"]
