@@ -93,7 +93,6 @@ SUBCATEGORY_LABELS: dict[str, tuple[str, str]] = {
         "water_power",
         "wave, tidal, and run-of-river hydropower",
     ),
-    "h2integrate.converters.hopp": ("hopp", "hybrid renewable plant via HOPP"),
     "h2integrate.converters.hydrogen": ("hydrogen", "hydrogen production"),
     "h2integrate.converters.hydrogen.geologic": (
         "geoh2",
@@ -148,7 +147,6 @@ SUBCATEGORY_LABELS: dict[str, tuple[str, str]] = {
 # ---------------------------------------------------------------------------
 COMBINED_PERFORMANCE_AND_COST_MODELS: frozenset[str] = frozenset(
     {
-        "HOPPComponent",
         "WOMBATElectrolyzerModel",
     }
 )

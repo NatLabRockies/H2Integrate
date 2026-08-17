@@ -4,6 +4,9 @@
 - Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
+- Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`; see method for details. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled), added `heat` to `PipePerformanceModel` supported transport items, and updated examples 33 and 36 to use length-4 connections. [PR 832](https://github.com/NatLabRockies/H2Integrate/pull/832)
+- Fully remove HOPP and its integration into H2I now that all relevant capabilities have been ported to H2I. [PR 827](https://github.com/NatLabRockies/H2Integrate/pull/827)
+- Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
 
 ## 0.9 [August 10, 2026]
 
@@ -32,7 +35,7 @@
 - Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
 - Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
 - Added an optional `inflation_rate` input to `NumpyFinancialNPVFinanceConfig` that is combined with `real_discount_rate` via the Fisher equation to form the effective rate passed to `numpy_financial.npv`, allowing users to supply either a nominal discount rate (with `inflation_rate=0`, the default) or a real discount rate together with an explicit inflation rate. Matches how ProFAST combines its real discount rate and `general_inflation` inputs. [PR 788](https://github.com/NatLabRockies/H2Integrate/pull/788)
-- Renamed the `discount_rate` input to `real_discount_rate` in `NumpyFinancialNPVFinanceConfig` to clarify that it is combined with `inflation_rate` via the Fisher equation. The ProFAST models keep their existing `discount_rate` name. Updated the numpy NPV model, tests, docs, and the example 19 config accordingly. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Renamed the `discount_rate` input to `real_discount_rate` in `NumpyFinancialNPVFinanceConfig` to clarify that it is combined with `inflation_rate` via the Fisher equation. The ProFAST models keep their existing `discount_rate` name. Updated the numpy NPV model, tests, docs, and the example 19 config accordingly. [PR 788](https://github.com/NatLabRockies/H2Integrate/pull/788)
 - Connect each cost-aware system-level controller's `{tech}_buy_price` input directly to the technology's own buy-price input via OpenMDAO 3.44 input-to-input connections, so a single `prob.set_val()` on (for example) `grid.electricity_buy_price` now propagates to the SLC. [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
 - Added system-level-controller unit tests that confirm the `cost_per_tech: feedstock` mode correctly sums `VarOpEx` from all upstream feedstocks for a multi-feedstock dispatchable, including a fuel-cell-style hydrogen-plus-oxygen scenario and a case with feedstocks at different graph depths. [PR 793](https://github.com/NatLabRockies/H2Integrate/pull/793)
 - Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
@@ -44,6 +47,7 @@
 
 
 #### Infrastructure
+- Grouped closely related test assertions into behavior-focused subtests and documented when to use subtests in the developer coding guidelines. [PR 839](https://github.com/NatLabRockies/H2Integrate/pull/839)
 - Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
 - `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks` [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)

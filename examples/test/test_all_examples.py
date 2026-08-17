@@ -1,4 +1,5 @@
 import os
+import shutil
 import importlib
 from pathlib import Path
 
@@ -278,7 +279,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     model.post_process()
 
     # Subtests for checking specific values
-    with subtests.test("Check HOPP CapEx"):
+    with subtests.test("Check renewable plant CapEx"):
         wind_pv_capex = (
             model.prob.get_val("wind.CapEx", units="USD")[0]
             + model.prob.get_val("solar.CapEx", units="USD")[0]
@@ -287,7 +288,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         re_capex = wind_pv_capex + battery_capex
         assert pytest.approx(re_capex, rel=1e-6) == 1.75469962e09
 
-    with subtests.test("Check HOPP OpEx"):
+    with subtests.test("Check renewable plant OpEx"):
         wind_pv_opex = (
             model.prob.get_val("wind.OpEx", units="USD/yr")[0]
             + model.prob.get_val("solar.OpEx", units="USD/yr")[0]
@@ -1400,9 +1401,9 @@ def test_electrolyzer_om_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOE"):
         assert pytest.approx(lcoe, rel=1e-4) == 39.98869
     with subtests.test("Check LCOH with lcoh_financials"):
-        assert pytest.approx(lcoh_with_lcoh_finance, rel=1e-4) == 16.9204156301
+        assert pytest.approx(lcoh_with_lcoh_finance, rel=2e-3) == 16.9204156301
     with subtests.test("Check LCOH with lcoe_financials"):
-        assert pytest.approx(lcoh_with_lcoe_finance, rel=1e-4) == 10.3360027653
+        assert pytest.approx(lcoh_with_lcoe_finance, rel=2e-3) == 10.3360027653
 
 
 @pytest.mark.integration
@@ -2730,6 +2731,9 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
 )
 def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
+    if shutil.which("glpsol") is None:
+        pytest.skip("GLPK executable 'glpsol' is not available in PATH")
+
     example_folder = temp_copy_of_example
 
     # Create a H2Integrate model

@@ -58,7 +58,6 @@ CATEGORY_RULES = [
     ("converters/grid", ("Converter", "Grid")),
     ("converters/water_power", ("Converter", "Water Power")),
     ("converters/natural_gas", ("Converter", "Natural Gas")),
-    ("converters/hopp", ("Converter", "HOPP")),
     # --- Chemical converters ---
     ("converters/hydrogen", ("Converter", "Hydrogen")),
     ("converters/ammonia", ("Converter", "Ammonia")),
@@ -109,7 +108,6 @@ PRODUCT_TO_GROUP = {
     "Wind": "Renewables",
     "Solar": "Renewables",
     "Water Power": "Renewables",
-    "HOPP": "Renewables",
     "Nuclear": "Other Elec. Generators",
     "Grid": "Other Elec. Generators",
     "Natural Gas": "Other Elec. Generators",

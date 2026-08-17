@@ -229,15 +229,15 @@ def test_battery_config(subtests):
     with subtests.test("with minimal params minimum_SOC"):
         assert (
             config.min_soc_fraction == 0.1
-        )  # Decimal percent as compared to test_battery.py in HOPP 10%
+        )  # Decimal percent from the baseline battery configuration
     with subtests.test("with minimal params maximum_SOC"):
         assert (
             config.max_soc_fraction == 0.9
-        )  # Decimal percent as compared to test_battery.py in HOPP 90%
+        )  # Decimal percent from the baseline battery configuration
     with subtests.test("with minimal params initial_SOC"):
         assert (
             config.init_soc_fraction == 0.1
-        )  # Decimal percent as compared to test_battery.py in HOPP 10%
+        )  # Decimal percent from the baseline battery configuration
 
     with subtests.test("with invalid capacity"):
         with pytest.raises(ValueError):
@@ -292,9 +292,8 @@ def test_battery_initialization(plant_config, subtests):
         assert battery.system_model is not None
 
     with subtests.test("battery mass"):
-        # this test value does not match the value in test_battery.py in HOPP
-        # this is because the mass is computed in compute function in H2I
-        # and in HOPP it's in the attrs_post_init function
+        # this test value differs from earlier implementations because mass is
+        # computed in `compute()` rather than at model initialization
         # suggest removing this subtest
         assert battery.system_model.ParamsPack.mass * 20000 == pytest.approx(3044540.0, 1e-3)
 
