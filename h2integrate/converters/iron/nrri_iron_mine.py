@@ -20,10 +20,14 @@ class NRRIIronMinePerformanceConfig(BaseConfig):
             "Minorca" or "Tilden"
         max_ore_production_rate_tonnes_per_hr (float): capacity of the pellet plant
             in units of metric tonnes of pellets produced per hour.
+        taconite_pellet_type (str): type of taconite pellets, options are "std" or "drg".
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
     mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    taconite_pellet_type: str = field(
+        converter=(str.lower, str.strip), validator=contains(["std", "drg"])
+    )
 
 
 class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
@@ -63,13 +67,22 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             desc="Electricity available for iron ore processing",
         )
 
-        # Add fuel input, default to 0 --> set using feedstock component
+        # Add natural_gas input, default to 0 --> set using feedstock component
         self.add_input(
-            "fuel_in",
+            "natural_gas_in",
             val=0.0,
             shape=self.n_timesteps,
             units="MMBtu/h",
-            desc="Fuel feedstock into iron mine",
+            desc="Natural_gas feedstock into iron mine",
+        )
+
+        # Add diesel input, default to 0 --> set using feedstock component
+        self.add_input(
+            "diesel_in",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="gal/h",
+            desc="Diesel feedstock into iron mine",
         )
 
         self.add_output(
@@ -81,7 +94,19 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            "fuel_consumed", val=0.0, shape=self.n_timesteps, units="MMBtu/h", desc="Fuel consumed"
+            "natural_gas_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="MMBtu/h",
+            desc="Natural gas consumed",
+        )
+
+        self.add_output(
+            "diesel_consumed",
+            val=0.0,
+            shape=self.n_timesteps,
+            units="gal/h",
+            desc="Diesel consumed",
         )
 
         self.add_output(
@@ -105,14 +130,14 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
                 "units": "kW",
                 "desc": "Electricity consumed in pelletization process",
             },
-            "mining_fuel": {"units": "MMBtu/h", "desc": "Fuel consumed in mining process"},
-            "concentration_fuel": {
+            "mining_diesel": {"units": "gal/h", "desc": "Diesel consumed in mining process"},
+            "concentration_natural_gas": {
                 "units": "MMBtu/h",
-                "desc": "Fuel consumed in beneficiation process",
+                "desc": "Natural gas consumed in beneficiation process",
             },
-            "pelletization_fuel": {
+            "pelletization_natural_gas": {
                 "units": "MMBtu/h",
-                "desc": "Fuel consumed in pelletization process",
+                "desc": "Natrual gas consumed in pelletization process",
             },
         }
         for key, val in output_dict.items():
@@ -160,11 +185,17 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         coeff_df.loc[i_per_wlt, "units"] = "kWh/lt"
         coeff_df.loc[i_per_wlt, "Type"] = "energy use/pellet"
 
-        # convert kWh/wet long ton to kWh/dry long ton
+        # convert MMBtu/wet long ton to MMBtu/dry long ton
         i = coeff_df[coeff_df["units"] == "MMBtu/LTP"].index.to_list()
         coeff_df.loc[i, "value"] = coeff_df.loc[i, "value"]
         coeff_df.loc[i, "units"] = "MMBtu/lt"
-        coeff_df.loc[i, "Type"] = "fuel use/pellet"
+        coeff_df.loc[i, "Type"] = "natural gas use/pellet"
+
+        # convert gal/wet long ton to gal/dry long ton
+        i = coeff_df[coeff_df["units"] == "gal/LTP"].index.to_list()
+        coeff_df.loc[i, "value"] = coeff_df.loc[i, "value"]
+        coeff_df.loc[i, "units"] = "gal/lt"
+        coeff_df.loc[i, "Type"] = "diesel use/pellet"
 
         # convert units to standardized units
         unit_rename_mapper = {}
@@ -196,7 +227,8 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
 
     def compute(self, inputs, outputs):
         energy_per_process = {}
-        fuel_per_process = {}
+        natural_gas_per_process = {}
+        diesel_per_process = {}
 
         system_capacity = inputs["system_capacity"][0]  # t/h pellets
 
@@ -215,8 +247,8 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         energy_per_process["mining"] = self.coeff_df[
             (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "(kW*h)/t")
         ]["value"].values
-        fuel_per_process["mining"] = self.coeff_df[
-            (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "MMBtu/t")
+        diesel_per_process["mining"] = self.coeff_df[
+            (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "gal/t")
         ]["value"].values
 
         #### Crushing (Comminution)
@@ -232,7 +264,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             (self.coeff_df["process"] == "Beneficiation (Concentration)")
             & (self.coeff_df["units"] == "(kW*h)/t")
         ]["value"].values
-        fuel_per_process["concentration"] = self.coeff_df[
+        natural_gas_per_process["concentration"] = self.coeff_df[
             (self.coeff_df["process"] == "Beneficiation (Concentration)")
             & (self.coeff_df["units"] == "MMBtu/t")
         ]["value"].values
@@ -245,13 +277,14 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         energy_per_process["pelletization"] = self.coeff_df[
             (self.coeff_df["process"] == "Pelletization") & (self.coeff_df["units"] == "(kW*h)/t")
         ]["value"].values
-        fuel_per_process["pelletization"] = self.coeff_df[
+        natural_gas_per_process["pelletization"] = self.coeff_df[
             (self.coeff_df["process"] == "Pelletization") & (self.coeff_df["units"] == "MMBtu/t")
         ]["value"].values
 
         # max feedstock consumption
         max_elec_consumed = sum(energy_per_process.values()) * system_capacity  # kW
-        max_fuel_consumed = sum(fuel_per_process.values()) * system_capacity  # MMBtu
+        max_natural_gas_consumed = sum(natural_gas_per_process.values()) * system_capacity  # MMBtu
+        max_diesel_consumed = sum(diesel_per_process.values()) * system_capacity  # gal
 
         # available feedstocks, saturated at maximum system feedstock consumption
         electricity_available = np.where(
@@ -259,24 +292,33 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             max_elec_consumed,
             inputs["electricity_in"],
         )
-        fuel_available = np.where(
-            inputs["fuel_in"] > max_fuel_consumed,
-            max_fuel_consumed,
-            inputs["fuel_in"],
+        natural_gas_available = np.where(
+            inputs["natural_gas_in"] > max_natural_gas_consumed,
+            max_natural_gas_consumed,
+            inputs["natural_gas_in"],
+        )
+        diesel_available = np.where(
+            inputs["diesel_in"] > max_diesel_consumed,
+            max_diesel_consumed,
+            inputs["diesel_in"],
         )
 
         # how much output can be produced from each of the feedstocks
         processed_ore_from_electricity = (
             electricity_available / max_elec_consumed
         ) * system_capacity  # t/h pellets
-        processed_ore_from_fuel = (
-            fuel_available / max_fuel_consumed
+        processed_ore_from_natural_gas = (
+            natural_gas_available / max_natural_gas_consumed
+        ) * system_capacity  # t/h pellets
+        processed_ore_from_diesel = (
+            diesel_available / max_diesel_consumed
         ) * system_capacity  # t/h pellets
 
         # output is minimum between available feedstocks and output command value
         processed_ore_production = np.minimum.reduce(
             [
-                processed_ore_from_fuel,
+                processed_ore_from_diesel,
+                processed_ore_from_natural_gas,
                 processed_ore_from_electricity,
             ]
         )
@@ -306,15 +348,22 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             energy_per_process["pelletization"] * processed_ore_production
         )
 
-        outputs["mining_fuel"] = fuel_per_process["mining"] * processed_ore_production
-        outputs["concentration_fuel"] = fuel_per_process["concentration"] * processed_ore_production
-        outputs["pelletization_fuel"] = fuel_per_process["pelletization"] * processed_ore_production
+        outputs["mining_diesel"] = diesel_per_process["mining"] * processed_ore_production
+        outputs["concentration_natural_gas"] = (
+            natural_gas_per_process["concentration"] * processed_ore_production
+        )
+        outputs["pelletization_natural_gas"] = (
+            natural_gas_per_process["pelletization"] * processed_ore_production
+        )
 
         # feedstock consumption
         outputs["electricity_consumed"] = (
             sum(energy_per_process.values()) * processed_ore_production
         )
-        outputs["fuel_consumed"] = sum(fuel_per_process.values()) * processed_ore_production
+        outputs["natural_gas_consumed"] = (
+            sum(natural_gas_per_process.values()) * processed_ore_production
+        )
+        outputs["diesel_consumed"] = sum(diesel_per_process.values()) * processed_ore_production
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)
@@ -420,13 +469,20 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         return coeff_df
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        outputs["CapEx"] = 0.0  # assumed that it's all included in annualized fixed operating costs
+        pellet_type = self.config["taconite_pellet_type"]
 
-        # OpEx is either on a per LT pellet basis or LT crude ore basis, depending on the mine
-        # Both are included in OpEx calculation, but only one will be non-zero depending on the mine
+        # Get the capital cost for the reference design and scale to the modeled mine
+        ref_Oreproduced = self.coeff_df[self.coeff_df["process"] == "capacity"]["Value"].val
+        capex_index = "capex_" + pellet_type
+        ref_tot_capex = self.coeff_df[self.coeff_df["process"] == capex_index]["Value"].val
+        ref_capex_per_processed_ore = ref_tot_capex / ref_Oreproduced  # USD/t/yr
+        tot_capex_2021USD = inputs["annual_iron_ore_produced"] * ref_capex_per_processed_ore  # USD
+        outputs["CapEx"] = tot_capex_2021USD
+
+        # OpEx is calculated from the total opex minus energy costs calculated from SEC reports
+        # Variable energy cost is then considered from electricity, NG, and diesel feedstocks
+        opex_index = "opex_" + pellet_type
         outputs["OpEx"] = (
             inputs["annual_iron_ore_produced"][0]
-            * self.coeff_df.loc[self.coeff_df["process"] == "pellet", "value"].values
-            + sum(inputs["raw_ore"])
-            * self.coeff_df.loc[self.coeff_df["process"] == "mined", "value"].values
+            * self.coeff_df.loc[self.coeff_df["process"] == opex_index, "value"].values
         )
