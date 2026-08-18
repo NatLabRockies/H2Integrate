@@ -14,10 +14,10 @@ properties:
     default: plant configuration
   sites:
     type: object
-    properties:
-      site:
+    description: Sites included in the configuration
+    patternProperties:
+      .*:  # Allows any string as the key (e.g., site, wind_site, etc)
         type: object
-        default: {}
         properties:
           latitude:
             type: number
@@ -33,6 +33,20 @@ properties:
             type: number
             description: Elevation of the site in meters
             minimum: 0
+          resources:
+            type: object
+            description: Resource models for this site
+            patternProperties:
+              .*:  # Allows any string as the key (e.g., wind_resource, solar_resource)
+                type: object
+                properties:
+                  resource_model:
+                    type: string
+                    description: Name of the resource model class
+                  resource_parameters:
+                    type: object
+                    description: Input parameters for the resource model
+              required: [resource_model, resource_parameters]
           required: [latitude, longitude]
   plant:
     type: object
@@ -83,5 +97,6 @@ properties:
       items:
         type: [string, array]
         description: Connecting resource data from a site to a performance model
+
   # should we add in finance_parameters, finance_subgroups, and cost_adjustment_parameters?
-required: [name, description]
+required: [name, description]  # should plant be required?
