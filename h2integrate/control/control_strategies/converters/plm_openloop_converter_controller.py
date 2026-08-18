@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.control.control_strategies.openloop_control_base import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -40,7 +39,7 @@ class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
     demand_profile_upstream: int | float | list | None = field()
     demand_profile_upstream_peak_cutoff: int | float | None = field()
     demand_profile_upstream_kind: str = field(
-        default="commodity", validator=contains(["commodity", "price"])
+        default="commodity", validator=validators.in_(["commodity", "price"])
     )
 
 

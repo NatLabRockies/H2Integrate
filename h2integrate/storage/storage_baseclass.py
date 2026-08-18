@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -21,8 +20,8 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
 
     # Below are used in all storage models
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    max_soc_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    max_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     demand_profile: int | float | list = field()
 
 

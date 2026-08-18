@@ -5,7 +5,6 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import gte_zero, range_val_or_none
 
 
 @define(kw_only=True)
@@ -64,15 +63,29 @@ class OpenLoopControlBaseConfig(BaseConfig):
     require_storage_parameters: ClassVar[bool] = False
 
     max_capacity: float | None = field(default=None)
-    max_soc_fraction: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    min_soc_fraction: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    init_soc_fraction: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    max_charge_rate: float | None = field(default=None, validator=validators.optional(gte_zero))
+    max_soc_fraction: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    min_soc_fraction: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    init_soc_fraction: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    max_charge_rate: float | None = field(
+        default=None, validator=validators.optional(validators.ge(0))
+    )
     charge_equals_discharge: bool = field(default=True)
     max_discharge_rate: float | None = field(default=None)
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    charge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    discharge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    round_trip_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
 
     def __attrs_post_init__(self):
         if self.commodity_amount_units is None:
