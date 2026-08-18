@@ -2302,13 +2302,19 @@ class H2IntegrateModel:
                 continue  # length-3 connections carry no commodity; skip them
             out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
             in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
+            dest_classifier = self.tech_control_classifiers.get(dest)
             for c in commodity:
                 in_commodity_sources.setdefault(dest, {}).update(
                     {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
                 )
-                out_commodity_dests.setdefault(source, {}).update(
-                    {c: out_commodity_dests.get(source, {}).get(c, 0) + 1}
-                )
+                # Demand-classified techs are observers/sinks (they report on a commodity
+                # stream but do not consume it in a topology sense). Exclude them from the
+                # source's output-destination count so that a source may simultaneously
+                # feed a real consumer and a reporting/demand component without triggering
+                # the multi-destination error in Check 3.
+                if dest_classifier != "demand":
+                    current = out_commodity_dests.setdefault(source, {})
+                    current[c] = current.get(c, 0) + 1
 
         # --- Check 2: storage technology topology ---
         storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
