@@ -1,10 +1,9 @@
 import warnings
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
@@ -24,10 +23,10 @@ class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
             (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
     """
 
-    location: str = field(validator=contains(["onshore", "offshore"]))
+    location: str = field(validator=validators.in_(["onshore", "offshore"]))
     electrolyzer_capex: int = field()
-    time_between_replacement: int = field(validator=gt_zero)
-    cost_year: int = field(default=2016, converter=int, validator=must_equal(2016))
+    time_between_replacement: int = field(validator=validators.gt(0))
+    cost_year: int = field(default=2016, converter=int, validator=validators.in_([2016]))
 
 
 class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
@@ -62,7 +61,7 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
         electrical_generation_timeseries_kw = inputs["electricity_in"]
         electrolyzer_capex_kw = self.config.electrolyzer_capex
 
-        # run hydrogen production cost model - from hopp examples
+        # run hydrogen production cost model
         if self.config.location == "onshore":
             offshore = 0
         else:

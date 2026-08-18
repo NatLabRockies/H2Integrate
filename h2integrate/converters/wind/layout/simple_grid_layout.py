@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains, gte_zero, range_val
 
 
 @define(kw_only=True)
@@ -28,14 +27,14 @@ class BasicGridLayoutConfig(BaseConfig):
     row_D_spacing: float = field()
     turbine_D_spacing: float = field()
     rotation_angle_deg: float = field(default=0.0)
-    row_phase_offset: float = field(default=0.0, validator=range_val(0.0, 1.0))
+    row_phase_offset: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
 
     layout_shape: str = field(
         default="square",
         converter=(str.lower, str.strip),
-        validator=contains(["square", "rectangle"]),
+        validator=validators.in_(["square", "rectangle"]),
     )
-    turbine_aspect_ratio: float = field(default=1.0, validator=gte_zero)
+    turbine_aspect_ratio: float = field(default=1.0, validator=validators.ge(0))
 
     def __attrs_post_init__(self):
         if self.layout_shape == "square" and self.turbine_aspect_ratio != 1.0:
