@@ -463,6 +463,54 @@ def test_validate_interconnections_length3_commodity_pair_with_slices_raises(sub
 
 
 @pytest.mark.unit
+def test_validate_interconnections_demand_component_not_counted_as_destination(subtests):
+    """A source sending a commodity to both a real consumer and a demand-classified
+    reporting component must pass validation.
+
+    Demand components are observers/sinks that report on a commodity stream
+    but do not consume it in a topology sense. They should not count against
+    the source's per-commodity output-destination limit, allowing a pattern like:
+
+        wind -> electricity -> electrolyzer   (real consumer)
+        wind -> electricity -> demand_reporter (reporting only)
+
+    The two-real-consumer case (no demand component involved) must still fail.
+    """
+    interconnections_valid = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+    ]
+    classifiers_valid = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+    }
+    fake_valid = _make_fake_model(interconnections_valid, classifiers_valid)
+
+    with subtests.test("source to real consumer + demand reporter passes validation"):
+        H2IntegrateModel._validate_technology_interconnections(fake_valid)  # must not raise
+
+    # Two real (non-demand) consumers of the same commodity from one source must still fail.
+    interconnections_bad = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "grid", "electricity", "cable"],
+    ]
+    classifiers_bad = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "grid": "dispatchable",
+    }
+    fake_bad = _make_fake_model(interconnections_bad, classifiers_bad)
+
+    with subtests.test("source to two real consumers still raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake_bad)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "Consider using a splitter component." in err
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
 )
