@@ -100,5 +100,6 @@ properties:
       items:
         type: [string, array]
         description: Connecting resource data from a site to a performance model
+  # include tech_to_dispatch_connections?
   # should we add in finance_parameters, finance_subgroups, and cost_adjustment_parameters?
 required: [name, description]  # should plant be required?

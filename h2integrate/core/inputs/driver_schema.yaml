@@ -65,7 +65,7 @@ properties:
         properties:
           flag:
             type: boolean
-            description: Activates as a design variable or constraint
+            description: Activates as a design variable
           lower:
             type: number
             description: Lower bound for the variable
@@ -73,6 +73,24 @@ properties:
           upper:
             type: number
             description: Upper bound for the variable
+            default: null
+          units:
+            type: [string, 'null']
+            description: Units of the variable
+  constraints:
+    type: object
+    additionalProperties:
+      type: object
+      additionalProperties:
+        type: object
+        required: [flag, units]
+        properties:
+          flag:
+            type: boolean
+            description: Activates a constraint
+          lower:
+            type: number
+            description: Lower bound for the variable
             default: null
           units:
             type: [string, 'null']
