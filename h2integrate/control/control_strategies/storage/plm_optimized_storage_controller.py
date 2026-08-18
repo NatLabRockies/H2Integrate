@@ -31,8 +31,8 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     Attributes:
         max_charge_rate (float): Maximum charge and discharge rate (kW).
         lmp_signal (list[float]): Locational Marginal Price (LMP)
-            forecast time series.
-        demand_signal (list[float]): Consumer demand forecast time series
+            forecast time series ($/kWh).
+        demand_signal (list[float]): Consumer demand forecast time series (kW).
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
         GnT_pricingfunction_coeffs (list[float]): Coefficients for G&T pricing function

@@ -25,11 +25,12 @@ technologies:
         system_commodity_interface_limit: 1.0e9
         lmp_signal: !include demand_profiles/lmp.yaml
         demand_signal: !include demand_profiles/demand.yaml
-        GnT_pricingfunction_coeffs: [1.05, 20]
+        GnT_pricingfunction_coeffs: [1.05, 0.02]
         peak_window:
           start: 12:00:00
           end: 20:00:00
-        performance_incentive_per_event: 16800.0  # $/event
+        performance_incentive_per_event: 800.0  # $/event
+        # performance_incentive: 200.0  # $/event
         n_max_events: 10  # maximum discharge events per month
         signal_threshold_percentile: 95.0  # only dispatch when LMP >= this percentile
         n_control_window_hours: 24  # hours; converted to timesteps using simulation dt

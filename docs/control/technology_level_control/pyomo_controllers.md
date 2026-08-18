@@ -120,8 +120,8 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 ### Definitions
 
 **Given:**
-- $\lambda_t$ := `lmp_signal`: electricity price time series at timestep $t$
-- $\delta_t$ := `demand_signal`: consumer demand time series at timestep $t$
+- $\lambda_t$ := `lmp_signal`: electricity price time series at timestep $t$ (\$/kWh)
+- $\delta_t$ := `demand_signal`: consumer demand time series at timestep $t$ (kWh)
 - $\Delta t$ := simulation timestep duration (hours), derived from `dt` in the plant config
 - $\mathcal{W}$ := `peak_window`: set of timesteps eligible for dispatch (e.g., 12:00-20:00 each day)
 - $\lambda_*$ := signal threshold = `signal_threshold_percentile`-th percentile of $\lambda_t$ over $\mathcal{W}$

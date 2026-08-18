@@ -1,3 +1,7 @@
+# Consumer demand profile the peak-load-management example controller.
+# Synthetically generated (not measured) and intended for demonstration only.
+# Units: commodity rate units (kW in examples/34_plm_optimized_dispatch).
+# This profile is paired with lmp.yaml.
 - 5298
 - 5209
 - 5089
