@@ -9,5 +9,5 @@ plant:
     start_time: 2025/07/01 00:00:00
 technology_interconnections:
   - [hydrogen_feedstock, fuel_cell, hydrogen, pipe]
-  - [fuel_cell, electrical_load_demand, [electricity_out, electricity_in]]
+  - [fuel_cell, electrical_load_demand, electricity, cable]
   - [electrical_load_demand, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
