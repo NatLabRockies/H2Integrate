@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gte_zero, range_val_or_none
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -27,11 +26,13 @@ class GenericConverterCostConfig(CostModelBaseConfig):
 
     commodity: str = field(converter=str.strip)
     commodity_rate_units: str = field(converter=str.strip)
-    unit_capex: float | int = field(validator=gte_zero)
+    unit_capex: float | int = field(validator=validators.ge(0))
     unit_varopex: float = field()
 
     unit_opex: float | int | None = field(default=None)
-    opex_fraction: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    opex_fraction: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
     commodity_amount_units: str = field(default=None)
 
     def __attrs_post_init__(self):

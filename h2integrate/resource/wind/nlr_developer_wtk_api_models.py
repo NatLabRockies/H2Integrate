@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.wind.nlr_developer_wtk_api_base import NLRDeveloperAPIWindResourceBase
 
@@ -32,7 +31,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2007, 2014))
+    resource_year: int = field(converter=int, validator=(validators.ge(2007), validators.le(2014)))
     dataset_desc: str = "wtk_v2"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
@@ -82,7 +81,7 @@ class WTKHRRRMETAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2015, 2025))
+    resource_year: int = field(converter=int, validator=(validators.ge(2015), validators.le(2025)))
     dataset_desc: str = "hrrr_met_toolkit"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [60])
