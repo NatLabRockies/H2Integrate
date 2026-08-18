@@ -1,12 +1,10 @@
 from copy import deepcopy
 
 import numpy as np
-from attrs import field, define
-from attrs.validators import in_
+from attrs import field, define, validators
 
 import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -40,16 +38,16 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
         isentropic_efficiency_turbine (float): isentropic efficiency of the turbine.
     """
 
-    flowrate_max_fluid_cubic_m_per_s: float = field(validator=gt_zero)
-    system_capacity_mw: float = field(validator=gte_zero)
-    generator_efficiency: float = field(validator=gt_zero)
-    generator_nameplate_power_mw: float = field(validator=gt_zero)
-    pressure_ratio: float = field(validator=gt_zero)
-    firing_temp_C: float = field(validator=gt_zero)
-    isentropic_efficiency_compressor: float = field(validator=gt_zero)
-    isentropic_efficiency_turbine: float = field(validator=gt_zero)
+    flowrate_max_fluid_cubic_m_per_s: float = field(validator=validators.gt(0.0))
+    system_capacity_mw: float = field(validator=validators.ge(0.0))
+    generator_efficiency: float = field(validator=validators.gt(0.0))
+    generator_nameplate_power_mw: float = field(validator=validators.gt(0.0))
+    pressure_ratio: float = field(validator=validators.gt(0.0))
+    firing_temp_C: float = field(validator=validators.gt(0.0))
+    isentropic_efficiency_compressor: float = field(validator=validators.gt(0.0))
+    isentropic_efficiency_turbine: float = field(validator=validators.gt(0.0))
     fuel_source: str = field(
-        validator=in_(
+        validator=validators.in_(
             [
                 "natural_gas",
             ]
