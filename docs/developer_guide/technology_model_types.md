@@ -12,10 +12,9 @@ Here is an example of a solar PV performance model.
 
 ```python
 import PySAM.Pvwattsv8 as Pvwatts
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val_or_none
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 
@@ -29,11 +28,17 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
     """
 
     pv_capacity_kWdc: float = field()
-    dc_ac_ratio: float = field(default=None, validator=range_val_or_none(0.0, 2.0))
-    tilt: float = field(default=None, validator=range_val_or_none(0.0, 90.0))
+    dc_ac_ratio: float = field(
+        default=None,
+        validator=validators.optional((validators.ge(0), validators.le(2)))
+    )
+    tilt: float = field(
+        default=None,
+        validator=validators.optional((validators.ge(0), validators.le(90)))
+    )
     config_name: str = field(
         default="PVWattsSingleOwner",
-        validator=contains(["PVWattsSingleOwner", "PVWattsCommercial"]),  # truncated
+        validator=validators.in_(["PVWattsSingleOwner", "PVWattsCommercial"]),  # truncated
     )
 
 
@@ -107,10 +112,9 @@ model always reports costs in a fixed dollar-year), inherit the config from
 `BaseConfig` and pin `cost_year` to a constant:
 
 ```python
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
@@ -118,10 +122,10 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass
 class ReverseOsmosisCostModelConfig(BaseConfig):
     # Config values come from tech_config['model_inputs']['cost_parameters']
     # or tech_config['model_inputs']['shared_parameters'].
-    freshwater_kg_per_hour: float = field(validator=gt_zero)
-    freshwater_density: float = field(validator=gt_zero)
+    freshwater_kg_per_hour: float = field(validator=validators.gt(0))
+    freshwater_density: float = field(validator=validators.gt(0))
     # cost_year is fixed because this model always reports 2013 USD.
-    cost_year: int = field(default=2013, converter=int, validator=must_equal(2013))
+    cost_year: int = field(default=2013, converter=int, validator=validators.in_([2013]))
 
 
 class ReverseOsmosisCostModel(CostModelBaseClass):
@@ -148,17 +152,16 @@ inherit the config from `CostModelBaseConfig` instead. `CostModelBaseConfig`
 adds a required `cost_year` field, forcing the user to supply it:
 
 ```python
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)
 class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
-    capex_per_kWac: float | int = field(validator=gt_zero)
-    opex_per_kWac_per_year: float | int = field(validator=gt_zero)
+    capex_per_kWac: float | int = field(validator=validators.gt(0))
+    opex_per_kWac_per_year: float | int = field(validator=validators.gt(0))
     # ``cost_year`` is inherited from CostModelBaseConfig and is user-provided.
 
 
@@ -186,7 +189,7 @@ You only need to write a control model if you want to override that default — 
 
 ```{note}
 It is possible to have a combined performance, cost, and financial model within a single OpenMDAO system, provided that it returns all the necessary values.
-For example, in the HOPP wrapper, we use a combined performance and cost model to reduce computational cost.
+For example, `WOMBATElectrolyzerModel` uses a combined performance and cost model to reduce computational cost.
 ```
 
 ## Financial model (optional)

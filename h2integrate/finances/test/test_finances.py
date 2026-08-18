@@ -172,7 +172,7 @@ def test_lcoe_with_selected_technologies():
     plant_config = load_plant_yaml(example_case_dir / "plant_config.yaml")
     driver_config = load_driver_yaml(example_case_dir / "driver_config.yaml")
 
-    # Only include HOPP and electrolyzer in metrics
+    # Only include selected technologies in metrics
     plant_config["finance_parameters"]["finance_subgroups"]["electricity"]["technologies"] = [
         "wind",
         "steel",

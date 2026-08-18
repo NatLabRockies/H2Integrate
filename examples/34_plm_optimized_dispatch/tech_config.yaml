@@ -30,7 +30,6 @@ technologies:
           start: 12:00:00
           end: 20:00:00
         performance_incentive_per_event: 800.0  # $/event
-        # performance_incentive: 200.0  # $/event
         n_max_events: 10  # maximum discharge events per month
         signal_threshold_percentile: 95.0  # only dispatch when LMP >= this percentile
         n_control_window_hours: 24  # hours; converted to timesteps using simulation dt
