@@ -25,6 +25,9 @@ properties:
               model:
                 type: string
                 description: Name of the performance model
+              model_location:
+                type: [string, Path]
+                description: Filepath for a custom technology performance model
             required: [model]
             description: Performance model name
           cost_model:
@@ -33,6 +36,9 @@ properties:
               model:
                 type: string
                 description: Name of the cost model
+              model_location:
+                type: [string, Path]
+                description: Filepath for a custom technology cost model
             required: [model]
             description: Cost model name
           finance_model:
@@ -40,12 +46,30 @@ properties:
             properties:
               model:
                 type: string
-                description: Name of the cost model
+                description: Name of the technology finance model
+              model_location:
+                type: [string, Path]
+                description: Filepath for a custom technology finance model
             required: [model]
-            description: Cost model name
+            description: Technology finance model name
           model_inputs:
             type: object
             description: Detailed configuration parameters (optional)
-            additionalProperties: true
+            properties:
+              shared_parameters:
+                type: object
+                description: Parameters that are shared between at least 2 of the models
+              performance_parameters:
+                type: object
+                description: Input parameters for the performance model
+              cost_parameters:
+                type: object
+                description: Input parameters for the cost model
+              financial_parameters:
+                type: object
+                description: Input parameters for the finance model
+              control_parameters:
+                type: object
+                description: Input parameters for the technology control model
         required: [performance_model]
 required: [name, description, technologies]

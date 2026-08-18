@@ -43,6 +43,9 @@ properties:
                   resource_model:
                     type: string
                     description: Name of the resource model class
+                  resource_model_location:
+                    type: [string, Path]
+                    description: Filepath containing a custom resource model
                   resource_parameters:
                     type: object
                     description: Input parameters for the resource model
@@ -97,6 +100,5 @@ properties:
       items:
         type: [string, array]
         description: Connecting resource data from a site to a performance model
-
   # should we add in finance_parameters, finance_subgroups, and cost_adjustment_parameters?
 required: [name, description]  # should plant be required?
