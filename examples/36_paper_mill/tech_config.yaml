@@ -1,0 +1,75 @@
+# TOASK: (1) Easy way to switch on and off SAF portion? Create another example?; (2) paper vs pulp
+name: technology_config
+description: This plant produces pulp and paper
+technologies:
+  paper_mill:
+    performance_model:
+      model: PaperMillPerformanceModel
+    cost_model:
+      model: PaperMillCostModel
+    model_inputs:
+      shared_parameters:
+        plant_capacity_mtpy: 3300000
+      performance_parameters:
+        capacity_factor: 0.9
+      cost_parameters:
+        operational_year: 2030
+        installation_time: 24  # months
+        inflation_rate: 0.0  # 0 for nominal analysis
+        # Feedstock parameters (flattened)
+        wood_unitcost: 99.3
+        wood_transport_cost: 0.0
+        electricity_cost: 0.054
+        calcium_carbonate_unitcost: 0.33  #$/kg consumable
+        sodium_sulfide_unitcost: 0.22  #$/kg consumable
+        sodium_hydroxide_unitcost: 0.33  #$/kg consumable
+        chlorine_dioxide_unitcost: 1.79  #$/kg consumable
+        hydrogen_peroxide_unitcost: 0.33  #$/kg consumable
+        magnesium_sulfate_unitcost: 0.36  #$/kg consumable
+        oxygen_unitcost: 0  #$/ton consumable
+        raw_water_unitcost: 0.001519
+        raw_water_consumption: 40693
+        wood_consumption: 0.225
+        calcium_carbonate_consumption: 240  # kg/MT product
+        sodium_sulfide_consumption: 16.5  # kg/MT product
+        sodium_hydroxide_consumption: 3.5  # kg/MT product
+        chlorine_dioxide_consumption: 2.0  # kg/MT product
+        hydrogen_peroxide_consumption: .5  # kg/MT product
+        magnesium_sulfate_consumption: .2  # kg/MT product
+        oxygen_consumption: 2.25  # kg/MT product
+        electricity_consumption: 68.7
+        water_disposal_unitcost: 0.002013
+        water_disposal_rate: 18927
+  saf:
+    performance_model:
+      model: SAFPerformanceModel
+    cost_model:
+      model: SAFCostModel
+    model_inputs:
+      shared_parameters:
+        plant_capacity_mtpy: 28000
+      performance_parameters:
+        capacity_factor: 0.9
+      cost_parameters:
+        operational_year: 2030
+# TOASK: LCOH vs hydrogen unit cost. Should we use the hydrogen module for the August results
+#        lcoh: 7.37
+        installation_time: 24  # months
+        inflation_rate: 0.0  # 0 for nominal analysis
+        # Feedstock parameters (flattened)
+        lignin_unitcost: 0.78
+        lignin_transport_cost: 0.0
+        lignin_consumption: 1650
+        hydrogen_unitcost: 7.37
+        hydrogen_transport_cost: 0.0
+        hydrogen_consumption: 580
+        electricity_cost: 0.054
+        electricity_consumption: 19750
+        raw_water_unitcost: 0.001519
+        raw_water_consumption: 2839
+        water_disposal_unitcost: 0.002013
+        water_disposal_rate: 0
+        salt_mix_unitcost: 0.86  # $/kg
+        salt_mix_consumption: 41.3  # kg/t SAF
+        hydrogen_chloride_unitcost: 0.26  # $/kg
+        hydrogen_chloride_consumption: 1.5  # kg/t SAF
