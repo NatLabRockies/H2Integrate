@@ -23,8 +23,8 @@ technologies:
         demand_profile: 0.0
       control_parameters:
         system_commodity_interface_limit: 1.0e9
-        lmp_signal: !include demand_profiles/lmp.yaml
-        demand_signal: !include demand_profiles/demand.yaml
+        lmp_signal: !include demand_profiles/lmp_profile.yaml
+        demand_signal: !include demand_profiles/demand_profile_consumers.yaml
         GnT_pricingfunction_coeffs: [1.05, 0.02]
         peak_window:
           start: 12:00:00
