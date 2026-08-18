@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -30,6 +32,7 @@ def tech_config():
             "performance_parameters": {
                 "system_capacity_kw": 1000.0,
                 "fuel_cell_efficiency_hhv": 0.50,
+                "uptime_hours_until_eol": (8760 * 7.0),
             }
         }
     }
@@ -44,6 +47,7 @@ def cost_config():
                 "system_capacity_kw": 1000.0,
                 "capex_per_kw": 200.0,
                 "fixed_opex_per_kw_per_year": 10.0,
+                "variable_opex_per_kwh": 5.0,
                 "cost_year": 2018,
             }
         }
@@ -121,6 +125,79 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             == 175230.7542647681
         )
 
+    with subtests.test("refurbishment_schedule"):
+        np.testing.assert_allclose(
+            prob.get_val("fuel_cell.replacement_schedule", units="unitless"),
+            np.tile([0, 0, 0, 0, 0, 0, 1], 15)[:30],
+            atol=1e-6,
+        )
+
+    with subtests.test("refurbishment_schedule_non_int_multiple"):
+        n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+        tech_config_copy = copy.deepcopy(tech_config)
+        tech_config_copy["model_inputs"]["performance_parameters"]["uptime_hours_until_eol"] = (
+            8760 * 1.5
+        )
+        prob = om.Problem()
+
+        fuel_cell_2 = LinearH2FuelCellPerformanceModel(
+            plant_config=plant_config, tech_config=tech_config_copy, driver_config={}
+        )
+
+        prob.model.add_subsystem("fuel_cell", fuel_cell_2, promotes=["*"])
+
+        prob.setup()
+
+        hydrogen_input = np.ones(n_timesteps) * 20.0  # kg/h
+        hydrogen_input[0] = (
+            500000000.0  # test case of extreme hydrogen input to check system capacity limit
+        )
+
+        prob.set_val("fuel_cell.hydrogen_in", hydrogen_input, units="kg/h")
+
+        prob.run_model()
+
+        # Check that electricity output is less than or equal to system capacity
+        electricity_output = prob.get_val("fuel_cell.electricity_out", units="kW")
+        np.testing.assert_allclose(
+            prob.get_val("fuel_cell.replacement_schedule", units="unitless"),
+            np.tile([0, 1, 1], 10),
+            atol=1e-6,
+        )
+
+    with subtests.test("refurbishment_schedule_multiple_replacements_in_some_years"):
+        n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+        tech_config_copy = tech_config
+        tech_config_copy["model_inputs"]["performance_parameters"]["uptime_hours_until_eol"] = (
+            8760 * 0.75
+        )
+        prob = om.Problem()
+
+        fuel_cell_2 = LinearH2FuelCellPerformanceModel(
+            plant_config=plant_config, tech_config=tech_config_copy, driver_config={}
+        )
+
+        prob.model.add_subsystem("fuel_cell", fuel_cell_2, promotes=["*"])
+
+        prob.setup()
+
+        hydrogen_input = np.ones(n_timesteps) * 20.0  # kg/h
+        hydrogen_input[0] = (
+            500000000.0  # test case of extreme hydrogen input to check system capacity limit
+        )
+
+        prob.set_val("fuel_cell.hydrogen_in", hydrogen_input, units="kg/h")
+
+        prob.run_model()
+
+        # Check that electricity output is less than or equal to system capacity
+        electricity_output = prob.get_val("fuel_cell.electricity_out", units="kW")
+        np.testing.assert_allclose(
+            prob.get_val("fuel_cell.replacement_schedule", units="unitless"),
+            np.tile([1, 1, 2], 10),
+            atol=1e-6,
+        )
+
 
 @pytest.mark.unit
 def test_fuel_cell_demand(tech_config, plant_config, subtests):
@@ -176,15 +253,22 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
         )
 
 
-@pytest.mark.regression
+@pytest.mark.unit
 def test_fuel_cell_cost(cost_config, plant_config, subtests):
     int(plant_config["plant"]["simulation"]["n_timesteps"])
 
     prob = om.Problem()
 
+    annual_production = 45  # kwh/year
+
     fuel_cell_cost = H2FuelCellCostModel(
         plant_config=plant_config, tech_config=cost_config, driver_config={}
     )
+    annual_prod_comp = om.IndepVarComp(
+        name="annual_electricity_produced", val=np.full(30, annual_production), units="(kW*h)/yr"
+    )
+
+    prob.model.add_subsystem("IVC1", annual_prod_comp, promotes=["*"])
 
     prob.model.add_subsystem("fuel_cell_cost", fuel_cell_cost, promotes=["*"])
 
@@ -197,3 +281,6 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
 
     with subtests.test("opex value"):
         assert prob.get_val("fuel_cell_cost.OpEx", units="USD/year") == 10000.0
+
+    with subtests.test("varopex"):
+        assert prob.get_val("fuel_cell_cost.VarOpEx", units="USD/year")[0] == 45 * 5.0

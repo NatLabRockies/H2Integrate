@@ -2,10 +2,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val_or_none
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     PyomoStorageControllerBaseClass,
     PyomoStorageControllerBaseConfig,
@@ -33,9 +32,15 @@ class HeuristicLoadFollowingStorageControllerConfig(PyomoStorageControllerBaseCo
             provided.
     """
 
-    charge_efficiency: float = field(validator=range_val_or_none(0, 1), default=None)
-    discharge_efficiency: float = field(validator=range_val_or_none(0, 1), default=None)
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    charge_efficiency: float = field(
+        validator=validators.optional((validators.ge(0), validators.le(1))), default=None
+    )
+    discharge_efficiency: float = field(
+        validator=validators.optional((validators.ge(0), validators.le(1))), default=None
+    )
+    round_trip_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
 
     def __attrs_post_init__(self):
         """
@@ -270,8 +275,6 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             start_time (int): The start time.
 
         """
-        # TODO: provide more control; currently don't use `start_time`
-        # see HOPP implementation
         self.time_duration = [1.0] * len(self.blocks.index_set())
 
     def update_dispatch_initial_soc(self, initial_soc: float | None = None):

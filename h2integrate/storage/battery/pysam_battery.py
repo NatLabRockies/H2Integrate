@@ -1,10 +1,9 @@
 import numpy as np
 import PySAM.BatteryTools as BatteryTools
 import PySAM.BatteryStateful as BatteryStateful
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, gte_zero, range_val
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -29,7 +28,7 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
         chemistry (str):
-            Battery chemistry option. "LDES" has not been brought over from HOPP yet.
+            Battery chemistry option.
             Supported values include:
 
             - PySAM: ``"LFPGraphite"``, ``"LMOLTO"``, ``"LeadAcid"``, ``"NMCGraphite"``
@@ -51,16 +50,16 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
     """
 
-    max_capacity: float = field(validator=gte_zero)
-    max_charge_rate: float = field(validator=gte_zero)
+    max_capacity: float = field(validator=validators.ge(0))
+    max_charge_rate: float = field(validator=validators.ge(0))
 
     chemistry: str = field(
-        validator=contains(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
+        validator=validators.in_(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
     )
 
-    init_soc_fraction: float = field(validator=range_val(0, 1))
+    init_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     control_variable: str = field(
-        default="input_power", validator=contains(["input_power", "input_current"])
+        default="input_power", validator=validators.in_(["input_power", "input_current"])
     )
     ref_module_capacity: int | float = field(default=400)
     ref_module_surface_area: int | float = field(default=30)
@@ -135,7 +134,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
             outputs["capacity_factor"] = 0.0
             return
 
-        # Size the battery based on inputs -> method brought from HOPP
+        # Size the battery based on inputs.
         module_specs = {
             "capacity": self.config.ref_module_capacity,
             "surface_area": self.config.ref_module_surface_area,
