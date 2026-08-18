@@ -1,6 +1,6 @@
 # Locational-marginal-pricing for the peak-load-management example controllers.
 # Synthetically generated (not measured) and intended for demonstration only.
-# Units: commodity rate units ($/kWh in examples/34_plm_optimized_dispatch). 
+# Units: commodity rate units ($/kWh in examples/34_plm_optimized_dispatch).
 # This profile is paired with demand.yaml.
 - 0.02118
 - 0.02151
