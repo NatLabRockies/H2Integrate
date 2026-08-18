@@ -275,8 +275,6 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
             start_time (int): The start time.
 
         """
-        # TODO: provide more control; currently don't use `start_time`
-        # see HOPP implementation
         self.time_duration = [1.0] * len(self.blocks.index_set())
 
     def update_dispatch_initial_soc(self, initial_soc: float | None = None):

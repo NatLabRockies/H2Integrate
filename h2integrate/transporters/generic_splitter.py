@@ -70,7 +70,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    _control_classifier = "connector"
+    _control_classifier = "splitter"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})
@@ -125,6 +125,13 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the second technology",
         )
+        self.add_output(
+            f"{self.config.commodity}_consumed",
+            val=0.0,
+            shape=n_timesteps,
+            units=self.config.commodity_rate_units,
+            desc=f"Total {self.config.commodity} consumed from the upstream source",
+        )
 
     def compute(self, inputs, outputs):
         commodity_in = inputs[f"{self.config.commodity}_in"]
@@ -151,3 +158,4 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         # TODO: This mapping logic should be enhanced based on plant configuration
         outputs[f"{self.config.commodity}_out1"] = commodity_to_priority
         outputs[f"{self.config.commodity}_out2"] = commodity_to_other
+        outputs[f"{self.config.commodity}_consumed"] = commodity_to_priority + commodity_to_other

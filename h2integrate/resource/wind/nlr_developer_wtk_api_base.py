@@ -1,3 +1,4 @@
+import warnings
 import urllib.parse
 from pathlib import Path
 
@@ -46,16 +47,9 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
+class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
     def setup(self):
-        # create the input dictionary for WTKNLRDeveloperAPIConfig
-        resource_specs = self.helper_setup_method()
-
-        # create the resource config
-        self.config = WTKNLRDeveloperAPIConfig.from_dict(
-            resource_specs,
-            additional_cls_name=self.__class__.__name__,
-        )
+        super().setup()
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -71,8 +65,6 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
                 self.interval = int(max(self.config.valid_intervals))
             else:
                 self.interval = int(min(self.config.valid_intervals))
-
-        super().setup()
 
         # get the data dictionary
         data = self.get_data(self.config.latitude, self.config.longitude)
@@ -124,8 +116,7 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
             "api_key": get_nlr_developer_api_key(),
             "email": get_nlr_developer_api_email(),
         }
-        base_url = "https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download.csv?"
-        url = base_url + urllib.parse.urlencode(input_data, True)
+        url = self.base_url + urllib.parse.urlencode(input_data, True)
         return url
 
     def load_data(self, fpath):
@@ -209,6 +200,15 @@ class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
             if "surface" in c:
                 new_c += "_0m"
                 new_c = new_c.replace("surface", "").replace("__", "").strip("_")
+            if new_c == "skin_temperature":
+                new_c += "_0m"
+                units = "degC"
+            if ("specifichumidity" in c) and (units == c):
+                units = "%"
+            if units == c:
+                msg = f"Cannot determine units for wind resource data column {c}."
+                warnings.warn(msg, UserWarning, stacklevel=3)
+                continue
             data_rename_mapper.update({c: new_c})
             data_units.update({new_c: units})
         data = data.rename(columns=data_rename_mapper)

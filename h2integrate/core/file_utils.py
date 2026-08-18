@@ -1,4 +1,3 @@
-import os
 import re
 import csv
 import copy
@@ -12,6 +11,7 @@ from yaml.composer import Composer
 from yaml.resolver import BaseResolver
 
 from h2integrate import ROOT_DIR, RESOURCE_DEFAULT_DIR, FEEDSTOCK_DEFAULT_DIR
+from h2integrate.core.env_tools import get_environment_variables
 from h2integrate.core.dict_utils import remove_numpy, dict_to_yaml_formatting
 
 
@@ -509,7 +509,8 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
         return full_dir.absolute()
 
     # Check for user-defined environment variable with resource data_subdir
-    data_dir = os.getenv(f"{data_type.upper()}_DIR")
+    data_env_vars = get_environment_variables(f"{data_type.upper()}_DIR")
+    data_dir = data_env_vars.get(f"{data_type.upper()}_DIR")
     if data_dir is not None:
         if not Path(data_dir).is_dir():
             Path.mkdir(data_dir, parents=True, exist_ok=True)

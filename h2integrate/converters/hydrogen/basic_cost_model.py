@@ -61,7 +61,7 @@ class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
         electrical_generation_timeseries_kw = inputs["electricity_in"]
         electrolyzer_capex_kw = self.config.electrolyzer_capex
 
-        # run hydrogen production cost model - from hopp examples
+        # run hydrogen production cost model
         if self.config.location == "onshore":
             offshore = 0
         else:

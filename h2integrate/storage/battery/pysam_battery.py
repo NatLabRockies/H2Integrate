@@ -28,7 +28,7 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
         chemistry (str):
-            Battery chemistry option. "LDES" has not been brought over from HOPP yet.
+            Battery chemistry option.
             Supported values include:
 
             - PySAM: ``"LFPGraphite"``, ``"LMOLTO"``, ``"LeadAcid"``, ``"NMCGraphite"``
@@ -134,7 +134,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
             outputs["capacity_factor"] = 0.0
             return
 
-        # Size the battery based on inputs -> method brought from HOPP
+        # Size the battery based on inputs.
         module_specs = {
             "capacity": self.config.ref_module_capacity,
             "surface_area": self.config.ref_module_surface_area,
