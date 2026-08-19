@@ -476,7 +476,7 @@ class ThermodynamicCycleResult:
             net work rate in kJ/s when ``mass_flowrate`` is set, otherwise
             net specific work in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         total_work_unit = sum(self.process_work_unit.values())
         if losses:
             total_work_unit -= sum(self.loss_work_unit.values())
@@ -490,7 +490,7 @@ class ThermodynamicCycleResult:
             heat input rate in kJ/s when ``mass_flowrate`` is set,
             otherwise specific heat input in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         return mass_flowrate * sum(np.maximum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_net_heat_rejection(self):
@@ -501,7 +501,7 @@ class ThermodynamicCycleResult:
             heat rejection rate in kJ/s when ``mass_flowrate`` is set,
             otherwise specific heat rejection in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         return mass_flowrate * sum(np.minimum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_back_work_ratio(self):
@@ -539,7 +539,7 @@ class ThermodynamicCycleResult:
         Returns:
             fuel mass flow rate in kg/s.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         combustor_heat_input_rate = (
             mass_flowrate * self.process_heat_unit[heating_process]
         )  # [kg/s]*[kJ/kg] = kJ/s
@@ -558,7 +558,7 @@ class ThermodynamicCycleResult:
         Returns:
             dimensionless fuel-to-air mass ratio.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         mass_flowrate_fuel = self.get_fuel_mass_flow(LHV_fuel, heating_process=heating_process)
         return mass_flowrate_fuel / mass_flowrate
 
