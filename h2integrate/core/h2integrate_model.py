@@ -2396,6 +2396,66 @@ class H2IntegrateModel:
                         f"send it to at most 1. Consider using a splitter component."
                     )
 
+        # --- Check 4: prevent commodity double-counting via demand components ---
+        # A demand component may receive a commodity and pass it on to a real consumer
+        # (e.g. acting as a profile regularizer). However, if a source does this it
+        # must NOT also send the same commodity directly to another real consumer,
+        # because the flow would be counted twice.
+        #
+        # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
+        # Valid:   source -> demand_comp (pure observer)
+        #          source -> real_consumer
+        # Invalid: source -> real_consumer_A                (competing direct path)
+        #          source -> demand_comp -> real_consumer_B (and also via demand)
+        #
+        # The check is transitive: a demand component "reaches a real consumer" even
+        # when the path passes through a chain of other demand components first.
+
+        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+            visited: set[str] = set()
+            stack = [demand_tech]
+            while stack:
+                node = stack.pop()
+                if node in visited:
+                    continue
+                visited.add(node)
+                for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
+                    if not c:
+                        continue
+                    if self.tech_control_classifiers.get(d) != "demand":
+                        return True
+                    stack.append(d)
+            return False
+
+        # Build per-(source, commodity) destination lists from L4 edges.
+        source_commodity_dests: dict[tuple[str, str], list[str]] = {}
+        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
+            if not commodity:
+                continue
+            for c in commodity:
+                source_commodity_dests.setdefault((source, c), []).append(dest)
+
+        for (source, commodity), dests in source_commodity_dests.items():
+            direct_real_dests = [
+                d for d in dests if self.tech_control_classifiers.get(d) != "demand"
+            ]
+            outputting_demand_dests = [
+                d
+                for d in dests
+                if self.tech_control_classifiers.get(d) == "demand"
+                and _demand_reaches_real_consumer(d)
+            ]
+            if direct_real_dests and outputting_demand_dests:
+                raise ValueError(
+                    f"Technology {source!r} sends commodity {commodity!r} both directly "
+                    f"to {direct_real_dests} and to demand component(s) "
+                    f"{outputting_demand_dests} that re-emit the commodity to real "
+                    f"consumers. This would double-count the commodity flow. Either route "
+                    f"all {commodity!r} from {source!r} through the demand component, or "
+                    f"connect the downstream consumers directly to {source!r} instead."
+                )
+
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.
 

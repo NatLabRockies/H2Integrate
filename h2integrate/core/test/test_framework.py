@@ -509,6 +509,87 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
         assert "wind" in err
         assert "Consider using a splitter component." in err
 
+    # Sending to a demand component that re-emits to a real consumer is valid on its
+    # own; wind routes all electricity through the demand component to grid_sell.
+    interconnections_demand_passthrough = [
+        ["wind", "demand_comp", "electricity", "cable"],
+        ["demand_comp", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_demand_passthrough = {
+        "wind": "flexible",
+        "demand_comp": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_passthrough = _make_fake_model(
+        interconnections_demand_passthrough, classifiers_demand_passthrough
+    )
+
+    with subtests.test("demand component acting as pass-through to real consumer passes"):
+        H2IntegrateModel._validate_technology_interconnections(fake_passthrough)  # must not raise
+
+    # Double-counting: wind sends electricity to electrolyzer directly AND through a
+    # demand component to grid_sell. The same electricity is counted in both paths.
+    interconnections_double_count = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_double_count = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_double_count = _make_fake_model(interconnections_double_count, classifiers_double_count)
+
+    with subtests.test("source to direct real consumer AND outputting demand raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake_double_count)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "double-count" in err
+
+    # Daisy-chain through two demand components then to a real consumer is valid as
+    # long as wind does not also have a competing direct path to a real consumer.
+    interconnections_daisy_valid = [
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "nested_demand", "electricity", "cable"],
+        ["nested_demand", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_daisy_valid = {
+        "wind": "flexible",
+        "demand_reporter": "demand",
+        "nested_demand": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_daisy_valid = _make_fake_model(interconnections_daisy_valid, classifiers_daisy_valid)
+
+    with subtests.test("daisy-chained demand components as sole path to real consumer passes"):
+        H2IntegrateModel._validate_technology_interconnections(fake_daisy_valid)  # must not raise
+
+    # Same daisy-chain but wind also has a direct real consumer - should fail.
+    interconnections_daisy_double = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "nested_demand", "electricity", "cable"],
+        ["nested_demand", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_daisy_double = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "nested_demand": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_daisy_double = _make_fake_model(interconnections_daisy_double, classifiers_daisy_double)
+
+    with subtests.test("daisy-chained demand with competing direct path raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel._validate_technology_interconnections(fake_daisy_double)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "double-count" in err
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
