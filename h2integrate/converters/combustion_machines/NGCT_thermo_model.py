@@ -30,8 +30,6 @@ class NGCT:
     isentropic_efficiency_turbine: float  # -, turbine isentropic efficiency
     Q_fluid_max: float  # m**3/s, design volumetric flowrate
 
-    design_conditions: dict  # design conditions dictionary
-
     def __init__(
         self,
         ratio_P: float,  # -, pressure ratio
@@ -41,7 +39,6 @@ class NGCT:
         Q_fluid_max: (
             float | None
         ) = None,  # m**3/s, design volumetric flowrate; unit-mass analysis if None
-        design_conditions=None,  # dict, design conditions dictionary
     ):
         # set in variables
         self.ratio_P = ratio_P
@@ -49,9 +46,6 @@ class NGCT:
         self.isentropic_efficiency_compressor = isentropic_efficiency_compressor
         self.isentropic_efficiency_turbine = isentropic_efficiency_turbine
         self.Q_fluid_max = Q_fluid_max
-
-        if design_conditions is not None:
-            self.design_conditions = design_conditions
 
     def run_turbine_model(
         self,
