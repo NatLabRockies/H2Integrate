@@ -871,7 +871,11 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         Returns:
             float: Cost charged by the G$T in the same units as `lmp`.
         """
-        return (
-            self.config.GnT_pricingfunction_coeffs[0] * lmp
-            + self.config.GnT_pricingfunction_coeffs[1]
-        )
+        num_coeffs = len(self.config.GnT_pricingfunction_coeffs)
+        price = 0.0
+        for idx_coeff in range(num_coeffs):
+            price += self.config.GnT_pricingfunction_coeffs[idx_coeff] * lmp ** (
+                num_coeffs - 1 - idx_coeff
+            )
+
+        return price
