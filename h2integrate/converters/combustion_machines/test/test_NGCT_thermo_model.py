@@ -331,25 +331,6 @@ def test_demo_case(ge_7ea_2014):
     assert exhaust_temperature == pytest.approx(exhaust_temperature_ref, rel=1.0e-6)
 
 
-# @pytest.mark.regression
-# @pytest.mark.skipif(
-#     importlib.util.find_spec("pyfluids") is None,
-#     reason="thermo modules are not installed",
-# )
-# def test_ge_7ea_2014_iso_design_point_regression(ge_7ea_2014, iso_ambient_state):
-# 	result = ge_7ea_2014.run_turbine_model([iso_ambient_state])[0]
-#
-# 	assert result.get_efficiency() == pytest.approx(
-# 		ge_7ea_2014.design_conditions["eta_th_ISO"],
-# 		rel=0.05,
-# 	)
-# 	assert result.get_net_work() == pytest.approx(
-# 		ge_7ea_2014.design_conditions["W_net_ISO"],
-# 		rel=0.08,
-# 	)
-# 	assert result.states[4].temperature > iso_ambient_state.temperature
-
-
 @pytest.mark.integration
 @pytest.mark.skipif(
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
