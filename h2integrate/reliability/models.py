@@ -75,10 +75,10 @@ class LogNormalDowntime(BaseDowntime):
     """Basic log-normal downtime model for generating the length of downtime for a given event.
 
     Args:
-        mean (float): Average length of downtime per event, in hours.
-        sigma (float): Standard deviation of the distribution(s), in hours.
-        n_components (int): Number of identical components to sample. Primarily for convenience.
-            Defaults to 1.
+        mean (float | array-like): Average length of downtime per event, in hours.
+        sigma (float | array-like): Standard deviation of the distribution(s), in hours.
+        n_components (int): Number of identical components to sample to avoid defining an array of
+            mean and sigma values when they are the same. Defaults to 1.
     """
 
     mean: float = field(
@@ -137,20 +137,29 @@ class WeibullReliability(BaseReliability):
         - stabilize random generator/determine how to manage random seeding across library
     """
 
-    scale: float = field(validator=validators.instance_of(float))
-    shape: float = field(validator=validators.instance_of(float))
+    scale: float = field(
+        converter=float_array_converter,
+        validator=validators.instance_of(np.ndarray),
+    )
+    shape: float = field(
+        converter=float_array_converter,
+        validator=validators.instance_of(np.ndarray),
+    )
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: Any = field(converter=generate_downtime_model)
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
-    availability: np.ndarray = field(
-        default=np.ones(N_TIMESTEPS), init=False, validator=validators.instance_of(np.ndarray)
-    )
+    availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
 
     def __attrs_post_init__(self):
+        self.availability = np.ones(self.scale.size, N_TIMESTEPS, dtype=float)
         self.create_downtime_events()
         self.calculate_availability()
 
     def sample_events(self):
-        return np.ceil(self.rng.weibul(self.shape, size=100) * self.scale * N_TIMESTEPS).astype(int)
+        """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
+        return np.ceil(
+            self.rng.weibul(self.shape, size=(self.shape, 100)) * self.scale * N_TIMESTEPS
+        ).astype(int)
 
     def create_downtime_events(self):
         """Creates a ``time_to_failure`` and ``downtime_per_event``."""
@@ -161,6 +170,7 @@ class WeibullReliability(BaseReliability):
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
+        # TODO: convert to matrix compatible variation, not just single component version
         accumulated = 0
         while accumulated < N_TIMESTEPS:
             event, self.time_to_failures = self.time_to_failures[0], self.time_to_failures[1:]
