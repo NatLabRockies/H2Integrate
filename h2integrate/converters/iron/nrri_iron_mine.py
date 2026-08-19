@@ -82,7 +82,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             "diesel_in",
             val=0.0,
             shape=self.n_timesteps,
-            units="gal/h",
+            units="galUS/h",
             desc="Diesel feedstock into iron mine",
         )
 
@@ -106,7 +106,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             "diesel_consumed",
             val=0.0,
             shape=self.n_timesteps,
-            units="gal/h",
+            units="galUS/h",
             desc="Diesel consumed",
         )
 
@@ -131,7 +131,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
                 "units": "kW",
                 "desc": "Electricity consumed in pelletization process",
             },
-            "mining_diesel": {"units": "gal/h", "desc": "Diesel consumed in mining process"},
+            "mining_diesel": {"units": "galUS/h", "desc": "Diesel consumed in mining process"},
             "concentration_natural_gas": {
                 "units": "MMBtu/h",
                 "desc": "Natural gas consumed in beneficiation process",
@@ -195,7 +195,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         # convert gal/wet long ton to gal/dry long ton
         i = coeff_df[coeff_df["units"] == "gal/LTP"].index.to_list()
         coeff_df.loc[i, "value"] = coeff_df.loc[i, "value"]
-        coeff_df.loc[i, "units"] = "gal/lt"
+        coeff_df.loc[i, "units"] = "galUS/lt"
         coeff_df.loc[i, "Type"] = "diesel use/pellet"
 
         # convert units to standardized units
@@ -212,6 +212,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         convert_units_dict = {
             "(kW*h)/(2240*lb)": "(kW*h)/t",
             "MMBtu/(2240*lb)": "MMBtu/t",
+            "galUS/(2240*lb)": "galUS/t",
             "(2240*lb)": "t",
             "(2240*lb)/yr": "t/yr",
         }
@@ -249,7 +250,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "(kW*h)/t")
         ]["value"].values
         diesel_per_process["mining"] = self.coeff_df[
-            (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "gal/t")
+            (self.coeff_df["process"] == "Mining") & (self.coeff_df["units"] == "galUS/t")
         ]["value"].values
 
         #### Crushing (Comminution)
@@ -377,11 +378,15 @@ class NRRIIronMineCostConfig(BaseConfig):
     Attributes:
         mine (str): name of ore mine. Must be "Hibbing", "Northshore", "United",
             "Minorca" or "Tilden"
+        taconite_pellet_type (str): type of taconite pellets, options are "std" or "drg".
         cost_year (int): target dollar year to convert costs to.
     """
 
     mine: str = field(
         validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
+    )
+    taconite_pellet_type: str = field(
+        converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
     cost_year: int = field(
         default=2025, converter=int, validator=validators.in_([2025])
@@ -472,14 +477,16 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         return coeff_df
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        pellet_type = self.config["taconite_pellet_type"]
+        pellet_type = self.config.taconite_pellet_type
 
         # Get the capital cost for the reference design and scale to the modeled mine
-        ref_Oreproduced = self.coeff_df[self.coeff_df["process"] == "capacity"]["Value"].val
+        ref_Oreproduced = self.coeff_df[self.coeff_df["process"] == "capacity"]["value"].values
         capex_index = "capex_" + pellet_type
-        ref_tot_capex = self.coeff_df[self.coeff_df["process"] == capex_index]["Value"].val
+        ref_tot_capex = self.coeff_df[self.coeff_df["process"] == capex_index]["value"].values
         ref_capex_per_processed_ore = ref_tot_capex / ref_Oreproduced  # USD/t/yr
-        tot_capex_2021USD = inputs["annual_iron_ore_produced"] * ref_capex_per_processed_ore  # USD
+        tot_capex_2021USD = (
+            inputs["annual_iron_ore_produced"][0] * ref_capex_per_processed_ore
+        )  # USD
         outputs["CapEx"] = tot_capex_2021USD
 
         # OpEx is calculated from the total opex minus energy costs calculated from SEC reports

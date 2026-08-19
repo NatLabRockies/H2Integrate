@@ -13,6 +13,7 @@ from h2integrate.converters.iron.nrri_iron_mine import (
 def iron_ore_config_martin_om():
     shared_params = {
         "mine": "Tilden",
+        "taconite_pellet_type": "std",
     }
     tech_config = {
         "model_inputs": {
@@ -44,10 +45,12 @@ def test_iron_mine_performance_outputs(
 
     hourly_electricity = 85795.22689
     hourly_fuel = 2134.768277
+    hourly_diesel = 1e6
     ore_rated_capacity = 7457805 * 0.98 * 1.016
 
     prob.set_val("comp.electricity_in", [hourly_electricity] * 8760, units="kW")
-    prob.set_val("comp.fuel_in", [hourly_fuel] * 8760, units="MMBtu/h")
+    prob.set_val("comp.natural_gas_in", [hourly_fuel] * 8760, units="MMBtu/h")
+    prob.set_val("comp.diesel_in", [hourly_diesel] * 8760, units="galUS/h")
     prob.set_val("comp.iron_ore_command_value", [ore_rated_capacity], units="t/h")
 
     prob.run_model()
