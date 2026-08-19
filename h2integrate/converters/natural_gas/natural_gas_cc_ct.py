@@ -210,7 +210,6 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_mw: float | int = field(validator=validators.gt(0))
     capex_per_kw: float | int = field(validator=validators.ge(0))
     fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
     variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
@@ -234,7 +233,7 @@ class NaturalGasCostModel(CostModelBaseClass):
     3. Variable O&M: variable_opex_per_mwh * delivered_electricity_MWh
 
     Inputs:
-        system_capacity (float): Natural gas plant capacity in MW
+        system_capacity (float): Natural gas plant capacity in MW from performance model
         electricity_out (array): Hourly electricity output in MW from performance model
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
@@ -262,7 +261,7 @@ class NaturalGasCostModel(CostModelBaseClass):
         # Add inputs specific to the cost model with config values as defaults
         self.add_input(
             "system_capacity",
-            val=self.config.system_capacity_mw,
+            val=0.0,  # switching to expecting this from promotion in the performance/cost complex
             units="MW",
             desc="Natural gas plant capacity",
         )

@@ -55,7 +55,8 @@ def test_demo_case(subtests):
                 "model_inputs": {
                     "performance_parameters": {
                         "fuel_source": "natural_gas",
-                        "system_capacity_mw": 239.0,
+                        "num_turbines": 1,
+                        "turbine_capacity_mw": 239.0,
                         "firing_temp_C": 1300.0,
                         "pressure_ratio": 18.712850988834695,
                         "flowrate_max_fluid_cubic_m_per_s": 477.78734437019483,
@@ -125,7 +126,7 @@ def test_demo_case(subtests):
 
     ref_values = {
         "fuel_source": "natural_gas",
-        "system_capacity": 239.0,
+        "turbine_capacity": 239.0,
         "firing_temp_C": 1300.0,
         "pressure_ratio": 18.712850988834695,
         "flowrate_max_fluid_cubic_m_per_s": 477.78734437019483,
@@ -146,10 +147,12 @@ def test_demo_case(subtests):
 
     with subtests.test("config_value_capacity_set"):
         assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.system_capacity_mw
-            == ref_values["system_capacity"]
+            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.turbine_capacity_mw
+            == ref_values["turbine_capacity"]
         )
-        assert h2i.model.get_val("ng.system_capacity", units="MW") == ref_values["system_capacity"]
+        assert (
+            h2i.model.get_val("ng.turbine_capacity", units="MW") == ref_values["turbine_capacity"]
+        )
 
     with subtests.test("config_value_firing_temp_set"):
         assert (
@@ -216,7 +219,7 @@ def test_demo_case(subtests):
     with subtests.test("output_value_rated_elec"):
         assert (
             np.mean(h2i.model.get_val("ng.rated_electricity_production", units="MW"))
-            == ref_values["system_capacity"]
+            == ref_values["turbine_capacity"]
         )
 
     with subtests.test("output_value_ng_consumption"):
