@@ -30,7 +30,7 @@ def create_failure_model(config: dict):
 
 def create_maintenance_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
-    name = config.pop("maintenance_model")
+    name = config["maintenance_model"]
     maintenance_config = config["maintenance_parameters"]
     match name:
         case "WeibullReliability":
@@ -43,11 +43,14 @@ def create_maintenance_model(config: dict):
 
 def generate_downtime_model(config: dict | int):
     if not isinstance(config, dict):
-        return config
-    name = config.pop("model")
+        return FixedDowntime(hours=config)
+    name = config["model"]
+    parameters = {k: v for k, v in config.items() if k != "model"}
     match name:
         case "LogNormalDowntime":
-            return LogNormalDowntime.from_dict(config)
+            return LogNormalDowntime.from_dict(parameters)
+        case "FixedDowntime":
+            return FixedDowntime.from_dict(parameters)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -69,7 +72,7 @@ def float_array_converter(val: int | float | ArrayLike):
 
 
 def int_array_converter(val: int | float | ArrayLike):
-    return np.array(val).astype(float).reshape(-1, 1)
+    return np.array(val).astype(int).reshape(-1, 1)
 
 
 @define(kw_only=True)
@@ -84,13 +87,24 @@ class FixedDowntime(BaseDowntime):
 
     hours: int | ArrayLike = field(
         converter=int_array_converter,
-        validator=(validators.instance_of(np.ndarray), validators.ge(1)),
+        validator=validators.instance_of(np.ndarray),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
+    @hours.validator
+    def hours_validator(self, attribute, value):
+        """Validates that all values of :py:attr:`hours` are greater than or equal to 1."""
+        if not np.all(value > 1):
+            raise ValueError("All values passed to 'hours' must be greater than or equal to 1.")
+
+    def __attrs_post_init__(self):
+        if self.hours.size == 1 and self.n_components > 1:
+            self.hours = np.broadcast_to(self.hours, (self.n_components, 1))
+        # ...
+
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
-        return np.ones((1, 100)) * self.hours
+        return np.ones((1, 100), dtype=int) * self.hours
 
 
 @define(kw_only=True)
@@ -158,6 +172,7 @@ class WeibullReliability(BaseReliability):
 
     TODO:
         - how to pass n_timesteps through from plant?
+        - burn-in
     """
 
     scale: float = field(
@@ -192,24 +207,25 @@ class WeibullReliability(BaseReliability):
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
-        # TODO: convert to matrix compatible variation, not just single component version
-        # only modify rows that haven't reached 8760 yet, then
-        accumulated = 0
-        while accumulated < N_TIMESTEPS:
-            event, self.time_to_failures = self.time_to_failures[0], self.time_to_failures[1:]
-            duration, self.downtime_per_event = (
-                self.downtime_per_event[0],
-                self.downtime_per_event[1:],
-            )
-            if event + accumulated > N_TIMESTEPS:
+        accumulated = np.zeros_like(self.shape, dtype=int)
+        while any(accumulated < N_TIMESTEPS):
+            if not self.time_to_failures.size == 0:
+                self.create_downtime_events()
+            event = self.time_to_failures[:, 0].reshape(-1, 1)
+            self.time_to_failures = self.time_to_failures[:, 1:]
+            duration = self.downtime_per_event[:, 0].reshape(-1, 1)
+            self.downtime_per_event = self.downtime_per_event[:, 1:]
+
+            if all(event + accumulated) > N_TIMESTEPS:
                 break
 
             start = accumulated + event
             end = start + duration
-            self.availability[start:end] = 0
+            for i, (s, e) in enumerate(zip(start.flatten(), end.flatten())):
+                if s < N_TIMESTEPS:
+                    e = min(N_TIMESTEPS, e)
+                    self.availability[i, s:e] = 0
             accumulated = end
-            if not self.time_to_failures:
-                self.create_downtime_events()
 
 
 @define(kw_only=True)
