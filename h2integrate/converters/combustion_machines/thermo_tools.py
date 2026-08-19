@@ -27,7 +27,10 @@ def kelvin_to_celsius(degK: float) -> float:
 
 
 def humidity_ratio_to_water_mass_fraction(humidity_ratio: float) -> float:
-    """Convert from humidity ratio to water mass fraction."""
+    """Convert from humidity ratio to water mass fraction.
+
+    Currently just used for testing purposes.
+    """
     return humidity_ratio / (1.0 + humidity_ratio)
 
 
@@ -57,6 +60,8 @@ def make_humid_air_mixture(
     humidity ratio at the requested thermodynamic state. That ratio is then
     converted to a water mass fraction and combined with the dry-air composition
     defined in ``DRY_AIR_MASS_FRACTIONS`` to create a ``pyfluids.Mixture``.
+
+    Currently just used for testing purposes.
 
     Args:
         pressure: mixture pressure in Pa.
@@ -476,7 +481,7 @@ class ThermodynamicCycleResult:
             net work rate in kJ/s when ``mass_flowrate`` is set, otherwise
             net specific work in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         total_work_unit = sum(self.process_work_unit.values())
         if losses:
             total_work_unit -= sum(self.loss_work_unit.values())
@@ -490,23 +495,27 @@ class ThermodynamicCycleResult:
             heat input rate in kJ/s when ``mass_flowrate`` is set,
             otherwise specific heat input in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         return mass_flowrate * sum(np.maximum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_net_heat_rejection(self):
         """
         Compute the total heat rejected by the cycle.
 
+        Currently just used for testing purposes.
+
         Returns:
             heat rejection rate in kJ/s when ``mass_flowrate`` is set,
             otherwise specific heat rejection in kJ/kg.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         return mass_flowrate * sum(np.minimum(0.0, list(self.process_heat_unit.values())))  # kJ/s
 
     def get_back_work_ratio(self):
         """
         Compute the ratio of back work to forward work.
+
+        Currently just used for testing purposes.
 
         Returns:
             dimensionless back work ratio.
@@ -539,7 +548,7 @@ class ThermodynamicCycleResult:
         Returns:
             fuel mass flow rate in kg/s.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         combustor_heat_input_rate = (
             mass_flowrate * self.process_heat_unit[heating_process]
         )  # [kg/s]*[kJ/kg] = kJ/s
@@ -558,7 +567,7 @@ class ThermodynamicCycleResult:
         Returns:
             dimensionless fuel-to-air mass ratio.
         """
-        mass_flowrate = self.mass_flowrate if self.mass_flowrate else 1.0
+        mass_flowrate = self.mass_flowrate or 1.0
         mass_flowrate_fuel = self.get_fuel_mass_flow(LHV_fuel, heating_process=heating_process)
         return mass_flowrate_fuel / mass_flowrate
 

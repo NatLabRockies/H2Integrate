@@ -30,8 +30,6 @@ class NGCT:
     isentropic_efficiency_turbine: float  # -, turbine isentropic efficiency
     Q_fluid_max: float  # m**3/s, design volumetric flowrate
 
-    design_conditions: dict  # design conditions dictionary
-
     def __init__(
         self,
         ratio_P: float,  # -, pressure ratio
@@ -41,7 +39,6 @@ class NGCT:
         Q_fluid_max: (
             float | None
         ) = None,  # m**3/s, design volumetric flowrate; unit-mass analysis if None
-        design_conditions=None,  # dict, design conditions dictionary
     ):
         # set in variables
         self.ratio_P = ratio_P
@@ -50,28 +47,34 @@ class NGCT:
         self.isentropic_efficiency_turbine = isentropic_efficiency_turbine
         self.Q_fluid_max = Q_fluid_max
 
-        if design_conditions is not None:
-            self.design_conditions = design_conditions
-
     def run_turbine_model(
         self,
-        fluid_ambient_list: (
-            list[pyfluids.fluids.abstract_fluid.AbstractFluid]
-            | pyfluids.fluids.abstract_fluid.AbstractFluid
-        ),
+        fluid_ambient_list: list[pyfluids.fluids.abstract_fluid.AbstractFluid],
         power_rated: float = np.inf,  # kW, maximum rated power of the system
         heatrate_fuel_capacity: float = np.inf,  # kJ/s, maximum allowable heat rate
-    ):
-        singleton = False  # make a flag if there's just one ambient state to run
-        if isinstance(
-            fluid_ambient_list,
-            pyfluids.fluids.abstract_fluid.AbstractFluid,
-        ):
-            fluid_ambient_list = [
-                fluid_ambient_list,
-            ]
-            singleton = True
+    ) -> list[ThermodynamicCycleResult]:
+        """
+        Run the Brayton cycle model for a list of ambient fluid states.
 
+        For each ambient fluid state, the cycle states are computed through the
+        compressor, combustor, and turbine, then the specific work and heat
+        terms are evaluated. If a design volumetric flowrate is set, the mass
+        flowrate is also computed subject to the volumetric, power rating, and
+        fuel heat rate limits.
+
+        Args:
+            fluid_ambient_list: Ambient fluid states to evaluate, one per
+                operating condition. A single condition should be passed as a
+                list of length one.
+            power_rated: Generator power rating constraint (kW). Defaults to no
+                limit.
+            heatrate_fuel_capacity: Fuel heat rate capacity limit (kJ/s).
+                Defaults to no limit.
+
+        Returns:
+            One ThermodynamicCycleResult per entry in fluid_ambient_list, in the
+            same order.
+        """
         results = []  # vector to store results for each ambient fluid state
         for fluid_ambient in fluid_ambient_list:  # loop over ambient fluid states
             ### CALCULATE THE CYCLE STATES
@@ -176,9 +179,6 @@ class NGCT:
                 "constant-pressure (atmospheric) cooling",
             )
 
-            # return logic
-            if singleton:
-                return result
             results.append(result)
 
         return results
@@ -229,79 +229,3 @@ class NGCT:
 
         # the actual mass flowrate is the minimum of the limiting cases
         return float(np.min(mass_flowrate_candidates))
-
-
-class GE_7FA05_NGCT(NGCT):
-    """
-    Thermodynamic model for the GE 7FA.05 NGCT in simple-cycle performance.
-
-    A thermodynamic model for the performance of the GE 7FA.05 natural gas
-    combustion turbine in simple-cycle operation. We use a mix of fact- and
-    data-sheet performance descriptions, textbook assumptions, and
-    reverse-engineering to characterize the system. Reverse engineering targets
-    matching the ISO performance at the design conditions.
-    """
-
-    def __init__(self):
-        ratio_P = 18.712850988834695  # -, by reverse-engineering from datasheet
-        Trel_firing = 1300.0  # °C, by textbook assumption
-        isentropic_efficiency_compressor = 0.85  # -, by textbook assumption
-        isentropic_efficiency_turbine = 0.90  # -, by textbook assumption
-        Q_fluid = 477.78734437019483  # m**3/s, by reverse-engineering from datasheet datasheet
-
-        design_conditions = {
-            "P_ISO": 101325.0,  # Pa, ISO conditions
-            "T_ISO": 288.15,  # K, ISO conditions
-            "rel_humidity_ISO": 60.0,  # %, ISO conditions
-            "eta_th_ISO": 0.385,  # -, from GEfactsheet for 7F.05
-            "W_net_ISO": 239.0e3,  # kW, from GEfactsheet for 7F.05
-        }
-
-        # specialize the parent class
-        super().__init__(
-            ratio_P,
-            Trel_firing,
-            isentropic_efficiency_compressor,
-            isentropic_efficiency_turbine,
-            Q_fluid,
-            design_conditions,
-        )
-
-
-class GE_7EA_NGCT_2014(NGCT):
-    """
-    Thermodynamic model for the GE 7EA NGCT in simple-cycle performance.
-
-    A thermodynamic model for the performance of the GE 7EA natural gas
-    combustion turbine in simple-cycle operation. We use a mix of fact- and
-    data-sheet performance descriptions, textbook assumptions, and
-    reverse-engineering to characterize the system. Reverse engineering targets
-    matching the ISO performance at the design conditions.
-
-    Matching is middling and the information on the turbine is very old.
-    """
-
-    def __init__(self):
-        ratio_P = 12.6  # -, from NYISO GE factsheet
-        Trel_firing = 1300.0  # °C, by textbook assumption
-        isentropic_efficiency_compressor = 0.85  # -, by textbook assumption
-        isentropic_efficiency_turbine = 0.90  # -, by textbook assumption
-        Q_fluid = 238.3673469388  # m**3/s, from NYISO GE factsheet
-
-        design_conditions = {
-            "P_ISO": 101325.0,  # Pa, ISO conditions
-            "T_ISO": 288.15,  # K, ISO conditions
-            "rel_humidity_ISO": 60.0,  # %, ISO conditions
-            "eta_th_ISO": 0.3275,  # -, from GEfactsheet for 7F.05
-            "W_net_ISO": 85.4e3,  # kW, from GEfactsheet for 7F.05
-        }
-
-        # specialize the parent class
-        super().__init__(
-            ratio_P,
-            Trel_firing,
-            isentropic_efficiency_compressor,
-            isentropic_efficiency_turbine,
-            Q_fluid,
-            design_conditions,
-        )
