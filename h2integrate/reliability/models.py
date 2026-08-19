@@ -73,6 +73,27 @@ def int_array_converter(val: int | float | ArrayLike):
 
 
 @define(kw_only=True)
+class FixedDowntime(BaseDowntime):
+    """Basic log-normal downtime model for generating the length of downtime for a given event.
+
+    Args:
+        hours (int | array-like): Length of downtime per event, in hours. Must be at least 1 hour.
+        n_components (int): Number of identical components to sample to avoid defining an array of
+            :py:attr:`hours` values when they are the same. Defaults to 1.
+    """
+
+    hours: int | ArrayLike = field(
+        converter=int_array_converter,
+        validator=(validators.instance_of(np.ndarray), validators.ge(1)),
+    )
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
+
+    def sample_downtime(self):
+        """Return an array of 100 :py:attr:`hours`."""
+        return np.ones((1, 100)) * self.hours
+
+
+@define(kw_only=True)
 class LogNormalDowntime(BaseDowntime):
     """Basic log-normal downtime model for generating the length of downtime for a given event.
 
@@ -110,6 +131,7 @@ class LogNormalDowntime(BaseDowntime):
             self.sigma *= broadcaster
 
     def sample_downtime(self) -> np.ndarray:
+        """Return an array of 100 samples of each lognormal distribution."""
         return rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
 
 
