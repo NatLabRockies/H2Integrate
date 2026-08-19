@@ -17,13 +17,45 @@ try:
         compute_isentropic_expansion_outlet_state,
         compute_isentropic_compression_outlet_state,
     )
-    from h2integrate.converters.combustion_machines.NGCT_thermo_model import (
-        NGCT,
-        GE_7FA05_NGCT,
-        GE_7EA_NGCT_2014,
-    )
+    from h2integrate.converters.combustion_machines.NGCT_thermo_model import NGCT
 except ModuleNotFoundError:
     pass
+
+
+# GE 7FA.05 in simple-cycle operation. Values come from a mix of fact- and
+# data-sheet performance descriptions, textbook assumptions, and
+# reverse-engineering targeting the ISO performance at the design conditions.
+GE_7FA05_NGCT_INPUTS = {
+    "ratio_P": 18.712850988834695,  # -, by reverse-engineering from datasheet
+    "Trel_firing": 1300.0,  # deg C, by textbook assumption
+    "isentropic_efficiency_compressor": 0.85,  # -, by textbook assumption
+    "isentropic_efficiency_turbine": 0.90,  # -, by textbook assumption
+    "Q_fluid_max": 477.78734437019483,  # m**3/s, by reverse-engineering from datasheet
+    "design_conditions": {
+        "P_ISO": 101325.0,  # Pa, ISO conditions
+        "T_ISO": 288.15,  # K, ISO conditions
+        "rel_humidity_ISO": 60.0,  # %, ISO conditions
+        "eta_th_ISO": 0.385,  # -, from GE factsheet for 7F.05
+        "W_net_ISO": 239.0e3,  # kW, from GE factsheet for 7F.05
+    },
+}
+
+# GE 7EA in simple-cycle operation. Matching is middling and the information on
+# the turbine is very old.
+GE_7EA_NGCT_2014_INPUTS = {
+    "ratio_P": 12.6,  # -, from NYISO GE factsheet
+    "Trel_firing": 1300.0,  # deg C, by textbook assumption
+    "isentropic_efficiency_compressor": 0.85,  # -, by textbook assumption
+    "isentropic_efficiency_turbine": 0.90,  # -, by textbook assumption
+    "Q_fluid_max": 238.3673469388,  # m**3/s, from NYISO GE factsheet
+    "design_conditions": {
+        "P_ISO": 101325.0,  # Pa, ISO conditions
+        "T_ISO": 288.15,  # K, ISO conditions
+        "rel_humidity_ISO": 60.0,  # %, ISO conditions
+        "eta_th_ISO": 0.3275,  # -, from GE factsheet for 7EA
+        "W_net_ISO": 85.4e3,  # kW, from GE factsheet for 7EA
+    },
+}
 
 
 @pytest.fixture(scope="module")
@@ -61,12 +93,12 @@ def basic_ngct():
 
 @pytest.fixture(scope="module")
 def ge_7fa05():
-    return GE_7FA05_NGCT()
+    return NGCT(**GE_7FA05_NGCT_INPUTS)
 
 
 @pytest.fixture(scope="module")
 def ge_7ea_2014():
-    return GE_7EA_NGCT_2014()
+    return NGCT(**GE_7EA_NGCT_2014_INPUTS)
 
 
 @pytest.fixture(
@@ -264,7 +296,7 @@ def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
 @pytest.mark.skipif(
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
 )
-def test_demo_case():
+def test_demo_case(ge_7ea_2014):
     P_ambient = 101325.0  # Pa
     Trel_ambient = 15.0  # Pa
     rel_humidity_ambient = 60
@@ -275,10 +307,7 @@ def test_demo_case():
         pyfluids.Input.temperature(Trel_ambient),
     )
 
-    ngct = GE_7EA_NGCT_2014()
-    # ngct = GE_7FA05_NGCT()
-
-    result = ngct.run_turbine_model(fluid_ambient)
+    result = ge_7ea_2014.run_turbine_model(fluid_ambient)
 
     net_work = result.get_net_work()
     net_heat_input = result.get_net_heat_input()
