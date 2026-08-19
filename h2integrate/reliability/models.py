@@ -21,7 +21,7 @@ def create_failure_model(config: dict):
     fail_config = config["failure_parameters"]
     match name:
         case "WeibullReliability":
-            return WeibullReliability.from_dict()
+            return WeibullReliability.from_dict(fail_config)
         case "FixedIntervalReliability":
             return FixedIntervalReliability.from_dict(fail_config)
         case _:
@@ -41,7 +41,9 @@ def create_maintenance_model(config: dict):
             raise NotImplementedError(f"{name} is not a valid model name")
 
 
-def generate_downtime_model(config: dict):
+def generate_downtime_model(config: dict | int):
+    if not isinstance(config, dict):
+        return config
     name = config.pop("model")
     match name:
         case "LogNormalDowntime":
@@ -63,11 +65,11 @@ class BaseReliability(ABC, BaseConfig):
 
 
 def float_array_converter(val: int | float | ArrayLike):
-    return np.ndarray(val).astype(float).reshape(-1, 1)
+    return np.array(val).astype(float).reshape(-1, 1)
 
 
 def int_array_converter(val: int | float | ArrayLike):
-    return np.ndarray(val).astype(float).reshape(-1, 1)
+    return np.array(val).astype(float).reshape(-1, 1)
 
 
 @define(kw_only=True)
@@ -134,7 +136,6 @@ class WeibullReliability(BaseReliability):
 
     TODO:
         - how to pass n_timesteps through from plant?
-        - stabilize random generator/determine how to manage random seeding across library
     """
 
     scale: float = field(
@@ -146,31 +147,31 @@ class WeibullReliability(BaseReliability):
         validator=validators.instance_of(np.ndarray),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
-    downtime: Any = field(converter=generate_downtime_model)
+    downtime: int | BaseDowntime = field(converter=generate_downtime_model)
+    time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
 
     def __attrs_post_init__(self):
-        self.availability = np.ones(self.scale.size, N_TIMESTEPS, dtype=float)
+        self.availability = np.ones((self.scale.size, N_TIMESTEPS), dtype=float)
         self.create_downtime_events()
-        self.calculate_availability()
+        # self.calculate_availability()
 
     def sample_events(self):
         """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
         return np.ceil(
-            self.rng.weibul(self.shape, size=(self.shape, 100)) * self.scale * N_TIMESTEPS
+            rng.weibull(self.shape, size=(self.shape.size, 100)) * self.scale * N_TIMESTEPS
         ).astype(int)
 
     def create_downtime_events(self):
         """Creates a ``time_to_failure`` and ``downtime_per_event``."""
-        # NOTE: Arrays are default length 30 to ensure enough events are created for a 1-year
-        # simulation without burdening the memory usage.
         self.time_to_failures = self.sample_events()
         self.downtime_per_event = self.downtime.sample_downtime()
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
         # TODO: convert to matrix compatible variation, not just single component version
+        # only modify rows that haven't reached 8760 yet, then
         accumulated = 0
         while accumulated < N_TIMESTEPS:
             event, self.time_to_failures = self.time_to_failures[0], self.time_to_failures[1:]
