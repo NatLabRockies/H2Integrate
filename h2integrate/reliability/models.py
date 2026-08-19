@@ -188,6 +188,9 @@ class WeibullReliability(BaseReliability):
     time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
+    system_availability: np.ndarray = field(
+        init=False, validator=validators.instance_of(np.ndarray)
+    )
 
     def __attrs_post_init__(self):
         self.availability = np.ones((self.scale.size, N_TIMESTEPS), dtype=float)
@@ -226,6 +229,8 @@ class WeibullReliability(BaseReliability):
                     e = min(N_TIMESTEPS, e)
                     self.availability[i, s:e] = 0
             accumulated = end
+
+        self.system_availability = np.min(self.availability, axis=0)
 
 
 @define(kw_only=True)
