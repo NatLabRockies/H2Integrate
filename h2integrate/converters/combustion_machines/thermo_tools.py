@@ -27,7 +27,10 @@ def kelvin_to_celsius(degK: float) -> float:
 
 
 def humidity_ratio_to_water_mass_fraction(humidity_ratio: float) -> float:
-    """Convert from humidity ratio to water mass fraction."""
+    """Convert from humidity ratio to water mass fraction.
+
+    Currently just used for testing purposes.
+    """
     return humidity_ratio / (1.0 + humidity_ratio)
 
 
@@ -57,6 +60,8 @@ def make_humid_air_mixture(
     humidity ratio at the requested thermodynamic state. That ratio is then
     converted to a water mass fraction and combined with the dry-air composition
     defined in ``DRY_AIR_MASS_FRACTIONS`` to create a ``pyfluids.Mixture``.
+
+    Currently just used for testing purposes.
 
     Args:
         pressure: mixture pressure in Pa.
@@ -497,6 +502,8 @@ class ThermodynamicCycleResult:
         """
         Compute the total heat rejected by the cycle.
 
+        Currently just used for testing purposes.
+
         Returns:
             heat rejection rate in kJ/s when ``mass_flowrate`` is set,
             otherwise specific heat rejection in kJ/kg.
@@ -507,6 +514,8 @@ class ThermodynamicCycleResult:
     def get_back_work_ratio(self):
         """
         Compute the ratio of back work to forward work.
+
+        Currently just used for testing purposes.
 
         Returns:
             dimensionless back work ratio.
