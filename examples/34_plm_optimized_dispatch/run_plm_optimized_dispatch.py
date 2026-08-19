@@ -20,7 +20,7 @@ from h2integrate.core.h2integrate_model import H2IntegrateModel
 EXAMPLE_DIR = Path(__file__).parent
 
 
-# Run H2Ingegrate
+# Run H2Integrate
 model = H2IntegrateModel(EXAMPLE_DIR / "34_plm_optimized_dispatch.yaml")
 model.setup()
 model.run()

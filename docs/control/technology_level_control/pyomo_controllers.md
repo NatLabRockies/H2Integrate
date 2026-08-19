@@ -175,6 +175,8 @@ $$
 -\gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p^d_{gt,t}
 $$
 
+where $f(\lambda_t)$ describes the price charged by the G&T to the Co-Op.
+
 The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled at any timestep resolution.
 
 ### Constraints
