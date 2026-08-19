@@ -62,9 +62,33 @@ class BaseDowntime(ABC, BaseConfig):
 
 
 @define(kw_only=True)
-class BaseReliability(ABC, BaseConfig):
-    @abstractmethod
-    def sample_events(self) -> np.ndarray: ...
+class BaseReliability(BaseConfig):
+    def sample_events(self) -> np.ndarray:
+        raise NotImplementedError("Failed to successfully subclass, please implement me.")
+
+    def calculate_availability(self):
+        """Determine the timing and duration of outages for a single year of simulation time."""
+        accumulated = np.zeros_like(self.shape, dtype=int)
+        while any(accumulated < N_TIMESTEPS):
+            if not self.time_to_failures.size == 0:
+                self.create_downtime_events()
+            event = self.time_to_failures[:, 0].reshape(-1, 1)
+            self.time_to_failures = self.time_to_failures[:, 1:]
+            duration = self.downtime_per_event[:, 0].reshape(-1, 1)
+            self.downtime_per_event = self.downtime_per_event[:, 1:]
+
+            if all(event + accumulated) > N_TIMESTEPS:
+                break
+
+            start = accumulated + event
+            end = start + duration
+            for i, (s, e) in enumerate(zip(start.flatten(), end.flatten())):
+                if s < N_TIMESTEPS:
+                    e = min(N_TIMESTEPS, e)
+                    self.availability[i, s:e] = 0
+            accumulated = end
+
+        self.system_availability = np.min(self.availability, axis=0)
 
 
 def float_array_converter(val: int | float | ArrayLike):
@@ -140,9 +164,9 @@ class LogNormalDowntime(BaseDowntime):
 
     def __attrs_post_init__(self):
         if self.mean.size == 1 and self.n_components > 1:
-            broadcaster = np.ones((self.n_components, 1))
-            self.mean *= broadcaster
-            self.sigma *= broadcaster
+            shape = (self.n_components, 1)
+            self.mean = np.broadcast_to(self.mean, shape)
+            self.sigma = np.broadcast_to(self.sigma, shape)
 
     def sample_downtime(self) -> np.ndarray:
         """Return an array of 100 samples of each lognormal distribution."""
@@ -193,9 +217,14 @@ class WeibullReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
+        if self.scale.size == 1 and self.n_components > 1:
+            shape = (self.n_components, 1)
+            self.scale = np.broadcast_to(self.scale, shape)
+            self.shape = np.broadcast_to(self.shape, shape)
+
         self.availability = np.ones((self.scale.size, N_TIMESTEPS), dtype=float)
         self.create_downtime_events()
-        # self.calculate_availability()
+        self.calculate_availability()
 
     def sample_events(self):
         """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
@@ -207,30 +236,6 @@ class WeibullReliability(BaseReliability):
         """Creates a ``time_to_failure`` and ``downtime_per_event``."""
         self.time_to_failures = self.sample_events()
         self.downtime_per_event = self.downtime.sample_downtime()
-
-    def calculate_availability(self):
-        """Determine the timing and duration of outages for a single year of simulation time."""
-        accumulated = np.zeros_like(self.shape, dtype=int)
-        while any(accumulated < N_TIMESTEPS):
-            if not self.time_to_failures.size == 0:
-                self.create_downtime_events()
-            event = self.time_to_failures[:, 0].reshape(-1, 1)
-            self.time_to_failures = self.time_to_failures[:, 1:]
-            duration = self.downtime_per_event[:, 0].reshape(-1, 1)
-            self.downtime_per_event = self.downtime_per_event[:, 1:]
-
-            if all(event + accumulated) > N_TIMESTEPS:
-                break
-
-            start = accumulated + event
-            end = start + duration
-            for i, (s, e) in enumerate(zip(start.flatten(), end.flatten())):
-                if s < N_TIMESTEPS:
-                    e = min(N_TIMESTEPS, e)
-                    self.availability[i, s:e] = 0
-            accumulated = end
-
-        self.system_availability = np.min(self.availability, axis=0)
 
 
 @define(kw_only=True)
@@ -268,25 +273,3 @@ class FixedIntervalReliability(BaseReliability):
         """Creates a ``time_to_failure`` and ``downtime_per_event``."""
         self.first_occurrence, self.interval = self.sample_events()
         self.downtime_per_event = self.downtime.sample_downtime()
-
-    def calculate_availability(self):
-        """Determine the timing and duration of outages for a single year of simulation time."""
-        duration, self.downtime_per_event = (
-            self.downtime_per_event[0],
-            self.downtime_per_event[1:],
-        )
-        end = self.first_occurrence + duration
-        self.availability[self.first_occurrence : end] = 0
-        accumulated = end
-        while (start := accumulated + self.interval) < N_TIMESTEPS:
-            duration, self.downtime_per_event = (
-                self.downtime_per_event[0],
-                self.downtime_per_event[1:],
-            )
-            # TODO: handle start > 8760
-            end = start + duration
-            end = np.where(end > 8760, 8760, end)
-            self.availability[start:end] = 0
-            accumulated = end
-            if not self.downtime_per_event:
-                self.downtime.sample_downtime()
