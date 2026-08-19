@@ -62,7 +62,7 @@ def test_demo_case(subtests):
                         "isentropic_efficiency_compressor": 0.85,
                         "isentropic_efficiency_turbine": 0.90,
                         "generator_efficiency": 1.0,
-                        "generator_nameplate_power_mw": 255.0,  # 300 MVA @ 0.85 PF
+                        "generator_oversize_ratio": 1.067,  # (300 MVA @ 0.85 PF = 255 MW)/239 MW
                     },
                     "cost_parameters": {
                         "capex_per_kw": 1000,  # $/kW - typical for NGCC; stolen from ex. 16
