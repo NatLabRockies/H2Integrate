@@ -207,9 +207,6 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
             This includes variable O&M costs that scale with electricity generation.
             Typical values: 1-5 $/MWh
 
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh, used for fuel cost calculations.
-            This should match the heat rate used in the performance model.
-
         cost_year (int): Dollar year corresponding to input costs.
     """
 
@@ -217,7 +214,6 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
     capex_per_kw: float | int = field(validator=validators.ge(0))
     fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
     variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
-    heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
 class NaturalGasCostModel(CostModelBaseClass):
@@ -242,7 +238,6 @@ class NaturalGasCostModel(CostModelBaseClass):
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
         variable_opex_per_mwh (float): Variable operating expenses per unit generation in $/MWh
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh
 
     Outputs:
         CapEx (float): Total capital expenditure in USD
@@ -294,12 +289,6 @@ class NaturalGasCostModel(CostModelBaseClass):
             val=self.config.variable_opex_per_mwh,
             units="USD/(MW*h)",
             desc="Variable operating expenses per unit generation",
-        )
-        self.add_input(
-            "heat_rate_mmbtu_per_mwh",
-            val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/(MW*h)",
-            desc="Plant heat rate",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

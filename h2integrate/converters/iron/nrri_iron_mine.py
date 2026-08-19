@@ -2,12 +2,11 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
@@ -24,9 +23,11 @@ class NRRIIronMinePerformanceConfig(BaseConfig):
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
-    mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    mine: str = field(
+        validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
+    )
     taconite_pellet_type: str = field(
-        converter=(str.lower, str.strip), validator=contains(["std", "drg"])
+        converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
 
 
@@ -379,9 +380,11 @@ class NRRIIronMineCostConfig(BaseConfig):
         cost_year (int): target dollar year to convert costs to.
     """
 
-    mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    mine: str = field(
+        validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
+    )
     cost_year: int = field(
-        converter=int, validator=must_equal(2025)
+        default=2025, converter=int, validator=validators.in_([2025])
     )  # TODO: check what year SEC reports are from
 
 
