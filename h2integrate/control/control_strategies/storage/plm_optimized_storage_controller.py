@@ -578,7 +578,6 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         """
         m: Any = pyomo.ConcreteModel(name="plm_dr")
 
-        E_max = storage_capacity * (self.config.max_soc_fraction - self.config.min_soc_fraction)
         eta_c = self.config.charge_efficiency
         eta_d = self.config.discharge_efficiency
         soc_max = self.config.max_soc_fraction
