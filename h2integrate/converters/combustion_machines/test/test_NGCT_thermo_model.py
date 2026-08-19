@@ -237,14 +237,15 @@ def test_ngct_result_aggregates_cycle_quantities(iso_ambient_state):
 @pytest.mark.skipif(
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
 )
-def test_run_turbine_model_singleton_matches_batch_result(ge_7ea_2014, iso_ambient_state):
-    result_single = ge_7ea_2014.run_turbine_model(iso_ambient_state)
-    result_batch = ge_7ea_2014.run_turbine_model([iso_ambient_state])[0]
+def test_run_turbine_model_returns_one_result_per_ambient_state(ge_7ea_2014, iso_ambient_state):
+    results = ge_7ea_2014.run_turbine_model([iso_ambient_state, iso_ambient_state])
 
-    assert result_single.mass_flowrate == pytest.approx(result_batch.mass_flowrate)
-    assert result_single.get_net_work() == pytest.approx(result_batch.get_net_work())
-    assert result_single.get_efficiency() == pytest.approx(result_batch.get_efficiency())
-    assert result_single.states[4].temperature == pytest.approx(result_batch.states[4].temperature)
+    assert isinstance(results, list)
+    assert len(results) == 2
+    assert results[0].mass_flowrate == pytest.approx(results[1].mass_flowrate)
+    assert results[0].get_net_work() == pytest.approx(results[1].get_net_work())
+    assert results[0].get_efficiency() == pytest.approx(results[1].get_efficiency())
+    assert results[0].states[4].temperature == pytest.approx(results[1].states[4].temperature)
 
 
 @pytest.mark.regression
@@ -252,7 +253,7 @@ def test_run_turbine_model_singleton_matches_batch_result(ge_7ea_2014, iso_ambie
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
 )
 def test_run_turbine_model_applies_minimum_mass_flow_constraint(basic_ngct, iso_ambient_state):
-    unconstrained = basic_ngct.run_turbine_model(iso_ambient_state)
+    unconstrained = basic_ngct.run_turbine_model([iso_ambient_state])[0]
     specific_net_work = unconstrained.get_net_work() / unconstrained.mass_flowrate
     specific_heat_input = unconstrained.process_heat_unit[(2, 3)]
 
@@ -260,10 +261,10 @@ def test_run_turbine_model_applies_minimum_mass_flow_constraint(basic_ngct, iso_
     heat_limit = 0.60 * unconstrained.get_net_heat_input()
 
     constrained = basic_ngct.run_turbine_model(
-        iso_ambient_state,
+        [iso_ambient_state],
         power_rated=power_limit,
         heatrate_fuel_capacity=heat_limit,
-    )
+    )[0]
 
     expected_mass_flowrate = min(
         unconstrained.mass_flowrate,
@@ -279,7 +280,7 @@ def test_run_turbine_model_applies_minimum_mass_flow_constraint(basic_ngct, iso_
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
 )
 def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
-    result = ge_7fa05.run_turbine_model(iso_ambient_state)
+    result = ge_7fa05.run_turbine_model([iso_ambient_state])[0]
 
     assert result.get_efficiency() == pytest.approx(
         ge_7fa05.design_conditions["eta_th_ISO"],
@@ -307,7 +308,7 @@ def test_demo_case(ge_7ea_2014):
         pyfluids.Input.temperature(Trel_ambient),
     )
 
-    result = ge_7ea_2014.run_turbine_model(fluid_ambient)
+    result = ge_7ea_2014.run_turbine_model([fluid_ambient])[0]
 
     net_work = result.get_net_work()
     net_heat_input = result.get_net_heat_input()
@@ -336,7 +337,7 @@ def test_demo_case(ge_7ea_2014):
 #     reason="thermo modules are not installed",
 # )
 # def test_ge_7ea_2014_iso_design_point_regression(ge_7ea_2014, iso_ambient_state):
-# 	result = ge_7ea_2014.run_turbine_model(iso_ambient_state)
+# 	result = ge_7ea_2014.run_turbine_model([iso_ambient_state])[0]
 #
 # 	assert result.get_efficiency() == pytest.approx(
 # 		ge_7ea_2014.design_conditions["eta_th_ISO"],
@@ -361,7 +362,7 @@ def test_ideal_brayton_cycle_energy_balance(iso_ambient_state):
         isentropic_efficiency_turbine=1.0,
         Q_fluid_max=1.0,
     )
-    result = ideal_ngct.run_turbine_model(iso_ambient_state)
+    result = ideal_ngct.run_turbine_model([iso_ambient_state])[0]
     net_heat = result.get_net_heat_input() + result.get_net_heat_rejection()
 
     assert result.get_net_work() == pytest.approx(net_heat, rel=1e-9)
@@ -372,7 +373,7 @@ def test_ideal_brayton_cycle_energy_balance(iso_ambient_state):
     importlib.util.find_spec("pyfluids") is None, reason="thermo modules are not installed"
 )
 def test_varied_ambient_conditions_produce_finite_outputs(ge_7ea_2014, varied_ambient_state):
-    result = ge_7ea_2014.run_turbine_model(varied_ambient_state)
+    result = ge_7ea_2014.run_turbine_model([varied_ambient_state])[0]
 
     assert np.isfinite(result.mass_flowrate)
     assert np.isfinite(result.get_net_work())
