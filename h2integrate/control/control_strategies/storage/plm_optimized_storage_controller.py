@@ -718,12 +718,17 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         # Dynamics of the battery SOC evolution.
         def soc_evolution_rule(mdl, t):
             if t == 0:
-                return pyomo.Constraint.Skip
+                return mdl.soc[t] == (
+                    init_soc
+                    + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
+                    - mdl.p_discharge_gt[t] * dt_hours / (eta_d * storage_capacity)
+                    - mdl.p_discharge_coop[t] * dt_hours / (eta_d * storage_capacity)
+                )
             return mdl.soc[t] == (
                 mdl.soc[t - 1]
-                + eta_c * mdl.p_charge[t] * dt_hours / E_max
-                - mdl.p_discharge_gt[t] * dt_hours / (eta_d * E_max)
-                - mdl.p_discharge_coop[t] * dt_hours / (eta_d * E_max)
+                + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
+                - mdl.p_discharge_gt[t] * dt_hours / (eta_d * storage_capacity)
+                - mdl.p_discharge_coop[t] * dt_hours / (eta_d * storage_capacity)
             )
 
         m.soc_evolution = pyomo.Constraint(m.T, rule=soc_evolution_rule)

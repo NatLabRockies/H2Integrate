@@ -110,9 +110,9 @@ ax.plot(
     lmp[:plot_time_window],
     color="steelblue",
     linewidth=1.0,
-    label="LMP ($/MWh)",
+    label="LMP ($/kWh)",
 )
-ax.set_ylabel("LMP ($/MWh)", fontsize=8)
+ax.set_ylabel("LMP ($/kWh)", fontsize=8)
 ax.set_ylim(bottom=0)
 ax.legend(fontsize=7, loc="upper left", frameon=True)
 
@@ -186,7 +186,7 @@ ax.plot(
 )
 ax.set_ylabel("Demand (kW)", fontsize=8)
 ax.set_xlabel("Time")
-ax.set_ylim([2500, 6250])
+ax.set_ylim([2300, 6500])
 ax.legend(fontsize=7, loc="lower left", frameon=True)
 
 plt.tight_layout()
