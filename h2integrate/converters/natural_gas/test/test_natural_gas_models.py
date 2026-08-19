@@ -36,7 +36,7 @@ def ngcc_cost_params():
         "capex_per_kw": 1000,  # $/kW
         "fixed_opex_per_kw_per_year": 10.0,  # $/kW/year
         "variable_opex_per_mwh": 2.5,  # $/MWh
-        "system_capacity_mw": 100,  # MW
+        # "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
     return cost_params
@@ -49,7 +49,7 @@ def ngct_cost_params():
         "capex_per_kw": 800,  # $/kW
         "fixed_opex_per_kw_per_year": 8.0,  # $/kW/year
         "variable_opex_per_mwh": 3.0,  # $/MWh
-        "system_capacity_mw": 100,  # MW
+        # "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
     return cost_params
