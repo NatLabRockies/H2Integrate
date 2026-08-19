@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 from attrs import field, define, validators
+from numpy.typing import ArrayLike
 
 from h2integrate.core.utilities import BaseConfig
 
@@ -16,12 +17,13 @@ N_TIMESTEPS = 8760
 
 def create_failure_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
-    name = config.pop("failure_model")
+    name = config["failure_model"]
+    fail_config = config["failure_parameters"]
     match name:
         case "WeibullReliability":
-            return WeibullReliability.from_dict(config)
+            return WeibullReliability.from_dict()
         case "FixedIntervalReliability":
-            return FixedIntervalReliability.from_dict(config)
+            return FixedIntervalReliability.from_dict(fail_config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -29,11 +31,12 @@ def create_failure_model(config: dict):
 def create_maintenance_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config.pop("maintenance_model")
+    maintenance_config = config["maintenance_parameters"]
     match name:
         case "WeibullReliability":
-            return WeibullReliability.from_dict(config)
+            return WeibullReliability.from_dict(maintenance_config)
         case "FixedIntervalReliability":
-            return FixedIntervalReliability.from_dict(config)
+            return FixedIntervalReliability.from_dict(maintenance_config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -59,6 +62,14 @@ class BaseReliability(ABC, BaseConfig):
     def sample_events(self) -> np.ndarray: ...
 
 
+def float_array_converter(val: int | float | ArrayLike):
+    return np.ndarray(val).astype(float).reshape(-1, 1)
+
+
+def int_array_converter(val: int | float | ArrayLike):
+    return np.ndarray(val).astype(float).reshape(-1, 1)
+
+
 @define(kw_only=True)
 class LogNormalDowntime(BaseDowntime):
     """Basic log-normal downtime model for generating the length of downtime for a given event.
@@ -70,13 +81,34 @@ class LogNormalDowntime(BaseDowntime):
             Defaults to 1.
     """
 
-    mean: float = field(validator=(validators.instance_of(float), validators.ge(0)))
-    sigma: float = field(validator=(validators.instance_of(float), validators.ge(0)))
+    mean: float = field(
+        converter=float_array_converter,
+        validator=(validators.instance_of(np.ndarray), validators.ge(0)),
+    )
+    sigma: float = field(
+        converter=float_array_converter,
+        validator=(validators.instance_of(np.ndarray), validators.ge(0)),
+    )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
+    @sigma.validator
+    def validate_shape(self, attribute, value):
+        """Validates that :py:attr:`mean` and :py:attr:`sigma` are the same size."""
+        if self.mean.shape != value.shape:
+            msg = (
+                "Inputs to 'mean' and 'sigma' must be the same length. Received"
+                f" 'mean': {self.mean.size}, 'sigma': {value.size}"
+            )
+            raise ValueError(msg)
+
+    def __attrs_post_init__(self):
+        if self.mean.size == 1 and self.n_components > 1:
+            broadcaster = np.ones((self.n_components, 1))
+            self.mean *= broadcaster
+            self.sigma *= broadcaster
+
     def sample_downtime(self) -> np.ndarray:
-        size = (self.n_components, 100) if isinstance(self.mean, int | float) else 100
-        return rng.lognormal(self.mean, self.sigma, size=size)
+        return rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
 
 
 @define(kw_only=True)
