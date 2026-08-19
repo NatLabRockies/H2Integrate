@@ -55,23 +55,32 @@ class NGCT:
 
     def run_turbine_model(
         self,
-        fluid_ambient_list: (
-            list[pyfluids.fluids.abstract_fluid.AbstractFluid]
-            | pyfluids.fluids.abstract_fluid.AbstractFluid
-        ),
+        fluid_ambient_list: list[pyfluids.fluids.abstract_fluid.AbstractFluid],
         power_rated: float = np.inf,  # kW, maximum rated power of the system
         heatrate_fuel_capacity: float = np.inf,  # kJ/s, maximum allowable heat rate
-    ):
-        singleton = False  # make a flag if there's just one ambient state to run
-        if isinstance(
-            fluid_ambient_list,
-            pyfluids.fluids.abstract_fluid.AbstractFluid,
-        ):
-            fluid_ambient_list = [
-                fluid_ambient_list,
-            ]
-            singleton = True
+    ) -> list[ThermodynamicCycleResult]:
+        """
+        Run the Brayton cycle model for a list of ambient fluid states.
 
+        For each ambient fluid state, the cycle states are computed through the
+        compressor, combustor, and turbine, then the specific work and heat
+        terms are evaluated. If a design volumetric flowrate is set, the mass
+        flowrate is also computed subject to the volumetric, power rating, and
+        fuel heat rate limits.
+
+        Args:
+            fluid_ambient_list: Ambient fluid states to evaluate, one per
+                operating condition. A single condition should be passed as a
+                list of length one.
+            power_rated: Generator power rating constraint (kW). Defaults to no
+                limit.
+            heatrate_fuel_capacity: Fuel heat rate capacity limit (kJ/s).
+                Defaults to no limit.
+
+        Returns:
+            One ThermodynamicCycleResult per entry in fluid_ambient_list, in the
+            same order.
+        """
         results = []  # vector to store results for each ambient fluid state
         for fluid_ambient in fluid_ambient_list:  # loop over ambient fluid states
             ### CALCULATE THE CYCLE STATES
@@ -176,9 +185,6 @@ class NGCT:
                 "constant-pressure (atmospheric) cooling",
             )
 
-            # return logic
-            if singleton:
-                return result
             results.append(result)
 
         return results
