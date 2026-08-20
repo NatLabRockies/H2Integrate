@@ -110,12 +110,19 @@ class ProFastLCO(ProFastBase):
         if "system_level_control" in self.options["plant_config"] and np.all(
             inputs["capacity_factor"] == 0.0
         ):
-            outputs[self.LCO_str] = 1e12
+            # Zero capacity factor: ProFAST cannot compute a levelized cost (it would
+            # divide by zero production). During a nonlinear (gauss-seidel) solve the
+            # commodity stream can be momentarily zero on an intermediate iteration before
+            # demand propagates forward into production, so writing a large sentinel here
+            # would swing the LCO output by orders of magnitude and dominate the coupled
+            # residual, stalling convergence. Instead, hold the current output value: it
+            # starts at 0.0 and retains the last valid LCO once production begins, so a
+            # transient zero-capacity iteration does not perturb the coupled residual.
             msg = (
                 f"Commodity stream for finance group has a zero capacity factor. "
                 "If you recieve this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
-                f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+                f"{self.LCO_str} is being held at its current value ({self.price_units})"
             )
             warnings.warn(msg, UserWarning)
             return

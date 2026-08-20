@@ -22,6 +22,7 @@ _CLASS_COLORS = {
     "dispatchable": "#9AA0A6",
     "feedstock": "#6FA8DC",
     "combiner": "#D9D9D9",
+    "splitter": "#CBD8EE",
     "demand": "#B39DDB",
 }
 _COMMODITY_COLORS = {
@@ -79,9 +80,9 @@ os.chdir(EXAMPLE_FOLDER)
 # Create an H2I model with an ammonia demand served by a heterogeneous commodity chain.
 # The profit-maximizing system-level controller translates ammonia demand backward into
 # hydrogen demand (across the synthesis loop) and then into electricity demand (across the
-# electrolyzer). Wind runs whenever it is available, the battery charges on wind surplus and
-# discharges to cover short deficits, and the grid is only dispatched to backfill the
-# electricity that wind and the battery cannot supply.
+# electrolyzer). Solar runs whenever it is available and the battery charges on solar surplus
+# and discharges to cover short deficits. There is no grid backup, so the ammonia demand is
+# only met when solar and the battery can supply enough electricity.
 h2i = H2IntegrateModel("heterogeneous_commodity.yaml")
 
 h2i.setup()
@@ -108,21 +109,31 @@ def make_plots(figure_dir):
     n_timesteps = h2i.prob.get_val("ammonia.ammonia_out", units="kg/h").size
     hours = np.arange(n_timesteps)
 
-    # A representative week (7 days) chosen to show variable wind and grid backup.
+    # A representative week (7 days) chosen to show variable solar and battery dispatch.
     week_start = 3000
     week = slice(week_start, week_start + 168)
     week_hours = hours[week] - week_start
 
     # Electricity streams (MW).
-    wind_mw = _get("wind.electricity_out", "MW")
-    grid_mw = _get("grid.electricity_out", "MW")
+    solar_mw = _get("solar.electricity_out", "MW")
     battery_mw = _get("battery.electricity_out", "MW")
     electrolyzer_load_mw = _get("electrolyzer.electricity_consumed", "MW")
     synloop_load_mw = _get("ammonia.electricity_consumed", "MW")
 
+    # Splitter streams (MW): the combined bus feeds a literal splitter whose
+    # priority output (out1) supplies the electrolyzer and whose second output
+    # (out2) supplies the synloop. The controller sets the prescribed priority
+    # allocation each hour from the two consumers' backpropagated demand.
+    bus_mw = _get("elec_combiner.electricity_out", "MW")
+    split_out1_mw = _get("electricity_splitter.electricity_out1", "MW")
+    split_out2_mw = _get("electricity_splitter.electricity_out2", "MW")
+    prescribed_mw = _get("system_level_controller.electricity_splitter_electricity_set_point", "MW")
+
     # Hydrogen streams (kg/h).
     h2_produced = _get("electrolyzer.hydrogen_out", "kg/h")
     h2_to_synloop = _get("ammonia.hydrogen_consumed", "kg/h")
+    h2_from_combiner = _get("h2_combiner.hydrogen_out", "kg/h")
+    h2_storage_discharge = _get("h2_storage.hydrogen_out", "kg/h")
 
     # Ammonia streams (kg/h).
     ammonia_out = _get("ammonia.ammonia_out", "kg/h")
@@ -147,17 +158,16 @@ def make_plots(figure_dir):
 
     # -----------------------------------------------------------------
     # Figure 1: the commodity cascade over a representative week.
-    # Electricity (wind + grid) drives hydrogen, which drives ammonia.
+    # Electricity (solar + battery) drives hydrogen, which drives ammonia.
     # -----------------------------------------------------------------
     fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
 
     axes[0].stackplot(
         week_hours,
-        wind_mw[week],
+        solar_mw[week],
         np.clip(battery_mw[week], 0.0, None),
-        grid_mw[week],
-        labels=["Wind", "Battery discharge", "Grid (firm)"],
-        colors=["#4C9F70", "#F2C14E", "#8C8C8C"],
+        labels=["Solar PV", "Battery discharge"],
+        colors=["#EF8A17", "#F2C14E"],
     )
     axes[0].plot(
         week_hours,
@@ -167,7 +177,7 @@ def make_plots(figure_dir):
         label="Electrolyzer + synloop load",
     )
     axes[0].set_ylabel("Electricity (MW)")
-    axes[0].set_title("Electricity supply: wind prioritized, grid provides firm backup")
+    axes[0].set_title("Electricity supply: solar prioritized, battery smooths short deficits")
     axes[0].legend(loc="upper right", ncol=2, fontsize=8)
 
     axes[1].plot(week_hours, h2_produced[week], color="#3B7DD8", label="Electrolyzer output")
@@ -273,10 +283,10 @@ def make_plots(figure_dir):
     color_flow = _COMMODITY_COLORS
 
     # Technology boxes, laid out left to right along the forward commodity flow.
-    _box(ax, (9, 86), "Wind\n(flexible)\n120 MW", color_class["flexible"])
+    _box(ax, (9, 86), "Solar PV\n(flexible)\n200 MWdc", color_class["flexible"])
     _box(ax, (9, 68), "Battery\n(storage)\n10 MW / 40 MWh", color_class["storage"])
-    _box(ax, (9, 50), "Grid\n(dispatchable)\n50 MW", color_class["dispatchable"])
-    _box(ax, (26, 68), "Electricity\ncombiner", color_class["combiner"], width=11, height=7)
+    _box(ax, (22, 68), "Electricity\ncombiner", color_class["combiner"], width=9, height=7)
+    _box(ax, (32, 68), "Electricity\nsplitter", color_class["splitter"], width=7, height=7)
     _box(
         ax,
         (44, 68),
@@ -296,22 +306,25 @@ def make_plots(figure_dir):
         width=16,
         height=13,
     )
-    _box(
-        ax,
-        (80, 48),
-        "Electricity feedstock\n(feedstock)",
-        color_class["feedstock"],
-        width=13,
-        height=7,
-    )
     _box(ax, (95, 68), "Ammonia\ndemand\n4000 kg/h", color_class["demand"], width=10, height=9)
 
     # Electricity flows (blue).
-    _flow_arrow(ax, (14.5, 84), (20.5, 70), color_flow["electricity"])
-    _flow_arrow(ax, (14.5, 68), (20.5, 68), color_flow["electricity"], label="electricity")
-    _flow_arrow(ax, (14.5, 52), (20.5, 66), color_flow["electricity"])
-    _flow_arrow(ax, (31.5, 68), (36.5, 68), color_flow["electricity"], label="electricity")
-    _flow_arrow(ax, (80, 51.5), (80, 61.5), color_flow["electricity"], label="direct", label_dy=0)
+    _flow_arrow(ax, (14.5, 84), (17.5, 70), color_flow["electricity"])
+    _flow_arrow(ax, (14.5, 68), (17.5, 68), color_flow["electricity"], label="electricity")
+    # Combined electricity bus feeds a literal splitter that divides the bus.
+    _flow_arrow(ax, (26.5, 68), (28.5, 68), color_flow["electricity"], label="bus")
+    # Splitter out1 (priority) supplies the electrolyzer.
+    _flow_arrow(ax, (35.5, 68), (36.5, 68), color_flow["electricity"], label="out1")
+    # Splitter out2 supplies the synloop's direct electricity along the same bus.
+    _flow_arrow(
+        ax,
+        (32.0, 64.5),
+        (74.0, 61.5),
+        color_flow["electricity"],
+        rad=-0.5,
+        label="out2 (direct electricity to synloop)",
+        label_dy=18.0,
+    )
     _flow_arrow(ax, (5, 82), (5, 72), color_flow["electricity"], lw=1.6, label="charge", label_dy=0)
 
     # Hydrogen flows (orange).
@@ -411,6 +424,7 @@ def make_plots(figure_dir):
         Patch(facecolor=color_class["dispatchable"], edgecolor="#2F2F2F", label="dispatchable"),
         Patch(facecolor=color_class["feedstock"], edgecolor="#2F2F2F", label="feedstock"),
         Patch(facecolor=color_class["combiner"], edgecolor="#2F2F2F", label="combiner"),
+        Patch(facecolor=color_class["splitter"], edgecolor="#2F2F2F", label="splitter"),
         Patch(facecolor=color_class["demand"], edgecolor="#2F2F2F", label="demand"),
     ]
     ax.legend(
@@ -527,8 +541,107 @@ def make_plots(figure_dir):
     fig.savefig(figure_dir / "conversion_ratio_chain.png", dpi=150)
     plt.close(fig)
 
+    # -----------------------------------------------------------------
+    # Figure 5: hourly time histories of the commodity signals that pass
+    # between components over a representative week. The top panels show how
+    # the literal electricity splitter divides the combined bus: the priority
+    # output (out1) tracks the electrolyzer's demand while the second output
+    # (out2) carries the remainder to the synloop, so both loads are served
+    # from a single physical stream. The lower panels follow the hydrogen and
+    # ammonia signals along the rest of the chain.
+    # -----------------------------------------------------------------
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+
+    # Panel 1: the split of the combined electricity bus at the splitter.
+    axes[0].stackplot(
+        week_hours,
+        split_out1_mw[week],
+        split_out2_mw[week],
+        labels=["out1 -> electrolyzer", "out2 -> synloop"],
+        colors=["#3B7DD8", "#9AC4F0"],
+    )
+    axes[0].plot(
+        week_hours, bus_mw[week], color="black", lw=1.4, label="combined bus (combiner out)"
+    )
+    axes[0].plot(
+        week_hours,
+        prescribed_mw[week],
+        color="#D8663B",
+        lw=1.2,
+        ls=":",
+        label="controller prescribed priority allocation",
+    )
+    axes[0].set_ylabel("Electricity (MW)")
+    axes[0].set_title("Electricity splitter: controller divides the combined bus between two loads")
+    axes[0].legend(loc="upper right", ncol=2, fontsize=8)
+
+    # Panel 2: each split output vs the load it serves (no starvation of either).
+    axes[1].plot(week_hours, split_out1_mw[week], color="#3B7DD8", lw=1.4, label="out1 (priority)")
+    axes[1].plot(
+        week_hours,
+        electrolyzer_load_mw[week],
+        color="#1F3F66",
+        ls="--",
+        lw=1.2,
+        label="electrolyzer consumed",
+    )
+    axes[1].plot(week_hours, split_out2_mw[week], color="#9AC4F0", lw=1.4, label="out2")
+    axes[1].plot(
+        week_hours,
+        synloop_load_mw[week],
+        color="#7B4FA3",
+        ls="--",
+        lw=1.2,
+        label="synloop consumed",
+    )
+    axes[1].set_ylabel("Electricity (MW)")
+    axes[1].set_title("Split allocations track each consumer's load")
+    axes[1].legend(loc="upper right", ncol=2, fontsize=8)
+
+    # Panel 3: hydrogen signals between the electrolyzer, storage, and synloop.
+    axes[2].plot(week_hours, h2_produced[week], color="#D8663B", lw=1.4, label="electrolyzer out")
+    axes[2].plot(
+        week_hours,
+        h2_storage_discharge[week],
+        color="#F2C14E",
+        lw=1.2,
+        label="storage discharge",
+    )
+    axes[2].plot(
+        week_hours,
+        h2_from_combiner[week],
+        color="#8C4A2F",
+        ls="--",
+        lw=1.2,
+        label="H2 combiner out -> synloop",
+    )
+    axes[2].plot(
+        week_hours, h2_to_synloop[week], color="black", ls=":", lw=1.2, label="synloop consumed"
+    )
+    axes[2].set_ylabel("Hydrogen (kg/h)")
+    axes[2].set_title("Hydrogen signals between the electrolyzer, storage, and synloop")
+    axes[2].legend(loc="upper right", ncol=2, fontsize=8)
+
+    # Panel 4: the ammonia product signal that drives the whole chain.
+    axes[3].plot(week_hours, ammonia_out[week], color="#7B4FA3", lw=1.4, label="ammonia production")
+    axes[3].plot(
+        week_hours, ammonia_demand[week], color="black", ls="--", lw=1.2, label="ammonia demand"
+    )
+    axes[3].set_ylabel("Ammonia (kg/h)")
+    axes[3].set_xlabel("Hour of representative week")
+    axes[3].set_title("Ammonia production tracks the demand that drives the chain")
+    axes[3].legend(loc="lower right", fontsize=8)
+
+    fig.suptitle("Hourly commodity signals between components (representative week)", y=0.997)
+    fig.tight_layout()
+    fig.savefig(figure_dir / "commodity_time_histories.png", dpi=150)
+    plt.close(fig)
+
     return figure_dir
 
 
 figures = make_plots(EXAMPLE_FOLDER / "outputs")
-print(f"Saved dispatch, block-diagram, and conversion-ratio figures to {figures}")
+print(
+    "Saved dispatch, block-diagram, conversion-ratio, and commodity time-history "
+    f"figures to {figures}"
+)

@@ -263,6 +263,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # across converter boundaries for heterogeneous-commodity systems.
         self._build_converters()
 
+        # Register a set-point output for every controller-managed splitter so
+        # the controller can drive its per-timestep priority allocation from the
+        # backpropagated demand of the two downstream consumers.
+        self.splitters = slc_topology.get("splitters", [])
+        for splitter in self.splitters:
+            self.add_output(
+                f"{splitter['name']}_{splitter['commodity']}_set_point",
+                val=0.0,
+                shape=self.n_timesteps,
+                units=splitter.get("commodity_rate_units", None),
+                desc=(
+                    f"Prescribed {splitter['commodity']} allocation to the priority "
+                    f"consumer of splitter {splitter['name']}"
+                ),
+            )
+
     def _setup_commodity(
         self,
         tech_name,
@@ -718,6 +734,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # input as unconnected (dynamic ratio unavailable) when running the
         # component standalone
         self._converter_consumed_names = {}
+        registered_consumed = set()
         for in_commodity, tech_name, out_commodity in self._converters:
             has_producers = any(
                 in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
@@ -725,24 +742,29 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if not has_producers:
                 continue
 
-            if in_commodity in self.commodities_to_units:
-                unit_kwargs = {"units": self.commodities_to_units[in_commodity]}
-            elif in_commodity in self.commodities_to_ref_var:
-                unit_kwargs = {
-                    "units": None,
-                    "copy_units": self.commodities_to_ref_var[in_commodity],
-                }
-            else:
-                unit_kwargs = {"units": None}
-
             consumed_name = f"{tech_name}_{in_commodity}_consumed"
-            self.add_input(
-                consumed_name,
-                val=np.full(self.n_timesteps, np.nan),
-                shape=self.n_timesteps,
-                desc=f"Measured {in_commodity} consumed by converter {tech_name}",
-                **unit_kwargs,
-            )
+            # A co-product converter (one technology, one input, several
+            # outputs) shares a single measured-consumption input across its
+            # outputs, so register the input at most once per (tech, input).
+            if consumed_name not in registered_consumed:
+                if in_commodity in self.commodities_to_units:
+                    unit_kwargs = {"units": self.commodities_to_units[in_commodity]}
+                elif in_commodity in self.commodities_to_ref_var:
+                    unit_kwargs = {
+                        "units": None,
+                        "copy_units": self.commodities_to_ref_var[in_commodity],
+                    }
+                else:
+                    unit_kwargs = {"units": None}
+
+                self.add_input(
+                    consumed_name,
+                    val=np.full(self.n_timesteps, np.nan),
+                    shape=self.n_timesteps,
+                    desc=f"Measured {in_commodity} consumed by converter {tech_name}",
+                    **unit_kwargs,
+                )
+                registered_consumed.add(consumed_name)
             self._converter_consumed_names[(tech_name, in_commodity, out_commodity)] = consumed_name
 
     def _run_dispatch(self, inputs, outputs):
@@ -772,16 +794,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
           outputs that carry no demand are simply never dispatched and never
           generate upstream demand.
 
-        The one topology this flat aggregation does not yet disambiguate is a
-        single converter that maps two *separately demanded* outputs back to the
-        same input commodity; that would double-count the shared input. It is
-        not reachable by the current examples and is called out in the module
-        docs as a known follow-up.
+        Co-product converters (one technology that produces several demanded
+        outputs from the same input commodity) are handled so the shared input
+        is not double-counted: contributions from different outputs of the same
+        converter are combined by the binding (element-wise maximum) requirement,
+        since one physical unit produces its co-products together, while distinct
+        converters that draw on the same commodity still sum. See
+        ``_accumulate_derived_demand``.
 
         Subclasses implement the strategy-specific dispatchable step by
         overriding ``_dispatch_dispatchables``; the fixed, flexible, and
         storage steps are shared across all strategies.
         """
+        # Reset the per-converter contribution tracker used to combine multiple
+        # outputs of a single converter that draw on the same input commodity.
+        self._converter_contributions = defaultdict(dict)
+
         # Flexible techs can only curtail, so they always run at their rated
         # production for every commodity they produce. Commanding them here
         # guarantees they are set even when their commodity is not explicitly
@@ -800,6 +828,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self._dispatch_commodity(
                 self.commodity, inputs[self.demand_input_name].copy(), inputs, outputs
             )
+            self._set_splitter_setpoints(outputs)
             return
 
         # Build the demand-flow graph (out_commodity -> in_commodity) and group
@@ -834,6 +863,37 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 self._accumulate_derived_demand(
                     derived_demand, tech_name, in_commodity, out_commodity, inputs, outputs
                 )
+
+        self._set_splitter_setpoints(outputs)
+
+    def _set_splitter_setpoints(self, outputs):
+        """Set each controller-managed splitter's prescribed priority allocation.
+
+        A ``GenericSplitterPerformanceModel`` in ``prescribed_commodity`` mode
+        divides its input commodity so the priority output (out1) receives a
+        prescribed per-timestep amount and the second output (out2) receives the
+        remainder. For a splitter placed on a controller-managed bus, the correct
+        prescribed amount is the backpropagated demand of the priority consumer
+        (the first technology connected downstream of the splitter). The dispatch
+        already accumulates that consumer's draw as its converter contribution to
+        the split commodity, so setting the prescribed amount to the priority
+        consumer's draw makes out2 equal the second consumer's draw whenever the
+        upstream producers deliver the summed demand. Both consumers are then
+        served from a single physical stream without starving either one.
+
+        Args:
+            outputs: OpenMDAO outputs; each splitter's
+                ``{name}_{commodity}_set_point`` output is written in place.
+        """
+        for splitter in getattr(self, "splitters", []):
+            set_point_name = f"{splitter['name']}_{splitter['commodity']}_set_point"
+            if set_point_name not in outputs:
+                continue
+            contributions = self._converter_contributions.get(splitter["commodity"], {})
+            priority_demand = contributions.get(splitter["priority_tech"])
+            if priority_demand is None:
+                priority_demand = np.zeros(self.n_timesteps)
+            outputs[set_point_name] = np.maximum(priority_demand, 0.0)
 
     def _dispatch_commodity(self, commodity, demand, inputs, outputs):
         """Dispatch all technologies producing ``commodity`` to meet ``demand``.
@@ -966,6 +1026,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         (upstream techs keep their default dispatch, the legacy behavior) and a
         one-time warning is emitted so the missing ratio is discoverable when
         heterogeneous-commodity control is intended.
+
+        When one converter produces several demanded outputs from the same input
+        commodity (a co-product converter), each output's induced demand is
+        combined by the element-wise maximum rather than summed, so the shared
+        input is not double-counted. Distinct converters that draw on the same
+        commodity (a splitter) still sum.
         """
         has_producers = any(
             in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
@@ -994,10 +1060,27 @@ class SystemLevelControlBase(om.ExplicitComponent):
         set_point = np.asarray(outputs[f"{tech_name}_{out_commodity}_set_point"], dtype=float)
         contribution = np.maximum(set_point, 0.0) * ratio
 
-        if in_commodity in derived_demand:
-            derived_demand[in_commodity] = derived_demand[in_commodity] + contribution
+        # Combine multiple outputs of the SAME converter that draw on this input
+        # by the binding (element-wise maximum) requirement rather than summing,
+        # since one physical unit produces its co-products together. Distinct
+        # converters still sum into the shared input's derived demand. The demand
+        # is updated by the incremental delta so it stays correct as each output
+        # of a co-product converter is processed (commodities are dispatched in
+        # topological order, so all contributions land before the input is used).
+        by_tech = self._converter_contributions[in_commodity]
+        previous = by_tech.get(tech_name)
+        if previous is None:
+            combined = contribution
+            delta = contribution
         else:
-            derived_demand[in_commodity] = contribution
+            combined = np.maximum(previous, contribution)
+            delta = combined - previous
+        by_tech[tech_name] = combined
+
+        if in_commodity in derived_demand:
+            derived_demand[in_commodity] = derived_demand[in_commodity] + delta
+        else:
+            derived_demand[in_commodity] = delta
 
     def _capacity_ratio(self, tech_name, in_commodity, out_commodity, inputs):
         """Return a scalar input-per-output ratio from rated capacities, or ``None``.

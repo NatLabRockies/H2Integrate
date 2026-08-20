@@ -41,11 +41,29 @@ def _build_plant_config(
 
 def _build_technology_graph(technology_interconnections):
     technology_graph = nx.DiGraph()
+
+    def _as_list(commodity):
+        if commodity is None:
+            return []
+        if isinstance(commodity, str):
+            return [commodity]
+        return list(commodity)
+
     for connection in technology_interconnections:
         source = connection[0]
         destination = connection[1]
         if len(connection) == 4:
-            technology_graph.add_edge(source, destination, commodity=connection[2])
+            # Mirror ``H2IntegrateModel.create_technology_graph``: keep edge
+            # commodities as a list and merge parallel connections between the
+            # same pair of technologies (a co-product converter feeding one
+            # downstream tech with several commodities).
+            new_commodities = _as_list(connection[2])
+            if technology_graph.has_edge(source, destination):
+                existing = _as_list(technology_graph.edges[source, destination].get("commodity"))
+                merged = list(set(existing + new_commodities))
+                technology_graph.add_edge(source, destination, commodity=merged)
+            else:
+                technology_graph.add_edge(source, destination, commodity=new_commodities)
         else:
             technology_graph.add_edge(source, destination)
     return technology_graph
@@ -71,7 +89,10 @@ def _build_slc_topology(
     storage_techs_with_control: list = [],
 ):
     sources_to_commodities = {
-        (e[0], e[-1]) for e in technology_graph.edges(data="commodity") if e[-1] is not None
+        (src, commodity)
+        for src, _dst, edge_commodity in technology_graph.edges(data="commodity")
+        if edge_commodity is not None
+        for commodity in (edge_commodity if isinstance(edge_commodity, list) else [edge_commodity])
     }
 
     tech_to_commodities = {
@@ -1193,3 +1214,117 @@ class TestHeterogeneousCommodityControl:
         # Electricity demand from both electrolyzers is summed onto the single grid:
         # (10 * 51) + (10 * 51) = 1020 kW.
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 1020.0)
+
+    def test_electricity_splitter_feeds_electrolyzer_and_synloop(self):
+        """One electricity source split between two distinct consumers sums demand.
+
+        The canonical splitter topology: a single electricity generator feeds
+        both an electrolyzer and, directly, an ammonia synloop. Because these are
+        two distinct converters that happen to share the same input commodity,
+        their electricity demands sum onto the single source.
+        """
+        tech_connections = [
+            ["grid", "electrolyzer", "electricity", "cable"],
+            ["grid", "synloop", "electricity", "cable"],
+            ["electrolyzer", "synloop", "hydrogen", "pipe"],
+            ["synloop", "demand", "ammonia", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(
+            dispatchable=["grid", "electrolyzer", "synloop"]
+        )
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="ammonia",
+            demand_commodity_rate_units="kg/h",
+        )
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            {},
+            demand=100.0,
+            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        )
+        # hydrogen/ammonia capacity ratio = electrolyzer 200 / synloop 1000 = 0.2.
+        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 200.0)
+        # grid electricity seeds two capacity ratios from a single rated capacity:
+        #   electricity/hydrogen  = 10200 / 200  = 51   (electrolyzer draw)
+        #   electricity/ammonia   = 10200 / 1000 = 10.2 (synloop direct draw)
+        prob.set_val("slc.grid_rated_electricity_production", 10200.0)
+        prob.run_model()
+
+        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        # Derived hydrogen demand = 100 * 0.2 = 20 kg/h.
+        np.testing.assert_allclose(prob.get_val("slc.electrolyzer_hydrogen_set_point"), 20.0)
+        # Electricity from the two distinct converters sums onto the single grid:
+        #   electrolyzer: 20 * 51   = 1020 kW
+        #   synloop:      100 * 10.2 = 1020 kW  ->  total 2040 kW
+        np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 2040.0)
+
+    def test_coproduct_converter_shares_input_without_double_counting(self):
+        """A converter with two demanded outputs shares one input, no double-count.
+
+        A reformer produces both hydrogen and electricity from natural gas (a
+        co-product converter), and a synloop consumes both to make ammonia. The
+        two outputs of the reformer both draw on natural gas, so their induced
+        natural-gas demand is combined by the binding (maximum) requirement
+        rather than summed, since the single physical unit makes both together.
+        """
+        tech_connections = [
+            ["ng_source", "reformer", "natural_gas", "pipe"],
+            ["reformer", "synloop", "hydrogen", "pipe"],
+            ["reformer", "synloop", "electricity", "cable"],
+            ["synloop", "demand", "ammonia", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(
+            dispatchable=["ng_source", "reformer", "synloop"]
+        )
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="ammonia",
+            demand_commodity_rate_units="kg/h",
+        )
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            {},
+            demand=100.0,
+            # Measured reformer production feeds the measured natural-gas ratios.
+            upstream_out={("reformer", "hydrogen"): 10.0, ("reformer", "electricity"): 40.0},
+            commodity_units={
+                "natural_gas": "kg/h",
+                "hydrogen": "kg/h",
+                "electricity": "kW",
+            },
+        )
+        # Reformer co-product converter detected for both outputs from one input.
+        assert ("natural_gas", "reformer", "hydrogen") in prob.model.slc._converters
+        assert ("natural_gas", "reformer", "electricity") in prob.model.slc._converters
+
+        # synloop uses capacity ratios: hydrogen 200/1000 = 0.2, electricity 300/1000 = 0.3.
+        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        prob.set_val("slc.reformer_rated_hydrogen_production", 200.0)
+        prob.set_val("slc.reformer_rated_electricity_production", 300.0)
+        # reformer uses a measured natural-gas ratio: 100 kg/h consumed shared across
+        # 10 kg/h hydrogen and 40 kW electricity produced.
+        prob.set_val("slc.reformer_natural_gas_consumed", 100.0)
+        prob.run_model()
+
+        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        # Derived reformer set points: hydrogen 100 * 0.2 = 20, electricity 100 * 0.3 = 30.
+        np.testing.assert_allclose(prob.get_val("slc.reformer_hydrogen_set_point"), 20.0)
+        np.testing.assert_allclose(prob.get_val("slc.reformer_electricity_set_point"), 30.0)
+        # Natural-gas demand from the two outputs:
+        #   via hydrogen:     20 * (100 / 10) = 200 kg/h
+        #   via electricity:  30 * (100 / 40) =  75 kg/h
+        # These are combined by the maximum (200), NOT summed (275), because they
+        # come from the same physical reformer.
+        np.testing.assert_allclose(prob.get_val("slc.ng_source_natural_gas_set_point"), 200.0)

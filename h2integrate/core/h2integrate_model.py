@@ -650,6 +650,50 @@ class H2IntegrateModel:
             upstream_tech_graph, converter_input_techs, produced_by_tech
         )
 
+        # Detect controller-managed splitters. A GenericSplitterPerformanceModel
+        # divides one commodity bus between two downstream consumers, but its
+        # split is a static config value. When the splitter sits on a bus the
+        # system-level controller manages, the correct split varies per timestep
+        # with the two consumers' backpropagated demand, so the controller drives
+        # the splitter's prescribed allocation instead. Record each such splitter
+        # with its transported commodity and its ordered downstream consumers;
+        # the first connected consumer is the priority (out1) technology.
+        splitters = []
+        for tech in upstream_controllable_techs:
+            model = (
+                self.technology_config["technologies"]
+                .get(tech, {})
+                .get("performance_model", {})
+                .get("model", None)
+            )
+            if model != "GenericSplitterPerformanceModel":
+                continue
+            downstream_consumers = [
+                connection[1] for connection in upstream_interconnections if connection[0] == tech
+            ]
+            split_commodities = [
+                connection[2]
+                for connection in upstream_interconnections
+                if connection[0] == tech and len(connection) > 2
+            ]
+            if not downstream_consumers or not split_commodities:
+                continue
+            perf_params = (
+                self.technology_config["technologies"][tech]
+                .get("model_inputs", {})
+                .get("performance_parameters", {})
+            )
+            splitters.append(
+                {
+                    "name": tech,
+                    "commodity": split_commodities[0],
+                    "commodity_rate_units": perf_params.get("commodity_rate_units", None),
+                    "priority_tech": downstream_consumers[0],
+                    "consumers": downstream_consumers,
+                }
+            )
+        slc_topology["splitters"] = splitters
+
         return slc_topology
 
     def add_system_level_controller(self, slc_topology):
@@ -846,6 +890,17 @@ class H2IntegrateModel:
             self.plant.connect(
                 f"{converter_tech}.{in_commodity}_consumed",
                 f"system_level_controller.{converter_tech}_{in_commodity}_consumed",
+            )
+
+        # --- Step 3c: Connect controller-managed splitter allocations -----
+        # For each splitter on a controller-managed bus, route the SLC's
+        # per-timestep prescribed allocation for the priority consumer to the
+        # splitter's ``prescribed_commodity_to_priority_tech`` input so the
+        # split tracks the backpropagated demand of the two consumers.
+        for splitter in slc_topology.get("splitters", []):
+            self.plant.connect(
+                f"system_level_controller.{splitter['name']}_{splitter['commodity']}_set_point",
+                f"{splitter['name']}.prescribed_commodity_to_priority_tech",
             )
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
