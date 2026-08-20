@@ -1,9 +1,8 @@
 import copy
 
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfaceCostConfig,
@@ -84,7 +83,7 @@ class GeoH2SubsurfaceCostConfig(GeoH2SubsurfaceCostConfig):
     contingency_pct: float = field()
     preprod_time: float = field()
     as_spent_ratio: float = field()
-    cost_year: int = field(converter=int, validator=range_val(2010, 2024))
+    cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
     use_cost_curve: bool = field()
     constant_drill_cost: float | None = field(default=None)
 
