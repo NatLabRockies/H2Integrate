@@ -1,13 +1,15 @@
 import os
 
 import pytest
-from hopp import TEST_ENV_VAR
 
 from test.conftest import (  # noqa: F401
     temp_dir,
     temp_copy_of_example,
     pytest_collection_modifyitems,
 )
+
+
+TEST_ENV_VAR = "TEST"
 
 
 def pytest_sessionstart(session):

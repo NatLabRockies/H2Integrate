@@ -2,10 +2,9 @@ import warnings
 
 import numpy as np
 import PySAM.Pvwattsv8 as Pvwatts
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val_or_none
 from h2integrate.converters.tools import check_pysam_input_params
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
@@ -46,24 +45,28 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
     pv_capacity_kWdc: float = field()
 
     dc_ac_ratio: float = field(
-        default=None, validator=range_val_or_none(0.0, 2.0)
+        default=None, validator=validators.optional((validators.ge(0), validators.le(2)))
     )  # default value depends on config
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
-    tilt: float = field(default=None, validator=range_val_or_none(0.0, 90.0))
+    tilt: float = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(90)))
+    )
 
     tilt_angle_func: str = field(
         default="none",
-        validator=contains(["none", "lat-func", "lat"]),
+        validator=validators.in_(["none", "lat-func", "lat"]),
         converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="PVWattsSingleOwner",
-        validator=contains(
+        validator=validators.in_(
             [
                 "PVWattsCommercial",
                 "PVWattsCommunitySolar",
