@@ -146,13 +146,20 @@ class LogNormalDowntime(BaseDowntime):
 
     mean: float = field(
         converter=float_array_converter,
-        validator=(validators.instance_of(np.ndarray), validators.ge(0)),
+        validator=(validators.instance_of(np.ndarray)),
     )
     sigma: float = field(
         converter=float_array_converter,
-        validator=(validators.instance_of(np.ndarray), validators.ge(0)),
+        validator=(validators.instance_of(np.ndarray)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
+
+    @mean.validator
+    @sigma.validator
+    def validate_ge_zero(self, attribute, value):
+        """Validates the :py:attr:`sigma` and :py:attr:`mean` values are at least 0."""
+        if any(value < 0):
+            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
 
     @sigma.validator
     def validate_shape(self, attribute, value):
@@ -175,7 +182,9 @@ class LogNormalDowntime(BaseDowntime):
 
     def sample_downtime(self) -> np.ndarray:
         """Return an array of 100 samples of each lognormal distribution."""
-        return rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
+        return np.ceil(rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))).astype(
+            int
+        )
 
 
 @define(kw_only=True)
