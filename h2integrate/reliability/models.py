@@ -94,6 +94,8 @@ def array_ge(val):
         if any(value < val):
             raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
 
+    return validator
+
 
 @define(kw_only=True)
 class BaseDowntime(ABC, BaseConfig):
