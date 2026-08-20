@@ -1,0 +1,439 @@
+import warnings
+from pathlib import Path
+from datetime import timezone, timedelta
+
+import numpy as np
+import pandas as pd
+import openmdao.api as om
+from attrs import field, define
+
+from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.file_utils import check_resource_dir
+
+
+@define(kw_only=True)
+class ResourceBaseH5Config(BaseConfig):
+    """Base configuration class for resource data loaded from an .h5 file.
+
+    Subclasses should include the following attributes that are not set in this BaseConfig:
+
+        - **resource_year** (*int*): Year to download resource data for.
+            Recommended to have a validator for upper and lower limits.
+        - **resource_data** (*dict*, optional): Dictionary of user-provided resource data.
+            Defaults to {}.
+        - **resource_dir** (*str | Path*, optional): Folder to save resource files to or
+            load resource files from. Defaults to "".
+        - **resource_filename** (*str*, optional): Filename to save resource data to or load
+            resource data from. Defaults to None.
+        - **valid_intervals** (*list[int]*): time interval(s) in minutes that resource data can be
+            downloaded in.
+
+    Note:
+        Attributes should be updated in subclasses and should not be modifiable by the user.
+        These should be inherit attributes of the subclass.
+
+    Args:
+        latitude (float): latitude to download resource data for.
+        longitude (float): longitude to download resource data for.
+        timezone (float | int): timezone to output data in. May be used to determine whether
+            to download data in UTC or local timezone. This should be populated by the value
+            in sim_config['timezone']
+        use_fixed_resource_location (bool, optional): Whether to update resource data in the
+            `compute()` method. Set to False if the site location is being swept, set to
+            True if the resource data should not be updated to the location
+            (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
+            to reduce computation time during optimizations or design sweeps if site location is
+            not being swept. Defaults to False.
+
+    Attributes:
+        dataset_desc (str): description of the dataset, used in file naming.
+            Should be updated in a subclass.
+        resource_type (str): type of resource data downloaded, used in folder naming.
+            Should be updated in a subclass.
+    """
+
+    latitude: float = field()
+    longitude: float = field()
+
+    timezone: int | float = field()
+
+    # TODO: add site_gid as input?
+    use_fixed_resource_location: bool = field(default=False, kw_only=True)
+    resource_data: dict | object = field(default={}, kw_only=True)
+
+    # H5 file info
+    dataset_filename: Path | str = field(default="", kw_only=True)
+    dataset_path: Path | str | None = field(default=None, kw_only=True)
+
+    # Export file info
+    save_to_csv: bool = field(default=False, kw_only=True)
+    load_from_csv: bool = field(default=False, kw_only=True)
+    csv_output_dir: Path | str | None = field(default=None, kw_only=True)
+    csv_filename: Path | str = field(default="")
+
+    dataset_desc: str = field(default="default", init=False)
+    resource_type: str = field(default="none", init=False)
+    with_hsds: bool = field(default=False, init=False)
+
+    # def __attrs_post_init__(self):
+
+
+class ResourceBaseH5Model(om.ExplicitComponent):
+    """Base model for downloading resource data from API calls or loading resource
+    data for a single site from a file.
+
+    Attributes
+        resource_data (dict | None): resource data that is created in setup() method.
+        dt (int): timestep in seconds.
+        config (object): configuration class that inherits ResourceBaseAPIConfig.
+
+    Inputs:
+        latitude (float): latitude corresponding to location for resource data
+        longitude (float): longitude corresponding to location for resource data
+
+    Outputs:
+        dict: dictionary of resource data.
+    """
+
+    def initialize(self):
+        self.options.declare("plant_config", types=dict)
+        self.options.declare("resource_config", types=dict)
+        self.options.declare("driver_config", types=dict)
+
+    def setup(self):
+        # create attributes that will be commonly used for resource classes.
+        self.resource_data = None
+        self.resource_site = [self.config.latitude, self.config.longitude]
+        self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
+        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.add_input("latitude", self.config.latitude, units="deg")
+        self.add_input("longitude", self.config.longitude, units="deg")
+        # self.add_input("site_gid", self.config.site_gid, units="unitless")
+
+    def helper_setup_method(self):
+        """
+        Prepares and configures resource specifications for the resource API based on plant
+        and site configuration options.
+
+        This method extracts relevant configuration details from the `self.options` dictionary,
+        pulls values for latitude, longitude, resource directory and timezone from the
+        ``site`` section of ``plant_config`` if these parameters are not specified in the
+        ``resource_config`` and returns the updated resource specifications dictionary.
+
+        Returns:
+            dict: The resource specifications dictionary with defaults set for latitude,
+            longitude, resource_dir, and timezone.
+        """
+        site_config = self.options["plant_config"]["site"]
+        sim_config = self.options["plant_config"]["plant"]["simulation"]
+        self.dt = sim_config["dt"]
+
+        # create the input dictionary for the resource API config
+        resource_specs = self.options["resource_config"]
+        # set the default latitude, longitude, and resource_year from the site_config
+        resource_specs.setdefault("latitude", site_config["latitude"])
+        resource_specs.setdefault("longitude", site_config["longitude"])
+        # set the default resource_dir from a directory that can be
+        # specified in site_config['resources']['resource_dir']
+        resource_specs.setdefault(
+            "resource_dir", site_config.get("resources", {}).get("resource_dir", None)
+        )
+
+        # default timezone to UTC because 'timezone' was removed from the plant config schema
+        resource_specs.setdefault("timezone", sim_config.get("timezone", 0))
+
+        return resource_specs
+
+    def add_resource_start_end_times(self, data: dict):
+        """Add resource data start time, end time, and timestep to the resource data dictionary.
+
+        The start and end time are represented as strings formatted as "yyyy/mm/dd hh:mm:ss (tz)"
+        and the timestep is represented in seconds.
+
+        Args:
+            data (dict): dictionary of resource data
+
+        Returns:
+            data (dict): resource data dictionary with added time strings, modified in place
+        """
+
+        time_keys = ["year", "month", "day", "hour", "minute", "second"]
+        time_dict = {k: data.get(k) for k in time_keys if k in data}
+
+        # If no time information is in the resource data, return the dictionary unchanged
+        if not bool(time_dict):
+            return data
+
+        df = pd.to_datetime(time_dict)
+
+        # If theres not enough time information, return the dictionary unchanged
+        if len(df) <= 1:
+            return data
+
+        start_date = df.iloc[0].strftime("%Y/%m/%d %H:%M:%S")
+        end_date = df.iloc[-1].strftime("%Y/%m/%d %H:%M:%S")
+
+        # Get resource time interval
+        dt = df.iloc[1] - df.iloc[0]
+
+        # Get timezone string
+        tz_utc_offset = timedelta(hours=data.get("data_tz", 0))
+        tz = timezone(offset=tz_utc_offset)
+        tz_str = str(tz).replace("UTC", "").replace(":", "")
+        if tz_str == "":
+            tz_str = "+0000"
+
+        # Create dictionary of time information with dt in seconds
+        time_start_end_info = {
+            "start_time": f"{start_date} ({tz_str})",
+            "end_time": f"{end_date} ({tz_str})",
+            "dt": dt.seconds,
+        }
+
+        # Update resource data with time information
+        data.update(time_start_end_info)
+
+        return data
+
+    def process_leap_day(self, data: dict):
+        """Process leap day data by optionally removing it and validating data length.
+
+        Checks whether the provided resource data contains a leap day (February 29th).
+        If ``include_leap_day`` is set to False in the config and the data contains a
+        leap day, the leap day entries are removed. After processing, validates that
+        the length of the data matches the expected number of timesteps.
+
+        Args:
+            data (dict): DataFrame-like dictionary of resource data containing
+                "Month" and "Day" columns.
+        Returns:
+            dict: Processed resource data with leap day handled according to configuration.
+
+        Raises:
+            ValueError: If the length of the data does not match ``self.n_timesteps``
+                after leap day processing.
+        """
+
+        # Check if data includes leap day
+        data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+
+        # Remove leap day if needed
+        if not self.config.include_leap_day and data_has_leap_day:
+            # Get index of dataframe that includes leap day
+            leap_day_index = (
+                data.reset_index(drop=False)
+                .set_index(keys=["Month", "Day"], drop=True)
+                .loc[(2, 29)]["index"]
+                .to_list()
+            )
+            # Drop the leap day data from the dataframe
+            data = data.drop(index=leap_day_index)
+
+        # Check if data is the same length as the number of timesteps
+        if len(data) != self.n_timesteps:
+            leap_day_msg = ""
+            if data_has_leap_day and len(data) > self.n_timesteps:
+                # Add extra detail to error message if error may be due to leap day
+                leap_day_msg = (
+                    "This may be because the resource data includes a leap day. ",
+                    "To remove data from a leap day from resource data, please set "
+                    "`include_leap_day` to False.",
+                )
+
+            msg = (
+                f"{self.__class__.__name__}: Resource data is not the same length as n_timesteps. "
+                f"Resource data has length {len(data)}, n_timesteps is {self.n_timesteps}. "
+                f"{leap_day_msg}"
+            )
+            raise ValueError(msg)
+
+        return data
+
+    # def create_filename(self, latitude, longitude):
+    def create_csv_filename(self, latitude, longitude):
+        """Create default filename to save downloaded data to. Suggested filename formatting is:
+
+        "{latitude}_{longitude}_{resource_year}_{dataset_desc}_{interval}min_{tz_desc}_tz.csv"
+        where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+
+        Returns:
+            str: filename for resource data to be saved to or loaded from.
+        """
+
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+    # def get_site_gid(self, latitude, longitude):
+
+    # def create_url(self, latitude, longitude):
+    #     """Create url for data download.
+
+    #     Args:
+    #         latitude (float): latitude corresponding to location for resource data
+    #         longitude (float): longitude corresponding to location for resource data
+
+    #     Returns:
+    #         str: url to use for API call.
+    #     """
+
+    #     raise NotImplementedError("This method should be implemented in a subclass.")
+
+    # def download_data(self, url, fpath):
+    #     """Download data from url to a file.
+
+    #     Args:
+    #         url (str): url to call to access data.
+    #         fpath (Path | str): filepath to save data to.
+
+    #     Returns:
+    #         bool: True if data was downloaded successfully, False if error was encountered.
+    #     """
+
+    #     success = download_from_api(url, fpath)
+    #     return success
+
+    def load_data(self, fpath):
+        """Loads data from a file, reformats data to follow a standardized naming convention,
+        converts data to standardized units, and creates a data time profile.
+
+        Args:
+            fpath (str | fpath): filepath to load the data from.
+
+        Raises:
+            NotImplementedError: this method should be implemented in a subclass.
+
+        Returns:
+            dict: dictionary of data that follows the corresponding standardized
+                naming convention and is in standardized units.
+                The time profile created should be found in the 'time' key.
+        """
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+    def get_data(self, latitude, longitude, first_call=True):
+        """Get resource data to handle any of the expected inputs. This method does the following:
+
+        0) If this is not the first resource call of the simulation, check if latitude and longitude
+            inputs are different than the previous latitude and longitude values. If resource data
+            has not been already loaded for the, continue to Step 1.
+        1) Check if resource data was input. If not, continue to Step 2.
+        2) Get valid resource_dir with :py:func:`check_resource_dir`
+        3) Create a filename if resource_filename was not input or if the site location changed
+            with the method `create_filename()`. Otherwise, use resource_filename as the filename.
+        4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid filepath,
+            load data using `load_data()`. Otherwise, continue to Step 5.
+        5) Create the url to download data using `create_url()` and continue to Step 6.
+        6) Download data from the url created in Step 5 and save to a filepath created from the
+            resulting resource_dir and filename from Steps 2 and 3. Continue to Step 7.
+        7) Load data from the file created in Step 6 using `load_data()`
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+            first_call (bool): True if called from `setup()` method, False if called from
+                `compute()` method to prevent unnecessary reloading of data.
+
+        Raises:
+            ValueError: If data was not successfully downloaded from the API
+            ValueError: An unexpected case was encountered in handling data
+
+        Returns:
+            Any: resource data in the format expected by the subclass.
+        """
+        site_changed = False
+
+        site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
+
+        # 0) If site hasn't changed and resource data has already been loaded
+        # just return the resource data that was loaded in the setup() method
+        if not site_changed and not first_call:
+            if self.resource_data is not None:
+                return self.resource_data
+
+        # 1) check if user provided data, add start and end times if so
+        # and return the data
+        if bool(self.config.resource_data):
+            data = self.add_resource_start_end_times(self.config.resource_data)
+            return data
+
+        # check if user provided directory or filename
+        provided_filename = False if self.config.resource_filename == "" else True
+        provided_dir = False if self.config.resource_dir is None else True
+
+        # 2a) check if file exists directly within resource directory
+        # 2) Get valid resource_dir with the function check_resource_dir()
+        resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
+        # 3a) Create a filename if resource_filename was input
+        if provided_filename and not site_changed:
+            # If a filename was input, use resource_filename as the filename.
+            filepath = resource_dir / self.config.resource_filename
+        # Otherwise, create a filename with the method `create_filename()`.
+        else:
+            filename = self.create_filename(latitude, longitude)
+            filepath = resource_dir / filename
+        # if file doesn't exist, continue to Step 2b
+        if not filepath.is_file():
+            # 2b) check if file exists directly within a subfolder of the resource directory
+            # 2) Get valid resource_dir with the function check_resource_dir()
+            if (
+                provided_dir
+                and Path(self.config.resource_dir).parts[-1] == self.config.resource_type
+            ):
+                resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
+            else:
+                resource_dir = check_resource_dir(
+                    data_dir=self.config.resource_dir, data_subdir=self.config.resource_type
+                )
+            # 3) Create a filename if resource_filename was input
+            if provided_filename and not site_changed:
+                # If a filename was input, use resource_filename as the filename.
+                filepath = resource_dir / self.config.resource_filename
+            # Otherwise, create a filename with the method `create_filename()`.
+            else:
+                filename = self.create_filename(latitude, longitude)
+                filepath = resource_dir / filename
+
+        # Check if the filename was provided by the user and the site hasn't changed
+        if provided_filename and not site_changed:
+            # If the user-provided filename wasn't found, throw a warning
+            if not filepath.is_file():
+                msg = (
+                    f"User provided resource filename {self.config.resource_filename} "
+                    f"not found in {resource_dir}. Data will be downloaded for this site."
+                )
+                warnings.warn(msg, UserWarning)
+
+        # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
+        # filepath, load data using `load_data()`
+        if filepath.is_file():
+            self.filepath = filepath
+            data = self.load_data(filepath)
+            data = self.add_resource_start_end_times(data)
+            return data
+
+        # If the filepath (resource_dir/filename) does not exist, download data
+        self.filepath = filepath
+        # 5) Create the url to download data using `create_url()` and continue to Step 6.
+        url = self.create_url(latitude, longitude)
+        # 6) Download data from the url created in Step 5 and save to a filepath created from
+        # the resulting resource_dir and filename from Steps 2 and 3.
+        success = self.download_data(url, filepath)
+        if success:
+            # 7) Load data from the file created in Step 6 using `load_data()`
+            data = self.load_data(filepath)
+            data = self.add_resource_start_end_times(data)
+            return data
+
+        else:
+            raise ValueError("Did not successfully download resource data.")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        if not self.config.use_fixed_resource_location:
+            # update the resource data based on the input latitude and longitude
+            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
+            # update the stored resource data and site
+            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
+            self.resource_data = data
+            discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
