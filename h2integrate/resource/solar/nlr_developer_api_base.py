@@ -167,11 +167,13 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
             )
 
             if units == "c":
-                units = units.upper()
+                units = "degC"
             if units == "w/m2":
                 units = "W/m**2"
-            if units == "nan" or units == "%":
+            if units == "%":
                 units = "percent"
+            if units == "nan":
+                units = "unitless"
             if units == "Degree" or units == "Degrees":
                 units = "deg"
 
