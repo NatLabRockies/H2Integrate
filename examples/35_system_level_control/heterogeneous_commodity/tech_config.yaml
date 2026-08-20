@@ -1,6 +1,6 @@
 name: technology_config
-description: Solar PV and battery power an electrolyzer that feeds an ammonia synthesis loop, with the system-level controller
-  translating ammonia demand backward into hydrogen and electricity demand.
+description: Wind and solar PV combined with a battery power an electrolyzer that feeds an ammonia synthesis loop, with the
+  system-level controller translating ammonia demand backward into hydrogen and electricity demand.
 technologies:
   solar:
     performance_model:
@@ -29,6 +29,36 @@ technologies:
         capex_per_kWac: 1367  # 2022 costs from ATB 2024 v3
         opex_per_kWac_per_year: 24  # 2022 costs from ATB 2024 v3
         cost_year: 2022
+  wind:
+    performance_model:
+      model: PYSAMWindPlantPerformanceModel
+    cost_model:
+      model: ATBWindPlantCostModel
+    model_inputs:
+      performance_parameters:
+        num_turbines: 17  # 17 x 6 MW = 102 MW, a reasonable complement to the 100 MWdc solar array
+        turbine_rating_kw: 6000
+        hub_height: 115
+        rotor_diameter: 170
+        create_model_from: default
+        config_name: WindPowerSingleOwner
+        pysam_options:
+          Farm:
+            wind_farm_wake_model: 0
+          Losses:
+            ops_strategies_loss: 10.0
+        layout:
+          layout_mode: basicgrid
+          layout_options:
+            row_D_spacing: 5.0
+            turbine_D_spacing: 5.0
+            rotation_angle_deg: 0.0
+            row_phase_offset: 0.0
+            layout_shape: square
+      cost_parameters:
+        capex_per_kW: 1300
+        opex_per_kW_per_year: 39
+        cost_year: 2022
   battery:
     performance_model:
       model: StoragePerformanceModel
@@ -51,6 +81,16 @@ technologies:
         capacity_capex: 310  # $/kWh
         charge_capex: 311  # $/kW
         opex_fraction: 0.025
+  gen_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        # Combine the wind and solar generation into a single stream before it
+        # reaches the battery and the downstream electricity bus.
+        commodity: electricity
+        commodity_rate_units: kW
+        in_streams: 2
   elec_combiner:
     performance_model:
       model: GenericCombinerPerformanceModel

@@ -5,6 +5,10 @@ sites:
     latitude: 30.6617
     longitude: -101.7096
     resources:
+      wind_resource:
+        resource_model: WTKNLRDeveloperAPIWindResource
+        resource_parameters:
+          resource_year: 2013
       solar_resource:
         resource_model: OpenMeteoHistoricalSolarResource
         resource_parameters:
@@ -12,11 +16,14 @@ sites:
           resource_filename: 30.6617_-101.7096_2013_openmeteo_archive_solar_60min_utc_tz.csv
 # array of arrays containing left-to-right technology interconnections
 technology_interconnections:
-  # solar output available for battery charging (electricity_in)
-  - [solar, battery, electricity, cable]
-  # solar to the combined electricity output
-  - [solar, elec_combiner, electricity, cable]
-  # battery net output to the combined electricity output
+  # combine the wind and solar generation into a single stream
+  - [wind, gen_combiner, electricity, cable]
+  - [solar, gen_combiner, electricity, cable]
+  # combined generation is available for battery charging (electricity_in)
+  - [gen_combiner, battery, electricity, cable]
+  # combined generation also feeds the downstream electricity bus
+  - [gen_combiner, elec_combiner, electricity, cable]
+  # battery net output to the combined electricity bus
   - [battery, elec_combiner, electricity, cable]
   # combined electricity feeds a literal splitter that divides the shared bus
   - [elec_combiner, electricity_splitter, electricity, cable]
@@ -36,6 +43,8 @@ technology_interconnections:
   # ammonia supply to the ammonia demand
   - [ammonia, ammonia_load_demand, ammonia, pipe]
 resource_to_tech_connections:
+  # connect the wind resource to the wind technology
+  - [site.wind_resource, wind, wind_resource_data]
   # connect the solar resource to the solar technology
   - [site.solar_resource, solar, solar_resource_data]
 plant:
@@ -48,18 +57,18 @@ system_level_control:
   demand_component: ammonia_load_demand
   # Profit-maximizing dispatch. The controller honors each technology's control
   # classification, which produces the desired behavior for this plant:
-  #   - solar is flexible, so it always runs at its available (curtailable) output;
+  #   - wind and solar are flexible, so they always run at their available (curtailable) output;
   #   - the battery is storage, so it charges on surplus and discharges to cover deficits.
-  # There is no firm grid backup, so the electricity supply is limited to what solar and
+  # There is no firm grid backup, so the electricity supply is limited to what wind, solar, and
   # the battery can provide. The ammonia demand is therefore not met in every hour, which
-  # is expected for this solar-plus-battery only configuration.
+  # is expected for this wind-plus-solar-plus-battery only configuration.
   # Ammonia is produced at every timestep where its sell price exceeds its marginal
   # cost, so the whole chain runs whenever ammonia production is profitable.
   control_parameters:
     commodity_sell_price: 0.60  # USD/kg ammonia sell price (above the marginal cost so demand is served)
     cost_per_tech:
-      # Ammonia marginal cost is taken from its upstream nitrogen feedstock; solar and the
-      # battery are not feedstocks and are not summed here. The synloop's direct
+      # Ammonia marginal cost is taken from its upstream nitrogen feedstock; wind, solar, and
+      # the battery are not feedstocks and are not summed here. The synloop's direct
       # electricity is supplied by the shared electricity bus rather than a dedicated
       # feedstock, so it is costed through the electricity dispatch instead.
       ammonia: feedstock
@@ -100,6 +109,7 @@ finance_parameters:
       commodity_stream: ammonia
       finance_groups: [profast_lco]
       technologies:
+        - wind
         - solar
         - battery
         - electrolyzer

@@ -432,9 +432,15 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
             > 0.0
         )
 
-    with subtests.test("Electricity demand propagated to solar and battery"):
+    with subtests.test("Electricity demand propagated to wind, solar, and battery"):
         # Hydrogen demand across the electrolyzer propagates to an electricity demand, so the
         # electricity producers appear in the controller as set-point outputs.
+        assert (
+            model.prob.get_val(
+                "system_level_controller.wind_electricity_set_point", units="kW"
+            ).sum()
+            > 0.0
+        )
         assert (
             model.prob.get_val(
                 "system_level_controller.solar_electricity_set_point", units="kW"
@@ -456,24 +462,24 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         )
 
     with subtests.test("Ammonia annual production"):
-        # Well below the 4000 kg/h * 8760 h ceiling: with no grid backup, solar and the
-        # battery cannot supply enough electricity to run the chain in most hours, so the
-        # ammonia demand is only partially met. Value is the true converged fixed point
-        # reached with Aitken relaxation on the Gauss-Seidel dispatch loop.
+        # Below the 4000 kg/h * 8760 h ceiling: with no grid backup, wind, solar, and the
+        # battery meet the ammonia demand in most but not all hours, so production falls short
+        # of the full-year ceiling. Value is the true converged fixed point reached with Aitken
+        # relaxation on the Gauss-Seidel dispatch loop.
         assert (
-            pytest.approx(6494079.455872689, rel=1e-5)
+            pytest.approx(24103124.8399071, rel=1e-5)
             == model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
         )
 
     with subtests.test("Electrolyzer hydrogen set point total"):
         assert (
-            pytest.approx(7373669.739603172, rel=1e-5)
+            pytest.approx(7212138.510629037, rel=1e-5)
             == model.prob.get_val(
                 "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
             ).sum()
         )
 
     with subtests.test("LCOA"):
-        assert pytest.approx(10.84372882, rel=1e-5) == model.prob.get_val(
+        assert pytest.approx(3.72596319, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )

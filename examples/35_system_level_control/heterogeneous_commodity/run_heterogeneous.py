@@ -80,9 +80,9 @@ os.chdir(EXAMPLE_FOLDER)
 # Create an H2I model with an ammonia demand served by a heterogeneous commodity chain.
 # The profit-maximizing system-level controller translates ammonia demand backward into
 # hydrogen demand (across the synthesis loop) and then into electricity demand (across the
-# electrolyzer). Solar runs whenever it is available and the battery charges on solar surplus
-# and discharges to cover short deficits. There is no grid backup, so the ammonia demand is
-# only met when solar and the battery can supply enough electricity.
+# electrolyzer). Wind and solar run whenever they are available; their combined generation
+# charges the battery, which discharges to cover short deficits. There is no grid backup, so
+# the ammonia demand is only met when wind, solar, and the battery can supply enough electricity.
 h2i = H2IntegrateModel("heterogeneous_commodity.yaml")
 
 h2i.setup()
@@ -115,6 +115,7 @@ def make_plots(figure_dir):
     week_hours = hours[week] - week_start
 
     # Electricity streams (MW).
+    wind_mw = _get("wind.electricity_out", "MW")
     solar_mw = _get("solar.electricity_out", "MW")
     battery_mw = _get("battery.electricity_out", "MW")
     electrolyzer_load_mw = _get("electrolyzer.electricity_consumed", "MW")
@@ -158,16 +159,17 @@ def make_plots(figure_dir):
 
     # -----------------------------------------------------------------
     # Figure 1: the commodity cascade over a representative week.
-    # Electricity (solar + battery) drives hydrogen, which drives ammonia.
+    # Electricity (wind + solar + battery) drives hydrogen, which drives ammonia.
     # -----------------------------------------------------------------
     fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
 
     axes[0].stackplot(
         week_hours,
+        wind_mw[week],
         solar_mw[week],
         np.clip(battery_mw[week], 0.0, None),
-        labels=["Solar PV", "Battery discharge"],
-        colors=["#EF8A17", "#F2C14E"],
+        labels=["Wind", "Solar PV", "Battery discharge"],
+        colors=["#4C9F70", "#EF8A17", "#F2C14E"],
     )
     axes[0].plot(
         week_hours,
@@ -177,8 +179,10 @@ def make_plots(figure_dir):
         label="Electrolyzer + synloop load",
     )
     axes[0].set_ylabel("Electricity (MW)")
-    axes[0].set_title("Electricity supply: solar prioritized, battery smooths short deficits")
-    axes[0].legend(loc="upper right", ncol=2, fontsize=8)
+    axes[0].set_title(
+        "Electricity supply: wind and solar prioritized, battery smooths short deficits"
+    )
+    axes[0].legend(loc="upper right", ncol=3, fontsize=8)
 
     axes[1].plot(week_hours, h2_produced[week], color="#3B7DD8", label="Electrolyzer output")
     axes[1].plot(
@@ -283,10 +287,19 @@ def make_plots(figure_dir):
     color_flow = _COMMODITY_COLORS
 
     # Technology boxes, laid out left to right along the forward commodity flow.
-    _box(ax, (9, 86), "Solar PV\n(flexible)\n200 MWdc", color_class["flexible"])
-    _box(ax, (9, 68), "Battery\n(storage)\n10 MW / 40 MWh", color_class["storage"])
-    _box(ax, (22, 68), "Electricity\ncombiner", color_class["combiner"], width=9, height=7)
-    _box(ax, (32, 68), "Electricity\nsplitter", color_class["splitter"], width=7, height=7)
+    _box(ax, (7, 90), "Wind\n(flexible)\n102 MW", color_class["flexible"], width=12, height=8)
+    _box(ax, (7, 79), "Solar PV\n(flexible)\n100 MWdc", color_class["flexible"], width=12, height=8)
+    _box(ax, (18, 84.5), "Generation\ncombiner", color_class["combiner"], width=8, height=7)
+    _box(
+        ax,
+        (7, 66),
+        "Battery\n(storage)\n40 MW / 400 MWh",
+        color_class["storage"],
+        width=12,
+        height=8,
+    )
+    _box(ax, (26, 75), "Electricity\ncombiner", color_class["combiner"], width=8, height=7)
+    _box(ax, (33, 68), "Electricity\nsplitter", color_class["splitter"], width=5.5, height=7)
     _box(
         ax,
         (44, 68),
@@ -309,23 +322,30 @@ def make_plots(figure_dir):
     _box(ax, (95, 68), "Ammonia\ndemand\n4000 kg/h", color_class["demand"], width=10, height=9)
 
     # Electricity flows (blue).
-    _flow_arrow(ax, (14.5, 84), (17.5, 70), color_flow["electricity"])
-    _flow_arrow(ax, (14.5, 68), (17.5, 68), color_flow["electricity"], label="electricity")
-    # Combined electricity bus feeds a literal splitter that divides the bus.
-    _flow_arrow(ax, (26.5, 68), (28.5, 68), color_flow["electricity"], label="bus")
+    # Wind and solar combine into the generation combiner.
+    _flow_arrow(ax, (13, 90), (14.5, 86), color_flow["electricity"], label="wind", label_dy=1.2)
+    _flow_arrow(ax, (13, 80), (14.5, 83), color_flow["electricity"], label="solar", label_dy=-1.2)
+    # Combined generation charges the battery and feeds the electricity bus.
+    _flow_arrow(ax, (16, 81), (10, 70.5), color_flow["electricity"], label="charge", label_dy=0)
+    _flow_arrow(ax, (21.5, 83.5), (23.0, 78.0), color_flow["electricity"])
+    # Battery net output joins the generation at the electricity combiner.
+    _flow_arrow(
+        ax, (13, 67), (22.0, 73.0), color_flow["electricity"], label="battery", label_dy=1.6
+    )
+    # Combined bus feeds a literal splitter that divides it.
+    _flow_arrow(ax, (30.0, 74), (30.5, 70.0), color_flow["electricity"], label="bus", label_dy=1.2)
     # Splitter out1 (priority) supplies the electrolyzer.
-    _flow_arrow(ax, (35.5, 68), (36.5, 68), color_flow["electricity"], label="out1")
+    _flow_arrow(ax, (35.8, 68), (36.5, 68), color_flow["electricity"], label="out1")
     # Splitter out2 supplies the synloop's direct electricity along the same bus.
     _flow_arrow(
         ax,
-        (32.0, 64.5),
+        (33.0, 64.5),
         (74.0, 61.5),
         color_flow["electricity"],
         rad=-0.5,
         label="out2 (direct electricity to synloop)",
         label_dy=18.0,
     )
-    _flow_arrow(ax, (5, 82), (5, 72), color_flow["electricity"], lw=1.6, label="charge", label_dy=0)
 
     # Hydrogen flows (orange).
     _flow_arrow(ax, (51.5, 71), (56.5, 86), color_flow["hydrogen"], rad=0.25)
