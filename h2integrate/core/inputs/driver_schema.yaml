@@ -89,8 +89,12 @@ properties:
             type: boolean
             description: Activates a constraint
           lower:
-            type: number
+            type: [number, 'null']
             description: Lower bound for the variable
+            default: null
+          upper:
+            type: [number, 'null']
+            description: Upper bound for the variable
             default: null
           units:
             type: [string, 'null']
