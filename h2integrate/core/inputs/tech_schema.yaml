@@ -52,6 +52,9 @@ properties:
               model_location:
                 type: [string, Path]
                 description: Filepath for a custom technology finance model
+              group:
+                type: string
+                description: Finance group name of this technology specific finance model
             required: [model]
             additionalProperties: false
             description: Technology finance model name
