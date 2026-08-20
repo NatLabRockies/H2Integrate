@@ -62,6 +62,29 @@ def generate_downtime_model(config: dict | int):
             raise NotImplementedError(f"{name} is not a valid model name")
 
 
+def update_dimensions(n_components: int, *args: np.ndarray):
+    """Update the dimensionality of a series of arrays and the value of :py:attr:`n_components`
+    to match. If the size of an array passed :py:attr:`args` is 1 and :py:attr:`n_components`
+    is greater than 1, all arrays passed to :py:attr:`args` will be broadcast to an array shaped
+    (:py:attr:`n_components`, 1). If the arrays are already larger than 1, then
+    :py:attr:`n_components will be updated to the size of the arrays.
+
+    Args:
+        n_components (int): Number of components in the model
+        args (np.ndarray): NumPy array of attribute values used to create a model.
+
+    Returns:
+        n_components: The value as passed or updated to match the size of arrays in :py:attr:`args`.
+        args: The arrays as passed or the arrays reshaped to shape (:py:attr:`n_components`, 1).
+    """
+    if args[0].size == 1 and n_components > 1:
+        shape = (n_components, 1)
+        for arg in args:
+            arg = np.broadcast_to(arg, shape)
+    n_components = args[0].size
+    return n_components, *args
+
+
 @define(kw_only=True)
 class BaseDowntime(ABC, BaseConfig):
     @abstractmethod
@@ -162,10 +185,7 @@ class FixedDowntime(BaseDowntime):
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
     def __attrs_post_init__(self):
-        if self.hours.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.hours = np.broadcast_to(self.hours, shape)
-        self.n_components = self.hours.size
+        self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
 
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
@@ -202,11 +222,9 @@ class LogNormalDowntime(BaseDowntime):
             raise ValueError(msg)
 
     def __attrs_post_init__(self):
-        if self.mean.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.mean = np.broadcast_to(self.mean, shape)
-            self.sigma = np.broadcast_to(self.sigma, shape)
-        self.n_components = self.mean.size
+        self.n_components, self.mean, self.sigma = update_dimensions(
+            self.n_components, self.mean, self.sigma
+        )
 
     def sample_downtime(self) -> np.ndarray:
         """Return an array of 100 samples of each lognormal distribution."""
@@ -251,11 +269,9 @@ class WeibullReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
-        if self.scale.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.scale = np.broadcast_to(self.scale, shape)
-            self.shape = np.broadcast_to(self.shape, shape)
-        self.n_components = self.scale.size
+        self.n_components, self.scale, self.shape = update_dimensions(
+            self.n_components, self.scale, self.shape
+        )
 
         self.create_downtime_events()
         self.calculate_availability()
@@ -291,10 +307,7 @@ class FixedIntervalReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
-        if self.frequency.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.frequency = np.broadcast_to(self.frequency, shape)
-        self.n_components = self.frequency.size
+        self.n_components, self.frequency = update_dimensions(self.n_components, self.frequency)
 
         self.create_downtime_events()
         self.calculate_availability()
