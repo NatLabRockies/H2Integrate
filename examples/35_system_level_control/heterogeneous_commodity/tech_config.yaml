@@ -64,6 +64,8 @@ technologies:
       model: StoragePerformanceModel
     cost_model:
       model: GenericStorageCostModel
+    control_strategy:
+      model: SimpleStorageOpenLoopController
     model_inputs:
       shared_parameters:
         commodity: electricity
@@ -73,9 +75,11 @@ technologies:
         init_soc_fraction: 0.5
         max_soc_fraction: 1.0
         min_soc_fraction: 0.1
+        demand_profile: 40000  # kW, required by storage base config
       performance_parameters:
         round_trip_efficiency: 0.90
-        demand_profile: 40000  # kW, required by storage base config
+      control_parameters:
+        set_demand_as_avg_commodity_in: false
       cost_parameters:
         cost_year: 2022
         capacity_capex: 310  # $/kWh
