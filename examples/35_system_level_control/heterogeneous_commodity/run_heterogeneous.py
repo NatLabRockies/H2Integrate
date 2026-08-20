@@ -133,12 +133,13 @@ def make_plots(figure_dir):
     # Hydrogen streams (kg/h).
     h2_produced = _get("electrolyzer.hydrogen_out", "kg/h")
     h2_to_synloop = _get("ammonia.hydrogen_consumed", "kg/h")
-    h2_from_combiner = _get("h2_combiner.hydrogen_out", "kg/h")
-    h2_storage_discharge = _get("h2_storage.hydrogen_out", "kg/h")
 
     # Ammonia streams (kg/h).
     ammonia_out = _get("ammonia.ammonia_out", "kg/h")
     ammonia_demand = _get("ammonia_load_demand.ammonia_demand_out", "kg/h")
+
+    # Battery state of charge (fraction of capacity).
+    battery_soc = _get("battery.SOC", "unitless")
 
     # Controller set points that show backward propagation of demand.
     _get("system_level_controller.ammonia_ammonia_set_point", "kg/h")
@@ -204,65 +205,14 @@ def make_plots(figure_dir):
     fig.savefig(figure_dir / "dispatch_cascade.png", dpi=150)
     plt.close(fig)
 
-    # -----------------------------------------------------------------
-    # Figure 2: conversion ratios across the year. The controller derives
-    # these ratios automatically, preferring the measured ratio
-    # (input_consumed / output_produced) and seeding from rated capacities.
-    # The electrolyzer ratio drifts up as the stack degrades over the year.
-    # -----------------------------------------------------------------
-    fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
-
-    # Measured (dynamic) ratios that the controller actually used, averaged over the year.
+    # Measured (dynamic) conversion ratios the controller actually used, averaged over the
+    # year. These feed the block diagram and conversion-ratio-chain figures below.
     m_elec_per_h2 = float(np.nanmean(electricity_per_hydrogen))
     m_h2_per_nh3 = float(np.nanmean(hydrogen_per_ammonia))
     m_elec_per_nh3 = float(np.nanmean(electricity_per_ammonia))
 
-    axes[0].plot(hours, electricity_per_hydrogen, color="#3B7DD8", lw=0.8)
-    axes[0].axhline(
-        m_elec_per_h2,
-        color="black",
-        ls=":",
-        lw=1.0,
-        label=f"Yearly mean ({m_elec_per_h2:0.1f} kWh/kg)",
-    )
-    axes[0].set_ylabel("kWh / kg H2")
-    axes[0].set_title(
-        "Electrolyzer measured ratio (electricity per hydrogen) drifts up with degradation"
-    )
-    axes[0].legend(loc="upper left", fontsize=8)
-
-    axes[1].plot(hours, hydrogen_per_ammonia, color="#D8663B", lw=0.8)
-    axes[1].axhline(
-        m_h2_per_nh3,
-        color="black",
-        ls=":",
-        lw=1.0,
-        label=f"Yearly mean ({m_h2_per_nh3:0.2f} kg/kg)",
-    )
-    axes[1].set_ylabel("kg H2 / kg NH3")
-    axes[1].set_title("Synloop measured ratio (hydrogen per ammonia)")
-    axes[1].legend(loc="upper left", fontsize=8)
-
-    axes[2].plot(hours, electricity_per_ammonia, color="#7B4FA3", lw=0.8)
-    axes[2].axhline(
-        m_elec_per_nh3,
-        color="black",
-        ls=":",
-        lw=1.0,
-        label=f"Yearly mean ({m_elec_per_nh3:0.2f} kWh/kg)",
-    )
-    axes[2].set_ylabel("kWh / kg NH3")
-    axes[2].set_xlabel("Hour of year")
-    axes[2].set_title("Synloop measured ratio (electricity per ammonia)")
-    axes[2].legend(loc="upper left", fontsize=8)
-
-    fig.suptitle("Conversion ratios used to translate demand across converters", y=0.995)
-    fig.tight_layout()
-    fig.savefig(figure_dir / "conversion_ratios.png", dpi=150)
-    plt.close(fig)
-
     # -----------------------------------------------------------------
-    # Figure 3: system block diagram. Technologies are colored by their
+    # Figure 2: system block diagram. Technologies are colored by their
     # control classification, arrows show the commodity flows, and the two
     # converters (electrolyzer and ammonia synloop) carry the conversion
     # ratios that the controller multiplies to propagate demand upstream.
@@ -302,14 +252,12 @@ def make_plots(figure_dir):
     _box(ax, (33, 68), "Electricity\nsplitter", color_class["splitter"], width=5.5, height=7)
     _box(
         ax,
-        (44, 68),
+        (59, 68),
         "Electrolyzer\n(dispatchable)\nconverter: elec -> H2",
         color_class["dispatchable"],
         width=15,
         height=11,
     )
-    _box(ax, (62, 88), "H2 storage\n(storage)", color_class["storage"], width=11, height=7)
-    _box(ax, (62, 68), "H2\ncombiner", color_class["combiner"], width=11, height=7)
     _box(ax, (80, 90), "N2 feedstock\n(feedstock)", color_class["feedstock"], width=12, height=7)
     _box(
         ax,
@@ -335,7 +283,7 @@ def make_plots(figure_dir):
     # Combined bus feeds a literal splitter that divides it.
     _flow_arrow(ax, (30.0, 74), (30.5, 70.0), color_flow["electricity"], label="bus", label_dy=1.2)
     # Splitter out1 (priority) supplies the electrolyzer.
-    _flow_arrow(ax, (35.8, 68), (36.5, 68), color_flow["electricity"], label="out1")
+    _flow_arrow(ax, (35.8, 68), (51.5, 68), color_flow["electricity"], label="out1")
     # Splitter out2 supplies the synloop's direct electricity along the same bus.
     _flow_arrow(
         ax,
@@ -347,11 +295,8 @@ def make_plots(figure_dir):
         label_dy=18.0,
     )
 
-    # Hydrogen flows (orange).
-    _flow_arrow(ax, (51.5, 71), (56.5, 86), color_flow["hydrogen"], rad=0.25)
-    _flow_arrow(ax, (51.5, 68), (56.5, 68), color_flow["hydrogen"], label="hydrogen")
-    _flow_arrow(ax, (62, 84.5), (62, 71.5), color_flow["hydrogen"])
-    _flow_arrow(ax, (67.5, 68), (72, 68), color_flow["hydrogen"], label="hydrogen")
+    # Hydrogen flows (orange): the electrolyzer feeds the synloop directly.
+    _flow_arrow(ax, (66.5, 68), (72, 68), color_flow["hydrogen"], label="hydrogen")
 
     # Nitrogen feedstock and the final ammonia product.
     _flow_arrow(ax, (80, 86.5), (80, 74.5), color_flow["nitrogen"], label="nitrogen", label_dy=0)
@@ -359,7 +304,7 @@ def make_plots(figure_dir):
 
     # Conversion-ratio callouts on the two converters (measured yearly means).
     ax.text(
-        44,
+        59,
         60.5,
         f"x {m_elec_per_h2:0.1f} kWh/kg H2\n(measured mean)",
         ha="center",
@@ -465,7 +410,7 @@ def make_plots(figure_dir):
     plt.close(fig)
 
     # -----------------------------------------------------------------
-    # Figure 4: how the conversion ratios multiply along the chain to set
+    # Figure 3: how the conversion ratios multiply along the chain to set
     # the electricity intensity of one kilogram of ammonia. Seeds come from
     # plant_config; the measured values are what the controller actually used.
     # -----------------------------------------------------------------
@@ -562,15 +507,16 @@ def make_plots(figure_dir):
     plt.close(fig)
 
     # -----------------------------------------------------------------
-    # Figure 5: hourly time histories of the commodity signals that pass
+    # Figure 4: hourly time histories of the commodity signals that pass
     # between components over a representative week. The top panels show how
     # the literal electricity splitter divides the combined bus: the priority
     # output (out1) tracks the electrolyzer's demand while the second output
     # (out2) carries the remainder to the synloop, so both loads are served
     # from a single physical stream. The lower panels follow the hydrogen and
-    # ammonia signals along the rest of the chain.
+    # ammonia signals along the rest of the chain, and the final panel shows the
+    # battery state of charge over the same week.
     # -----------------------------------------------------------------
-    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+    fig, axes = plt.subplots(5, 1, figsize=(10, 14), sharex=True)
 
     # Panel 1: the split of the combined electricity bus at the splitter.
     axes[0].stackplot(
@@ -618,28 +564,13 @@ def make_plots(figure_dir):
     axes[1].set_title("Split allocations track each consumer's load")
     axes[1].legend(loc="upper right", ncol=2, fontsize=8)
 
-    # Panel 3: hydrogen signals between the electrolyzer, storage, and synloop.
+    # Panel 3: hydrogen signals between the electrolyzer and the synloop.
     axes[2].plot(week_hours, h2_produced[week], color="#D8663B", lw=1.4, label="electrolyzer out")
-    axes[2].plot(
-        week_hours,
-        h2_storage_discharge[week],
-        color="#F2C14E",
-        lw=1.2,
-        label="storage discharge",
-    )
-    axes[2].plot(
-        week_hours,
-        h2_from_combiner[week],
-        color="#8C4A2F",
-        ls="--",
-        lw=1.2,
-        label="H2 combiner out -> synloop",
-    )
     axes[2].plot(
         week_hours, h2_to_synloop[week], color="black", ls=":", lw=1.2, label="synloop consumed"
     )
     axes[2].set_ylabel("Hydrogen (kg/h)")
-    axes[2].set_title("Hydrogen signals between the electrolyzer, storage, and synloop")
+    axes[2].set_title("Hydrogen: electrolyzer output feeds the ammonia synthesis loop")
     axes[2].legend(loc="upper right", ncol=2, fontsize=8)
 
     # Panel 4: the ammonia product signal that drives the whole chain.
@@ -648,9 +579,18 @@ def make_plots(figure_dir):
         week_hours, ammonia_demand[week], color="black", ls="--", lw=1.2, label="ammonia demand"
     )
     axes[3].set_ylabel("Ammonia (kg/h)")
-    axes[3].set_xlabel("Hour of representative week")
     axes[3].set_title("Ammonia production tracks the demand that drives the chain")
     axes[3].legend(loc="lower right", fontsize=8)
+
+    # Panel 5: battery state of charge over the week.
+    axes[4].plot(
+        week_hours, battery_soc[week] * 100.0, color="#F2C14E", lw=1.4, label="battery SOC"
+    )
+    axes[4].set_ylabel("State of charge (%)")
+    axes[4].set_ylim(0, 100)
+    axes[4].set_xlabel("Hour of representative week")
+    axes[4].set_title("Battery state of charge")
+    axes[4].legend(loc="upper right", fontsize=8)
 
     fig.suptitle("Hourly commodity signals between components (representative week)", y=0.997)
     fig.tight_layout()

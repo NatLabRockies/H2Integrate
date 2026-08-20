@@ -467,19 +467,19 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         # of the full-year ceiling. Value is the true converged fixed point reached with Aitken
         # relaxation on the Gauss-Seidel dispatch loop.
         assert (
-            pytest.approx(26323482.375772666, rel=1e-5)
+            pytest.approx(26332404.59092386, rel=1e-5)
             == model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
         )
 
     with subtests.test("Electrolyzer hydrogen set point total"):
         assert (
-            pytest.approx(7184916.282793145, rel=1e-5)
+            pytest.approx(7184825.71631848, rel=1e-5)
             == model.prob.get_val(
                 "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
             ).sum()
         )
 
     with subtests.test("LCOA"):
-        assert pytest.approx(3.39863986, rel=1e-5) == model.prob.get_val(
+        assert pytest.approx(3.39502411, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )

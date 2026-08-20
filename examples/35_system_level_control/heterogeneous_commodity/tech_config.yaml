@@ -139,37 +139,6 @@ technologies:
         capital_items:
           depr_period: 7
           replacement_cost_percent: 0.15  # percent of capex - H2A default case
-  h2_storage:
-    performance_model:
-      model: StoragePerformanceModel
-    cost_model:
-      model: GenericStorageCostModel
-    model_inputs:
-      shared_parameters:
-        commodity: hydrogen
-        commodity_rate_units: kg/h
-        max_charge_rate: 1200.0  # kg/time step
-        max_capacity: 3700.0  # kg
-      performance_parameters:
-        max_soc_fraction: 1.0  # fraction (0-1)
-        min_soc_fraction: 0.1  # fraction (0-1)
-        init_soc_fraction: 0.1  # fraction (0-1)
-        max_discharge_rate: 1200.0  # kg/time step
-        charge_efficiency: 1.0  # fraction (0-1)
-        discharge_efficiency: 1.0  # fraction (0-1)
-        demand_profile: 4000.0  # kg/h (see commodity_rate_units)
-      cost_parameters:
-        cost_year: 2022
-        capacity_capex: 100  # $/kg
-        charge_capex: 100  # $/kg/h
-        opex_fraction: 0.025
-  h2_combiner:
-    performance_model:
-      model: GenericCombinerPerformanceModel
-    model_inputs:
-      performance_parameters:
-        commodity: hydrogen
-        commodity_rate_units: kg/h
   n2_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

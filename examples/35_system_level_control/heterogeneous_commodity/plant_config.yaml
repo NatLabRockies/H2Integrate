@@ -31,13 +31,8 @@ technology_interconnections:
   - [electricity_splitter, electrolyzer, electricity, cable]
   # splitter out2 supplies the ammonia synthesis loop's direct electricity
   - [electricity_splitter, ammonia, electricity, cable]
-  # electrolyzer to hydrogen storage
-  - [electrolyzer, h2_storage, hydrogen, pipe]
-  # combine the hydrogen streams from the electrolyzer and storage
-  - [electrolyzer, h2_combiner, hydrogen, pipe]
-  - [h2_storage, h2_combiner, hydrogen, pipe]
   # hydrogen supply to the ammonia synthesis loop
-  - [h2_combiner, ammonia, hydrogen, pipe]
+  - [electrolyzer, ammonia, hydrogen, pipe]
   # nitrogen feedstock for the synthesis loop
   - [n2_feedstock, ammonia, nitrogen, pipe]
   # ammonia supply to the ammonia demand
@@ -113,7 +108,6 @@ finance_parameters:
         - solar
         - battery
         - electrolyzer
-        - h2_storage
         - n2_feedstock
         - ammonia
   cost_adjustment_parameters:
