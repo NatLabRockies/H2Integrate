@@ -14,6 +14,14 @@ rng = np.random.default_rng(279299947538423226929715083173412195503)
 N_TIMESTEPS = 8760
 
 
+def array_ge(val):
+    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
+
+    def validator(instance, attribute, value):
+        if any(value < val):
+            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
+
+
 def create_failure_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config["failure_model"]
@@ -149,15 +157,9 @@ class FixedDowntime(BaseDowntime):
 
     hours: int | ArrayLike = field(
         converter=int_array_converter,
-        validator=validators.instance_of(np.ndarray),
+        validator=(validators.instance_of(np.ndarray), array_ge(1)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
-
-    @hours.validator
-    def hours_validator(self, attribute, value):
-        """Validates that all values of :py:attr:`hours` are greater than or equal to 1."""
-        if not np.all(value > 1):
-            raise ValueError("All values passed to 'hours' must be greater than or equal to 1.")
 
     def __attrs_post_init__(self):
         if self.hours.size == 1 and self.n_components > 1:
@@ -181,20 +183,13 @@ class LogNormalDowntime(BaseDowntime):
 
     mean: float = field(
         converter=float_array_converter,
-        validator=(validators.instance_of(np.ndarray)),
+        validator=(validators.instance_of(np.ndarray), array_ge(0)),
     )
     sigma: float = field(
         converter=float_array_converter,
-        validator=(validators.instance_of(np.ndarray)),
+        validator=(validators.instance_of(np.ndarray), array_ge(0)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
-
-    @mean.validator
-    @sigma.validator
-    def validate_ge_zero(self, attribute, value):
-        """Validates the :py:attr:`sigma` and :py:attr:`mean` values are at least 0."""
-        if any(value < 0):
-            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
 
     @sigma.validator
     def validate_shape(self, attribute, value):
