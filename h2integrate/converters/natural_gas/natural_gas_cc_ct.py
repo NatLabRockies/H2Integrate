@@ -69,7 +69,6 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
         self.reliability_model = None
-        self.use_reliability = False
 
     def setup(self):
         super().setup()
@@ -78,12 +77,12 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        if self.options["tech_config"]["model_inputs"]["reliability"]:
+        if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
             self.reliability_model = WeibullReliabilityModel.from_dict(
                 merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability"),
                 additional_cls_name=self.__class__.__name__,
             )
-            self.use_reliability = True
+        self.use_reliability = use_reliability
 
         # Add natural gas consumed output
         self.add_output(
