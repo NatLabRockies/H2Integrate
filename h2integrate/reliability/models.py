@@ -121,9 +121,12 @@ class FixedDowntime(BaseDowntime):
             raise ValueError("All values passed to 'hours' must be greater than or equal to 1.")
 
     def __attrs_post_init__(self):
-        if self.hours.size == 1 and self.n_components > 1:
-            self.hours = np.broadcast_to(self.hours, (self.n_components, 1))
-        # ...
+        if self.hours.size == 1:
+            if self.n_components > 1:
+                shape = (self.n_components, 1)
+                self.hours = np.broadcast_to(self.hours, shape)
+            else:
+                self.n_components = 1
 
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
