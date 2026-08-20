@@ -142,12 +142,42 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             == 20476.7060254
         )
 
-    with subtests.test("carbon dioxide out"):
+    with subtests.test("co2 out"):
+        assert (
+            pytest.approx(np.sum(prob.get_val("fuel_cell.co2_out", units="kg/h")), rel=1e-6)
+            == 12505.9649206
+        )
+
+    with subtests.test("rated natural gas consumed"):
         assert (
             pytest.approx(
-                np.sum(prob.get_val("fuel_cell.carbon_dioxide_out", units="kg/h")), rel=1e-6
+                prob.get_val("fuel_cell.rated_natural_gas_consumed", units="MMBtu/h"), rel=1e-6
             )
-            == 12505.9649206
+            == 26.9726698
+        )
+
+    with subtests.test("rated oxygen consumed"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_oxygen_consumed", units="kg/h"), rel=1e-6)
+            == 607.11480
+        )
+
+    with subtests.test("rated water out"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_water_out", units="kg/h"), rel=1e-6)
+            == 683.61604984
+        )
+
+    with subtests.test("rated co2 out"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_co2_out", units="kg/h"), rel=1e-6)
+            == 417.512383
+        )
+
+    with subtests.test("rated heat out"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_heat_out", units="kW"), rel=1e-6)
+            == 76176.9025  # TODO: update expected value
         )
 
 
@@ -205,7 +235,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
     ng_consumed = prob.get_val("fuel_cell.natural_gas_consumed", units="MMBtu/h")
     o2_consumed = prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")
     water_out = prob.get_val("fuel_cell.water_out", units="kg/h")
-    co2_out = prob.get_val("fuel_cell.carbon_dioxide_out", units="kg/h")
+    co2_out = prob.get_val("fuel_cell.co2_out", units="kg/h")
 
     with subtests.test("output bounded by system capacity"):
         assert np.max(electricity_output) <= 1500.0 + 1e-6

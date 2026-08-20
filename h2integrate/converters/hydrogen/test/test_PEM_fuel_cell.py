@@ -157,6 +157,30 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
             == 20476.70602546
         )
 
+    with subtests.test("rated h2 consumed"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_h2_consumed", units="kg/h"), rel=1e-6)
+            == 76.5012465
+        )
+
+    with subtests.test("rated o2 consumed"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_o2_consumed", units="kg/h"), rel=1e-6)
+            == 607.11480
+        )
+
+    with subtests.test("rated water out"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_water_out", units="kg/h"), rel=1e-6)
+            == 683.6160498
+        )
+
+    with subtests.test("rated heat out"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_heat_out", units="kW"), rel=1e-6)
+            == 1515.1571138
+        )
+
 
 @pytest.mark.unit
 def test_fuel_cell_demand(tech_config, plant_config, subtests):
