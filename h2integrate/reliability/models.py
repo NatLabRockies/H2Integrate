@@ -97,6 +97,23 @@ def array_ge(val):
     return validator
 
 
+def match_shape(other):
+    """Validates the shape of an array matches the shape of :py:attr:`other`."""
+
+    def validator(instance, attribute, value):
+        other_arr = getattr(instance, other, None)
+        if other_arr is None:
+            raise ValueError(f"'{other}' does not exist.")
+        if other_arr.shape != value.shape:
+            msg = (
+                f"Shape of '{attribute.name}' {value.shape} does not match"
+                f" '{other}' {other_arr.shape}."
+            )
+            raise ValueError(msg)
+
+    return validator
+
+
 @define(kw_only=True)
 class BaseDowntime(ABC, BaseConfig):
     @abstractmethod
@@ -211,7 +228,7 @@ class LogNormalDowntime(BaseDowntime):
     )
     sigma: float = field(
         converter=float_array_converter,
-        validator=(validators.instance_of(np.ndarray), array_ge(0)),
+        validator=(validators.instance_of(np.ndarray), match_shape("mean"), array_ge(0)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
@@ -269,7 +286,7 @@ class WeibullReliability(BaseReliability):
     )
     shape: float = field(
         converter=float_array_converter,
-        validator=validators.instance_of(np.ndarray),
+        validator=(validators.instance_of(np.ndarray), match_shape("scale")),
     )
 
     def __attrs_post_init__(self):
