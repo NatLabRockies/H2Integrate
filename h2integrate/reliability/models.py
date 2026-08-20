@@ -232,16 +232,6 @@ class LogNormalDowntime(BaseDowntime):
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
-    @sigma.validator
-    def validate_shape(self, attribute, value):
-        """Validates that :py:attr:`mean` and :py:attr:`sigma` are the same size."""
-        if self.mean.shape != value.shape:
-            msg = (
-                "Inputs to 'mean' and 'sigma' must be the same length. Received"
-                f" 'mean': {self.mean.size}, 'sigma': {value.size}"
-            )
-            raise ValueError(msg)
-
     def __attrs_post_init__(self):
         self.n_components, self.mean, self.sigma = update_dimensions(
             self.n_components, self.mean, self.sigma
