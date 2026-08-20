@@ -187,7 +187,7 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
             )
-            == 9.46456262909423
+            == 9.137956305329464
         )
 
 
@@ -457,7 +457,7 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
 
     with subtests.test("Ammonia annual production"):
         assert (
-            pytest.approx(35036000.0, rel=1e-5)
+            pytest.approx(35040000.0, rel=1e-5)
             == model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
         )
 
@@ -470,6 +470,6 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         )
 
     with subtests.test("LCOA"):
-        assert pytest.approx(2.00231927, rel=1e-5) == model.prob.get_val(
+        assert pytest.approx(2.0020582, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )

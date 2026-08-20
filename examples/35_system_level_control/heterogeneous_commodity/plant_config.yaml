@@ -58,17 +58,6 @@ system_level_control:
       # Ammonia marginal cost is taken from its upstream nitrogen and direct-electricity
       # feedstocks; the grid, wind, and battery are not feedstocks and are not summed here.
       ammonia: feedstock
-    # Static seed ratios for the commodity converters, keyed by technology. The
-    # controller prefers the measured ratio (input_consumed / output_produced)
-    # once the solver has values and uses these seeds on iteration zero and for
-    # zero-output timesteps. Feedstock-supplied inputs (for example nitrogen into
-    # the synloop) are not controller-managed and need no ratio.
-    conversion_parameters:
-      electrolyzer:
-        electricity_per_hydrogen: 51.0  # kWh electricity per kg hydrogen
-      ammonia:
-        hydrogen_per_ammonia: 0.2  # kg hydrogen per kg ammonia
-        electricity_per_ammonia: 0.530645243  # kWh electricity per kg ammonia
   solver_options:
     solver_name: gauss_seidel
     max_iter: 50

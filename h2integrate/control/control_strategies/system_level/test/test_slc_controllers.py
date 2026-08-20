@@ -729,26 +729,6 @@ class TestProfitMaximizationControl:
 # ---------------------------------------------------------------------------
 # Heterogeneous-commodity dispatch (backward demand propagation)
 # ---------------------------------------------------------------------------
-def _plant_config_with_conversion_parameters(plant_config, conversion_parameters):
-    """Attach static conversion ratios to a plant config.
-
-    Args:
-        plant_config (dict): Plant config to extend in place.
-        conversion_parameters (dict): Mapping of ``tech_name`` to a dict of
-            ``{"<in>_per_<out>": ratio}`` entries.
-
-    Returns:
-        dict: The same ``plant_config`` with the ``system_level_control.
-        control_parameters.conversion_parameters`` structure the base class
-        reads.
-    """
-    control_parameters = plant_config.setdefault("system_level_control", {}).setdefault(
-        "control_parameters", {}
-    )
-    control_parameters["conversion_parameters"] = conversion_parameters
-    return plant_config
-
-
 def _build_hetero_problem(
     slc_cls,
     plant_config,
@@ -768,7 +748,7 @@ def _build_hetero_problem(
         slc_cls: Controller class to instantiate.
         plant_config (dict): Plant config.
         slc_topology (dict): SLC topology.
-        tech_config (dict): Tech config (carries conversion ratios).
+        tech_config (dict): Tech config.
         demand (float | array): Demand-commodity demand profile.
         upstream_out (dict): Optional ``{(tech, commodity): value}`` outputs for
             the wired IVCs (defaults to zero).
@@ -830,13 +810,6 @@ class TestHeterogeneousCommodityControl:
         slc_topology = _build_slc_topology(
             tech_graph, classifiers, demand_commodity="ammonia", demand_commodity_rate_units="kg/h"
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config,
-            {
-                "electrolyzer": {"electricity_per_hydrogen": 51.0},
-                "synloop": {"hydrogen_per_ammonia": 0.18},
-            },
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -850,8 +823,8 @@ class TestHeterogeneousCommodityControl:
             ("hydrogen", "synloop", "ammonia"),
         }
 
-    def test_single_converter_static_propagation(self):
-        """A single converter translates hydrogen demand into electricity demand."""
+    def test_single_converter_capacity_propagation(self):
+        """A single converter seeds electricity demand from the rated capacity ratio."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "demand", "hydrogen", "pipe"],
@@ -865,9 +838,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 51.0}}
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -876,15 +846,16 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        # Capacity ratio = grid rated electricity / electrolyzer rated hydrogen = 51.
+        prob.set_val("slc.grid_rated_electricity_production", 51e6)
         prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
         prob.run_model()
 
         np.testing.assert_allclose(prob.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0)
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 100.0 * 51.0)
 
-    def test_chained_converter_static_propagation(self):
-        """Demand propagates through a two-converter chain to the electricity source."""
+    def test_chained_converter_capacity_propagation(self):
+        """Demand propagates through a two-converter chain via capacity ratios."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "synloop", "hydrogen", "pipe"],
@@ -901,13 +872,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="ammonia",
             demand_commodity_rate_units="kg/h",
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config,
-            {
-                "electrolyzer": {"electricity_per_hydrogen": 51.0},
-                "synloop": {"hydrogen_per_ammonia": 0.18},
-            },
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -916,9 +880,11 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
-        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        # hydrogen/ammonia capacity ratio = electrolyzer rated / synloop rated = 0.18.
         prob.set_val("slc.synloop_rated_ammonia_production", 1e6)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 0.18e6)
+        # electricity/hydrogen capacity ratio = grid rated / electrolyzer rated = 51.
+        prob.set_val("slc.grid_rated_electricity_production", 51.0 * 0.18e6)
         prob.run_model()
 
         np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
@@ -947,9 +913,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -959,9 +922,11 @@ class TestHeterogeneousCommodityControl:
             upstream_out={("wind", "electricity"): 1000.0},
             commodity_units={"electricity": "kW"},
         )
+        # Capacity ratio sums the upstream rated electricity capacities:
+        # (wind 2000 + grid 48000) / electrolyzer 1000 = 50 kWh/kg.
         prob.set_val("slc.wind_rated_electricity_production", 2000.0)
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
-        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        prob.set_val("slc.grid_rated_electricity_production", 48000.0)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1000.0)
         prob.run_model()
 
         # Derived electricity demand = 100 kg/h * 50 kWh/kg = 5000 kW
@@ -971,7 +936,7 @@ class TestHeterogeneousCommodityControl:
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 4000.0)
 
     def test_missing_ratio_warns_and_keeps_legacy_dispatch(self):
-        """A converter without a ratio warns once and skips propagation."""
+        """A converter with no measurement and zero rated capacities warns once."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "demand", "hydrogen", "pipe"],
@@ -993,9 +958,8 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
-        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
-
+        # Rated productions stay at their zero defaults, so no capacity ratio is
+        # available and (with no measured consumption) propagation is skipped.
         with pytest.warns(UserWarning, match="No conversion ratio"):
             prob.run_model()
 
@@ -1023,9 +987,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
-        )
         prob = _build_hetero_problem(
             CostMinimizationControl,
             plant_config,
@@ -1034,9 +995,10 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
+        # Capacity ratio = (cheap 3000 + expensive 5000) / electrolyzer 160 = 50 kWh/kg.
         prob.set_val("slc.cheap_rated_electricity_production", 3000.0)
         prob.set_val("slc.expensive_rated_electricity_production", 5000.0)
-        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 160.0)
         prob.run_model()
 
         # Derived electricity demand = 5000 kW; cheapest tech fills first
@@ -1044,8 +1006,8 @@ class TestHeterogeneousCommodityControl:
         np.testing.assert_allclose(prob.get_val("slc.cheap_electricity_set_point"), 3000.0)
         np.testing.assert_allclose(prob.get_val("slc.expensive_electricity_set_point"), 2000.0)
 
-    def test_dynamic_ratio_overrides_static(self):
-        """Measured consumption drives the ratio, overriding the static tech-config value."""
+    def test_dynamic_ratio_overrides_capacity(self):
+        """Measured consumption drives the ratio, overriding the capacity seed."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "demand", "hydrogen", "pipe"],
@@ -1059,10 +1021,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        # Static ratio is 50, but the measured ratio (5100 / 100 = 51) should win.
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -1071,7 +1029,8 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        # Capacity seed is 50, but the measured ratio (5100 / 100 = 51) should win.
+        prob.set_val("slc.grid_rated_electricity_production", 50e6)
         prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
         prob.set_val("slc.electrolyzer_hydrogen_out", 100.0)
         prob.set_val("slc.electrolyzer_electricity_consumed", 5100.0)
@@ -1080,7 +1039,7 @@ class TestHeterogeneousCommodityControl:
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 100.0 * 51.0)
 
     def test_dynamic_ratio_time_varying_with_zero_output_fallback(self):
-        """Per-timestep measured ratios apply; a zero-output timestep falls back to static."""
+        """Per-timestep measured ratios apply; a zero-output timestep falls back to capacity."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "demand", "hydrogen", "pipe"],
@@ -1094,9 +1053,6 @@ class TestHeterogeneousCommodityControl:
             demand_commodity="hydrogen",
             demand_commodity_rate_units="kg/h",
         )
-        plant_config = _plant_config_with_conversion_parameters(
-            plant_config, {"electrolyzer": {"electricity_per_hydrogen": 50.0}}
-        )
         prob = _build_hetero_problem(
             DemandFollowingControl,
             plant_config,
@@ -1105,9 +1061,10 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
+        # Capacity seed = grid rated / electrolyzer rated = 50 kWh/kg.
+        prob.set_val("slc.grid_rated_electricity_production", 50e6)
         prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
-        # Third timestep produces no hydrogen, so its ratio falls back to the static 50.
+        # Third timestep produces no hydrogen, so its ratio falls back to the capacity seed 50.
         prob.set_val("slc.electrolyzer_hydrogen_out", [100.0, 100.0, 0.0, 100.0])
         prob.set_val("slc.electrolyzer_electricity_consumed", [5100.0, 4000.0, 9999.0, 6000.0])
         prob.run_model()
@@ -1117,8 +1074,8 @@ class TestHeterogeneousCommodityControl:
             prob.get_val("slc.grid_electricity_set_point"), [5100.0, 4000.0, 5000.0, 6000.0]
         )
 
-    def test_dynamic_ratio_without_static_does_not_warn(self):
-        """A connected consumption signal enables propagation with no static ratio or warning."""
+    def test_dynamic_ratio_without_capacity_does_not_warn(self):
+        """A connected consumption signal enables propagation with no capacity seed or warning."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
             ["electrolyzer", "demand", "hydrogen", "pipe"],
@@ -1140,8 +1097,8 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW"},
         )
-        prob.set_val("slc.grid_rated_electricity_production", 1e9)
-        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+        # Rated productions stay zero (no capacity seed), so only the measured
+        # ratio drives propagation; the connected consumption still avoids a warning.
         prob.set_val("slc.electrolyzer_hydrogen_out", 100.0)
         prob.set_val("slc.electrolyzer_electricity_consumed", 5100.0)
 
@@ -1151,3 +1108,88 @@ class TestHeterogeneousCommodityControl:
 
         assert not any("No conversion ratio" in str(w.message) for w in caught)
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 100.0 * 51.0)
+
+    def test_capacity_seed_scales_with_rated_capacities(self):
+        """The capacity seed alone (no measurement) sets demand = rated-in / rated-out."""
+        tech_connections = [
+            ["grid", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "demand", "hydrogen", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="hydrogen",
+            demand_commodity_rate_units="kg/h",
+        )
+
+        # Doubling the upstream rated capacity doubles the seeded electricity demand,
+        # confirming the capacity ratio (not any measurement) drives propagation.
+        for rated_electricity, expected_ratio in ((40e6, 40.0), (80e6, 80.0)):
+            prob = _build_hetero_problem(
+                DemandFollowingControl,
+                plant_config,
+                slc_topology,
+                {},
+                demand=100.0,
+                commodity_units={"electricity": "kW"},
+            )
+            prob.set_val("slc.grid_rated_electricity_production", rated_electricity)
+            prob.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
+            prob.run_model()
+
+            np.testing.assert_allclose(
+                prob.get_val("slc.grid_electricity_set_point"), 100.0 * expected_ratio
+            )
+
+    def test_splitter_aggregates_derived_demand_across_producers(self):
+        """A shared input commodity sums derived demand from multiple converters.
+
+        Two electrolyzers feed one synloop (a hydrogen combiner) and both draw
+        electricity from one grid (an electricity splitter). Flat per-commodity
+        aggregation dispatches the derived hydrogen demand across both
+        electrolyzers and sums their electricity demand onto the single grid.
+        """
+        tech_connections = [
+            ["grid", "ely_a", "electricity", "cable"],
+            ["grid", "ely_b", "electricity", "cable"],
+            ["ely_a", "synloop", "hydrogen", "pipe"],
+            ["ely_b", "synloop", "hydrogen", "pipe"],
+            ["synloop", "demand", "ammonia", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(
+            dispatchable=["grid", "ely_a", "ely_b", "synloop"]
+        )
+        slc_topology = _build_slc_topology(
+            tech_graph,
+            classifiers,
+            demand_commodity="ammonia",
+            demand_commodity_rate_units="kg/h",
+        )
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            slc_topology,
+            {},
+            demand=100.0,
+            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        )
+        # hydrogen/ammonia capacity ratio = (ely_a 100 + ely_b 100) / synloop 1000 = 0.2.
+        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        prob.set_val("slc.ely_a_rated_hydrogen_production", 100.0)
+        prob.set_val("slc.ely_b_rated_hydrogen_production", 100.0)
+        # electricity/hydrogen capacity ratio for each electrolyzer = grid 5100 / 100 = 51.
+        prob.set_val("slc.grid_rated_electricity_production", 5100.0)
+        prob.run_model()
+
+        # Derived hydrogen demand = 100 * 0.2 = 20 kg/h, split evenly across electrolyzers.
+        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        np.testing.assert_allclose(prob.get_val("slc.ely_a_hydrogen_set_point"), 10.0)
+        np.testing.assert_allclose(prob.get_val("slc.ely_b_hydrogen_set_point"), 10.0)
+        # Electricity demand from both electrolyzers is summed onto the single grid:
+        # (10 * 51) + (10 * 51) = 1020 kW.
+        np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 1020.0)

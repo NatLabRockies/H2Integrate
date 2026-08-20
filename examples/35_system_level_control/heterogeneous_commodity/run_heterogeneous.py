@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-import yaml
 import numpy as np
 import matplotlib
 
@@ -192,13 +191,26 @@ def make_plots(figure_dir):
     plt.close(fig)
 
     # -----------------------------------------------------------------
-    # Figure 2: dynamic conversion ratios across the year. The controller
-    # prefers these measured ratios over the static seed values. The
-    # electrolyzer ratio drifts up as the stack degrades over the year.
+    # Figure 2: conversion ratios across the year. The controller derives
+    # these ratios automatically, preferring the measured ratio
+    # (input_consumed / output_produced) and seeding from rated capacities.
+    # The electrolyzer ratio drifts up as the stack degrades over the year.
     # -----------------------------------------------------------------
     fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
 
+    # Measured (dynamic) ratios that the controller actually used, averaged over the year.
+    m_elec_per_h2 = float(np.nanmean(electricity_per_hydrogen))
+    m_h2_per_nh3 = float(np.nanmean(hydrogen_per_ammonia))
+    m_elec_per_nh3 = float(np.nanmean(electricity_per_ammonia))
+
     axes[0].plot(hours, electricity_per_hydrogen, color="#3B7DD8", lw=0.8)
+    axes[0].axhline(
+        m_elec_per_h2,
+        color="black",
+        ls=":",
+        lw=1.0,
+        label=f"Yearly mean ({m_elec_per_h2:0.1f} kWh/kg)",
+    )
     axes[0].set_ylabel("kWh / kg H2")
     axes[0].set_title(
         "Electrolyzer measured ratio (electricity per hydrogen) drifts up with degradation"
@@ -206,19 +218,31 @@ def make_plots(figure_dir):
     axes[0].legend(loc="upper left", fontsize=8)
 
     axes[1].plot(hours, hydrogen_per_ammonia, color="#D8663B", lw=0.8)
-    axes[1].axhline(0.2, color="black", ls=":", lw=1.0, label="Static seed (0.2 kg/kg)")
+    axes[1].axhline(
+        m_h2_per_nh3,
+        color="black",
+        ls=":",
+        lw=1.0,
+        label=f"Yearly mean ({m_h2_per_nh3:0.2f} kg/kg)",
+    )
     axes[1].set_ylabel("kg H2 / kg NH3")
     axes[1].set_title("Synloop measured ratio (hydrogen per ammonia)")
     axes[1].legend(loc="upper left", fontsize=8)
 
     axes[2].plot(hours, electricity_per_ammonia, color="#7B4FA3", lw=0.8)
-    axes[2].axhline(0.530645243, color="black", ls=":", lw=1.0, label="Static seed (0.53 kWh/kg)")
+    axes[2].axhline(
+        m_elec_per_nh3,
+        color="black",
+        ls=":",
+        lw=1.0,
+        label=f"Yearly mean ({m_elec_per_nh3:0.2f} kWh/kg)",
+    )
     axes[2].set_ylabel("kWh / kg NH3")
     axes[2].set_xlabel("Hour of year")
     axes[2].set_title("Synloop measured ratio (electricity per ammonia)")
     axes[2].legend(loc="upper left", fontsize=8)
 
-    fig.suptitle("Dynamic conversion ratios used to translate demand across converters", y=0.995)
+    fig.suptitle("Conversion ratios used to translate demand across converters", y=0.995)
     fig.tight_layout()
     fig.savefig(figure_dir / "conversion_ratios.png", dpi=150)
     plt.close(fig)
@@ -229,20 +253,10 @@ def make_plots(figure_dir):
     # converters (electrolyzer and ammonia synloop) carry the conversion
     # ratios that the controller multiplies to propagate demand upstream.
     # -----------------------------------------------------------------
-    # The static seed ratios now live in plant_config under
-    # system_level_control -> control_parameters -> conversion_parameters,
-    # so read them straight from there to keep the diagram in sync with the config.
-    with Path("plant_config.yaml").open() as f:
-        plant_cfg = yaml.safe_load(f)
-    conv = plant_cfg["system_level_control"]["control_parameters"]["conversion_parameters"]
-    seed_elec_per_h2 = float(conv["electrolyzer"]["electricity_per_hydrogen"])
-    seed_h2_per_nh3 = float(conv["ammonia"]["hydrogen_per_ammonia"])
-    seed_elec_per_nh3 = float(conv["ammonia"]["electricity_per_ammonia"])
-
-    # Measured (dynamic) ratios that the controller actually used, averaged over the year.
-    m_elec_per_h2 = float(np.nanmean(electricity_per_hydrogen))
-    m_h2_per_nh3 = float(np.nanmean(hydrogen_per_ammonia))
-    m_elec_per_nh3 = float(np.nanmean(electricity_per_ammonia))
+    # Annotate the converters with the measured (dynamic) ratios the
+    # controller actually used, averaged over the year. These are derived
+    # automatically from consumption and rated capacities; no ratios are
+    # authored in the plant config.
 
     # Representative demand magnitudes used to annotate the propagation band.
     nh3_rate = float(ammonia_demand.mean())
@@ -310,11 +324,11 @@ def make_plots(figure_dir):
     _flow_arrow(ax, (80, 86.5), (80, 74.5), color_flow["nitrogen"], label="nitrogen", label_dy=0)
     _flow_arrow(ax, (88, 68), (90, 68), color_flow["ammonia"], label="ammonia")
 
-    # Conversion-ratio callouts on the two converters (seed and measured values).
+    # Conversion-ratio callouts on the two converters (measured yearly means).
     ax.text(
         44,
         60.5,
-        f"x {seed_elec_per_h2:0.1f} kWh/kg H2 (seed)\nmeasured ~{m_elec_per_h2:0.1f}",
+        f"x {m_elec_per_h2:0.1f} kWh/kg H2\n(measured mean)",
         ha="center",
         va="top",
         fontsize=7.5,
@@ -323,8 +337,7 @@ def make_plots(figure_dir):
     ax.text(
         80,
         60.0,
-        f"x {seed_h2_per_nh3:0.2f} kg H2/kg NH3 (seed)\n"
-        f"+ {seed_elec_per_nh3:0.3f} kWh/kg NH3 direct",
+        f"x {m_h2_per_nh3:0.2f} kg H2/kg NH3\n+ {m_elec_per_nh3:0.3f} kWh/kg NH3 direct",
         ha="center",
         va="top",
         fontsize=7.5,
@@ -347,7 +360,7 @@ def make_plots(figure_dir):
         50,
         25.5,
         "System-level controller: backward demand propagation "
-        "(measured consumed/produced ratios override the plant_config seeds)",
+        "(measured consumed/produced ratios, seeded from rated capacities)",
         ha="center",
         va="center",
         fontsize=9.5,
@@ -369,7 +382,7 @@ def make_plots(figure_dir):
         (23.5, 15),
         (34.5, 15),
         color_flow["hydrogen"],
-        label=f"x {seed_h2_per_nh3:0.2f}",
+        label=f"x {m_h2_per_nh3:0.2f}",
         label_dy=1.4,
     )
     _flow_arrow(
@@ -377,7 +390,7 @@ def make_plots(figure_dir):
         (49.5, 15),
         (63.5, 19),
         color_flow["electricity"],
-        label=f"x {seed_elec_per_h2:0.1f}",
+        label=f"x {m_elec_per_h2:0.1f}",
         label_dy=1.4,
     )
     _flow_arrow(
@@ -386,7 +399,7 @@ def make_plots(figure_dir):
         (63.5, 10),
         color_flow["electricity"],
         rad=0.1,
-        label=f"x {seed_elec_per_nh3:0.3f} (direct)",
+        label=f"x {m_elec_per_nh3:0.3f} (direct)",
         label_dy=-1.8,
     )
 

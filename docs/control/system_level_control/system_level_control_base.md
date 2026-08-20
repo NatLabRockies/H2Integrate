@@ -27,18 +27,24 @@ synthesis loop, and then into electricity demand across an electrolyzer).
     - Module-level helper that identifies converter technologies (technologies whose
       output commodity differs from an input commodity) that have a controllable
       producer for that input commodity, so demand can propagate backward across them.
-- `_build_conversion_ratios()`
-    - Registers each converter's `{commodity}_consumed` inputs and reads any static
-      conversion ratios supplied under
-      `technologies.<tech>.model_inputs.control_parameters.conversion_ratios`.
+- `_build_converters()`
+    - Detects the converters, registers each converter's `{commodity}_consumed` inputs,
+      and caches the upstream producers of each converter input. Conversion ratios are
+      never authored by the user; they are derived automatically from measured
+      consumption and from rated capacities.
+- `_capacity_ratio()`
+    - Returns a scalar input-per-output ratio seeded from rated capacities: the summed
+      rated input capacity of a converter's upstream producers divided by the
+      converter's rated output capacity. This seeds the conversion ratio on the first
+      solver iteration and at zero-output timesteps.
 - `_conversion_ratio()`
     - Returns the per-timestep conversion ratio for a converter. It prefers a measured
       ratio computed from the converter's consumed and produced streams, and falls back
-      to the static ratio from the technology config when a measurement is unavailable.
+      to the capacity-based ratio when a measurement is unavailable.
 - `_accumulate_derived_demand()`
     - Adds the demand derived through a converter (output demand times conversion ratio)
-      to the upstream commodity's demand, warning only when neither a measured nor a
-      static ratio is available.
+      to the upstream commodity's demand, warning only when neither a measured ratio nor
+      a capacity-based ratio is available.
 
 Functions for controlling components based on assigned control classifier.
 - `_subtract_curtailable()`
