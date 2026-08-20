@@ -98,7 +98,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             "electricity_sold",
             val=0.0,
             shape=self.n_timesteps,
-            units=self.commodity_rate_units,
+            units="kW",  # must be kW to interconect w/ cost model
             desc="Electricity sold to the grid",
         )
 
