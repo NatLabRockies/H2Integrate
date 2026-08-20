@@ -5,10 +5,9 @@ import numpy as np
 import pandas as pd
 import requests_cache
 import openmeteo_requests
-from attrs import field, define
+from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.core.validators import range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
@@ -44,7 +43,9 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(1940, datetime.now().year - 1))
+    resource_year: int = field(
+        converter=int, validator=(validators.ge(1940), validators.le(datetime.now().year - 1))
+    )
     include_leap_day: bool = field(default=False)
     dataset_desc: str = "openmeteo_archive_solar"
     resource_type: str = "solar"

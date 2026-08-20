@@ -1,10 +1,9 @@
 import math
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
 from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
@@ -43,13 +42,13 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
             (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
     """
 
-    n_clusters: int = field(validator=gt_zero)
-    location: str = field(validator=contains(["onshore", "offshore"]))
-    cluster_rating_MW: float = field(validator=gt_zero)
-    eol_eff_percent_loss: float = field(validator=gt_zero)
-    uptime_hours_until_eol: int = field(validator=gt_zero)
+    n_clusters: int = field(validator=validators.gt(0))
+    location: str = field(validator=validators.in_(["onshore", "offshore"]))
+    cluster_rating_MW: float = field(validator=validators.gt(0))
+    eol_eff_percent_loss: float = field(validator=validators.gt(0))
+    uptime_hours_until_eol: int = field(validator=validators.gt(0))
     include_degradation_penalty: bool = field()
-    turndown_ratio: float = field(validator=gt_zero)
+    turndown_ratio: float = field(validator=validators.gt(0))
     electrolyzer_capex: int = field()
 
 

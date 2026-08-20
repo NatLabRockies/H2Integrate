@@ -1,9 +1,8 @@
 import pyomo.environ as pyo
-from attrs import field, define
+from attrs import field, define, validators
 from pyomo.network import Port
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, range_val
 from h2integrate.control.control_rules.pyomo_rule_baseclass import (
     PyomoRuleBaseClass,
     PyomoRuleBaseConfig,
@@ -12,13 +11,15 @@ from h2integrate.control.control_rules.pyomo_rule_baseclass import (
 
 @define(kw_only=True)
 class PyomoStorageRuleBaseConfig(PyomoRuleBaseConfig):
-    max_capacity: float = field(validator=gt_zero)
+    max_capacity: float = field(validator=validators.gt(0))
 
-    min_soc_fraction: float = field(default=0.1, validator=range_val(0, 1))
-    max_soc_fraction: float = field(default=0.9, validator=range_val(0, 1))
+    min_soc_fraction: float = field(default=0.1, validator=(validators.ge(0), validators.le(1)))
+    max_soc_fraction: float = field(default=0.9, validator=(validators.ge(0), validators.le(1)))
 
-    charge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
-    discharge_efficiency: float = field(default=0.938, validator=range_val(0, 1))
+    charge_efficiency: float = field(default=0.938, validator=(validators.ge(0), validators.le(1)))
+    discharge_efficiency: float = field(
+        default=0.938, validator=(validators.ge(0), validators.le(1))
+    )
 
 
 class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):

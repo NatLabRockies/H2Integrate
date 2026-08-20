@@ -1,9 +1,8 @@
 import numpy as np
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains, range_val_or_none
 
 
 @define(kw_only=True)
@@ -15,11 +14,14 @@ class GenericSplitterPerformanceConfig(BaseConfig):
     """
 
     split_mode: str = field(
-        converter=(str.lower, str.strip), validator=contains(["prescribed_commodity", "fraction"])
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["prescribed_commodity", "fraction"]),
     )
     commodity: str = field(converter=(str.lower, str.strip))
     commodity_rate_units: str = field()
-    fraction_to_priority_tech: float = field(default=None, validator=range_val_or_none(0, 1))
+    fraction_to_priority_tech: float = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
     prescribed_commodity_to_priority_tech: float = field(default=None)
 
     def __attrs_post_init__(self):

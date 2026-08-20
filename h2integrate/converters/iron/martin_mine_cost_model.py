@@ -1,12 +1,11 @@
 import copy
 
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
@@ -28,14 +27,16 @@ class MartinIronMineCostConfig(BaseConfig):
     max_ore_production_rate_tonnes_per_hr: float = field()
 
     taconite_pellet_type: str = field(
-        converter=(str.lower, str.strip), validator=contains(["std", "drg"])
+        converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
 
-    mine: str = field(validator=contains(["Hibbing", "Northshore", "United", "Minorca", "Tilden"]))
+    mine: str = field(
+        validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
+    )
 
     # the cost model is based on costs from 2021 and can be adjusted to another cost year
     # using CPI adjustment.
-    cost_year: int = field(converter=int, validator=range_val(2010, 2024))
+    cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
 
 
 class MartinIronMineCostComponent(CostModelBaseClass):

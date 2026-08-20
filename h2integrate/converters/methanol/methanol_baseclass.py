@@ -1,15 +1,14 @@
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
 class MethanolPerformanceConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
     capacity_factor: float = field()
     co2e_emit_ratio: float = field()
     h2o_consume_ratio: float = field()
@@ -61,7 +60,7 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
 @define(kw_only=True)
 class MethanolCostConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
     toc_kg_y: float = field()
     foc_kg_y2: float = field()
     voc_kg: float = field()
@@ -115,7 +114,7 @@ class MethanolFinanceConfig(BaseConfig):
     tasc_toc_multiplier: float = field()
     fixed_charge_rate: float = field()
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
 
 
 class MethanolFinanceBaseClass(om.ExplicitComponent):

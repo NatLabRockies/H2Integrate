@@ -1,10 +1,9 @@
 from typing import ClassVar
 
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import gt_zero, contains, gte_zero
 
 
 @define(kw_only=True)
@@ -29,12 +28,12 @@ class SLCSolverOptionsConfig(BaseConfig):
     """
 
     solver_name: str = field(
-        default="gauss_seidel", validator=contains(["gauss_seidel", "newton", "block_jacobi"])
+        default="gauss_seidel", validator=validators.in_(["gauss_seidel", "newton", "block_jacobi"])
     )
-    max_iter: int = field(default=20, converter=int, validator=gte_zero)
+    max_iter: int = field(default=20, converter=int, validator=validators.ge(0))
     atol: float | None = field(default=None)
     rtol: float | None = field(default=None)
-    convergence_tolerance: float = field(default=1e-6, validator=gt_zero)
+    convergence_tolerance: float = field(default=1e-6, validator=validators.gt(0))
     iprint: int = field(default=2)
     solver_option_kwargs: dict = field(default={})
 

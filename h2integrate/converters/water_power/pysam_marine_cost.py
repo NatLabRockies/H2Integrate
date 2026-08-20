@@ -1,8 +1,7 @@
 import PySAM.MhkCosts as MhkCost
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -44,18 +43,18 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
         through the [System Advisor Model](https://sam.nlr.gov/)
     """
 
-    device_rating_kw: float = field(validator=gt_zero)
-    num_devices: int = field(validator=gt_zero)
-    reference_model_number: int = field(validator=contains([1, 2, 3, 5, 6]))
-    water_depth: float = field(validator=gt_zero)
-    distance_to_shore: float = field(validator=gt_zero)
-    number_rows: int = field(validator=gt_zero)
-    device_spacing: float = field(validator=gt_zero)
-    row_spacing: float = field(validator=gt_zero)
-    cable_system_overbuild: float = field(validator=range_val(0, 100))
+    device_rating_kw: float = field(validator=validators.gt(0))
+    num_devices: int = field(validator=validators.gt(0))
+    reference_model_number: int = field(validator=validators.in_([1, 2, 3, 5, 6]))
+    water_depth: float = field(validator=validators.gt(0))
+    distance_to_shore: float = field(validator=validators.gt(0))
+    number_rows: int = field(validator=validators.gt(0))
+    device_spacing: float = field(validator=validators.gt(0))
+    row_spacing: float = field(validator=validators.gt(0))
+    cable_system_overbuild: float = field(validator=(validators.ge(0), validators.le(100)))
     pysam_cost_options: dict = field(default={})
     cost_year: int = field(
-        default=2022, converter=int, validator=must_equal(2022)
+        default=2022, converter=int, validator=validators.in_([2022])
     )  # TODO update based on feedback from SAM team
 
     def __attrs_post_init__(self):

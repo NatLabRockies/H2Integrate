@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gte_zero, range_val
 from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
 
 
@@ -33,11 +32,11 @@ class FlexibleDemandComponentConfig(DemandComponentBaseConfig):
             ``sum({commodity}_flexible_demand_profile)/sum({commodity}_demand)``
     """
 
-    rated_demand: float = field(validator=gte_zero)
-    turndown_ratio: float = field(validator=range_val(0, 1.0))
-    ramp_down_rate_fraction: float = field(validator=range_val(0, 1.0))
-    ramp_up_rate_fraction: float = field(validator=range_val(0, 1.0))
-    min_utilization: float = field(validator=range_val(0, 1.0))
+    rated_demand: float = field(validator=validators.ge(0))
+    turndown_ratio: float = field(validator=(validators.ge(0), validators.le(1)))
+    ramp_down_rate_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    ramp_up_rate_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    min_utilization: float = field(validator=(validators.ge(0), validators.le(1)))
 
 
 class FlexibleDemandComponent(DemandComponentBase):

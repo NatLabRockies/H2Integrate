@@ -4,12 +4,11 @@ from datetime import datetime
 
 import attrs
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path, check_feedstock_dir
-from h2integrate.core.validators import range_val
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
 from h2integrate.core.model_baseclasses import BaseConfig
 
@@ -58,30 +57,26 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             Defaults to 0.0.
     """
 
-    resource_year: int = field(validator=attrs.validators.in_(range(2001, CURRENT_YEAR + 1)))
-    monthly: bool = field(validator=attrs.validators.instance_of(bool))
-    price_category: str = field(
-        converter=str.lower, validator=attrs.validators.in_(eia.EIA_NG_FACET)
-    )
+    resource_year: int = field(validator=validators.in_(range(2001, CURRENT_YEAR + 1)))
+    monthly: bool = field(validator=validators.instance_of(bool))
+    price_category: str = field(converter=str.lower, validator=validators.in_(eia.EIA_NG_FACET))
     api_key_file: str | None = field(default=None, converter=attrs.converters.optional(get_path))
     state: str = field(
         default=None,
         converter=attrs.converters.optional(
             attrs.converters.pipe(geospatial.convert_state_value, geospatial.convert_state_to_code)
         ),
-        validator=attrs.validators.optional(
-            attrs.validators.in_([*geospatial.US_STATE_MAP, *geospatial.US_STATE_MAP.values()])
+        validator=validators.optional(
+            validators.in_([*geospatial.US_STATE_MAP, *geospatial.US_STATE_MAP.values()])
         ),
     )
     latitude: float | None = field(
-        default=None, validator=attrs.validators.optional(range_val(-90.0, 90.0))
+        default=None, validator=validators.optional((validators.ge(-90), validators.le(90)))
     )
     longitude: float | None = field(
-        default=None, validator=attrs.validators.optional(range_val(-180.0, 180.0))
+        default=None, validator=validators.optional((validators.ge(-180), validators.le(180)))
     )
-    site_name: str = field(
-        default=None, validator=attrs.validators.optional(attrs.validators.instance_of(str))
-    )
+    site_name: str = field(default=None, validator=validators.optional(validators.instance_of(str)))
     cost_year: int = field(default=CURRENT_YEAR)
     annual_cost: float = field(default=0.0, converter=float)
     start_up_cost: float = field(default=0.0, converter=float)
@@ -94,7 +89,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     price: np.ndarray = field(
         default=np.zeros(8760, dtype=float),
         init=False,
-        validator=attrs.validators.instance_of(np.ndarray),
+        validator=validators.instance_of(np.ndarray),
     )
 
     def __attrs_post_init__(self):

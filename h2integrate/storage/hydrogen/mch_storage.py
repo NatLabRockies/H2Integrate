@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
@@ -21,9 +20,9 @@ class MCHTOLStorageCostModelConfig(BaseConfig):
     charge_equals_discharge: bool = field(default=True)
 
     commodity_name: str = field(default="hydrogen")
-    commodity_units: str = field(default="kg/h", validator=contains(["kg/h", "g/h", "t/h"]))
+    commodity_units: str = field(default="kg/h", validator=validators.in_(["kg/h", "g/h", "t/h"]))
 
-    cost_year: int = field(default=2024, converter=int, validator=contains([2024]))
+    cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
     marginal_cost: float = field(default=0.0)
 
     def __attrs_post_init__(self):

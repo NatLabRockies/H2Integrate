@@ -1,5 +1,5 @@
 """
-Example 33: Peak load management dispatch
+Example 33: Peak load management storage heuristic dispatch
 
 This example demonstrates:
 1. Peak load management dispatch open loop control with two demand profiles of interest
@@ -32,7 +32,7 @@ from h2integrate.core.utilities import build_time_series_from_plant_config
 
 
 # Create, setup, and run the H2Integrate model
-model = H2IntegrateModel("33_peak_load_management.yaml")
+model = H2IntegrateModel("33_plm_storage_heuristic.yaml")
 
 model.setup()
 model.run()

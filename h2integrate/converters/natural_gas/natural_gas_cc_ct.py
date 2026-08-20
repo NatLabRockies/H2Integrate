@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -28,8 +27,8 @@ class NaturalGasPerformanceConfig(BaseConfig):
             - NGCC: 6-8 MMBtu/MWh
     """
 
-    system_capacity_mw: float = field(validator=gte_zero)
-    heat_rate_mmbtu_per_mwh: float = field(validator=gt_zero)
+    system_capacity_mw: float = field(validator=validators.ge(0))
+    heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
 class NaturalGasPerformanceModel(PerformanceModelBaseClass):
@@ -192,33 +191,23 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
     turbines (NGCT) and natural gas combined cycle (NGCC) plants.
 
     Attributes:
-        system_capacity (float | int): Plant capacity in MW.
-
         capex_per_kw (float|int): Capital cost per unit capacity in $/kW. This includes
             all equipment, installation, and construction costs.
             Typical values:
             - NGCT: 600-2400 $/kW
             - NGCC: 800-2400 $/kW
-
         fixed_opex_per_kw_per_year (float|int): Fixed operating expenses per unit capacity
             in $/kW/year. This includes fixed O&M costs that don't vary with generation.
             Typical values: 5-15 $/kW/year
-
         variable_opex_per_mwh (float|int): Variable operating expenses per unit generation in $/MWh.
             This includes variable O&M costs that scale with electricity generation.
             Typical values: 1-5 $/MWh
-
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh, used for fuel cost calculations.
-            This should match the heat rate used in the performance model.
-
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_mw: float | int = field(validator=gt_zero)
-    capex_per_kw: float | int = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float | int = field(validator=gte_zero)
-    variable_opex_per_mwh: float | int = field(validator=gte_zero)
-    heat_rate_mmbtu_per_mwh: float = field(validator=gt_zero)
+    capex_per_kw: float | int = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
+    variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
 
 
 class NaturalGasCostModel(CostModelBaseClass):
@@ -238,12 +227,11 @@ class NaturalGasCostModel(CostModelBaseClass):
     3. Variable O&M: variable_opex_per_mwh * delivered_electricity_MWh
 
     Inputs:
-        system_capacity (float): Natural gas plant capacity in MW
+        system_capacity (float): Natural gas plant capacity in MW from performance model
         electricity_out (array): Hourly electricity output in MW from performance model
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
         variable_opex_per_mwh (float): Variable operating expenses per unit generation in $/MWh
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh
 
     Outputs:
         CapEx (float): Total capital expenditure in USD
@@ -266,8 +254,8 @@ class NaturalGasCostModel(CostModelBaseClass):
 
         # Add inputs specific to the cost model with config values as defaults
         self.add_input(
-            "system_capacity",
-            val=self.config.system_capacity_mw,
+            "rated_electricity_production",
+            val=0.0,  # switching to expecting this from promotion in the performance/cost complex
             units="MW",
             desc="Natural gas plant capacity",
         )
@@ -296,18 +284,12 @@ class NaturalGasCostModel(CostModelBaseClass):
             units="USD/(MW*h)",
             desc="Variable operating expenses per unit generation",
         )
-        self.add_input(
-            "heat_rate_mmbtu_per_mwh",
-            val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/(MW*h)",
-            desc="Plant heat rate",
-        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Compute capital and operating costs for the natural gas plant.
         """
-        plant_capacity_kw = inputs["system_capacity"] * 1000  # Convert MW to kW
+        plant_capacity_kw = inputs["rated_electricity_production"] * 1000  # Convert MW to kW
         electricity_out = inputs["electricity_out"]  # MW hourly profile
         capex_per_kw = inputs["capex_per_kw"]
         fixed_opex_per_kw_per_year = inputs["fixed_opex_per_kw_per_year"]

@@ -1074,6 +1074,17 @@ class H2IntegrateModel:
             promotes=["*"],
         )
 
+        # Some controllers read performance-model outputs (e.g.
+        # ``rated_<commodity>_production``) as inputs, which creates a
+        # controller<->performance data cycle within the technology group. Add a
+        # nonlinear solver so this coupling is resolved instead of using stale
+        # (default) values on a single execution pass.
+        if model_type == "control_strategy" and getattr(
+            model_object, "_reads_performance_outputs", False
+        ):
+            tech_group.nonlinear_solver = om.NonlinearBlockGS()
+            tech_group.linear_solver = om.DirectSolver()
+
         return om_model_object
 
     def _check_time_step(self, model_name, model_object):
@@ -2291,13 +2302,19 @@ class H2IntegrateModel:
                 continue  # length-3 connections carry no commodity; skip them
             out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
             in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
+            dest_classifier = self.tech_control_classifiers.get(dest)
             for c in commodity:
                 in_commodity_sources.setdefault(dest, {}).update(
                     {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
                 )
-                out_commodity_dests.setdefault(source, {}).update(
-                    {c: out_commodity_dests.get(source, {}).get(c, 0) + 1}
-                )
+                # Demand-classified techs are observers/sinks (they report on a commodity
+                # stream but do not consume it in a topology sense). Exclude them from the
+                # source's output-destination count so that a source may simultaneously
+                # feed a real consumer and a reporting/demand component without triggering
+                # the multi-destination error in Check 3.
+                if dest_classifier != "demand":
+                    current = out_commodity_dests.setdefault(source, {})
+                    current[c] = current.get(c, 0) + 1
 
         # --- Check 2: storage technology topology ---
         storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
@@ -2378,6 +2395,66 @@ class H2IntegrateModel:
                         f"{n_dests} destinations in the technology graph but should "
                         f"send it to at most 1. Consider using a splitter component."
                     )
+
+        # --- Check 4: prevent commodity double-counting via demand components ---
+        # A demand component may receive a commodity and pass it on to a real consumer
+        # (e.g. acting as a profile regularizer). However, if a source does this it
+        # must NOT also send the same commodity directly to another real consumer,
+        # because the flow would be counted twice.
+        #
+        # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
+        # Valid:   source -> demand_comp (pure observer)
+        #          source -> real_consumer
+        # Invalid: source -> real_consumer_A                (competing direct path)
+        #          source -> demand_comp -> real_consumer_B (and also via demand)
+        #
+        # The check is transitive: a demand component "reaches a real consumer" even
+        # when the path passes through a chain of other demand components first.
+
+        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+            visited: set[str] = set()
+            stack = [demand_tech]
+            while stack:
+                node = stack.pop()
+                if node in visited:
+                    continue
+                visited.add(node)
+                for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
+                    if not c:
+                        continue
+                    if self.tech_control_classifiers.get(d) != "demand":
+                        return True
+                    stack.append(d)
+            return False
+
+        # Build per-(source, commodity) destination lists from L4 edges.
+        source_commodity_dests: dict[tuple[str, str], list[str]] = {}
+        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
+            if not commodity:
+                continue
+            for c in commodity:
+                source_commodity_dests.setdefault((source, c), []).append(dest)
+
+        for (source, commodity), dests in source_commodity_dests.items():
+            direct_real_dests = [
+                d for d in dests if self.tech_control_classifiers.get(d) != "demand"
+            ]
+            outputting_demand_dests = [
+                d
+                for d in dests
+                if self.tech_control_classifiers.get(d) == "demand"
+                and _demand_reaches_real_consumer(d)
+            ]
+            if direct_real_dests and outputting_demand_dests:
+                raise ValueError(
+                    f"Technology {source!r} sends commodity {commodity!r} both directly "
+                    f"to {direct_real_dests} and to demand component(s) "
+                    f"{outputting_demand_dests} that re-emit the commodity to real "
+                    f"consumers. This would double-count the commodity flow. Either route "
+                    f"all {commodity!r} from {source!r} through the demand component, or "
+                    f"connect the downstream consumers directly to {source!r} instead."
+                )
 
     def _check_tech_connections(self):
         """Check that commodity streams between technologies are valid.

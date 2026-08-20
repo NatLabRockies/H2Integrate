@@ -478,7 +478,7 @@ def test_plm_controller_basic_discharge_before_peak(subtests, tech_config_base, 
         "demand_profile": np.concatenate(
             (np.full(10, 10.0), np.full(4, 50.0), np.full(10, 10.0))
         ),  # Peak at hours 10-14
-        "peak_range": {"start": "10:00:00", "end": "14:00:00"},
+        "peak_range": {"start": 36000, "end": 50400},
         "advance_discharge_period": {"units": "h", "val": 2},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": False,
@@ -560,7 +560,7 @@ def test_plm_controller_respects_soc_bounds(subtests, tech_config_base, plant_co
         "charge_efficiency": 0.9,
         "discharge_efficiency": 0.9,
         "demand_profile": [5.0] * 12,
-        "peak_range": {"start": "06:00:00", "end": "09:00:00"},
+        "peak_range": {"start": 21600, "end": 32400},
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,
@@ -621,8 +621,8 @@ def test_plm_controller_blocking_charge_in_peak_range(
     """Test PLM controller blocks charging during peak window when configured."""
     tech_config = tech_config_base
 
-    peak_window_start = "10:00:00"
-    peak_window_end = "14:00:00"
+    peak_window_start = 36000
+    peak_window_end = 50400
 
     tech_config["technologies"]["h2_storage"]["model_inputs"]["shared_parameters"] = {
         "commodity": "hydrogen",
@@ -717,7 +717,7 @@ def test_plm_controller_warns_when_requested_charge_exceeds_input(
         "discharge_efficiency": 0.95,
         "demand_profile": np.full(24, 1.0),
         "demand_profile_upstream": None,
-        "peak_range": {"start": "23:00:00", "end": "23:59:59"},
+        "peak_range": {"start": 82800, "end": 86399},
         "advance_discharge_period": {"units": "h", "val": 1},
         "delay_charge_period": {"units": "h", "val": 1},
         "allow_charge_in_peak_range": True,

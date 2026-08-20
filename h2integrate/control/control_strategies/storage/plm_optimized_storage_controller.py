@@ -5,11 +5,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 from pyomo.opt import SolverStatus, TerminationCondition
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import range_val
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     SolverOptions,
@@ -79,11 +78,13 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
     peak_window: dict = field()
     performance_incentive: float = field(default=None)
     performance_incentive_per_event: float = field(default=None)
-    charge_efficiency: float = field(validator=range_val(0, 1), default=1.0)
-    discharge_efficiency: float = field(validator=range_val(0, 1), default=1.0)
+    charge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=1.0)
+    discharge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=1.0)
     n_max_events: int = field(default=10)
     n_control_window_hours: float = field(default=24.0)
-    signal_threshold_percentile: float = field(default=0.0, validator=range_val(0, 100))
+    signal_threshold_percentile: float = field(
+        default=0.0, validator=(validators.ge(0), validators.le(100))
+    )
     event_duration: dict = field(default=None)
     min_peak_separation: dict = field(default=None)
 

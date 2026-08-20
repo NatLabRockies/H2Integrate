@@ -17,10 +17,9 @@ Classes:
 """
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, must_equal
 from h2integrate.tools.constants import FE_MW, faraday
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
@@ -51,10 +50,12 @@ class HumbertStinnEwinCostConfig(CostModelBaseConfig):
     """
 
     electrolysis_type: str = field(
-        kw_only=True, converter=(str.lower, str.strip), validator=contains(["ahe", "mse", "moe"])
+        kw_only=True,
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["ahe", "mse", "moe"]),
     )  # product selection
     # Set cost year to 2018 - fixed for Stinn modeling
-    cost_year: int = field(default=2018, converter=int, validator=must_equal(2018))
+    cost_year: int = field(default=2018, converter=int, validator=validators.in_([2018]))
     labor_rate_cost: float = field(default=55.90)
     anode_cost_per_tonne: float = field(default=1660.716)
     annual_labor_hours_per_position: int | float = field(default=2000)

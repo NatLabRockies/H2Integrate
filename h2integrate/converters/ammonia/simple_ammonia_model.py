@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -104,7 +103,7 @@ class AmmoniaCostModelConfig(CostModelBaseConfig):
     iron_based_catalyst_consumption: float = field()
     oxygen_byproduct: float = field()
     capex_scaling_exponent: float = field()
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
 class SimpleAmmoniaCostModel(CostModelBaseClass):

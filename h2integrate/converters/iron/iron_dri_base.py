@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -286,8 +285,8 @@ class IronReductionCostBaseConfig(CostModelBaseConfig):
 
     sponge_iron_production_rate_tonnes_per_hr: float = field()
     cost_year: int = field(converter=int)
-    skilled_labor_cost: float = field(validator=gte_zero)
-    unskilled_labor_cost: float = field(validator=gte_zero)
+    skilled_labor_cost: float = field(validator=validators.ge(0))
+    unskilled_labor_cost: float = field(validator=validators.ge(0))
 
 
 class IronReductionPlantBaseCostComponent(CostModelBaseClass):

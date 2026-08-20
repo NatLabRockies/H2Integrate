@@ -1,8 +1,7 @@
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 
 
 @define(kw_only=True)
@@ -17,7 +16,7 @@ class GenericSummerPerformanceConfig(BaseConfig):
     operation_mode: str = field(
         default="production",
         converter=(str.lower, str.strip),
-        validator=contains(["production", "consumption"]),
+        validator=validators.in_(["production", "consumption"]),
     )
 
 

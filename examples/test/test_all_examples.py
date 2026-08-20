@@ -2988,12 +2988,13 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("33_peak_load_management", None)]
+    "example_folder,resource_example_folder",
+    [("33_peak_load_management_heuristics/plm_storage", None)],
 )
 def test_peak_load_management_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(example_folder / "33_peak_load_management.yaml")
+    model = H2IntegrateModel(example_folder / "33_plm_storage_heuristic.yaml")
     model.setup()
     model.run()
 
@@ -3030,6 +3031,55 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         )
         grid_purchase = model.prob.get_val("grid_buy.electricity_out", units="kW")
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder,expected",
+    [
+        (
+            "33_peak_load_management_heuristics/plm_converter/commodity_peak_driven_mode",
+            None,
+            {"command_sum": 778276.0, "command_max": 519.0, "nonzero_dispatch": 3648},
+        ),
+        (
+            "33_peak_load_management_heuristics/plm_converter/price_peak_driven_mode",
+            None,
+            {"command_sum": 39615.0, "command_max": 140.0, "nonzero_dispatch": 516},
+        ),
+    ],
+    ids=["commodity_peak_driven_mode", "price_peak_driven_mode"],
+)
+def test_plm_converter_heuristic_example(subtests, temp_copy_of_example, expected):
+    example_folder = temp_copy_of_example
+
+    model = H2IntegrateModel(example_folder / "33_plm_converter_heuristic.yaml")
+    model.setup()
+    model.run()
+
+    command = model.prob.get_val("fuel_cell.electricity_command_value", units="kW")
+    electricity_out = model.prob.get_val("fuel_cell.electricity_out", units="kW")
+    unmet = model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="kW")
+    grid_purchase = model.prob.get_val("grid_buy.electricity_out", units="kW")
+    rated = model.prob.get_val("fuel_cell.rated_electricity_production", units="kW")
+
+    with subtests.test("Fuel-cell command sum"):
+        assert command.sum() == pytest.approx(expected["command_sum"], rel=1e-6)
+
+    with subtests.test("Fuel-cell output matches command"):
+        np.testing.assert_allclose(electricity_out, command, rtol=1e-9)
+
+    with subtests.test("Fuel-cell command max"):
+        assert command.max() == pytest.approx(expected["command_max"], rel=1e-6)
+
+    with subtests.test("Unmet demand equals grid purchase"):
+        assert unmet.sum() == pytest.approx(grid_purchase.sum(), rel=1e-9)
+
+    with subtests.test("Rated fuel-cell production"):
+        assert rated[0] == pytest.approx(1000.0, rel=1e-9)
+
+    with subtests.test("Nonzero dispatch timesteps"):
+        assert np.sum(command > 0) == expected["nonzero_dispatch"]
 
 
 @pytest.mark.integration
