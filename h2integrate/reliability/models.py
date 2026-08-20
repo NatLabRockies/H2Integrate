@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Any
 
 import numpy as np
 from attrs import field, define, validators
@@ -68,7 +67,7 @@ class BaseReliability(BaseConfig):
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
-        accumulated = np.zeros_like(self.shape, dtype=int)
+        accumulated = np.zeros((self.n_components, 1), dtype=int)
         while any(accumulated < N_TIMESTEPS):
             if not self.time_to_failures.size == 0:
                 self.create_downtime_events()
@@ -163,10 +162,13 @@ class LogNormalDowntime(BaseDowntime):
             raise ValueError(msg)
 
     def __attrs_post_init__(self):
-        if self.mean.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.mean = np.broadcast_to(self.mean, shape)
-            self.sigma = np.broadcast_to(self.sigma, shape)
+        if self.mean.size == 1:
+            if self.n_components > 1:
+                shape = (self.n_components, 1)
+                self.mean = np.broadcast_to(self.mean, shape)
+                self.sigma = np.broadcast_to(self.sigma, shape)
+            else:
+                self.n_components = 1
 
     def sample_downtime(self) -> np.ndarray:
         """Return an array of 100 samples of each lognormal distribution."""
@@ -209,6 +211,7 @@ class WeibullReliability(BaseReliability):
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: int | BaseDowntime = field(converter=generate_downtime_model)
+
     time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
@@ -217,10 +220,13 @@ class WeibullReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
-        if self.scale.size == 1 and self.n_components > 1:
-            shape = (self.n_components, 1)
-            self.scale = np.broadcast_to(self.scale, shape)
-            self.shape = np.broadcast_to(self.shape, shape)
+        if self.scale.size == 1:
+            if self.n_components > 1:
+                shape = (self.n_components, 1)
+                self.scale = np.broadcast_to(self.scale, shape)
+                self.shape = np.broadcast_to(self.shape, shape)
+            else:
+                self.n_components = 1
 
         self.availability = np.ones((self.scale.size, N_TIMESTEPS), dtype=float)
         self.create_downtime_events()
@@ -249,27 +255,56 @@ class FixedIntervalReliability(BaseReliability):
             interval period to offset events from being based on January 1st in an 8760.
         downtime (int | float | dict): Either fixed length of each downtime, in hours, or a
             configuration dictionary for a downtime length model.
-
     """
 
-    frequency: float = field(validator=(validators.instance_of((float, int)), validators.gt(0)))
-    downtime: Any = field(converter=generate_downtime_model)
+    frequency: float = field(
+        converter=float_array_converter,
+        validator=validators.instance_of(np.ndarray),
+    )
+    downtime: int | BaseDowntime = field(converter=generate_downtime_model)
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
-    availability: np.ndarray = field(
-        default=np.ones(N_TIMESTEPS), init=False, validator=validators.instance_of(np.ndarray)
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
+
+    time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
+    availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
+    system_availability: np.ndarray = field(
+        init=False, validator=validators.instance_of(np.ndarray)
     )
 
     def __attrs_post_init__(self):
+        if self.frequency.size == 1:
+            if self.n_components > 1:
+                shape = (self.n_components, 1)
+                self.frequency = np.broadcast_to(self.frequency, shape)
+            else:
+                self.n_components = 1
+
+        self.availability = np.ones((self.frequency.size, N_TIMESTEPS), dtype=float)
         self.create_downtime_events()
         self.calculate_availability()
 
+    @frequency.validator
+    def validate_frequency(self, attribute, value):
+        """Validates all passed values to :py:attr:`frequency` are greater than 0."""
+        if any(value <= 0):
+            raise ValueError("All values of 'frequency' must be greater than 0.")
+
     def sample_events(self):
-        frequency = np.array([0.1, 20, 30]).reshape(-1, 1)
-        interval = np.ceil(8760 / frequency).astype(int)
+        """Creates the time to next failure array for each event's modality with the first event
+        occurring randomly either in the first year or first failure interval, whichever
+        comes first.
+
+        Returns:
+            time_to_failures (np.ndarray): An array of the next 100 events' time to next failure.
+        """
+        interval = np.ceil(8760 / (1 / self.frequency)).astype(int)
         first_occurrence = rng.integers(0, np.where(interval > 8760, 8760, interval))
-        return first_occurrence, interval
+        time_to_failures = np.hstack(
+            (first_occurrence, np.broadcast_to(interval, (interval.size, 99)))
+        )
+        return time_to_failures
 
     def create_downtime_events(self):
         """Creates a ``time_to_failure`` and ``downtime_per_event``."""
-        self.first_occurrence, self.interval = self.sample_events()
+        self.time_to_failures = self.sample_events()
         self.downtime_per_event = self.downtime.sample_downtime()
