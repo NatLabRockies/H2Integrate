@@ -1,8 +1,7 @@
 import ProFAST
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.converters.steel.steel_baseclass import (
     SteelCostBaseClass,
     SteelPerformanceBaseClass,
@@ -58,7 +57,7 @@ class SteelCostAndFinancialModelConfig(BaseConfig):
     # Financial parameters - flattened from the nested structure
     grid_prices: dict = field()
     financial_assumptions: dict = field()
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
     # Feedstock parameters - flattened from the nested structure
     excess_oxygen: float = field(default=395)
@@ -303,7 +302,6 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         analysis_start = int([*self.config.grid_prices][0]) - int(
             self.config.installation_time / 12
         )
-        plant_life = self.options["plant_config"]["plant"]["plant_life"]
 
         # Fill these in - can have most of them as 0 also
         pf.set_params(
@@ -318,7 +316,7 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         pf.set_params("capacity", self.config.plant_capacity_mtpy / 365)  # units/day
         pf.set_params("maintenance", {"value": 0, "escalation": self.config.inflation_rate})
         pf.set_params("analysis start year", analysis_start)
-        pf.set_params("operating life", plant_life)
+        pf.set_params("operating life", self.plant_life)
         pf.set_params("installation months", self.config.installation_time)
         pf.set_params(
             "installation cost",
@@ -332,7 +330,7 @@ class SteelCostAndFinancialModel(SteelCostBaseClass):
         pf.set_params("non depr assets", land_cost)
         pf.set_params(
             "end of proj sale non depr assets",
-            land_cost * (1 + self.config.inflation_rate) ** plant_life,
+            land_cost * (1 + self.config.inflation_rate) ** self.plant_life,
         )
         pf.set_params("demand rampup", 5.3)
         pf.set_params("long term utilization", self.config.capacity_factor)

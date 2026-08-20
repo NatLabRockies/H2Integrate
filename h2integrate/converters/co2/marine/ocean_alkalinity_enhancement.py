@@ -1,8 +1,7 @@
-from attrs import field, define
+from attrs import field, define, validators
 from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val, must_equal
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -47,20 +46,20 @@ class OAEPerformanceConfig(BaseConfig):
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
-    number_ed_min: int = field(validator=gt_zero)
-    number_ed_max: int = field(validator=gt_zero)
+    number_ed_min: int = field(validator=validators.gt(0))
+    number_ed_max: int = field(validator=validators.gt(0))
     use_storage_tanks: bool = field()
-    store_hours: float = field(validator=gte_zero)
-    assumed_CDR_rate: float = field(validator=range_val(0, 1))
-    frac_base_flow: float = field(validator=range_val(0, 1))
-    max_ed_system_flow_rate_m3s: float = field(validator=gt_zero)
-    initial_temp_C: float = field(validator=gte_zero)
-    initial_salinity_ppt: float = field(validator=gte_zero)
-    initial_dic_mol_per_L: float = field(validator=gte_zero)
-    initial_pH: float = field(validator=gte_zero)
-    initial_tank_volume_m3: float = field(validator=gte_zero)
+    store_hours: float = field(validator=validators.ge(0))
+    assumed_CDR_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    frac_base_flow: float = field(validator=(validators.ge(0), validators.le(1)))
+    max_ed_system_flow_rate_m3s: float = field(validator=validators.gt(0))
+    initial_temp_C: float = field(validator=validators.ge(0))
+    initial_salinity_ppt: float = field(validator=validators.ge(0))
+    initial_dic_mol_per_L: float = field(validator=validators.ge(0))
+    initial_pH: float = field(validator=validators.ge(0))
+    initial_tank_volume_m3: float = field(validator=validators.ge(0))
     acid_disposal_method: str = field(
-        validator=contains(["sell acid", "sell rca", "acid disposal"])
+        validator=validators.in_(["sell acid", "sell rca", "acid disposal"])
     )
     save_outputs: bool = field(default=False)
     save_plots: bool = field(default=False)
@@ -73,6 +72,7 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -252,7 +252,7 @@ class OAECostModelConfig(CostModelBaseConfig):
         cost_year (int): dollar year corresponding to cost values
     """
 
-    cost_year: int = field(default=2024, converter=int, validator=must_equal(2024))
+    cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
 
 
 class OAECostModel(CostModelBaseClass):
@@ -280,12 +280,11 @@ class OAECostModel(CostModelBaseClass):
                 additional_cls_name=self.__class__.__name__,
             )
         super().setup()
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
             "annual_co2_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="t/year",
         )
         self.add_input(
@@ -377,13 +376,11 @@ class OAECostAndFinancialModel(CostModelBaseClass):
                 additional_cls_name=self.__class__.__name__,
             )
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         self.add_input(
             "annual_co2_produced",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="t/year",
             desc="Annual co2 captured",
         )
@@ -396,14 +393,14 @@ class OAECostAndFinancialModel(CostModelBaseClass):
         self.add_input(
             "annual_input_electricity",
             val=0.0,
-            shape=plant_life,
+            shape=self.plant_life,
             units="kW*h/year",
             desc="Annual energy input to the OAE",
         )
         self.add_input(
             "unused_energy",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kW",
             desc="Unused energy unused by OAE system",
         )

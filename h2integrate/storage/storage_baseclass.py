@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -12,7 +11,7 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
     Configuration class for the StoragePerformanceBase model.
 
-     Attributes:
+    Attributes:
         min_soc_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
         max_soc_fraction (float): Maximum allowable state of charge as a fraction (0 to 1).
         demand_profile (int | float | list): Demand values for each timestep, in
@@ -21,8 +20,8 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
 
     # Below are used in all storage models
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    max_soc_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    max_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     demand_profile: int | float | list = field()
 
 
@@ -50,6 +49,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         1,
         36000,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "storage"
 
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
@@ -110,7 +110,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Storage design outputs:
         default_storage_duration = 0.0
         if hasattr(self.config, "max_charge_rate") and hasattr(self.config, "max_capacity"):
-            default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
+            if self.config.max_charge_rate > 0:
+                default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
 
         self.add_output(
             "storage_duration",
@@ -165,21 +166,21 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             ]:
                 if any(intended_dispatch_tech == name for name in self.tech_group_name):
                     self.add_input(
-                        f"{commodity}_demand",
+                        f"{commodity}_set_point",
                         val=self.config.demand_profile,
                         shape=n_timesteps,
                         units=commodity_rate_units,
-                        desc=f"{commodity} demand profile",
+                        desc=f"{commodity} set-point profile",
                     )
                     self.add_discrete_input("pyomo_dispatch_solver", val=lambda: None)
-                    # the controller gets demand from the storage model
+                    # the controller gets set-point from the storage model
                     # set the using feedback control variable to True
                     using_feedback_control = True
                     break
         if not using_feedback_control:
             # using an open-loop storage controller
             self.add_input(
-                f"{commodity}_set_point",
+                f"{commodity}_command_value",
                 val=0.0,
                 shape=n_timesteps,
                 units=commodity_rate_units,
@@ -273,7 +274,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         else:
             storage_commodity_out, soc = self.simulate(
-                storage_dispatch_commands=inputs[f"{self.commodity}_set_point"],
+                storage_dispatch_commands=inputs[f"{self.commodity}_command_value"],
                 charge_rate=charge_rate,
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,

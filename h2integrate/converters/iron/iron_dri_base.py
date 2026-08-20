@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -34,6 +33,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -43,7 +43,6 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = IronReductionPerformanceBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -63,25 +62,25 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for iron reduction",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for iron reduction",
             )
 
-        # Default the sponge iron set point input as the rated capacity
+        # Default the sponge iron command value input as the rated capacity
         self.add_input(
-            "sponge_iron_set_point",
+            "sponge_iron_command_value",
             val=self.config.sponge_iron_production_rate_tonnes_per_hr,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
-            desc="Pig iron set point for iron plant",
+            desc="Pig iron command value for iron plant",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "perf_coeffs.csv"
@@ -224,20 +223,20 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 feedstocks["Name"] == "Reformer Catalyst"
             ]["Value"].sum()
 
-        # sponge iron set point, saturated at maximum rated system capacity
-        sponge_iron_set_point = np.where(
-            inputs["sponge_iron_set_point"] > inputs["system_capacity"],
+        # sponge iron command value, saturated at maximum rated system capacity
+        sponge_iron_command_value = np.where(
+            inputs["sponge_iron_command_value"] > inputs["system_capacity"],
             inputs["system_capacity"],
-            inputs["sponge_iron_set_point"],
+            inputs["sponge_iron_command_value"],
         )
 
         # initialize an array of how much sponge iron could be produced
-        # from the available feedstocks and the set point
+        # from the available feedstocks and the command value
         sponge_iron_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_rates) + 1, len(inputs["sponge_iron_set_point"]))
+            (len(feedstocks_usage_rates) + 1, len(inputs["sponge_iron_command_value"]))
         )
-        # first entry is the sponge iron set point
-        sponge_iron_from_feedstocks[0] = sponge_iron_set_point
+        # first entry is the sponge iron command value
+        sponge_iron_from_feedstocks[0] = sponge_iron_command_value
         ii = 1
         for feedstock_type, consumption_rate in feedstocks_usage_rates.items():
             # calculate max inputs/outputs based on rated capacity
@@ -286,8 +285,8 @@ class IronReductionCostBaseConfig(CostModelBaseConfig):
 
     sponge_iron_production_rate_tonnes_per_hr: float = field()
     cost_year: int = field(converter=int)
-    skilled_labor_cost: float = field(validator=gte_zero)
-    unskilled_labor_cost: float = field(validator=gte_zero)
+    skilled_labor_cost: float = field(validator=validators.ge(0))
+    unskilled_labor_cost: float = field(validator=validators.ge(0))
 
 
 class IronReductionPlantBaseCostComponent(CostModelBaseClass):
@@ -306,8 +305,6 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-
         config_dict = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost")
 
         if "cost_year" in config_dict:
@@ -352,7 +349,7 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
         self.add_input(
             "sponge_iron_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="t/h",
             desc="Pig iron produced",
         )

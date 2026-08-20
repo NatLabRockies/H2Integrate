@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
 from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
@@ -42,10 +41,18 @@ class SimpleASUPerformanceConfig(BaseConfig):
     rated_N2_kg_pr_hr: float | None = field(default=None)
     ASU_rated_power_kW: float | None = field(default=None)
 
-    N2_fraction_in_air: float = field(default=0.7811, validator=range_val(0, 1))
-    O2_fraction_in_air: float = field(default=0.2096, validator=range_val(0, 1))
-    Ar_fraction_in_air: float = field(default=0.0093, validator=range_val(0, 1))
-    efficiency_kWh_pr_kg_N2: float = field(default=0.29, validator=range_val(0.10, 0.50))
+    N2_fraction_in_air: float = field(
+        default=0.7811, validator=(validators.ge(0), validators.le(1))
+    )
+    O2_fraction_in_air: float = field(
+        default=0.2096, validator=(validators.ge(0), validators.le(1))
+    )
+    Ar_fraction_in_air: float = field(
+        default=0.0093, validator=(validators.ge(0), validators.le(1))
+    )
+    efficiency_kWh_pr_kg_N2: float = field(
+        default=0.29, validator=(validators.ge(0.1), validators.le(0.5))
+    )
     # 0.29 is efficiency of pressure swing absorption
     # 0.119 is efficiency of cryogenic
 
@@ -69,6 +76,7 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -79,19 +87,18 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = SimpleASUPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
         if self.config.size_from_N2_demand:
-            self.add_input("nitrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
-            self.add_output("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_input("nitrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+            self.add_output("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
         else:
-            self.add_input("electricity_in", val=0.0, shape=n_timesteps, units="kW")
+            self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
 
-        self.add_output("air_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_output("air_in", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("ASU_capacity_kW", val=0.0, units="kW", desc="ASU rated capacity in kW")
 
         self.add_output(
@@ -101,8 +108,8 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
             desc="ASU annual electricity consumption in kWh/year",
         )
 
-        self.add_output("oxygen_out", val=0.0, shape=n_timesteps, units="kg/h")
-        self.add_output("argon_out", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_output("oxygen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("argon_out", val=0.0, shape=self.n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         """Calculate the amount of N2 that can be produced and the amount of feedstocks required
@@ -225,10 +232,10 @@ def make_cost_unit_multiplier(unit_str):
         unit_str (str): The unit string, e.g., "kw", "mw", "kg/hour", "tonne/day", etc.
 
     Returns:
-        tuple: (conversion_multiplier, unit_type)
-            conversion_multiplier (float): Multiplier to convert the input unit to
-                the model's base unit.
-            unit_type (str): "power" if the unit is power-based, "mass" if mass-based.
+        tuple: ``(conversion_multiplier, unit_type)`` where ``conversion_multiplier``
+        (float) is the multiplier to convert the input unit to the model's base unit and
+        ``unit_type`` (str) is ``"power"`` if the unit is power-based, or ``"mass"`` if
+        mass-based.
 
     Notes:
         - For "mw", the multiplier converts MW to kW.
@@ -261,14 +268,16 @@ class SimpleASUCostConfig(CostModelBaseConfig):
     capex_usd_per_unit: float = field()
 
     capex_unit: str = field(
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
+        validator=validators.in_(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
         converter=(str.strip, str.lower),
     )
 
     opex_usd_per_unit_per_year: float = field(default=0.0)
     opex_unit: str = field(
         default="none",
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]),
+        validator=validators.in_(
+            ["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]
+        ),
         converter=(str.strip, str.lower),
     )
 

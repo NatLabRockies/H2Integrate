@@ -1,15 +1,14 @@
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
 class MethanolPerformanceConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
     capacity_factor: float = field()
     co2e_emit_ratio: float = field()
     h2o_consume_ratio: float = field()
@@ -38,6 +37,7 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -60,7 +60,7 @@ class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
 @define(kw_only=True)
 class MethanolCostConfig(BaseConfig):
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
     toc_kg_y: float = field()
     foc_kg_y2: float = field()
     voc_kg: float = field()
@@ -98,13 +98,12 @@ class MethanolCostBaseClass(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         super().setup()
         self.add_input("toc_kg_y", units="USD/kg/year", val=self.config.toc_kg_y)
         self.add_input("foc_kg_y2", units="USD/kg/year**2", val=self.config.foc_kg_y2)
         self.add_input("voc_kg", units="USD/kg", val=self.config.voc_kg)
         self.add_input("plant_capacity_kgpy", units="kg/year", val=self.config.plant_capacity_kgpy)
-        self.add_input("methanol_out", shape=n_timesteps, units="kg/h")
+        self.add_input("methanol_out", shape=self.n_timesteps, units="kg/h")
 
         self.add_output("Fixed_OpEx", units="USD/year")
         self.add_output("Variable_OpEx", units="USD/year")
@@ -115,7 +114,7 @@ class MethanolFinanceConfig(BaseConfig):
     tasc_toc_multiplier: float = field()
     fixed_charge_rate: float = field()
     plant_capacity_kgpy: float = field()
-    plant_capacity_flow: str = field(validator=contains(["hydrogen", "methanol"]))
+    plant_capacity_flow: str = field(validator=validators.in_(["hydrogen", "methanol"]))
 
 
 class MethanolFinanceBaseClass(om.ExplicitComponent):
@@ -146,7 +145,9 @@ class MethanolFinanceBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         self.add_input("CapEx", units="USD", val=1.0, desc="Total capital expenditure in USD.")
         self.add_input(
             "OpEx", units="USD/year", val=1.0, desc="Total operational expenditure in USD/year."
@@ -177,7 +178,7 @@ class MethanolFinanceBaseClass(om.ExplicitComponent):
         )
         self.add_input(
             "methanol_out",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/h",
             desc="Methanol production rate in kg/h over n_timesteps hours.",
         )

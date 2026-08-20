@@ -4,22 +4,64 @@ import numpy as np
 import pandas as pd
 import openmdao.api as om
 import numpy_financial as npf
-from attrs import field, define
+from attrs import field, define, validators
+from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.finances.tools import check_plant_config_and_profast_params
-from h2integrate.core.validators import gte_zero, range_val
+from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
 
 
 @define(kw_only=True)
 class NumpyFinancialNPVFinanceConfig(BaseConfig):
     """Configuration for NumpyFinancialNPVFinance.
 
+    Future cash flows are discounted using the nominal, pre-tax weighted average
+    cost of capital (WACC):
+
+        WACC = equity_weight * equity_rate + debt_weight * debt_rate
+
+    where the equity and debt weights are derived from ``debt_equity_ratio``
+    (``D/E``) as ``equity_weight = 1 / (1 + D/E)`` and
+    ``debt_weight = (D/E) / (1 + D/E)``. ``real_discount_rate`` is treated as
+    the real equity rate and ``debt_rate`` as the real debt rate; both are
+    converted from real to nominal via the Fisher equation before being
+    combined:
+
+        (1 + nominal_rate) = (1 + real_rate) * (1 + inflation_rate)
+
+    The WACC is pre-tax: no interest tax shield is applied to the debt leg, which
+    keeps the discount rate consistent with the pre-tax cash flows used by this
+    component (revenues and costs are not tax-adjusted).
+
+    The multiplicative (Fisher) form is the exact relationship between real and
+    nominal rates and matches how ProFAST combines its real rates and
+    ``general_inflation`` inputs, keeping the two finance backends consistent.
+    When ``inflation_rate`` is 0 (the default), the real rates are used as-is
+    (and should be nominal rates if inflation effects are desired).
+
     Attributes:
         plant_life (int): operating life of plant in years
-        discount_rate (float): discount rate, expressed as a fraction between 0 and 1.
+        real_discount_rate (float): real equity rate (cost of equity), expressed as
+            a fraction between 0 and 1. Can be either a real or nominal rate depending
+            on how ``inflation_rate`` is specified. A pre-computed WACC can also be
+            supplied directly here by leaving ``debt_equity_ratio`` at 0.0 (so the
+            WACC reduces to this rate) and setting ``inflation_rate`` to 0.0 (so it is
+            used as-is without further Fisher adjustment).
+        debt_rate (float, optional): real debt rate (cost of debt), expressed as a
+            fraction between 0 and 1. Converted to nominal via the Fisher equation
+            when ``inflation_rate`` is provided. Defaults to 0.0.
+        debt_equity_ratio (float, optional): ratio of debt to equity (``D/E``) used
+            to weight the debt and equity contributions to the WACC. Defaults to 0.0,
+            in which case the WACC reduces to the equity rate.
+        inflation_rate (float, optional): inflation rate, expressed as a fraction
+            between 0 and 1. Combined with the real equity and debt rates via the
+            Fisher equation to form the nominal rates used in the WACC. Defaults to
+            0.0, in which case the real rates are used as-is (and should be nominal
+            rates if inflation effects are desired).
         commodity_sell_price (int | float, optional): sell price of commodity in
             USD/unit of commodity. Defaults to 0.0
+        commodity_sell_price_units (str): OpenMDAO unit string for ``commodity_sell_price``
+            (e.g. ``"USD/(kW*h)"`` for electricity or ``"USD/kg"`` for hydrogen). Required.
         save_cost_breakdown (bool, optional): whether to save the cost breakdown per year.
             Defaults to False.
         save_npv_breakdown (bool, optional): whether to save the npv breakdown per technology.
@@ -29,9 +71,13 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
             ``save_npv_breakdown`` is True. Defaults to 'default'.
     """
 
-    plant_life: int = field(converter=int, validator=gte_zero)
-    discount_rate: float = field(validator=range_val(0, 1))
+    plant_life: int = field(converter=int, validator=validators.ge(0))
+    real_discount_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    debt_rate: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
+    debt_equity_ratio: float = field(default=0.0, validator=validators.ge(0))
+    inflation_rate: float = field(default=0.0, validator=(validators.ge(0), validators.le(1)))
     commodity_sell_price: int | float = field(default=0.0)
+    commodity_sell_price_units: str = field()
     save_cost_breakdown: bool = field(default=False)
     save_npv_breakdown: bool = field(default=False)
     cost_breakdown_file_description: str = field(default="default")
@@ -86,30 +132,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.NPV_str = f"NPV_{commodity_type}{suffix}"
         self.output_txt = f"{commodity_type}{suffix}"
 
-        # TODO: update below with standardized naming
-        if self.options["commodity_type"] == "electricity":
-            commodity_price_units = "USD/(kW*h)"
-            commodity_rate_units = "kW"
-        else:
-            commodity_price_units = "USD/kg"
-            commodity_rate_units = "kg/h"
-
         self.add_output(self.NPV_str, val=0.0, units="USD")
-
-        self.add_input(
-            f"rated_{self.options['commodity_type']}_production",
-            val=0.0,
-            units=commodity_rate_units,
-            shape=1,
-            require_connection=True,
-        )
-        self.add_input(
-            "capacity_factor",
-            val=0.0,
-            units="unitless",
-            shape=plant_life,
-            require_connection=True,
-        )
 
         plant_config = self.options["plant_config"]
         finance_params = plant_config["finance_parameters"]["model_inputs"]
@@ -122,6 +145,25 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.config = NumpyFinancialNPVFinanceConfig.from_dict(
             finance_params,
             additional_cls_name=self.__class__.__name__,
+        )
+
+        rate_units = _compute_rate_units(
+            self.config.commodity_sell_price_units, check_conversion=False
+        )
+
+        self.add_input(
+            f"rated_{self.options['commodity_type']}_production",
+            val=0.0,
+            units=rate_units,
+            shape=1,
+            require_connection=True,
+        )
+        self.add_input(
+            "capacity_factor",
+            val=0.0,
+            units="unitless",
+            shape=plant_life,
+            require_connection=True,
         )
 
         tech_config = self.tech_config = self.options["tech_config"]
@@ -141,7 +183,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         self.add_input(
             f"sell_price_{self.output_txt}",
             val=self.config.commodity_sell_price,
-            units=commodity_price_units,
+            units=self.config.commodity_sell_price_units,
         )
 
     def compute(self, inputs, outputs):
@@ -176,17 +218,31 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             FileNotFoundError: If the specified output directory cannot be created.
             ValueError: If refurbishment schedules cannot be derived from inputs.
         """
+        io_meta_data = self.get_io_metadata()
+        self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
+        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        rate_units_from_price = _compute_rate_units(self.price_units, check_conversion=False)
+
+        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
+        if float(conversion_ratio) != 1.0:
+            capacity = convert_units(
+                inputs[f"rated_{self.options['commodity_type']}_production"],
+                rate_units_capacity,
+                rate_units_from_price,
+            )
+        else:
+            capacity = inputs[f"rated_{self.options['commodity_type']}_production"]
+
+        # Extract annual production based on commodity type
+        annual_production = inputs["capacity_factor"] * capacity * 8760
+
         # By convention in NPV calculations, investments (capex, opex, refurbishment) are
         # negative cash flows while revenues are positive. This follows the numpy_financial
         # convention where money going out is negative and money coming in is positive.
         sign_of_costs = -1
-
-        # Extract annual production based on commodity type
-        annual_production = (
-            inputs["capacity_factor"]
-            * inputs[f"rated_{self.options['commodity_type']}_production"]
-            * 8760
-        )
 
         # Calculate revenue from selling the commodity at the specified price
         # Revenue is only generated during operational years (not during construction year 0)
@@ -259,12 +315,16 @@ class NumpyFinancialNPV(om.ExplicitComponent):
                 cost_breakdown[f"{tech}: replacement cost"] = refurb_cost
 
         # Calculate NPV for each cost category and sum to get total NPV
-        # This iterative approach also builds npv_cost_breakdown for optional reporting
+        # This iterative approach also builds npv_cost_breakdown for optional reporting.
+        # Cash flows are discounted at the nominal, pre-tax weighted average cost of
+        # capital (WACC), computed from the equity rate, debt rate, and debt/equity
+        # ratio (see ``_compute_wacc``).
+        effective_rate = self._compute_wacc()
         npv_item_check = 0
         npv_cost_breakdown = {}
         for cost_type, cost_vals in cost_breakdown.items():
-            # Apply NPV formula: NPV = sum(cash_flow[t] / (1 + discount_rate)^t) for all t
-            npv_item = npf.npv(self.config.discount_rate, cost_vals)
+            # Apply NPV formula: NPV = sum(cash_flow[t] / (1 + effective_rate)^t) for all t
+            npv_item = npf.npv(effective_rate, cost_vals)
             npv_item_check += float(npv_item)
             npv_cost_breakdown[cost_type] = float(npv_item)
 
@@ -274,6 +334,67 @@ class NumpyFinancialNPV(om.ExplicitComponent):
         # Optionally save detailed breakdowns to CSV files for analysis
         if self.config.save_cost_breakdown or self.config.save_npv_breakdown:
             self._save_cost_breakdown_files(cost_breakdown, npv_cost_breakdown, npv_item_check)
+
+    def _real_to_nominal_rate(self, real_rate):
+        """Convert a real rate to a nominal rate via the Fisher equation.
+
+        The Fisher equation is the exact multiplicative relationship between real and
+        nominal rates (rather than the additive approximation
+        ``r_nominal ~= r_real + inflation``):
+
+            (1 + nominal_rate) = (1 + real_rate) * (1 + inflation_rate)
+
+        When ``inflation_rate`` is 0 (the default), the rate is returned unchanged. In
+        that case no inflation adjustment is applied, so the effective rate remains the
+        real rate rather than a nominal rate.
+
+        Args:
+            real_rate (float): The real rate to convert, expressed as a fraction.
+
+        Returns:
+            float: The equivalent nominal rate.
+        """
+        return (1.0 + real_rate) * (1.0 + self.config.inflation_rate) - 1.0
+
+    def _compute_wacc(self):
+        """Compute the nominal, pre-tax weighted average cost of capital (WACC).
+
+        The equity rate (``real_discount_rate``) and debt rate (``debt_rate``) are
+        treated as real rates and converted to nominal rates via the Fisher equation
+        using ``inflation_rate``.
+
+        The nominal rates are then combined into the WACC using weights derived from
+        the debt/equity ratio (``D/E``):
+
+            equity_weight = 1 / (1 + D/E)
+            debt_weight = (D/E) / (1 + D/E)
+            WACC = equity_weight * equity_rate + debt_weight * debt_rate
+
+        The WACC is pre-tax: no interest tax shield is applied to the debt leg, so the
+        discount rate stays consistent with the pre-tax cash flows discounted by this
+        component.
+
+        When ``debt_equity_ratio`` is 0 (the default), the WACC reduces to the equity
+        rate. Note that when ``inflation_rate`` is 0, the Fisher conversion leaves the
+        rates unchanged, so the resulting WACC is a real rate rather than a nominal one.
+
+        Returns:
+            float: The WACC used to discount future cash flows. It is nominal when
+                ``inflation_rate`` is nonzero and real when ``inflation_rate`` is 0.
+        """
+        # Convert real equity and debt rates to nominal rates via the Fisher equation.
+        # When inflation_rate is 0, the rates are unchanged.
+        nominal_equity_rate = self._real_to_nominal_rate(self.config.real_discount_rate)
+        nominal_debt_rate = self._real_to_nominal_rate(self.config.debt_rate)
+
+        # Derive equity and debt weights from the debt/equity ratio (D/E).
+        debt_equity_ratio = self.config.debt_equity_ratio
+        equity_weight = 1.0 / (1.0 + debt_equity_ratio)
+        debt_weight = debt_equity_ratio / (1.0 + debt_equity_ratio)
+
+        # Pre-tax weighted average cost of capital (no interest tax shield on debt).
+        wacc = equity_weight * nominal_equity_rate + debt_weight * nominal_debt_rate
+        return wacc
 
     def _save_cost_breakdown_files(self, cost_breakdown, npv_cost_breakdown, total_npv):
         """Save cost breakdown and/or NPV breakdown to CSV files.

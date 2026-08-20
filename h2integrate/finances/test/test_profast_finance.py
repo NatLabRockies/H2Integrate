@@ -3,6 +3,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.finances.profast_lco import ProFastLCO
+from h2integrate.finances.profast_base import BasicProFASTParameterConfig
 
 
 @fixture
@@ -57,6 +58,34 @@ def fake_cost_dict():
         "varopex_adjusted_natural_gas": [65458026.9] * 30,
     }
     return fake_costs
+
+
+@pytest.mark.unit
+def test_profast_params_config(profast_inputs_no1, subtests):
+    profast_params = profast_inputs_no1["params"]
+    profast_params["plant_life"] = 30
+    profast_params["inflation_rate"] = 0.02
+    profast_params["incidental_revenue"] = {"value": 0.0, "escalation": 0.03}
+    profast_params["road_tax"] = {"value": 0.0, "escalation": 0.0}
+    pf_config = BasicProFASTParameterConfig.from_dict(profast_params)
+    pf_params = pf_config.as_dict()
+    with subtests.test("Incidental revenue escalation rate"):
+        assert pf_params["incidental revenue"]["escalation"] == 0.03
+
+    with subtests.test("Road tax escalation rate"):
+        assert pf_params["road tax"]["escalation"] == 0.0
+
+    with subtests.test("Commodity escalation rate"):
+        assert pf_params["commodity"]["escalation"] == 0.02
+
+    with subtests.test("General inflation rate"):
+        assert pf_params["general inflation rate"] == 0.02
+
+    with subtests.test("Labor escalation rate"):
+        assert pf_params["labor"]["escalation"] == 0.02
+
+    with subtests.test("Maintenance escalation rate"):
+        assert pf_params["maintenance"]["escalation"] == 0.02
 
 
 @pytest.mark.regression
@@ -123,7 +152,7 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe
 
 
 @pytest.mark.regression
@@ -195,4 +224,60 @@ def test_profast_comp_coproduct(
         assert pytest.approx(lcoe, rel=1e-6) == price
 
     with subtests.test("LCOE breakdown total"):
-        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kWh)"] * 1e3, rel=1e-6) == lcoe
+        assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW/h)"] * 1e3, rel=1e-6) == lcoe
+
+
+@pytest.mark.regression
+def test_profast_comp_heat(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+    }
+    pf = ProFastLCO(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="heat",
+        description="no1",
+    )
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_heat_production", mean_hourly_production, units="MMBtu/h")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_heat_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    prob.run_model()
+
+    with subtests.test("LCO-Heat"):
+        assert (
+            pytest.approx(prob.get_val("pf.LCOH_no1", units="USD/(MMBtu)")[0], rel=1e-6)
+            == 63.8181779 * 1e-3
+        )
+
+    with subtests.test("WACC"):
+        assert (
+            pytest.approx(prob.get_val("pf.wacc_heat_no1", units="percent")[0], rel=1e-6)
+            == 0.056453864
+        )
+
+    with subtests.test("CRF"):
+        assert (
+            pytest.approx(prob.get_val("pf.crf_heat_no1", units="percent")[0], rel=1e-6)
+            == 0.0674704169
+        )
+
+    with subtests.test("Profit Index"):
+        assert (
+            pytest.approx(prob.get_val("pf.profit_index_heat_no1", units="unitless")[0], rel=1e-6)
+            == 2.12026237778
+        )

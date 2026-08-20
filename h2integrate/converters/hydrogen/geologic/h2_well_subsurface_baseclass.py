@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -39,13 +38,15 @@ class GeoH2SubsurfacePerformanceConfig(BaseConfig):
     """
 
     borehole_depth: float = field()
-    well_diameter: str = field(validator=contains(["small", "large"]))
-    well_geometry: str = field(validator=contains(["vertical", "horizontal"]))
-    rock_type: str = field(validator=contains(["peridotite", "bei_troctolite"]))
+    well_diameter: str = field(validator=validators.in_(["small", "large"]))
+    well_geometry: str = field(validator=validators.in_(["vertical", "horizontal"]))
+    rock_type: str = field(validator=validators.in_(["peridotite", "bei_troctolite"]))
     grain_size: float = field()
 
 
 class GeoH2SubsurfacePerformanceBaseClass(PerformanceModelBaseClass):
+    _control_classifier = "dispatchable"
+
     """OpenMDAO component for modeling the performance of the well subsurface for
         geologic hydrogen.
 
@@ -132,8 +133,8 @@ class GeoH2SubsurfaceCostConfig(CostModelBaseConfig):
     """
 
     borehole_depth: float = field()
-    well_diameter: str = field(validator=contains(["small", "large"]))
-    well_geometry: str = field(validator=contains(["vertical", "horizontal"]))
+    well_diameter: str = field(validator=validators.in_(["small", "large"]))
+    well_geometry: str = field(validator=validators.in_(["vertical", "horizontal"]))
 
 
 class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
@@ -181,15 +182,14 @@ class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # inputs
         self.add_input("borehole_depth", units="m", val=self.config.borehole_depth)
         self.add_input(
             "wellhead_gas_out",
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/h",
-            desc=f"Hydrogen production rate in kg/h over {n_timesteps} hours.",
+            desc=f"Hydrogen production rate in kg/h over {self.n_timesteps} hours.",
         )
         self.add_input("total_wellhead_gas_produced", val=0.0, units="kg/year")
 

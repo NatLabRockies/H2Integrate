@@ -1,11 +1,10 @@
 """Electric Arc Furnace performance model based on CMU decarbSTEEL EAF Model"""
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.tools.constants import (
     C_MW,
     CO_MW,
@@ -54,10 +53,10 @@ class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
             "SiO2": 1.0 / 100,  # mass fraction SiO2, 'Model Inputs & Outputs!B28'
         }
     )
-    pellet_grade: str = field(default="DR", validator=contains(["DR", "BF", "custom"]))
+    pellet_grade: str = field(default="DR", validator=validators.in_(["DR", "BF", "custom"]))
     pct_DRI: float = field(default=60.0 / 100)  # mass fraction, 'Model Inputs & Outputs!B61'
     DRI_feed_temp: str = field(
-        default="hot", validator=contains(["hot", "cold"])
+        default="hot", validator=validators.in_(["hot", "cold"])
     )  # hot = 873 K or cold = 298 K, 'Model Inputs & Outputs!B63'
     DRI_composition: dict[str, float] | None = None
     SiO2_ratio: float | None = None
@@ -143,6 +142,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -152,8 +152,6 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         self.config = CMUElectricArcFurnaceDRIPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
@@ -177,15 +175,15 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             desc="Actual steel production",
         )
 
-        # Default the steel demand input as the production rate
+        # Default the steel command value input as the production rate
         self.add_input(
-            "steel_demand",
+            "steel_command_value",
             val=units.convert_units(
                 self.config.steel_production_rate_tonnes_per_year, "t/year", "t/h"
             ),
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Steel demand for steel plant",
+            desc="Steel command value for steel plant",
         )
 
         self.add_input(
@@ -240,14 +238,14 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             self.add_input(
                 f"{feedstock}_in",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} available for steel production",
             )
             self.add_output(
                 f"{feedstock}_consumed",
                 val=0.0,
-                shape=n_timesteps,
+                shape=self.n_timesteps,
                 units=feedstock_units,
                 desc=f"{feedstock} consumed for steel production",
             )
@@ -256,7 +254,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "slag_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of slag",
         )
@@ -264,7 +262,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_MgO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of MgO in slag",
         )
@@ -272,7 +270,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_FeO_slag",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of FeO in slag",
         )
@@ -280,7 +278,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_Fe_to_FeO",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg",
             desc="Total unit of Fe consumed to produce FeO",
         )
@@ -288,7 +286,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         self.add_output(
             "mass_steel_per_unit_dri",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="kg/t",
             desc="Total unit of steel formed from EAF fed with dri + scrap per unit of dri",
         )
@@ -326,20 +324,20 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             "lime": energy_mass_per_tonne["burnt_lime_per_tLS"],  # t/t
         }
 
-        # steel demand, saturated at maximum rated system capacity
-        steel_demand = np.where(
-            inputs["steel_demand"] > system_production,
+        # steel command value, saturated at maximum rated system capacity
+        steel_command_value = np.where(
+            inputs["steel_command_value"] > system_production,
             system_production,
-            inputs["steel_demand"],
+            inputs["steel_command_value"],
         )
 
         # initialize an array of how much steel could be produced
-        # from the available feedstocks and the demand
+        # from the available feedstocks and the command value
         steel_from_feedstocks = np.zeros(
-            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_demand"]))
+            (len(feedstocks_usage_per_tonne_steel) + 1, len(inputs["steel_command_value"]))
         )
-        # first entry is the steel demand
-        steel_from_feedstocks[0] = steel_demand
+        # first entry is the steel command value
+        steel_from_feedstocks[0] = steel_command_value
         ii = 1
 
         for feedstock_type, consumption_rate in feedstocks_usage_per_tonne_steel.items():
@@ -385,10 +383,12 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
 
     def energy_mass_balance_per_unit(self, inputs):
         """Computes the energy and mass balance for the EAF fed with dri and scrap on a
-            per ton of dri or liquid steel basis.
+        per ton of dri or liquid steel basis.
+
         Returns:
             output_dict (dict): Dictionary with the amount of feedstocks and energy used per
-                ton of steel.
+            ton of steel. Keys include:
+
                 - mass_slag_per_tDRI (kg/t): Total mass of slag produced per ton of DRI.
                 - mass_MgO_slag_per_tDRI (kg/t): Mass of MgO in slag per ton of DRI.
                 - mass_FeO_slag_per_tDRI (kg/t): Mass of FeO in slag per ton of DRI.
@@ -405,7 +405,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
                 - mass_MgO_slag_per_tLS (kg/t): Mass of MgO in slag per ton of liquid steel.
                 - mass_FeO_slag_per_tLS (kg/t): Mass of FeO in slag per ton of liquid steel.
                 - mass_Fe_to_FeO_per_tLS (kg/t): Mass of Fe consumed to produce FeO per ton
-                    of liquid steel.
+                  of liquid steel.
                 - mass_CO_injected_per_tLS (kg/t): Mass of CO injected per ton of liquid steel.
                 - coal_per_tLS (t/t): Mass of coal per ton of liquid steel.
                 - oxygen_per_tLS (Nm^3/t): Normal cubic meters of oxygen per ton of liquid steel.
@@ -415,8 +415,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
                 - off_gas_CO_kg (kg/t): Mass of CO in off-gas per ton of liquid steel.
                 - EAF_DRI_heat_loss_pct (%): Percentage of heat loss in EAF.
                 - electricity_per_tLS (kWh/t): Total electricity consumption per ton of liquid
-                    steel for EAF with scrap-only case, including heat loss adjustment.
-
+                  steel for EAF with scrap-only case, including heat loss adjustment.
         """
         output_dict = {}
         # Including DRI in feed (assumed constants in feedstocks)

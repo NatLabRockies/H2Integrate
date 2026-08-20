@@ -47,7 +47,7 @@ def ng_feedstock_availability_costs():
         },
         "water": {
             "rated_capacity": 40000.0,  # need 38071.049649 galUS/h
-            "units": "galUS",
+            "units": "galUS/h",
             "price": 1670.0,  # cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
         "iron_ore": {
@@ -80,7 +80,7 @@ def h2_feedstock_availability_costs():
         },
         "water": {
             "rated_capacity": 24000.0,  # need 23066.4878077501 galUS/h
-            "units": "galUS",
+            "units": "galUS/h",
             "price": 1670.0,  # TODO: update cost is $0.441167535/t, equal to $1670.0004398318847/galUS
         },
         "iron_ore": {

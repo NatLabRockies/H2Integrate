@@ -1,8 +1,7 @@
 import PySAM.MhkTidal as MhkTidal
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -31,17 +30,19 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 
     """
 
-    device_rating_kw: float = field(validator=gt_zero)
-    num_devices: int = field(validator=gt_zero)
+    device_rating_kw: float = field(validator=validators.gt(0))
+    num_devices: int = field(validator=validators.gt(0))
     tidal_power_curve: list[list[float]] | None = field(default=None)
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="MEtidalNone",
-        validator=contains(
+        validator=validators.in_(
             [
                 "MEtidalLCOECalculator",
                 "MEtidalNone",
@@ -124,6 +125,7 @@ class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "flexible"
 
     def initialize(self):
         super().initialize()
@@ -228,3 +230,7 @@ class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
         outputs["capacity_factor"] = (
             self.system_model.Outputs.capacity_factor / 100
         )  # divide by 100 to make it unitless
+
+        # Honor a system-level controller's set-point by curtailing
+        # `electricity_out`. No-op when there is no system-level controller.
+        self.apply_curtailment(outputs)

@@ -1,3 +1,4 @@
+(feedstocks:intro)=
 # Feedstock Models
 
 Feedstock models in H2Integrate represent any resource input that is consumed by technologies in your plant that comes from outside your designed system boundary (and not generated internally), such as natural gas, water, electricity from the grid, or any other material input.
@@ -94,6 +95,7 @@ The feedstock model outputs cost and performance information about the consumed 
 - `rated_{commodity}_production`: this is equal to the the `rated_capacity` of the feedstock model (in `commodity_rate_units`)
 - `capacity_factor`: ratio of the feedstock consumed to the maximum feedstock available
 
+(feedstocks:eia_ng_price)=
 ## EIA Natural Gas Pricing
 
 A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` exists to enable users

@@ -5,10 +5,9 @@ from typing import Any
 import numpy as np
 import PySAM.Windpower as Windpower
 import matplotlib.pyplot as plt
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -46,7 +45,7 @@ class PySAMPowerCurveCalculationInputs(BaseConfig):
     wind_default_cut_in_speed: int | float = field(default=4)
     wind_default_cut_out_speed: int | float = field(default=25)
     wind_default_drive_train: int = field(
-        default=0, converter=int, validator=contains([0, 1, 2, 3])
+        default=0, converter=int, validator=validators.in_([0, 1, 2, 3])
     )
 
 
@@ -73,18 +72,20 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             power curve. defaults to True.
     """
 
-    num_turbines: int = field(converter=int, validator=gt_zero)
-    hub_height: float = field(validator=gt_zero)
-    rotor_diameter: float = field(validator=gt_zero)
-    turbine_rating_kw: float = field(validator=gt_zero)
+    num_turbines: int = field(converter=int, validator=validators.ge(0))
+    hub_height: float = field(validator=validators.ge(0))
+    rotor_diameter: float = field(validator=validators.ge(0))
+    turbine_rating_kw: float = field(validator=validators.ge(0))
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="WindPowerSingleOwner",
-        validator=contains(
+        validator=validators.in_(
             [
                 "WindPowerAllEquityPartnershipFlip",
                 "WindPowerCommercial",
@@ -319,10 +320,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         field_number_to_data = {v: k for k, v in self.data_to_field_number.items()}
         # fields is a list of numbers representing the data type
         fields = np.tile(list(field_number_to_data.keys()), len(bounding_heights))
-        n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         # initialize resource data array
-        resource_data = np.zeros((n_timesteps, len(fields)))
+        resource_data = np.zeros((self.n_timesteps, len(fields)))
         cnt = 0
         for height, field_num in zip(heights, fields):
             # get the rounding precision for the field
@@ -404,6 +404,15 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         Returns:
             bool: True if the new power curve has a maximum value equal to `turbine_rating_kw`
         """
+        # Capture the existing windspeeds / CT curve before PySAM regenerates the power
+        # curve. ``calculate_powercurve`` only updates ``wind_turbine_powercurve_windspeeds``
+        # and ``wind_turbine_powercurve_powerout``; the CT curve length must equal the new
+        # windspeed length, otherwise PySAM Windpower fails to execute. Neither the
+        # ``new`` nor ``default`` model paths populate a CT curve on their own, so the
+        # only source is ``pysam_options["Turbine"]``.
+        turbine_opts = self.config.pysam_options.get("Turbine", {})
+        old_ct_curve = list(turbine_opts.get("wind_turbine_ct_curve", []))
+        old_windspeeds = list(turbine_opts.get("wind_turbine_powercurve_windspeeds", []))
 
         self.system_model.Turbine.calculate_powercurve(
             turbine_rating_kw,
@@ -416,6 +425,22 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             self.power_curve_config.wind_default_cut_out_speed,
             self.power_curve_config.wind_default_drive_train,
         )
+
+        # Resample the CT curve (if one was provided) onto the regenerated windspeeds so
+        # the two arrays remain length-aligned for PySAM execution.
+        new_windspeeds = list(self.system_model.value("wind_turbine_powercurve_windspeeds"))
+        if (
+            len(old_ct_curve) > 0
+            and len(old_windspeeds) == len(old_ct_curve)
+            and len(new_windspeeds) != len(old_ct_curve)
+        ):
+            resampled_ct = np.interp(
+                np.asarray(new_windspeeds, dtype=float),
+                np.asarray(old_windspeeds, dtype=float),
+                np.asarray(old_ct_curve, dtype=float),
+            )
+            self.system_model.value("wind_turbine_ct_curve", tuple(resampled_ct.tolist()))
+
         success = False
         if max(self.system_model.value("wind_turbine_powercurve_powerout")) == float(
             turbine_rating_kw
@@ -427,6 +452,15 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         rotor_diameter = inputs["rotor_diameter"][0]
         turbine_rating_kw = inputs["wind_turbine_rating"][0]
         n_turbs = int(np.round(inputs["num_turbines"][0]))
+
+        if turbine_rating_kw <= 0 or n_turbs <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
 
         # format resource data and input into model
         data = self.format_resource_data(
@@ -460,6 +494,10 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                 self.system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
             )
 
+        # Override the 300-turbine maximum, if needed
+        if n_turbs > 300:
+            self.system_model.value("max_turbine_override", n_turbs)
+
         self.system_model.value("wind_farm_xCoordinates", tuple(x_pos))
         self.system_model.value("wind_farm_yCoordinates", tuple(y_pos))
 
@@ -477,6 +515,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
         )
         outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+
+        # Apply curtailment based on set_point
+        self.apply_curtailment(outputs)
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(

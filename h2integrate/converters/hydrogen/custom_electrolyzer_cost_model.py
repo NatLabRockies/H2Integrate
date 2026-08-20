@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import CostModelBaseConfig
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
@@ -18,8 +17,8 @@ class CustomElectrolyzerCostModelConfig(CostModelBaseConfig):
             fixed_om_USD_per_kW_per_year
     """
 
-    capex_USD_per_kW: float = field(validator=gte_zero)
-    fixed_om_USD_per_kW_per_year: float = field(validator=gte_zero)
+    capex_USD_per_kW: float = field(validator=validators.ge(0))
+    fixed_om_USD_per_kW_per_year: float = field(validator=validators.ge(0))
 
 
 class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):

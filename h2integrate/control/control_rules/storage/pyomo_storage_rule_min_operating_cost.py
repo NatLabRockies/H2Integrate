@@ -69,11 +69,11 @@ class PyomoRuleStorageMinOperatingCosts:
             inputs (dict):
                 Dictionary of numpy arrays (length = self.n_timesteps) containing at least:
                     f"{commodity}_in"       : Available generated commodity profile.
-                    f"{commodity}_demand"   : Demanded commodity output profile.
+                    f"{commodity}_set_point"   : Demanded commodity output profile.
             dispatch_inputs (dict): Dictionary of the dispatch input parameters from config
 
         """
-        commodity_demand = inputs[f"{self.commodity_name}_demand"]
+        commodity_demand = inputs[f"{self.commodity_name}_set_point"]
 
         # Dispatch Parameters
         self.set_timeseries_parameter("cost_per_charge", dispatch_inputs["cost_per_charge"])

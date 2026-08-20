@@ -57,14 +57,14 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
     prob.model.add_subsystem(
         name="IVC3",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
     prob.model.add_subsystem(
         name="IVC4",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -229,15 +229,15 @@ def test_battery_config(subtests):
     with subtests.test("with minimal params minimum_SOC"):
         assert (
             config.min_soc_fraction == 0.1
-        )  # Decimal percent as compared to test_battery.py in HOPP 10%
+        )  # Decimal percent from the baseline battery configuration
     with subtests.test("with minimal params maximum_SOC"):
         assert (
             config.max_soc_fraction == 0.9
-        )  # Decimal percent as compared to test_battery.py in HOPP 90%
+        )  # Decimal percent from the baseline battery configuration
     with subtests.test("with minimal params initial_SOC"):
         assert (
             config.init_soc_fraction == 0.1
-        )  # Decimal percent as compared to test_battery.py in HOPP 10%
+        )  # Decimal percent from the baseline battery configuration
 
     with subtests.test("with invalid capacity"):
         with pytest.raises(ValueError):
@@ -292,9 +292,8 @@ def test_battery_initialization(plant_config, subtests):
         assert battery.system_model is not None
 
     with subtests.test("battery mass"):
-        # this test value does not match the value in test_battery.py in HOPP
-        # this is because the mass is computed in compute function in H2I
-        # and in HOPP it's in the attrs_post_init function
+        # this test value differs from earlier implementations because mass is
+        # computed in `compute()` rather than at model initialization
         # suggest removing this subtest
         assert battery.system_model.ParamsPack.mass * 20000 == pytest.approx(3044540.0, 1e-3)
 
@@ -338,7 +337,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init = om.Problem()
     prob_init.model.add_subsystem(
         name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
@@ -351,7 +350,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob_init.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )
@@ -406,7 +405,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob = om.Problem()
     prob.model.add_subsystem(
         name="IVC1",
-        subsys=om.IndepVarComp(name="electricity_demand", val=electricity_demand, units="kW"),
+        subsys=om.IndepVarComp(name="electricity_set_point", val=electricity_demand, units="kW"),
         promotes=["*"],
     )
 
@@ -419,7 +418,7 @@ def test_pysam_battery_no_controller_change_capacity(plant_config, subtests):
     prob.model.add_subsystem(
         name="IVC3",
         subsys=om.IndepVarComp(
-            name="electricity_set_point", val=electricity_demand - electricity_in, units="kW"
+            name="electricity_command_value", val=electricity_demand - electricity_in, units="kW"
         ),
         promotes=["*"],
     )

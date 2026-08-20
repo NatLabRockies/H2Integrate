@@ -36,7 +36,6 @@ def ngcc_cost_params():
         "capex_per_kw": 1000,  # $/kW
         "fixed_opex_per_kw_per_year": 10.0,  # $/kW/year
         "variable_opex_per_mwh": 2.5,  # $/MWh
-        "heat_rate_mmbtu_per_mwh": 7.5,  # MMBtu/MWh
         "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
@@ -50,7 +49,6 @@ def ngct_cost_params():
         "capex_per_kw": 800,  # $/kW
         "fixed_opex_per_kw_per_year": 8.0,  # $/kW/year
         "variable_opex_per_mwh": 3.0,  # $/MWh
-        "heat_rate_mmbtu_per_mwh": 11.5,  # MMBtu/MWh
         "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
@@ -397,7 +395,7 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
 
     # Set the natural gas input
     prob.set_val("natural_gas_in", natural_gas_input)
-    prob.set_val("electricity_set_point", electricity_demand_MW)
+    prob.set_val("electricity_command_value", electricity_demand_MW)
     prob.run_model()
 
     electricity_out = prob.get_val("electricity_out", units="MW")
@@ -426,4 +424,3 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
         # Headroom should be capacity less expected output (here zero)
         expected_headroom = ngcc_performance_params["system_capacity_mw"] - expected_output
         assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
-

@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -34,6 +33,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -43,12 +43,11 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.config = AmmoniaPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        self.add_input("hydrogen_in", val=0.0, shape=n_timesteps, units="kg/h")
+        self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
 
     def compute(self, inputs, outputs):
         ammonia_production_kgpy = (
@@ -104,7 +103,7 @@ class AmmoniaCostModelConfig(CostModelBaseConfig):
     iron_based_catalyst_consumption: float = field()
     oxygen_byproduct: float = field()
     capex_scaling_exponent: float = field()
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
 class SimpleAmmoniaCostModel(CostModelBaseClass):

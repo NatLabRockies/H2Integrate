@@ -14,10 +14,10 @@ from h2integrate.core.file_utils import make_unique_case_name, check_file_format
 class PoseOptimization:
     """
     This class contains a collection of methods for setting up an OpenMDAO
-    optimization problem for a H2Integrate simulation.
+    optimization problem for an H2Integrate simulation.
 
     Args:
-        config: instance of a H2Integrate config containing all desired simulation set up
+        config: instance of an H2Integrate config containing all desired simulation set up
     """
 
     def __init__(self, config):
@@ -431,7 +431,7 @@ class PoseOptimization:
         if self.config["recorder"].get("flag", False):
             # Check that the output folder exists and create it if needed
             if not Path(folder_output).exists():
-                Path.mkdir(folder_output, parents=True, exist_ok=True)
+                Path.mkdir(Path(folder_output), parents=True, exist_ok=True)
 
             overwrite_recorder = self.config["recorder"].get("overwrite_recorder", False)
             recorder_path = Path(folder_output) / self.config["recorder"]["file"]

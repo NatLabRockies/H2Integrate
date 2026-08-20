@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -28,8 +27,8 @@ class NaturalGasPerformanceConfig(BaseConfig):
             - NGCC: 6-8 MMBtu/MWh
     """
 
-    system_capacity_mw: float = field(validator=gte_zero)
-    heat_rate_mmbtu_per_mwh: float = field(validator=gt_zero)
+    system_capacity_mw: float = field(validator=validators.ge(0))
+    heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
 class NaturalGasPerformanceModel(PerformanceModelBaseClass):
@@ -48,7 +47,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         system_capacity (float): Natural gas plant rated capacity in MW
         natural_gas_in (array): Natural gas input energy in MMBtu/h
         heat_rate_mmbtu_per_mwh (float): Plant heat rate in MMBtu/MWh
-        electricity_set_point (array): Electricity set point in MW for each timestep
+        electricity_command_value (array): Electricity command value in MW for each timestep
 
     Outputs:
         electricity_out (array): Electricity output in MW for each timestep
@@ -60,6 +59,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "dispatchable"
 
     def initialize(self):
         super().initialize()
@@ -74,13 +74,12 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         # Add natural gas consumed output
         self.add_output(
             "natural_gas_consumed",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas consumed by the plant",
         )
@@ -101,20 +100,20 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             desc="Natural gas plant rated capacity in MW",
         )
 
-        # Default the electricity set point input as the rated capacity
+        # Default the electricity command value input as the rated capacity
         self.add_input(
-            f"{self.commodity}_set_point",
+            f"{self.commodity}_command_value",
             val=self.config.system_capacity_mw,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
-            desc="Electricity set point for natural gas plant",
+            desc="Electricity command value for natural gas plant",
         )
 
         # Add natural gas input, default to 0 --> set using feedstock component
         self.add_input(
             "natural_gas_in",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MMBtu/h",
             desc="Natural gas input energy",
         )
@@ -129,7 +128,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.add_output(
             "unmet_electricity_demand",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units=self.commodity_rate_units,
             desc="Unmet electricity demand for natural gas plant",
         )
@@ -144,7 +143,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
         Args:
             inputs: OpenMDAO inputs object containing natural_gas_in, heat_rate_mmbtu_per_mwh,
-                system_capacity, and electricity_set_point.
+                system_capacity, and electricity_command_value.
             outputs: OpenMDAO outputs object for electricity_out, natural_gas_consumed,
                 and unmet_electricity_demand.
         """
@@ -154,13 +153,13 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         heat_rate_mmbtu_per_mwh = inputs["heat_rate_mmbtu_per_mwh"]
         max_natural_gas_consumption = system_capacity * heat_rate_mmbtu_per_mwh
 
-        # electrical set point, saturated at maximum rated system capacity
-        electricity_set_point = np.where(
-            inputs["electricity_set_point"] > system_capacity,
+        # electrical command value, saturated at maximum rated system capacity
+        electricity_command_value = np.where(
+            inputs["electricity_command_value"] > system_capacity,
             system_capacity,
-            inputs["electricity_set_point"],
+            inputs["electricity_command_value"],
         )
-        natural_gas_demand = electricity_set_point * heat_rate_mmbtu_per_mwh
+        natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
 
         # available feedstock, saturated at maximum system feedstock consumption
         natural_gas_available = np.where(
@@ -177,10 +176,14 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
-        outputs["electricity_headroom_out"] = np.minimum(  # we are limitied by either
-            natural_gas_available / heat_rate_mmbtu_per_mwh,  # the power available in the natural gas supply
-            system_capacity,  # or the rated power of the system
-        ) - electricity_out  # and subtracting out what we're using gives the available excess capacity
+        outputs["electricity_headroom_out"] = (
+            np.minimum(  # we are limitied by either
+                natural_gas_available
+                / heat_rate_mmbtu_per_mwh,  # the power available in the natural gas supply
+                system_capacity,  # or the rated power of the system
+            )
+            - electricity_out
+        )  # and subtracting out what we're using gives the available excess capacity
 
         outputs["rated_electricity_production"] = inputs["system_capacity"]
 
@@ -191,7 +194,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
-        outputs["unmet_electricity_demand"] = inputs["electricity_set_point"] - electricity_out
+        outputs["unmet_electricity_demand"] = inputs["electricity_command_value"] - electricity_out
 
 
 @define(kw_only=True)
@@ -219,17 +222,13 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
             This includes variable O&M costs that scale with electricity generation.
             Typical values: 1-5 $/MWh
 
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh, used for fuel cost calculations.
-            This should match the heat rate used in the performance model.
-
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_mw: float | int = field(validator=gt_zero)
-    capex_per_kw: float | int = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float | int = field(validator=gte_zero)
-    variable_opex_per_mwh: float | int = field(validator=gte_zero)
-    heat_rate_mmbtu_per_mwh: float = field(validator=gt_zero)
+    system_capacity_mw: float | int = field(validator=validators.gt(0))
+    capex_per_kw: float | int = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
+    variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
 
 
 class NaturalGasCostModel(CostModelBaseClass):
@@ -254,7 +253,6 @@ class NaturalGasCostModel(CostModelBaseClass):
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
         variable_opex_per_mwh (float): Variable operating expenses per unit generation in $/MWh
-        heat_rate_mmbtu_per_mwh (float): Heat rate in MMBtu/MWh
 
     Outputs:
         CapEx (float): Total capital expenditure in USD
@@ -272,7 +270,6 @@ class NaturalGasCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
-        n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
         super().setup()
 
@@ -286,7 +283,7 @@ class NaturalGasCostModel(CostModelBaseClass):
         self.add_input(
             "electricity_out",
             val=0.0,
-            shape=n_timesteps,
+            shape=self.n_timesteps,
             units="MW",
             desc="Hourly electricity output from performance model",
         )
@@ -308,12 +305,6 @@ class NaturalGasCostModel(CostModelBaseClass):
             units="USD/(MW*h)",
             desc="Variable operating expenses per unit generation",
         )
-        self.add_input(
-            "heat_rate_mmbtu_per_mwh",
-            val=self.config.heat_rate_mmbtu_per_mwh,
-            units="MMBtu/(MW*h)",
-            desc="Plant heat rate",
-        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
@@ -327,9 +318,8 @@ class NaturalGasCostModel(CostModelBaseClass):
 
         # Sum hourly electricity output to get annual generation
         # electricity_out is in MW, so sum gives MWh for hourly data
-        dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         delivered_electricity_MWdt = electricity_out.sum()
-        delivered_electricity_MWh = delivered_electricity_MWdt * dt / 3600
+        delivered_electricity_MWh = delivered_electricity_MWdt * self.dt / 3600
 
         # Calculate capital expenditure
         capex = capex_per_kw * plant_capacity_kw
