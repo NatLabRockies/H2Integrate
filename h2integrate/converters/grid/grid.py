@@ -103,7 +103,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            "electricity_headroom_sold",
+            "electricity_sell_headroom",
             val=0.0,
             shape=self.n_timesteps,
             units=self.commodity_rate_units,
@@ -164,7 +164,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         max_production = (
             inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
         )
-        outputs["electricity_headroom_sold"] = interconnection_size - electricity_sold
+        outputs["electricity_sell_headroom"] = interconnection_size - electricity_sold
         outputs["electricity_headroom_out"] = interconnection_size - electricity_bought
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (

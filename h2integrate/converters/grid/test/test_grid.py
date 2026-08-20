@@ -128,9 +128,9 @@ def test_grid_performance_outputs(plant_config, subtests):
         )
 
     # Test that interconnect sales headroom is at the rating (nothing fed to grid)
-    with subtests.test(f"{commodity}_headroom_sold == rated_{commodity}_production"):
+    with subtests.test(f"{commodity}_sell_headroom == rated_{commodity}_production"):
         assert np.all(
-            prob.get_val(f"comp.{commodity}_headroom_sold", units="MW")
+            prob.get_val(f"comp.{commodity}_sell_headroom", units="MW")
             == prob.get_val(f"comp.rated_{commodity}_production", units="MW")
         )
 
@@ -237,7 +237,7 @@ def test_selling_electricity(plant_config, n_timesteps):
     np.testing.assert_array_almost_equal(actual_in, electricity_in)
 
     # The headroom should be the difference between electricity_in and the rating
-    headroom = prob.get_val("grid.electricity_headroom_sold")
+    headroom = prob.get_val("grid.electricity_sell_headroom")
     np.testing.assert_array_almost_equal(
         headroom,
         tech_config["model_inputs"]["shared_parameters"]["interconnection_size"] - electricity_in,
