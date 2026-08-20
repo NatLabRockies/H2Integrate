@@ -14,14 +14,6 @@ rng = np.random.default_rng(279299947538423226929715083173412195503)
 N_TIMESTEPS = 8760
 
 
-def array_ge(val):
-    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
-
-    def validator(instance, attribute, value):
-        if any(value < val):
-            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
-
-
 def create_failure_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config["failure_model"]
@@ -83,6 +75,24 @@ def update_dimensions(n_components: int, *args: np.ndarray):
             arg = np.broadcast_to(arg, shape)
     n_components = args[0].size
     return n_components, *args
+
+
+def float_array_converter(val: int | float | ArrayLike):
+    return np.array(val).astype(float).reshape(-1, 1)
+
+
+def int_array_converter(val: int | float | ArrayLike):
+    return np.array(val).astype(int).reshape(-1, 1)
+
+
+# NOTE: yes, I see the irony in creating a custom converter after removing all the attrs duplicates
+# NOTE: yes, I'll also be removing the above comment, but I'm sure someone will appreciate it
+def array_ge(val):
+    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
+
+    def validator(instance, attribute, value):
+        if any(value < val):
+            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
 
 
 @define(kw_only=True)
@@ -158,14 +168,6 @@ class BaseReliability(BaseConfig):
 
         self.availability = availability[:, burn_in_time:simulation_end]
         self.system_availability = np.min(self.availability, axis=0)
-
-
-def float_array_converter(val: int | float | ArrayLike):
-    return np.array(val).astype(float).reshape(-1, 1)
-
-
-def int_array_converter(val: int | float | ArrayLike):
-    return np.array(val).astype(int).reshape(-1, 1)
 
 
 @define(kw_only=True)
