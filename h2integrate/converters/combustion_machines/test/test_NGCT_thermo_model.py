@@ -31,13 +31,13 @@ GE_7FA05_NGCT_INPUTS = {
     "isentropic_efficiency_compressor": 0.85,  # -, by textbook assumption
     "isentropic_efficiency_turbine": 0.90,  # -, by textbook assumption
     "Q_fluid_max": 477.78734437019483,  # m**3/s, by reverse-engineering from datasheet
-    "design_conditions": {
-        "P_ISO": 101325.0,  # Pa, ISO conditions
-        "T_ISO": 288.15,  # K, ISO conditions
-        "rel_humidity_ISO": 60.0,  # %, ISO conditions
-        "eta_th_ISO": 0.385,  # -, from GE factsheet for 7F.05
-        "W_net_ISO": 239.0e3,  # kW, from GE factsheet for 7F.05
-    },
+}
+GE_7FA05_NGCT_DESIGN_CONDITIONS = {
+    "P_ISO": 101325.0,  # Pa, ISO conditions
+    "T_ISO": 288.15,  # K, ISO conditions
+    "rel_humidity_ISO": 60.0,  # %, ISO conditions
+    "eta_th_ISO": 0.385,  # -, from GE factsheet for 7F.05
+    "W_net_ISO": 239.0e3,  # kW, from GE factsheet for 7F.05
 }
 
 # GE 7EA in simple-cycle operation. Matching is middling and the information on
@@ -48,13 +48,13 @@ GE_7EA_NGCT_2014_INPUTS = {
     "isentropic_efficiency_compressor": 0.85,  # -, by textbook assumption
     "isentropic_efficiency_turbine": 0.90,  # -, by textbook assumption
     "Q_fluid_max": 238.3673469388,  # m**3/s, from NYISO GE factsheet
-    "design_conditions": {
-        "P_ISO": 101325.0,  # Pa, ISO conditions
-        "T_ISO": 288.15,  # K, ISO conditions
-        "rel_humidity_ISO": 60.0,  # %, ISO conditions
-        "eta_th_ISO": 0.3275,  # -, from GE factsheet for 7EA
-        "W_net_ISO": 85.4e3,  # kW, from GE factsheet for 7EA
-    },
+}
+GE_7EA_NGCT_2014_DESIGN_CONDITIONS = {
+    "P_ISO": 101325.0,  # Pa, ISO conditions
+    "T_ISO": 288.15,  # K, ISO conditions
+    "rel_humidity_ISO": 60.0,  # %, ISO conditions
+    "eta_th_ISO": 0.3275,  # -, from GE factsheet for 7EA
+    "W_net_ISO": 85.4e3,  # kW, from GE factsheet for 7EA
 }
 
 
@@ -283,11 +283,11 @@ def test_ge_7fa05_iso_design_point_regression(ge_7fa05, iso_ambient_state):
     result = ge_7fa05.run_turbine_model([iso_ambient_state])[0]
 
     assert result.get_efficiency() == pytest.approx(
-        ge_7fa05.design_conditions["eta_th_ISO"],
+        GE_7FA05_NGCT_DESIGN_CONDITIONS["eta_th_ISO"],
         rel=0.05,
     )
     assert result.get_net_work() == pytest.approx(
-        ge_7fa05.design_conditions["W_net_ISO"],
+        GE_7FA05_NGCT_DESIGN_CONDITIONS["W_net_ISO"],
         rel=0.08,
     )
     assert result.states[4].temperature > iso_ambient_state.temperature
