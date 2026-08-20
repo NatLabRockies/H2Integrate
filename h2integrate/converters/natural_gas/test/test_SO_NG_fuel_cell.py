@@ -31,6 +31,7 @@ def tech_config():
                 "system_capacity_kw": 1500.0,
                 "n_stacks": 60,
                 "stack_temperature_K": 1073.0,
+                "hhv": 15.4,  # kWh/kg --> based on methane
             }
         }
     }
@@ -47,6 +48,7 @@ def cost_config():
                 "capex_bop_per_kw": 1000,
                 "capex_indirect_costs_per_kw": 1500,
                 "fixed_opex_per_kw_per_year": 31.0,
+                "capex_battery_total": 90000,
                 "cost_year": 2026,
             }
         }
@@ -286,7 +288,7 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
     expected_unit_capex = (
         cp["capex_stack_per_kw"] + cp["capex_bop_per_kw"] + cp["capex_indirect_costs_per_kw"]
     )
-    expected_capex = cp["system_capacity_kw"] * expected_unit_capex
+    expected_capex = cp["system_capacity_kw"] * expected_unit_capex + cp["capex_battery_total"]
     expected_opex = cp["system_capacity_kw"] * cp["fixed_opex_per_kw_per_year"]
 
     with subtests.test("capex value"):

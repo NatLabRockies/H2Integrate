@@ -11,7 +11,8 @@ technologies:
         system_capacity_kw: 1500
       performance_parameters:
         n_stacks: 60
-        stack_temperature_K: 1073  # Not used yet
+        stack_temperature_K: 1073
+        hhv: 15.4  # kWh/kg --> based on methane
       cost_parameters:
         capex_stack_per_kw: 800
         capex_fuel_supply_per_kw: 140.67

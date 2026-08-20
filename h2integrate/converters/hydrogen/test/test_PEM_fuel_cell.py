@@ -31,6 +31,7 @@ def tech_config():
                 "system_capacity_kw": 1500.0,
                 "n_stacks": 60,
                 "stack_temperature_K": 278.0,
+                "hhv": 39.4,  # kWh/kg
             }
         }
     }
@@ -51,6 +52,7 @@ def cost_config():
                 "capex_electrical_per_kw": 447.83,
                 "capex_assembly_per_kw": 63.51,
                 "capex_additional_labor_per_kw": 137.96,
+                "capex_battery_total": 90000,
                 "fixed_opex_per_kw_per_year": 31.0,
                 "cost_year": 2026,
             }
@@ -274,7 +276,7 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
         + cp["capex_assembly_per_kw"]
         + cp["capex_additional_labor_per_kw"]
     )
-    expected_capex = cp["system_capacity_kw"] * expected_unit_capex
+    expected_capex = cp["system_capacity_kw"] * expected_unit_capex + cp["capex_battery_total"]
     expected_opex = cp["system_capacity_kw"] * cp["fixed_opex_per_kw_per_year"]
 
     with subtests.test("capex value"):

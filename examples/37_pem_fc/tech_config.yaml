@@ -12,6 +12,7 @@ technologies:
       performance_parameters:
         n_stacks: 60
         stack_temperature_K: 278  # Not used yet
+        hhv: 39.4  # kWh/kg
       cost_parameters:
         capex_stack_per_kw: 800
         capex_hydrogen_supply_per_kw: 140.67
