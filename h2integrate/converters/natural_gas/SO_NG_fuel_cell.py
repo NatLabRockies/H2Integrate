@@ -4,11 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, faraday
-from h2integrate.core.model_baseclasses import (
-    CostModelBaseClass,
-    CostModelBaseConfig,
-    PerformanceModelBaseClass,
-)
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -385,88 +381,3 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
 
         # TODO: implement a natural gas and oxygen conversion efficiency based on stack
         #   temperature and other factors
-
-
-@define(kw_only=True)
-class SONGFuelCellCostConfig(CostModelBaseConfig):
-    """Configuration class for the solid oxide natural gas fuel cell cost model.
-
-    Attributes:
-        capex_stack_per_kw (float): Capital expenditure for the stack per kilowatt ($/kW).
-        capex_bop (float): Capital expenditure for balance of plant ($/kW).
-        capex_indirect_costs_per_kw (float): Indirect capital costs per kilowatt ($/kW).
-        fixed_opex_per_kw_per_year (float): Fixed operating expenditure per
-                                            kilowatt per year ($/kW/year).
-
-    The `cost_year` field is inherited from `CostModelBaseConfig`.
-    """
-
-    capex_stack_per_kw: float = field(validator=validators.ge(0))
-    capex_bop_per_kw: float = field(validator=validators.ge(0))
-    capex_indirect_costs_per_kw: float = field(validator=validators.ge(0))
-    fixed_opex_per_kw_per_year: float = field(validator=validators.ge(0))
-    capex_battery_total: float = field(validator=validators.ge(0))
-
-
-class SONGFuelCellCostModel(CostModelBaseClass):
-    """
-    Cost model for a solid oxide natural gas fuel cell system.
-
-    The model calculates capital and fixed operating costs based on system capacity and
-    specified cost parameters.
-    """
-
-    _time_step_bounds = (
-        3600,
-        3600,
-    )  # (min, max) time step lengths (in seconds) compatible with this model
-
-    def setup(self):
-        self.config = SONGFuelCellCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
-            additional_cls_name=self.__class__.__name__,
-        )
-
-        super().setup()
-
-        self.add_input(
-            "rated_electricity_production",
-            val=0.0,
-            units="kW",
-            desc="Capacity of the solid oxide natural gas fuel cell system",
-        )
-
-        self.add_input(
-            "unit_capex",
-            val=self.config.capex_stack_per_kw
-            + self.config.capex_bop_per_kw
-            + self.config.capex_indirect_costs_per_kw,
-            units="USD/kW",
-            desc="Capital cost per unit capacity",
-        )
-
-        self.add_input(
-            "fixed_opex_per_year",
-            val=self.config.fixed_opex_per_kw_per_year,
-            units="(USD/kW)/year",
-            desc="Fixed operating expenses per unit capacity per year",
-        )
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """
-        Compute capital and fixed operating costs for the solid oxide natural gas fuel cell system.
-
-        Args:
-            inputs: OpenMDAO inputs object containing rated_electricity_production.
-            outputs: OpenMDAO outputs object for capital_cost and fixed_operating_cost_per_year.
-        """
-
-        system_capacity_kw = inputs["rated_electricity_production"]
-
-        # Calculate capital cost
-        outputs["CapEx"] = (
-            system_capacity_kw * inputs["unit_capex"] + self.config.capex_battery_total
-        )
-
-        # Calculate fixed operating cost per year
-        outputs["OpEx"] = system_capacity_kw * inputs["fixed_opex_per_year"]

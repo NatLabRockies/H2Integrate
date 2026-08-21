@@ -10,5 +10,4 @@ from h2integrate.converters.natural_gas.dummy_gas_components import (
 )
 from h2integrate.converters.natural_gas.SO_NG_fuel_cell import (
     SONGFuelCellPerformanceModel,
-    SONGFuelCellCostModel,
 )

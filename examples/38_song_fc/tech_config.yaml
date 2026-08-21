@@ -5,20 +5,20 @@ technologies:
     performance_model:
       model: SONGFuelCellPerformanceModel
     cost_model:
-      model: SONGFuelCellCostModel
+      model: GenericConverterCostModel
     model_inputs:
-      shared_parameters:
-        system_capacity_kw: 1500
       performance_parameters:
+        system_capacity_kw: 1500
         n_stacks: 60
         stack_temperature_K: 1073
         hhv: 15.4  # kWh/kg --> based on methane
       cost_parameters:
-        capex_stack_per_kw: 500.0
-        capex_bop_per_kw: 1000.0
-        capex_indirect_costs_per_kw: 1500.0
-        capex_battery_total: 95000
-        fixed_opex_per_kw_per_year: 35
+        commodity: electricity
+        commodity_rate_units: kW
+        commodity_amount_units: kW*h
+        unit_capex: 3174  # USD/kW
+        unit_opex: 35  # USD/kW/year
+        unit_varopex: 0.0  # USD/kWh
         cost_year: 2026
   electricity_load_demand:
     performance_model:

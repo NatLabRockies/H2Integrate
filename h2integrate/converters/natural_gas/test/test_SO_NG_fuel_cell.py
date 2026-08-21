@@ -3,10 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.converters.natural_gas.SO_NG_fuel_cell import (
-    SONGFuelCellCostModel,
-    SONGFuelCellPerformanceModel,
-)
+from h2integrate.converters.natural_gas.SO_NG_fuel_cell import SONGFuelCellPerformanceModel
 
 
 @fixture
@@ -32,23 +29,6 @@ def tech_config():
                 "n_stacks": 60,
                 "stack_temperature_K": 1073.0,
                 "hhv": 15.4,  # kWh/kg --> based on methane
-            }
-        }
-    }
-    return config
-
-
-@fixture
-def cost_config():
-    config = {
-        "model_inputs": {
-            "cost_parameters": {
-                "capex_stack_per_kw": 500.0,
-                "capex_bop_per_kw": 1000,
-                "capex_indirect_costs_per_kw": 1500,
-                "fixed_opex_per_kw_per_year": 31.0,
-                "capex_battery_total": 90000,
-                "cost_year": 2026,
             }
         }
     }
@@ -297,40 +277,3 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
         assert o2_consumed[7] == pytest.approx(0.0, abs=1e-6)
         assert water_out[7] == pytest.approx(0.0, abs=1e-6)
         assert co2_out[7] == pytest.approx(0.0, abs=1e-6)
-
-
-@pytest.mark.regression
-def test_fuel_cell_cost(cost_config, plant_config, subtests):
-    system_capacity_kw = 1500.0  # kW
-    prob = om.Problem()
-
-    fuel_cell_cost = SONGFuelCellCostModel(
-        plant_config=plant_config, tech_config=cost_config, driver_config={}
-    )
-
-    prob.model.add_subsystem("fuel_cell_cost", fuel_cell_cost, promotes=["*"])
-
-    prob.setup()
-
-    prob.set_val("fuel_cell_cost.rated_electricity_production", system_capacity_kw, units="kW")
-
-    prob.run_model()
-
-    cp = cost_config["model_inputs"]["cost_parameters"]
-    expected_unit_capex = (
-        cp["capex_stack_per_kw"] + cp["capex_bop_per_kw"] + cp["capex_indirect_costs_per_kw"]
-    )
-    expected_capex = system_capacity_kw * expected_unit_capex + cp["capex_battery_total"]
-    expected_opex = system_capacity_kw * cp["fixed_opex_per_kw_per_year"]
-
-    with subtests.test("capex value"):
-        assert (
-            pytest.approx(prob.get_val("fuel_cell_cost.CapEx", units="USD"), rel=1e-6)
-            == expected_capex
-        )
-
-    with subtests.test("opex value"):
-        assert (
-            pytest.approx(prob.get_val("fuel_cell_cost.OpEx", units="USD/year"), rel=1e-6)
-            == expected_opex
-        )
