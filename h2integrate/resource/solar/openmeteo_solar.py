@@ -87,14 +87,14 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         self.hourly_solar_data_to_units = {
             "wind_speed_10m": "m/s",
             "wind_direction_10m": "deg",
-            "temperature_2m": "C",
+            "temperature_2m": "degC",
             "surface_pressure": "hPa",  # TODO check units
             # "precipitation": "mm/h", #TODO: check units
             "relative_humidity_2m": "percent",  # ranges between 0 and 100
             "shortwave_radiation": "W/m**2",  # "ghi": "W/m**2",
             "direct_normal_irradiance": "W/m**2",  # "dni": "W/m**2",
             "diffuse_radiation": "W/m**2",  # "dhi": "W/m**2",
-            "dew_point_2m": "C",
+            "dew_point_2m": "degC",
             # "surface_albedo": "percent",
             # "solar_zenith_angle": "deg",
             "snow_depth": "m",
