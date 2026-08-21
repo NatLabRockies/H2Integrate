@@ -9,11 +9,48 @@ import pytest
 import openmdao.api as om
 from attrs import field, define
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR, RESOURCE_DEFAULT_DIR, load_tech_yaml
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    RESOURCE_DEFAULT_DIR,
+    load_tech_yaml,
+    load_driver_yaml,
+)
 from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
 from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
-from h2integrate.core.file_utils import get_path, find_file, load_yaml, make_unique_case_name
+from h2integrate.core.file_utils import (
+    get_path,
+    find_file,
+    load_yaml,
+    check_data_dir,
+    check_resource_dir,
+    make_unique_case_name,
+)
 from h2integrate.core.supported_models import supported_models
+
+
+@pytest.mark.unit
+def test_driver_schema_path_validator(subtests):
+    driver_config = load_yaml(EXAMPLE_DIR / "16_natural_gas" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = EXAMPLE_DIR / "16_natural_gas" / "outputs"
+    driver_config_validated = load_driver_yaml(driver_config)
+    with subtests.test("folder output is a path object"):
+        assert isinstance(driver_config_validated["general"]["folder_output"], Path)
+
+
+@pytest.fixture(scope="function")
+def temp_resource_dir_env():
+    """Temporarily set the `RESOURCE_DIR` environment variable to the default resource folder."""
+    # NOTE: changes to this fixture can result in hard-to-debug test failures
+    # in tests for resource components. Please do not modify this fixture if possible!
+    resource_dir = str(RESOURCE_DEFAULT_DIR)
+    original = os.environ.get("RESOURCE_DIR")
+    os.environ["RESOURCE_DIR"] = resource_dir
+    yield resource_dir
+    os.environ.pop("RESOURCE_DIR", None)
+    assert os.getenv("RESOURCE_DIR") is None
+    if original is not None:
+        os.environ["RESOURCE_DIR"] = original
 
 
 @pytest.mark.unit
@@ -21,43 +58,41 @@ def test_get_path(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = (
-        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
-    )
+    file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = get_path(file_abs_path)
     with subtests.test("get_path: absolute filepath for file"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
+    file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = get_path(file_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for file"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = get_path(file_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for file"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 1. As an absolute path.
-    dir_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs"
+    dir_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture"
     dir_abs_out_path = get_path(dir_abs_path)
     with subtests.test("get_path: absolute filepath for folder"):
         assert dir_abs_out_path == dir_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    dir_cwd_rel_path = "tech_inputs"
+    dir_cwd_rel_path = "."
     dir_cwd_rel_out_path = get_path(dir_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for folder"):
         assert dir_cwd_rel_out_path == dir_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR)
-    dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs"
+    dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture"
     dir_h2i_rel_out_path = get_path(dir_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for folder"):
         assert dir_h2i_rel_out_path == dir_abs_path
@@ -70,35 +105,33 @@ def test_find_file(subtests):
     current_cwd = Path.cwd()
 
     # 1. As an absolute path.
-    file_abs_path = (
-        EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_inputs" / "hopp_config.yaml"
-    )
+    file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = find_file(file_abs_path)
     with subtests.test("find_file: absolute filepath"):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
     os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
-    file_cwd_rel_path = "tech_inputs/hopp_config.yaml"
+    file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = find_file(file_cwd_rel_path)
     with subtests.test("find_file: filepath relative to cwd"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
     os.chdir(ROOT_DIR / "core" / "inputs")
-    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = find_file(file_h2i_rel_path)
     with subtests.test("find_file: filepath relative to H2I package"):
         assert file_h2i_rel_out_path == file_abs_path
 
     # 3. Relative to the root_folder (outside of it)
-    file_root_rel_path = "../examples/09_co2/direct_ocean_capture/tech_inputs/hopp_config.yaml"
+    file_root_rel_path = "../examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_root_rel_out_path = find_file(file_root_rel_path, root_folder=ROOT_DIR)
     with subtests.test("find_file: filepath relative (outside) of root_folder"):
         assert file_root_rel_out_path.resolve() == file_abs_path
 
     # 4. Relative to the root_folder (inside of it)
-    file_root_in_rel_path = "tech_inputs/hopp_config.yaml"
+    file_root_in_rel_path = "tech_config.yaml"
     ex_root = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture"
     file_root_in_rel_out_path = find_file(file_root_in_rel_path, root_folder=ex_root)
     with subtests.test("find_file: filepath relative (inside) to root_folder"):
@@ -124,6 +157,63 @@ def test_make_unique_filename(subtests):
         assert len(py_files) == 0
     with subtests.test("Uniquely named .csv file"):
         assert len(csv_files) == 0
+
+
+@pytest.mark.unit
+def test_check_data_dir_no_dir(subtests):
+    output_dir = check_data_dir(data_type="resource")
+    output_resource_dir = check_resource_dir()
+    with subtests.test("No data_dir, no data_subdir"):
+        assert output_resource_dir == output_dir
+        assert output_resource_dir == RESOURCE_DEFAULT_DIR
+
+    output_dir = check_resource_dir(data_subdir="wind")
+    with subtests.test("No data_dir, with data_subdir"):
+        expected_output_dir = RESOURCE_DEFAULT_DIR / "wind"
+        assert output_dir == expected_output_dir
+
+
+@pytest.mark.unit
+def test_check_data_dir_relative_dir_exists(subtests):
+    os.chdir(ROOT_DIR.parent)
+    relative_dir = "resource_files"
+    expected_dir = RESOURCE_DEFAULT_DIR
+    output_dir = check_resource_dir(data_dir=relative_dir)
+    with subtests.test("Relative data_dir, no data_subdir"):
+        assert output_dir == expected_dir
+
+    relative_dir = "resource_files"
+    expected_dir = RESOURCE_DEFAULT_DIR / "wind"
+    output_dir = check_resource_dir(data_dir=relative_dir, data_subdir="wind")
+    with subtests.test("Relative data_dir, with data_subdir"):
+        assert output_dir == expected_dir
+
+
+@pytest.mark.unit
+def test_check_data_dir_full_dir_exists(subtests):
+    expected_dir = RESOURCE_DEFAULT_DIR
+    output_dir = check_resource_dir(data_dir=expected_dir)
+    with subtests.test("Full data_dir, no data_subdir"):
+        assert output_dir == expected_dir
+
+    output_dir = check_data_dir(data_type="resource", data_dir=expected_dir, data_subdir="wind")
+    with subtests.test("Full data_dir, with data_subdir"):
+        assert str(output_dir) == str(expected_dir / "wind")
+
+
+@pytest.mark.unit
+def test_check_resource_dir_environment_var(subtests, temp_resource_dir_env):
+    # NOTE: changes to this test can result in hard-to-debug test failures!
+    # Please do not modify this test if possible.
+
+    data_dir = temp_resource_dir_env
+    output_dir = check_resource_dir()
+    with subtests.test("Environment variable data_dir, no data_subdir"):
+        assert str(output_dir) == data_dir
+
+    output_dir = check_resource_dir(data_subdir="wind")
+    with subtests.test("Environment variable data_dir, with data_subdir"):
+        assert str(output_dir) == str(Path(data_dir) / "wind")
 
 
 @pytest.mark.unit
@@ -639,63 +729,76 @@ def test_check_inputs(subtests):
     tech_config_fpath = Path(__file__).parent / "inputs" / "no_duplicates.yaml"
 
     # 1: check for an unused parameter under performance_parameters
+    # Tests the message thrown if `if shared_overlap` is False
     tech_config = load_tech_yaml(tech_config_fpath)
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_01 = (
+        "The parameter(s) ['system_model_source'] found in performance_parameters "
+        f"are not used for the 'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #1"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+                assert expected_error_01 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['system_model_source'] found in performance_parameters "
-                    f"are not used for the 'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 2: check when not-shared parameters are under shared_parameters
+    # Tests the message thrown in ``if len(unnecessary_shared) == 1``
     tech_config = load_tech_yaml(tech_config_fpath)
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
         "system_model_source"
     )
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_02 = (
+        "The parameter(s): ['n_control_window_hours', "
+        "'system_commodity_interface_limit'] "
+        "found in shared_parameters but should be in control_parameters for "
+        f"the 'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #2"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_02 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['n_control_window_hours', "
-                    "'system_commodity_interface_limit'] "
-                    "found in shared_parameters but should be in control_parameters for "
-                    f"the 'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 3: check when multiple unshared parameters from different categories are under shared\
+    # Tests the message thrown in the else statement of ``if len(unnecessary_shared) == 1``
     key = "opex_fraction"
     val = tech_config["technologies"]["battery"]["model_inputs"]["cost_parameters"].pop(key)
     tech_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][key] = val
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+
+    expected_error_03 = (
+        "The following parameter sets were found in shared_parameters but should be"
+        " contained in the following sections for the 'battery' section of "
+        f"{tech_config_fpath}:"
+        "\n\tcontrol_parameters should contain"
+        " ['n_control_window_hours', 'system_commodity_interface_limit']"
+        "\n\tcost_parameters should contain ['opex_fraction']"
+    )
+
+    with subtests.test("Situation #3"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_03 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The following parameter sets were found in shared_parameters but should be"
-                    " contained in the following sections for the 'battery' section of "
-                    f"{tech_config_fpath}:"
-                    "\n\tcontrol_parameters should contain"
-                    " ['n_control_window_hours', 'system_commodity_interface_limit']"
-                    "\n\tcost_parameters should contain ['opex_fraction]"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 4: check when an unused parameter is under shared_parameters
+    # Tests the message thrown in the else statement of ``if unnecessary_shared``
     tech_config = load_tech_yaml(tech_config_fpath)
     control_parameters = {}
     tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"].pop(
@@ -716,20 +819,24 @@ def test_check_inputs(subtests):
     )
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "battery":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_04 = (
+        "The parameter(s): ['test_unused_input'] found in "
+        f"shared_parameters are not used by any of the models for the "
+        f"'battery' section of {tech_config_fpath}"
+    )
+
+    with subtests.test("Situation #4"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "battery":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_04 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['test_unused_input'] found in "
-                    f"shared_parameters are not used by any of the models for the "
-                    f"'battery' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)
 
     # 5: check when parameters are shared but specified individually
+    # Tests the `if shared_overlap` message
     combiner_tech = {
         "performance_model": {"model": "GenericCombinerPerformanceModel"},
         "dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"},
@@ -756,15 +863,17 @@ def test_check_inputs(subtests):
     tech_config["technologies"].update({"combiner": combiner_tech})
     prob = create_om_problem(tech_config)
 
-    for tech, tech_info in tech_config["technologies"].items():
-        if tech == "combiner":
-            with pytest.raises(AttributeError) as excinfo:
+    expected_error_05 = (
+        "The parameter(s) ['commodity', 'commodity_rate_units'] found in "
+        "performance_parameters should be under shared_parameters for "
+        f"the 'combiner' section of {tech_config_fpath}"
+    )
+    with subtests.test("Situation #5"):
+        for tech, tech_info in tech_config["technologies"].items():
+            if tech == "combiner":
+                with pytest.raises(AttributeError) as excinfo:
+                    check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+                assert expected_error_05 == str(excinfo.value)
+            else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
-                expected_error = (
-                    "The parameter(s) ['commodity', 'commodity_rate_units] found in "
-                    "performance_parameters should be under shared_parameter(s) for "
-                    f"the 'combiner' section of {tech_config_fpath}"
-                )
-                assert expected_error == str(excinfo.value)
-        else:
-            check_inputs(prob, tech, tech_info, tech_config_fpath)

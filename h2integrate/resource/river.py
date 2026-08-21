@@ -24,15 +24,6 @@ class RiverResource(om.ExplicitComponent):
     CSV files are assumed to have the structure outputted from the USGS Water
     Information System: https://waterdata.usgs.gov/nwis/uv
 
-    Methods:
-        initialize():
-            Declares the options for the component, including the required "filename" option.
-        setup():
-            Defines the outputs for the component, in this case just the "discharge" array.
-        compute(inputs, outputs):
-            Reads, processes, and resamples the discharge data from the input file.
-            Outputs the hourly discharge values.
-
     Raises:
         FileNotFoundError: If the specified file does not exist.
         ValueError: If the file does not contain sufficient data or the required

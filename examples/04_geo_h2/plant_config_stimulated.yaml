@@ -9,6 +9,7 @@ plant:
 finance_parameters:
   finance_groups:
     commodity: hydrogen
+    commodity_stream: geoh2_well_subsurface
     finance_model: ProFastLCO
     model_inputs:
       params:

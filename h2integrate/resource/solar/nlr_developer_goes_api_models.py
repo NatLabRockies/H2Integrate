@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import contains, range_val
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
 
@@ -33,7 +32,7 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(1998, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2024)))
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
@@ -82,7 +81,7 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
@@ -132,7 +131,7 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
@@ -159,7 +158,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
 @define(kw_only=True)
 class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
-    `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
+    `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
     Args:
@@ -185,7 +184,7 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
 
     resource_year: str = field(
         converter=str.lower,
-        validator=contains(
+        validator=validators.in_(
             [
                 "tmy-2022",
                 "tdy-2022",

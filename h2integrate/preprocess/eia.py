@@ -1,6 +1,5 @@
 """Tools for getting the EIA natural gas data that could be expanded into other EIA API data."""
 
-import os
 import json
 from pathlib import Path
 
@@ -8,7 +7,8 @@ import pandas as pd
 import requests
 
 from h2integrate.preprocess import geospatial
-from h2integrate.core.file_utils import get_path
+from h2integrate.core.env_tools import get_environment_variables
+from h2integrate.core.file_utils import get_path, check_feedstock_dir
 
 
 MCF_to_MMBTU = 1 / 0.964
@@ -37,38 +37,31 @@ NG_PROCESS_NAME_MAP = {
 }
 
 
-def get_eia_api_key(api_key_file: Path | None) -> str:
+def get_eia_api_key(api_key_file: Path | None, set_vars: bool = True) -> str:
     """Retrieves the EIA API key from a file, and returns the key following "EIA_API_KEY:".
 
     Args:
         api_key_file (Path, optional): Full file path and name of where the EIA API key is located.
             If none is provided, then the API key is retrieved from the environment variables. Must
             be encoded as "EIA_API_KEY: xxxxxx"
+        set_vars (bool, optional): If True, set the environment variables if they
+            haven't already been set. Defaults to True.
 
     Raises:
-        ValueError: Raised either if no file is provided and an environment variable has not be
-            defined, or if a filename is provided but "EIA_API_KEY" is not found.
+        ValueError: Raised if "EIA_API_KEY" is not found or has not been previously set.
 
     Returns:
         str: The EIA API key.
     """
-    if api_key_file is None:
-        key = os.environ.get("EIA_API_KEY")
-        if key is None:
-            msg = (
-                "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY' is not defined as an"
-                " environment variable."
-            )
-            raise ValueError(msg)
-        return key
-
-    with api_key_file.open() as f:
-        for line in f.readlines():
-            if ":" in line:
-                name, val = line.strip().split(":")
-                if name == "EIA_API_KEY":
-                    return val.strip()
-    raise ValueError(f"No 'EIA_API_KEY' defined in {api_key_file=}")
+    eia_api_key = get_environment_variables(
+        "EIA_API_KEY", file_path=api_key_file, set_variables=set_vars
+    )
+    msg = "`EIA_API_KEY` has not been set. Please set the `EIA_API_KEY` environment variable."
+    if not bool(eia_api_key):
+        raise ValueError(msg)
+    if (eia_key := eia_api_key.get("EIA_API_KEY")) is not None:
+        return eia_key
+    raise ValueError(msg)
 
 
 def convert_to_monthly(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
@@ -330,6 +323,7 @@ def get_eia_ng_data(
     state: str | list[str],
     api_key_file: str | Path | None = None,
     filename: str | Path | None = None,
+    feedstock_dir: str | Path | None = None,
     *,
     monthly: bool = True,
 ):
@@ -340,27 +334,55 @@ def get_eia_ng_data(
             data should be retrieved. Should be between 2001 and the current year, inclusive of
             endpoints as that is all that the EIA provides, regardless of what is queried.
         price_category (str | list[str]): One or a combination of "wellhead", "imports", "citygate",
-            "residential", "commercial","industrial", "electrical_power", or "exports". Note that
+            "residential", "commercial", "industrial", "electrical_power", or "exports". Note that
             not all categories will return state-level data.
         state (str | list[str]): Full name(s) of the state or two-letter state abbreviation(s), such
             as "United States" or "US". Only the "US" or one of the 50 US states will produce valid
             results.
         api_key_file (Path, optional): Full file name of the file where the API key is located. If
             no file name is provided, then the environment variable ``EIA_API_KEY`` is used.
-        filename (str | Path | None): Full file name where the EIA data can either be loaded from
+        filename (str | Path | None): File name where the EIA data can either be loaded from
             or should be saved to. If None, then data will be queried and returned with saving
-            left to the user.
+            left to the user. Should be used in conjunction with :py:attr:`feedstock_dir` or the
+            file will be expected in :py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas"
+        feedstock_dir (str | Path | None): File path for where the the data should be saved to or
+            retrieved from. If None, and :py:attr:`filename` is used, then
+            ":py:attr:`h2integrate.FEEDSTOCK_DEFAULT_DIR` / "natural_gas" will be used.
         monthly (Path): True, if monthly data is desired, False if annual data is desired.
 
     Returns:
         pd.DataFrame: A monthly dataframe containing the date, state, price_category, and price
             (MMBTU).
     """
-
-    filename = _validate_file_name(filename)
+    if filename is not None:
+        if feedstock_dir is None:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir, data_subdir="natural_gas")
+        else:
+            feedstock_dir = check_feedstock_dir(data_dir=feedstock_dir)
+    file_path = filename if filename is None else _validate_file_name(feedstock_dir / filename)
     state = _validate_state(state)
     price_category = _validate_price_category(price_category)
     resource_year = _validate_resource_year(resource_year)
+
+    start, end = resource_year
+    keep_cols = ["price"]
+    if len(state) > 1:
+        keep_cols = ["state", *keep_cols]
+    if len(price_category) > 1:
+        keep_cols = ["category", *keep_cols]
+    if file_path is not None:
+        if file_path.exists():
+            df = pd.read_csv(file_path, parse_dates=["period"]).set_index("period")
+            df = df.loc[
+                (df.index.year >= start)
+                & (df.index.year <= end)
+                & df.category.isin(price_category)
+                & df.state.isin(state),
+                keep_cols,
+            ]
+            df = convert_to_monthly(df, start, end)
+            if df is not None:
+                return df
 
     url = create_eia_ng_api_url(
         api_key_file=api_key_file,
@@ -369,25 +391,6 @@ def get_eia_ng_data(
         state=state,
         monthly=monthly,
     )
-
-    start, end = resource_year
-    keep_cols = ["price"]
-    if len(state) > 1:
-        keep_cols = ["state", *keep_cols]
-    if len(price_category) > 1:
-        keep_cols = ["category", *keep_cols]
-    if filename is not None:
-        if filename.exists():
-            df = pd.read_csv(filename, parse_dates=["period"]).set_index("period")
-            df = df.loc[
-                (df.index.year >= start)(df.index.year <= end)
-                & df.category.isin(price_category)
-                & df.state.isin(state),
-                keep_cols,
-            ]
-            df = convert_to_monthly(df)
-            if df is not None:
-                return df
 
     r = requests.get(url)
     if r.status_code != 200:
@@ -418,7 +421,7 @@ def get_eia_ng_data(
     df = convert_to_monthly(df, *resource_year)
     df.price *= MCF_to_MMBTU
 
-    if filename is not None:
-        df.to_csv(filename, index_label="period")
+    if file_path is not None:
+        df.to_csv(file_path, index_label="period")
 
     return df

@@ -1,9 +1,8 @@
 import numpy as np
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains, range_val_or_none
 
 
 @define(kw_only=True)
@@ -15,11 +14,14 @@ class GenericSplitterPerformanceConfig(BaseConfig):
     """
 
     split_mode: str = field(
-        converter=(str.lower, str.strip), validator=contains(["prescribed_commodity", "fraction"])
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["prescribed_commodity", "fraction"]),
     )
     commodity: str = field(converter=(str.lower, str.strip))
     commodity_rate_units: str = field()
-    fraction_to_priority_tech: float = field(default=None, validator=range_val_or_none(0, 1))
+    fraction_to_priority_tech: float = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
     prescribed_commodity_to_priority_tech: float = field(default=None)
 
     def __attrs_post_init__(self):
@@ -68,7 +70,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    _control_classifier = "connector"
+    _control_classifier = "splitter"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})
@@ -98,6 +100,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
                 "fraction_to_priority_tech",
                 val=self.config.fraction_to_priority_tech,
                 desc="Fraction of input commodity to send to the priority technology (0.0 to 1.0)",
+                units="unitless",
             )
         elif split_mode == "prescribed_commodity":
             self.add_input(
@@ -121,6 +124,13 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
             shape=n_timesteps,
             units=self.config.commodity_rate_units,
             desc=f"{self.config.commodity} output to the second technology",
+        )
+        self.add_output(
+            f"{self.config.commodity}_consumed",
+            val=0.0,
+            shape=n_timesteps,
+            units=self.config.commodity_rate_units,
+            desc=f"Total {self.config.commodity} consumed from the upstream source",
         )
 
     def compute(self, inputs, outputs):
@@ -148,3 +158,4 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
         # TODO: This mapping logic should be enhanced based on plant configuration
         outputs[f"{self.config.commodity}_out1"] = commodity_to_priority
         outputs[f"{self.config.commodity}_out2"] = commodity_to_other
+        outputs[f"{self.config.commodity}_consumed"] = commodity_to_priority + commodity_to_other

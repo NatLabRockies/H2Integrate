@@ -94,8 +94,9 @@ for value in value_units.keys():
     print(value + ": " + str(np.max(model.prob.get_val(value, units=units))))
 
 # In this case, the electrolyzer will be sized to match the maximum `electricity_in`
-# coming from HOPP. This increases the electrolyzer size to 1080 MW, the smallest
-# multiple of 40 MW (the cluster size) matching the max HOPP power output of 1048 MW.
+# coming from the upstream renewable electricity source. This increases the
+# electrolyzer size to 1080 MW, the smallest multiple of 40 MW (the cluster size)
+# matching the max input power of 1048 MW.
 # This increases the LCOH to $4.80/kg H2, and increases the LCOA to $1.54/kg NH3
 tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_parameters"][
     "size_mode"
@@ -122,7 +123,7 @@ for value in value_units.keys():
 # will ensure an h2 production capacity that matches the ammonia plant's h2 intake at
 # its max ammonia production capacity. This increases the LCOH to $4.64/kg H2, but
 # reduces the LCOA to $1.30/kg NH3, since electrolyzer size was matched to ammonia
-# production but not HOPP.
+# production but not the upstream renewable source.
 
 tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_parameters"][
     "size_mode"
@@ -135,7 +136,7 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
 ]
@@ -169,7 +170,7 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["hopp", "electrolyzer", "electricity", "cable"],
+    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
     ["electrolyzer", "ammonia", "hydrogen", "pipe"],
 ]
 input_config["plant_config"] = plant_config

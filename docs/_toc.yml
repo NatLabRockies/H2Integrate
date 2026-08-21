@@ -28,6 +28,7 @@ parts:
       - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river
       - file: technology_models/tidal
+      - file: technology_models/wave
       - file: technology_models/natural_gas
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
@@ -44,6 +45,7 @@ parts:
       - file: technology_models/grid
       - file: technology_models/h2_fuel_cell.md
       - file: technology_models/h2_smr.md
+      - file: technology_models/h2_htse.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
       - file: technology_models/iron_dri.md
@@ -63,14 +65,17 @@ parts:
       - file: resource/resource_index
         sections:
           - file: resource/wind_index
-          - file: resource/wind_toolkit_v2_api
-          - file: resource/openmeteo_wind_archive
+            sections:
+              - file: resource/wind_toolkit_v2_api
+              - file: resource/openmeteo_wind_archive
           - file: resource/solar_index
-          - file: resource/goes_solar_v4_api
-          - file: resource/himawari_v3_api
-          - file: resource/meteosat_prime_meridian_v4_api
-          - file: resource/openmeteo_solar_archive
+            sections:
+              - file: resource/goes_solar_v4_api
+              - file: resource/himawari_v3_api
+              - file: resource/meteosat_prime_meridian_v4_api
+              - file: resource/openmeteo_solar_archive
           - file: resource/tidal_resource
+          - file: resource/wave_resource
   - caption: Control
     chapters:
       - file: control/system_level_control/system_level_control
@@ -108,16 +113,17 @@ parts:
       - file: developer_guide/coding_guidelines
       - file: developer_guide/why_make_h2integrate
       - file: developer_guide/adding_a_new_technology
-      - file: developer_guide/features_not_currently_implemented
       - file: developer_guide/class_structure
-      - file: developer_guide/describing_whats_in_classes
+      - file: developer_guide/technology_model_types
       - file: developer_guide/testing
+      - file: developer_guide/features_not_currently_implemented
   - caption: Miscellaneous Resources
     chapters:
       - file: misc_resources/FAQ
       - file: misc_resources/glossary
       - file: misc_resources/defining_filepaths
       - file: misc_resources/turbine_models_library_preprocessing
+      - file: misc_resources/debugging_environment_variables
   - caption: API Reference
     maxdepth: 3
     chapters:

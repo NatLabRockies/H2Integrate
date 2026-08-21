@@ -5,6 +5,18 @@
 - [Solar Resource Data](solar_resource:models)
 - [Tidal Resource Data](tidal_resource:models)
 
+## Common Resource Datasets and Considerations
+
+Both wind and solar resource data can be obtained from resource models that use the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api) or resource models that use the resource models available in the [NLR Developer Network](https://developer.nlr.gov).
+
+Resource models that use the [NLR Developer Network](https://developer.nlr.gov) require an API key (which can be obtained for free from [here](https://developer.nlr.gov/signup/)). Resource models that use the OpenMeteo Archive API do not require an API key.
+
+Another key difference is that the NLR resource datasets are constrained to specific geographic regions, meaning you have to choose the resource model that corresponds to your site location. OpenMeteo resource data is available globally, for all onshore sites.
+
+```{note}
+OpenMeteo data can be downloaded directly from the web instead of using the models in H2I. If OpenMeteo resource data is downloaded directly from the web and in the local timezone of the site, the data is downloaded with a UTC offset in *daylight time* whereas data downloaded with the H2I resource models will use a UTC offset in *standard time*. Resource data downloaded from the NLR Developer developer network in local time also use a UTC offset in *standard time*.
+```
+
 
 ## Setting resource data for a technology
 
@@ -14,6 +26,7 @@ There are two ways to supply resource data to a technology:
 
 
 
+(resource-data-specified-using-setval)=
 ### Resource data specified using `set_val()`
 
 Resource data for a technology can be set using the `set_val()` command. In the [Run of River Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/07_run_of_river_plant/), the technology named `river` needs a resource input called `discharge`. An example of this is shown below:
@@ -38,6 +51,7 @@ h2i.run()
 ```
 
 
+(custom-resource-models)=
 ### Custom resource models
 The benefit of using a custom resource model is that the resource data can be made to vary for different inputs, which can be beneficial if running a design sweep or optimization where the resource location (specified by a latitude and longitude) is a design variable.
 

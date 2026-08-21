@@ -13,7 +13,6 @@ sites:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2013
-          resource_dir: ../11_hybrid_energy_plant/tech_inputs/weather/solar
           resource_filename: 30.6617_-101.7096_psmv3_60_2013.csv
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
@@ -68,6 +67,7 @@ finance_parameters:
       finance_model: ProFastNPV
       model_inputs:
         commodity_sell_price: 0.05167052
+        commodity_sell_price_units: USD/(kW*h)
         params:
           analysis_start_year: 2032
           installation_time: 36  # months

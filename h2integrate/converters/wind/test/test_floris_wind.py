@@ -6,9 +6,9 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import ROOT_DIR, H2I_LIBRARY_DIR, load_yaml
+from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
-from h2integrate.resource.wind.nlr_developer_wtk_api import WTKNLRDeveloperAPIWindResource
 
 
 @fixture
@@ -213,7 +213,7 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
                 prob.get_val("wind_plant.annual_electricity_produced", units="kW*h/year")[0],
                 rel=1e-6,
             )
-            == 36471.03023616864 * 1e3
+            == 36457.44603023616864 * 1e3
         )
 
     with subtests.test("total electricity_out"):

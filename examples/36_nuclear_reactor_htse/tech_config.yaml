@@ -1,0 +1,115 @@
+name: technology_config
+description: This is a nuclear plant generating electricity and can also provide heat
+general:
+  folder_output: nuclear_htse
+technologies:
+  heat_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      shared_parameters:
+        commodity: heat
+        commodity_rate_units: kW
+  water_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: water
+        commodity_rate_units: galUS/h
+      performance_parameters:
+        rated_capacity: 2000.0  # gal water per hour
+      cost_parameters:
+        cost_year: 2021
+        commodity_amount_units: galUS
+        price: 0.0035  # 3.5 USD/kgal
+        annual_cost: 0.
+        start_up_cost: 0.0
+  nuclear:
+    performance_model:
+      model: SimpleThermalNuclearReactorPerformanceModel
+    cost_model:
+      model: SimpleThermalNuclearReactorCostModel
+    model_inputs:
+      performance_parameters:
+        operating_mode: heat
+        electricity_command_value: 500  # MW
+        high_pressure_electrical_efficiency: 0.12
+        low_pressure_electrical_efficiency: 0.22
+        minimum_heat_extract: 1  # MW
+      cost_parameters:
+        cost_year: 2022
+        upfront_cost: 5750000.0  # $/MWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
+        fixed_om_cost: 2640.0 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
+        variable_om_cost: 145.0
+        # Values from Table 38, Meta-Analysis of Advanced Nuclear Reactor Cost Estimations,
+        # slightly adjusted away from 93% capacity factor
+      shared_parameters:
+        commodity_rate_units: MW
+        commodity_amount_units: MWh
+        rated_capacity: 1000.0
+  htse_electricity_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+      performance_parameters:
+        rated_capacity: 30000.0  # kW
+      cost_parameters:
+        cost_year: 2022
+        commodity_amount_units: kW*h
+        price: 0.0  # USD/(kW*h)
+        annual_cost: 0.
+        start_up_cost: 0.0
+  htse:
+    performance_model:
+      model: HTSEPerformanceModel
+    cost_model:
+      model: HTSECostModel
+    model_inputs:
+      performance_parameters:
+        nominal_heat_required: 6.4  # kWh/kg
+        nominal_electricity_required: 36.8  # kWh/kg
+        # https://lwrs.inl.gov/content/uploads/11/2024/03/TechnicalEconomicAssessment-LWR-SupportedHydrogen.pdf  # INL/RPT-23-75604
+        cluster_rating_MW: 1  # Electric-only sizing component, so capacity = rating*clusters/nom_elec
+        n_clusters: 25
+        turndown_ratio: 0.1  # minimum operating power
+        uptime_hours_until_eol: 35040  # 4 years as per  Diaz et al. 2023
+      cost_parameters:
+        cost_year: 2022
+        unit_capex: 1417  # $/kW based on Diaz et al. 2023: Technical Economic Assessment of LWR-Supported Hydrogen Markets in Gulf Coast Regions
+        fixed_capex: 0.0
+      capital_items:
+        depr_type: MACRS     # can be "MACRS" or "Straight line"
+        depr_period: 7
+        refurb: null  # to be assigned at run rime
+        replacement_cost_percent: 0.1077  # based on table 2 in Diaz et al. 2023
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # 100 MW
+  grid_sell:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 5000000  # 5 GW
+      cost_parameters:
+        cost_year: 2022
+        electricity_sell_price: 0.0  # $/kWh - only selling, no buying
+        sell_price_mode: constant
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost

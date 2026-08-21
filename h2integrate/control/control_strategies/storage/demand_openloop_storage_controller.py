@@ -4,14 +4,14 @@ import numpy as np
 from attrs import define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
-    StorageOpenLoopControlBase,
-    StorageOpenLoopControlBaseConfig,
+from h2integrate.control.control_strategies.openloop_control_base import (
+    OpenLoopControlBase,
+    OpenLoopControlBaseConfig,
 )
 
 
 @define(kw_only=True)
-class DemandOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
+class DemandOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
     """
     Configuration class for the DemandOpenLoopStorageController.
 
@@ -35,7 +35,7 @@ class DemandOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
         self.common_post_init_operations()
 
 
-class DemandOpenLoopStorageController(StorageOpenLoopControlBase):
+class DemandOpenLoopStorageController(OpenLoopControlBase):
     """
     A controller that manages commodity flow based on demand and storage constraints.
 

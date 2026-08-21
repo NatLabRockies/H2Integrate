@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -12,7 +11,7 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
     Configuration class for the StoragePerformanceBase model.
 
-     Attributes:
+    Attributes:
         min_soc_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
         max_soc_fraction (float): Maximum allowable state of charge as a fraction (0 to 1).
         demand_profile (int | float | list): Demand values for each timestep, in
@@ -21,8 +20,8 @@ class StoragePerformanceBaseConfig(BaseConfig):
     """
 
     # Below are used in all storage models
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    max_soc_fraction: float = field(validator=range_val(0, 1))
+    min_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    max_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     demand_profile: int | float | list = field()
 
 
@@ -111,7 +110,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Storage design outputs:
         default_storage_duration = 0.0
         if hasattr(self.config, "max_charge_rate") and hasattr(self.config, "max_capacity"):
-            default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
+            if self.config.max_charge_rate > 0:
+                default_storage_duration = self.config.max_capacity / self.config.max_charge_rate
 
         self.add_output(
             "storage_duration",

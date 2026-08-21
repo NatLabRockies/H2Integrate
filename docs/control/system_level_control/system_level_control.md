@@ -13,7 +13,7 @@ Every technology group has an *implicit passthrough controller* that converts `{
 ```
 
 ```{important}
-SLC demand is set by connecting a demand component (for example, `GenericDemandComponent`) to the system. When SLC is enabled, only one demand component is currently supported.
+SLC demand is set by connecting a demand component (for example, `GenericDemandComponent`) to the system. Currently, the only supported models for the demand component are the `GenericDemandComponent` and the `FlexibleDemandComponent`. The technology defined as the demand component must be included in the `technology_interconnections` in the plant configuration file.
 ```
 
 ```{figure} figures/slc_basic.png
@@ -21,18 +21,19 @@ SLC demand is set by connecting a demand component (for example, `GenericDemandC
 :align: center
 ```
 
-The SLC control strategy and solver options are set within `plant_config.yaml` under the `"system_level_control"` section.
+The SLC control strategy, demand technology, and solver options are set within `plant_config.yaml` under the `"system_level_control"` section.
 
 ```yaml
 system_level_control:
   control_strategy: DemandFollowingControl
+  demand_component: electrical_load_demand
   solver_options:
     solver_name: gauss_seidel
     max_iter: 20
     convergence_tolerance: 1.0e-6
 ```
 
-To set the demand for SLC, define exactly one demand block/component in `tech_config.yaml`. For example:
+To set the demand for SLC, define exactly the demand block/component in `tech_config.yaml`. For example:
 
 ```yaml
 electrical_load_demand:
