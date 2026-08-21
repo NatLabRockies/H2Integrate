@@ -5,7 +5,7 @@ from datetime import timezone, timedelta
 import numpy as np
 import pandas as pd
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
@@ -56,37 +56,37 @@ class ResourceBaseH5Config(BaseConfig):
     longitude: float = field()
 
     timezone: int | float = field()
+    site_gid: int = field(default=-1)
 
+    location_input: str = field(default="lat/lon", validator=validators.in_(["lat/lon", "gid"]))
     # TODO: add site_gid as input?
     # use_fixed_resource_location: bool = field(default=False, kw_only=True)
-    resource_data: dict | object = field(default={}, kw_only=True)
+    # resource_data: dict | object = field(default={}, kw_only=True)
 
     # H5 file info
-    dataset_filename: Path | str = field(default="", kw_only=True)
-    dataset_path: Path | str | None = field(default=None, kw_only=True)
+    # dataset_filename: Path | str = field(default="", kw_only=True)
+    # dataset_path: Path | str | None = field(default=None, kw_only=True)
 
     # Export file info
     save_to_csv: bool = field(default=False, kw_only=True)
     load_from_csv: bool = field(default=False, kw_only=True)
     csv_output_dir: Path | str | None = field(default=None, kw_only=True)
-    csv_filename: str = field(default="")
+    # csv_filename: str = field(default="")
+    with_hsds: bool = field(default=False, kw_only=True)
+    hsds_kwargs: dict = field(default={}, kw_only=True)
 
+    # Attributes to be populated by parent classes
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
-    with_hsds: bool = field(default=False, init=False)
 
     def __attrs_post_init__(self):
-        provided_filename = False if self.csv_filename == "" else True
+        # provided_filename = False if self.csv_filename == "" else True
         provided_dir = False if self.csv_output_dir is None else True
 
         # Get valid resource_dir with the function check_resource_dir()
         csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
 
-        if provided_filename:
-            # If a filename was input, use csv_filename as the filename.
-            filepath = csv_dir / self.csv_filename
-            if filepath.is_file():
-                self.csv_output_dir = filepath.parent
+        csv_usage_enabled = self.save_to_csv or self.load_from_csv
 
         if self.csv_output_dir is None:
             if provided_dir and Path(self.csv_output_dir).parts[-1] == self.csv_output_dir:
@@ -97,6 +97,37 @@ class ResourceBaseH5Config(BaseConfig):
                 )
 
             self.csv_output_dir = csv_dir
+
+        if csv_usage_enabled and not provided_dir:
+            msg = (
+                "Resource data can be loaded or saved to a csv file but `csv_dir` was not "
+                f"provided. Csv files will be loaded or saved to folder: {csv_dir}"
+            )
+            warnings.warn(msg, UserWarning, stacklevel=3)
+
+        if bool(self.hsds_kwargs) and not self.with_hsds:
+            msg = (
+                "Provided `hsds_kwargs` but `with_hsds` if False. Please set `with_hsds` "
+                "to True to run this resource model with hsds enabled. If running on an "
+                "NLR super-computer, remove `hsds_kwargs` from the inputs. "
+            )
+
+            raise AttributeError(msg)
+
+        if int(self.timezone) != 0:
+            msg = (
+                "Data from HPC datasets is natively in UTC. Timeseries data will be rolled to "
+                "local timezone (in standard time), but time data (year, month, etc) will not "
+                "be rolled to prevent unexpected behavior in performance models."
+            )
+            warnings.warn(msg, UserWarning, stacklevel=3)
+
+        if self.location_input == "gid" and self.site_gid == -1:
+            msg = (
+                "`site_gid` is required when `location_input` is `gid`. "
+                "Please provide the `site_gid` or change `location_input` to `lat/lon`."
+            )
+            raise AttributeError(msg)
 
 
 class ResourceBaseH5Model(om.ExplicitComponent):
@@ -125,12 +156,16 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         # create attributes that will be commonly used for resource classes.
         self.resource_data = None
         self.resource_site = [self.config.latitude, self.config.longitude]
+        self.resource_id = self.config.site_gid
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
 
-        # self.add_input("site_gid", self.config.site_gid, units="unitless")
+        if self.config.location_input == "gid":
+            self.add_input(
+                f"{self.config.resource_type}_site_gid", self.config.site_gid, units="unitless"
+            )
 
     def helper_setup_method(self):
         """
@@ -271,8 +306,51 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         return data
 
+    def search_for_csv_file_from_gid(self, site_gid: int):
+        filename_desc = f"{self.config.resource_year}_{self.config.dataset_desc}"
+        existing_files = [
+            f for f in Path(self.config.csv_output_dir).glob(f"{site_gid}_*") if f.suffix == ".csv"
+        ]
+        close_match_files = [f for f in existing_files if filename_desc in f.name]
+        if not close_match_files:
+            return None
+        if len(close_match_files) == 1:
+            return close_match_files[0]
+        # multiple files match. Perhaps because similar sites have the same site GID
+        chosen_file = close_match_files[0]
+        msg = (
+            f"Found {len(close_match_files)} potential csv files for site_gid {site_gid} "
+            f"with dataset description of {filename_desc}. Files found were: \n"
+            f"{close_match_files} \n. Running resource model with file {chosen_file}"
+        )
+        warnings.warn(msg, UserWarning, stacklevel=3)
+        return chosen_file
+
+    def search_for_csv_file_from_lat_lon(self, latitude, longitude):
+        filename_desc = (
+            f"{latitude}_{longitude}_{self.config.resource_year}_{self.config.dataset_desc}"
+        )
+        close_match_files = [
+            f for f in Path(self.config.csv_output_dir).glob("*.csv") if filename_desc in f.name
+        ]
+
+        if not close_match_files:
+            return None
+        if len(close_match_files) == 1:
+            return close_match_files[0]
+        # multiple files match. This would be a bit unexpected.
+        chosen_file = close_match_files[0]
+        msg = (
+            f"Found {len(close_match_files)} potential csv files for location "
+            f"({latitude}, {longitude}) with dataset description of {filename_desc}. "
+            f"Files found were: \n{close_match_files} \n. Running resource model "
+            f"with file {chosen_file}"
+        )
+        warnings.warn(msg, UserWarning, stacklevel=3)
+        return chosen_file
+
     # def create_filename(self, latitude, longitude):
-    def create_csv_filename(self, latitude, longitude):
+    def create_csv_filename(self, site_gid, latitude, longitude):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
 
         "{latitude}_{longitude}_{resource_year}_{dataset_desc}_{interval}min_{tz_desc}_tz.csv"
@@ -285,71 +363,27 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         Returns:
             str: filename for resource data to be saved to or loaded from.
         """
-
-        raise NotImplementedError("This method should be implemented in a subclass.")
-
-    # def get_site_gid(self, latitude, longitude):
-
-    # def create_url(self, latitude, longitude):
-    #     """Create url for data download.
+        end_name = (
+            f"{self.config.resource_year}_{self.config.dataset_desc}_{self.dt_min}min_utc_tz.csv"
+        )
+        filename = f"{int(site_gid)}_{latitude}_{longitude}_{end_name}"
+        return filename
+        # raise NotImplementedError("This method should be implemented in a subclass.")
 
     #     Args:
     #         latitude (float): latitude corresponding to location for resource data
     #         longitude (float): longitude corresponding to location for resource data
 
-    #     Returns:
-    #         str: url to use for API call.
-    #     """
-
-    #     raise NotImplementedError("This method should be implemented in a subclass.")
-
-    # def download_data(self, url, fpath):
-    #     """Download data from url to a file.
-
-    #     Args:
-    #         url (str): url to call to access data.
-    #         fpath (Path | str): filepath to save data to.
-
-    #     Returns:
-    #         bool: True if data was downloaded successfully, False if error was encountered.
-    #     """
-
-    #     success = download_from_api(url, fpath)
-    #     return success
-
-    def load_data(self, fpath):
-        """Loads data from a file, reformats data to follow a standardized naming convention,
-        converts data to standardized units, and creates a data time profile.
-
-        Args:
-            fpath (str | fpath): filepath to load the data from.
-
-        Raises:
-            NotImplementedError: this method should be implemented in a subclass.
-
-        Returns:
-            dict: dictionary of data that follows the corresponding standardized
-                naming convention and is in standardized units.
-                The time profile created should be found in the 'time' key.
-        """
-        raise NotImplementedError("This method should be implemented in a subclass.")
-
-    def get_data(self, latitude, longitude, first_call=True):
+    def get_data(self, site_gid, latitude, longitude, first_call=True):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
             inputs are different than the previous latitude and longitude values. If resource data
             has not been already loaded for the, continue to Step 1.
-        1) Check if resource data was input. If not, continue to Step 2.
-        2) Get valid resource_dir with :py:func:`check_resource_dir`
-        3) Create a filename if resource_filename was not input or if the site location changed
-            with the method `create_filename()`. Otherwise, use resource_filename as the filename.
-        4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid filepath,
-            load data using `load_data()`. Otherwise, continue to Step 5.
-        5) Create the url to download data using `create_url()` and continue to Step 6.
-        6) Download data from the url created in Step 5 and save to a filepath created from the
-            resulting resource_dir and filename from Steps 2 and 3. Continue to Step 7.
-        7) Load data from the file created in Step 6 using `load_data()`
+        1) If either saving or loading from a csv file, check if a csv file matching
+            either the site GID or lat/lon exists. If a csv file is found, load data from
+            the csv file. Otherwise, continue to step 3
+        2)
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -364,92 +398,83 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         Returns:
             Any: resource data in the format expected by the subclass.
         """
-        site_changed = False
+        # site_changed = False
 
-        site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
+        site_loc_changed = not np.allclose(
+            [latitude, longitude], self.resource_site, atol=1e-6, rtol=0
+        )
+        site_id_changed = site_gid != self.resource_id
+        # both_changed = site_loc_changed and site_id_changed
+        # neither_changed = (not site_loc_changed) and (not site_id_changed)
+
+        if site_id_changed and self.config.location_input == "lat/lon" and not site_loc_changed:
+            msg = (
+                f"For location ({latitude},{longitude}), the `site_gid` changed from "
+                f"{self.resource_id} to {site_gid}, but the latitude and longitude are unchanged. "
+                f"`site_gid` should not change unless the latitude and longitude change when "
+                "`location_input` is `lat/lon`. Resource data will be output for "
+                f"original `site_gid` of {self.resource_id}"
+            )
+            warnings.warn(msg, UserWarning, stacklevel=2)
+        if site_loc_changed and self.config.location_input == "gid" and not site_id_changed:
+            msg = (
+                f"For location with `site_gid` of {site_gid}, the location changed from "
+                f"{tuple(self.resource_site)} to ({latitude},{longitude}), but the `site_gid` is "
+                f"unchanged. The latitude and longitude should not change unless the `site_gid` "
+                "changes when `location_input` is `gid`. Resource data will be output for "
+                f"original location of {tuple(self.resource_site)}"
+            )
+            warnings.warn(msg, UserWarning, stacklevel=2)
 
         # 0) If site hasn't changed and resource data has already been loaded
         # just return the resource data that was loaded in the setup() method
-        if not site_changed and not first_call:
-            if self.resource_data is not None:
+        if (not first_call) and (self.resource_data is not None):
+            if self.config.location_input == "lat/lon" and not site_loc_changed:
+                return self.resource_data
+            if self.config.location_input == "gid" and not site_id_changed:
                 return self.resource_data
 
-        # 1) check if user provided data, add start and end times if so
-        # and return the data
-        if bool(self.config.resource_data):
-            data = self.add_resource_start_end_times(self.config.resource_data)
-            return data
+        # if neither_changed and not first_call:
 
-        # check if user provided directory or filename
-        provided_filename = False if self.config.resource_filename == "" else True
-        provided_dir = False if self.config.resource_dir is None else True
+        # if self.config.load_from_csv:
+        #     if self.config.location_input == "gid"
+        #     self.search_for_csv_file_from_lat_lon
+        # # 0) If site hasn't changed and resource data has already been loaded
+        # # just return the resource data that was loaded in the setup() method
+        # if not site_changed and not first_call:
+        #     if self.resource_data is not None:
+        #         return self.resource_data
 
-        # 2a) check if file exists directly within resource directory
-        # 2) Get valid resource_dir with the function check_resource_dir()
-        resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
-        # 3a) Create a filename if resource_filename was input
-        if provided_filename and not site_changed:
-            # If a filename was input, use resource_filename as the filename.
-            filepath = resource_dir / self.config.resource_filename
-        # Otherwise, create a filename with the method `create_filename()`.
-        else:
-            filename = self.create_filename(latitude, longitude)
-            filepath = resource_dir / filename
-        # if file doesn't exist, continue to Step 2b
-        if not filepath.is_file():
-            # 2b) check if file exists directly within a subfolder of the resource directory
-            # 2) Get valid resource_dir with the function check_resource_dir()
-            if (
-                provided_dir
-                and Path(self.config.resource_dir).parts[-1] == self.config.resource_type
-            ):
-                resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
-            else:
-                resource_dir = check_resource_dir(
-                    data_dir=self.config.resource_dir, data_subdir=self.config.resource_type
-                )
-            # 3) Create a filename if resource_filename was input
-            if provided_filename and not site_changed:
-                # If a filename was input, use resource_filename as the filename.
-                filepath = resource_dir / self.config.resource_filename
-            # Otherwise, create a filename with the method `create_filename()`.
-            else:
-                filename = self.create_filename(latitude, longitude)
-                filepath = resource_dir / filename
+        # # Check if the filename was provided by the user and the site hasn't changed
+        # if provided_filename and not site_changed:
+        #     # If the user-provided filename wasn't found, throw a warning
+        #     if not filepath.is_file():
+        #         msg = (
+        #             f"User provided resource filename {self.config.resource_filename} "
+        #             f"not found in {resource_dir}. Data will be downloaded for this site."
+        #         )
+        #         warnings.warn(msg, UserWarning)
 
-        # Check if the filename was provided by the user and the site hasn't changed
-        if provided_filename and not site_changed:
-            # If the user-provided filename wasn't found, throw a warning
-            if not filepath.is_file():
-                msg = (
-                    f"User provided resource filename {self.config.resource_filename} "
-                    f"not found in {resource_dir}. Data will be downloaded for this site."
-                )
-                warnings.warn(msg, UserWarning)
+        # # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
+        # # filepath, load data using `load_data()`
+        # if filepath.is_file():
+        #     self.filepath = filepath
+        #     data = self.load_data(filepath)
+        #     data = self.add_resource_start_end_times(data)
+        #     return data
 
-        # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
-        # filepath, load data using `load_data()`
-        if filepath.is_file():
-            self.filepath = filepath
-            data = self.load_data(filepath)
-            data = self.add_resource_start_end_times(data)
-            return data
-
-        # If the filepath (resource_dir/filename) does not exist, download data
-        self.filepath = filepath
-        # 5) Create the url to download data using `create_url()` and continue to Step 6.
-        url = self.create_url(latitude, longitude)
-        # 6) Download data from the url created in Step 5 and save to a filepath created from
-        # the resulting resource_dir and filename from Steps 2 and 3.
-        success = self.download_data(url, filepath)
-        if success:
-            # 7) Load data from the file created in Step 6 using `load_data()`
-            data = self.load_data(filepath)
-            data = self.add_resource_start_end_times(data)
-            return data
-
-        else:
-            raise ValueError("Did not successfully download resource data.")
+        # # If the filepath (resource_dir/filename) does not exist, download data
+        # self.filepath = filepath
+        # # 5) Create the url to download data using `create_url()` and continue to Step 6.
+        # url = self.create_url(latitude, longitude)
+        # # 6) Download data from the url created in Step 5 and save to a filepath created from
+        # # the resulting resource_dir and filename from Steps 2 and 3.
+        # success = self.download_data(url, filepath)
+        # if success:
+        #     # 7) Load data from the file created in Step 6 using `load_data()`
+        #     data = self.load_data(filepath)
+        #     data = self.add_resource_start_end_times(data)
+        #     return data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         if not self.config.use_fixed_resource_location:
