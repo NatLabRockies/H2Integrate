@@ -11,7 +11,6 @@ from h2integrate.converters.hydrogen.h2_fuel_cell import (
 )
 from h2integrate.converters.hydrogen.PEM_h2_fuel_cell import (
     PEMH2FuelCellPerformanceModel,
-    PEMH2FuelCellCostModel,
 )
 from h2integrate.converters.hydrogen.steam_methane_reformer import (
     SteamMethaneReformerPerformanceModel,

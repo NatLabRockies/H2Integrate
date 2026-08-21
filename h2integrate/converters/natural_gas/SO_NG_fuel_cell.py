@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, faraday
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
@@ -26,10 +25,10 @@ class SONGFuelCellPerformanceConfig(BaseConfig):
     # TODO: how to size the fuel cell? N_cells + N_stacks?
     # How does N_cells translate to electricity rating?
 
-    system_capacity_kw: float = field(validator=gte_zero)
-    n_stacks: int
-    stack_temperature_K: float
-    hhv: float
+    system_capacity_kw: float = field(validator=validators.ge(0))
+    n_stacks: int = field(validator=validators.ge(0))
+    stack_temperature_K: float = field(validator=validators.ge(0))
+    hhv: float = field(validator=validators.ge(0))
     # min_system_power_fraction_kw: float
     # fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
 
@@ -402,11 +401,11 @@ class SONGFuelCellCostConfig(CostModelBaseConfig):
     The `cost_year` field is inherited from `CostModelBaseConfig`.
     """
 
-    capex_stack_per_kw: float = field(validator=gte_zero)
-    capex_bop_per_kw: float = field(validator=gte_zero)
-    capex_indirect_costs_per_kw: float = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
-    capex_battery_total: float = field(validator=gte_zero)
+    capex_stack_per_kw: float = field(validator=validators.ge(0))
+    capex_bop_per_kw: float = field(validator=validators.ge(0))
+    capex_indirect_costs_per_kw: float = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float = field(validator=validators.ge(0))
+    capex_battery_total: float = field(validator=validators.ge(0))
 
 
 class SONGFuelCellCostModel(CostModelBaseClass):

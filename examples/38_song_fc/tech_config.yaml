@@ -14,15 +14,11 @@ technologies:
         stack_temperature_K: 1073
         hhv: 15.4  # kWh/kg --> based on methane
       cost_parameters:
-        capex_stack_per_kw: 800
-        capex_fuel_supply_per_kw: 140.67
-        capex_air_supply_per_kw: 138.79
-        capex_cooling_per_kw: 64.14
-        capex_controls_instrumentation_per_kw: 106.52
-        capex_electrical_per_kw: 447.83
-        capex_assembly_per_kw: 63.51
-        capex_additional_labor_per_kw: 137.96
-        fixed_opex_per_kw_per_year: 31
+        capex_stack_per_kw: 500.0
+        capex_bop_per_kw: 1000.0
+        capex_indirect_costs_per_kw: 1500.0
+        capex_battery_total: 95000
+        fixed_opex_per_kw_per_year: 35
         cost_year: 2026
   electricity_load_demand:
     performance_model:

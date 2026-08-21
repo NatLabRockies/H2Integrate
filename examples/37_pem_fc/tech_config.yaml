@@ -5,7 +5,7 @@ technologies:
     performance_model:
       model: PEMH2FuelCellPerformanceModel
     cost_model:
-      model: PEMH2FuelCellCostModel
+      model: GenericConverterCostModel
     model_inputs:
       performance_parameters:
         system_capacity_kw: 1500
@@ -13,15 +13,12 @@ technologies:
         stack_temperature_K: 278  # Not used yet
         hhv: 39.4  # kWh/kg
       cost_parameters:
-        capex_stack_per_kw: 800
-        capex_hydrogen_supply_per_kw: 140.67
-        capex_air_supply_per_kw: 138.79
-        capex_cooling_per_kw: 64.14
-        capex_controls_instrumentation_per_kw: 106.52
-        capex_electrical_per_kw: 447.83
-        capex_assembly_per_kw: 63.51
-        capex_additional_labor_per_kw: 137.96
-        fixed_opex_per_kw_per_year: 31
+        commodity: electricity
+        commodity_rate_units: kW
+        commodity_amount_units: kW*h
+        unit_capex: 1999.6  # USD/kW
+        unit_opex: 31  # USD/kW/year
+        unit_varopex: 0.0  # USD/kWh
         cost_year: 2026
   electricity_load_demand:
     performance_model:

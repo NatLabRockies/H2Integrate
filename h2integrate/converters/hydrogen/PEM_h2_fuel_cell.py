@@ -1,14 +1,9 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.tools.constants import H_MW, O2_MW, faraday
-from h2integrate.core.model_baseclasses import (
-    CostModelBaseClass,
-    CostModelBaseConfig,
-    PerformanceModelBaseClass,
-)
+from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
@@ -24,10 +19,10 @@ class PEMH2FuelCellPerformanceConfig(BaseConfig):
     # TODO: how to size the fuel cell? N_cells + N_stacks?
     # How does N_cells translate to electricity rating?
 
-    system_capacity_kw: float = field(validator=gte_zero)
-    n_stacks: int
-    stack_temperature_K: float
-    hhv: float
+    system_capacity_kw: float = field(validator=validators.ge(0))
+    n_stacks: int = field(validator=validators.ge(0))
+    stack_temperature_K: float = field(validator=validators.ge(0))
+    hhv: float = field(validator=validators.ge(0))
     # min_system_power_fraction_kw: float
     # fuel_cell_efficiency_hhv: float = field(validator=range_val(0, 1))
 
@@ -340,96 +335,3 @@ class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
 
         # TODO: implement a hydrogen and oxygen conversion efficiency based on stack
         #   temperature and other factors
-
-
-@define(kw_only=True)
-class PEMH2FuelCellCostConfig(CostModelBaseConfig):
-    """Configuration class for the hydrogen fuel cell cost model.
-
-    TODO: update doc string
-    Fields include `system_capacity_kw`, `capex_stack_per_kw`, `capex_hydrogen_supply_per_kw`,
-    `capex_air_supply_per_kw`, `capex_cooling_per_kw`, `capex_controls_instrumentation_per_kw`,
-    `capex_electrical_per_kw`, `capex_assembly_per_kw`, `capex_additional_labor_per_kw`,
-    and `fixed_opex_per_kw_per_year`. The `cost_year` field is inherited from `CostModelBaseConfig`.
-    """
-
-    # system_capacity_kw: float = field(validator=gte_zero)
-    capex_stack_per_kw: float = field(validator=gte_zero)
-    capex_hydrogen_supply_per_kw: float = field(validator=gte_zero, default=0.0)
-    capex_air_supply_per_kw: float = field(validator=gte_zero)
-    capex_cooling_per_kw: float = field(validator=gte_zero)
-    capex_controls_instrumentation_per_kw: float = field(validator=gte_zero)
-    capex_electrical_per_kw: float = field(validator=gte_zero)
-    capex_assembly_per_kw: float = field(validator=gte_zero)
-    capex_additional_labor_per_kw: float = field(validator=gte_zero)
-    capex_battery_total: float = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float = field(validator=gte_zero)
-
-
-class PEMH2FuelCellCostModel(CostModelBaseClass):
-    """
-    Cost model for a hydrogen fuel cell system.
-
-    The model calculates capital and fixed operating costs based on system capacity and
-    specified cost parameters.
-    """
-
-    _time_step_bounds = (
-        3600,
-        3600,
-    )  # (min, max) time step lengths (in seconds) compatible with this model
-
-    def setup(self):
-        self.config = PEMH2FuelCellCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
-            additional_cls_name=self.__class__.__name__,
-        )
-
-        super().setup()
-
-        self.add_input(
-            "rated_electricity_production",
-            val=0.0,
-            units="kW",
-            desc="Capacity of the h2 fuel cell system",
-        )
-
-        self.add_input(
-            "unit_capex",
-            val=self.config.capex_stack_per_kw
-            + self.config.capex_hydrogen_supply_per_kw
-            + self.config.capex_air_supply_per_kw
-            + self.config.capex_cooling_per_kw
-            + self.config.capex_controls_instrumentation_per_kw
-            + self.config.capex_electrical_per_kw
-            + self.config.capex_assembly_per_kw
-            + self.config.capex_additional_labor_per_kw,
-            units="USD/kW",
-            desc="Capital cost per unit capacity",
-        )
-
-        self.add_input(
-            "fixed_opex_per_year",
-            val=self.config.fixed_opex_per_kw_per_year,
-            units="(USD/kW)/year",
-            desc="Fixed operating expenses per unit capacity per year",
-        )
-
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        """
-        Compute capital and fixed operating costs for the fuel cell system.
-
-        Args:
-            inputs: OpenMDAO inputs object containing rated_electricity_production.
-            outputs: OpenMDAO outputs object for capital_cost and fixed_operating_cost_per_year.
-        """
-
-        system_capacity_kw = inputs["rated_electricity_production"]
-
-        # Calculate capital cost
-        outputs["CapEx"] = (
-            system_capacity_kw * inputs["unit_capex"] + self.config.capex_battery_total
-        )
-
-        # Calculate fixed operating cost per year
-        outputs["OpEx"] = system_capacity_kw * inputs["fixed_opex_per_year"]
