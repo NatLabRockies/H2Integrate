@@ -120,10 +120,10 @@ def test_grid_performance_outputs(plant_config, subtests):
 
     # Test that interconnect output headroom is greater than zero
     # (plant oversized) and less than the rating
-    with subtests.test(f"0 < {commodity}_headroom_out < rated_{commodity}_production"):
-        assert np.all(prob.get_val(f"comp.{commodity}_headroom_out", units="MW") >= 0)
+    with subtests.test(f"0 < {commodity}_headroom < rated_{commodity}_production"):
+        assert np.all(prob.get_val(f"comp.{commodity}_headroom", units="MW") >= 0)
         assert np.all(
-            prob.get_val(f"comp.{commodity}_headroom_out", units="MW")
+            prob.get_val(f"comp.{commodity}_headroom", units="MW")
             <= prob.get_val(f"comp.rated_{commodity}_production", units="MW")
         )
 
@@ -305,7 +305,7 @@ def test_varying_demand_profile(plant_config, n_timesteps):
     np.testing.assert_array_almost_equal(electricity_out, expected)
 
     # The output headroom should be the difference between electricity_out and the rating
-    headroom = prob.get_val("grid.electricity_headroom_out")
+    headroom = prob.get_val("grid.electricity_headroom")
     np.testing.assert_array_almost_equal(
         headroom,
         tech_config["model_inputs"]["shared_parameters"]["interconnection_size"] - electricity_out,
@@ -444,7 +444,7 @@ def test_grid_integration_dt_1800(subtests, tmp_path):
         assert annual_energy == pytest.approx(expected_annual)
 
     with subtests.test("headroom calculation accurately represents rating less demand"):
-        headroom = h2i.prob.get_val("grid.electricity_headroom_out", units="kW")
+        headroom = h2i.prob.get_val("grid.electricity_headroom", units="kW")
         assert headroom == pytest.approx(
             tech_config["technologies"]["grid"]["model_inputs"]["shared_parameters"][
                 "interconnection_size"
