@@ -42,7 +42,7 @@ technologies:
         commodity: natural_gas
         commodity_rate_units: MMBtu/h
       performance_parameters:
-        rated_capacity: 20.0  # MMBtu/h of natural gas
+        rated_capacity: 30.0  # MMBtu/h of natural gas
       cost_parameters:
         cost_year: 2022
         price: 0.1
@@ -58,7 +58,7 @@ technologies:
         commodity: oxygen
         commodity_rate_units: kg/h
       performance_parameters:
-        rated_capacity: 400.0  # kg/h of oxygen
+        rated_capacity: 650.0  # kg/h of oxygen
       cost_parameters:
         cost_year: 2022
         price: 0.5  # $0.5/kg of oxygen. price is extremely variable

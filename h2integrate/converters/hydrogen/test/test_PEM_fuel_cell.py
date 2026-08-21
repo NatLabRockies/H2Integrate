@@ -43,7 +43,6 @@ def cost_config():
     config = {
         "model_inputs": {
             "cost_parameters": {
-                "system_capacity_kw": 1500.0,
                 "capex_stack_per_kw": 800.0,
                 "capex_hydrogen_supply_per_kw": 140.67,
                 "capex_air_supply_per_kw": 138.79,
@@ -277,6 +276,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
 
 @pytest.mark.regression
 def test_fuel_cell_cost(cost_config, plant_config, subtests):
+    system_capacity_kw = 1500.0
     prob = om.Problem()
 
     fuel_cell_cost = PEMH2FuelCellCostModel(
@@ -286,6 +286,8 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
     prob.model.add_subsystem("fuel_cell_cost", fuel_cell_cost, promotes=["*"])
 
     prob.setup()
+
+    prob.set_val("fuel_cell_cost.rated_electricity_production", system_capacity_kw, units="kW")
 
     prob.run_model()
 
@@ -300,8 +302,8 @@ def test_fuel_cell_cost(cost_config, plant_config, subtests):
         + cp["capex_assembly_per_kw"]
         + cp["capex_additional_labor_per_kw"]
     )
-    expected_capex = cp["system_capacity_kw"] * expected_unit_capex + cp["capex_battery_total"]
-    expected_opex = cp["system_capacity_kw"] * cp["fixed_opex_per_kw_per_year"]
+    expected_capex = system_capacity_kw * expected_unit_capex + cp["capex_battery_total"]
+    expected_opex = system_capacity_kw * cp["fixed_opex_per_kw_per_year"]
 
     with subtests.test("capex value"):
         assert (

@@ -7,9 +7,8 @@ technologies:
     cost_model:
       model: PEMH2FuelCellCostModel
     model_inputs:
-      shared_parameters:
-        system_capacity_kw: 1500
       performance_parameters:
+        system_capacity_kw: 1500
         n_stacks: 60
         stack_temperature_K: 278  # Not used yet
         hhv: 39.4  # kWh/kg
