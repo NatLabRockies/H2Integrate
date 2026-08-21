@@ -58,7 +58,7 @@ class ResourceBaseH5Config(BaseConfig):
     timezone: int | float = field()
 
     # TODO: add site_gid as input?
-    use_fixed_resource_location: bool = field(default=False, kw_only=True)
+    # use_fixed_resource_location: bool = field(default=False, kw_only=True)
     resource_data: dict | object = field(default={}, kw_only=True)
 
     # H5 file info
@@ -69,13 +69,34 @@ class ResourceBaseH5Config(BaseConfig):
     save_to_csv: bool = field(default=False, kw_only=True)
     load_from_csv: bool = field(default=False, kw_only=True)
     csv_output_dir: Path | str | None = field(default=None, kw_only=True)
-    csv_filename: Path | str = field(default="")
+    csv_filename: str = field(default="")
 
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     with_hsds: bool = field(default=False, init=False)
 
-    # def __attrs_post_init__(self):
+    def __attrs_post_init__(self):
+        provided_filename = False if self.csv_filename == "" else True
+        provided_dir = False if self.csv_output_dir is None else True
+
+        # Get valid resource_dir with the function check_resource_dir()
+        csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
+
+        if provided_filename:
+            # If a filename was input, use csv_filename as the filename.
+            filepath = csv_dir / self.csv_filename
+            if filepath.is_file():
+                self.csv_output_dir = filepath.parent
+
+        if self.csv_output_dir is None:
+            if provided_dir and Path(self.csv_output_dir).parts[-1] == self.csv_output_dir:
+                csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
+            else:
+                csv_dir = check_resource_dir(
+                    data_dir=self.csv_output_dir, data_subdir=self.resource_type
+                )
+
+            self.csv_output_dir = csv_dir
 
 
 class ResourceBaseH5Model(om.ExplicitComponent):
@@ -108,6 +129,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
+
         # self.add_input("site_gid", self.config.site_gid, units="unitless")
 
     def helper_setup_method(self):
