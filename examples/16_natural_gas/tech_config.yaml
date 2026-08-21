@@ -92,9 +92,8 @@ technologies:
     cost_model:
       model: NaturalGasCostModel
     model_inputs:
-      shared_parameters:
-        system_capacity_mw: 100.
       performance_parameters:
+        system_capacity_mw: 100.
         heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
       cost_parameters:
         capex_per_kw: 1000  # $/kW - typical for NGCC
