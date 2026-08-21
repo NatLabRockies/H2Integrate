@@ -92,7 +92,17 @@ def array_ge(val):
 
     def validator(instance, attribute, value):
         if any(value < val):
-            raise ValueError(f"'{attribute.name}' must have all values of at least 0.")
+            raise ValueError(f"'{attribute.name}' must have all values of at least {val}.")
+
+    return validator
+
+
+def array_gt(val):
+    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
+
+    def validator(instance, attribute, value):
+        if any(value <= val):
+            raise ValueError(f"'{attribute.name}' must have all values greater than {val}.")
 
     return validator
 
@@ -121,7 +131,7 @@ class BaseDowntime(ABC, BaseConfig):
 
 
 @define(kw_only=True)
-class BaseReliability(BaseConfig):
+class BaseReliability(ABC, BaseConfig):
     """Base reliability class responsible for common definitions and functionality.
 
     Args:
@@ -157,6 +167,11 @@ class BaseReliability(BaseConfig):
 
     def sample_events(self) -> np.ndarray:
         raise NotImplementedError("Failed to successfully subclass, please implement me.")
+
+    def create_downtime_events(self):
+        """Creates the ``time_to_failure`` and ``downtime_per_event`` arrays."""
+        self.time_to_failures = self.sample_events()
+        self.downtime_per_event = self.downtime.sample_downtime()
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
@@ -293,11 +308,6 @@ class WeibullReliability(BaseReliability):
             rng.weibull(self.shape, size=(self.shape.size, 100)) * self.scale * N_TIMESTEPS
         ).astype(int)
 
-    def create_downtime_events(self):
-        """Creates a ``time_to_failure`` and ``downtime_per_event``."""
-        self.time_to_failures = self.sample_events()
-        self.downtime_per_event = self.downtime.sample_downtime()
-
 
 @define(kw_only=True)
 class FixedIntervalReliability(BaseReliability):
@@ -314,7 +324,7 @@ class FixedIntervalReliability(BaseReliability):
 
     frequency: float = field(
         converter=float_array_converter,
-        validator=validators.instance_of(np.ndarray),
+        validator=(validators.instance_of(np.ndarray), array_gt(0)),
     )
 
     def __attrs_post_init__(self):
@@ -322,12 +332,6 @@ class FixedIntervalReliability(BaseReliability):
 
         self.create_downtime_events()
         self.calculate_availability()
-
-    @frequency.validator
-    def validate_frequency(self, attribute, value):
-        """Validates all passed values to :py:attr:`frequency` are greater than 0."""
-        if any(value <= 0):
-            raise ValueError("All values of 'frequency' must be greater than 0.")
 
     def sample_events(self):
         """Creates the time to next failure array for each event's modality with the first event
@@ -343,8 +347,3 @@ class FixedIntervalReliability(BaseReliability):
             (first_occurrence, np.broadcast_to(interval, (interval.size, 99)))
         )
         return time_to_failures
-
-    def create_downtime_events(self):
-        """Creates a ``time_to_failure`` and ``downtime_per_event``."""
-        self.time_to_failures = self.sample_events()
-        self.downtime_per_event = self.downtime.sample_downtime()
