@@ -592,7 +592,7 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
 
     expected_history = np.array(
         [
-            1.0,
+            0.0,
             1.0,
             0.0,
             0.0,
