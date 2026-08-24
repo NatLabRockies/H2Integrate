@@ -72,7 +72,7 @@ class ResourceBaseH5Config(BaseConfig):
     load_from_csv: bool = field(default=False, kw_only=True)
     csv_output_dir: Path | str | None = field(default=None, kw_only=True)
     # csv_filename: str = field(default="")
-    with_hsds: bool = field(default=False, kw_only=True)
+    use_hsds: bool = field(default=False, kw_only=True)
     hsds_kwargs: dict = field(default={}, kw_only=True)
 
     # Attributes to be populated by parent classes
@@ -83,12 +83,12 @@ class ResourceBaseH5Config(BaseConfig):
         # provided_filename = False if self.csv_filename == "" else True
         provided_dir = False if self.csv_output_dir is None else True
 
-        # Get valid resource_dir with the function check_resource_dir()
-        csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
-
         csv_usage_enabled = self.save_to_csv or self.load_from_csv
 
         if self.csv_output_dir is None:
+            # Get valid resource_dir with the function check_resource_dir()
+            csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
+
             if provided_dir and Path(self.csv_output_dir).parts[-1] == self.csv_output_dir:
                 csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
             else:
@@ -105,9 +105,9 @@ class ResourceBaseH5Config(BaseConfig):
             )
             warnings.warn(msg, UserWarning, stacklevel=3)
 
-        if bool(self.hsds_kwargs) and not self.with_hsds:
+        if bool(self.hsds_kwargs) and not self.use_hsds:
             msg = (
-                "Provided `hsds_kwargs` but `with_hsds` if False. Please set `with_hsds` "
+                "Provided `hsds_kwargs` but `use_hsds` if False. Please set `use_hsds` "
                 "to True to run this resource model with hsds enabled. If running on an "
                 "NLR super-computer, remove `hsds_kwargs` from the inputs. "
             )
@@ -162,10 +162,11 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
 
-        if self.config.location_input == "gid":
-            self.add_input(
-                f"{self.config.resource_type}_site_gid", self.config.site_gid, units="unitless"
-            )
+        # if self.config.location_input == "gid":
+        # self.add_input(
+        #     f"{self.config.resource_type}_site_gid", self.config.site_gid, units="unitless"
+        # )
+        self.add_input("site_gid", self.config.site_gid, units="unitless")
 
     def helper_setup_method(self):
         """
@@ -374,6 +375,57 @@ class ResourceBaseH5Model(om.ExplicitComponent):
     #         latitude (float): latitude corresponding to location for resource data
     #         longitude (float): longitude corresponding to location for resource data
 
+    def load_data_from_dataset(self, latitude, longitude, site_gid=None):
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+    def load_data_from_csv(self, fpath):
+        raise NotImplementedError("This method should be implemented in a subclass.")
+
+    def sample_data_to_interval(self, data):
+        time_keys = ["year", "month", "day", "hour", "minute", "second"]
+        time_dict = {k: data.get(k) for k in time_keys if k in data}
+        time_df = pd.to_datetime(time_dict)
+        # Assumed that data interval is not less than 1 min, corresponds with
+        # assumptions elsewhere in model
+        data_n_timesteps = len(time_df)
+        dt_minutes = int((time_df.iloc[1] - time_df.iloc[0]).seconds / 60)  # min
+        if len(time_df) == self.n_timesteps:
+            return data
+        if dt_minutes == self.interval:
+            return data
+        if dt_minutes > self.interval:
+            raise ValueError("This should not happen")
+        # at this point, we have to downsample the data
+        year = self.config.resource_year
+        is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
+            year % 4 == 0 and year % 100 != 0
+        )
+        remaining_timesteps = data_n_timesteps % self.n_timesteps != 0
+        step = data_n_timesteps // self.n_timesteps
+        if is_leap and remaining_timesteps:
+            i_end = data_n_timesteps // step
+        else:
+            i_end = self.n_timesteps
+        i = 0
+        if self.interval == 60:
+            if time_df.iloc[0].minute != 30:
+                while time_df.iloc[i].minute < 30:
+                    i += 1
+        time_slice = slice(i, data_n_timesteps, step)
+        data_sliced = {k: v[time_slice][:i_end] for k, v in data.items()}
+        return data_sliced
+
+        # data_sliced = {k:v[time_slice][:self.n_timesteps] for k,v in data.items()}
+        # time_df.values[]
+
+        # (len(time_df) + 24)//8760
+
+        #     # most common use-case, so has special handling
+        #     start_index = 0 if time_df.iloc[0].minutes==30 else 1
+
+        # self.config.interval
+        # pass
+
     def get_data(self, site_gid, latitude, longitude, first_call=True):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
@@ -416,6 +468,8 @@ class ResourceBaseH5Model(om.ExplicitComponent):
                 f"original `site_gid` of {self.resource_id}"
             )
             warnings.warn(msg, UserWarning, stacklevel=2)
+
+        # Site lat/lon changed but GID didn't
         if site_loc_changed and self.config.location_input == "gid" and not site_id_changed:
             msg = (
                 f"For location with `site_gid` of {site_gid}, the location changed from "
@@ -436,51 +490,61 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         # if neither_changed and not first_call:
 
-        # if self.config.load_from_csv:
-        #     if self.config.location_input == "gid"
-        #     self.search_for_csv_file_from_lat_lon
-        # # 0) If site hasn't changed and resource data has already been loaded
-        # # just return the resource data that was loaded in the setup() method
-        # if not site_changed and not first_call:
-        #     if self.resource_data is not None:
-        #         return self.resource_data
+        if self.config.load_from_csv or self.config.save_to_csv:
+            # first check to see if a csv file exists
+            csv_file = None
+            if self.config.location_input == "gid":
+                if self.config.save_to_csv and not site_loc_changed:
+                    msg = (
+                        "If site_gid is input, please ensure that lat/lon is also changing"
+                        "especially when saving data to csv files!"
+                    )
+                    raise ValueError(msg)
 
-        # # Check if the filename was provided by the user and the site hasn't changed
-        # if provided_filename and not site_changed:
-        #     # If the user-provided filename wasn't found, throw a warning
-        #     if not filepath.is_file():
-        #         msg = (
-        #             f"User provided resource filename {self.config.resource_filename} "
-        #             f"not found in {resource_dir}. Data will be downloaded for this site."
-        #         )
-        #         warnings.warn(msg, UserWarning)
+                csv_file = self.search_for_csv_file_from_gid(site_gid)
+                if csv_file is None and site_loc_changed:
+                    # If site lat/lon also changed,
+                    # then assuming they're connected to lat/lon
+                    csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
 
-        # # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
-        # # filepath, load data using `load_data()`
-        # if filepath.is_file():
-        #     self.filepath = filepath
-        #     data = self.load_data(filepath)
-        #     data = self.add_resource_start_end_times(data)
-        #     return data
+                if csv_file is None:
+                    # didn't file csv file, load from dataset
+                    data, meta_data = self.load_data_from_dataset(
+                        latitude, longitude, site_gid=site_gid
+                    )
+                else:
+                    data, meta_data = self.load_data_from_csv(csv_file)
+            else:
+                # TODO: update to reduce repetition in code
+                # using lat/lon
+                csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
+                if csv_file is None:
+                    # didn't file csv file, load from dataset
+                    data, meta_data = self.load_data_from_dataset(latitude, longitude)
+                else:
+                    data, meta_data = self.load_data_from_csv(csv_file)
+        else:
+            input_id = site_gid if self.config.location_input == "gid" else None
+            data, meta_data = self.load_data_from_dataset(latitude, longitude, site_gid=input_id)
 
-        # # If the filepath (resource_dir/filename) does not exist, download data
-        # self.filepath = filepath
-        # # 5) Create the url to download data using `create_url()` and continue to Step 6.
-        # url = self.create_url(latitude, longitude)
-        # # 6) Download data from the url created in Step 5 and save to a filepath created from
-        # # the resulting resource_dir and filename from Steps 2 and 3.
-        # success = self.download_data(url, filepath)
-        # if success:
-        #     # 7) Load data from the file created in Step 6 using `load_data()`
-        #     data = self.load_data(filepath)
-        #     data = self.add_resource_start_end_times(data)
-        #     return data
+        data = self.sample_data_to_interval(data)
+        # unsure if below code works with dictionary of it data has to be a dataframe
+
+        data = self.process_leap_day(data)
+
+        return data | meta_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if not self.config.use_fixed_resource_location:
-            # update the resource data based on the input latitude and longitude
-            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
-            # update the stored resource data and site
-            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
-            self.resource_data = data
-            discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+        # update the resource data based on the input site information
+        data = self.get_data(
+            inputs[f"{self.config.resource_type}_site_gid"][0],
+            inputs["latitude"][0],
+            inputs["longitude"][0],
+            first_call=False,
+        )
+        # update the stored resource data and site
+        self.resource_id = inputs["site_gid"][0]
+        self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
+        self.resource_data = data
+        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
