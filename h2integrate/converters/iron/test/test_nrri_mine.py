@@ -22,7 +22,7 @@ def iron_ore_config_martin_om():
                 / 8760,  # convert from WLT/yr to LT/yr to t/yr and then hourly,
             },
             "cost_parameters": {
-                "cost_year": 2025,
+                "cost_year": 2021,
                 "taconite_pellet_type": "std",
             },
         }
