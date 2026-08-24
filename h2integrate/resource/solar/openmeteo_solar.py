@@ -358,6 +358,9 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
                 units.replace("undefined", "unitless").replace("m²", "m**2").replace("degC", "C")
             )
 
+            if units == "C":
+                units = "degC"
+
             new_c = c.split("(")[0].replace("air", "").replace("at ", "")
             new_c = new_c.replace(f"({units})", "").strip().replace(" ", "_").replace("__", "_")
             new_c = new_c.replace("_10m", "").replace("_2m", "")
