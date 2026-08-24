@@ -19,15 +19,12 @@ class NRRIIronMinePerformanceConfig(BaseConfig):
             "Minorca" or "Tilden"
         max_ore_production_rate_tonnes_per_hr (float): capacity of the pellet plant
             in units of metric tonnes of pellets produced per hour.
-        taconite_pellet_type (str): type of taconite pellets, options are "std" or "drg".
+
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
     mine: str = field(
         validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
-    )
-    taconite_pellet_type: str = field(
-        converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
 
 
@@ -388,9 +385,7 @@ class NRRIIronMineCostConfig(BaseConfig):
     taconite_pellet_type: str = field(
         converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
-    cost_year: int = field(
-        default=2025, converter=int, validator=validators.in_([2025])
-    )  # TODO: check what year SEC reports are from
+    cost_year: int = field(default=2021, converter=int, validator=validators.in_([2021]))
 
 
 class NRRIIronMineCostComponent(CostModelBaseClass):
@@ -416,14 +411,6 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
             desc="Annual iron ore production",
         )
 
-        self.add_input(
-            "raw_ore",
-            val=0.0,
-            shape=self.n_timesteps,
-            units="t/h",
-            desc="Raw ore mass flow",
-        )
-
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "nrri_ore" / "cost_coeffs.csv"
         # nrri ore cost model
         coeff_df = pd.read_csv(coeff_fpath)
@@ -445,6 +432,15 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         coeff_df = coeff_df[data_cols]
         coeff_df = coeff_df.rename(columns={mine: "value"})
 
+        # convert wet to dry
+        moisture_percent = 2.0
+        dry_fraction = (100 - moisture_percent) / 100
+
+        # convert wet long tons per year to dry long tons per year
+        i_wlt = coeff_df[coeff_df["units"] == "WLT/Yr"].index.to_list()
+        coeff_df.loc[i_wlt, "value"] = coeff_df.loc[i_wlt, "value"] * dry_fraction
+        coeff_df.loc[i_wlt, "units"] = "lt/yr"
+
         i_per_wlt = coeff_df[coeff_df["units"] == "USD/LTP"].index.to_list()
         coeff_df.loc[i_per_wlt, "value"] = coeff_df.loc[i_per_wlt, "value"]
         coeff_df.loc[i_per_wlt, "units"] = "USD/lt"
@@ -464,6 +460,8 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
 
         convert_units_dict = {
             "USD/(2240*lb)": "USD/t",
+            "(2240*lb)": "t",
+            "(2240*lb)/yr": "t/yr",
         }
         for i in coeff_df.index.to_list():
             if coeff_df.loc[i, "units"] in convert_units_dict:

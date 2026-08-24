@@ -13,7 +13,6 @@ from h2integrate.converters.iron.nrri_iron_mine import (
 def iron_ore_config_martin_om():
     shared_params = {
         "mine": "Tilden",
-        "taconite_pellet_type": "std",
     }
     tech_config = {
         "model_inputs": {
@@ -24,6 +23,7 @@ def iron_ore_config_martin_om():
             },
             "cost_parameters": {
                 "cost_year": 2025,
+                "taconite_pellet_type": "std",
             },
         }
     }
@@ -79,19 +79,23 @@ def test_iron_pellet_cost_outputs(plant_config, driver_config, iron_ore_config_m
     prob.setup()
 
     prob.set_val("comp.annual_iron_ore_produced", [7457805 * 1.016], units="t/yr")
-    prob.set_val("comp.raw_ore", [1e6] * 8760, units="t/h")
 
     prob.run_model()
+
+    with subtests.test("total_capex"):
+        total_capex = prob.get_val("comp.CapEx", units="USD")
+        assert total_capex == pytest.approx(1527719439.562, rel=1e-3)
 
     # check total opex for year 1
     with subtests.test("total_opex"):
         total_opex = prob.get_val("comp.OpEx", units="USD/yr")
-        assert total_opex == pytest.approx(7457805 * 15.3, rel=1e-3)
+        assert total_opex == pytest.approx(7457805.0 * 48.66003278, rel=1e-3)
 
 
 @pytest.mark.regression
 def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
     iron_ore_config_martin_om["model_inputs"]["shared_parameters"]["mine"] = "United"
+    iron_ore_config_martin_om["model_inputs"]["cost_parameters"]["taconite_pellet_type"] = "drg"
     prob = om.Problem()
     iron_ore_cost = NRRIIronMineCostComponent(
         plant_config=plant_config,
@@ -102,11 +106,10 @@ def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_mar
     prob.setup()
 
     prob.set_val("comp.annual_iron_ore_produced", [7457805 * 1.016], units="t/yr")
-    prob.set_val("comp.raw_ore", [10] * 8760, units="t/h")
 
     prob.run_model()
 
     # check total opex for year 1
     with subtests.test("total_opex"):
         total_opex = prob.get_val("comp.OpEx", units="USD/yr")
-        assert total_opex == pytest.approx(87600 * 3.72 / 1.016, rel=1e-3)
+        assert total_opex == pytest.approx(7457805.0 * 89.3661325, rel=1e-3)
