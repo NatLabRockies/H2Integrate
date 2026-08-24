@@ -69,6 +69,7 @@ def test_iron_mine_performance_outputs(
 
 @pytest.mark.regression
 def test_iron_pellet_cost_outputs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    plant_config["finance_parameters"]["cost_adjustment_parameters"]["target_dollar_year"] = 2021
     prob = om.Problem()
     iron_ore_cost = NRRIIronMineCostComponent(
         plant_config=plant_config,
@@ -96,6 +97,7 @@ def test_iron_pellet_cost_outputs(plant_config, driver_config, iron_ore_config_m
 def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
     iron_ore_config_martin_om["model_inputs"]["shared_parameters"]["mine"] = "United"
     iron_ore_config_martin_om["model_inputs"]["cost_parameters"]["taconite_pellet_type"] = "drg"
+    plant_config["finance_parameters"]["cost_adjustment_parameters"]["target_dollar_year"] = 2021
     prob = om.Problem()
     iron_ore_cost = NRRIIronMineCostComponent(
         plant_config=plant_config,
@@ -113,3 +115,27 @@ def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_mar
     with subtests.test("total_opex"):
         total_opex = prob.get_val("comp.OpEx", units="USD/yr")
         assert total_opex == pytest.approx(7457805.0 * 89.3661325, rel=1e-3)
+
+
+@pytest.mark.regression
+def test_adjusting_cost_year(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    iron_ore_config_martin_om["model_inputs"]["shared_parameters"]["mine"] = "United"
+    iron_ore_config_martin_om["model_inputs"]["cost_parameters"]["taconite_pellet_type"] = "drg"
+    prob = om.Problem()
+    iron_ore_cost = NRRIIronMineCostComponent(
+        plant_config=plant_config,
+        tech_config=iron_ore_config_martin_om,
+        driver_config=driver_config,
+    )
+    prob.model.add_subsystem("comp", iron_ore_cost, promotes=["*"])
+    prob.setup()
+
+    prob.set_val("comp.annual_iron_ore_produced", [7457805 * 1.016], units="t/yr")
+
+    prob.run_model()
+
+    # check total opex for year 1
+    with subtests.test("total_opex"):
+        total_opex = prob.get_val("comp.OpEx", units="USD/yr")
+        # greater than 2021 because the cost year is adjusted to 2022, which has a higher CPI
+        assert total_opex == pytest.approx(719809158.0098612, rel=1e-3)

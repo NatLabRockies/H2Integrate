@@ -1,3 +1,4 @@
+import copy
 import warnings
 
 import numpy as np
@@ -8,6 +9,7 @@ from openmdao.utils import units
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
 @define(kw_only=True)
@@ -385,7 +387,9 @@ class NRRIIronMineCostConfig(BaseConfig):
     taconite_pellet_type: str = field(
         converter=(str.lower, str.strip), validator=validators.in_(["std", "drg"])
     )
-    cost_year: int = field(default=2021, converter=int, validator=validators.in_([2021]))
+    # the cost model is based on costs from 2021 and can be adjusted to another cost year
+    # using CPI adjustment.
+    cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
 
 
 class NRRIIronMineCostComponent(CostModelBaseClass):
@@ -395,8 +399,39 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
+        # merge inputs from performance parameters and cost parameters
+        config_dict = merge_shared_inputs(
+            copy.deepcopy(self.options["tech_config"]["model_inputs"]), "cost"
+        )
+
+        if "cost_year" in config_dict:
+            if config_dict.get("cost_year", 2021) != 2021:
+                msg = (
+                    "This cost model is based on 2021 costs and adjusts costs using CPI. "
+                    "The cost year cannot be modified for this cost model. "
+                )
+                raise ValueError(msg)
+
+        target_dollar_year = self.options["plant_config"]["finance_parameters"][
+            "cost_adjustment_parameters"
+        ]["target_dollar_year"]
+
+        if target_dollar_year <= 2024 and target_dollar_year >= 2010:
+            # adjust costs from 2021 to target dollar year using CPI adjustment
+            self.target_dollar_year = target_dollar_year
+
+        elif target_dollar_year < 2010:
+            # adjust costs from 2021 to 2010 using CPI adjustment
+            self.target_dollar_year = 2010
+
+        elif target_dollar_year > 2024:
+            # adjust costs from 2021 to 2024 using CPI adjustment
+            self.target_dollar_year = 2024
+
+        config_dict.update({"cost_year": self.target_dollar_year})
+
         self.config = NRRIIronMineCostConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
+            config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,
         )
@@ -485,12 +520,15 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         tot_capex_2021USD = (
             inputs["annual_iron_ore_produced"][0] * ref_capex_per_processed_ore
         )  # USD
-        outputs["CapEx"] = tot_capex_2021USD
 
         # OpEx is calculated from the total opex minus energy costs calculated from SEC reports
         # Variable energy cost is then considered from electricity, NG, and diesel feedstocks
         opex_index = "opex_" + pellet_type
-        outputs["OpEx"] = (
+        om_2021USD = (
             inputs["annual_iron_ore_produced"][0]
             * self.coeff_df.loc[self.coeff_df["process"] == opex_index, "value"].values
         )
+
+        # adjust costs to cost year
+        outputs["CapEx"] = inflate_cpi(tot_capex_2021USD, 2021, self.config.cost_year)
+        outputs["OpEx"] = inflate_cpi(om_2021USD, 2021, self.config.cost_year)
