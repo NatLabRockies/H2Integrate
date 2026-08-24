@@ -19,12 +19,7 @@ class ResourceBaseH5Config(BaseConfig):
 
         - **resource_year** (*int*): Year to download resource data for.
             Recommended to have a validator for upper and lower limits.
-        - **resource_data** (*dict*, optional): Dictionary of user-provided resource data.
-            Defaults to {}.
-        - **resource_dir** (*str | Path*, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        - **resource_filename** (*str*, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+
         - **valid_intervals** (*list[int]*): time interval(s) in minutes that resource data can be
             downloaded in.
 
@@ -38,12 +33,7 @@ class ResourceBaseH5Config(BaseConfig):
         timezone (float | int): timezone to output data in. May be used to determine whether
             to download data in UTC or local timezone. This should be populated by the value
             in sim_config['timezone']
-        use_fixed_resource_location (bool, optional): Whether to update resource data in the
-            `compute()` method. Set to False if the site location is being swept, set to
-            True if the resource data should not be updated to the location
-            (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
-            to reduce computation time during optimizations or design sweeps if site location is
-            not being swept. Defaults to False.
+
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -59,19 +49,12 @@ class ResourceBaseH5Config(BaseConfig):
     site_gid: int = field(default=-1)
 
     location_input: str = field(default="lat/lon", validator=validators.in_(["lat/lon", "gid"]))
-    # TODO: add site_gid as input?
-    # use_fixed_resource_location: bool = field(default=False, kw_only=True)
-    # resource_data: dict | object = field(default={}, kw_only=True)
-
-    # H5 file info
-    # dataset_filename: Path | str = field(default="", kw_only=True)
-    # dataset_path: Path | str | None = field(default=None, kw_only=True)
 
     # Export file info
     save_to_csv: bool = field(default=False, kw_only=True)
     load_from_csv: bool = field(default=False, kw_only=True)
     csv_output_dir: Path | str | None = field(default=None, kw_only=True)
-    # csv_filename: str = field(default="")
+
     use_hsds: bool = field(default=False, kw_only=True)
     hsds_kwargs: dict = field(default={}, kw_only=True)
 
@@ -89,7 +72,7 @@ class ResourceBaseH5Config(BaseConfig):
             # Get valid resource_dir with the function check_resource_dir()
             csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
 
-            if provided_dir and Path(self.csv_output_dir).parts[-1] == self.csv_output_dir:
+            if provided_dir and Path(self.csv_output_dir).parts[-1] == self.resource_type:
                 csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
             else:
                 csv_dir = check_resource_dir(
