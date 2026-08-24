@@ -9,7 +9,10 @@ from h2integrate import H2IntegrateModel
 
 
 # Run one of both simulation paradigms by changing the flags in this dict
-run_dict = {"run_sequential": True, "run_concurrent": True}
+run_dict = {
+    # "run_sequential": True,
+    "run_concurrent": True,
+}
 
 
 # Set up
@@ -86,10 +89,17 @@ if run_dict.get("run_sequential", False):
     fig, ax = plt.subplots(3, 1, sharex="all", layout="constrained")
 
     fb_zero(
-        ax[0], get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_seq)
+        ax[0],
+        get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_seq),
     )
-    fb_zero(ax[0], get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_seq))
-    fb_zero(ax[1], get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_seq))
+    fb_zero(
+        ax[0],
+        get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_seq),
+    )
+    fb_zero(
+        ax[1],
+        get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_seq),
+    )
 
     fig.suptitle("Sequential simulation")
 
@@ -97,10 +107,17 @@ if run_dict.get("run_concurrent", False):
     fig, ax = plt.subplots(3, 1, sharex="all", layout="constrained")
 
     fb_zero(
-        ax[0], get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_con)
+        ax[0],
+        get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_con),
     )
-    fb_zero(ax[0], get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_con))
-    fb_zero(ax[1], get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_con))
+    fb_zero(
+        ax[0],
+        get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_con),
+    )
+    fb_zero(
+        ax[1],
+        get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_con),
+    )
 
     fig.suptitle("Concurrent simulation")
 
