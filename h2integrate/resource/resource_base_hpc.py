@@ -55,6 +55,7 @@ class ResourceBaseH5Config(BaseConfig):
     load_from_csv: bool = field(default=False, kw_only=True)
     csv_output_dir: Path | str | None = field(default=None, kw_only=True)
 
+    include_leap_day: bool = field(default=False)
     use_hsds: bool = field(default=False, kw_only=True)
     hsds_kwargs: dict = field(default={}, kw_only=True)
 
@@ -176,9 +177,9 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         resource_specs.setdefault("longitude", site_config["longitude"])
         # set the default resource_dir from a directory that can be
         # specified in site_config['resources']['resource_dir']
-        resource_specs.setdefault(
-            "resource_dir", site_config.get("resources", {}).get("resource_dir", None)
-        )
+        # resource_specs.setdefault(
+        #     "resource_dir", site_config.get("resources", {}).get("resource_dir", None)
+        # )
 
         # default timezone to UTC because 'timezone' was removed from the plant config schema
         resource_specs.setdefault("timezone", sim_config.get("timezone", 0))
@@ -236,7 +237,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         return data
 
-    def process_leap_day(self, data: dict):
+    def process_leap_day(self, data_in: dict):
         """Process leap day data by optionally removing it and validating data length.
 
         Checks whether the provided resource data contains a leap day (February 29th).
@@ -254,16 +255,24 @@ class ResourceBaseH5Model(om.ExplicitComponent):
             ValueError: If the length of the data does not match ``self.n_timesteps``
                 after leap day processing.
         """
+        if isinstance(data_in, dict):
+            # time_keys = ["year", "month", "day", "hour", "minute", "second"]
+            # rename_time_cols = {c:c.capitalize() for c in time_keys if c in data_in}
+
+            data = pd.DataFrame(data_in)
+            # data = data.rename(columns = rename_time_cols)
+        else:
+            data = data
 
         # Check if data includes leap day
-        data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+        data_has_leap_day = int(data[data["month"] == 2]["day"].max()) == 29
 
         # Remove leap day if needed
         if not self.config.include_leap_day and data_has_leap_day:
             # Get index of dataframe that includes leap day
             leap_day_index = (
                 data.reset_index(drop=False)
-                .set_index(keys=["Month", "Day"], drop=True)
+                .set_index(keys=["month", "day"], drop=True)
                 .loc[(2, 29)]["index"]
                 .to_list()
             )
@@ -288,7 +297,8 @@ class ResourceBaseH5Model(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
-        return data
+        data_out = {k: data[k].values for k in data.columns.to_list()}
+        return data_out
 
     def search_for_csv_file_from_gid(self, site_gid: int):
         filename_desc = f"{self.config.resource_year}_{self.config.dataset_desc}"
@@ -520,7 +530,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # update the resource data based on the input site information
         data = self.get_data(
-            inputs[f"{self.config.resource_type}_site_gid"][0],
+            inputs["site_gid"][0],
             inputs["latitude"][0],
             inputs["longitude"][0],
             first_call=False,

@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from rex import NSRDBX
@@ -84,9 +87,9 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
     def create_dataset_filepath(self):
         if self.config.use_hsds:
             dataset_path = self.hsds_path.format(year=self.config.resource_year)
-            return dataset_path
+            return Path(dataset_path)
         # Pulling from Super computer
-        dataset_path = self.hpc_path.format(year=self.config.resource_year)
+        dataset_path = Path(self.hpc_path.format(year=self.config.resource_year))
 
         if dataset_path.exists():
             return dataset_path
@@ -139,7 +142,6 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
             if k in resource_data and isinstance(v, str)
         }
         if "cloud_type" in data_units:
-            fill_flag_mapper = data_units.pop("cloud_type")
             cloud_type_mapper = data_units.pop("cloud_type")
             fill_flag_mapper = {
                 cloud_type.split(":")[0].replace("'", "").strip(): int(
@@ -222,6 +224,18 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
             and k.replace(" Flag", "") not in fill_flag_mapper
         }
 
+        numeric_site_data = [
+            k for k, v in site_data.items() if bool(re.fullmatch(r"[+-]?\d+(\.\d+)?", str(v)))
+        ]
+        int_numeric_site_data = [
+            k
+            for k, v in site_data.items()
+            if bool(re.fullmatch(r"[+-]?\d+", str(v))) or bool(re.fullmatch(r"[+-]?\d+", v))
+        ]
+
+        site_data |= {k: float(v) for k, v in site_data.items() if k in numeric_site_data}
+        site_data |= {k: int(v) for k, v in site_data.items() if k in int_numeric_site_data}
+
         data_dict = {
             c: np.array(data[c].astype(float).values) for c in data.columns.to_list() if c != "time"
         }
@@ -232,6 +246,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
 
         # resource_data = data_dict | site_data | {"fill_flag": fill_flag_mapper}
         meta_data = site_data | {"fill_flag": fill_flag_mapper}
-
+        meta_data["dataset_filepath"] = meta_data.pop("filepath")
+        meta_data["filepath"] = str(fpath)
         # NOTE: should we include data_units in the resource data?
         return data_dict, meta_data
