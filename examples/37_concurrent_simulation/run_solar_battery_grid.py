@@ -9,7 +9,7 @@ from h2integrate import H2IntegrateModel
 
 
 # Run one of both simulation paradigms by changing the flags in this dict
-run_dict = {"run_sequential": False, "run_concurrent": True}
+run_dict = {"run_sequential": True, "run_concurrent": True}
 
 
 # Set up

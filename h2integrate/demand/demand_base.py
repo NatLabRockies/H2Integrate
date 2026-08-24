@@ -126,7 +126,8 @@ class DemandComponentBase(PerformanceModelBaseClass):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def calculate_outputs(self, commodity_in, commodity_demand, outputs):
+    # def calculate_outputs(self, commodity_in, commodity_demand, outputs):
+    def calculate_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Compute unmet demand, unused commodity, and converter output.
 
         This method compares the demand profile to the supplied commodity for
@@ -153,22 +154,41 @@ class DemandComponentBase(PerformanceModelBaseClass):
             ``curtailment_percent``, which are scalar summary outputs.
         """
 
-        outputs[f"{self.commodity}_demand_out"] = commodity_demand
+        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+
+        commodity_in = inputs[f"{self.commodity}_in"][
+            simulation_range.start : simulation_range.stop
+        ]
+        commodity_demand = inputs[f"{self.commodity}_demand"][
+            simulation_range.start : simulation_range.stop
+        ]
+
+        outputs[f"{self.commodity}_demand_out"][simulation_range.start : simulation_range.stop] = (
+            commodity_demand
+        )
 
         remaining_demand = commodity_demand - commodity_in
 
         # Calculate missed load and curtailed production
-        outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-            remaining_demand > 0, remaining_demand, 0
-        )
-        outputs[f"unused_{self.commodity}_out"] = np.where(
-            remaining_demand < 0, -1 * remaining_demand, 0
+        outputs[f"unmet_{self.commodity}_demand_out"][
+            simulation_range.start : simulation_range.stop
+        ] = np.where(remaining_demand > 0, remaining_demand, 0)
+        outputs[f"unused_{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
+            np.where(remaining_demand < 0, -1 * remaining_demand, 0)
         )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
+        outputs[f"{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
+            commodity_in
+            - outputs[f"unused_{self.commodity}_out"][
+                simulation_range.start : simulation_range.stop
+            ]
+        )
 
-        outputs[f"rated_{self.commodity}_production"] = commodity_demand.mean()
+        # TODO double check annual calculation is still accurate
+        outputs[f"rated_{self.commodity}_production"][
+            simulation_range.start : simulation_range.stop
+        ] = commodity_demand.mean()
 
         outputs[f"total_{self.commodity}_produced"] = np.sum(outputs[f"{self.commodity}_out"]) * (
             self.dt / 3600
