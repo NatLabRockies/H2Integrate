@@ -127,7 +127,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             desc="Annual electricity sold to the grid",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         interconnection_size = inputs["interconnection_size"]
 
         # Selling: electricity flows into grid, limited by interconnection size

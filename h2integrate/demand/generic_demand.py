@@ -26,7 +26,7 @@ class GenericDemandComponent(DemandComponentBase):
         )
         super().setup()
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Compute unmet demand, unused commodity, and converter output.
 
         This method compares the demand profile to the supplied commodity for

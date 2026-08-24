@@ -32,6 +32,11 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
+        # n_steps_per_compute is the number of timesteps simulated a compute call
+        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
+            "n_steps_per_compute", self.n_timesteps
+        )
+
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
@@ -62,6 +67,9 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 "documentation."
             )
             raise NotImplementedError(msg)
+
+        # TODO add comment
+        self.add_discrete_input("timestep_index", val=0, desc="Time step index")
 
         # timeseries profiles
         self.add_output(
@@ -115,6 +123,10 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 units=self.commodity_rate_units,
                 desc=f"Full (uncurtailed) {self.commodity} output",
             )
+
+    def _get_compute_time_range(self, time_index):
+        # TODO add comment
+        return range(time_index, time_index + self.n_steps_per_compute)
 
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.

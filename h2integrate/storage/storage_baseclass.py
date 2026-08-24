@@ -52,6 +52,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "storage"
 
+    _soc_timeseries = np.zeros(8760)  # Default to 1 year
+
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
 
@@ -72,6 +74,9 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         commodity_rate_units = self.commodity_rate_units
         commodity_amount_units = self.commodity_amount_units
         n_timesteps = self.n_timesteps
+
+        self._soc_timeseries = np.zeros(self.n_timesteps)
+        self._soc_timeseries[0] = self.config.init_soc_fraction
 
         # Input timeseries
         self.add_input(
@@ -262,6 +267,9 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         Returns:
             om.vectors.default_vector.DefaultVector: calculated OpenMDAO outputs.
         """
+
+        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+
         if "pyomo_dispatch_solver" in discrete_inputs:
             dispatch = discrete_inputs["pyomo_dispatch_solver"]
             # kwargs are tech-specific inputs to the simulate() method
@@ -280,6 +288,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                 discharge_rate=discharge_rate,
                 storage_capacity=storage_capacity,
                 commodity_available=inputs[f"{self.commodity}_in"],
+                sim_start_index=simulation_range.start,
+                sim_end_index=simulation_range.stop,
             )
 
         # determine storage charge and discharge
@@ -294,18 +304,21 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             outputs["storage_duration"] = 0
 
         # Storage specific timeseries outputs
-        outputs[f"storage_{self.commodity}_charge"] = np.where(
-            storage_commodity_out < 0, storage_commodity_out, 0
+        outputs[f"storage_{self.commodity}_charge"][
+            simulation_range.start : simulation_range.stop
+        ] = np.where(storage_commodity_out < 0, storage_commodity_out, 0)
+        outputs[f"storage_{self.commodity}_discharge"][
+            simulation_range.start : simulation_range.stop
+        ] = np.where(storage_commodity_out > 0, storage_commodity_out, 0)
+        outputs["SOC"][simulation_range.start : simulation_range.stop] = soc
+        outputs[f"{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
+            storage_commodity_out
         )
-        outputs[f"storage_{self.commodity}_discharge"] = np.where(
-            storage_commodity_out > 0, storage_commodity_out, 0
-        )
-        outputs["SOC"] = soc
-        outputs[f"{self.commodity}_out"] = storage_commodity_out
 
         # Performance model outputs
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
         # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
+        # TODO Make sure this calculation is correct with non-annual simulation periods
         outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
@@ -335,6 +348,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         storage_capacity: float,
         commodity_available: list | np.ndarray,
         sim_start_index: int = 0,
+        sim_end_index: int = 8760,
     ):
         """Run the storage model over a control window of ``n_control_window_hours`` length of time.
 
@@ -377,6 +391,9 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             sim_start_index (int, optional):
                 Starting index for writing into persistent output arrays.
                 Defaults to 0.
+            sim_end_index (int, optional):
+                Ending index for writing into persistent output arrays.
+                Defaults to 8760 (1 year)
 
         Returns:
             tuple[np.ndarray, np.ndarray]
@@ -389,7 +406,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                     (0-100).
         """
 
-        n = len(storage_dispatch_commands)
+        # n = len(storage_dispatch_commands)
+        n = sim_end_index - sim_start_index
         storage_commodity_out_timesteps = np.zeros(n)
         soc_timesteps = np.zeros(n)
 
@@ -406,8 +424,10 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         soc_max = self.config.max_soc_fraction
         soc_min = self.config.min_soc_fraction
 
-        commands = np.asarray(storage_dispatch_commands, dtype=float)
-        soc = float(self.current_soc)
+        commands = np.asarray(storage_dispatch_commands, dtype=float)[sim_start_index:sim_end_index]
+
+        # soc = float(self.current_soc)
+        soc = self._soc_timeseries[sim_start_index]
 
         for t, cmd in enumerate(commands):
             if cmd < 0.0:
@@ -460,4 +480,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Persist the final SOC so subsequent simulate() calls (e.g. from the
         # Pyomo controller across rolling windows) start where we left off.
         self.current_soc = soc
+        self._soc_timeseries[sim_start_index:sim_end_index] = soc_timesteps
+
         return storage_commodity_out_timesteps, soc_timesteps

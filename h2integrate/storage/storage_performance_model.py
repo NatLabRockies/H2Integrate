@@ -139,14 +139,29 @@ class StoragePerformanceModel(StoragePerformanceBase):
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
+        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+
         self.current_soc = self.config.init_soc_fraction
 
+        # Unpack scalar inputs
         charge_rate = inputs["max_charge_rate"][0]
+
         if "max_discharge_rate" in inputs:
             discharge_rate = inputs["max_discharge_rate"][0]
         else:
             discharge_rate = inputs["max_charge_rate"][0]
+
         storage_capacity = inputs["storage_capacity"][0]
-        outputs = self.run_storage(
-            charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
-        )
+
+        if simulation_range.stop != self.n_timesteps:
+            # Run everything in a loop here,
+            # NOTE: Later, move the loop into maybe a openmdao sub-problem
+
+            starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
+
+            for si in starting_index:
+                discrete_inputs["timestep_index"] = si
+
+                outputs = self.run_storage(
+                    charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
+                )
