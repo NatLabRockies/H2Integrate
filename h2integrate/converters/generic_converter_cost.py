@@ -106,19 +106,19 @@ class GenericConverterCostModel(CostModelBaseClass):
         )
 
         self.add_input(
-            "extra_capex",
+            "additional_constant_capex",
             val=self.config.additional_capex_USD,
             units="USD",
             desc="Additional capital expense",
         )
         self.add_input(
-            "extra_opex",
+            "additional_constant_opex",
             val=self.config.additional_opex_USD_per_year,
             units="USD/year",
             desc="Additional annual fixed operating expense",
         )
         self.add_input(
-            "extra_varopex",
+            "additional_constant_varopex",
             val=self.config.additional_varopex_USD_per_year,
             shape=self.plant_life,
             units="USD/year",
@@ -144,13 +144,13 @@ class GenericConverterCostModel(CostModelBaseClass):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         tot_capex = inputs[f"rated_{self.config.commodity}_production"] * inputs["unit_capex"]
-        outputs["CapEx"] = tot_capex + inputs["extra_capex"]
+        outputs["CapEx"] = tot_capex + inputs["additional_constant_capex"]
         if "unit_opex" in inputs:
             opex = inputs[f"rated_{self.config.commodity}_production"] * inputs["unit_opex"]
         else:
             opex = tot_capex * inputs["fixed_opex_ratio"]
 
-        outputs["OpEx"] = opex + inputs["extra_opex"]
+        outputs["OpEx"] = opex + inputs["additional_constant_opex"]
         outputs["VarOpEx"] = (
             inputs[f"annual_{self.config.commodity}_produced"] * inputs["unit_varopex"]
-        ) + inputs["extra_varopex"]
+        ) + inputs["additional_constant_varopex"]
