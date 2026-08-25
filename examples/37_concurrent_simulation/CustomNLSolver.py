@@ -19,9 +19,12 @@ class CustomNonLinearRunOnce(NonlinearRunOnce):
         timestep_keys = [k for k in di_keys if k.endswith("timestep_index")]
 
         # TODO get N_sim and N_step from H2I somehow
+        # Sloppy
+        n_steps_per_compute = system.battery.StoragePerformanceModel.n_steps_per_compute
+        n_timesteps = system.battery.StoragePerformanceModel.n_timesteps
 
         # Make loop
-        sim_starts = np.arange(0, 8760, 24)
+        sim_starts = np.arange(0, n_timesteps, n_steps_per_compute)
 
         for ss in sim_starts:
             for di_k in timestep_keys:
