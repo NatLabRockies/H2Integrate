@@ -43,6 +43,15 @@ properties:
             required: [model]
             additionalProperties: false
             description: Cost model name
+          control_strategy:
+            type: object
+            properties:
+              model:
+                type: string
+                description: Name of the controller model
+            required: [model]
+            additionalProperties: false
+            description: Cost model name
           finance_model:
             type: object
             properties:
