@@ -1,3 +1,5 @@
+import warnings
+
 from openmdao.utils import units
 
 from h2integrate.resource.resource_base import ResourceBaseAPIModel
@@ -118,7 +120,13 @@ class WindResourceBaseH5Model(ResourceBaseH5Model):
                     data_units[data_col] = desired_units
             else:
                 if len(output_var) < 1:
-                    raise Warning(f"{data_col} not found as common variable.")
+                    warnings.warn(
+                        f"{data_col} not found as common variable.", UserWarning, stacklevel=3
+                    )
                 else:
-                    raise Warning(f"{data_col} not found as a unique common variable.")
+                    warnings.warn(
+                        f"{data_col} not found as a unique common variable.",
+                        UserWarning,
+                        stacklevel=3,
+                    )
         return data, data_units
