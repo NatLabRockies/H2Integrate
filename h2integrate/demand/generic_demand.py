@@ -1,5 +1,3 @@
-import numpy as np
-
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
 
@@ -52,13 +50,10 @@ class GenericDemandComponent(DemandComponentBase):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
-        self._get_compute_time_range(discrete_inputs["timestep_index"])
+        # self._get_compute_time_range(discrete_inputs["timestep_index"])
 
-        starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        for si in starting_index:
-            discrete_inputs["timestep_index"] = si
+        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
+        # for si in starting_index:
+        #     discrete_inputs["timestep_index"] = si
 
-            outputs = self.calculate_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
-        # outputs = self.calculate_outputs(
-        #     inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
-        # )
+        outputs = self.calculate_outputs(inputs, outputs, discrete_inputs, discrete_outputs)

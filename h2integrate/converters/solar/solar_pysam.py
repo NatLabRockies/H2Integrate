@@ -372,46 +372,44 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             self.apply_curtailment(outputs)
             return
 
-        starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        for si in starting_index:
-            discrete_inputs["timestep_index"] = si
+        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
+        # for si in starting_index:
+        #     discrete_inputs["timestep_index"] = si
 
-            if not self._PYSAM_model_has_been_executed:
-                assert (
-                    discrete_inputs["timestep_index"] == 0
-                ), "PYSAM model should only be executed at the start of the simulation"
+        if not self._PYSAM_model_has_been_executed:
+            assert (
+                discrete_inputs["timestep_index"] == 0
+            ), "PYSAM model should only be executed at the start of the simulation"
 
-                # calculate the tilt angle based on site latitude (use 0 if site
-                # latitude is not input)
-                tilt = self.calc_tilt_angle(
-                    discrete_inputs["solar_resource_data"].get("site_lat", 0)
-                )
-                # over-write the tilt angle if it was specified in the design dict
-                tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
-                # assign the tilt angle
-                self.system_model.value("tilt", tilt_angle)
+            # calculate the tilt angle based on site latitude (use 0 if site
+            # latitude is not input)
+            tilt = self.calc_tilt_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
+            # over-write the tilt angle if it was specified in the design dict
+            tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
+            # assign the tilt angle
+            self.system_model.value("tilt", tilt_angle)
 
-                # calculate the azimuth angle based on site latitude or get user input azimuth angle
-                azimuth = self.calc_azimuth_angle(
-                    discrete_inputs["solar_resource_data"].get("site_lat", 0)
-                )
-                # assign the azimuth angle
-                self.system_model.value("azimuth", azimuth)
+            # calculate the azimuth angle based on site latitude or get user input azimuth angle
+            azimuth = self.calc_azimuth_angle(
+                discrete_inputs["solar_resource_data"].get("site_lat", 0)
+            )
+            # assign the azimuth angle
+            self.system_model.value("azimuth", azimuth)
 
-                # set the system capacity
-                self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])
+            # set the system capacity
+            self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])
 
-                solar_resource_data = discrete_inputs["solar_resource_data"]
-                # format solar resource data into the necessary format for PySAM
-                solar_resource = self.format_resource_data(solar_resource_data)
-                self.system_model.value("solar_resource_data", solar_resource)
+            solar_resource_data = discrete_inputs["solar_resource_data"]
+            # format solar resource data into the necessary format for PySAM
+            solar_resource = self.format_resource_data(solar_resource_data)
+            self.system_model.value("solar_resource_data", solar_resource)
 
-                # run the model
-                self.system_model.execute(0)
+            # run the model
+            self.system_model.execute(0)
 
-                self._PYSAM_model_has_been_executed = True
+            self._PYSAM_model_has_been_executed = True
 
-                self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+            self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
 
-            else:
-                self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+        else:
+            self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)

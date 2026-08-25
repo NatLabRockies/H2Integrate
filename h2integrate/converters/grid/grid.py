@@ -133,45 +133,46 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
 
-        # NOTE For running in a local loop. TODO move to a higher level location
-        # in the code, maybe in an openmdao sub problem
-        starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        for si in starting_index:
-            discrete_inputs["timestep_index"] = si
-            simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+        # # NOTE For running in a local loop. TODO move to a higher level location
+        # # in the code, maybe in an openmdao sub problem
+        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
+        # for si in starting_index:
+        #     discrete_inputs["timestep_index"] = si
 
-            # Selling: electricity flows into grid, limited by interconnection size
-            electricity_sold = np.clip(
-                inputs["electricity_in"][simulation_range.start : simulation_range.stop],
-                0,
-                interconnection_size,
-            )
-            outputs["electricity_sold"][simulation_range.start : simulation_range.stop] = (
-                electricity_sold
-            )
+        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
 
-            # Buying: electricity flows out of grid to meet command value,
-            # limited by interconnection
-            electricity_bought = np.clip(
-                inputs["electricity_command_value"][simulation_range.start : simulation_range.stop],
-                0,
-                interconnection_size,
-            )
-            outputs["electricity_out"][simulation_range.start : simulation_range.stop] = (
-                electricity_bought
-            )
+        # Selling: electricity flows into grid, limited by interconnection size
+        electricity_sold = np.clip(
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_sold"][simulation_range.start : simulation_range.stop] = (
+            electricity_sold
+        )
 
-            # Unmet demand if command value exceeds interconnection size
-            outputs["electricity_unmet_demand"][simulation_range.start : simulation_range.stop] = (
-                inputs["electricity_command_value"][simulation_range.start : simulation_range.stop]
-                - electricity_bought
-            )
+        # Buying: electricity flows out of grid to meet command value,
+        # limited by interconnection
+        electricity_bought = np.clip(
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_out"][simulation_range.start : simulation_range.stop] = (
+            electricity_bought
+        )
 
-            # Not sold electricity if demand exceeds interconnection size
-            outputs["electricity_excess"][simulation_range.start : simulation_range.stop] = (
-                inputs["electricity_in"][simulation_range.start : simulation_range.stop]
-                - electricity_sold
-            )
+        # Unmet demand if command value exceeds interconnection size
+        outputs["electricity_unmet_demand"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop]
+            - electricity_bought
+        )
+
+        # Not sold electricity if demand exceeds interconnection size
+        outputs["electricity_excess"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop]
+            - electricity_sold
+        )
 
         # Scalar outputs
         max_production = (
