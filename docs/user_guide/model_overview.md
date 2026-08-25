@@ -153,6 +153,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModel` - An OpenMDAO component that wraps the PEM electrolyzer model.
     + {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModel` - A simplified high-temperature steam electrolysis (HTSE) model.
     + {py:class}`~h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceModel` - Performance model for a hydrogen fuel cell.
+    + {py:class}`~h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellPerformanceModel` - Performance model for a PEM hydrogen fuel cell.
     + {py:class}`~h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerPerformanceModel` - Performance model for steam methane reforming (SMR) hydrogen production plants.
   - cost models:
     + {py:class}`~h2integrate.converters.hydrogen.basic_cost_model.BasicElectrolyzerCostModel` - An OpenMDAO component that computes the cost of a PEM electrolyzer.
@@ -193,6 +194,7 @@ auto-generated API page.
 - `natural_gas`: natural gas combined-cycle and combustion turbines
   - performance models:
     + {py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasPerformanceModel` - Performance model for natural gas power plants.
+    + {py:class}`~h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellPerformanceModel` - Performance model for a solid oxide natural gas fuel cell.
   - cost models:
     + {py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasCostModel` - Cost model for natural gas power plants.
 
