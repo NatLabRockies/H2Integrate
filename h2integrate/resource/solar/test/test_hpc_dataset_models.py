@@ -10,7 +10,6 @@ from h2integrate.resource.solar.nlr_nsrdb_dataset_model import NSRDBDatasetH5
 
 
 on_hpc = Path("/datasets/NSRDB").is_dir()
-# from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
 
 
 @fixture
