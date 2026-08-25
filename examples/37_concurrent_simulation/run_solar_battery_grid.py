@@ -1,3 +1,4 @@
+import sys
 from copy import deepcopy
 from pathlib import Path
 
@@ -6,6 +7,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from h2integrate import H2IntegrateModel
+
+
+sys.path.append(str(Path(__file__).resolve().parents[0]))
+from CustomNLSolver import CustomLinearRunOnce, CustomNonLinearRunOnce
 
 
 # Run one of both simulation paradigms by changing the flags in this dict
@@ -53,8 +58,8 @@ if run_dict.get("run_sequential", False):
     # Post-process the results
     h2i_seq.post_process()
 
-    inputs_seq = h2i_seq.model.list_inputs()
-    outputs_seq = h2i_seq.model.list_outputs()
+    inputs_seq = h2i_seq.model.list_inputs(out_stream=None)
+    outputs_seq = h2i_seq.model.list_outputs(out_stream=None)
 
 
 if run_dict.get("run_concurrent", False):
@@ -66,14 +71,18 @@ if run_dict.get("run_concurrent", False):
     # Create an H2I model for steppable simulation
     h2i_con = H2IntegrateModel(config_con)
 
+    h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce()
+    # h2i_con.prob.model.plant.nonlinear_solver = NonlinearRunOnce()
+    h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
+
     # Run the model
     h2i_con.run()
 
     # Post-process the results
-    h2i_con.post_process()
+    h2i_con.post_process(print_results=False)
 
-    inputs_con = h2i_con.model.list_inputs()
-    outputs_con = h2i_con.model.list_outputs()
+    inputs_con = h2i_con.model.list_inputs(out_stream=None)
+    outputs_con = h2i_con.model.list_outputs(out_stream=None)
 
 
 def get_io(name, io_list):
@@ -81,6 +90,7 @@ def get_io(name, io_list):
 
 
 def fb_zero(ax, signal):
+    # Plot fill between zero and the given signal
     t = np.arange(0, len(signal), 1)
     ax.fill_between(t, np.zeros_like(signal), signal)
 
