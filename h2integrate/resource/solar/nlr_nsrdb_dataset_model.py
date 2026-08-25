@@ -85,6 +85,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
         )
 
     def create_dataset_filepath(self):
+        # TODO: move to baseclass?
         if self.config.use_hsds:
             dataset_path = self.hsds_path.format(year=self.config.resource_year)
             return Path(dataset_path)
@@ -137,7 +138,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
 
         # Rename units as necessary
         data_units = {
-            k: self.units_translation.get(v, v)
+            self.columns_translation.get(k, k): self.units_translation.get(v, v)
             for k, v in resource_units.items()
             if k in resource_data and isinstance(v, str)
         }
@@ -155,6 +156,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model):
         data_dt = res.time_index[1] - res.time_index[0]
         self.dt_min = int(data_dt.seconds / 60)  # TODO: use this for filenamign
 
+        # NOTE: should rename columns before making `data_units`
         data_df = pd.DataFrame(resource_data, index=time_index)
         data_df = data_df.rename(columns=self.columns_translation)
         data_df.index.name = "time"
