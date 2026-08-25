@@ -7,7 +7,6 @@ from unittest.mock import patch
 import yaml
 import numpy as np
 import pytest
-from jsonschema.exceptions import ValidationError
 
 import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import (
@@ -1137,19 +1136,12 @@ def test_finance_subgroup_missing_commodity_stream_raises(subtests):
     driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
 
-    # NOTE: This error is no longer thrown because a jsonschema ValidationError is thrown instead
-    # I think our error message is more clear (below). Should we use the jsonschema error or our
-    # error? (if we want our error, then I'll remove `commodity_stream` as a required field
-    # in the plant schema)
-
-    # expected_msg = (
-    #     r"Finance subgroup 'electricity' \(commodity 'electricity'\) is "
-    #     r"missing the required `commodity_stream` field\. Please specify "
-    #     r"which technology's output should be used as the commodity stream "
-    #     r"for this subgroup\."
-    # )
-
-    json_error_msg = r"'commodity_stream' is a required property"
+    expected_msg = (
+        r"Finance subgroup 'electricity' \(commodity 'electricity'\) is "
+        r"missing the required `commodity_stream` field\. Please specify "
+        r"which technology's output should be used as the commodity stream "
+        r"for this subgroup\."
+    )
 
     scenarios = {
         "no producing tech in subgroup": ["electrolyzer", "h2_storage"],
@@ -1176,11 +1168,8 @@ def test_finance_subgroup_missing_commodity_stream_raises(subtests):
                 "plant_config": plant_config,
             }
 
-            with pytest.raises(ValidationError, match=json_error_msg):
+            with pytest.raises(ValueError, match=expected_msg):
                 H2IntegrateModel(h2i_config)
-
-            # with pytest.raises(ValueError, match=expected_msg):
-            #     H2IntegrateModel(h2i_config)
 
 
 @pytest.mark.unit

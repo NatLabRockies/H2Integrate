@@ -141,7 +141,7 @@ properties:
                 type: string
                 description: Name of timeseries profile output variable from commodity_stream to use in finance calculations.
                   Only used if use_commodity_stream_timeseries is True
-            required: [commodity, commodity_stream, technologies]
+            required: [commodity, technologies]
             additionalProperties: false
       cost_adjustment_parameters:
         type: object
