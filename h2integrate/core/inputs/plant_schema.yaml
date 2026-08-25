@@ -159,4 +159,4 @@ properties:
         additionalProperties: false
     additionalProperties: false
     required: [finance_groups, cost_adjustment_parameters]
-required: [name, description]  # should plant be required?
+required: [name, description, plant]  # should plant be required?

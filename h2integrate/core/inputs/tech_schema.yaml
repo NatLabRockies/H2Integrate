@@ -58,7 +58,15 @@ properties:
             required: [model]
             additionalProperties: false
             description: Technology finance model name
-          # include dispatch_rule_set?
+          dispatch_rule_set:
+            type: object
+            properties:
+              model:
+                type: string
+                description: Name of the technology dispatch rule set
+            required: [model]
+            additionalProperties: false
+            description: Dispatch rule set for the technology
           model_inputs:
             type: object
             description: Detailed configuration parameters (optional)
@@ -78,7 +86,6 @@ properties:
               control_parameters:
                 type: object
                 description: Input parameters for the technology control model
-              # include dispatch_parameters?
         required: [performance_model, model_inputs]
-        additionalProperties: true  # can set to false if put dispatch_rule_set in
+        additionalProperties: false
 required: [name, description, technologies]
