@@ -126,8 +126,13 @@ class WTKHRRRMETDatasetH5(WindResourceBaseH5Model):
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index
             resource_units = res.resource.units
-
-            resource_data = {c: res[c, :, int(site_gid)] for c in res.resource_datasets}
+            # resource_data_cols = [
+            #     k for k in res.resource_datasets if resource_units.get(k) is not None
+            #     ]
+            # resource_data = {c: res[c, :, int(site_gid)] for c in resurce_data_cols}
+            resource_data = {
+                c: res[c, :, int(site_gid)] for c in res.resource_datasets if c != "fill_flag"
+            }
         res.close()  # this should be OK, but test it out
 
         # Afterwards, we should slice down the resource data based on the interval

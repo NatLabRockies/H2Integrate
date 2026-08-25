@@ -180,7 +180,7 @@ def test_nsrdb_dataset_from_csv_pvwatts(
     "model,site_gid,lat,lon,resource_year,timezone,dt,n_timesteps,loc_param,expected_aep",
     [
         ("NSRDBDatasetH5",478473,39.7555, -105.2211, 2024, 0, 1800, 17520, "gid", 487861.01335131214), # noqa: E501
-        ("NSRDBDatasetH5",2074501,-27.3649, 152.67935, 2024, 0, 3600, 8760, "gid", 487378.273467741), # noqa: E501
+        ("NSRDBDatasetH5",542970,34.22, -102.75, 2024, 0, 3600, 8760, "gid", 487378.273467741),
         ("NSRDBDatasetH5",-1,39.7555, -105.2211, 2024, 0, 3600, 8760, "lat/lon", 487378.273467741),
         ],
     ids=[
