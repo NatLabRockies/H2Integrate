@@ -6,7 +6,6 @@ The model is sized by `system_capacity_kw` and `n_stacks`. The number of cells p
 
 There are no non-linear operational considerations in this model such as warm-up delays, degraded performance over operational life, voltage recalculation after current adjustment for limited feedstock supply, or thermal dynamics beyond a constant stack temperature input.
 
-The PEM hydrogen fuel cell cost model is implemented to use cost values in dollars per kilowatt (or per kilowatt per year), decomposed into capital cost components for the stack, hydrogen supply, air supply, cooling, controls and instrumentation, electrical, assembly, and additional labor.
 
 ```{note}
 The I-V curve is currently internally defined in the model and not adjustable.
@@ -24,24 +23,6 @@ The I-V curve is currently internally defined in the model and not adjustable.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-## Cost Model
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellCostConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellCostModel
    :members:
    :undoc-members:
    :show-inheritance:

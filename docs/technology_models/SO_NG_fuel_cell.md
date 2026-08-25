@@ -6,8 +6,6 @@ The model is sized by `system_capacity_kw` and `n_stacks`. The number of cells p
 
 There are no non-linear operational considerations in this model such as warm-up delays, degraded performance over operational life, or thermal dynamics beyond a constant stack temperature input.
 
-The SO NG fuel cell cost model is implemented to use cost values in dollars per kilowatt (or per kilowatt per year), decomposed into capital cost components for the stack, fuel supply, air supply, cooling, controls and instrumentation, electrical, assembly, and additional labor.
-
 ```{note}
 The I-V curve is currently internally defined in the model and not adjustable.
 ```
@@ -24,24 +22,6 @@ The I-V curve is currently internally defined in the model and not adjustable.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-## Cost Model
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellCostConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellCostModel
    :members:
    :undoc-members:
    :show-inheritance:
