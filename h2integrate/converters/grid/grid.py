@@ -133,12 +133,6 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
 
-        # # NOTE For running in a local loop. TODO move to a higher level location
-        # # in the code, maybe in an openmdao sub problem
-        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        # for si in starting_index:
-        #     discrete_inputs["timestep_index"] = si
-
         simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
 
         # Selling: electricity flows into grid, limited by interconnection size

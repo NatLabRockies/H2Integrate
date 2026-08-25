@@ -50,10 +50,4 @@ class GenericDemandComponent(DemandComponentBase):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
-        # self._get_compute_time_range(discrete_inputs["timestep_index"])
-
-        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        # for si in starting_index:
-        #     discrete_inputs["timestep_index"] = si
-
         outputs = self.calculate_outputs(inputs, outputs, discrete_inputs, discrete_outputs)

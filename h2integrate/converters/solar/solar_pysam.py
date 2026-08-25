@@ -372,10 +372,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             self.apply_curtailment(outputs)
             return
 
-        # starting_index = np.arange(0, self.n_timesteps, self.n_steps_per_compute)
-        # for si in starting_index:
-        #     discrete_inputs["timestep_index"] = si
-
         if not self._PYSAM_model_has_been_executed:
             assert (
                 discrete_inputs["timestep_index"] == 0
