@@ -59,11 +59,6 @@ class WindPerformanceBaseClass(PerformanceModelBaseClass):
                 if bool(re.fullmatch(rf"{param}_\d+m", txt))
             ]
 
-            # params_heights = [
-            #     int(k.split("_")[-1].replace("m", "").strip())
-            #     for k, v in resource_data.items()
-            #     if param in k and "m" in k.split("_")[-1]
-            # ]
             if len(params_heights) > 0:
                 heights_per_parameter.update({param: params_heights})
                 allowed_hub_height_meters.update(params_heights)
