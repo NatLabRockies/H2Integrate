@@ -156,13 +156,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
 
-        # commodity_in = inputs[f"{self.commodity}_in"][
-        #     simulation_range.start : simulation_range.stop
-        # ]
-        # commodity_demand = inputs[f"{self.commodity}_demand"][
-        #     simulation_range.start : simulation_range.stop
-        # ]
-
+        # Arrays relevant to the current simulation step
         commodity_in_sim = commodity_in[simulation_range.start : simulation_range.stop]
         commodity_demand_sim = commodity_demand[simulation_range.start : simulation_range.stop]
 
@@ -189,8 +183,6 @@ class DemandComponentBase(PerformanceModelBaseClass):
         )
 
         # Simulation-length commodity_demand vector for bulk calculations
-        # commodity_demand_full = inputs[f"{self.commodity}_demand"]
-        # commodity_in_full = inputs[f"{self.commodity}_in"]
         commodity_demand_full = commodity_demand
         commodity_in_full = commodity_in
 

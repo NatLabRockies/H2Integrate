@@ -20,7 +20,6 @@ run_dict = {
 }
 
 
-# Set up
 def load_yaml_to_dict(fpath):
     with Path(fpath).open() as f:
         config = yaml.safe_load(f)
@@ -31,35 +30,34 @@ def load_yaml_to_dict(fpath):
 config_root = Path(__file__).parent
 config_path = config_root / "solar_battery_grid.yaml"
 
+# Load top level config
 config = load_yaml_to_dict(config_path)
 
+# Fill driver config
 driver_config_path = config_root / config["driver_config"]
 config["driver_config"] = load_yaml_to_dict(driver_config_path)
 
+# Fill technology config
 technology_config_path = config_root / config["technology_config"]
 config["technology_config"] = load_yaml_to_dict(technology_config_path)
 
-
+# Fill plant config
 plant_config_path = config_root / config["plant_config"]
 config["plant_config"] = load_yaml_to_dict(plant_config_path)
 
 
 def get_io(name, io_list):
+    # Get the value of a specific input or output from the H2I inputs and outputs
     return [io[1]["val"] for io in io_list if io[0] == name][0]
 
 
-def fb_zero(ax, signal):
-    # Plot fill between zero and the given signal
-    t = np.arange(0, len(signal), 1)
-    ax.fill_between(t, np.zeros_like(signal), signal)
-
-
+# Run simulation sequentially one subsystem at a time
 if run_dict.get("run_sequential", False):
     config_seq = deepcopy(config)
     config_seq["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
     config_seq["plant_config"]["plant"]["simulation"]["n_steps_per_compute"] = 8760
 
-    # Create an H2I model for standard year-long
+    # Create an H2I model for standard year-long simulation
     h2i_seq = H2IntegrateModel(config_seq)
 
     # Run the model
@@ -76,7 +74,7 @@ if run_dict.get("run_sequential", False):
         outputs_seq,
     )
 
-
+# Run the simulation concurrently for all subsystems one step at a time
 if run_dict.get("run_concurrent", False):
     config_con = deepcopy(config)
 
@@ -104,13 +102,15 @@ if run_dict.get("run_concurrent", False):
         outputs_con,
     )
 
-
+# Compare results
 if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", False):
 
     def percent_diff(v1, v2):
+        # Calculate the percent difference between two numbers or arrays
         return np.nan_to_num((v2 - v1) / (0.5 * (v1 + v2)))
 
     def percent_diff_dicts(d1, d2):
+        # Construct a dict of percent differences from two dicts with the same entries
         d1 = dict(d1)
         d2 = dict(d2)
 
@@ -120,6 +120,7 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
             v2 = d2[k1]
 
             if isinstance(v1["val"], dict):
+                # If the H2I input or output is more complicated than an array, skip it
                 continue
 
             pd = percent_diff(v1["val"], v2["val"])
@@ -129,6 +130,7 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
         return d_out
 
     def find_nonzero_percent_diffs(pd_dict):
+        # Return only the dict items that are non-zero
         return {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
 
     inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
@@ -163,42 +165,3 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
     # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
     # plot_diff('plant.grid_buy.GridPerformanceModel.electricity_out')
     # plot_diff('plant.battery.StoragePerformanceModel.SOC')
-
-
-if run_dict.get("run_sequential", False):
-    fig, ax = plt.subplots(3, 1, sharex="all", layout="constrained")
-
-    fb_zero(
-        ax[0],
-        get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_seq),
-    )
-    fb_zero(
-        ax[0],
-        get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_seq),
-    )
-    fb_zero(
-        ax[1],
-        get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_seq),
-    )
-
-    fig.suptitle("Sequential simulation")
-
-if run_dict.get("run_concurrent", False):
-    fig, ax = plt.subplots(3, 1, sharex="all", layout="constrained")
-
-    fb_zero(
-        ax[0],
-        get_io("plant.solar.PYSAMSolarPlantPerformanceModel.electricity_out", outputs_con),
-    )
-    fb_zero(
-        ax[0],
-        get_io("plant.grid_buy.GridPerformanceModel.electricity_out", outputs_con),
-    )
-    fb_zero(
-        ax[1],
-        get_io("plant.battery.StoragePerformanceModel.electricity_out", outputs_con),
-    )
-
-    fig.suptitle("Concurrent simulation")
-
-plt.show()

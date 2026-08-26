@@ -153,7 +153,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    # TODO descriptive comment
+    # Flag to avoid unnecessary re-calculation of PySAM model
     _PYSAM_model_has_been_executed = False
 
     def setup(self):
