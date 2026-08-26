@@ -83,7 +83,7 @@
 - Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the feedstock data with the resource data methodology [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
 - Add support for slice notation in technology connections to allow users to connect between variables of different shapes. [PR 774](https://github.com/NatLabRockies/H2Integrate/pull/774)
 - Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
-- Added two new fuel cell models: `PEMH2FuelCellPerformanceModel` and `PEMH2FuelCellCostModel` to model a PEM hydrogen fuel cell and `SONGFuelCellPerformanceModel` and `SONGFuelCellCostModel` to model a natural gas solid oxide fuel cell [PR 794](https://github.com/NatLabRockies/H2Integrate/pull/794)
+- Added two new fuel cell models: `PEMH2FuelCellPerformanceModel` to model a PEM hydrogen fuel cell and `SONGFuelCellPerformanceModel` to model a natural gas solid oxide fuel cell [PR 794](https://github.com/NatLabRockies/H2Integrate/pull/794)
 
 ### Fixes
 - Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
