@@ -63,6 +63,9 @@ supported_models = _ModelRegistry(
         "Himawari7SolarAPI": "resource.solar:Himawari7SolarAPI",
         "Himawari8SolarAPI": "resource.solar:Himawari8SolarAPI",
         "HimawariTMYSolarAPI": "resource.solar:HimawariTMYSolarAPI",
+        # HPC or HSDS Resources
+        "NSRDBDatasetH5": "resource.solar:NSRDBDatasetH5",
+        "WTKHRRRMETDatasetH5": "resource.wind:WTKHRRRMETDatasetH5",
         # Converters
         "GenericConverterCostModel": "converters:GenericConverterCostModel",
         "ATBWindPlantCostModel": "converters.wind:ATBWindPlantCostModel",
