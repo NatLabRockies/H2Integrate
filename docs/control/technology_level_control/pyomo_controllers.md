@@ -111,7 +111,6 @@ tech_to_dispatch_connections: [
 ]
 ```
 
-(optimized-demand-response-controller)=
 # Optimized Demand Response Controller
 
 This controller optimizes the dispatch of a Battery Energy Storage System (BESS) based on a pre-defined supervisory signal. This signal could be the Locational Marginal Price (LMP), a demand profile, or an $LMP\times demand$ product depending on the application. The objective is to maximize incentive payments to the battery, subject to constraints on the maximum number of dispatch events per month and on the battery state of charge.
@@ -140,7 +139,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month
 - $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is `null`)
 - $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
-- $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own sub-controller is a combined *gross* demand signal (always $\geq 0$: `{commodity}_in` from upstream techs plus remaining system demand, see [Storage control classifier](../system_level_control/control_classifier.md#storage)) rather than a signed net target, so it is netted against `{commodity}_in` here — the same way `DemandOpenLoopStorageController` and the heuristic PLM storage controller already interpret those two inputs. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`)
+- $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own controller is a combined *gross* demand signal. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`). 
 
 ## Dispatch Window Construction
 

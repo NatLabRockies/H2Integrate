@@ -74,12 +74,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
         constrain_dispatch_to_set_point (bool): When ``True``, caps
             ``p_discharge``/``p_charge`` each timestep at
             ``{commodity}_set_point - {commodity}_in`` (positive = system
-            needs discharge, negative = surplus to absorb), tightening the
-            existing ``P_max`` bound without affecting ``supervisory_signal``,
-            ``peak_window``, or the incentive objective. See
-            ``control_classifier.md``'s "Storage" section for why the raw
-            set-point needs netting against ``{commodity}_in`` first.
-            Defaults to ``False`` (no effect on standalone configs).
+            needs discharge, negative = surplus to absorb),
     """
 
     max_charge_rate: float = field()
