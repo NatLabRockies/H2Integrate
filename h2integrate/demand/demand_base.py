@@ -126,8 +126,8 @@ class DemandComponentBase(PerformanceModelBaseClass):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    # def calculate_outputs(self, commodity_in, commodity_demand, outputs):
-    def calculate_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def calculate_outputs(self, commodity_in, commodity_demand, outputs, discrete_inputs):
+        # def calculate_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Compute unmet demand, unused commodity, and converter output.
 
         This method compares the demand profile to the supplied commodity for
@@ -156,18 +156,21 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
 
-        commodity_in = inputs[f"{self.commodity}_in"][
-            simulation_range.start : simulation_range.stop
-        ]
-        commodity_demand = inputs[f"{self.commodity}_demand"][
-            simulation_range.start : simulation_range.stop
-        ]
+        # commodity_in = inputs[f"{self.commodity}_in"][
+        #     simulation_range.start : simulation_range.stop
+        # ]
+        # commodity_demand = inputs[f"{self.commodity}_demand"][
+        #     simulation_range.start : simulation_range.stop
+        # ]
+
+        commodity_in_sim = commodity_in[simulation_range.start : simulation_range.stop]
+        commodity_demand_sim = commodity_demand[simulation_range.start : simulation_range.stop]
 
         outputs[f"{self.commodity}_demand_out"][simulation_range.start : simulation_range.stop] = (
-            commodity_demand
+            commodity_demand_sim
         )
 
-        remaining_demand = commodity_demand - commodity_in
+        remaining_demand = commodity_demand_sim - commodity_in_sim
 
         # Calculate missed load and curtailed production
         outputs[f"unmet_{self.commodity}_demand_out"][
@@ -179,17 +182,17 @@ class DemandComponentBase(PerformanceModelBaseClass):
 
         # Calculate actual output based on demand met and curtailment
         outputs[f"{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
-            commodity_in
+            commodity_in_sim
             - outputs[f"unused_{self.commodity}_out"][
                 simulation_range.start : simulation_range.stop
             ]
         )
 
-        # TODO double check annual calculation is still accurate
-
         # Simulation-length commodity_demand vector for bulk calculations
-        commodity_demand_full = inputs[f"{self.commodity}_demand"]
-        commodity_in_full = inputs[f"{self.commodity}_in"]
+        # commodity_demand_full = inputs[f"{self.commodity}_demand"]
+        # commodity_in_full = inputs[f"{self.commodity}_in"]
+        commodity_demand_full = commodity_demand
+        commodity_in_full = commodity_in
 
         outputs[f"rated_{self.commodity}_production"] = commodity_demand_full.mean()
 

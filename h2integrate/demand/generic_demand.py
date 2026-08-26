@@ -50,4 +50,8 @@ class GenericDemandComponent(DemandComponentBase):
             All variables operate on a per-timestep basis and typically have
             array shape ``(n_timesteps,)``.
         """
-        outputs = self.calculate_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+
+        commodity_in = inputs[f"{self.commodity}_in"]
+        commodity_demand = inputs[f"{self.commodity}_demand"]
+        outputs = self.calculate_outputs(commodity_in, commodity_demand, outputs, discrete_inputs)
+        # outputs = self.calculate_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
