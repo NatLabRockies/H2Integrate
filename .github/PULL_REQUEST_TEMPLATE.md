@@ -109,7 +109,7 @@ failing test cases.
 - [ ] **Model Structure**:
   - [ ] Follows established naming conventions outlined in `docs/developer_guide/coding_guidelines.md`
   - [ ] Used `attrs` class to define the `Config` to load in attributes for the model
-    - [ ] If applicable: inherit from `BaseConfig`, `PerformanceModelBaseConfig` or `CostModelBaseConfig`
+    - [ ] If applicable: inherit from `BaseConfig` or `CostModelBaseConfig`
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method
     - [ ] If applicable: inherit from `PerformanceModelBaseClass` and `CostModelBaseClass`
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
@@ -118,7 +118,7 @@ failing test cases.
 - [ ] **Tests**: Unit tests have been added for the new model
   - [ ] [Pytest-style unit tests](https://realpython.com/pytest-python-testing/)
   - [ ] Unit tests are in a "test" folder within the folder a new model was added to
-  - [ ] If applicable add integration tests
+  - [ ] If applicable, add integration tests
 - [ ] **Example**: If applicable, a working example demonstrating the new model has been created
   - [ ] Input file comments
   - [ ] Run file comments
@@ -126,9 +126,10 @@ failing test cases.
 - [ ] **Documentation**:
   - [ ] Write docstrings using the [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
   - [ ] Model documentation page added to the appropriate `docs/` section
-    - [ ] `<model_name>.md` is added to the `_toc.yml`
-  - [ ] Navigate to docs folder and run `sh build_book.sh`
-  - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`
+    - [ ] Path to model documentation page is added to the `_toc.yml`
+  - [ ] Update the class hierarchy diagram `docs/_static/class_hierarchy.html` by doing one of the below options:
+    - [ ] Navigate to `docs` folder and run `sh build_book.sh`
+    - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`. You may need to delete the `_autosummary` folder before doing this.
 
 
 
