@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -207,10 +206,10 @@ class GridCostModelConfig(CostModelBaseConfig):
     electricity_buy_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
     electricity_sell_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
     buy_price_mode: str | None = field(
-        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+        default="per_timestep", validator=validators.in_(["per_year", "per_timestep", "constant"])
     )
     sell_price_mode: str | None = field(
-        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+        default="per_timestep", validator=validators.in_(["per_year", "per_timestep", "constant"])
     )
 
 

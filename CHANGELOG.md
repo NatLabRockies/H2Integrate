@@ -7,7 +7,13 @@
 - Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`; see method for details. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled), added `heat` to `PipePerformanceModel` supported transport items, and updated examples 33 and 36 to use length-4 connections. [PR 832](https://github.com/NatLabRockies/H2Integrate/pull/832)
 - Fully remove HOPP and its integration into H2I now that all relevant capabilities have been ported to H2I. [PR 827](https://github.com/NatLabRockies/H2Integrate/pull/827)
 - Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
+- Added a new NLR wind resource model: HRRR MET Toolkit [PR 837](https://github.com/NatLabRockies/H2Integrate/pull/837)
 - Updated EIA feedstock API call and getting user-specified directories (for feedstock and resource data) to use `get_environment_variables()` [PR #834](https://github.com/NatLabRockies/H2Integrate/pull/834)
+- Added a converter controller that implements a peak-load management heuristic. [PR 773](https://github.com/NatLabRockies/H2Integrate/pull/773)
+- Fixed error message that is thrown in `check_inputs` and updated testing of `check_inputs` to actually test the error messages [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
+- Fixed several tests where the assert statements paired with `pytest.raises` were indented inside the context manager block and never ran, and corrected the now-active expected error strings. [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
+- Replaces all custom attrs validators in `h2integrate.core.validators` with built in attrs validators. [PR 835](https://github.com/NatLabRockies/H2Integrate/pull/835)
+- Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 
 ## 0.9 [August 10, 2026]
 

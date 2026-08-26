@@ -1,11 +1,10 @@
 """Electric Arc Furnace performance model based on CMU decarbSTEEL EAF Model"""
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.tools.constants import (
     C_MW,
     CO_MW,
@@ -54,10 +53,10 @@ class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
             "SiO2": 1.0 / 100,  # mass fraction SiO2, 'Model Inputs & Outputs!B28'
         }
     )
-    pellet_grade: str = field(default="DR", validator=contains(["DR", "BF", "custom"]))
+    pellet_grade: str = field(default="DR", validator=validators.in_(["DR", "BF", "custom"]))
     pct_DRI: float = field(default=60.0 / 100)  # mass fraction, 'Model Inputs & Outputs!B61'
     DRI_feed_temp: str = field(
-        default="hot", validator=contains(["hot", "cold"])
+        default="hot", validator=validators.in_(["hot", "cold"])
     )  # hot = 873 K or cold = 298 K, 'Model Inputs & Outputs!B63'
     DRI_composition: dict[str, float] | None = None
     SiO2_ratio: float | None = None

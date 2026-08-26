@@ -15,10 +15,9 @@ Classes:
 """
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -37,7 +36,9 @@ class HumbertEwinConfig(BaseConfig):
     """
 
     electrolysis_type: str = field(
-        kw_only=True, converter=(str.lower, str.strip), validator=contains(["ahe", "mse", "moe"])
+        kw_only=True,
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["ahe", "mse", "moe"]),
     )  # product selection
     ore_fe_wt_pct: float = field(kw_only=True)
     capacity_mw: float = field(kw_only=True)

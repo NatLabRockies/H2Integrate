@@ -11,10 +11,9 @@ connection feature. They produce and consume wellhead_gas_mixture streams with
 """
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -41,12 +40,12 @@ class SimpleGasProducerPerformanceConfig(BaseConfig):
         random_seed: Seed for random number generator (for reproducibility)
     """
 
-    base_flow_rate: float = field(default=100.0, validator=gt_zero)
-    base_temperature: float = field(default=300.0, validator=gt_zero)
-    base_pressure: float = field(default=10.0, validator=gt_zero)
-    flow_variation: float = field(default=20.0, validator=gte_zero)
-    temp_variation: float = field(default=10.0, validator=gte_zero)
-    pressure_variation: float = field(default=1.0, validator=gte_zero)
+    base_flow_rate: float = field(default=100.0, validator=validators.gt(0))
+    base_temperature: float = field(default=300.0, validator=validators.gt(0))
+    base_pressure: float = field(default=10.0, validator=validators.gt(0))
+    flow_variation: float = field(default=20.0, validator=validators.ge(0))
+    temp_variation: float = field(default=10.0, validator=validators.ge(0))
+    pressure_variation: float = field(default=1.0, validator=validators.ge(0))
     random_seed: int | None = field(default=None)
 
 
@@ -210,8 +209,8 @@ class SimpleGasProducerCostConfig(CostModelBaseConfig):
         opex: Fixed operational expenditure in USD/year
     """
 
-    capex: float = field(default=1_000_000.0, validator=gte_zero)
-    opex: float = field(default=50_000.0, validator=gte_zero)
+    capex: float = field(default=1_000_000.0, validator=validators.ge(0))
+    opex: float = field(default=50_000.0, validator=validators.ge(0))
 
 
 class SimpleGasProducerCost(CostModelBaseClass):
@@ -246,8 +245,8 @@ class SimpleGasConsumerCostConfig(CostModelBaseConfig):
         opex: Fixed operational expenditure in USD/year
     """
 
-    capex: float = field(default=2_000_000.0, validator=gte_zero)
-    opex: float = field(default=100_000.0, validator=gte_zero)
+    capex: float = field(default=2_000_000.0, validator=validators.ge(0))
+    opex: float = field(default=100_000.0, validator=validators.ge(0))
 
 
 class SimpleGasConsumerCost(CostModelBaseClass):

@@ -51,6 +51,7 @@ supported_models = _ModelRegistry(
         "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
+        "HRRRMETToolkitWindAPI": "resource.wind:HRRRMETToolkitWindAPI",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
         "OpenMeteoHistoricalSolarResource": "resource.solar:OpenMeteoHistoricalSolarResource",
         "GOESAggregatedSolarAPI": "resource.solar:GOESAggregatedSolarAPI",
@@ -134,6 +135,7 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
@@ -164,6 +166,7 @@ supported_models = _ModelRegistry(
         "OptimizedDispatchStorageController": "control.control_strategies.storage:OptimizedDispatchStorageController",
         "GenericDemandComponent": "demand:GenericDemandComponent",
         "FlexibleDemandComponent": "demand:FlexibleDemandComponent",
+        "PLMHeuristicOpenLoopConverterController": "control.control_strategies.converters:PLMHeuristicOpenLoopConverterController",
         # Dispatch
         "PyomoDispatchGenericConverter": "control.control_rules.converters:PyomoDispatchGenericConverter",
         "PyomoRuleStorageBaseclass": "control.control_rules.storage:PyomoRuleStorageBaseclass",

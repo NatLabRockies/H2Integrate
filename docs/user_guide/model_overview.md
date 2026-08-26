@@ -98,8 +98,9 @@ auto-generated API page.
 
 - `wind`: wind resource data providers
   - other components:
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI`
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
-    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api.WTKNLRDeveloperAPIWindResource`
+    + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=
 ## Converter models
@@ -287,6 +288,10 @@ auto-generated API page.
 
 (control-models)=
 ## Control models
+
+- `control_strategies`
+  - controllers:
+    + {py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterController` - Open-loop peak-load management controller for converter technologies.
 
 - `pyomo_converter_dispatch`: Pyomo dispatch rules for converters
   - dispatch rules:

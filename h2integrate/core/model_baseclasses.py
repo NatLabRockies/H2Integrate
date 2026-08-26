@@ -201,7 +201,6 @@ class CostModelBaseClass(om.ExplicitComponent):
         hours_per_year = 8760
         hours_simulated = (self.dt / 3600) * self.n_timesteps
         self.fraction_of_year_simulated = hours_simulated / hours_per_year
-
         # Define outputs: CapEx and OpEx costs
         self.add_output("CapEx", val=0.0, units="USD", desc="Capital expenditure")
         self.add_output("OpEx", val=0.0, units="USD/year", desc="Fixed operational expenditure")

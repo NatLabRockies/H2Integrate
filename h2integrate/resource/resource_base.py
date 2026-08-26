@@ -19,7 +19,7 @@ class ResourceBaseAPIConfig(BaseConfig):
     Subclasses should include the following attributes that are not set in this BaseConfig:
 
         - **resource_year** (*int*): Year to download resource data for.
-            Recommended to have a range_val validator.
+            Recommended to have a validator for upper and lower limits.
         - **resource_data** (*dict*, optional): Dictionary of user-provided resource data.
             Defaults to {}.
         - **resource_dir** (*str | Path*, optional): Folder to save resource files to or

@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, range_val, range_val_or_none
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -55,18 +54,24 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
     commodity: str = field()
     commodity_rate_units: str = field()
 
-    max_capacity: float = field(validator=gt_zero)
-    max_charge_rate: float = field(validator=gt_zero)
+    max_capacity: float = field(validator=validators.gt(0))
+    max_charge_rate: float = field(validator=validators.gt(0))
 
-    init_soc_fraction: float = field(validator=range_val(0, 1))
+    init_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
 
     commodity_amount_units: str = field(default=None)
     max_discharge_rate: float | None = field(default=None)
     charge_equals_discharge: bool = field(default=True)
 
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    charge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    discharge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    round_trip_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
 
     def __attrs_post_init__(self):
         """
