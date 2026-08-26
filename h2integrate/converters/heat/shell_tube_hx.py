@@ -3,10 +3,14 @@ from math import log
 import numpy as np
 import openmdao.api as om
 from attrs import field, define
+from attrs.validators import gt_zero
 from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero
+from h2integrate.core.commodity_stream_definitions import (
+    multivariable_streams,
+    add_multivariable_output,
+)
 
 
 @define(kw_only=True)
@@ -14,35 +18,56 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     """
     Configuration class for the ShellTubeHXPerformanceModel.
 
+    The heat exchanger connects two multivariable fluid streams:
+
+    * ``process_fluid`` — tube-side fluid; the fluid heated/cooled by the HX
+      that continues to a downstream component.
+    * ``working_fluid`` — shell-side fluid; the utility fluid that brings
+      heat to (or removes heat from) the process fluid.
+
     Args:
-        Temp_hot_in_C (float): Hot fluid inlet temperature in degrees Celsius.
-        Temp_cold_in_C (float): Cold fluid inlet temperature in degrees Celsius.
-        m_dot_h_kg_s (float): Mass flow rate of the hot fluid in kg/s.
-        m_dot_c_kg_s (float): Mass flow rate of the cold fluid in kg/s.
-        N_tubes (int): Number of tubes in the heat exchanger.
-        N_passes (int): Number of passes in the heat exchanger.
-        L_tube_m (float): Length of each tube in meters.
-        D_o_m (float): Outer diameter of the tubes in meters.
-        t_wall_m (float): Wall thickness of the tubes in meters.
-        D_shell_m (float): Diameter of the shell in meters.
-        cost_year (int): Year for cost estimation.
+        process_fluid_temp_C: Default process (tube-side) inlet temperature in degC.
+        working_fluid_temp_C: Default working (shell-side) inlet temperature in degC.
+        process_fluid_mass_flow_kg_s: Default process mass flow rate in kg/s.
+        working_fluid_mass_flow_kg_s: Default working mass flow rate in kg/s.
+        process_fluid_pressure_bar: Default process inlet pressure in bar.
+        working_fluid_pressure_bar: Default working inlet pressure in bar.
+        N_tubes: Number of tubes in the heat exchanger.
+        N_passes: Number of tube passes.
+        L_tube_m: Length of each tube in meters.
+        D_o_m: Outer diameter of the tubes in meters.
+        t_wall_m: Wall thickness of the tubes in meters.
+        D_shell_m: Diameter of the shell in meters.
+        process_fluid_name: CoolProp fluid name for the process stream.
+        working_fluid_name: CoolProp fluid name for the working stream.
     """
 
-    temp_hot_in_C: float = field(validator=gt_zero)
-    temp_cold_in_C: float = field(validator=gt_zero)
-    mass_flow_rate_hot_kg_s: float = field(validator=gt_zero)
-    mass_flow_rate_cold_kg_s: float = field(validator=gt_zero)
+    process_fluid_temp_C: float = field(validator=gt_zero)
+    working_fluid_temp_C: float = field(validator=gt_zero)
+    process_fluid_mass_flow_kg_s: float = field(validator=gt_zero)
+    working_fluid_mass_flow_kg_s: float = field(validator=gt_zero)
+    process_fluid_pressure_bar: float = field(default=1.0, validator=gt_zero)
+    working_fluid_pressure_bar: float = field(default=1.0, validator=gt_zero)
     N_tubes: int = field(validator=gt_zero)
     N_passes: int = field(validator=gt_zero)
     L_tube_m: float = field(validator=gt_zero)
     D_o_m: float = field(validator=gt_zero)
     t_wall_m: float = field(validator=gt_zero)
     D_shell_m: float = field(validator=gt_zero)
+    process_fluid_name: str = field(default="Water")
+    working_fluid_name: str = field(default="Water")
 
 
 class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     """
-    An OpenMDAO component that wraps the steady shell tube heat exchanger model.
+    An OpenMDAO component that wraps the steady shell-and-tube heat exchanger model.
+
+    The component exposes two multivariable-stream inlet ports
+    (``process_fluid`` on the tube side and ``working_fluid`` on the shell side) and
+    the corresponding two multivariable-stream outlet ports. Each stream carries
+    ``mass_flow`` (kg/s), ``temperature`` (degC), and ``pressure`` (bar) as
+    time-series of length ``n_timesteps``. The steady HX solver is evaluated
+    independently at each timestep.
     """
 
     def initialize(self):
@@ -57,82 +82,194 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             additional_cls_name=self.__class__.__name__,
         )
 
-        # Setup OpenMDAO inputs
-        self.add_input(
-            "temp_hot_in",
-            val=self.config.temp_hot_in_C,
-            units="degC",
-            desc="Hot fluid inlet temperature",
-        )
-        self.add_input(
-            "temp_cold_in",
-            val=self.config.temp_cold_in_C,
-            units="degC",
-            desc="Cold fluid inlet temperature",
-        )
-        self.add_input(
-            "mass_flow_rate_hot",
-            val=self.config.mass_flow_rate_hot_kg_s,
-            units="kg/s",
-            desc="Hot fluid mass flow rate",
-        )
-        self.add_input(
-            "mass_flow_rate_cold",
-            val=self.config.mass_flow_rate_cold_kg_s,
-            units="kg/s",
-            desc="Cold fluid mass flow rate",
+        # Simulation length (time-series shape)
+        self.n_timesteps = int(
+            self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         )
 
-        # Setup OpenMDAO outputs
-        self.add_output("temp_hot_out", val=0.0, units="degC", desc="Hot fluid outlet temperature")
+        # Multivariable-stream inputs (both inlet streams). The variables are
+        # setup directly (rather than via ``add_multivariable_input``) so that
+        # the inlet defaults can be seeded from the config — this lets the
+        # component run stand-alone (e.g. in # unit tests) without an
+        # upstream connection.
+        inlet_defaults = {
+            "process_fluid": {
+                "mass_flow": self.config.process_fluid_mass_flow_kg_s,
+                "temperature": self.config.process_fluid_temp_C,
+                "pressure": self.config.process_fluid_pressure_bar,
+            },
+            "working_fluid": {
+                "mass_flow": self.config.working_fluid_mass_flow_kg_s,
+                "temperature": self.config.working_fluid_temp_C,
+                "pressure": self.config.working_fluid_pressure_bar,
+            },
+        }
+        for stream_name, defaults in inlet_defaults.items():
+            for var_name, var_props in multivariable_streams[stream_name].items():
+                self.add_input(
+                    f"{stream_name}:{var_name}_in",
+                    val=np.full(self.n_timesteps, defaults[var_name]),
+                    shape=self.n_timesteps,
+                    units=var_props.get("units"),
+                    desc=var_props.get("desc", ""),
+                )
+
+        # Multivariable-stream outputs (both outlet streams). Mass flow is
+        # conserved through the HX; temperature and pressure change.
+        add_multivariable_output(self, "process_fluid", self.n_timesteps)
+        add_multivariable_output(self, "working_fluid", self.n_timesteps)
+
+        # Additional performance outputs (time-series)
+        ts = dict(shape=self.n_timesteps, val=0.0)
+        self.add_output("Q_total", units="kW", desc="Total heat transfer rate", **ts)
+        self.add_output("epsilon", desc="Effectiveness of the heat exchanger", **ts)
+        self.add_output("NTU", desc="Number of transfer units", **ts)
+        self.add_output("C_r", desc="Heat capacity rate ratio", **ts)
+        self.add_output("U_global", units="W/m**2/K", desc="Overall heat transfer coefficient", **ts)
         self.add_output(
-            "temp_cold_out", val=0.0, units="degC", desc="Cold fluid outlet temperature"
-        )
-        self.add_output("Q_total", val=0.0, units="kW", desc="Total heat transfer rate")
-        self.add_output("epsilon", val=0.0, desc="Effectiveness of the heat exchanger")
-        self.add_output("NTU", val=0.0, desc="Number of transfer units")
-        self.add_output("C_r", val=0.0, desc="Heat capacity rate ratio")
-        self.add_output(
-            "U_global_W_m2K", val=0.0, units="W/m**2/K", desc="Overall heat transfer coefficient"
+            "pressure_drop_process_fluid",
+            units="Pa",
+            desc="Process-side (tube) pressure drop",
+            **ts,
         )
         self.add_output(
-            "pressure_drop_hot", val=0.0, units="Pa", desc="Pressure drop on the hot side"
+            "pressure_drop_working_fluid",
+            units="Pa",
+            desc="Working-side (shell) pressure drop",
+            **ts,
         )
+        self.add_output("pump_power", units="kW", desc="Total pump power required", **ts)
+        self.add_output("S_gen_dot", units="W/K", desc="Entropy generation rate", **ts)
+        self.add_output("Ex_dest_dot", units="kW", desc="Exergy destruction rate", **ts)
         self.add_output(
-            "pressure_drop_cold", val=0.0, units="Pa", desc="Pressure drop on the cold side"
+            "roles_swapped",
+            desc=(
+                "Per-timestep flag (0/1). 1 indicates the working fluid entered "
+                "hotter than the process fluid at that timestep and the two "
+                "streams were routed into the solver with swapped hot/cold "
+                "roles so the LMTD bisection remained valid."
+            ),
+            **ts,
         )
-        self.add_output("pump_power", val=0.0, units="kW", desc="Total pump power required")
-        self.add_output("S_gen_dot", val=0.0, units="W/K", desc="Entropy generation rate")
-        self.add_output("Ex_dest_dot", val=0.0, units="kW", desc="Exergy destruction rate")
 
     def compute(self, inputs, outputs):
-        params = {
-            "temp_hot_in": inputs["temp_hot_in"][0],
-            "temp_cold_in": inputs["temp_cold_in"][0],
-            "mass_flow_rate_hot": inputs["mass_flow_rate_hot"][0],
-            "mass_flow_rate_cold": inputs["mass_flow_rate_cold"][0],
-            "N_tubes": self.config.N_tubes,
-            "N_passes": self.config.N_passes,
-            "L_tube": self.config.L_tube_m,
-            "D_o": self.config.D_o_m,
-            "t_wall": self.config.t_wall_m,
-            "D_shell": self.config.D_shell_m,
-        }
+        n = self.n_timesteps
 
-        res = self.hx_shell_tube_steady(params)
+        m_dot_process = inputs["process_fluid:mass_flow_in"]
+        T_process = inputs["process_fluid:temperature_in"]
+        P_process = inputs["process_fluid:pressure_in"]
 
-        outputs["temp_hot_out"] = float(res["Th"][-1])
-        outputs["temp_cold_out"] = float(res["Tc"][0])
-        outputs["Q_total"] = float(res["Q_total"]) / 1e3
-        outputs["epsilon"] = float(res["epsilon"])
-        outputs["NTU"] = float(res["NTU"])
-        outputs["C_r"] = float(res["C_r"])
-        outputs["U_global_W_m2K"] = float(res["U_global"])
-        outputs["pressure_drop_hot"] = float(res["dp_tube_total"])
-        outputs["pressure_drop_cold"] = float(res["dp_shell_total"])
-        outputs["pump_power"] = float(res["P_pump_total"]) / 1e3
-        outputs["S_gen_dot"] = float(res["S_gen_dot"])
-        outputs["Ex_dest_dot"] = float(res["Ex_dest_dot"]) / 1e3
+        m_dot_working = inputs["working_fluid:mass_flow_in"]
+        T_working = inputs["working_fluid:temperature_in"]
+        P_working = inputs["working_fluid:pressure_in"]
+
+        # Fluid property functions built once per timestep (pressure varies)
+        for i in range(n):
+            # Fluid-property callables at this timestep's inlet pressures
+            fluid_process_fun = self.make_coolprop_fluid(
+                fluid_name=self.config.process_fluid_name,
+                P_bar=float(P_process[i]),
+            )
+            fluid_working_fun = self.make_coolprop_fluid(
+                fluid_name=self.config.working_fluid_name,
+                P_bar=float(P_working[i]),
+            )
+
+            # ---- Role-swap safeguard ----
+            # The steady solver assumes ``hot`` enters warmer than ``cold``
+            # (its LMTD bisection requires dT > 0 throughout). The nominal
+            # assignment is process → hot (tube side), working → cold (shell
+            # side). When the working fluid enters hotter than the process
+            # fluid we swap the two streams' roles for this timestep so the
+            # solver still converges; the swap is undone when writing the
+            # outputs back to the process/working streams. This means the
+            # tube-side vs shell-side geometry is applied to whichever
+            # stream is hotter at that timestep — an explicit modeling
+            # assumption for design-oriented HX studies.
+            swap = float(T_working[i]) > float(T_process[i])
+
+            if swap:
+                (T_hot, m_dot_hot, fluid_hot_fun) = (
+                    float(T_working[i]),
+                    float(m_dot_working[i]),
+                    fluid_working_fun,
+                )
+                (T_cold, m_dot_cold, fluid_cold_fun) = (
+                    float(T_process[i]),
+                    float(m_dot_process[i]),
+                    fluid_process_fun,
+                )
+            else:
+                (T_hot, m_dot_hot, fluid_hot_fun) = (
+                    float(T_process[i]),
+                    float(m_dot_process[i]),
+                    fluid_process_fun,
+                )
+                (T_cold, m_dot_cold, fluid_cold_fun) = (
+                    float(T_working[i]),
+                    float(m_dot_working[i]),
+                    fluid_working_fun,
+                )
+
+            params = {
+                "temp_hot_in": T_hot,
+                "temp_cold_in": T_cold,
+                "mass_flow_rate_hot": m_dot_hot,
+                "mass_flow_rate_cold": m_dot_cold,
+                "N_tubes": self.config.N_tubes,
+                "N_passes": self.config.N_passes,
+                "L_tube": self.config.L_tube_m,
+                "D_o": self.config.D_o_m,
+                "t_wall": self.config.t_wall_m,
+                "D_shell": self.config.D_shell_m,
+                "fluid_hot": fluid_hot_fun,
+                "fluid_cold": fluid_cold_fun,
+            }
+
+            res = self.hx_shell_tube_steady(params)
+
+            # Solver-frame results
+            T_hot_out = float(res["Th"][-1])
+            T_cold_out = float(res["Tc"][0])
+            dp_tube_total = float(res["dp_tube_total"])
+            dp_shell_total = float(res["dp_shell_total"])
+
+            # Map solver-frame results back to the process/working streams.
+            # The "tube" pressure drop belongs to whichever stream was routed
+            # into the hot role; the "shell" drop belongs to the cold role.
+            if swap:
+                T_process_out = T_cold_out
+                T_working_out = T_hot_out
+                dp_process = dp_shell_total
+                dp_working = dp_tube_total
+            else:
+                T_process_out = T_hot_out
+                T_working_out = T_cold_out
+                dp_process = dp_tube_total
+                dp_working = dp_shell_total
+
+            # Outlet multivariable-stream values
+            outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
+            outputs["process_fluid:temperature_out"][i] = T_process_out
+            # Convert Pa drop back into a bar-scale pressure decrement
+            outputs["process_fluid:pressure_out"][i] = float(P_process[i]) - dp_process / 1e5
+
+            outputs["working_fluid:mass_flow_out"][i] = float(m_dot_working[i])
+            outputs["working_fluid:temperature_out"][i] = T_working_out
+            outputs["working_fluid:pressure_out"][i] = float(P_working[i]) - dp_working / 1e5
+
+            # Diagnostic time-series outputs
+            outputs["Q_total"][i] = float(res["Q_total"]) / 1e3
+            outputs["epsilon"][i] = float(res["epsilon"])
+            outputs["NTU"][i] = float(res["NTU"])
+            outputs["C_r"][i] = float(res["C_r"])
+            outputs["U_global"][i] = float(res["U_global"])
+            outputs["pressure_drop_process_fluid"][i] = dp_process
+            outputs["pressure_drop_working_fluid"][i] = dp_working
+            outputs["pump_power"][i] = float(res["P_pump_total"]) / 1e3
+            outputs["S_gen_dot"][i] = float(res["S_gen_dot"])
+            outputs["Ex_dest_dot"][i] = float(res["Ex_dest_dot"]) / 1e3
+            outputs["roles_swapped"][i] = 1.0 if swap else 0.0
 
     # ----------------------------------------------------------------------
     # 1) CoolProp-based generic fluid properties

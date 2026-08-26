@@ -61,6 +61,40 @@ multivariable_streams = {
             "desc": "Gas stream pressure",
         },
     },
+    "process_fluid": {
+        "mass_flow": {
+            "units": "kg/s",
+            "desc": (
+                "Mass flow rate of the process fluid — the fluid that is heated or "
+                "cooled by the heat exchanger and passed to a downstream component."
+            ),
+        },
+        "temperature": {
+            "units": "degC",
+            "desc": "Temperature of the process fluid",
+        },
+        "pressure": {
+            "units": "bar",
+            "desc": "Pressure of the process fluid",
+        },
+    },
+    "working_fluid": {
+        "mass_flow": {
+            "units": "kg/s",
+            "desc": (
+                "Mass flow rate of the working fluid — the utility fluid that brings "
+                "heat to or removes heat from the process fluid in the heat exchanger."
+            ),
+        },
+        "temperature": {
+            "units": "degC",
+            "desc": "Temperature of the working fluid",
+        },
+        "pressure": {
+            "units": "bar",
+            "desc": "Pressure of the working fluid",
+        },
+    },
 }
 
 
