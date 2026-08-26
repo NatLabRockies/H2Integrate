@@ -174,7 +174,7 @@ def test_nsrdb_dataset_from_csv_pvwatts(
 
 
 # fmt: off
-@pytest.mark.hpc
+@pytest.mark.integration
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
     "model,site_gid,lat,lon,resource_year,timezone,dt,n_timesteps,loc_param,expected_aep",
