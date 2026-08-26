@@ -35,3 +35,4 @@ In the pyomo control framework in H2Integrate, each technology can have control 
 Supported controllers:
 - [`HeuristicLoadFollowingStorageController`](#heuristic-load-following-controller)
 - [`OptimizedDispatchController`](#optimized-load-following-controller)
+- [`PeakLoadManagementOptimizedStorageController`](../technology_level_control/pyomo_controllers.md#optimized-demand-response-controller)
