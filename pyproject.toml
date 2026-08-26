@@ -51,7 +51,7 @@ dependencies = [
   "pint",
   "ProFAST",
   "Pyomo>=6.1.2",
-  "pyfluids>=4.0"
+  "pyfluids>=4.0",
   "rainflow",
   "requests",
   "requests-cache",
