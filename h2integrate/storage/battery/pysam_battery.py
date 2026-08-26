@@ -50,8 +50,8 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
     """
 
-    max_capacity: float = field(validator=validators.gt(0))
-    max_charge_rate: float = field(validator=validators.gt(0))
+    max_capacity: float = field(validator=validators.ge(0))
+    max_charge_rate: float = field(validator=validators.ge(0))
 
     chemistry: str = field(
         validator=validators.in_(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),

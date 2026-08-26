@@ -24,6 +24,7 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
 
     system_capacity_kw: float = field(validator=validators.ge(0))
     fuel_cell_efficiency_hhv: float = field(validator=(validators.ge(0), validators.le(1)))
+    uptime_hours_until_eol: int = field(validator=validators.ge(0))
 
 
 class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
@@ -217,6 +218,7 @@ class H2FuelCellCostConfig(CostModelBaseConfig):
     system_capacity_kw: float = field(validator=validators.ge(0))
     capex_per_kw: float = field(validator=validators.ge(0))
     fixed_opex_per_kw_per_year: float = field(validator=validators.ge(0))
+    variable_opex_per_kwh: float = field(validator=validators.ge(0))
 
 
 class H2FuelCellCostModel(CostModelBaseClass):

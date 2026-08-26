@@ -208,7 +208,6 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
     capex_per_kw: float | int = field(validator=validators.ge(0))
     fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
     variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
-    heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
 class NaturalGasCostModel(CostModelBaseClass):

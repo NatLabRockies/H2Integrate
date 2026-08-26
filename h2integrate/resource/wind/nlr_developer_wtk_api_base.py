@@ -46,7 +46,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class WTKNLRDeveloperAPIWindResource(WindResourceBaseAPIModel):
+class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
