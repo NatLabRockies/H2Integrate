@@ -104,7 +104,7 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
         self.add_output("oxygen_out", val=0.0, shape=self.n_timesteps, units="kg/h")
         self.add_output("argon_out", val=0.0, shape=self.n_timesteps, units="kg/h")
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Calculate the amount of N2 that can be produced and the amount of feedstocks required
         given the input parameters and values.
 

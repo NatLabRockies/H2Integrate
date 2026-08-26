@@ -76,7 +76,12 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         n_timesteps = self.n_timesteps
 
         self._soc_timeseries = np.zeros(self.n_timesteps)
-        self._soc_timeseries[0] = self.config.init_soc_fraction
+        if hasattr(self.config, "init_soc_fraction"):
+            soc_init = self.config.init_soc_fraction
+        else:
+            soc_init = (1 / 2) * (self.config.min_soc_fraction + self.config.max_soc_fraction)
+
+        self._soc_timeseries[0] = soc_init
 
         # Input timeseries
         self.add_input(
@@ -319,7 +324,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # Simulation-length storage_commodity_out vector for bulk calculations
         storage_commodity_out_full = (
-            outputs["storage_electricity_discharge"] + outputs["storage_electricity_charge"]
+            outputs[f"storage_{self.commodity}_discharge"]
+            + outputs[f"storage_{self.commodity}_charge"]
         )
 
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
@@ -435,7 +441,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # soc = float(self.current_soc)
         if sim_start_index == 0:
-            soc = self.config.init_soc_fraction
+            # soc = self.config.init_soc_fraction
+            soc = self._soc_timeseries[0]
         else:
             soc = self._soc_timeseries[sim_start_index - 1]
 

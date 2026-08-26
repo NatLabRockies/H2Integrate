@@ -70,7 +70,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
             units=self.commodity_rate_units,
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         ard_electricity_series = inputs["ard_electricity_out"]
 
         # ard has no concept of time and will simulate for all

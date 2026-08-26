@@ -157,7 +157,7 @@ class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
             desc="Net energy conversion ratio",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Compute hydrogen output from natural gas input.
 

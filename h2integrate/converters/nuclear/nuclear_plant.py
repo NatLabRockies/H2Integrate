@@ -67,7 +67,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
             desc="Electricity command value for nuclear plant",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         system_capacity = inputs["system_capacity"]
         electricity_command_value = inputs[f"{self.commodity}_command_value"]
 

@@ -99,7 +99,7 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
 
         self.add_output("hydrogen_out_stim", units="kg/h", shape=self.n_timesteps)
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         n_timesteps = self.n_timesteps
         lifetime = self.plant_life
 

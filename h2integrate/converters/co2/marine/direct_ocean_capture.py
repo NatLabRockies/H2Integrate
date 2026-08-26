@@ -109,7 +109,7 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
             units="m**3",
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         ED_inputs = setup_electrodialysis_inputs(self.config)
 
         co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(

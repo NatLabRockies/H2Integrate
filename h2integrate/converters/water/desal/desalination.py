@@ -51,7 +51,7 @@ class ReverseOsmosisPerformanceModel(DesalinationPerformanceBaseClass):
         )
         self.add_output("feedwater", val=0.0, units="m**3/h", desc="Feedwater flow rate")
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         freshwater_m3_per_hr = self.config.freshwater_kg_per_hour / self.config.freshwater_density
 
         if self.config.salinity == "seawater":

@@ -196,7 +196,7 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
                     design_dict.update({group: group_parameters})
         self.system_model.assign(design_dict)
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Set time-series resource mode
         self.system_model.MHKWave.wave_resource_model_choice = 1
 

@@ -173,7 +173,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             units=self.commodity_rate_units,
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Parse inputs
         elec_in = inputs["electricity_in"]
         ore_in = inputs["iron_ore_in"]
