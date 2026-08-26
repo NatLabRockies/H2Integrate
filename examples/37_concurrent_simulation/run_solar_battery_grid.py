@@ -10,7 +10,7 @@ from h2integrate import H2IntegrateModel
 
 
 sys.path.append(str(Path(__file__).resolve().parents[0]))
-from CustomNLSolver import CustomLinearRunOnce, CustomNonLinearRunOnce
+from CustomNLSolver import CustomNonLinearRunOnce
 
 
 # Run one of both simulation paradigms by changing the flags in this dict
@@ -86,9 +86,9 @@ if run_dict.get("run_concurrent", False):
     # Create an H2I model for steppable simulation
     h2i_con = H2IntegrateModel(config_con)
 
+    # Set plant group nonlinear solver to custom steppable solver
     h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce()
-    # h2i_con.prob.model.plant.nonlinear_solver = NonlinearRunOnce()
-    h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
+    # h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
 
     # Run the model
     h2i_con.run()
