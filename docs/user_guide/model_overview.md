@@ -130,6 +130,8 @@ auto-generated API page.
     + {py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModel` - An OpenMDAO component that computes the cost of a reverse osmosis desalination system.
 
 - `generic`: generic converter components
+  - performance models:
+    + {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel` - Performance model for simple Brayton-cycle turbines.
   - cost models:
     + {py:class}`~h2integrate.converters.generic_converter_cost.GenericConverterCostModel`
 

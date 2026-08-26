@@ -51,7 +51,7 @@ parts:
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
       - file: technology_models/steel_eaf_cmu.md
-      - file: technology_models/PEM_fuel_cell.md
+      - file: technology_models/PEM_h2_fuel_cell.md
       - file: technology_models/SO_NG_fuel_cell.md
   - caption: Storage Models
     chapters:
