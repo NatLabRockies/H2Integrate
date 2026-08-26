@@ -132,10 +132,37 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
         return {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
 
     inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
-    outputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
+    outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
 
     find_nonzero_percent_diffs(inputs_pd_dict)
     find_nonzero_percent_diffs(outputs_pd_dict)
+
+    def plot_diff(key, io="outputs"):
+        if io == "outputs":
+            seq = dict(outputs_seq)
+            con = dict(outputs_con)
+        elif io == "inputs":
+            seq = dict(inputs_seq)
+            con = dict(inputs_con)
+
+        fig, ax = plt.subplots(2, 1, sharex="all", sharey="all", layout="constrained")
+
+        ax[0].plot(seq[key]["val"], label="sequential")
+        ax[0].plot(con[key]["val"], label="concurrent")
+        ax[0].legend()
+
+        ax[1].axhline(0, color="black", linewidth=1)
+        ax[1].fill_between(
+            np.arange(0, len(seq[key]["val"]), 1),
+            np.zeros_like(seq[key]["val"]),
+            seq[key]["val"] - con[key]["val"],
+        )
+
+        ax[0].set_title(key)
+
+    # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
+    # plot_diff('plant.grid_buy.GridPerformanceModel.electricity_out')
+    # plot_diff('plant.battery.StoragePerformanceModel.SOC')
 
 
 if run_dict.get("run_sequential", False):

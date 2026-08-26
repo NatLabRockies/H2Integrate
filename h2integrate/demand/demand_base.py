@@ -186,9 +186,12 @@ class DemandComponentBase(PerformanceModelBaseClass):
         )
 
         # TODO double check annual calculation is still accurate
-        outputs[f"rated_{self.commodity}_production"][
-            simulation_range.start : simulation_range.stop
-        ] = commodity_demand.mean()
+
+        # Simulation-length commodity_demand vector for bulk calculations
+        commodity_demand_full = inputs[f"{self.commodity}_demand"]
+        commodity_in_full = inputs[f"{self.commodity}_in"]
+
+        outputs[f"rated_{self.commodity}_production"] = commodity_demand_full.mean()
 
         outputs[f"total_{self.commodity}_produced"] = np.sum(outputs[f"{self.commodity}_out"]) * (
             self.dt / 3600
@@ -198,10 +201,12 @@ class DemandComponentBase(PerformanceModelBaseClass):
             outputs[f"total_{self.commodity}_produced"] / self.fraction_of_year_simulated
         )
 
-        outputs["capacity_factor"] = outputs[f"{self.commodity}_out"].sum() / commodity_demand.sum()
+        outputs["capacity_factor"] = (
+            outputs[f"{self.commodity}_out"].sum() / commodity_demand_full.sum()
+        )
 
-        total_demand = commodity_demand.sum()
-        total_gen = commodity_in.sum()
+        total_demand = commodity_demand_full.sum()
+        total_gen = commodity_in_full.sum()
         if total_demand > 0:
             outputs["percent_load_missed"] = (
                 100.0 * outputs[f"unmet_{self.commodity}_demand_out"].sum() / total_demand

@@ -316,10 +316,17 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         )
 
         # Performance model outputs
+
+        # Simulation-length storage_commodity_out vector for bulk calculations
+        storage_commodity_out_full = (
+            outputs["storage_electricity_discharge"] + outputs["storage_electricity_charge"]
+        )
+
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
         # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
-        # TODO Make sure this calculation is correct with non-annual simulation periods
-        outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
+        outputs[f"total_{self.commodity}_produced"] = (
+            np.sum(storage_commodity_out_full) * self.dt_amount
+        )
         outputs[f"annual_{self.commodity}_produced"] = outputs[
             f"total_{self.commodity}_produced"
         ] * (1 / self.fraction_of_year_simulated)
@@ -427,7 +434,10 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         commands = np.asarray(storage_dispatch_commands, dtype=float)[sim_start_index:sim_end_index]
 
         # soc = float(self.current_soc)
-        soc = self._soc_timeseries[sim_start_index]
+        if sim_start_index == 0:
+            soc = self.config.init_soc_fraction
+        else:
+            soc = self._soc_timeseries[sim_start_index - 1]
 
         for t, cmd in enumerate(commands):
             if cmd < 0.0:
@@ -480,6 +490,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         # Persist the final SOC so subsequent simulate() calls (e.g. from the
         # Pyomo controller across rolling windows) start where we left off.
         self.current_soc = soc
-        self._soc_timeseries[sim_start_index:sim_end_index] = soc_timesteps
+        self._soc_timeseries[sim_start_index:sim_end_index] = soc_timesteps / 100
 
         return storage_commodity_out_timesteps, soc_timesteps

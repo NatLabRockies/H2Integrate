@@ -181,7 +181,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             1 / self.fraction_of_year_simulated
         )
 
-        total_electricity_sold = np.sum(electricity_sold) * (self.dt / 3600)
+        total_electricity_sold = np.sum(outputs["electricity_sold"]) * (self.dt / 3600)
         outputs["annual_electricity_sold"] = total_electricity_sold * (
             1 / self.fraction_of_year_simulated
         )
