@@ -42,16 +42,6 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
     [
-        # (
-        #     "WTKHRRRMETDatasetH5",
-        #     39.7555,
-        #     -105.2211,
-        #     852124,
-        #     2024,
-        #     0,
-        #     "lat/lon",
-        #     284248.8972640701,
-        # ),
         (
             "WTKHRRRMETDatasetH5",
             37.3376,
@@ -64,7 +54,6 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
         ),
     ],
     ids=[
-        # "HRRRMETToolkitWindAPI-852124",
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
@@ -106,20 +95,9 @@ def test_pysam_windpower_integration(
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
     [
-        # (
-        #     "WTKHRRRMETDatasetH5",
-        #     39.7555,
-        #     -105.2211,
-        #     -1,
-        #     2024,
-        #     0,
-        #     "lat/lon",
-        #     9294.347553939786,
-        # ),
         ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
     ],
     ids=[
-        # "HRRRMETToolkitWindAPI-852124",
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
@@ -169,7 +147,7 @@ def test_floris_integration(
             852124,
             2024,
             0,
-            "lat/lon",
+            "gid",
             284248.8972640701,
         ),
         (
@@ -240,7 +218,7 @@ def test_hpc_integration_with_pysam(
             "lat/lon",
             9294.347553939786,
         ),
-        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
+        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "gid", 16278.222138130743),
     ],
     ids=[
         "HRRRMETToolkitWindAPI-852124",
