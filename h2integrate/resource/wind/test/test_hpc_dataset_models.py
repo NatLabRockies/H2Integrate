@@ -42,16 +42,16 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
     [
-        (
-            "WTKHRRRMETDatasetH5",
-            39.7555,
-            -105.2211,
-            852124,
-            2024,
-            0,
-            "lat/lon",
-            284248.8972640701,
-        ),
+        # (
+        #     "WTKHRRRMETDatasetH5",
+        #     39.7555,
+        #     -105.2211,
+        #     852124,
+        #     2024,
+        #     0,
+        #     "lat/lon",
+        #     284248.8972640701,
+        # ),
         (
             "WTKHRRRMETDatasetH5",
             37.3376,
@@ -60,11 +60,11 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
             2025,
             0,
             "lat/lon",
-            439285.87881150434,  # 439285.35435542057, # very small diffrence from API data
+            439285.87881150434,
         ),
     ],
     ids=[
-        "HRRRMETToolkitWindAPI-852124",
+        # "HRRRMETToolkitWindAPI-852124",
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
@@ -106,20 +106,20 @@ def test_pysam_windpower_integration(
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
     [
-        (
-            "WTKHRRRMETDatasetH5",
-            39.7555,
-            -105.2211,
-            -1,
-            2024,
-            0,
-            "lat/lon",
-            9294.347553939786,
-        ),
+        # (
+        #     "WTKHRRRMETDatasetH5",
+        #     39.7555,
+        #     -105.2211,
+        #     -1,
+        #     2024,
+        #     0,
+        #     "lat/lon",
+        #     9294.347553939786,
+        # ),
         ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
     ],
     ids=[
-        "HRRRMETToolkitWindAPI-852124",
+        # "HRRRMETToolkitWindAPI-852124",
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
@@ -157,5 +157,129 @@ def test_floris_integration(
         assert pytest.approx(aep, rel=1e-6) == expected_aep
 
 
-# @pytest.mark.integration
-# @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
+@pytest.mark.integration
+@pytest.mark.skipif(not on_hpc, reason="not running on HPC")
+@pytest.mark.parametrize(
+    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    [
+        (
+            "WTKHRRRMETDatasetH5",
+            39.7555,
+            -105.2211,
+            852124,
+            2024,
+            0,
+            "lat/lon",
+            284248.8972640701,
+        ),
+        (
+            "WTKHRRRMETDatasetH5",
+            37.3376,
+            -105.7076,
+            813606,
+            2025,
+            0,
+            "lat/lon",
+            439285.87881150434,
+        ),
+    ],
+    ids=[
+        "HRRRMETToolkitWindAPI-852124",
+        "HRRRMETToolkitWindAPI-813606",
+    ],
+)
+# fmt: on
+def test_hpc_integration_with_pysam(
+    subtests, plant_simulation, wind_site_config, wind_plant_config, model, expected_aep
+):
+    wind_site_config["wind_resource"]["resource_parameters"]["save_to_csv"] = False
+    wind_site_config["wind_resource"]["resource_parameters"]["load_from_csv"] = False
+    wind_site_config["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
+    prob = om.Problem()
+
+    plant_config = {
+        "site": wind_site_config,
+        "plant": plant_simulation,
+    }
+
+    resource_comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    wind_plant = PYSAMWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", resource_comp, promotes=["*"])
+    prob.model.add_subsystem("wind_perf", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("wind_perf.annual_electricity_produced", units="MW*h/year")[0]
+
+    with subtests.test("AEP"):
+        assert pytest.approx(aep, rel=1e-6, abs=0.5) == expected_aep
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not on_hpc, reason="not running on HPC")
+@pytest.mark.parametrize(
+    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    [
+        (
+            "WTKHRRRMETDatasetH5",
+            39.7555,
+            -105.2211,
+            -1,
+            2024,
+            0,
+            "lat/lon",
+            9294.347553939786,
+        ),
+        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
+    ],
+    ids=[
+        "HRRRMETToolkitWindAPI-852124",
+        "HRRRMETToolkitWindAPI-813606",
+    ],
+)
+# fmt: on
+def test_hpc_integration_with_floris(
+    subtests, plant_simulation, wind_site_config, floris_config, model, expected_aep
+):
+    wind_site_config["wind_resource"]["resource_parameters"]["save_to_csv"] = False
+    wind_site_config["wind_resource"]["resource_parameters"]["load_from_csv"] = False
+    wind_site_config["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
+
+    prob = om.Problem()
+
+    plant_config = {
+        "site": wind_site_config,
+        "plant": plant_simulation,
+    }
+
+    resource_comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    wind_plant = FlorisWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config={"model_inputs": {"performance_parameters": floris_config}},
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", resource_comp, promotes=["*"])
+    prob.model.add_subsystem("wind_perf", wind_plant, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("wind_perf.annual_electricity_produced", units="MW*h/year")[0]
+
+    with subtests.test("AEP"):
+        assert pytest.approx(aep, rel=1e-6) == expected_aep
