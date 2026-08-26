@@ -241,7 +241,5 @@ Example 34 performs the optimization with a synthetic LMP signal. The look-ahead
 
 ## Use as a system-level control (SLC) sub-controller
 
-Like every other storage controller, `PeakLoadManagementOptimizedStorageController` can also be used as a storage tech's sub-controller under a [system-level controller](../system_level_control/system_level_control.md): declaring `control_strategy` on the tech is what SLC's storage-tech classification looks for, and the SLC's `{tech_name}_{commodity}_set_point` output is wired to the tech group the same way regardless of which mechanism populates the input, so no extra wiring is required. Set `constrain_dispatch_to_set_point: true` to have the SLC's demand signal cap dispatch as described above.
+Like every other storage controller, `PeakLoadManagementOptimizedStorageController` can also be used as a storage tech's sub-controller under a [system-level controller](../system_level_control/system_level_control.md). Declaring `control_strategy` on the tech is what SLC's storage-tech classification looks for, and the SLC's `{tech_name}_{commodity}_set_point` output is wired to the tech group the same way regardless of which mechanism populates the input, so no extra wiring is required. Set `constrain_dispatch_to_set_point: true` to have the SLC's demand signal cap dispatch as described above.
 
-For an example of how to use `PeakLoadManagementOptimizedStorageController` as an SLC sub-controller, see:
-- `examples/35_system_level_control/plm_optimized_storage/`
