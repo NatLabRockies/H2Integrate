@@ -139,7 +139,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month
 - $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is `null`)
 - $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
-- $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own controller is a combined *gross* demand signal. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`). 
+- $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own controller is a combined *gross* demand signal. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`).
 
 ## Dispatch Window Construction
 
@@ -242,4 +242,3 @@ Example 34 performs the optimization with a synthetic LMP signal. The look-ahead
 ## Use as a system-level control (SLC) sub-controller
 
 Like every other storage controller, `PeakLoadManagementOptimizedStorageController` can also be used as a storage tech's sub-controller under a [system-level controller](../system_level_control/system_level_control.md). Declaring `control_strategy` on the tech is what SLC's storage-tech classification looks for, and the SLC's `{tech_name}_{commodity}_set_point` output is wired to the tech group the same way regardless of which mechanism populates the input, so no extra wiring is required. Set `constrain_dispatch_to_set_point: true` to have the SLC's demand signal cap dispatch as described above.
-
