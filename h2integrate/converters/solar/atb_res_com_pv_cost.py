@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -15,6 +14,7 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
     Reference cost values can be found on the `Solar - PV Dist. Comm` or
     `Solar - PV Dist. Res` sheets of the
     `NLR ATB workbook <https://atb.nlr.gov/electricity/2024/data>`_.
+
     Attributes:
         capex_per_kWdc (float|int): capital cost of solar-PV system in $/kW-DC
         opex_per_kWdc_per_year (float|int): annual operating cost of solar-PV
@@ -23,8 +23,8 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
         cost_year (int): dollar year corresponding to input costs
     """
 
-    capex_per_kWdc: float | int = field(validator=gt_zero)
-    opex_per_kWdc_per_year: float | int = field(validator=gt_zero)
+    capex_per_kWdc: float | int = field(validator=validators.gt(0))
+    opex_per_kWdc_per_year: float | int = field(validator=validators.gt(0))
     pv_capacity_kWdc: float = field()
 
 

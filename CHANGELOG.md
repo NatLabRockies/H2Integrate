@@ -1,45 +1,100 @@
 # Changelog
 
-## Unreleased
+## Unreleased [TBD]
+- Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
+- Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
+- Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
+- Added `_validate_technology_interconnections` to `H2IntegrateModel` with three topology checks on `technology_interconnections`; see method for details. Also extended `tech_control_classifiers` population to always run (previously only populated when SLC was enabled), added `heat` to `PipePerformanceModel` supported transport items, and updated examples 33 and 36 to use length-4 connections. [PR 832](https://github.com/NatLabRockies/H2Integrate/pull/832)
+- Fully remove HOPP and its integration into H2I now that all relevant capabilities have been ported to H2I. [PR 827](https://github.com/NatLabRockies/H2Integrate/pull/827)
+- Added commodity being passed to `connection_name` when naming transport models [PR #842](https://github.com/NatLabRockies/H2Integrate/pull/842)
+- Added a new NLR wind resource model: HRRR MET Toolkit [PR 837](https://github.com/NatLabRockies/H2Integrate/pull/837)
+- Updated EIA feedstock API call and getting user-specified directories (for feedstock and resource data) to use `get_environment_variables()` [PR #834](https://github.com/NatLabRockies/H2Integrate/pull/834)
+- Added a converter controller that implements a peak-load management heuristic. [PR 773](https://github.com/NatLabRockies/H2Integrate/pull/773)
+- Fixed error message that is thrown in `check_inputs` and updated testing of `check_inputs` to actually test the error messages [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
+- Fixed several tests where the assert statements paired with `pytest.raises` were indented inside the context manager block and never ran, and corrected the now-active expected error strings. [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
+- Replaces all custom attrs validators in `h2integrate.core.validators` with built in attrs validators. [PR 835](https://github.com/NatLabRockies/H2Integrate/pull/835)
+- Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 
-- Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
-- Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
-- Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
-- Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
+## 0.9 [August 10, 2026]
+
+### New Features
+- Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Add electric arc furnace performance and cost models based on the Carnegie Mellon University DecarbSTEEL v5 excel model [PR 686](https://github.com/NatLabRockies/H2Integrate/pull/686)
   - Adds scrap-only performance model
   - Adds DRI + scrap performance model
   - Adds EAF cost model applicable to both performance models
-- Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
+- Introduce general system-level controls framework. [PR 751(https://github.com/NatLabRockies/H2Integrate/pull/751)]
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
-- Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
+- Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
+
+### Updates
+#### Modeling
+- Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
+- Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
 - Add per-year pricing support for Grid and Feedstock cost models, allowing price arrays of length `plant_life` in addition to scalar and per-timestep arrays. [PR 700](https://github.com/NatLabRockies/H2Integrate/pull/700)
 - Added ability to have a custom/user-specified resource model [PR 698](https://github.com/NatLabRockies/H2Integrate/pull/698)
 - Add `{commodity}_set_point` as an input to hydrogen fuel cell model [PR 709](https://github.com/NatLabRockies/H2Integrate/pull/709)
 - Rename `n_control_window` to `n_control_window_hours` for unit clarity [PR 712](https://github.com/NatLabRockies/H2Integrate/pull/712)
-- Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
-- `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks`
-  [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
-- Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA
-  natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve
-  the US or any of the 50 states' annual or monthly values, which will be converted into an hourly
-  timeseries. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
-- Creates a series of preprocessing tools for basic state name and abbreviation handling, and for
-  reverse geocoding coordinates to state data. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
-- Creates a series of preprocessing tools for downloading EIA natural gas prices to monthly and
-  hourly timeseries that could be extended to other EIA API data in the future. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
-- Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
-- Adds `H2IntegrateModel`, `load_yaml`, `write_yaml`, and `write_readable_yaml` as package-level imports [PR 728](https://github.com/NatLabRockies/H2Integrate/pull/728).
-- Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
+- Creates a series of preprocessing tools for basic state name and abbreviation handling, and for reverse geocoding coordinates to state data. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Creates a series of preprocessing tools for downloading EIA natural gas prices to monthly and hourly timeseries that could be extended to other EIA API data in the future. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Added ability to use timeseries for finance calculations [PR 725](https://github.com/NatLabRockies/H2Integrate/pull/725)
-- Reduced import time for `h2integrate_model.py` by deferring imports of heavy dependencies until they are needed [PR 762](https://github.com/NatLabRockies/H2Integrate/pull/762)
 - Added multivariable purge gas stream output to `AmmoniaSynLoopPerformanceModel` [PR 760](https://github.com/NatLabRockies/H2Integrate/pull/760)
 - Add `constant` pricing mode for Grid cost models, allowing an explicit scalar price configuration alongside `per_timestep` and `per_year` modes. [PR 764](https://github.com/NatLabRockies/H2Integrate/pull/764)
+- Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
+- Added an optional `inflation_rate` input to `NumpyFinancialNPVFinanceConfig` that is combined with `real_discount_rate` via the Fisher equation to form the effective rate passed to `numpy_financial.npv`, allowing users to supply either a nominal discount rate (with `inflation_rate=0`, the default) or a real discount rate together with an explicit inflation rate. Matches how ProFAST combines its real discount rate and `general_inflation` inputs. [PR 788](https://github.com/NatLabRockies/H2Integrate/pull/788)
+- Renamed the `discount_rate` input to `real_discount_rate` in `NumpyFinancialNPVFinanceConfig` to clarify that it is combined with `inflation_rate` via the Fisher equation. The ProFAST models keep their existing `discount_rate` name. Updated the numpy NPV model, tests, docs, and the example 19 config accordingly. [PR 788](https://github.com/NatLabRockies/H2Integrate/pull/788)
+- Connect each cost-aware system-level controller's `{tech}_buy_price` input directly to the technology's own buy-price input via OpenMDAO 3.44 input-to-input connections, so a single `prob.set_val()` on (for example) `grid.electricity_buy_price` now propagates to the SLC. [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
+- Added system-level-controller unit tests that confirm the `cost_per_tech: feedstock` mode correctly sums `VarOpEx` from all upstream feedstocks for a multi-feedstock dispatchable, including a fuel-cell-style hydrogen-plus-oxygen scenario and a case with feedstocks at different graph depths. [PR 793](https://github.com/NatLabRockies/H2Integrate/pull/793)
+- Updated ammonia synloop test values and loosened test value tolerances due to unnecessary sensitivities from dynamic behavior [PR 795](https://github.com/NatLabRockies/H2Integrate/pull/795)
+- Removed hard-coded logic of price units in finance models to be flexible to any type of commodity. Created helper functions `_compute_price_units` and `_compute_rate_units` in `h2integrate.finances.tools` and integrated usage of these functions into all finance models  (`numpy_financial_npv`, `profast_npv`, `profast_lco`) accordingly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
+- Added capability to specify demand technology for system-level control, and renamed the framework-derived system-level control classification dict from `slc_config` to `slc_topology` to distinguish it from the user-authored `control_parameters` block. [PR 784](https://github.com/NatLabRockies/H2Integrate/pull/784)
+- Updated `commodity_sell_price` input to `ProFastNPV` to be per year of the plant life. Also updated `BasicProFASTParameterConfig.as_dict()` so explicitly input escalation values are not overwritten to the general inflation rate [PR 799](https://github.com/NatLabRockies/H2Integrate/pull/799)
+- Added `calc_azimuth_angle()` to `PYSAMSolarPlantPerformanceModel` to provide default azimuth angle based on whether the site is in the northern or southern hemisphere [PR 806](https://github.com/NatLabRockies/H2Integrate/pull/806)
+- Renamed `OpenLoopStorageControlBase` to `OpenLoopControlBase` and `OpenLoopStorageControlBaseConfig` to `OpenLoopControlBaseConfig` and moved them out of the control storage sub-directory. [PR 828](https://github.com/NatLabRockies/H2Integrate/pull/828)
+
+
+#### Infrastructure
+- Grouped closely related test assertions into behavior-focused subtests and documented when to use subtests in the developer coding guidelines. [PR 839](https://github.com/NatLabRockies/H2Integrate/pull/839)
+- Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
+- Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
+- `feedstocks.py` has moved from `h2integrate/core/` to `h2_integrate/feedstocks` [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
+- Added basic check of 4-length connections in `technology_interconnections` [PR 720](https://github.com/NatLabRockies/H2Integrate/pull/720)
+- Adds `H2IntegrateModel`, `load_yaml`, `write_yaml`, and `write_readable_yaml` as package-level imports [PR 728](https://github.com/NatLabRockies/H2Integrate/pull/728).
+- Reduced import time for `h2integrate_model.py` by deferring imports of heavy dependencies until they are needed [PR 762](https://github.com/NatLabRockies/H2Integrate/pull/762)
 - Renamed `design_of_experiments` to `parameter_sweep` throughout the codebase to avoid confusion with "Department of Energy" (DOE) in the energy domain. The core code supports both the new `parameter_sweep` and legacy `design_of_experiments` YAML keys for backward compatibility. Updated all driver configs, examples, tests, and documentation. Added generator type descriptions to the parameter sweep docs page and updated the run-cases docs to recommend parameter sweeps over manual for-loops. [PR 768](https://github.com/NatLabRockies/H2Integrate/pull/768)
 - Added imports for individual models to the appropriate `__init__.py` files to allow for direct imports of models from the package level and to ensure all models are properly imported and used in `supported_models.py` [PR 769](https://github.com/NatLabRockies/H2Integrate/pull/769)
-- Added dynamic operating constraints (turndown, ramping, warm/cold start delays) to `AmmoniaSynLoopPerformanceModel` and split `AmmoniaSynLoopCostModel` into its own module. [PR 770](https://github.com/NatLabRockies/H2Integrate/pull/770)
 - Speed up the slowest tests in the suite by swapping the Floris wind model for `PYSAMWindPlantPerformanceModel` in examples 01 (`01_onshore_steel_mn`) and 02 (`02_texas_ammonia`), updating the affected `test_steel_example`/`test_simple_ammonia_example` expected values, fixing a pre-existing `cases.sql` cache-path bug and module-scoping the fixtures in `h2integrate/postprocess/test/test_sql_timeseries_to_csv.py` so the example only runs once for all four tests. [PR 782](https://github.com/NatLabRockies/H2Integrate/pull/782)
 - Exposed `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` as attributes on `CostModelBaseClass` (matching `PerformanceModelBaseClass`) and updated all cost and performance model subclasses across `h2integrate/` to use these attributes instead of reading them from `plant_config`, removing redundant boilerplate from individual components. [PR 783](https://github.com/NatLabRockies/H2Integrate/pull/783)
+- Rewrote the "Adding a new technology" developer guide. Also replaced the hand-maintained model overview page with an auto-generated section (`docs/generate_model_overview.py`) that classifies every registered class in `supported_models` and appends the first sentence of each class's docstring. Migrated `.readthedocs.yaml` to invoke `docs/build_book.sh` via `build.commands` so hosted and local builds stay in sync. [PR 787](https://github.com/NatLabRockies/H2Integrate/pull/787)
+- Moves `h2integrate/resource/utilities/file_tools.py::check_resource_dir` to a general function `h2integrate/core/utilities/file_utils.py::check_data_dir` with a wrapped version for resource data (`check_resource_dir`) and feedstock data (`check_feedstock_data`). [PR 791](https://github.com/NatLabRockies/H2Integrate/pull/791)
+- Removed the `is_electricity_producer` helper from `h2integrate.core.commodity_stream_definitions` and the electricity-specific auto-detection branch in `H2IntegrateModel`, making finance-subgroup `commodity_stream` resolution fully commodity-agnostic; updated example `plant_config.yaml` files that previously relied on the auto-detection to set `commodity_stream` explicitly. [PR 786](https://github.com/NatLabRockies/H2Integrate/pull/786)
+- Ensure OpenMDAO data is cleaned up during testing [PR 797](https://github.com/NatLabRockies/H2Integrate/pull/797).
+- Reduced Sphinx documentation build warnings from roughly 880 to under 20. [PR 800](https://github.com/NatLabRockies/H2Integrate/pull/800)
+  - Set `napoleon_use_ivar` and added `napoleon_custom_sections` so custom Google-style sections (Inputs, Outputs, Promoted Inputs, Promoted Outputs, Subsystems, Discrete Inputs, Discrete Outputs, Options, Behavior, Side Effects) render cleanly.
+  - Suppressed the `etoc.toctree` category emitted by autosummary `:recursive:` stubs.
+  - Cleared stale `_autosummary/` files at the start of every docs build.
+  - Removed duplicated `Methods:` docstring sections that collided with autodoc method discovery.
+  - Added `:no-index:` to hand-authored autoclass directives that duplicated autosummary entries.
+  - Cleaned up docstring formatting bugs across roughly twenty source files (bullet and definition list separations, starred attribute markers, unbalanced backticks, and stray substitution references).
+  - Fixed several MyST cross-reference targets (missing labels, ambiguous doc vs ref targets, incorrect autosummary path, duplicate labels, broken image path, and a broken literalinclude path).
+  - Added a custom `docs/_templates/autosummary/module.rst` template that filters pytest `conftest.py` submodules from generated stubs, eliminating the "failed to import conftest" warnings that appeared on the Read the Docs build.
+  - Renamed the `GeoH2SubsurfaceCostModel` MyST label in `docs/technology_models/geologic_hydrogen.md` to `mathur-modified-geoh2-cost` to remove an ambiguous cross-reference with the autosummary entry for the Python class of the same name.
+- Updates `h2integrate/core/file_utils.py::check_data_dir` to allow for the creation of nested directories, not just the final subdirectory for smoother initialization of a feedstock directory [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the feedstock data with the resource data methodology [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
+- Add support for slice notation in technology connections to allow users to connect between variables of different shapes. [PR 774](https://github.com/NatLabRockies/H2Integrate/pull/774)
+- Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
+
+### Fixes
+- Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
+- Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
+- Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)
+- Update N2 diagram for demand openloop control from static and outdated to dynamic and interactive [PR 714](https://github.com/NatLabRockies/H2Integrate/pull/714)
+- Update N2 diagram for Pyomo heuristic control from static image to dynamic and interactive embedded diagram [PR 726](https://github.com/NatLabRockies/H2Integrate/pull/726)
+- Fixes a series of small bugs in the EIA natural gas feedstock modeling, and adds a test for the file-based usage [PR 777](https://github.com/NatLabRockies/H2Integrate/pull/777).
+- Corrected water rate units in pipe feedstock from galUS to galUS/h [PR 813](https://github.com/NatLabRockies/H2Integrate/pull/813)
+- Corrected timestamps in OpenMeteo resource downloads when resource data is downloaded in local time [PR #814](https://github.com/NatLabRockies/H2Integrate/pull/814)
+- Fixed docs build warnings by correcting inline-literal docstring markup etc, also enabled warning-as-error in the shared docs build script to minimize number of future warnings. [PR 821](https://github.com/NatLabRockies/H2Integrate/pull/821)
+- Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
 
 ## 0.8 [April 15, 2026]
 
@@ -97,6 +152,7 @@
 - Added infrastructure for running models with non-hourly time steps via a class attribute `_time_step_bounds` and sets new time step bounds of 5-minutes to 1-hour for the grid components. [PR 653](https://github.com/NatLabRockies/H2Integrate/pull/653) and [PR 671](https://github.com/NatLabRockies/H2Integrate/pull/671)
 - Remove demand-related outputs from storage performance models and replace usage with demand components [PR 666](https://github.com/NatLabRockies/H2Integrate/pull/666)
 - Added a compressed gas hydrogen storage model [PR 680](https://github.com/NatLabRockies/H2Integrate/pull/680)
+- Generalized functions for retrieving and setting environment variables in `h2integrate/core/test/test_env_tools.py`. The main function used to get and/or set environment variables is `get_environment_variables`, which is now used by the `get_nlr_developer_api_key` and `get_nlr_developer_api_email` functions [PR 798](https://github.com/NatLabRockies/H2Integrate/pull/798)
 
 ## 0.7.2 [April 9, 2026]
 

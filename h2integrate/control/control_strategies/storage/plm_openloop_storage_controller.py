@@ -4,18 +4,33 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import contains, has_required_keys
-from h2integrate.control.control_strategies.storage.openloop_storage_control_base import (
-    StorageOpenLoopControlBase,
-    StorageOpenLoopControlBaseConfig,
+from h2integrate.core.utilities import (
+    BaseConfig,
+    merge_shared_inputs,
+    build_time_series_from_plant_config,
+)
+from h2integrate.control.control_strategies.openloop_control_base import (
+    OpenLoopControlBase,
+    OpenLoopControlBaseConfig,
 )
 
 
+@define
+class PeakRange(BaseConfig):
+    start: int = field(validator=validators.instance_of(int))
+    end: int = field(validator=validators.instance_of(int))
+
+
+@define
+class TimePeriod(BaseConfig):
+    units: str = field(validator=validators.instance_of(str))
+    val: int | float = field(validator=validators.instance_of((int, float)))
+
+
 @define(kw_only=True)
-class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoopControlBaseConfig):
+class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
     """
     Configuration class for the PeakLoadManagementHeuristicOpenLoopStorageController.
 
@@ -35,25 +50,24 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoop
         override_events_period: (int | None, optional): Duration, in time steps, of the period
             in which the n_override_events must occur or a str indicating the time period (e.g.
             W for week, M for month). Defaults to the length of the simulation.
-        peak_range (dict): Daily time window restricting which timesteps are considered as peak
-            candidates in the primary demand profile. Keys ``start`` and ``end`` must be
-            ``HH:MM:SS`` strings (e.g. ``{'start': '12:00:00', 'end': '17:00:00'}``). Only
-            the highest-demand timestep within this window is marked as a candidate peak for
-            each day.
-        advance_discharge_period (dict): Lead time before a detected peak at which discharge
-            mode activates. Dict with keys ``units`` (pandas timedelta unit string, e.g. ``'h'``)
-            and ``val`` (numeric). For example ``{'units': 'h', 'val': 2}`` begins discharge two
-            hours before the identified peak.
-        delay_charge_period (dict): Minimum time to wait after the battery reaches minimum SOC
-            before recharging is permitted. Dict with keys ``units`` and ``val``, using the same
-            format as ``advance_discharge_period``.
+        peak_range (PeakRange | dict): Daily time window restricting which timesteps are
+            considered as peak candidates in the primary demand profile. Keys ``start`` and
+            ``end`` must be integer seconds from midnight (e.g. ``{'start': 43200, 'end': 61200}``
+            for 12:00-17:00). Only the highest-demand timestep within this window is marked as a
+            candidate peak for each day.
+        advance_discharge_period (TimePeriod | dict): Lead time before a detected peak at which
+            discharge mode activates. Requires ``units`` (pandas timedelta unit string,
+            e.g. ``'h'``) and ``val`` (numeric). For example ``{'units': 'h', 'val': 2}`` begins
+            discharge two hours before the identified peak.
+        delay_charge_period (TimePeriod | dict): Minimum time to wait after the battery reaches
+            minimum SOC before recharging is permitted. Same format as
+            ``advance_discharge_period``.
         allow_charge_in_peak_range (bool, optional): If ``True``, charging is never suppressed.
             If ``False``, charging is blocked for timesteps that fall inside ``peak_range`` to
             prevent charging whilst peak demand is expected. Defaults to ``True``.
-        min_peak_proximity (dict): Minimum required time separation between consecutive retained
-            peak events. A ``ValueError`` is raised during setup if selected peaks violate this
-            constraint. Dict with keys ``units`` and ``val``, using the same format as
-            ``advance_discharge_period``.
+        min_peak_proximity (TimePeriod | dict): Minimum required time separation between
+            consecutive retained peak events. A ``ValueError`` is raised during setup if selected
+            peaks violate this constraint. Same format as ``advance_discharge_period``.
 
     """
 
@@ -61,66 +75,23 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(StorageOpenLoop
 
     demand_profile_upstream: int | float | list | None = field()
     dispatch_priority_demand_profile: str = field(
-        validator=contains(["demand_profile", "demand_profile_upstream"]),
+        validator=validators.in_(["demand_profile", "demand_profile_upstream"]),
     )
     n_override_events: int | None = field(default=None)
     override_events_period: int | str | None = field(default=None)
-    peak_range: dict = field(validator=has_required_keys(["start", "end"]))
-    advance_discharge_period: dict = field(validator=has_required_keys(["units", "val"]))
-    delay_charge_period: dict = field(validator=has_required_keys(["units", "val"]))
+    peak_range: PeakRange | dict = field(converter=PeakRange.from_dict)
+    advance_discharge_period: TimePeriod | dict = field(converter=TimePeriod.from_dict)
+    delay_charge_period: TimePeriod | dict = field(converter=TimePeriod.from_dict)
     allow_charge_in_peak_range: bool = field(default=True)
-    min_peak_proximity: dict = field(validator=has_required_keys(["units", "val"]))
+    min_peak_proximity: TimePeriod | dict = field(converter=TimePeriod.from_dict)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
 
         self.common_post_init_operations()
 
-        # Validate and normalize dict parameters
-        # peak_range: must have 'start' and 'end' keys as HH:MM:SS strings.
-        # YAML automatically converts HH:MM:SS to an integer number of seconds,
-        # so non-string values are converted back here.
-        for _key in ("start", "end"):
-            if _key not in self.peak_range:
-                raise ValueError(
-                    f"peak_range is missing required key '{_key}'. "
-                    "Expected dict with 'start' and 'end' as HH:MM:SS strings."
-                )
-        for key, value in self.peak_range.items():
-            if not isinstance(value, str):
-                self.peak_range[key] = str(timedelta(seconds=value))
 
-        # advance_discharge_period / delay_charge_period / min_peak_proximity:
-        # must each be a dict with 'units' (str) and 'val' (int or float).
-        for _param_name, _param_val in (
-            ("advance_discharge_period", self.advance_discharge_period),
-            ("delay_charge_period", self.delay_charge_period),
-            ("min_peak_proximity", self.min_peak_proximity),
-        ):
-            if not isinstance(_param_val, dict):
-                raise ValueError(
-                    f"'{_param_name}' must be a dict with keys 'units' and 'val', "
-                    f"got {type(_param_val).__name__}."
-                )
-            for _key in ("units", "val"):
-                if _key not in _param_val:
-                    raise ValueError(
-                        f"'{_param_name}' is missing required key '{_key}'. "
-                        "Expected dict with 'units' (str) and 'val' (int or float)."
-                    )
-            if not isinstance(_param_val["units"], str) or not _param_val["units"].strip():
-                raise ValueError(
-                    f"'{_param_name}[\"units\"]' must be a non-empty string, "
-                    f"got {_param_val['units']!r}."
-                )
-            if not isinstance(_param_val["val"], int | float):
-                raise ValueError(
-                    f"'{_param_name}[\"val\"]' must be a numeric value (int or float), "
-                    f"got {type(_param_val['val']).__name__}."
-                )
-
-
-class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopControlBase):
+class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
     """
     Peak-load management storage controller implementing an open-loop control strategy.
 
@@ -230,23 +201,28 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         allowable bounds.
 
         Dispatch strategy outline:
+
         - Discharge:
+
           * Starting when time_to_peak <= advance_discharge_period
           * Discharge at max rate (or less to reach targets)
           * Stop discharging only when SOC reaches min_soc
         - Charge:
+
           * When not discharging, SOC < max, and allow_charge window is active
           * Start charging only after delay_charge_period since last discharge
           * Charge at max rate (or less to reach target)
           * Stop charging when SOC reaches max_soc
 
         Expected input keys:
+
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
             * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
             * ``max_capacity``: Maximum total storage capacity.
 
         Outputs populated:
+
             * ``<commodity>_command_value``: Dispatch command to storage,
                 negative when charging, positive when discharging.
 
@@ -312,12 +288,12 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         charging = False
 
         advance_discharge_period = pd.Timedelta(
-            value=self.config.advance_discharge_period["val"],
-            unit=self.config.advance_discharge_period["units"],
+            value=self.config.advance_discharge_period.val,
+            unit=self.config.advance_discharge_period.units,
         )
         delay_charge_period = pd.Timedelta(
-            value=self.config.delay_charge_period["val"],
-            unit=self.config.delay_charge_period["units"],
+            value=self.config.delay_charge_period.val,
+            unit=self.config.delay_charge_period.units,
         )
 
         # Initialize: no discharge has occurred yet
@@ -420,12 +396,19 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
 
     @staticmethod
     def _parse_peak_range(peak_range):
-        """Validate and parse peak_range values from HH:MM:SS strings.
+        """Validate and parse peak_range values.
 
-        Returns a dict with datetime.time objects.
+        Accepts a PeakRange object (with integer seconds from midnight) or a dict with
+        HH:MM:SS string values. Returns a dict with datetime.time objects.
         """
+        if isinstance(peak_range, PeakRange):
+            return {
+                "start": (datetime.min + timedelta(seconds=peak_range.start)).time(),
+                "end": (datetime.min + timedelta(seconds=peak_range.end)).time(),
+            }
+
         if not isinstance(peak_range, dict):
-            raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
+            raise ValueError("peak_range must be a PeakRange or dict with keys 'start' and 'end'")
         if "start" not in peak_range or "end" not in peak_range:
             raise ValueError("peak_range must be a dict with keys 'start' and 'end'")
 
@@ -463,9 +446,9 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
                 - int: group by timestep intervals (e.g., 288 for 24-hour periods)
                 - str: pandas period frequency (e.g., 'W' for week, 'M' for month)
                 Defaults to None.
-            min_proximity (dict | None): Minimum time gap between sequential peaks.
-                Dict with keys {'units': <pandas timedelta unit str>, 'val': <numeric>}.
-                Example: {'units': 'D', 'val': 1} enforces 1-day minimum gap.
+            min_proximity (TimePeriod | dict | None): Minimum time gap between sequential peaks.
+                Requires ``units`` (pandas timedelta unit string) and ``val`` (numeric).
+                Example: ``{'units': 'D', 'val': 1}`` enforces a 1-day minimum gap.
                 Raises ValueError if violated. Defaults to None (no constraint).
             peak_range (dict, optional): Daily time window for peak detection. Dict with keys:
                 - 'start': HH:MM:SS string (inclusive)
@@ -565,17 +548,22 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
 
         # Optional: Validate minimum spacing between consecutive peaks
         if min_proximity is not None:
-            if not isinstance(min_proximity, dict):
-                raise ValueError("min_proximity must be a dict with keys 'units' and 'val'")
-            if "units" not in min_proximity or "val" not in min_proximity:
-                raise ValueError("min_proximity must include keys 'units' and 'val'")
-
-            units = min_proximity["units"]
-            val = min_proximity["val"]
-            if not isinstance(units, str) or not units.strip():
-                raise ValueError("min_proximity['units'] must be a non-empty string")
-            if not isinstance(val, int | float) or val < 0:
-                raise ValueError("min_proximity['val'] must be a non-negative number")
+            if isinstance(min_proximity, TimePeriod):
+                units = min_proximity.units
+                val = min_proximity.val
+            else:
+                if not isinstance(min_proximity, dict):
+                    raise ValueError(
+                        "min_proximity must be a TimePeriod or dict with keys 'units' and 'val'"
+                    )
+                if "units" not in min_proximity or "val" not in min_proximity:
+                    raise ValueError("min_proximity must include keys 'units' and 'val'")
+                units = min_proximity["units"]
+                val = min_proximity["val"]
+                if not isinstance(units, str) or not units.strip():
+                    raise ValueError("min_proximity['units'] must be a non-empty string")
+                if not isinstance(val, int | float) or val < 0:
+                    raise ValueError("min_proximity['val'] must be a non-negative number")
 
             # Convert specification to timedelta
             min_delta = pd.to_timedelta(val, unit=units.strip())
@@ -599,6 +587,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(StorageOpenLoopContro
         """Merge peaks_1 and peak_2 schedules with peak_1 precedence.
 
         Combines two peak schedules (primary and fallback) using day-level precedence:
+
         - For each day, if the peaks_1 profile has any peaks on that day,
           use all peaks_1 peaks for that day
         - Otherwise, use the peaks_2 peaks for that day

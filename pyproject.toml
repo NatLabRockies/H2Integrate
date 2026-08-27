@@ -37,16 +37,18 @@ requires-python = ">=3.11, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
   "attrs",
-  "CoolProp<7.0.0",
+  "CoolProp",
   "geopy",
   "jsonschema",
   "marine-carbon-management",
   "matplotlib",
+  "NREL-PySAM>=7.0.0",
   "numpy",
   "numpy-financial",
-  "openmdao>=3.44.0",
+  "openmdao>=3.45.0",
   "openmeteo-requests",
   "pandas>=2.0.3",
+  "pint",
   "ProFAST",
   "Pyomo>=6.1.2",
   "rainflow",
@@ -58,9 +60,10 @@ dependencies = [
   "scipy",
   "orbit-nrel",
   "floris",
-  "hopp>=3.3.0",
+  "timezonefinder==6.5.9",
   "turbine-models>=0.2.1",
   "wombat>=0.13.3",
+  "charset_normalizer==3.4.9",
 ]
 keywords = [
     "python3",
@@ -115,7 +118,8 @@ gis = [
   "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
-extras = ["h2integrate[gis,ard]"]
+thermo = ["pyfluids>=4.0"]
+extras = ["h2integrate[gis,ard,thermo]"]
 all = ["h2integrate[develop,extras,examples]"]
 
 [tool.setuptools]
@@ -247,6 +251,7 @@ ignore = [
 "*/__init__.py" = ["E501", "D104", "F401"]
 "*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
+"*/test/test_wave_pysam.py" = ["E501"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

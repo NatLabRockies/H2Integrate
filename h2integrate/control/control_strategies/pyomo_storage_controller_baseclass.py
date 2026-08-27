@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import openmdao.api as om
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
 
 
 if TYPE_CHECKING:  # to avoid circular imports
@@ -46,7 +45,7 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
         tech_name (str):
             Technology identifier used to namespace Pyomo blocks / variables within
             the broader OpenMDAO model (e.g., "battery", "h2_storage").
-        system_commodity_interface_limit (float | int | str |list[float]): Max interface
+        system_commodity_interface_limit (float | int | str | list[float]): Max interface
             (e.g. grid interface) flow used to bound dispatch (scalar or per-timestep list of
             length n_control_window_hours).
         round_digits (int):
@@ -55,9 +54,9 @@ class PyomoStorageControllerBaseConfig(BaseConfig):
     """
 
     max_capacity: float = field()
-    max_soc_fraction: float = field(validator=range_val(0, 1))
-    min_soc_fraction: float = field(validator=range_val(0, 1))
-    init_soc_fraction: float = field(validator=range_val(0, 1))
+    max_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    min_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
+    init_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     n_control_window_hours: int = field()
     commodity: str = field()
     commodity_rate_units: str = field()

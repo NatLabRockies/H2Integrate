@@ -62,7 +62,7 @@ Run `pytest -m unit` to run only the unit test suite or `pytest -m not-unit` to 
 An example of a unit test is in the example below where there is only a validation of the location
 of the output directory and subdirectory, and not the contents of those files.
 
-:::{literalinclude} ../../h2integrate/resource/utilities/test/test_resource_file_tools.py
+:::{literalinclude} ../../h2integrate/core/test/test_utilities.py
 :start-at: @pytest.mark.unit
 :end-at: assert output_dir == expected_output_dir
 :::
@@ -147,7 +147,7 @@ the `plant_simulation` fixture.
 
 ## Using temporary directories to avoid saving output data
 
-For tests that utilize caching (similar to the HOPP) or non-openmdao ouputs (i.e., plots, data, etc.),
+For tests that utilize caching or non-openmdao ouputs (i.e., plots, data, etc.),
 the `temp_dir` fixture should be utilized for 2 reasons.
 
 1. The `temp_dir` fixture successfully removes the temporarily created files after running a module,

@@ -9,15 +9,21 @@ sites:
         resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2010
+      wave_resource:
+        resource_model: WaveResource
+        resource_parameters:
+          resource_dir: resource_files/wave/
+          resource_filename: wave_lat43.81_lon-124.82__2010.csv
+          resource_year: 2010
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [hopp, combiner, electricity, cable]
+  - [wave, combiner, electricity, cable]
   - [wind, combiner, electricity, cable]
   - [combiner, battery, electricity, cable]
-  # combine the battery output with the wind and hopp generation
+  # combine the battery output with the wind and wave generation
   - [battery, elec_combiner, electricity, cable]
   - [combiner, elec_combiner, electricity, cable]
   # connect the electricity supply to the doc
@@ -29,6 +35,9 @@ tech_to_dispatch_connections:
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
+  # connect the wave resource to the wave technology
+  - [site.wave_resource, wave, significant_wave_height]
+  - [site.wave_resource, wave, energy_period]
 plant:
   plant_life: 30
 finance_parameters:
@@ -61,7 +70,8 @@ finance_parameters:
     electricity:
       commodity: electricity
       commodity_stream: combiner
-      technologies: [hopp, wind, battery]
+      technologies: [wave, wind, battery]
     co2:
       commodity: co2
-      technologies: [hopp, wind, battery, doc]
+      commodity_stream: doc
+      technologies: [wave, wind, battery, doc]

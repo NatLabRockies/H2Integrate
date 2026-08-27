@@ -9,7 +9,6 @@ sites:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2013
-          resource_dir: ../11_hybrid_energy_plant/tech_inputs/weather/solar
           resource_filename: 30.6617_-101.7096_psmv3_60_2013.csv
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
@@ -29,8 +28,8 @@ technology_interconnections:
   - [electrical_load_demand, natural_gas_plant, [unmet_electricity_demand_out, electricity_set_point]]
   # connect NG feedstock to NG plant
   - [ng_feedstock, natural_gas_plant, natural_gas, pipe]
-  # connect natural gas and solar to finance combiner
-  - [solar, fin_combiner, electricity, cable]
+  # connect natural gas and combined solar+battery generation to finance combiner
+  - [elec_combiner, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
@@ -75,7 +74,7 @@ finance_parameters:
       technologies: [solar, battery]
     natural_gas:
       commodity: electricity
-      commmodity_stream: natural_gas_plant
+      commodity_stream: natural_gas_plant
       finance_groups: [profast_model]
       technologies: [natural_gas_plant, ng_feedstock]
     electricity:

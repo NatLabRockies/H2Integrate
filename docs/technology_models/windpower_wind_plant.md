@@ -44,7 +44,7 @@ technologies:
 
 (windpower-performance-parameters)=
 ## Performance Parameters
-- `num_turbines` (required): number of wind turbines in the wind farm
+- `num_turbines` (required): number of wind turbines in the wind farm. Previously limited to 300 turbines, but this limit has been removed in the latest version.
 - `hub_height` (required): wind turbine hub height in meters
 - `rotor_diameter` (required): wind turbine rotor diameter in meters
 - `turbine_rating_kw` (required): rated power of individual wind turbine in kW
@@ -91,7 +91,7 @@ The `powercurve_calc_config` section allows customization of the turbine power c
     - 2: Multi-Generator
     - 3: Direct Drive
 
-(pysam-options)=
+(pysam-options-windpower)=
 ## PySAM Options
 - `pysam_options` (dict): The top-level keys correspond to the Groups available in the [Windpower module](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html). The next level is the individual attributes a user could set and a full list is available through the PySAM documentation of Windpower module. The Groups that users may want to specify specific options for are the:
     - [Turbine](#turbine-group)

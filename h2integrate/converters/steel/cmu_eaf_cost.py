@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
@@ -30,7 +29,7 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
             in an electric arc furnace, used to calculate labor costs. Default value is 4/20.
         cost_year (int): Year for which the cost data is reported, used for inflation adjustments.
             Default value is 2022, which corresponds to the year of the cost data used in the CMU
-                decarbSTEEL v5 model.
+            decarbSTEEL v5 model.
 
     """
 
@@ -44,7 +43,7 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
     mean_hourly_wage: float = field(default=31.82)
     # person hours per ton steel, '6. Production Cost!B43' > '6. Production Cost!J73'
     eaf_labor_required_per_tLS: float = field(default=4 / 20)
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
 class CMUElectricArcFurnaceCostModel(CostModelBaseClass):

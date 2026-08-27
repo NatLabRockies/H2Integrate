@@ -106,6 +106,31 @@ An example output for the first week of a one-year simulation is shown below. Or
 ![](./figures/example_peak_load_dispatch.png)
 
 For an example of how to use the `PeakLoadManagementHeuristicOpenLoopStorageController`, see:
-- `examples/33_peak_load_management/`
+- `examples/33_peak_load_management_heuristics/plm_storage/`
 
-For API details, see the [`PeakLoadManagementHeuristicOpenLoopStorageController` API documentation](../_autosummary/h2integrate.control.control_strategies.storage.plm_openloop_storage_controller).
+For API details, see the [`PeakLoadManagementHeuristicOpenLoopStorageController` API documentation](../../_autosummary/h2integrate.control.control_strategies.storage.plm_openloop_storage_controller).
+
+## Open-Loop Converter Controllers
+The open-loop converter controllers can be attached as the control strategy in the `tech_config` for converter technologies (e.g., a fuel cell). Unlike the storage controllers, converter controllers do not track a state of charge; they translate a set-point into a `{commodity}_command_value` that is bounded by the converter's rated production. There is currently one converter controller:
+1. [Peak Load Management Open-Loop Converter Controller](#peak-load-management-open-loop-converter-controller) — computes a peak-shaving converter command from one or two demand profiles using simple threshold heuristics.
+
+(peak-load-management-open-loop-converter-controller)=
+### Peak Load Management Open-Loop Converter Controller
+The `PLMHeuristicOpenLoopConverterController` computes a per-timestep converter command that shaves demand peaks using threshold-based heuristics rather than storage state-of-charge dynamics or optimization. It is designed for dispatching a converter (such as a fuel cell) to reduce peak loads using either one or two demand profiles.
+
+The command at each timestep is determined by three limits:
+
+- **A primary set-point cutoff (`demand_profile_peak_cutoff`)** — dispatch is only considered when the local `{commodity}_set_point` exceeds this threshold. The desired dispatch is the amount by which the set-point exceeds the cutoff.
+- **An optional upstream signal and cutoff (`demand_profile_upstream` and `demand_profile_upstream_peak_cutoff`)** — a supervisory or upstream signal that can also trigger or shape dispatch. Its interpretation is controlled by `demand_profile_upstream_kind`:
+  - `"commodity"` (default) — the upstream signal is an upstream demand in commodity-amount units. The command tracks the larger exceedance of the local and upstream profiles.
+  - `"price"` — the upstream signal is a price time series. Dispatch is only enabled on timesteps where the upstream price exceeds `demand_profile_upstream_peak_cutoff`.
+- **A converter capacity ceiling** — the command is clipped so it never exceeds the converter's `rated_{commodity}_production` (read from the performance model) or the instantaneous local demand.
+
+Because the controller reads the performance model's `rated_{commodity}_production` output as its command ceiling, a solver is automatically added at the technology group level to converge the controller/performance-model coupling.
+
+**Configuration parameters**
+
+For an example of how to use the `PLMHeuristicOpenLoopConverterController`, see:
+- `examples/33_peak_load_management_heuristics/plm_converter/`
+
+For API details, see the [`PLMHeuristicOpenLoopConverterController` API documentation](../../_autosummary/h2integrate.control.control_strategies.converters.plm_openloop_converter_controller).

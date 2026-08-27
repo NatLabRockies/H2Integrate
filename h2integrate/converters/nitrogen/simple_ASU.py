@@ -1,8 +1,7 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
 from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
@@ -42,10 +41,18 @@ class SimpleASUPerformanceConfig(BaseConfig):
     rated_N2_kg_pr_hr: float | None = field(default=None)
     ASU_rated_power_kW: float | None = field(default=None)
 
-    N2_fraction_in_air: float = field(default=0.7811, validator=range_val(0, 1))
-    O2_fraction_in_air: float = field(default=0.2096, validator=range_val(0, 1))
-    Ar_fraction_in_air: float = field(default=0.0093, validator=range_val(0, 1))
-    efficiency_kWh_pr_kg_N2: float = field(default=0.29, validator=range_val(0.10, 0.50))
+    N2_fraction_in_air: float = field(
+        default=0.7811, validator=(validators.ge(0), validators.le(1))
+    )
+    O2_fraction_in_air: float = field(
+        default=0.2096, validator=(validators.ge(0), validators.le(1))
+    )
+    Ar_fraction_in_air: float = field(
+        default=0.0093, validator=(validators.ge(0), validators.le(1))
+    )
+    efficiency_kWh_pr_kg_N2: float = field(
+        default=0.29, validator=(validators.ge(0.1), validators.le(0.5))
+    )
     # 0.29 is efficiency of pressure swing absorption
     # 0.119 is efficiency of cryogenic
 
@@ -225,10 +232,10 @@ def make_cost_unit_multiplier(unit_str):
         unit_str (str): The unit string, e.g., "kw", "mw", "kg/hour", "tonne/day", etc.
 
     Returns:
-        tuple: (conversion_multiplier, unit_type)
-            conversion_multiplier (float): Multiplier to convert the input unit to
-                the model's base unit.
-            unit_type (str): "power" if the unit is power-based, "mass" if mass-based.
+        tuple: ``(conversion_multiplier, unit_type)`` where ``conversion_multiplier``
+        (float) is the multiplier to convert the input unit to the model's base unit and
+        ``unit_type`` (str) is ``"power"`` if the unit is power-based, or ``"mass"`` if
+        mass-based.
 
     Notes:
         - For "mw", the multiplier converts MW to kW.
@@ -261,14 +268,16 @@ class SimpleASUCostConfig(CostModelBaseConfig):
     capex_usd_per_unit: float = field()
 
     capex_unit: str = field(
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
+        validator=validators.in_(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
         converter=(str.strip, str.lower),
     )
 
     opex_usd_per_unit_per_year: float = field(default=0.0)
     opex_unit: str = field(
         default="none",
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]),
+        validator=validators.in_(
+            ["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]
+        ),
         converter=(str.strip, str.lower),
     )
 

@@ -1,8 +1,10 @@
+import warnings
+
+import numpy as np
 import PySAM.Pvwattsv8 as Pvwatts
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val_or_none
 from h2integrate.converters.tools import check_pysam_input_params
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
@@ -43,24 +45,28 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
     pv_capacity_kWdc: float = field()
 
     dc_ac_ratio: float = field(
-        default=None, validator=range_val_or_none(0.0, 2.0)
+        default=None, validator=validators.optional((validators.ge(0), validators.le(2)))
     )  # default value depends on config
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
-    tilt: float = field(default=None, validator=range_val_or_none(0.0, 90.0))
+    tilt: float = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(90)))
+    )
 
     tilt_angle_func: str = field(
         default="none",
-        validator=contains(["none", "lat-func", "lat"]),
+        validator=validators.in_(["none", "lat-func", "lat"]),
         converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="PVWattsSingleOwner",
-        validator=contains(
+        validator=validators.in_(
             [
                 "PVWattsCommercial",
                 "PVWattsCommunitySolar",
@@ -150,31 +156,31 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def setup(self):
         super().setup()
 
-        self.design_config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
         )
         self.add_input(
             "system_capacity_DC",
-            val=self.design_config.pv_capacity_kWdc,
+            val=self.config.pv_capacity_kWdc,
             units="kW",
             desc="PV rated capacity in DC",
         )
         self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
-        if self.design_config.create_model_from == "default":
-            self.system_model = Pvwatts.default(self.design_config.config_name)
-        elif self.design_config.create_model_from == "new":
-            self.system_model = Pvwatts.new(self.design_config.config_name)
+        if self.config.create_model_from == "default":
+            self.system_model = Pvwatts.default(self.config.config_name)
+        elif self.config.create_model_from == "new":
+            self.system_model = Pvwatts.new(self.config.config_name)
 
-        design_dict = self.design_config.create_input_dict()
+        design_dict = self.config.create_input_dict()
 
         # update design_dict if user provides non-empty design information
-        if bool(self.design_config.pysam_options):
-            check_pysam_input_params(design_dict, self.design_config.pysam_options)
+        if bool(self.config.pysam_options):
+            check_pysam_input_params(design_dict, self.config.pysam_options)
 
-            for group, group_parameters in self.design_config.pysam_options.items():
+            for group, group_parameters in self.config.pysam_options.items():
                 if group in design_dict:
                     design_dict[group].update(group_parameters)
                 else:
@@ -186,41 +192,41 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def calc_tilt_angle(self, latitude):
         """
         Calculates the tilt angle of the PV panel based on the tilt option described by
-        design_config.tilt_angle_func.
+        config.tilt_angle_func.
 
         Returns:
             float: tilt angle of the PV panel in degrees.
         """
         # If tilt angle function is 'none', use the provided tilt value or default
-        if self.design_config.tilt_angle_func == "none":
+        if self.config.tilt_angle_func == "none":
             # If using a default PySAM model, get tilt from model if not specified
-            if self.design_config.create_model_from == "default":
-                if self.design_config.tilt is None:
+            if self.config.create_model_from == "default":
+                if self.config.tilt is None:
                     # Return the default tilt from the system model
                     return self.system_model.value("tilt")
                 else:
                     # Return user-specified tilt
-                    return self.design_config.tilt
+                    return self.config.tilt
 
             # If creating a new PySAM model, get tilt from pysam_options or default to 0
-            if self.design_config.create_model_from == "new":
-                if self.design_config.tilt is None:
+            if self.config.create_model_from == "new":
+                if self.config.tilt is None:
                     # Return tilt from pysam_options if provided, else 0
-                    return self.design_config.pysam_options.get("SystemDesign", {}).get("tilt", 0)
+                    return self.config.pysam_options.get("SystemDesign", {}).get("tilt", 0)
                 else:
                     # Return user-specified tilt
-                    return self.design_config.tilt
+                    return self.config.tilt
 
         # Use absolute value of latitude for tilt calculations
         # to support southern hemisphere (negative) latitudes
         abs_latitude = abs(latitude)
 
         # If tilt angle function is 'lat', use the latitude as the tilt
-        if self.design_config.tilt_angle_func == "lat":
+        if self.config.tilt_angle_func == "lat":
             return abs_latitude
 
         # If tilt angle function is 'lat-func', use empirical formulas based on latitude
-        if self.design_config.tilt_angle_func == "lat-func":
+        if self.config.tilt_angle_func == "lat-func":
             if abs_latitude <= 25:
                 # For latitudes <= 25, use 0.87 * latitude
                 return abs_latitude * 0.87
@@ -229,6 +235,55 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 return (abs_latitude * 0.76) + 3.1
             # For latitudes > 50, use latitude directly
             return abs_latitude
+
+    def calc_azimuth_angle(self, latitude):
+        """
+        Calculates the azimuth angle of the PV panel based on the site latitude and user inputs.
+        If a user specifies the azimuth angle in `config.pysam_options.SystemDesign.azimuth`,
+        that value will be returned. If the user-specified azimuth angle seems incorrect based on
+        the site latitude, a UserWarning will be raised. If the user does not specify the azimuth
+        angle explicitly, then the azimuth angle will be returned as:
+
+        - 180 degrees (south-facing) if the site is in the northern hemisphere (latitude>=0)
+        - 0 degrees (north-facing) if the site is in the southern hemisphere (latitude<0)
+
+        Args:
+            latitude (float): latitude of the site in degrees.
+
+        Returns:
+            float: azimuth angle of the solar panels in degrees.
+        """
+
+        if (
+            azimuth := self.config.pysam_options.get("SystemDesign", {}).get("azimuth", None)
+        ) is not None:
+            # User did explicitly define azimuth angle
+            if latitude < 0.0 and float(azimuth) == 180.0:
+                # Southern hemisphere with south-facing azimuth angle
+                msg = (
+                    f"Site is located in southern hemisphere (latitude of {latitude}) "
+                    f"and solar-PV azimuth angle is set to {azimuth} degrees. For sites in the "
+                    "southern hemisphere, it is recommended to use an north-facing azimuth angle "
+                    "of 0 degrees. Solar-PV generation may be lower than expected. "
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+            if latitude > 0.0 and float(np.abs(azimuth)) == 0.0:
+                # Northern hemisphere with north-facing azimuth angle
+                msg = (
+                    f"Site is located in northern hemisphere (latitude of {latitude}) "
+                    f"and solar-PV azimuth angle is set to {azimuth} degrees. For sites in the "
+                    "northern hemisphere, it is recommended to use an south-facing azimuth angle "
+                    "of 180 degrees. Solar-PV generation may be lower than expected. "
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
+            return azimuth
+
+        # User did not explicitly define azimuth angle
+        if latitude <= 0.0:
+            # North-facing for southern-hemisphere
+            return 0.0
+        return 180.0  # South-facing for northern hemisphere
 
     def format_resource_data(self, solar_resource_data):
         """Format solar resource data into the format required for the
@@ -279,12 +334,27 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         return reformatted_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        if inputs["system_capacity_DC"][0] <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["system_capacity_AC"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
+
         # calculate the tilt angle based on site latitude (use 0 if site latitude is not input)
         tilt = self.calc_tilt_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
         # over-write the tilt angle if it was specified in the design dict
         tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
         # assign the tilt angle
         self.system_model.value("tilt", tilt_angle)
+
+        # calculate the azimuth angle based on site latitude or get user input azimuth angle
+        azimuth = self.calc_azimuth_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
+        # assign the azimuth angle
+        self.system_model.value("azimuth", azimuth)
 
         # set the system capacity
         self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])

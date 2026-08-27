@@ -79,9 +79,11 @@ finance_parameters:
       technologies: [wind, solar, battery]
     hydrogen:
       commodity: hydrogen
+      commodity_stream: electrolyzer
       technologies: [wind, solar, battery, electrolyzer, h2_storage]
     ammonia:
       commodity: ammonia
+      commodity_stream: ammonia
       technologies:
         - wind
         - solar

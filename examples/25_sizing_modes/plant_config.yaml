@@ -9,10 +9,11 @@ sites:
 # with the reverse definition.
 # this will naturally grow as we mature the interconnected tech
 technology_interconnections:
-  - [hopp, electrolyzer, electricity, cable]
+  - [electricity_feedstock, electricity_splitter, electricity, cable]
+  - [electricity_splitter, electrolyzer, electricity, cable]
   - [electrolyzer, ammonia, hydrogen, pipe]
   - [n2_feedstock, ammonia, nitrogen, pipe]
-  - [electricity_feedstock, ammonia, electricity, cable]
+  - [electricity_splitter, ammonia, electricity, cable]
 plant:
   plant_life: 30
 finance_parameters:
@@ -44,7 +45,9 @@ finance_parameters:
   finance_subgroups:
     h2:
       commodity: hydrogen
-      technologies: [hopp, electrolyzer]
+      commodity_stream: electrolyzer
+      technologies: [electricity_feedstock, electrolyzer]
     nh3:
       commodity: ammonia
-      technologies: [hopp, electrolyzer, ammonia]
+      commodity_stream: ammonia
+      technologies: [electricity_feedstock, electrolyzer, ammonia]

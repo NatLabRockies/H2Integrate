@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, gte_zero, range_val
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
@@ -35,22 +34,26 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
     max_capacity: float | None = field(default=None)
     max_charge_rate: float | None = field(default=None)
     sizing_mode: str = field(
-        default="set", converter=(str.strip, str.lower), validator=contains(["auto", "set"])
+        default="set", converter=(str.strip, str.lower), validator=validators.in_(["auto", "set"])
     )
 
-    commodity_rate_units: str = field(default="kg/h", validator=contains(["kg/h", "g/h", "t/h"]))
+    commodity_rate_units: str = field(
+        default="kg/h", validator=validators.in_(["kg/h", "g/h", "t/h"])
+    )
 
-    cost_year: int = field(default=2018, converter=int, validator=contains([2018]))
-    labor_rate: float = field(default=37.39817, validator=gte_zero)
-    insurance: float = field(default=0.01, validator=range_val(0, 1))
-    property_taxes: float = field(default=0.01, validator=range_val(0, 1))
-    licensing_permits: float = field(default=0.001, validator=range_val(0, 1))
-    compressor_om: float = field(default=0.04, validator=range_val(0, 1))
-    facility_om: float = field(default=0.01, validator=range_val(0, 1))
-    inlet_pressure_bar: float = field(default=20, validator=gte_zero)
-    storage_pressure_bar: float = field(default=200, validator=range_val(0, 700))
-    cg_capex_per_kg_350_bar: float = field(default=1333.11625, validator=gte_zero)
-    cg_capex_per_kg_700_bar: float = field(default=1999.67437, validator=gte_zero)
+    cost_year: int = field(default=2018, converter=int, validator=validators.in_([2018]))
+    labor_rate: float = field(default=37.39817, validator=validators.ge(0))
+    insurance: float = field(default=0.01, validator=(validators.ge(0), validators.le(1)))
+    property_taxes: float = field(default=0.01, validator=(validators.ge(0), validators.le(1)))
+    licensing_permits: float = field(default=0.001, validator=(validators.ge(0), validators.le(1)))
+    compressor_om: float = field(default=0.04, validator=(validators.ge(0), validators.le(1)))
+    facility_om: float = field(default=0.01, validator=(validators.ge(0), validators.le(1)))
+    inlet_pressure_bar: float = field(default=20, validator=validators.ge(0))
+    storage_pressure_bar: float = field(
+        default=200, validator=(validators.ge(0), validators.le(700))
+    )
+    cg_capex_per_kg_350_bar: float = field(default=1333.11625, validator=validators.ge(0))
+    cg_capex_per_kg_700_bar: float = field(default=1999.67437, validator=validators.ge(0))
     marginal_cost: float = field(default=0.0)
 
     def __attrs_post_init__(self):
@@ -166,10 +169,10 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -300,10 +303,10 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (
@@ -439,10 +442,10 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
         - Max pressure: 100 bar.
 
     References:
-        [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
-        [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
-            hydrogen_storage.md in the docs
-        [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
+        - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
+        - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
+          hydrogen_storage.md in the docs
+        - [3] HDSAM V4.0 Gaseous H2 Geologic Storage sheet
     """
 
     _time_step_bounds = (

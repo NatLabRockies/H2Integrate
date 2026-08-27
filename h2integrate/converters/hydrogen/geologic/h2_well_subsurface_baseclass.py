@@ -1,7 +1,6 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import contains
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -39,9 +38,9 @@ class GeoH2SubsurfacePerformanceConfig(BaseConfig):
     """
 
     borehole_depth: float = field()
-    well_diameter: str = field(validator=contains(["small", "large"]))
-    well_geometry: str = field(validator=contains(["vertical", "horizontal"]))
-    rock_type: str = field(validator=contains(["peridotite", "bei_troctolite"]))
+    well_diameter: str = field(validator=validators.in_(["small", "large"]))
+    well_geometry: str = field(validator=validators.in_(["vertical", "horizontal"]))
+    rock_type: str = field(validator=validators.in_(["peridotite", "bei_troctolite"]))
     grain_size: float = field()
 
 
@@ -134,8 +133,8 @@ class GeoH2SubsurfaceCostConfig(CostModelBaseConfig):
     """
 
     borehole_depth: float = field()
-    well_diameter: str = field(validator=contains(["small", "large"]))
-    well_geometry: str = field(validator=contains(["vertical", "horizontal"]))
+    well_diameter: str = field(validator=validators.in_(["small", "large"]))
+    well_geometry: str = field(validator=validators.in_(["vertical", "horizontal"]))
 
 
 class GeoH2SubsurfaceCostBaseClass(CostModelBaseClass):

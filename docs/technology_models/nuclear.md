@@ -1,93 +1,72 @@
-# Nuclear power plant model
+# Nuclear power plant models
 
-The nuclear power plant model provides a simple, size-based performance model and a type-based cost model.
-Cost defaults are intended to be populated from literature, such as Quinn et al. (2023) on SMR LWR techno-economic analysis.
-See the paper here: [Quinn et al. (2023)](#references).
+H2Integrate currently includes two nuclear converter options:
 
-To use this model, set the performance model to `QuinnNuclearPerformanceModel` and the cost model to `QuinnNuclearCostModel` in your `tech_config`.
+- `QuinnNuclearPerformanceModel` with `QuinnNuclearCostModel` for an electricity-only nuclear plant, based on Quinn et al. (2023)
+- `SimpleThermalNuclearReactorPerformanceModel` with `SimpleThermalNuclearReactorCostModel` for a thermal reactor that can trade off electricity production and process heat delivery. This is a simplified thermal reactor representation intended for coupled workflows such as nuclear plus a high-temp steam electrolyzer (HTSE).
 
-## Performance model
+## Quinn electricity-only nuclear model
 
-The performance model limits electricity production by the rated capacity and an optional demand signal.
+Use this model by setting:
 
-**Inputs**
-| Name | Shape | Units | Description |
-| --- | --- | --- | --- |
-| `system_capacity` | scalar | kW | Rated electrical capacity. |
-| `electricity_set_point` | array[n_timesteps] | kW | Optional set point profile; defaults to rated capacity. |
+- performance model: `QuinnNuclearPerformanceModel`
+- cost model: `QuinnNuclearCostModel`
 
-**Outputs**
-| Name | Shape | Units | Description |
-| --- | --- | --- | --- |
-| `electricity_out` | array[n_timesteps] | kW | Electricity produced, capped at `system_capacity`. |
-| `rated_electricity_production` | scalar | kW | Rated production (capacity). |
-| `total_electricity_produced` | scalar | kW*h | Sum of production over the simulation. |
-| `annual_electricity_produced` | array[plant_life] | kW*h/year | Annualized production. |
-| `capacity_factor` | array[plant_life] | unitless | Ratio of actual to maximum production. |
-| `replacement_schedule` | array[plant_life] | unitless | Placeholder replacement schedule (zeros). |
-| `operational_life` | scalar | yr | Operational life (defaults to plant life). |
+This model produces electricity only and clips commanded output to rated plant capacity.
 
-## Cost model
+### API details
+For API details, see the [`QuinnNuclearPerformanceModel` and `QuinnNuclearCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant).
 
-The cost model uses direct cost parameters to compute capital and operating costs.
-It supports optional scaling of capex with size using a reference capacity and scaling exponent.
+(references)=
+### References
+- Quinn, J. et al., 2023. Small modular reactor light water reactor techno-economic analysis. Applied Energy 120669. https://doi.org/10.1016/j.apenergy.2023.120669
 
-**Inputs**
-| Name | Shape | Units | Description |
-| --- | --- | --- | --- |
-| `system_capacity` | scalar | kW | Plant capacity used for cost scaling. |
-| `electricity_out` | array[n_timesteps] | kW | Output from performance model. |
+## Simple thermal nuclear reactor model
 
-**Cost parameters (tech_config)**
-| Key | Type | Description |
-| --- | --- | --- |
-| `system_capacity_kw` | float | Rated electrical capacity (kW). |
-| `capex_per_kw` | float | Capital cost per kW. |
-| `fixed_opex_per_kw_year` | float | Fixed O&M per kW per year. |
-| `variable_opex_per_mwh` | float | Variable O&M per MWh. |
-| `reference_capacity_kw` | float | Reference capacity for capex scaling (defaults to `system_capacity_kw`). |
-| `capex_scaling_exponent` | float | Capex scaling exponent (defaults to 1.0). |
-| `cost_year` | int | Dollar year for the input costs. |
+You can use this model by setting (in your `tech_config.yaml`):
 
-The capex calculation follows:
+- performance model: `SimpleThermalNuclearReactorPerformanceModel`
+- cost model: `SimpleThermalNuclearReactorCostModel`
 
-$$
-C_{\text{capex}} = (c_{\text{capex}} \cdot (P / P_{\text{ref}})^{(k-1)}) \cdot P
-$$
+This model represents a reactor with:
 
-Where $c_{\text{capex}}$ is `capex_per_kw`, $P$ is plant capacity (kW), $P_{\text{ref}}$ is `reference_capacity_kw`, and $k$ is `capex_scaling_exponent`.
+- a high-pressure electric conversion stage
+- a low-pressure electric conversion stage
+- an extractable process heat stream, extracted upstream of the low-pressure turbine stages (dashed red arrow in the figure)
 
-**Outputs**
-| Name | Shape | Units | Description |
-| --- | --- | --- | --- |
-| `CapEx` | scalar | USD | Total capital expenditure. |
-| `OpEx` | scalar | USD/year | Fixed plus variable O&M. |
-| `VarOpEx` | array[plant_life] | USD/year | Variable O&M (repeated each year). |
-| `cost_year` | scalar | year | Dollar year of costs. |
+The model was developed to provide both heat and electricity for high-temperature steam electrolysis as modeled in `HTSEPerformanceModel` and `HTSEPerformanceModel`. The integrated thermal-nuclear and HTSE system is shown in the figure below. However, the models were implemented in such a way as to allow integration with other technologies.
 
-## Example tech_config
-
-```yaml
-technologies:
-  nuclear:
-    performance_model:
-      model: "QuinnNuclearPerformanceModel"
-    cost_model:
-      model: "QuinnNuclearCostModel"
-    model_inputs:
-      performance_parameters:
-        system_capacity_kw: 300000.0
-        capacity_factor: 0.9
-      cost_parameters:
-        system_capacity_kw: 450000.0
-        capex_per_kw: 6000.0
-        fixed_opex_per_kw_year: 120.0
-        variable_opex_per_mwh: 2.5
-        reference_capacity_kw: 300000.0
-        capex_scaling_exponent: 0.9
-        cost_year: 2023
+```{figure} images/nuclear_htse_system_diagram.png
+:alt: System diagram showing a thermal nuclear reactor with integrated high-temperature steam electrolysis.
+:width: 100%
+:align: center
 ```
 
-## References
+It supports two operating modes:
 
-- Quinn, J. et al., 2023. Small modular reactor light water reactor techno-economic analysis. Applied Energy 120669. https://doi.org/10.1016/j.apenergy.2023.120669
+- `heat`: In `heat` mode, delivered heat is limited by available process heat and requested heat demand. Remaining low-pressure heat is converted to electricity.
+
+- `electricity`: In `electricity` mode, electricity is limited by the command value and rated capacity. Remaining process heat is then outputted as `heat_out`.
+
+```{figure} images/ThermalNucReactor-H2I.png
+:alt: Thermal nuclear reactor schematic
+:width: 100%
+:align: center
+```
+
+### Thermal reactor dispatch logic
+
+The model computes a combined electric efficiency:
+
+$$
+\eta_{combined} = \eta_{hp} + (1 - \eta_{hp}) \eta_{lp}
+$$
+
+Then infers thermal capacity from rated electrical capacity:
+
+$$
+P_{thermal} = \frac{P_{electric,rated}}{\eta_{combined}}
+$$
+
+### API details
+For API details, see the [`SimpleThermalNuclearReactorPerformanceModel` and `SimpleThermalNuclearReactorCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant_thermal).
