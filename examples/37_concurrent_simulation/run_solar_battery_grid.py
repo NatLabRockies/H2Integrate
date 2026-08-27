@@ -172,5 +172,5 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
         ax[0].set_title(key)
 
     # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
-    # plot_diff('plant.grid_buy.GridPerformanceModel.electricity_out')
+    plot_diff("plant.grid_buy.GridPerformanceModel.electricity_out")
     # plot_diff('plant.battery.StoragePerformanceModel.SOC')
