@@ -39,12 +39,6 @@ class ResourceBaseAPIConfig(BaseConfig):
         timezone (float | int): timezone to output data in. May be used to determine whether
             to download data in UTC or local timezone. This should be populated by the value
             in sim_config['timezone']
-        use_fixed_resource_location (bool): Whether to update resource data in the `compute()`
-            method. Set to False if the site location is being swept, set to True if the
-            resource data should not be updated to the location
-            (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
-            to reduce computation time during optimizations or design sweeps if site location is
-            not being swept. Defaults to True.
         resource_data (dict | object, optional): Dictionary of user-input resource data.
             Defaults to an empty dictionary.
         resource_dir (str | Path, optional): Folder to save resource files to or
@@ -64,7 +58,6 @@ class ResourceBaseAPIConfig(BaseConfig):
 
     timezone: int | float = field()
 
-    use_fixed_resource_location: bool = field(default=True, kw_only=True)
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
@@ -435,10 +428,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             raise ValueError("Did not successfully download resource data.")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if not self.config.use_fixed_resource_location:
-            # update the resource data based on the input latitude and longitude
-            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
-            # update the stored resource data and site
-            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
-            self.resource_data = data
-            discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+        # update the resource data based on the input latitude and longitude
+        data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
+        # update the stored resource data and site
+        self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
+        self.resource_data = data
+        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
