@@ -37,7 +37,7 @@ requires-python = ">=3.11, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
   "attrs",
-  "CoolProp<7.0.0",
+  "CoolProp",
   "geopy",
   "jsonschema",
   "marine-carbon-management",
@@ -51,6 +51,7 @@ dependencies = [
   "pint",
   "ProFAST",
   "Pyomo>=6.1.2",
+  "pyfluids>=4.0",
   "rainflow",
   "requests",
   "requests-cache",
