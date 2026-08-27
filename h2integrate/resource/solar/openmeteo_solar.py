@@ -23,12 +23,6 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
             Must been between 1940 the year before the current calendar year. (inclusive).
         include_leap_day (bool, optional): If False, remove data from leap day if the
             resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
         verify_download (bool, optional): Whether to verify the API download from the url.
             If an `openmeteo_requests.Client.OpenMeteoRequestsError` error is thrown,
             try setting to True. Defaults to False.
@@ -50,9 +44,6 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "openmeteo_archive_solar"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
-    # resource_data: dict | object = field(default={})
-    # resource_filename: Path | str = field(default="")
-    # resource_dir: Path | str | None = field(default=None)
     verify_download: bool = field(default=False)
 
 

@@ -45,6 +45,12 @@ class ResourceBaseAPIConfig(BaseConfig):
             (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
             to reduce computation time during optimizations or design sweeps if site location is
             not being swept. Defaults to True.
+        resource_data (dict | object, optional): Dictionary of user-input resource data.
+            Defaults to an empty dictionary.
+        resource_dir (str | Path, optional): Folder to save resource files to or
+            load resource files from. Defaults to "".
+        resource_filename (str, optional): Filename to save resource data to or load
+            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
