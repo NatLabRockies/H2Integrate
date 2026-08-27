@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
@@ -36,9 +34,9 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
+    # resource_data: dict | object = field(default={})
+    # resource_filename: Path | str = field(default="")
+    # resource_dir: Path | str | None = field(default=None)
 
 
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -85,9 +83,9 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
+    # resource_data: dict | object = field(default={})
+    # resource_filename: Path | str = field(default="")
+    # resource_dir: Path | str | None = field(default=None)
 
 
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -135,9 +133,9 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
+    # resource_data: dict | object = field(default={})
+    # resource_filename: Path | str = field(default="")
+    # resource_dir: Path | str | None = field(default=None)
 
 
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -201,9 +199,9 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_tmy_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
+    # resource_data: dict | object = field(default={})
+    # resource_filename: Path | str = field(default="")
+    # resource_dir: Path | str | None = field(default=None)
 
     def __attrs_post_init__(self):
         if "tmy" in self.resource_year:

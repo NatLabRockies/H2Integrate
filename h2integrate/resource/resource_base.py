@@ -61,6 +61,9 @@ class ResourceBaseAPIConfig(BaseConfig):
     use_fixed_resource_location: bool = field(default=True, kw_only=True)
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
+    resource_data: dict | object = field(default={})
+    resource_filename: Path | str = field(default="")
+    resource_dir: Path | str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -188,8 +191,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         the length of the data matches the expected number of timesteps.
 
         Args:
-            data (dict): DataFrame-like dictionary of resource data containing
-                "Month" and "Day" columns.
+            data (dict | pd.DataFrame): DataFrame-like dictionary of timeseries resource
+                data containing "Month" and "Day" columns.
+
         Returns:
             dict: Processed resource data with leap day handled according to configuration.
 
@@ -197,6 +201,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             ValueError: If the length of the data does not match ``self.n_timesteps``
                 after leap day processing.
         """
+
+        convert_to_dict = False
+        if isinstance(data, dict):
+            data = pd.DataFrame(data)
+            convert_to_dict = True
+
+        case_of_time_cols = "lower" if "month" in data.columns.to_list() else "upper"
+        data = data.rename(columns={"month": "Month", "day": "Day"})
 
         # Check if data includes leap day
         data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
@@ -231,6 +243,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
+        if case_of_time_cols == "lower":
+            data = data.rename(columns={"Month": "month", "Day": "day"})
+
+        if convert_to_dict:
+            data_out = {k: data[k].values for k in data.columns.to_list()}
+            return data_out
         return data
 
     def create_filename(self, latitude, longitude):

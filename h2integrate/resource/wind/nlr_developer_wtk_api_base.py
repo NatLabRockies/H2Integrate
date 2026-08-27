@@ -1,6 +1,5 @@
 import warnings
 import urllib.parse
-from pathlib import Path
 
 import pandas as pd
 from attrs import field, define, validators
@@ -42,9 +41,9 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "wtk_v2"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
+    # resource_data: dict | object = field(default={})
+    # resource_filename: Path | str = field(default="")
+    # resource_dir: Path | str | None = field(default=None)
 
 
 class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
