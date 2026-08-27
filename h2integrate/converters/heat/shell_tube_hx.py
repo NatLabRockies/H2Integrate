@@ -3,10 +3,10 @@ from math import log
 import numpy as np
 import openmdao.api as om
 from attrs import field, define
-from attrs.validators import gt_zero
 from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.validators import gt_zero
 from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     add_multivariable_output,
@@ -56,6 +56,9 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     D_shell_m: float = field(validator=gt_zero)
     process_fluid_name: str = field(default="Water")
     working_fluid_name: str = field(default="Water")
+    enable_plot: bool = field(default=False)
+    plot_dir: str | None = field(default=None)
+    show_plot: bool = field(default=False)
 
 
 class ShellTubeHXPerformanceModel(om.ExplicitComponent):
@@ -121,11 +124,18 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
 
         # Additional performance outputs (time-series)
         ts = dict(shape=self.n_timesteps, val=0.0)
-        self.add_output("Q_total", units="kW", desc="Total heat transfer rate", **ts)
-        self.add_output("epsilon", desc="Effectiveness of the heat exchanger", **ts)
-        self.add_output("NTU", desc="Number of transfer units", **ts)
-        self.add_output("C_r", desc="Heat capacity rate ratio", **ts)
-        self.add_output("U_global", units="W/m**2/K", desc="Overall heat transfer coefficient", **ts)
+        self.add_output(
+            "total_heat_transfer_rate", units="kW", desc="Total heat transfer rate", **ts
+        )
+        self.add_output("hx_effectiveness", desc="Effectiveness of the heat exchanger", **ts)
+        self.add_output("number_of_transfer_units", desc="Number of transfer units", **ts)
+        self.add_output("heat_capacity_rate_ratio", desc="Heat capacity rate ratio", **ts)
+        self.add_output(
+            "overall_heat_transfer_coefficient",
+            units="W/m**2/K",
+            desc="Overall heat transfer coefficient",
+            **ts,
+        )
         self.add_output(
             "pressure_drop_process_fluid",
             units="Pa",
@@ -139,8 +149,12 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             **ts,
         )
         self.add_output("pump_power", units="kW", desc="Total pump power required", **ts)
-        self.add_output("S_gen_dot", units="W/K", desc="Entropy generation rate", **ts)
-        self.add_output("Ex_dest_dot", units="kW", desc="Exergy destruction rate", **ts)
+        self.add_output(
+            "entropy_generation_rate", units="W/K", desc="Entropy generation rate", **ts
+        )
+        self.add_output(
+            "exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts
+        )
         self.add_output(
             "roles_swapped",
             desc=(
@@ -248,6 +262,14 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 dp_process = dp_tube_total
                 dp_working = dp_shell_total
 
+            if self.config.enable_plot:
+                self.plot_results(
+                    res,
+                    label=f"timestep_{i}",
+                    save_dir=self.config.plot_dir,
+                    show=self.config.show_plot,
+                )
+
             # Outlet multivariable-stream values
             outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
             outputs["process_fluid:temperature_out"][i] = T_process_out
@@ -259,16 +281,16 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             outputs["working_fluid:pressure_out"][i] = float(P_working[i]) - dp_working / 1e5
 
             # Diagnostic time-series outputs
-            outputs["Q_total"][i] = float(res["Q_total"]) / 1e3
-            outputs["epsilon"][i] = float(res["epsilon"])
-            outputs["NTU"][i] = float(res["NTU"])
-            outputs["C_r"][i] = float(res["C_r"])
-            outputs["U_global"][i] = float(res["U_global"])
+            outputs["total_heat_transfer_rate"][i] = float(res["Q_total"]) / 1e3
+            outputs["hx_effectiveness"][i] = float(res["epsilon"])
+            outputs["number_of_transfer_units"][i] = float(res["NTU"])
+            outputs["heat_capacity_rate_ratio"][i] = float(res["C_r"])
+            outputs["overall_heat_transfer_coefficient"][i] = float(res["U_global"])
             outputs["pressure_drop_process_fluid"][i] = dp_process
             outputs["pressure_drop_working_fluid"][i] = dp_working
             outputs["pump_power"][i] = float(res["P_pump_total"]) / 1e3
-            outputs["S_gen_dot"][i] = float(res["S_gen_dot"])
-            outputs["Ex_dest_dot"][i] = float(res["Ex_dest_dot"]) / 1e3
+            outputs["entropy_generation_rate"][i] = float(res["S_gen_dot"])
+            outputs["exergy_destruction_rate"][i] = float(res["Ex_dest_dot"]) / 1e3
             outputs["roles_swapped"][i] = 1.0 if swap else 0.0
 
     # ----------------------------------------------------------------------
@@ -1006,7 +1028,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     # ----------------------------------------------------------------------
     # 4) Printing summary utility
     # ----------------------------------------------------------------------
-    def print_summary(res, label="Python + CoolProp"):
+    def print_summary(self, res, label="Python + CoolProp"):
         Th_in = res["params"]["Th_in"]
         Tc_in = res["params"]["Tc_in"]
         Th_out = res["Th"][-1]
@@ -1081,8 +1103,26 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     # ----------------------------------------------------------------------
     # 5) Plotting utility
     # ----------------------------------------------------------------------
-    def plot_results(res):
+    def plot_results(self, res, label=None, save_dir=None, show=False):
+        """Produce the four diagnostic figures for a single HX solve.
+
+        Args:
+            res: Result dict returned by :meth:`hx_shell_tube_steady`.
+            label: Optional label (e.g. ``"timestep_0"``) used in figure
+                titles and as a filename prefix when saving.
+            save_dir: If not ``None``, save each figure as a PNG in this
+                directory. The directory is created if it does not exist.
+            show: If ``True``, call ``plt.show()`` after all figures have
+                been drawn. Not compatible with the ``"Agg"`` backend.
+
+        Returns:
+            List of the four ``matplotlib.figure.Figure`` objects created.
+        """
+        import os
+
         import matplotlib.pyplot as plt
+
+        suffix = f" ({label})" if label else ""
 
         x = res["x"]
         x_mid = res["x_mid"]
@@ -1105,24 +1145,27 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         # Heat-transfer per unit length [W/m]
         q_per_m = Q_seg / L_seg
 
+        figures = []
+
         # --- Figure 1: Temperature profiles ---
-        plt.figure(figsize=(6, 4))
+        fig1 = plt.figure(figsize=(6, 4))
         plt.plot(x, Th, "-r", label="T_h(x)")
         plt.plot(x, Tc, "-b", label="T_c(x)")
         plt.plot(x_mid, Tw, "--k", label="T_w(x)")
         plt.grid(True)
         plt.xlabel("Axial position x [m]")
         plt.ylabel("Temperature [°C]")
-        plt.title("Temperature profiles along HX (hot, cold, wall)")
+        plt.title(f"Temperature profiles along HX (hot, cold, wall){suffix}")
         plt.legend()
         plt.tight_layout()
+        figures.append(fig1)
 
         # --- Figure 2: Local q' and S_gen ---
-        fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
+        fig2, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
         axes[0].plot(x_mid, q_per_m / 1e3, "-o")
         axes[0].grid(True)
         axes[0].set_ylabel("q' [kW/m]")
-        axes[0].set_title("Local heat transfer per unit length")
+        axes[0].set_title(f"Local heat transfer per unit length{suffix}")
 
         axes[1].plot(x_mid, S_gen_seg, "-s")
         axes[1].grid(True)
@@ -1130,15 +1173,16 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         axes[1].set_ylabel("S_gen,seg [W/K]")
         axes[1].set_title("Local entropy generation per segment")
 
-        fig.tight_layout()
+        fig2.tight_layout()
+        figures.append(fig2)
 
         # --- Figure 3: Local h_i, h_o, and U_seg ---
-        fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
+        fig3, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
         axes[0].plot(x_mid, h_i_seg, "-r", label="h_i (tube side)")
         axes[0].plot(x_mid, h_o_seg, "-b", label="h_o (shell side)")
         axes[0].grid(True)
         axes[0].set_ylabel("h [W/m²-K]")
-        axes[0].set_title("Local film coefficients")
+        axes[0].set_title(f"Local film coefficients{suffix}")
         axes[0].legend()
 
         axes[1].plot(x_mid, U_seg, "-k")
@@ -1147,10 +1191,11 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         axes[1].set_ylabel("U [W/m²-K]")
         axes[1].set_title("Local overall heat transfer coefficient U(x)")
 
-        fig.tight_layout()
+        fig3.tight_layout()
+        figures.append(fig3)
 
         # --- Figure 4: Reynolds numbers ---
-        plt.figure(figsize=(6, 4))
+        fig4 = plt.figure(figsize=(6, 4))
         plt.plot(x_mid, Re_t, "-r", label="Re_tube")
         plt.plot(x_mid, Re_s, "-b", label="Re_shell")
         plt.axhline(
@@ -1161,6 +1206,28 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         plt.grid(True, which="both", axis="y")
         plt.xlabel("Axial position x [m]")
         plt.ylabel("Re [-]")
-        plt.title("Local Reynolds numbers (tube & shell)")
+        plt.title(f"Local Reynolds numbers (tube & shell){suffix}")
         plt.legend()
         plt.tight_layout()
+        figures.append(fig4)
+
+        if save_dir is not None:
+            os.makedirs(save_dir, exist_ok=True)
+            fname_prefix = f"{label}_" if label else ""
+            names = [
+                "temperature_profiles",
+                "local_q_and_Sgen",
+                "local_h_and_U",
+                "reynolds_numbers",
+            ]
+            for fig, name in zip(figures, names):
+                fig.savefig(os.path.join(save_dir, f"{fname_prefix}{name}.png"), dpi=100)
+
+        if show:
+            plt.show()
+        elif save_dir is not None:
+            # Free figure memory when running headlessly across many timesteps
+            for fig in figures:
+                plt.close(fig)
+
+        return figures

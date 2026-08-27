@@ -21,7 +21,6 @@ def shell_tube_hx_config():
         "D_o_m": 0.01905,
         "t_wall_m": 0.002,
         "D_shell_m": 0.591,
-        "cost_year": 2024,
     }
 
     tech_config = {
@@ -82,16 +81,18 @@ class TestShellTubeHXPerformanceModel:
         )
 
         # Diagnostic scalar-like outputs (time-series of length 1)
-        C_r = prob.get_val("shell_tube_hx.C_r")
-        Ex_dest_dot_kW = prob.get_val("shell_tube_hx.Ex_dest_dot_kW", units="kW")
-        NTU = prob.get_val("shell_tube_hx.NTU")
-        Q_total_kW = prob.get_val("shell_tube_hx.Q_total_kW", units="kW")
-        S_gen_dot_W_per_K = prob.get_val("shell_tube_hx.S_gen_dot_W_per_K", units="W/K")
-        U_global_W_m2K = prob.get_val("shell_tube_hx.U_global_W_m2K", units="W/m**2/K")
-        dp_working_Pa = prob.get_val("shell_tube_hx.pressure_drop_working_Pa", units="Pa")
-        dp_process_Pa = prob.get_val("shell_tube_hx.pressure_drop_process_Pa", units="Pa")
-        epsilon = prob.get_val("shell_tube_hx.epsilon")
-        pump_power_kW = prob.get_val("shell_tube_hx.pump_power_kW", units="kW")
+        C_r = prob.get_val("shell_tube_hx.heat_capacity_rate_ratio")
+        Ex_dest_dot_kW = prob.get_val("shell_tube_hx.exergy_destruction_rate", units="kW")
+        NTU = prob.get_val("shell_tube_hx.number_of_transfer_units")
+        Q_total_kW = prob.get_val("shell_tube_hx.total_heat_transfer_rate", units="kW")
+        S_gen_dot_W_per_K = prob.get_val("shell_tube_hx.entropy_generation_rate", units="W/K")
+        U_global_W_m2K = prob.get_val(
+            "shell_tube_hx.overall_heat_transfer_coefficient", units="W/m**2/K"
+        )
+        dp_working_Pa = prob.get_val("shell_tube_hx.pressure_drop_working_fluid", units="Pa")
+        dp_process_Pa = prob.get_val("shell_tube_hx.pressure_drop_process_fluid", units="Pa")
+        epsilon = prob.get_val("shell_tube_hx.hx_effectiveness")
+        pump_power_kW = prob.get_val("shell_tube_hx.pump_power", units="kW")
 
         # Expected values (regression values captured for this config)
         expected_C_r = 0.4527329816950921
@@ -152,7 +153,7 @@ class TestShellTubeHXPerformanceModel:
         prob.setup()
         prob.run_model()
 
-        Q = prob.get_val("shell_tube_hx.Q_total_kW", units="kW")
+        Q = prob.get_val("shell_tube_hx.total_heat_transfer_rate", units="kW")
         assert Q.shape == (3,)
         # All timesteps use the same (config-default) inlets, so results are identical
         assert np.allclose(Q, Q[0])
