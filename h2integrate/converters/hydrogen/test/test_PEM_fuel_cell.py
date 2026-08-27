@@ -145,14 +145,20 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
 
     with subtests.test("rated water out"):
         assert (
-            pytest.approx(prob.get_val("fuel_cell.rated_water_out", units="kg/h"), rel=1e-6)
+            pytest.approx(prob.get_val("fuel_cell.rated_water_production", units="kg/h"), rel=1e-6)
             == 683.6160498
         )
 
     with subtests.test("rated heat out"):
         assert (
-            pytest.approx(prob.get_val("fuel_cell.rated_heat_out", units="kW"), rel=1e-6)
+            pytest.approx(prob.get_val("fuel_cell.rated_heat_production", units="kW"), rel=1e-6)
             == 1515.1571138
+        )
+
+    with subtests.test("rated stack efficiency"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_stack_efficiency"), rel=1e-4)
+            == 0.49732  # Example calculation
         )
 
 
@@ -213,6 +219,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
     hydrogen_consumed = prob.get_val("fuel_cell.hydrogen_consumed", units="kg/h")
     oxygen_consumed = prob.get_val("fuel_cell.oxygen_consumed", units="kg/h")
     water_out = prob.get_val("fuel_cell.water_out", units="kg/h")
+    heat_out = prob.get_val("fuel_cell.heat_out", units="kW")
 
     with subtests.test("output clipped to system capacity"):
         assert electricity_output[0] == pytest.approx(1500.0, rel=1e-3)
@@ -247,3 +254,7 @@ def test_fuel_cell_demand(tech_config, plant_config, subtests):
     with subtests.test("water out"):
         expected_water_out = [683.61605, 204.817867, 683.61605, 0.0, 8.936012, 0.0]
         np.testing.assert_allclose(water_out[:6], expected_water_out, rtol=1e-4)
+
+    with subtests.test("heat out"):
+        expected_heat_out = [1513.436595, 404.4013, 1513.436595, 0.0, 10.155, 0.0]
+        np.testing.assert_allclose(heat_out[:6], expected_heat_out, rtol=1e-4)

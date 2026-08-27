@@ -143,20 +143,26 @@ def test_fuel_cell_performance(tech_config, plant_config, subtests):
 
     with subtests.test("rated water out"):
         assert (
-            pytest.approx(prob.get_val("fuel_cell.rated_water_out", units="kg/h"), rel=1e-6)
+            pytest.approx(prob.get_val("fuel_cell.rated_water_production", units="kg/h"), rel=1e-6)
             == 683.61604984
         )
 
     with subtests.test("rated co2 out"):
         assert (
-            pytest.approx(prob.get_val("fuel_cell.rated_co2_out", units="kg/h"), rel=1e-6)
+            pytest.approx(prob.get_val("fuel_cell.rated_co2_production", units="kg/h"), rel=1e-6)
             == 417.512383
         )
 
     with subtests.test("rated heat out"):
         assert (
-            pytest.approx(prob.get_val("fuel_cell.rated_heat_out", units="kW"), rel=1e-6)
+            pytest.approx(prob.get_val("fuel_cell.rated_heat_production", units="kW"), rel=1e-6)
             == 844.389934  # TODO: update expected value
+        )
+
+    with subtests.test("rated stack efficiency"):
+        assert (
+            pytest.approx(prob.get_val("fuel_cell.rated_stack_efficiency"), rel=1e-6)
+            == 0.63967037  # Example calculation
         )
 
 
