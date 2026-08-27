@@ -325,6 +325,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                     self._get_storage_dispatch_commands(),
                     **performance_model_kwargs,
                     sim_start_index=window_start,
+                    sim_end_index=window_start + window_len,
                 )
 
                 # Performance model returns SOC in percent.

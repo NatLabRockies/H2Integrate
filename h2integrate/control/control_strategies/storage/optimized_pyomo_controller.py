@@ -266,6 +266,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                     self.storage_dispatch_commands,
                     **performance_model_kwargs,
                     sim_start_index=t,
+                    sim_end_index=t + self.n_control_window_hours,
                 )
                 # update SOC for next time window
                 self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
