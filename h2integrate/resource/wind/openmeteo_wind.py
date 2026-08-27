@@ -239,8 +239,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in WindResourceBaseAPIModel.
-        2) is converted to standardized units described in WindResourceBaseAPIModel.
+        1) follows naming convention described in WindResourceBase.
+        2) is converted to standardized units described in WindResourceBase.
 
         This method does the following steps:
 

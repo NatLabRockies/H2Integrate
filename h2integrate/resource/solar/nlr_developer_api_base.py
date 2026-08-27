@@ -86,8 +86,8 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in SolarResourceBaseAPIModel.
-        2) is converted to standardized units described in SolarResourceBaseAPIModel.
+        1) follows naming convention described in SolarResourceBase.
+        2) is converted to standardized units described in SolarResourceBase.
 
         This method does the following steps:
 
