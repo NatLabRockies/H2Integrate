@@ -8,9 +8,9 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
+from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
 
 @define(kw_only=True)
@@ -56,7 +56,7 @@ class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
     verify_download: bool = field(default=False)
 
 
-class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
+class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalSolarAPIConfig
         resource_specs = self.helper_setup_method()
@@ -355,8 +355,13 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBaseAPIModel):
         for c in data_cols_init:
             units = c.split("(")[-1].strip(")").replace("°", "deg").replace("%", "unitless")
             units = (
-                units.replace("undefined", "unitless").replace("m²", "m**2").replace("degC", "C")
+                units.replace("undefined", "unitless").replace(
+                    "m²", "m**2"
+                )  # .replace("degC", "C")
             )
+
+            if units == "C":
+                units = "degC"
 
             new_c = c.split("(")[0].replace("air", "").replace("at ", "")
             new_c = new_c.replace(f"({units})", "").strip().replace(" ", "_").replace("__", "_")

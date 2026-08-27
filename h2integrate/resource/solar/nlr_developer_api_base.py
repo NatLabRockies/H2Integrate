@@ -2,14 +2,15 @@ import urllib.parse
 
 import pandas as pd
 
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
+from h2integrate.resource.resource_base import ResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
 )
 
 
-class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
+class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
@@ -167,10 +168,12 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
             )
 
             if units == "c":
-                units = units.upper()
+                units = "degC"
             if units == "w/m2":
                 units = "W/m**2"
-            if units == "nan" or units == "%":
+            if units == "nan":
+                units = "unitless"
+            if units == "%":
                 units = "percent"
             if units == "Degree" or units == "Degrees":
                 units = "deg"

@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
+from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.wind.wind_resource_base import WindResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
@@ -47,7 +47,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
-class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
+class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
