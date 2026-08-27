@@ -139,7 +139,7 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
         data, data_units = self.compare_units_and_correct(data, data_units)
 
         data.update(site_data)
-        return data
+        return data | {"units": data_units}
 
     def format_timeseries_data(self, data):
         """Convert data to a dictionary with keys that follow the standardized naming convention and

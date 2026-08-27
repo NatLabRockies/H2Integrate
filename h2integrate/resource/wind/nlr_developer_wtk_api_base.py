@@ -161,7 +161,7 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         # include site data with data
         data.update(site_data)
 
-        return data
+        return data | {"units": data_units}
 
     def format_timeseries_data(self, data):
         """Convert data to a dictionary with keys that follow the standardized naming convention and
