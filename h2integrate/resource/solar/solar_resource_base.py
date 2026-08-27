@@ -1,7 +1,8 @@
+from typing import ClassVar
+
 from openmdao.utils import units
 
 from h2integrate.resource.resource_base import ResourceBaseAPIModel
-from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model
 
 
 class SolarResourceBaseAPIModel(ResourceBaseAPIModel):
@@ -60,28 +61,28 @@ class SolarResourceBaseAPIModel(ResourceBaseAPIModel):
         return data, data_units
 
 
-class SolarResourceBaseH5Model(ResourceBaseH5Model):
-    def setup(self):
-        super().setup()
+class SolarResourceBaseH5Model:
+    # def setup(self):
+    #     super().setup()
 
-        self.output_vars_to_units = {
-            "wind_direction": "deg",
-            "wind_speed": "m/s",
-            "temperature": "degC",
-            "pressure": "mbar",
-            "relative_humidity": "percent",
-            "ghi": "W/m**2",
-            "dni": "W/m**2",
-            "dhi": "W/m**2",
-            "clearsky_ghi": "W/m**2",
-            "clearsky_dni": "W/m**2",
-            "clearsky_dhi": "W/m**2",
-            "dew_point": "degC",
-            "surface_albedo": "unitless",
-            "solar_zenith_angle": "deg",
-            "snow_depth": "cm",
-            "precipitable_water": "cm",
-        }
+    output_vars_to_units: ClassVar[dict[str, str]] = {
+        "wind_direction": "deg",
+        "wind_speed": "m/s",
+        "temperature": "degC",
+        "pressure": "mbar",
+        "relative_humidity": "percent",
+        "ghi": "W/m**2",
+        "dni": "W/m**2",
+        "dhi": "W/m**2",
+        "clearsky_ghi": "W/m**2",
+        "clearsky_dni": "W/m**2",
+        "clearsky_dhi": "W/m**2",
+        "dew_point": "degC",
+        "surface_albedo": "unitless",
+        "solar_zenith_angle": "deg",
+        "snow_depth": "cm",
+        "precipitable_water": "cm",
+    }
 
     def compare_units_and_correct(self, data, data_units):
         """Convert data to standard units defined in ``output_vars_to_units``.

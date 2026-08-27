@@ -1,9 +1,9 @@
 import warnings
+from typing import ClassVar
 
 from openmdao.utils import units
 
 from h2integrate.resource.resource_base import ResourceBaseAPIModel
-from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model
 
 
 class WindResourceBaseAPIModel(ResourceBaseAPIModel):
@@ -66,20 +66,21 @@ class WindResourceBaseAPIModel(ResourceBaseAPIModel):
         return data, data_units
 
 
-class WindResourceBaseH5Model(ResourceBaseH5Model):
-    def setup(self):
-        super().setup()
+# class WindResourceBaseH5Model(ResourceBaseH5Model):
+class WindResourceBaseH5Model:
+    output_vars_to_units: ClassVar[dict[str, str]] = {
+        "wind_direction": "deg",
+        "wind_speed": "m/s",
+        "temperature": "degC",
+        "pressure": "atm",
+        "precipitation_rate": "mm/h",
+        "relative_humidity": "percent",
+        "is_day": "unitless",
+        "specifichumidity": "percent",
+    }
 
-        self.output_vars_to_units = {
-            "wind_direction": "deg",
-            "wind_speed": "m/s",
-            "temperature": "degC",
-            "pressure": "atm",
-            "precipitation_rate": "mm/h",
-            "relative_humidity": "percent",
-            "is_day": "unitless",
-            "specifichumidity": "percent",
-        }
+    # def setup(self):
+    #     super().setup()
 
     def compare_units_and_correct(self, data, data_units):
         """Convert data to standard units defined in ``output_vars_to_units``.
