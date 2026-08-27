@@ -10,12 +10,8 @@ from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, Resource
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseH5Model
 
 
-# Maybe look at MultiFileNSRDBX and MultiTimeNSRDB and MultiYearNSRDBX
-
-
 @define(kw_only=True)
 class NSRDBDatasetH5Config(ResourceBaseH5Config):
-    # double-check years, redo name, check intervals
     resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2025)))
     dataset_desc: str = "nsrdb_current"
     resource_type: str = "solar"
@@ -38,17 +34,15 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
         self.columns_translation = {
             "air_temperature": "temperature",
             "surface_pressure": "pressure",
-            # "snow_depth"
             "total_precipitable_water": "precipitable_water",
         }
 
         self.hpc_path = "/datasets/NSRDB/current/nsrdb_{year}.h5"
         self.hsds_path = "/nrel/NSRDB/current/nsrdb_{year}.h5"
 
-        # Below is normally done in a baseclass
+        # create the input dictionary for NSRDBDatasetH5Config
         resource_specs = self.helper_setup_method()
 
-        # create the resource config
         self.config = NSRDBDatasetH5Config.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
@@ -58,7 +52,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
 
         super().setup()
 
-        # Below is normally done in a subclass
+        # The rest of this method is the exact same as whats used in the API resource models
 
         # set UTC variable depending on timezone, used for filenaming
         self.utc = False
@@ -79,7 +73,8 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
         data = self.get_data(self.config.site_gid, self.config.latitude, self.config.longitude)
 
         self.resource_data = data
-        # add resource data dictionary as an out
+
+        # add resource data dictionary as an output
         self.add_discrete_output(
             "solar_resource_data", val=data, desc="Dict of solar resource data"
         )
@@ -104,21 +99,23 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
         raise FileNotFoundError(msg)
 
     def load_data_from_dataset(self, latitude, longitude, site_gid=None):
-        # probably in resource-specific baseclass
-        # called from overall resource baseclass
+        # NOTE: if more solar resource datasets are added,
+        # this method could likely be moved into a baseclass
+
+        # Get filepath of the .h5 dataset
         dataset_path = self.create_dataset_filepath()
 
+        # Load the .h5 file
         with NSRDBX(dataset_path, hsds=self.config.use_hsds) as res:
             if site_gid is None:
                 site_gid = res.lat_lon_gid((latitude, longitude))
-            # NOTE: if site_gid is input, then should use the lat/lon
-            # from the meta data instead for csv filenaming?
+
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index
             resource_units = res.resource.units
 
             resource_data = {c: res[c, :, int(site_gid)] for c in res.resource_datasets}
-        res.close()  # this should be OK, but test it out
+        res.close()
 
         # Afterwards, we should slice down the resource data based on the interval
         site_data = {
@@ -129,19 +126,25 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
             "site_lon": float(site_meta["longitude"]),
             "elevation": float(site_meta["elevation"]),
             "filepath": str(dataset_path),
-            # Below is extra
+            # Below is extra data (not available in API calls)
             "resource_year": self.config.resource_year,
             "country": site_meta.get("country"),
             "state": site_meta.get("state"),
             "county": site_meta.get("county"),
         }
 
-        # Rename units as necessary
+        # Rename resource data keys in the data and units dictionaries
+        # to align with the naming in the solar resource baseclass
         data_units = {
             self.columns_translation.get(k, k): self.units_translation.get(v, v)
             for k, v in resource_units.items()
             if k in resource_data and isinstance(v, str)
         }
+        for old_key, new_key in self.columns_translation.items():
+            if old_key in resource_data:
+                resource_data[new_key] = resource_data.pop(old_key)
+                resource_units[new_key] = resource_units.pop(old_key)
+
         if "cloud_type" in data_units:
             cloud_type_mapper = data_units.pop("cloud_type")
             fill_flag_mapper = {
@@ -153,39 +156,37 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
         else:
             fill_flag_mapper = resource_units.get("cloud_type", {})
 
+        # update the time interval based on the data for csv filenaming
         data_dt = res.time_index[1] - res.time_index[0]
-        self.dt_min = int(data_dt.seconds / 60)  # TODO: use this for filenamign
-
-        # NOTE: should rename columns before making `data_units`
-        data_df = pd.DataFrame(resource_data, index=time_index)
-        data_df = data_df.rename(columns=self.columns_translation)
-        data_df.index.name = "time"
+        self.dt_min = int(data_dt.seconds / 60)
 
         if self.config.save_to_csv:
+            data_df = pd.DataFrame(resource_data, index=time_index)
+            # data_df = data_df.rename(columns=self.columns_translation)
+            data_df.index.name = "time"
+
+            # NOTE: if site_gid is input, then should use the lat/lon
+            # from the meta data instead for csv filenaming?
+
             # save before units-correction (idk why I'm doing it this way)
             csv_filename = self.create_csv_filename(site_gid, latitude, longitude)
             # get directory to save to
             self.save_to_csv(data_df, site_data, data_units, fill_flag_mapper, csv_filename)
 
-        # local_tz = timezone(timedelta(hours=float(site_meta["timezone"])))
-        # time_index.tz_convert(local_tz)
         time_cols = ["year", "month", "day", "hour", "minute"]
         time_dict = {k: getattr(time_index, k).values for k in time_cols}
-        data_dict = {
-            c: np.array(data_df[c].astype(float).values) for c in data_df.columns.to_list()
-        }
+
+        # could clean-up the below code to not make a new variable
+        data_dict = {k: np.array(v) for k, v in resource_data.items()}
 
         data_dict |= time_dict
 
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        # resource_data = data_dict | site_data | {"fill_flag": fill_flag_mapper}
         meta_data = site_data | {"fill_flag": fill_flag_mapper}
 
         # NOTE: should we include data_units in the resource data?
         return data_dict, meta_data
-
-        # # NOTE: this data is in UTC - aligns with API when using UTC
 
     def save_to_csv(self, data_df, site_data, data_units, fill_flag_mapper, csv_filename):
         fpath = self.config.csv_output_dir / csv_filename
@@ -202,8 +203,8 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
         data_df.to_csv(fpath, encoding="utf-8", mode="a")
 
     def load_data_from_csv(self, fpath):
-        # probably in resource-specific baseclass
-        # called from overall resource baseclass
+        # NOTE: if more solar resource datasets are added,
+        # this method could likely be moved into a baseclass
 
         data = pd.read_csv(fpath, header=2)
         header = pd.read_csv(fpath, nrows=2, header=None)
@@ -226,6 +227,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
             and k.replace(" Flag", "") not in fill_flag_mapper
         }
 
+        # All the header data is loaded as strings, get the keys numeric meta data
         numeric_site_data = [
             k for k, v in site_data.items() if bool(re.fullmatch(r"[+-]?\d+(\.\d+)?", str(v)))
         ]
@@ -235,6 +237,7 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
             if bool(re.fullmatch(r"[+-]?\d+", str(v))) or bool(re.fullmatch(r"[+-]?\d+", v))
         ]
 
+        # Convert the meta-data with numeric values to their corresponding numeric type
         site_data |= {k: float(v) for k, v in site_data.items() if k in numeric_site_data}
         site_data |= {k: int(v) for k, v in site_data.items() if k in int_numeric_site_data}
 
@@ -246,9 +249,10 @@ class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
 
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        # resource_data = data_dict | site_data | {"fill_flag": fill_flag_mapper}
         meta_data = site_data | {"fill_flag": fill_flag_mapper}
+
+        # Update the meta-data to include the filepath of this csv file
         meta_data["dataset_filepath"] = meta_data.pop("filepath")
         meta_data["filepath"] = str(fpath)
-        # NOTE: should we include data_units in the resource data?
-        return data_dict, meta_data
+
+        return data_dict, meta_data | data_units
