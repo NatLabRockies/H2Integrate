@@ -291,7 +291,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             desc="Total unit of steel formed from EAF fed with dri + scrap per unit of dri",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         """
         Computes the steel production from an electric arc furnace fed with DRI and scrap based on
         the feedstock availability and the energy and mass balance of the system.

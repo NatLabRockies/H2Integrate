@@ -195,7 +195,7 @@ class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
 
         return recalculated_power_curve
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # set tidal resource model choice
         self.system_model.MHKTidal.tidal_resource_model_choice = (
             1  # Time-series data=1 JPD=0 (Joint-probability distribution)

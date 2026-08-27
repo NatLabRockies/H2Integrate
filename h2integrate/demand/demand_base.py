@@ -126,7 +126,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def calculate_outputs(self, commodity_in, commodity_demand, outputs, discrete_inputs):
+    def calculate_outputs(self, commodity_in, commodity_demand, inputs, outputs):
         # def calculate_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Compute unmet demand, unused commodity, and converter output.
 
@@ -154,7 +154,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
             ``curtailment_percent``, which are scalar summary outputs.
         """
 
-        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # Arrays relevant to the current simulation step
         commodity_in_sim = commodity_in[simulation_range.start : simulation_range.stop]

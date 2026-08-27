@@ -1,4 +1,5 @@
 import sys
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -60,8 +61,12 @@ if run_dict.get("run_sequential", False):
     # Create an H2I model for standard year-long simulation
     h2i_seq = H2IntegrateModel(config_seq)
 
+    t0 = time.time()
     # Run the model
     h2i_seq.run()
+    t1 = time.time()
+
+    print(f"Sequential took {t1 - t0:.3f} seconds")
 
     # Post-process the results
     h2i_seq.post_process(print_results=False)
@@ -88,8 +93,12 @@ if run_dict.get("run_concurrent", False):
     h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce()
     # h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
 
+    t0 = time.time()
     # Run the model
     h2i_con.run()
+    t1 = time.time()
+
+    print(f"Concurrent took {t1 - t0:.3f} seconds")
 
     # Post-process the results
     h2i_con.post_process(print_results=False)

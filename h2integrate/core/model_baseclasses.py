@@ -68,8 +68,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             )
             raise NotImplementedError(msg)
 
-        # TODO add comment
-        self.add_discrete_input("timestep_index", val=0, desc="Time step index")
+        # self.add_discrete_input("timestep_index", val=0, desc="Time step index")
+        self.add_input("timestep_index", val=0, desc="Time step index")
 
         # timeseries profiles
         self.add_output(
@@ -126,7 +126,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
     def _get_compute_time_range(self, time_index):
         # TODO add comment
-        return range(time_index, time_index + self.n_steps_per_compute)
+        ti = int(time_index[0])
+        return range(ti, ti + self.n_steps_per_compute)
 
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.

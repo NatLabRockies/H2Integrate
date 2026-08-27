@@ -340,7 +340,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         pass
 
     def _compute_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # assign outputs
         outputs["electricity_out"][simulation_range.start : simulation_range.stop] = (
@@ -377,7 +377,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         if not self._PYSAM_model_has_been_executed:
             assert (
-                discrete_inputs["timestep_index"] == 0
+                inputs["timestep_index"] == 0
             ), "PYSAM model should only be executed at the start of the simulation"
 
             # calculate the tilt angle based on site latitude (use 0 if site

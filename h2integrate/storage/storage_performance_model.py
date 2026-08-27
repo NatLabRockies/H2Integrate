@@ -144,7 +144,6 @@ class StoragePerformanceModel(StoragePerformanceBase):
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
-        self._get_compute_time_range(discrete_inputs["timestep_index"])
 
         self.current_soc = self.config.init_soc_fraction
 

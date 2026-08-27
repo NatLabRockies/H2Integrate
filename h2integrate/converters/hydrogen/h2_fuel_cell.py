@@ -101,7 +101,7 @@ class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
             desc="Electricity command value for natural gas plant",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         """
         Compute electricity output from the fuel cell based on hydrogen input
             and fuel cell HHV efficiency.

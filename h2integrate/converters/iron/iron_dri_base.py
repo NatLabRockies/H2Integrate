@@ -194,7 +194,7 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
                 # but not big deal since percent is not used in feedstocks
         return coeff_df
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # get the feedstocks from
         feedstocks = self.coeff_df[self.coeff_df["Type"] == "feed/iron"].copy()
 

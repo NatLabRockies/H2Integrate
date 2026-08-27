@@ -187,7 +187,7 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
             desc="Unused energy unused by OAE system",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         OAE_inputs = setup_ocean_alkalinity_enhancement_inputs(self.config)
 
         # Call the OAE calculation method from the echem_oae module

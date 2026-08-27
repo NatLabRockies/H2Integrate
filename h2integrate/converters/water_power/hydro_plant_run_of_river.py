@@ -57,7 +57,7 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
 
         self.add_input("discharge", val=0.0, shape=self.n_timesteps, units="m**3/s")
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # Calculate the power output of the run-of-river hydropower plant
         power_output = (
             self.config.water_density

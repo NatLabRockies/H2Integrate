@@ -81,7 +81,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
         # Set up electricity production output
         self.add_output("electricity_out", shape=self.n_timesteps, units="kW*h/h")
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         n_timesteps = len(inputs["ng_in"])
         # Calculate max methanol production from each input
         syn_in = inputs["meoh_syn_cat_in"]

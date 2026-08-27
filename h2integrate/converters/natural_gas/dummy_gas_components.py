@@ -81,7 +81,7 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
         # Add all wellhead_gas_mixture stream outputs
         add_multivariable_output(self, "wellhead_gas_mixture", self.n_timesteps)
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # Set random seed for reproducibility if specified
         rng = np.random.default_rng(self.config.random_seed)
 
@@ -169,7 +169,7 @@ class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
         self.add_output("avg_temperature", val=0.0, units="K", desc="Average gas temperature")
         self.add_output("avg_pressure", val=0.0, units="bar", desc="Average gas pressure")
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # Calculate derived quantities from the stream inputs
         gas_flow = inputs["wellhead_gas_mixture:mass_flow_in"]
         h2_fraction = inputs["wellhead_gas_mixture:hydrogen_mass_fraction_in"]

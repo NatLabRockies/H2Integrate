@@ -126,7 +126,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             desc="Unmet electricity demand for natural gas plant",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         """
         Compute electricity output from natural gas input.
 

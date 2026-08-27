@@ -32,7 +32,7 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         steel_production_mtpy = self.config.plant_capacity_mtpy * self.config.capacity_factor
         outputs["steel_out"] = steel_production_mtpy / len(inputs["electricity_in"])
         outputs["rated_steel_production"] = self.config.plant_capacity_mtpy / 8760

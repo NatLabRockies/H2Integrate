@@ -272,7 +272,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             om.vectors.default_vector.DefaultVector: calculated OpenMDAO outputs.
         """
 
-        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         if "pyomo_dispatch_solver" in discrete_inputs:
             dispatch = discrete_inputs["pyomo_dispatch_solver"]

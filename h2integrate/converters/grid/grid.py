@@ -126,13 +126,11 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             desc="Annual electricity sold to the grid",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
-
+    def compute(self, inputs, outputs):
         # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
 
-        simulation_range = self._get_compute_time_range(discrete_inputs["timestep_index"])
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # Selling: electricity flows into grid, limited by interconnection size
         electricity_sold = np.clip(

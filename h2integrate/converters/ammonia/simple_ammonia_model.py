@@ -49,7 +49,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
         )
         self.add_input("hydrogen_in", val=0.0, shape=self.n_timesteps, units="kg/h")
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         ammonia_production_kgpy = (
             self.config.plant_capacity_kgpy * self.config.plant_capacity_factor
         )

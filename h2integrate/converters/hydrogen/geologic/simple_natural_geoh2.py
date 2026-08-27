@@ -173,7 +173,7 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
         self.add_output("wellhead_gas_out_natural", units="kg/h", shape=(self.n_timesteps,))
         self.add_output("max_wellhead_gas", units="kg/h")
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         n_timesteps = self.n_timesteps
 
         # Coerce scalar inputs to Python scalars (handles 0-d and 1-d arrays)

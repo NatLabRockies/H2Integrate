@@ -226,7 +226,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
             desc="Total unit of steel formed from EAF fed with scrap only per unit of scrap",
         )
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         """calculates energy and mass balance for EAF fed with scrap only case on a per unit basis,
         then calculates feedstock usage based on steel demand and available feedstocks,
         and finally calculates outputs.

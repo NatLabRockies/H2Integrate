@@ -177,7 +177,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
         return coeff_df
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # calculate crude ore required per amount of ore processed
         ref_Orefeedstock = self.coeff_df[self.coeff_df["Name"] == "Crude ore processed"][
             "Value"
