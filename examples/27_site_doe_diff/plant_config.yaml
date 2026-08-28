@@ -9,7 +9,6 @@ sites:
         resource_model: WTKNLRDeveloperAPIWindResource
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: false  # set to False so the resource data is updated when the site location changes in the design sweep
   solar_site:  # name of the site for the solar technology
     latitude: 34.22
     longitude: -102.75
@@ -18,7 +17,6 @@ sites:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: false  # set to False so the resource data is updated when the site location changes in the design sweep
 resource_to_tech_connections:
   # connect the wind resource to the wind technology
   - [wind_site.wind_resource, wind, wind_resource_data]
