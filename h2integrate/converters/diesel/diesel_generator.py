@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -24,8 +23,8 @@ class DieselGeneratorPerformanceConfig(BaseConfig):
             modern diesel generators are 65-85 gal/MWh (roughly 30-40% efficient at HHV).
     """
 
-    system_capacity_kw: float = field(validator=gte_zero)
-    heat_rate_gal_per_mwh: float = field(validator=gt_zero)
+    system_capacity_kw: float = field(validator=validators.ge(0))
+    heat_rate_gal_per_mwh: float = field(validator=validators.gt(0))
 
 
 class DieselGeneratorPerformanceModel(PerformanceModelBaseClass):
@@ -191,11 +190,11 @@ class DieselGeneratorCostModelConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_kw: float | int = field(validator=gt_zero)
-    capex_per_kw: float | int = field(validator=gte_zero)
-    capex_battery_total: float | int = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float | int = field(validator=gte_zero)
-    variable_opex_per_kwh: float | int = field(validator=gte_zero)
+    system_capacity_kw: float | int = field(validator=validators.ge(0))
+    capex_per_kw: float | int = field(validator=validators.ge(0))
+    capex_battery_total: float | int = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
+    variable_opex_per_kwh: float | int = field(validator=validators.ge(0))
 
 
 class DieselGeneratorCostModel(CostModelBaseClass):
