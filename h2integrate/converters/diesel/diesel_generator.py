@@ -202,8 +202,8 @@ class DieselGeneratorCostModel(CostModelBaseClass):
     Cost model for diesel generators.
 
     Calculates:
-    - CapEx: capex_per_kw * generator_capacity_kW
-    - OpEx: fixed_opex_per_kw_per_year * generator_capacity_kW
+        - CapEx: capex_per_kw * generator_capacity_kW
+        - OpEx: fixed_opex_per_kw_per_year * generator_capacity_kW
             + variable_opex_per_kwh * delivered_electricity_kWh
 
     Fuel costs are handled externally through the diesel feedstock component.
