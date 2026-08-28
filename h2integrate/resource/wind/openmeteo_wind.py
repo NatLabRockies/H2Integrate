@@ -7,8 +7,8 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
+from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.wind.wind_resource_base import WindResourceBase
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 
 
@@ -45,13 +45,10 @@ class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "openmeteo_archive"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
     verify_download: bool = field(default=False)
 
 
-class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
+class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalWindAPIConfig
         resource_specs = self.helper_setup_method()
@@ -242,8 +239,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in WindResourceBaseAPIModel.
-        2) is converted to standardized units described in WindResourceBaseAPIModel.
+        1) follows naming convention described in WindResourceBase.
+        2) is converted to standardized units described in WindResourceBase.
 
         This method does the following steps:
 
@@ -309,7 +306,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBaseAPIModel):
         # update wind resource data with site data
         data.update(site_data)
 
-        return data
+        return data | {"units": data_units}
 
     def format_timeseries_data(self, data):
         """Convert data to a dictionary with keys that follow the standardized naming convention and
