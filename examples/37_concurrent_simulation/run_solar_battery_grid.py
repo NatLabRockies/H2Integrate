@@ -116,7 +116,9 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
 
     def percent_diff(v1, v2):
         # Calculate the percent difference between two numbers or arrays
-        return np.nan_to_num((v2 - v1) / (0.5 * (v1 + v2)))
+        pd = np.nan_to_num((v2 - v1) / (0.5 * (v1 + v2)))
+        pd = np.where(np.max(np.abs(np.stack([v1, v2])), axis=0) <= 1e-8, 0, pd)
+        return pd
 
     def percent_diff_dicts(d1, d2):
         # Construct a dict of percent differences from two dicts with the same entries
@@ -128,7 +130,7 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
             assert k1 in d2.keys()
             v2 = d2[k1]
 
-            if isinstance(v1["val"], dict):
+            if isinstance(v1["val"], dict | bool):
                 # If the H2I input or output is more complicated than an array, skip it
                 continue
 
@@ -138,15 +140,17 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
 
         return d_out
 
-    def find_nonzero_percent_diffs(pd_dict):
+    def find_nonzero_percent_diffs(pd_dict, ref_dict):
         # Return only the dict items that are non-zero
-        return {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
+        abs_pd = {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
+        rel_pd = {k: v for k, v in abs_pd.items() if np.linalg.norm(ref_dict[k]["val"]) > 1e-8}
+        return abs_pd, rel_pd
 
     inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
     outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
 
-    find_nonzero_percent_diffs(inputs_pd_dict)
-    find_nonzero_percent_diffs(outputs_pd_dict)
+    in_abs, in_rel = find_nonzero_percent_diffs(inputs_pd_dict, dict(inputs_seq))
+    out_abs, out_rel = find_nonzero_percent_diffs(outputs_pd_dict, dict(outputs_seq))
 
     def plot_diff(key, io="outputs"):
         if io == "outputs":
@@ -171,6 +175,10 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
 
         ax[0].set_title(key)
 
+    plot_diff("plant.battery.StoragePerformanceModel.electricity_out")
+
     # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
     plot_diff("plant.grid_buy.GridPerformanceModel.electricity_out")
     # plot_diff('plant.battery.StoragePerformanceModel.SOC')
+
+    plot_diff("plant.battery.DemandOpenLoopStorageController.electricity_command_value")

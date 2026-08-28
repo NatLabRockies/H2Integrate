@@ -229,6 +229,10 @@ class CostModelBaseClass(om.ExplicitComponent):
             desc="Marginal cost of production for dispatch decisions",
         )
 
+        self.add_discrete_input(
+            "skip_compute", val=False, desc="Flag for skipping the calculations in compute()"
+        )
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Computation for the OM component.

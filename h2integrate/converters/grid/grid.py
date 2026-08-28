@@ -325,37 +325,38 @@ class GridCostModel(CostModelBaseClass):
             )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        interconnection_size = inputs["interconnection_size"]
+        if not discrete_inputs["skip_compute"]:
+            interconnection_size = inputs["interconnection_size"]
 
-        # Capital costs based on interconnection size
-        capex_per_kw = self.config.interconnection_capex_per_kw
-        fixed_cost = self.config.fixed_interconnection_cost
-        outputs["CapEx"] = (interconnection_size * capex_per_kw) + fixed_cost
+            # Capital costs based on interconnection size
+            capex_per_kw = self.config.interconnection_capex_per_kw
+            fixed_cost = self.config.fixed_interconnection_cost
+            outputs["CapEx"] = (interconnection_size * capex_per_kw) + fixed_cost
 
-        # Fixed operating costs based on interconnection size
-        opex_per_kw = self.config.interconnection_opex_per_kw
-        outputs["OpEx"] = interconnection_size * opex_per_kw
+            # Fixed operating costs based on interconnection size
+            opex_per_kw = self.config.interconnection_opex_per_kw
+            outputs["OpEx"] = interconnection_size * opex_per_kw
 
-        # Variable operating costs (positive cost for buying, negative for selling)
-        varopex = np.zeros(self.plant_life)
+            # Variable operating costs (positive cost for buying, negative for selling)
+            varopex = np.zeros(self.plant_life)
 
-        # Add buying costs if buy price is configured
-        if self.config.electricity_buy_price is not None:
-            buy_price = inputs["electricity_buy_price"]
-            if self._buy_price_mode == "per_year":
-                # annual_electricity_out is already in kW*h/yr (shape=plant_life)
-                varopex += inputs["annual_electricity_out"] * buy_price
-            else:
-                # Scalar or per-timestep: same cost each year
-                varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+            # Add buying costs if buy price is configured
+            if self.config.electricity_buy_price is not None:
+                buy_price = inputs["electricity_buy_price"]
+                if self._buy_price_mode == "per_year":
+                    # annual_electricity_out is already in kW*h/yr (shape=plant_life)
+                    varopex += inputs["annual_electricity_out"] * buy_price
+                else:
+                    # Scalar or per-timestep: same cost each year
+                    varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
 
-        # Add selling revenue if sell price is configured
-        if self.config.electricity_sell_price is not None:
-            sell_price = inputs["electricity_sell_price"]
-            if self._sell_price_mode == "per_year":
-                # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
-                varopex -= inputs["annual_electricity_sold"] * sell_price
-            else:
-                varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+            # Add selling revenue if sell price is configured
+            if self.config.electricity_sell_price is not None:
+                sell_price = inputs["electricity_sell_price"]
+                if self._sell_price_mode == "per_year":
+                    # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
+                    varopex -= inputs["annual_electricity_sold"] * sell_price
+                else:
+                    varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
 
-        outputs["VarOpEx"] = varopex
+            outputs["VarOpEx"] = varopex

@@ -101,73 +101,78 @@ class ProFastLCO(ProFastBase):
             None
         """
 
-        io_meta_data = self.get_io_metadata()
-        self.price_units = io_meta_data[self.LCO_str]["units"]
-        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        if not discrete_inputs["skip_compute"]:
+            io_meta_data = self.get_io_metadata()
+            self.price_units = io_meta_data[self.LCO_str]["units"]
+            self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
 
-        pf = self.populate_profast(inputs)
+            pf = self.populate_profast(inputs)
 
-        if "system_level_control" in self.options["plant_config"] and np.all(
-            inputs["capacity_factor"] == 0.0
-        ):
-            outputs[self.LCO_str] = 1e12
-            msg = (
-                f"Commodity stream for finance group has a zero capacity factor. "
-                "If you recieve this warning multiple times, there may be a problem "
-                "with your setup. ProFAST is not being run on this iteration and the "
-                f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+            if "system_level_control" in self.options["plant_config"] and np.all(
+                inputs["capacity_factor"] == 0.0
+            ):
+                outputs[self.LCO_str] = 1e12
+                msg = (
+                    f"Commodity stream for finance group has a zero capacity factor. "
+                    "If you recieve this warning multiple times, there may be a problem "
+                    "with your setup. ProFAST is not being run on this iteration and the "
+                    f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+                )
+                warnings.warn(msg, UserWarning)
+                return
+            # simulate ProFAST
+            sol, summary, price_breakdown = run_profast(pf)
+
+            # populate outputs
+            # Output names based on naming convention for finance subgroups
+            outputs[self.LCO_str] = sol["lco"]
+            outputs[f"price_{self.output_txt}"] = sol["price"]
+            for output_var in self.outputs_to_units.keys():
+                val = sol[output_var.replace("_", " ")]
+                if isinstance(val, np.ndarray | list | tuple):  # only for IRR
+                    val = val[-1]
+                outputs[f"{output_var}_{self.output_txt}"] = val
+
+            # make dictionary of ProFAST config
+            pf_config_dict = convert_pf_to_dict(pf)
+
+            # make LCO cost breakdown
+            lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+            discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
+
+            # Check whether to export profast object to .yaml file
+            save_results = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
+                "save_profast_results", False
             )
-            warnings.warn(msg, UserWarning)
-            return
-        # simulate ProFAST
-        sol, summary, price_breakdown = run_profast(pf)
-
-        # populate outputs
-        # Output names based on naming convention for finance subgroups
-        outputs[self.LCO_str] = sol["lco"]
-        outputs[f"price_{self.output_txt}"] = sol["price"]
-        for output_var in self.outputs_to_units.keys():
-            val = sol[output_var.replace("_", " ")]
-            if isinstance(val, np.ndarray | list | tuple):  # only for IRR
-                val = val[-1]
-            outputs[f"{output_var}_{self.output_txt}"] = val
-
-        # make dictionary of ProFAST config
-        pf_config_dict = convert_pf_to_dict(pf)
-
-        # make LCO cost breakdown
-        lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
-        discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
-
-        # Check whether to export profast object to .yaml file
-        save_results = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_results", False
-        )
-        save_config = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_config", False
-        )
-
-        if save_results or save_config:
-            output_dir = self.options["driver_config"]["general"]["folder_output"]
-            fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastLCO"
+            save_config = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
+                "save_profast_config", False
             )
 
-            fbasename = f"{fdesc}_{self.output_txt}"
+            if save_results or save_config:
+                output_dir = self.options["driver_config"]["general"]["folder_output"]
+                fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
+                    "profast_output_description", "ProFastLCO"
+                )
 
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
+                fbasename = f"{fdesc}_{self.output_txt}"
 
-            pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
+                output_dir = Path(output_dir)
+                output_dir.mkdir(parents=True, exist_ok=True)
 
-            if save_config:
-                config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
-                write_yaml(pf_config_dict, config_fpath)
+                pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
 
-            if save_results:
-                price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
-                pf_breakdown_fpath = Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
-                lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
-                price_breakdown_formatted.to_csv(pf_breakdown_fpath)
-                lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
-                write_yaml(lco_breakdown, lco_breakdown_fpath)
+                if save_config:
+                    config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
+                    write_yaml(pf_config_dict, config_fpath)
+
+                if save_results:
+                    price_breakdown_formatted = format_profast_price_breakdown_per_year(
+                        price_breakdown
+                    )
+                    pf_breakdown_fpath = (
+                        Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
+                    )
+                    lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
+                    price_breakdown_formatted.to_csv(pf_breakdown_fpath)
+                    lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
+                    write_yaml(lco_breakdown, lco_breakdown_fpath)
