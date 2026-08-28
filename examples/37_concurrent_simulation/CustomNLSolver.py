@@ -7,6 +7,10 @@ from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
 class CustomNonLinearRunOnce(NonlinearRunOnce):
     """A simple custom nonlinear solver skeleton."""
 
+    def __init__(self, plant_config):
+        super().__init__()
+        self.plant_config = plant_config
+
     def solve(self):
         # Should only be used when system is the plant group
         system = self._system()
@@ -22,8 +26,10 @@ class CustomNonLinearRunOnce(NonlinearRunOnce):
         ]
 
         # TODO get N_sim and N_step from H2I config rather than a subsystem model
-        n_steps_per_compute = system.solar.PYSAMSolarPlantPerformanceModel.n_steps_per_compute
-        n_timesteps = system.solar.PYSAMSolarPlantPerformanceModel.n_timesteps
+        n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
+        n_steps_per_compute = self.plant_config["plant"]["simulation"]["n_steps_per_compute"]
+        # n_steps_per_compute = system.solar.PYSAMSolarPlantPerformanceModel.n_steps_per_compute
+        # n_timesteps = system.solar.PYSAMSolarPlantPerformanceModel.n_timesteps
 
         # Make time stepping loop
         sim_starts = np.arange(0, n_timesteps, n_steps_per_compute)

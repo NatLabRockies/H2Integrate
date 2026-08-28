@@ -214,4 +214,4 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             # soc_array[t] = deepcopy(soc)
             self._soc_timeseries[t] = deepcopy(soc)
 
-        outputs[f"{commodity}_command_value"] = set_point_array
+        outputs[f"{commodity}_command_value"][simulation_range] = set_point_array[simulation_range]

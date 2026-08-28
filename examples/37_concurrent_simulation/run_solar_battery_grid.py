@@ -90,7 +90,9 @@ if run_dict.get("run_concurrent", False):
     h2i_con = H2IntegrateModel(config_con)
 
     # Set plant group nonlinear solver to custom steppable solver
-    h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce()
+    h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce(
+        plant_config=h2i_con.plant_config
+    )
     # h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
 
     t0 = time.time()
