@@ -7,7 +7,7 @@ from rex import WindX
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, ResourceBaseH5Config
-from h2integrate.resource.wind.wind_resource_base import WindResourceBaseH5Model
+from h2integrate.resource.wind.wind_resource_base import WindResourceBase
 
 
 @define(kw_only=True)
@@ -19,7 +19,7 @@ class WTKHRRRMETDatasetH5Config(ResourceBaseH5Config):
     valid_intervals: list[int] = field(factory=lambda: [60])
 
 
-class WTKHRRRMETDatasetH5(WindResourceBaseH5Model, ResourceBaseH5Model):
+class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
     def setup(self):
         self.units_translation = {
             "C": "degC",

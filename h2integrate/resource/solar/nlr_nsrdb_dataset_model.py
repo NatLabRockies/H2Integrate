@@ -7,7 +7,7 @@ from rex import NSRDBX
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, ResourceBaseH5Config
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseH5Model
+from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
 
 @define(kw_only=True)
@@ -15,11 +15,10 @@ class NSRDBDatasetH5Config(ResourceBaseH5Config):
     resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2025)))
     dataset_desc: str = "nsrdb_current"
     resource_type: str = "solar"
-
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
 
 
-class NSRDBDatasetH5(SolarResourceBaseH5Model, ResourceBaseH5Model):
+class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
     def setup(self):
         self.units_translation = {
             "Celsius": "degC",
