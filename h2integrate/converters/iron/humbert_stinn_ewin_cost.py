@@ -268,18 +268,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         # Power rectifying contribution
         rectifier_capex = a3 * V**e3 * N**e4
 
-        # Modify capex to Humbert using ratios of Hubert:Stinn/Allanore capex (Table 3 of Humbert)
-        ewin_type = self.config.electrolysis_type
-        if ewin_type == "ahe":
-            capex_modifier = 632.31 / 1076.74
-        elif ewin_type == "mse":
-            capex_modifier = 583.9 / 10946.85
-        elif ewin_type == "moe":
-            capex_modifier = 764.52 / 4901.86  # 1163.81
-        processing_capex *= capex_modifier
-        electrolysis_capex *= capex_modifier
-        rectifier_capex *= capex_modifier
-
         # Capex outputs
         # Note: Capex is broken out into components of `processing_capex`, `electrolysis_capex`,
         # etc., which are not used by the financial model but can be used for cost breakdowns.

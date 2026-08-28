@@ -63,8 +63,6 @@ technologies:
       cost_parameters:
         transport_year: 2022
         cost_year: 2022
-        water_shipping_cost: 0.0233  # $/ton-mi
-        land_shipping_cost: 0.0522  # $/ton-mi
   ewin_grid_feedstock:  # electricity feedstock for iron electrowinning
     performance_model:
       model: FeedstockPerformanceModel

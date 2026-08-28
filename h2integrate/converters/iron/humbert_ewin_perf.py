@@ -120,9 +120,9 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             CaCl2_ratio = 23138 * 0.1 / 2e6  # Ratio of CaCl2 consumption to annual iron production
 
         elif self.config.electrolysis_type == "moe":
-            E_all_lo = 4.45  # 2.89
+            E_all_lo = 2.89
             E_all_hi = 4.45
-            E_electrolysis_lo = 4.45  # 2.89
+            E_electrolysis_lo = 2.89
             E_electrolysis_hi = 4.45
             # Humbert opex model
             NaOH_ratio = 0  # Ratio of NaOH consumption to annual iron production
