@@ -111,25 +111,25 @@ failing test cases.
   - [ ] Used `attrs` class to define the `Config` to load in attributes for the model
     - [ ] If applicable: inherit from `BaseConfig` or `CostModelBaseConfig`
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method
-    - [ ] If applicable: inherit from `CostModelBaseClass`
+    - [ ] If applicable: inherit from `PerformanceModelBaseClass` and `CostModelBaseClass`
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
   - [ ] Add the new model to the appropriate `__init__.py` file to ensure it is properly imported and used in `supported_models.py`
   - [ ] Added to `supported_models.py`
-  - [ ] If a new commodity_type is added, update `create_financial_model` in `h2integrate_model.py`
 - [ ] **Tests**: Unit tests have been added for the new model
   - [ ] [Pytest-style unit tests](https://realpython.com/pytest-python-testing/)
   - [ ] Unit tests are in a "test" folder within the folder a new model was added to
-  - [ ] If applicable add integration tests
+  - [ ] If applicable, add integration tests
 - [ ] **Example**: If applicable, a working example demonstrating the new model has been created
   - [ ] Input file comments
   - [ ] Run file comments
   - [ ] Example has been tested and runs successfully in `test_all_examples.py`
 - [ ] **Documentation**:
   - [ ] Write docstrings using the [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
-  - [ ] Model added to the main models list in `docs/user_guide/model_overview.md`
-    - [ ] Model documentation page added to the appropriate `docs/` section
-    - [ ] `<model_name>.md` is added to the `_toc.yml`
-  - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`
+  - [ ] Model documentation page added to the appropriate `docs/` section
+    - [ ] Path to model documentation page is added to the `_toc.yml`
+  - [ ] Update the class hierarchy diagram `docs/_static/class_hierarchy.html` by doing one of the below options:
+    - [ ] Navigate to `docs` folder and run `sh build_book.sh`
+    - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`. You may need to delete the `_autosummary` folder before doing this.
 
 
 

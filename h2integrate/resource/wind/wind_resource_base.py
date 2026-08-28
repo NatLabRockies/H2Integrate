@@ -1,22 +1,20 @@
+import warnings
+from typing import ClassVar
+
 from openmdao.utils import units
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel
 
-
-class WindResourceBaseAPIModel(ResourceBaseAPIModel):
-    def setup(self):
-        super().setup()
-
-        self.output_vars_to_units = {
-            "wind_direction": "deg",
-            "wind_speed": "m/s",
-            "temperature": "degC",
-            "pressure": "atm",
-            "precipitation_rate": "mm/h",
-            "relative_humidity": "percent",
-            "is_day": "unitless",
-            "specifichumidity": "percent",
-        }
+class WindResourceBase:
+    output_vars_to_units: ClassVar[dict[str, str]] = {
+        "wind_direction": "deg",
+        "wind_speed": "m/s",
+        "temperature": "degC",
+        "pressure": "atm",
+        "precipitation_rate": "mm/h",
+        "relative_humidity": "percent",
+        "is_day": "unitless",
+        "specifichumidity": "percent",
+    }
 
     def compare_units_and_correct(self, data, data_units):
         """Convert data to standard units defined in ``output_vars_to_units``.
@@ -57,7 +55,13 @@ class WindResourceBaseAPIModel(ResourceBaseAPIModel):
                     data_units[data_col] = desired_units
             else:
                 if len(output_var) < 1:
-                    raise Warning(f"{data_col} not found as common variable.")
+                    warnings.warn(
+                        f"{data_col} not found as common variable.", UserWarning, stacklevel=3
+                    )
                 else:
-                    raise Warning(f"{data_col} not found as a unique common variable.")
+                    warnings.warn(
+                        f"{data_col} not found as a unique common variable.",
+                        UserWarning,
+                        stacklevel=3,
+                    )
         return data, data_units

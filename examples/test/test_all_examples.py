@@ -1459,8 +1459,6 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
     # Run the model
     model.run()
 
-    model.post_process()
-
     # Test battery storage functionality
     # SOC should stay within configured bounds (10% to 90%)
     # Due to pysam simulation, bounds may not be fully respected,
@@ -1531,7 +1529,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
     model_config = load_yaml(example_folder / "pyomo_heuristic_dispatch.yaml")
     tech = load_yaml(example_folder / "tech_config.yaml")
     with subtests.test("Ensure no-tech name validates"):
-        tech["technologies"]["battery"]["model_inputs"]["control_parameters"] = None
+        tech["technologies"]["battery"]["model_inputs"].pop("control_parameters")
         model_config["technology_config"] = tech
         model = H2IntegrateModel(model_config)
 

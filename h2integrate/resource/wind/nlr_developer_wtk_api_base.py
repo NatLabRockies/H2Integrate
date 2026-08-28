@@ -1,12 +1,11 @@
 import warnings
 import urllib.parse
-from pathlib import Path
 
 import pandas as pd
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBaseAPIModel
+from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.wind.wind_resource_base import WindResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
@@ -21,12 +20,6 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2007 and 2014 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -42,12 +35,9 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "wtk_v2"
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
-class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
+class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
@@ -122,8 +112,8 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in WindResourceBaseAPIModel.
-        2) is converted to standardized units described in WindResourceBaseAPIModel.
+        1) follows naming convention described in WindResourceBase.
+        2) is converted to standardized units described in WindResourceBase.
 
         This method does the following steps:
 
@@ -171,7 +161,7 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBaseAPIModel):
         # include site data with data
         data.update(site_data)
 
-        return data
+        return data | {"units": data_units}
 
     def format_timeseries_data(self, data):
         """Convert data to a dictionary with keys that follow the standardized naming convention and
