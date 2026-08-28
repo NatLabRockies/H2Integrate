@@ -182,7 +182,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
 
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        meta_data = site_data | {"fill_flag": fill_flag_mapper}
+        meta_data = site_data | {"fill_flag": fill_flag_mapper} | {"units": data_units}
 
         # NOTE: should we include data_units in the resource data?
         return data_dict, meta_data
@@ -254,4 +254,4 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
         meta_data["dataset_filepath"] = meta_data.pop("filepath")
         meta_data["filepath"] = str(fpath)
 
-        return data_dict, meta_data | data_units
+        return data_dict, meta_data | {"units": data_units}

@@ -186,7 +186,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
 
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        meta_data = site_data | data_units
+        meta_data = site_data | {"units": data_units}
 
         return data_dict, meta_data
 
@@ -237,4 +237,4 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         site_data["dataset_filepath"] = site_data.pop("filepath")
         site_data["filepath"] = str(fpath)
 
-        return data_dict, site_data | data_units
+        return data_dict, site_data | {"units": data_units}
