@@ -9,8 +9,8 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
-class MartinIronMinePerformanceConfig(BaseConfig):
-    """Configuration class for MartinIronMinePerformanceComponent.
+class SimpleIronMinePerformanceConfig(BaseConfig):
+    """Configuration class for SimpleIronMinePerformanceComponent.
 
     Attributes:
         taconite_pellet_type (str): type of taconite pellets, options are "std" or "drg".
@@ -31,7 +31,7 @@ class MartinIronMinePerformanceConfig(BaseConfig):
     )
 
 
-class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
+class SimpleIronMinePerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,
         3600,
@@ -46,7 +46,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        self.config = MartinIronMinePerformanceConfig.from_dict(
+        self.config = SimpleIronMinePerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -102,7 +102,7 @@ class MartinIronMinePerformanceComponent(PerformanceModelBaseClass):
             desc="Electricity consumed",
         )
 
-        coeff_fpath = ROOT_DIR / "converters" / "iron" / "martin_ore" / "perf_coeffs.csv"
+        coeff_fpath = ROOT_DIR / "converters" / "iron" / "simple_ore" / "perf_coeffs.csv"
         # martin ore performance model
         coeff_df = pd.read_csv(coeff_fpath, index_col=0)
         self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)

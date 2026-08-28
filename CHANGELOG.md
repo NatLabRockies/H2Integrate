@@ -13,7 +13,10 @@
 - Fixed error message that is thrown in `check_inputs` and updated testing of `check_inputs` to actually test the error messages [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
 - Fixed several tests where the assert statements paired with `pytest.raises` were indented inside the context manager block and never ran, and corrected the now-active expected error strings. [PR #846](https://github.com/NatLabRockies/H2Integrate/pull/846)
 - Replaces all custom attrs validators in `h2integrate.core.validators` with built in attrs validators. [PR 835](https://github.com/NatLabRockies/H2Integrate/pull/835)
+- Add `NRRIIronMinePerformanceModel` and `NRRIIronMineCostModel`. [PR 840](https://github.com/NatLabRockies/H2Integrate/pull/840)
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
+- Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 
 ## 0.9 [August 10, 2026]
 
