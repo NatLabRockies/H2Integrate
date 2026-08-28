@@ -15,12 +15,14 @@ from h2integrate.postprocess.mapping import (
 )
 
 
+# TODO: Pull ore/transport prices from separate runs, not static csvs
+
 # Create H2Integrate model
 # NOTE:
 # If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_28_out,
 # you may leave rerun_model = False to save on run time.
 # Otherwise, set rerun_model = True to produce the cases.csv / cases.sql results files
-rerun_model = False
+rerun_model = True
 if rerun_model:
     model = H2IntegrateModel("iron_map.yaml")
     model.run()

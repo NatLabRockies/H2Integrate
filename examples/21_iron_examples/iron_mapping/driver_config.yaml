@@ -7,7 +7,7 @@ driver:
     flag: true
     debug_print: false
     generator: csvgen
-    filename: ned_reduced_sitelist.csv
+    filename: iron_plant_sites.csv
     run_parallel: false
 design_variables:
   iron_transport:
@@ -27,5 +27,5 @@ recorder:
   file: cases.sql
   overwrite_recorder: true
   flag: true
-  includes: [site.latitude, site.longitude, finance_subgroup_sponge_iron.LCOS]
+  includes: [site.latitude, site.longitude, finance_subgroup_iron_ore.LCOI, iron_transport.iron_transport_cost, finance_subgroup_sponge_iron.LCOS]
   excludes: ['*']

@@ -84,10 +84,11 @@ technologies:
         shipment_site: None
         origin: ore_site
         destination: dri_site
+        land_circuity_ratio: 1.68  # ratio of land distance to geodesic distance
       cost_parameters:
         transport_year: 2022
         cost_year: 2022
-        water_shipping_cost: 0.0233  # $/ton-mi
+        water_shipping_cost: 0.0235  # $/ton-mi
         land_shipping_cost: 0.0522  # $/ton-mi
   natural_gas_feedstock:
     performance_model:

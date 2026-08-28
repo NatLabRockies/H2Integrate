@@ -24,6 +24,7 @@ class IronTransportPerformanceConfig(BaseConfig):
     )
     origin: str = field()
     destination: str = field()
+    land_circuity_ratio: float = field(default=1.68)  # ratio of land distance to geodesic distance
 
     #
     def __attrs_post_init__(self):
@@ -98,8 +99,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
             starting_location, ending_location, ellipsoid="WGS-84"
         ).km
 
-        # Transport distance is 1.5 times the geodesic distance to account for non-straight routes
-        land_transport_distance *= 1.5
+        # Apply circuity ratio to account for non-straight-line travel on land
+        land_transport_distance *= self.config.land_circuity_ratio
 
         return land_transport_distance
 
@@ -268,8 +269,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 class IronTransportCostConfig(BaseConfig):
     transport_year: int = field(converter=int, validator=(validators.ge(2022), validators.le(2065)))
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
-    land_shipping_cost: float = field()
-    water_shipping_cost: float = field()
+    land_shipping_cost: float = field(default=0.0522)  # $/ton-mi
+    water_shipping_cost: float = field(default=0.0235)  # $/ton-mi
     marginal_cost: float = field(default=0.0)
 
 
