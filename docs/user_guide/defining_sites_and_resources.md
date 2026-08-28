@@ -19,7 +19,6 @@ sites:
         resource_model: "wind_toolkit_v2_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: True # this is the default
 ```
 
 Further information on the available resource models can be found [here](https://h2integrate.readthedocs.io/en/latest/resource/resource_index.html)
@@ -76,7 +75,6 @@ sites:
         resource_model: "wind_toolkit_v2_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: True
 resource_to_tech_connections: [
   # formatted as [site_name.resource_name, tech_name, variable_name],
   ['wind_site.wind_resource', 'wind', 'wind_resource_data'],
@@ -103,12 +101,10 @@ sites:
         resource_model: "wind_toolkit_v2_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: True
       solar_resource: #resource model name for solar resource
         resource_model: "goes_aggregated_solar_v4_api"
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: True
 resource_to_tech_connections: [
   # formatted as [site_name.resource_name, tech_name, variable_name],
   ['site_A.wind_resource', 'wind', 'wind_resource_data'],
