@@ -8,36 +8,84 @@ Warning: this may take some time (up to a few minutes) depending on your PC's pr
 
 """
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR, H2IntegrateModel
+from pathlib import Path
+
+import pandas as pd
+
+from h2integrate import (
+    ROOT_DIR,
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
+from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
 )
 
 
-# TODO: Pull ore/transport prices from separate runs, not static csvs
+# TODO: Pull ore/transport prices from separate runs, not static csvs - ALMOST THERE
 
-# Create H2Integrate model
 # NOTE:
 # If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_28_out,
 # you may leave rerun_model = False to save on run time.
 # Otherwise, set rerun_model = True to produce the cases.csv / cases.sql results files
 rerun_model = True
-if rerun_model:
-    model = H2IntegrateModel("iron_map.yaml")
-    model.run()
-
-    model.post_process(summarize_sql=True)
 
 # Define filepaths
 ex_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
 ex_out_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping/ex_out"
 save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
-case_results_filepath = ex_out_dir / "cases.csv"
 ore_prices_filepath = ex_dir / "example_ore_prices.csv"
+transport_results_filepath = ex_out_dir / "cases_transport.csv"
+iron_plant_results_filepath = ex_out_dir / "cases_iron_plant.csv"
 shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
 shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
+
+# Set config inputs to create H2Integrate model
+tech_config = load_tech_yaml("tech_config.yaml")
+plant_config = load_plant_yaml("plant_config.yaml")
+driver_config = load_driver_yaml("driver_config.yaml")
+input_config = {
+    "name": "H2Integrate_config",
+    "system_summary": "hybrid plant containing ammonia plant and electrolyzer",
+    "driver_config": driver_config,
+    "plant_config": plant_config,
+    "technology_config": tech_config,
+}
+
+if rerun_model:
+    # Run mine sweep
+    mine_model = H2IntegrateModel(input_config)
+    case_file = Path("mine_inputs.csv")
+    cases = load_tech_config_cases(case_file)
+    casenames = ["Northshore", "Hibbing", "United"]
+    casenames = list(cases.keys())
+    ore_prices = pd.read_csv(ore_prices_filepath, index_col=0)
+    for casename in casenames:
+        mine_model = modify_tech_config(mine_model, cases[casename])
+        mine_model.run()
+        ore_cost = float(
+            mine_model.model.get_val("finance_subgroup_iron_ore.LCOI", units="USD/t")[0]
+        )
+        ore_prices[casename] = ore_cost
+    ore_prices.to_csv(ore_prices_filepath)
+
+    # Run transport sweep
+    input_config["driver_config"] = load_driver_yaml("driver_transport.yaml")
+    transport_model = H2IntegrateModel(input_config)
+    transport_model.run()
+    transport_model.post_process(summarize_sql=True)
+
+    # Run iron plant sweep
+    input_config["driver_config"] = load_driver_yaml("driver_iron_plant.yaml")
+    iron_plant_model = H2IntegrateModel(input_config)
+    iron_plant_model.run()
+    iron_plant_model.post_process(summarize_sql=True)
 
 # Add a layer for example ore cost prices from select mines
 fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
@@ -61,8 +109,9 @@ fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
 
 # Add a layer for example waterway shipping cost from select mines to select ports
 fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath=shipping_prices_filepath,
-    metric_to_plot="shipping_cost_per_kg",
+    case_results_fpath=transport_results_filepath,
+    metric_to_plot="iron_transport.iron_transport_cost (USD/t)",
+    metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={
         "figsize": (5, 4),
         "colormap": "Greys",
@@ -84,7 +133,7 @@ fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
 # Plot the LCOI results with geopandas and contextily
 # NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath=case_results_filepath,
+    case_results_fpath=iron_plant_results_filepath,
     metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
     metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={
