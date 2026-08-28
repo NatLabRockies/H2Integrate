@@ -2,14 +2,15 @@ import urllib.parse
 
 import pandas as pd
 
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBaseAPIModel
+from h2integrate.resource.resource_base import ResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
 )
 
 
-class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
+class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
     def setup(self):
         super().setup()
 
@@ -85,8 +86,8 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
     def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
-        1) follows naming convention described in SolarResourceBaseAPIModel.
-        2) is converted to standardized units described in SolarResourceBaseAPIModel.
+        1) follows naming convention described in SolarResourceBase.
+        2) is converted to standardized units described in SolarResourceBase.
 
         This method does the following steps:
 
@@ -138,7 +139,7 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
         data, data_units = self.compare_units_and_correct(data, data_units)
 
         data.update(site_data)
-        return data
+        return data | {"units": data_units}
 
     def format_timeseries_data(self, data):
         """Convert data to a dictionary with keys that follow the standardized naming convention and
@@ -167,10 +168,12 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBaseAPIModel):
             )
 
             if units == "c":
-                units = units.upper()
+                units = "degC"
             if units == "w/m2":
                 units = "W/m**2"
-            if units == "nan" or units == "%":
+            if units == "nan":
+                units = "unitless"
+            if units == "%":
                 units = "percent"
             if units == "Degree" or units == "Degrees":
                 units = "deg"
