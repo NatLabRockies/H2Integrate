@@ -222,13 +222,6 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             desc="Mass fraction of elemental C in DRI feedstock",
         )
 
-        self.add_input(
-            "SiO2_ratio",
-            val=self.config.SiO2_ratio,
-            units="unitless",
-            desc="Mass ratio of SiO2 to Alumina in DRI feedstock",
-        )
-
         feedstocks_to_units = {
             "oxygen": "m**3/h",
             "electricity": "kW",
@@ -352,15 +345,12 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
             max_feedstock_consumption = system_production * consumption_rate
             # available feedstocks, saturated at maximum system feedstock consumption
             feedstock_available = np.where(
-                inputs[f"{feedstock_type}_in"] >= max_feedstock_consumption,
+                inputs[f"{feedstock_type}_in"] > max_feedstock_consumption,
                 max_feedstock_consumption,
                 inputs[f"{feedstock_type}_in"],
             )
-            # how much output can be produced from each of the feedstocks, avoiding divide by zero
-            if consumption_rate > 0:
-                steel_from_feedstocks[ii] = feedstock_available / consumption_rate
-            else:
-                steel_from_feedstocks[ii] = np.full(len(feedstock_available), np.inf)
+            # how much output can be produced from each of the feedstocks
+            steel_from_feedstocks[ii] = feedstock_available / consumption_rate
             ii += 1
 
         # output is minimum between available feedstocks and output demand
@@ -470,7 +460,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
         # kg gangue/tDRI, '12. EAF Mass & Energy Balance!D161'
         mass_gangue_per_tDRI = mass_basis_DRI * inputs["dri_composition_gangue"]
         # kg/kg SiO2 to Alumina Ratio in DRI, '12. EAF Mass & Energy Balance!D162'
-        SiO2_ratio = inputs["SiO2_ratio"]
+        SiO2_ratio = self.config.SiO2_ratio
 
         # kg SiO2/tDRI, '12. EAF Mass & Energy Balance!D163'
         mass_SiO2_DRI_per_tDRI = (mass_gangue_per_tDRI * SiO2_ratio) / (SiO2_ratio + 1)
