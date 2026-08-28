@@ -170,9 +170,9 @@ def test_floris_integration(
 def test_hpc_integration_with_pysam(
     subtests, plant_simulation, wind_site_config, wind_plant_config, model, expected_aep
 ):
-    wind_site_config["wind_resource"]["resource_parameters"]["save_to_csv"] = False
-    wind_site_config["wind_resource"]["resource_parameters"]["load_from_csv"] = False
-    wind_site_config["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["save_to_csv"] = False
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["load_from_csv"] = False
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
     prob = om.Problem()
 
     plant_config = {
@@ -218,7 +218,7 @@ def test_hpc_integration_with_pysam(
             "lat/lon",
             9294.347553939786,
         ),
-        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "gid", 16278.222138130743),
+        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
     ],
     ids=[
         "HRRRMETToolkitWindAPI-852124",
@@ -229,9 +229,9 @@ def test_hpc_integration_with_pysam(
 def test_hpc_integration_with_floris(
     subtests, plant_simulation, wind_site_config, floris_config, model, expected_aep
 ):
-    wind_site_config["wind_resource"]["resource_parameters"]["save_to_csv"] = False
-    wind_site_config["wind_resource"]["resource_parameters"]["load_from_csv"] = False
-    wind_site_config["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["save_to_csv"] = False
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["load_from_csv"] = False
+    wind_site_config["resources"]["wind_resource"]["resource_parameters"]["csv_output_dir"] = None
 
     prob = om.Problem()
 
