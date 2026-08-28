@@ -94,7 +94,7 @@ fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
         "colorbar_bbox_to_anchor": (0.6, 0.27, 1.0, 1.0),
         "horz_alignment": ["right", "left", "left", "right", "left"],
         "vert_alignment": ["top"],
-        "label_offset_x": [0, 3, 3, -3, 3],
+        "label_offset_x": [3, 3, 3, -3, 3],
         "label_offset_y": [-6, -3, -3, -3, -3],
     },
     save_sql_file_to_csv=True,
