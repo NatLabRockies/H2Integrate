@@ -440,8 +440,10 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
         # soc = float(self.current_soc)
         if sim_start_index == 0:
-            # soc = self.config.init_soc_fraction
-            soc = self._soc_timeseries[0]
+            if hasattr(self.config, "init_soc_fraction"):
+                soc = self.config.init_soc_fraction
+            else:
+                soc = self._soc_timeseries[0]
         else:
             soc = self._soc_timeseries[sim_start_index - 1]
 

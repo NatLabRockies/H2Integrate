@@ -58,6 +58,9 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         super().setup()
 
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
+            "n_steps_per_compute", self.n_timesteps
+        )
 
         # Design constraints of storage system
         self.add_input(
@@ -117,6 +120,9 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         Returns:
             None
         """
+        timestep_index = int(inputs["timestep_index"][0])
+        simulation_range = range(timestep_index, timestep_index + self.n_steps_per_compute)
+
         commodity = self.config.commodity
 
         self.common_checks_needed_in_compute(inputs)
@@ -131,14 +137,20 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
 
         soc_max = self.config.max_soc_fraction
         soc_min = self.config.min_soc_fraction
-        init_soc_fraction = self.config.init_soc_fraction
 
         charge_eff = float(self.config.charge_efficiency)
         discharge_eff = float(self.config.discharge_efficiency)
 
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
-        soc = deepcopy(init_soc_fraction)
+        # soc = deepcopy(init_soc_fraction)
+        if simulation_range.start == 0:
+            if hasattr(self.config, "init_soc_fraction"):
+                soc = self.config.init_soc_fraction
+            else:
+                soc = self._soc_timeseries[0]
+        else:
+            soc = self._soc_timeseries[simulation_range.start - 1]
 
         demand_profile = inputs[f"{commodity}_set_point"]
 
