@@ -65,6 +65,7 @@ dependencies = [
   "turbine-models>=0.2.1",
   "wombat>=0.13.3",
   "charset_normalizer==3.4.9",
+  "statsmodels==0.14.6",
 ]
 keywords = [
     "python3",
