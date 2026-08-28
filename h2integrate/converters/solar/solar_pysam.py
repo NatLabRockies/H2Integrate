@@ -408,7 +408,8 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
             self._PYSAM_model_has_been_executed = True
 
-            self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+        # Re-set model execution flag at the end of the simulation
+        if int(inputs["timestep_index"][0]) + self.n_steps_per_compute >= self.n_timesteps:
+            self._PYSAM_model_has_been_executed = False
 
-        else:
-            self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+        self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)

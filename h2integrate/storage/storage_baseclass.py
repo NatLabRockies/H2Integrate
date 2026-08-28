@@ -436,7 +436,12 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         soc_max = self.config.max_soc_fraction
         soc_min = self.config.min_soc_fraction
 
-        commands = np.asarray(storage_dispatch_commands, dtype=float)[sim_start_index:sim_end_index]
+        if len(storage_dispatch_commands) > n:
+            commands = np.asarray(storage_dispatch_commands, dtype=float)[
+                sim_start_index:sim_end_index
+            ]
+        else:
+            commands = np.asarray(storage_dispatch_commands, dtype=float)
 
         # soc = float(self.current_soc)
         if sim_start_index == 0:
