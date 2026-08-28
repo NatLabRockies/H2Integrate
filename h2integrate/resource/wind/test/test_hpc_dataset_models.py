@@ -135,7 +135,7 @@ def test_floris_integration(
         assert pytest.approx(aep, rel=1e-6) == expected_aep
 
 
-@pytest.mark.integration
+@pytest.mark.hpc
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
@@ -203,7 +203,7 @@ def test_hpc_integration_with_pysam(
         assert pytest.approx(aep, rel=1e-6, abs=0.5) == expected_aep
 
 
-@pytest.mark.integration
+@pytest.mark.hpc
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
     "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
