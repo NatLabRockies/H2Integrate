@@ -253,7 +253,6 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 
             outputs["land_transport_distance_great_lakes"] = land_distance_for_min
             outputs["water_transport_distance_great_lakes"] = water_distance_for_min
-
         else:
             barge_dest = self.config.shipment_site
             barge_lat = barge_waypoint_coords.loc[barge_dest]["Lat"]

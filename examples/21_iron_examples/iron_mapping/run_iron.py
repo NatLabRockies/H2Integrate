@@ -37,33 +37,24 @@ ore_prices_filepath = ex_dir / "example_ore_prices.csv"
 shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
 shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
 
-# Plot the LCOI results with geopandas and contextily
-# NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
-fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
-    case_results_fpath=case_results_filepath,
-    metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/kg)",
-    map_preferences={
-        "figsize": (10, 8),
-        "colorbar_label": "Levelized Cost of\nIron [$/kg]",
-        "colorbar_limits": (0.6, 1.0),
-    },
-    save_sql_file_to_csv=True,
-)
-
 # Add a layer for example ore cost prices from select mines
 fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=ore_prices_filepath,
     metric_to_plot="ore_cost_per_kg",
     map_preferences={
+        "figsize": (5, 4),
         "colormap": "Greens",
         "marker": "o",
-        "colorbar_bbox_to_anchor": (0.025, 0.97, 1, 1),
+        "colorbar_bbox_to_anchor": (0.1, 0.97, 1, 1),
         "colorbar_label": "Levelized Cost of\nIron Ore Pellets\n[$/kg ore]",
         "colorbar_limits": (0.11, 0.14),
+        "colorbar_width": "35%",
+        "colorbar_num_ticks": 4,
+        "horz_alignment": ["left", "center", "right"],
+        "vert_alignment": ["bottom", "top", "bottom"],
+        "label_offset_x": [3, 0, -3],
+        "label_offset_y": [3, -6, 3],
     },
-    fig=fig,
-    ax=ax,
-    base_layer_gdf=lcoi_layer_gdf,
 )
 
 # Add a layer for example waterway shipping cost from select mines to select ports
@@ -71,16 +62,45 @@ fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=shipping_prices_filepath,
     metric_to_plot="shipping_cost_per_kg",
     map_preferences={
+        "figsize": (5, 4),
         "colormap": "Greys",
         "marker": "d",
         "markersize": 80,
-        "colorbar_bbox_to_anchor": (0.4, 0.97, 1, 1),
-        "colorbar_label": "Waterway Shipping Cost\n[$/kg ore]",
-        "colorbar_limits": (0.11, 0.14),
+        "colorbar_bbox_to_anchor": (0.6, 0.85, 1, 1),
+        "colorbar_label": "Waterway\nShipping Cost\n[$/kg ore]",
+        "colorbar_limits": (0.026, 0.03),
+        "colorbar_width": "35%",
+        "colorbar_num_ticks": 3,
+        "horz_alignment": ["right", "left"],
+        "label_offset_x": [-3, 3],
     },
     fig=fig,
     ax=ax,
-    base_layer_gdf=[lcoi_layer_gdf, ore_cost_layer_gdf],
+    base_layer_gdf=ore_cost_layer_gdf,
+)
+
+# Plot the LCOI results with geopandas and contextily
+# NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
+fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+    case_results_fpath=case_results_filepath,
+    metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
+    metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
+    map_preferences={
+        "figsize": (5, 4),
+        "colorbar_label": "Levelized Cost of\nIron [$/kg]",
+        "colorbar_limits": (0.3, 0.45),
+        "colorbar_width": "35%",
+        "colorbar_num_ticks": 4,
+        "colorbar_bbox_to_anchor": (0.6, 0.27, 1.0, 1.0),
+        "horz_alignment": ["right", "left", "left", "right", "left"],
+        "vert_alignment": ["top"],
+        "label_offset_x": [0, 3, 3, -3, 3],
+        "label_offset_y": [-6, -3, -3, -3, -3],
+    },
+    save_sql_file_to_csv=True,
+    fig=fig,
+    ax=ax,
+    base_layer_gdf=[ore_cost_layer_gdf, shipping_cost_layer_gdf],
 )
 
 # Define example water way shipping routes for plotting straight line transport
@@ -146,7 +166,15 @@ fig, ax, transport_layer2_gdf = plot_straight_line_shipping_routes(
 fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
     shipping_coords_fpath=shipping_coords_filepath,
     shipping_route=chicago_route,
-    map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
+    map_preferences={
+        "figure_title": "Example H2 DRI Iron Costs",
+        "figsize": (5, 4),
+        "basemap_upperpad": 0.5,
+        "basemap_lowerpad": 0.2,
+        "basemap_leftpad": 0.05,
+        "basemap_rightpad": 0.45,
+        "basemap_zoom": 4,
+    },
     fig=fig,
     ax=ax,
     base_layer_gdf=[
