@@ -68,7 +68,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             )
             raise NotImplementedError(msg)
 
-        # self.add_discrete_input("timestep_index", val=0, desc="Time step index")
         self.add_input("timestep_index", val=0, desc="Time step index")
 
         # timeseries profiles

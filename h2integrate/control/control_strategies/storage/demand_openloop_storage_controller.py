@@ -48,6 +48,7 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _soc_timeseries = np.zeros(8760)
 
     def setup(self):
         self.config = DemandOpenLoopStorageControllerConfig.from_dict(
@@ -57,10 +58,15 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         )
         super().setup()
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
-            "n_steps_per_compute", self.n_timesteps
-        )
+        # self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
+        self._soc_timeseries = np.zeros(self.n_timesteps)
+        if hasattr(self.config, "init_soc_fraction"):
+            soc_init = self.config.init_soc_fraction
+        else:
+            soc_init = (1 / 2) * (self.config.min_soc_fraction + self.config.max_soc_fraction)
+
+        self._soc_timeseries[0] = soc_init
 
         # Design constraints of storage system
         self.add_input(
@@ -120,10 +126,9 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         Returns:
             None
         """
-        timestep_index = int(inputs["timestep_index"][0])
-        simulation_range = range(timestep_index, timestep_index + self.n_steps_per_compute)
-
         commodity = self.config.commodity
+
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         self.common_checks_needed_in_compute(inputs)
 
@@ -155,11 +160,15 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         demand_profile = inputs[f"{commodity}_set_point"]
 
         # initialize outputs
-        soc_array = np.zeros(self.n_timesteps)
+        # soc_array = np.zeros(self.n_timesteps)
         set_point_array = np.zeros(self.n_timesteps)
+
         combined_output_array = np.zeros(self.n_timesteps)
         # Loop through each time step
-        for t, demand_t in enumerate(demand_profile):
+
+        # for t, demand_t in enumerate(demand_profile):
+        for t in simulation_range:
+            demand_t = demand_profile[t]
             # Get the input flow at the current time step
             input_flow = inputs[f"{commodity}_in"][t]
 
@@ -202,6 +211,7 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             soc = max(soc_min, min(soc_max, soc))
 
             # Record the SOC for the current time step
-            soc_array[t] = deepcopy(soc)
+            # soc_array[t] = deepcopy(soc)
+            self._soc_timeseries[t] = deepcopy(soc)
 
         outputs[f"{commodity}_command_value"] = set_point_array
