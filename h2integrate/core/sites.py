@@ -35,11 +35,9 @@ class SiteLocationComponentConfig(SiteBaseConfig):
         longitude (float, optional): longitude in degrees East of the Prime Meridian.
             Must be between -180 and 180. Defaults to 0.
         elevation (float, optional): elevation of the site in meters. Defaults to 0.0
-        site_gid (int, optional): site id for a resource dataset. Defaults to -1
     """
 
     elevation: float | int = field(default=0.0)
-    site_gid: float = field(default=-1)
 
 
 class SiteLocationComponent(SiteBaseComponent):
@@ -53,4 +51,3 @@ class SiteLocationComponent(SiteBaseComponent):
     def set_outputs(self):
         # latitude and longitude are set as outputs in ``SiteBaseComponent.__init__()``
         self.add_output("elevation", val=self.config.elevation, units="m")
-        self.add_output("site_gid", val=self.config.site_gid, units="unitless")

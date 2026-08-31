@@ -5,7 +5,7 @@ from datetime import timezone, timedelta
 import numpy as np
 import pandas as pd
 import openmdao.api as om
-from attrs import field, define, validators
+from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
@@ -46,9 +46,9 @@ class ResourceBaseH5Config(BaseConfig):
     longitude: float = field()
 
     timezone: int | float = field()
-    site_gid: int = field(default=-1)
+    # site_gid: int = field(default=-1)
 
-    location_input: str = field(default="lat/lon", validator=validators.in_(["lat/lon", "gid"]))
+    # location_input: str = field(default="lat/lon", validator=validators.in_(["lat/lon", "gid"]))
 
     # Export file info
     save_to_csv: bool = field(default=False, kw_only=True)
@@ -106,12 +106,12 @@ class ResourceBaseH5Config(BaseConfig):
             )
             warnings.warn(msg, UserWarning, stacklevel=3)
 
-        if self.location_input == "gid" and self.site_gid == -1:
-            msg = (
-                "`site_gid` is required when `location_input` is `gid`. "
-                "Please provide the `site_gid` or change `location_input` to `lat/lon`."
-            )
-            raise AttributeError(msg)
+        # if self.location_input == "gid" and self.site_gid == -1:
+        #     msg = (
+        #         "`site_gid` is required when `location_input` is `gid`. "
+        #         "Please provide the `site_gid` or change `location_input` to `lat/lon`."
+        #     )
+        #     raise AttributeError(msg)
 
 
 class ResourceBaseH5Model(om.ExplicitComponent):
@@ -138,9 +138,11 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
     def setup(self):
         # create attributes that will be commonly used for resource classes.
+        self.lat_lon_fmt = ".3f"
+
         self.resource_data = None
         self.resource_site = [self.config.latitude, self.config.longitude]
-        self.resource_id = self.config.site_gid
+        # self.resource_id = self.config.site_gid
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
@@ -150,7 +152,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         # self.add_input(
         #     f"{self.config.resource_type}_site_gid", self.config.site_gid, units="unitless"
         # )
-        self.add_input("site_gid", self.config.site_gid, units="unitless")
+        # self.add_input("site_gid", self.config.site_gid, units="unitless")
 
     def helper_setup_method(self):
         """
@@ -300,30 +302,9 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         data_out = {k: data[k].values for k in data.columns.to_list()}
         return data_out
 
-    def search_for_csv_file_from_gid(self, site_gid: int):
-        filename_desc = f"{self.config.resource_year}_{self.config.dataset_desc}"
-        existing_files = [
-            f for f in Path(self.config.csv_output_dir).glob(f"{site_gid}_*") if f.suffix == ".csv"
-        ]
-        close_match_files = [f for f in existing_files if filename_desc in f.name]
-        if not close_match_files:
-            return None
-        if len(close_match_files) == 1:
-            return close_match_files[0]
-        # multiple files match. Perhaps because similar sites have the same site GID
-        chosen_file = close_match_files[0]
-        msg = (
-            f"Found {len(close_match_files)} potential csv files for site_gid {site_gid} "
-            f"with dataset description of {filename_desc}. Files found were: \n"
-            f"{close_match_files} \n. Running resource model with file {chosen_file}"
-        )
-        warnings.warn(msg, UserWarning, stacklevel=3)
-        return chosen_file
-
     def search_for_csv_file_from_lat_lon(self, latitude, longitude):
-        filename_desc = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_{self.config.dataset_desc}"
-        )
+        loc_str = f"{latitude:{self.lat_lon_fmt}}_{longitude:{self.lat_lon_fmt}}"
+        filename_desc = f"{loc_str}_{self.config.resource_year}_{self.config.dataset_desc}"
         close_match_files = [
             f for f in Path(self.config.csv_output_dir).glob("*.csv") if filename_desc in f.name
         ]
@@ -351,24 +332,23 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
 
         Args:
+            site_gid (int): dataset specific site identification number
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
         """
+
         end_name = (
             f"{self.config.resource_year}_{self.config.dataset_desc}_{self.dt_min}min_utc_tz.csv"
         )
-        filename = f"{int(site_gid)}_{latitude}_{longitude}_{end_name}"
+        loc_str = f"{int(site_gid)}_{latitude:{self.lat_lon_fmt}}_{longitude:{self.lat_lon_fmt}}"
+        filename = f"{loc_str}_{end_name}"
         return filename
         # raise NotImplementedError("This method should be implemented in a subclass.")
 
-    #     Args:
-    #         latitude (float): latitude corresponding to location for resource data
-    #         longitude (float): longitude corresponding to location for resource data
-
-    def load_data_from_dataset(self, latitude, longitude, site_gid=None):
+    def load_data_from_dataset(self, latitude, longitude):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def load_data_from_csv(self, fpath):
@@ -419,16 +399,16 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         # self.config.interval
         # pass
 
-    def get_data(self, site_gid, latitude, longitude, first_call=True):
+    def get_data(self, latitude, longitude, first_call=True):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
             inputs are different than the previous latitude and longitude values. If resource data
-            has not been already loaded for the, continue to Step 1.
+            has not been already loaded for the site, continue to Step 1.
         1) If either saving or loading from a csv file, check if a csv file matching
-            either the site GID or lat/lon exists. If a csv file is found, load data from
-            the csv file. Otherwise, continue to step 3
-        2)
+            either the sitelat/lon exists. If a csv file is found, load data from
+            the csv file. Otherwise, continue to Step 2
+        2) Load data from the dataset
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -443,86 +423,35 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         Returns:
             Any: resource data in the format expected by the subclass.
         """
-        # site_changed = False
 
-        site_loc_changed = not np.allclose(
-            [latitude, longitude], self.resource_site, atol=1e-6, rtol=0
-        )
-        site_id_changed = site_gid != self.resource_id
-        # both_changed = site_loc_changed and site_id_changed
-        # neither_changed = (not site_loc_changed) and (not site_id_changed)
-
-        if site_id_changed and self.config.location_input == "lat/lon" and not site_loc_changed:
-            msg = (
-                f"For location ({latitude},{longitude}), the `site_gid` changed from "
-                f"{self.resource_id} to {site_gid}, but the latitude and longitude are unchanged. "
-                f"`site_gid` should not change unless the latitude and longitude change when "
-                "`location_input` is `lat/lon`. Resource data will be output for "
-                f"original `site_gid` of {self.resource_id}"
-            )
-            warnings.warn(msg, UserWarning, stacklevel=2)
-
-        # Site lat/lon changed but GID didn't
-        if site_loc_changed and self.config.location_input == "gid" and not site_id_changed:
-            msg = (
-                f"For location with `site_gid` of {site_gid}, the location changed from "
-                f"{tuple(self.resource_site)} to ({latitude},{longitude}), but the `site_gid` is "
-                f"unchanged. The latitude and longitude should not change unless the `site_gid` "
-                "changes when `location_input` is `gid`. Resource data will be output for "
-                f"original location of {tuple(self.resource_site)}"
-            )
-            warnings.warn(msg, UserWarning, stacklevel=2)
+        site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # 0) If site hasn't changed and resource data has already been loaded
         # just return the resource data that was loaded in the setup() method
         if (not first_call) and (self.resource_data is not None):
-            if self.config.location_input == "lat/lon" and not site_loc_changed:
+            if not site_changed:
                 return self.resource_data
-            if self.config.location_input == "gid" and not site_id_changed:
-                return self.resource_data
+            # if self.config.location_input == "gid" and not site_id_changed:
+            #     return self.resource_data
 
         # if neither_changed and not first_call:
 
+        csv_file = None
         if self.config.load_from_csv or self.config.save_to_csv:
             # first check to see if a csv file exists
-            csv_file = None
-            if self.config.location_input == "gid":
-                if self.config.save_to_csv and not site_loc_changed:
-                    msg = (
-                        "If site_gid is input, please ensure that lat/lon is also changing"
-                        "especially when saving data to csv files!"
-                    )
-                    raise ValueError(msg)
-
-                csv_file = self.search_for_csv_file_from_gid(site_gid)
-                if csv_file is None and site_loc_changed:
-                    # If site lat/lon also changed,
-                    # then assuming they're connected to lat/lon
-                    csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
-
-                if csv_file is None:
-                    # didn't file csv file, load from dataset
-                    data, meta_data = self.load_data_from_dataset(
-                        latitude, longitude, site_gid=site_gid
-                    )
-                else:
-                    data, meta_data = self.load_data_from_csv(csv_file)
-            else:
-                # TODO: update to reduce repetition in code
-                # using lat/lon
+            if site_changed:
                 csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
-                if csv_file is None:
-                    # didn't file csv file, load from dataset
-                    data, meta_data = self.load_data_from_dataset(latitude, longitude)
-                else:
-                    data, meta_data = self.load_data_from_csv(csv_file)
+
+        if csv_file is not None:
+            # found csv file and csv file usage is enabled, load data from the csv
+            data, meta_data = self.load_data_from_csv(csv_file)
+
         else:
-            input_id = site_gid if self.config.location_input == "gid" else None
-            data, meta_data = self.load_data_from_dataset(latitude, longitude, site_gid=input_id)
+            # didn't file csv file, load from dataset
+            data, meta_data = self.load_data_from_dataset(latitude, longitude)
 
+        data = self.add_resource_start_end_times(data)
         data = self.sample_data_to_interval(data)
-        # unsure if below code works with dictionary of it data has to be a dataframe
-
         data = self.process_leap_day(data)
 
         return data | meta_data
@@ -530,13 +459,12 @@ class ResourceBaseH5Model(om.ExplicitComponent):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # update the resource data based on the input site information
         data = self.get_data(
-            inputs["site_gid"][0],
             inputs["latitude"][0],
             inputs["longitude"][0],
             first_call=False,
         )
         # update the stored resource data and site
-        self.resource_id = inputs["site_gid"][0]
+
         self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
         self.resource_data = data
         discrete_outputs[f"{self.config.resource_type}_resource_data"] = data

@@ -13,7 +13,7 @@ on_hpc = Path("/datasets/WIND").is_dir()
 
 
 @pytest.fixture
-def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
+def wind_site_config(lat, lon, model, resource_year):
     site_config = {
         "latitude": lat,
         "longitude": lon,
@@ -22,12 +22,12 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
                 "resource_model": model,
                 "resource_parameters": {
                     "resource_year": resource_year,
-                    "site_gid": site_gid,
+                    # "site_gid": site_gid,
                     "latitude": lat,
                     "longitude": lon,
                     "use_hsds": False,
                     "hsds_kwargs": {},
-                    "location_input": loc_param,
+                    # "location_input": loc_param,
                     "save_to_csv": True,
                     "load_from_csv": True,
                     "csv_output_dir": RESOURCE_DEFAULT_DIR / "wind",
@@ -40,16 +40,16 @@ def wind_site_config(site_gid, lat, lon, model, loc_param, resource_year):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,expected_aep",
     [
         (
             "WTKHRRRMETDatasetH5",
             37.3376,
             -105.7076,
-            813606,
+            # 813606,
             2025,
             0,
-            "lat/lon",
+            # "lat/lon",
             439285.87881150434,
         ),
     ],
@@ -93,9 +93,9 @@ def test_pysam_windpower_integration(
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,expected_aep",
     [
-        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
+        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, 2025, 0, 16278.222138130743),
     ],
     ids=[
         "HRRRMETToolkitWindAPI-813606",
@@ -138,26 +138,26 @@ def test_floris_integration(
 @pytest.mark.hpc
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
-    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,expected_aep",
     [
         (
             "WTKHRRRMETDatasetH5",
             39.7555,
             -105.2211,
-            852124,
+            # 852124,
             2024,
             0,
-            "gid",
+            # "gid",
             284248.8972640701,
         ),
         (
             "WTKHRRRMETDatasetH5",
             37.3376,
             -105.7076,
-            813606,
+            # 813606,
             2025,
             0,
-            "lat/lon",
+            # "lat/lon",
             439285.87881150434,
         ),
     ],
@@ -206,19 +206,19 @@ def test_hpc_integration_with_pysam(
 @pytest.mark.hpc
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
-    "model,lat,lon,site_gid,resource_year,timezone,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,expected_aep",
     [
         (
             "WTKHRRRMETDatasetH5",
             39.7555,
             -105.2211,
-            -1,
+            # -1,
             2024,
             0,
-            "lat/lon",
+            # "lat/lon",
             9294.347553939786,
         ),
-        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, -1, 2025, 0, "lat/lon", 16278.222138130743),
+        ("WTKHRRRMETDatasetH5", 37.3376, -105.7076, 2025, 0, 16278.222138130743),
     ],
     ids=[
         "HRRRMETToolkitWindAPI-852124",

@@ -81,7 +81,7 @@ def plant_simulation_config(timezone, dt, n_timesteps):
 
 
 @pytest.fixture
-def solar_site_config(site_gid, lat, lon, model, resource_year):
+def solar_site_config(lat, lon, model, resource_year):
     site_config = {
         "latitude": lat,
         "longitude": lon,
@@ -90,7 +90,7 @@ def solar_site_config(site_gid, lat, lon, model, resource_year):
                 "resource_model": model,
                 "resource_parameters": {
                     "resource_year": resource_year,
-                    "site_gid": site_gid,
+                    # "site_gid": site_gid,
                     "latitude": lat,
                     "longitude": lon,
                     "use_hsds": False,
@@ -112,11 +112,12 @@ def solar_site_config(site_gid, lat, lon, model, resource_year):
 # fmt: off
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "model,site_gid,lat,lon,resource_year,timezone,dt,n_timesteps,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,dt,n_timesteps,expected_aep",
     [
-        ("NSRDBDatasetH5",478473, 39.7555, -105.2211, 2024, 0, 1800, 17520, "gid", 487861.01335131214), # noqa: E501
-        ("NSRDBDatasetH5",478473, 39.7555, -105.2211, 2024, 0, 3600, 8760, "gid", 487378.273467741),
-        ("NSRDBDatasetH5",-1, 39.7555, -105.2211, 2024, 0, 3600, 8760, "lat/lon", 487378.273467741),
+        ("NSRDBDatasetH5", 39.7555, -105.2211, 2024, 0, 1800, 17520, 487861.01335131214),
+        ("NSRDBDatasetH5", 39.7555, -105.2211, 2024, 0, 3600, 8760, 487378.273467741),
+        # ("NSRDBDatasetH5",478473, 39.7555, -105.2211, 2024, 0, 3600, 8760, 487378.273467741),
+        # ("NSRDBDatasetH5",-1, 39.7555, -105.2211, 2024, 0, 3600, 8760, 487378.273467741),
         ],
     ids=[
         "NSRDBDatasetH5-30min-csv",
@@ -131,7 +132,6 @@ def test_nsrdb_dataset_from_csv_pvwatts(
     plant_simulation_config,
     solar_site_config,
     expected_aep,
-    loc_param,
 ):
 
     resource_config = {
@@ -139,7 +139,7 @@ def test_nsrdb_dataset_from_csv_pvwatts(
         # "longitude": -105.2211,
         # "timezone": 0,
         # "site_gid": 478473,
-        "location_input": loc_param,
+        # "location_input": loc_param,
         "save_to_csv": False,
         "load_from_csv": True,
         "csv_output_dir": RESOURCE_DEFAULT_DIR/"solar",
@@ -177,16 +177,15 @@ def test_nsrdb_dataset_from_csv_pvwatts(
 @pytest.mark.hpc
 @pytest.mark.skipif(not on_hpc, reason="not running on HPC")
 @pytest.mark.parametrize(
-    "model,site_gid,lat,lon,resource_year,timezone,dt,n_timesteps,loc_param,expected_aep",
+    "model,lat,lon,resource_year,timezone,dt,n_timesteps,expected_aep",
     [
-        ("NSRDBDatasetH5",478473,39.7555, -105.2211, 2024, 0, 1800, 17520, "gid", 487861.01335131214), # noqa: E501
-        ("NSRDBDatasetH5",542970,34.22, -102.75, 2024, 0, 3600, 8760, "gid", 487378.273467741),
-        ("NSRDBDatasetH5",-1,39.7555, -105.2211, 2024, 0, 3600, 8760, "lat/lon", 487378.273467741),
+        ("NSRDBDatasetH5",39.7555, -105.2211, 2024, 0, 1800, 17520, 487861.01335131214),
+        ("NSRDBDatasetH5",33.7555, -102.2211, 2024, 0, 3600, 8760, 487378.273467741),
         ],
     ids=[
-        "NSRDBDatasetH5-30min-gid",
-        "NSRDBDatasetH5-60min-gid",
-        "NSRDBDatasetH5-60min-lat/lon",
+        "NSRDBDatasetH5-30min",
+        "NSRDBDatasetH5-60min",
+        # "NSRDBDatasetH5-60min-lat/lon",
     ]
 )
 # fmt: on
@@ -196,18 +195,18 @@ def test_nsrdb_dataset_from_dataset_pvwatts(
     plant_simulation_config,
     solar_site_config,
     expected_aep,
-    loc_param,
+    # loc_param,
 ):
 
     actual_lat = 39.7555
     actual_lon = -105.2211
-    actual_gid = 478473
+    # actual_gid = 478473
     resource_config = {
         # "latitude": 39.7555,
         # "longitude": -105.2211,
         # "timezone": 0,
         # "site_gid": 478473,
-        "location_input": loc_param,
+        # "location_input": loc_param,
         "save_to_csv": False,
         "load_from_csv": False,
         # "csv_output_dir": RESOURCE_DEFAULT_DIR/"solar",
@@ -233,11 +232,11 @@ def test_nsrdb_dataset_from_dataset_pvwatts(
     prob.model.add_subsystem("pv_perf", pysam_performance_model, promotes=["*"])
     prob.setup()
 
-    if loc_param == "lat/lon":
-        prob.model.set_val("solar_resource.latitude", actual_lat, units="deg")
-        prob.model.set_val("solar_resource.longitude", actual_lon, units="deg")
-    if loc_param == "gid":
-        prob.model.set_val("solar_resource.site_gid", actual_gid, units="unitless")
+    # if loc_param == "lat/lon":
+    prob.model.set_val("solar_resource.latitude", actual_lat, units="deg")
+    prob.model.set_val("solar_resource.longitude", actual_lon, units="deg")
+    # if loc_param == "gid":
+    #     prob.model.set_val("solar_resource.site_gid", actual_gid, units="unitless")
 
     prob.run_model()
 

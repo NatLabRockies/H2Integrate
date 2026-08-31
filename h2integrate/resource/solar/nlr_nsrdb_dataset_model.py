@@ -69,7 +69,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
                 self.interval = int(min(self.config.valid_intervals))
 
         # get the data dictionary
-        data = self.get_data(self.config.site_gid, self.config.latitude, self.config.longitude)
+        data = self.get_data(self.config.latitude, self.config.longitude)
 
         self.resource_data = data
 
@@ -97,7 +97,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
         )
         raise FileNotFoundError(msg)
 
-    def load_data_from_dataset(self, latitude, longitude, site_gid=None):
+    def load_data_from_dataset(self, latitude, longitude):
         # NOTE: if more solar resource datasets are added,
         # this method could likely be moved into a baseclass
 
@@ -106,8 +106,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
 
         # Load the .h5 file
         with NSRDBX(dataset_path, hsds=self.config.use_hsds) as res:
-            if site_gid is None:
-                site_gid = res.lat_lon_gid((latitude, longitude))
+            site_gid = res.lat_lon_gid((latitude, longitude))
 
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index

@@ -71,7 +71,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
                 self.interval = int(min(self.config.valid_intervals))
 
         # get the resource data
-        data = self.get_data(self.config.site_gid, self.config.latitude, self.config.longitude)
+        data = self.get_data(self.config.latitude, self.config.longitude)
 
         self.resource_data = data
 
@@ -108,7 +108,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             f.write(header)
         data_df.to_csv(fpath, encoding="utf-8", mode="a")
 
-    def load_data_from_dataset(self, latitude, longitude, site_gid=None):
+    def load_data_from_dataset(self, latitude, longitude):
         # NOTE: if more wind resource datasets are added,
         # this method could likely be moved into a baseclass
 
@@ -117,9 +117,8 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
 
         # Load the .h5 file
         with WindX(dataset_path, hsds=self.config.use_hsds) as res:
-            if site_gid is None:
-                site_gid = res.lat_lon_gid((latitude, longitude))
-                # NOTE: should we check the site_gid even if its provided?
+            site_gid = res.lat_lon_gid((latitude, longitude))
+            # NOTE: should we check the site_gid even if its provided?
 
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index
