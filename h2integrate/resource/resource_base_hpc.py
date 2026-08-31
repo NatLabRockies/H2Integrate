@@ -46,9 +46,6 @@ class ResourceBaseH5Config(BaseConfig):
     longitude: float = field()
 
     timezone: int | float = field()
-    # site_gid: int = field(default=-1)
-
-    # location_input: str = field(default="lat/lon", validator=validators.in_(["lat/lon", "gid"]))
 
     # Export file info
     save_to_csv: bool = field(default=False, kw_only=True)
@@ -64,7 +61,6 @@ class ResourceBaseH5Config(BaseConfig):
     resource_type: str = field(default="none", init=False)
 
     def __attrs_post_init__(self):
-        # provided_filename = False if self.csv_filename == "" else True
         provided_dir = False if self.csv_output_dir is None else True
 
         csv_usage_enabled = self.save_to_csv or self.load_from_csv
@@ -106,13 +102,6 @@ class ResourceBaseH5Config(BaseConfig):
             )
             warnings.warn(msg, UserWarning, stacklevel=3)
 
-        # if self.location_input == "gid" and self.site_gid == -1:
-        #     msg = (
-        #         "`site_gid` is required when `location_input` is `gid`. "
-        #         "Please provide the `site_gid` or change `location_input` to `lat/lon`."
-        #     )
-        #     raise AttributeError(msg)
-
 
 class ResourceBaseH5Model(om.ExplicitComponent):
     """Base model for downloading resource data from API calls or loading resource
@@ -142,17 +131,10 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         self.resource_data = None
         self.resource_site = [self.config.latitude, self.config.longitude]
-        # self.resource_id = self.config.site_gid
         self.dt = self.options["plant_config"]["plant"]["simulation"]["dt"]
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
-
-        # if self.config.location_input == "gid":
-        # self.add_input(
-        #     f"{self.config.resource_type}_site_gid", self.config.site_gid, units="unitless"
-        # )
-        # self.add_input("site_gid", self.config.site_gid, units="unitless")
 
     def helper_setup_method(self):
         """
@@ -177,11 +159,6 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         # set the default latitude, longitude, and resource_year from the site_config
         resource_specs.setdefault("latitude", site_config["latitude"])
         resource_specs.setdefault("longitude", site_config["longitude"])
-        # set the default resource_dir from a directory that can be
-        # specified in site_config['resources']['resource_dir']
-        # resource_specs.setdefault(
-        #     "resource_dir", site_config.get("resources", {}).get("resource_dir", None)
-        # )
 
         # default timezone to UTC because 'timezone' was removed from the plant config schema
         resource_specs.setdefault("timezone", sim_config.get("timezone", 0))
@@ -258,11 +235,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
                 after leap day processing.
         """
         if isinstance(data_in, dict):
-            # time_keys = ["year", "month", "day", "hour", "minute", "second"]
-            # rename_time_cols = {c:c.capitalize() for c in time_keys if c in data_in}
-
             data = pd.DataFrame(data_in)
-            # data = data.rename(columns = rename_time_cols)
         else:
             data = data
 
@@ -324,7 +297,6 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         warnings.warn(msg, UserWarning, stacklevel=3)
         return chosen_file
 
-    # def create_filename(self, latitude, longitude):
     def create_csv_filename(self, site_gid, latitude, longitude):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
 
@@ -346,7 +318,6 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         loc_str = f"{int(site_gid)}_{latitude:{self.lat_lon_fmt}}_{longitude:{self.lat_lon_fmt}}"
         filename = f"{loc_str}_{end_name}"
         return filename
-        # raise NotImplementedError("This method should be implemented in a subclass.")
 
     def load_data_from_dataset(self, latitude, longitude):
         raise NotImplementedError("This method should be implemented in a subclass.")
@@ -388,17 +359,6 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         data_sliced = {k: v[time_slice][:i_end] for k, v in data.items()}
         return data_sliced
 
-        # data_sliced = {k:v[time_slice][:self.n_timesteps] for k,v in data.items()}
-        # time_df.values[]
-
-        # (len(time_df) + 24)//8760
-
-        #     # most common use-case, so has special handling
-        #     start_index = 0 if time_df.iloc[0].minutes==30 else 1
-
-        # self.config.interval
-        # pass
-
     def get_data(self, latitude, longitude, first_call=True):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
@@ -431,21 +391,14 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         if (not first_call) and (self.resource_data is not None):
             if not site_changed:
                 return self.resource_data
-            # if self.config.location_input == "gid" and not site_id_changed:
-            #     return self.resource_data
-
-        # if neither_changed and not first_call:
 
         csv_file = None
         if self.config.load_from_csv or self.config.save_to_csv:
             # first check to see if a csv file exists
-            if site_changed:
-                csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
-
+            csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
         if csv_file is not None:
             # found csv file and csv file usage is enabled, load data from the csv
             data, meta_data = self.load_data_from_csv(csv_file)
-
         else:
             # didn't file csv file, load from dataset
             data, meta_data = self.load_data_from_dataset(latitude, longitude)
