@@ -1,5 +1,4 @@
 import re
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -22,6 +21,7 @@ class WTKHRRRMETDatasetH5Config(ResourceBaseH5Config):
 class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
     def setup(self):
         self.units_translation = {
+            # data units: openmdao compatible units
             "C": "degC",
             "m s-1": "m/s",
             "degree from N": "deg",
@@ -79,34 +79,29 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # add resource data dictionary as an output
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_dataset_filepath(self):
-        # TODO: move to baseclass?
-        if self.config.use_hsds:
-            dataset_path = self.hsds_path.format(year=self.config.resource_year)
-            return Path(dataset_path)
-        # Pulling from Super computer
-        dataset_path = Path(self.hpc_path.format(year=self.config.resource_year))
-
-        if dataset_path.exists():
-            return dataset_path
-
-        msg = (
-            f"Dataset file {dataset_path} is not a valid filepath. Please ensure you're logged "
-            "onto the NLR supercomputer or, if using an hsds setup, set `use_hsds` to True "
-            "and provide the `hsds_kwargs` in the input configuration class. If this error "
-            "is unexpected, please open an issue on the H2Integrate GitHub repo."
-        )
-        raise FileNotFoundError(msg)
-
     def save_to_csv(self, data_df, site_data, data_units, csv_filename):
+        """Save data extracted from the dataset to a csv file for a given site.
+
+        Args:
+            data_df (pd.DataFrame): timeseries resource data
+            site_data (dict): dictionary of site metadata
+            data_units (dict): dictionary of data columns and the corresponding units
+            csv_filename (str): filename of the csv file created with ``create_csv_filename()``
+        """
+
+        # Create the full filepath for the csv file
         fpath = self.config.csv_output_dir / csv_filename
 
+        # Add "Units" to the header columns for units
         header_dict = site_data | {f"{k} Units": v for k, v in data_units.items()}
+        # Convert unit info and site metadata to a header string
         header_line1 = ",".join(f"{k}" for k, _ in header_dict.items())
         header_line2 = ",".join(f"{v}" for _, v in header_dict.items())
         header = header_line1 + "\n" + header_line2 + "\n"
         with fpath.open(mode="w", encoding="utf-8") as f:
+            # Write the header to a csv file
             f.write(header)
+        # Add the timeseries data to the remaining rows of the csv file
         data_df.to_csv(fpath, encoding="utf-8", mode="a")
 
     def load_data_from_dataset(self, latitude, longitude):
@@ -123,14 +118,13 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # this method could likely be moved into a baseclass
 
         # Get filepath of the .h5 dataset
-        # 1. Get filepath of the .h5 dataset
         dataset_path = self.create_dataset_filepath()
 
-        # 2. Load the dataset from the .h5 file using the WindX resource extraction tool
+        # Load the dataset from the .h5 file using the WindX resource extraction tool
         with WindX(dataset_path, hsds=self.config.use_hsds) as res:
-            # 3. Get the site_gid from the input latitude/longitude
+            # Get the site_gid from the input latitude/longitude
             site_gid = res.lat_lon_gid((latitude, longitude))
-            # 4. Extract timeseries data, unit information, and meta data
+            # Extract timeseries data, unit information, and meta data
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index
             resource_units = res.resource.units
@@ -179,6 +173,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         }
 
         if self.config.save_to_csv:
+            # convert the timeseries data to a dataframe
             data_df = pd.DataFrame(resource_data, index=time_index)
             data_df.index.name = "time"
             # create the filename for the csv
@@ -205,6 +200,14 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         return data_dict, meta_data
 
     def load_data_from_csv(self, fpath):
+        """Load resource data that was pulled from an .h5 dataset and saved to a csv file
+
+        Args:
+            fpath (Path | str): Filepath of a pre-saved csv file containing resource data.
+
+        Returns:
+            tuple[dict,dict]: tuple of resource data formatted as [timeseries data, meta data]
+        """
         # NOTE: if more wind resource datasets are added,
         # this method could likely be moved into a baseclass
 
@@ -252,6 +255,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # Add the time information to the timeseries data dictionary
         data_dict |= time_dict
 
+        # Convert the data to standardized units defined in the wind resource baseclass
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
         # Update the meta-data to include the filepath of this csv file
