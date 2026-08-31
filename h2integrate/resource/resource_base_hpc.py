@@ -450,9 +450,9 @@ class ResourceBaseH5Model(om.ExplicitComponent):
             # didn't file csv file, load from dataset
             data, meta_data = self.load_data_from_dataset(latitude, longitude)
 
-        data = self.add_resource_start_end_times(data)
         data = self.sample_data_to_interval(data)
         data = self.process_leap_day(data)
+        data = self.add_resource_start_end_times(data)
 
         return data | meta_data
 

@@ -122,7 +122,7 @@ def solar_site_config(lat, lon, model, resource_year):
     ids=[
         "NSRDBDatasetH5-30min-csv",
         "NSRDBDatasetH5-60min-csv",
-        "NSRDBDatasetH5-60min-csv-lat/lon",
+        # "NSRDBDatasetH5-60min-csv-lat/lon",
     ]
 )
 # fmt: on
