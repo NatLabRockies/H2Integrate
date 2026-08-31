@@ -33,6 +33,9 @@ class ResourceBaseH5Config(BaseConfig):
         timezone (float | int): timezone to output data in. May be used to determine whether
             to download data in UTC or local timezone. This should be populated by the value
             in sim_config['timezone']
+        save_to_csv (bool):
+        load_from_csv (bool):
+        csv_output_dir (Path | str | None, optional):
 
 
     Attributes:
@@ -60,22 +63,36 @@ class ResourceBaseH5Config(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
 
+    def get_csv_dir(self, provided_dir):
+        # Get valid resource_dir with the function check_resource_dir()
+        csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
+
+        # provided csv_directory with resource-specific subfolder included
+        if provided_dir and Path(csv_dir).parts[-1] == self.resource_type:
+            return csv_dir
+
+        # csv directory has pre-existing resource-specific subfolder
+        if (csv_dir / self.resource_type).is_dir():
+            return csv_dir / self.resource_type
+
+        n_csv_files = sum(
+            1 for f in Path(csv_dir).glob("*.csv") if self.dataset_desc in f.name and f.is_file()
+        )
+        if n_csv_files > 0:
+            # csv files already exist in csv folder, don't use resource-specific subfolders
+            return csv_dir
+
+        # By default, use csv directory resource-specific subfolders
+        csv_dir = check_resource_dir(data_dir=csv_dir, data_subdir=self.resource_type)
+        return csv_dir
+
     def __attrs_post_init__(self):
         provided_dir = False if self.csv_output_dir is None else True
 
         csv_usage_enabled = self.save_to_csv or self.load_from_csv
 
-        if self.csv_output_dir is None:
-            # Get valid resource_dir with the function check_resource_dir()
-            csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
-
-            if provided_dir and Path(self.csv_output_dir).parts[-1] == self.resource_type:
-                csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
-            else:
-                csv_dir = check_resource_dir(
-                    data_dir=self.csv_output_dir, data_subdir=self.resource_type
-                )
-
+        if csv_usage_enabled:
+            csv_dir = self.get_csv_dir(provided_dir)
             self.csv_output_dir = csv_dir
 
         if csv_usage_enabled and not provided_dir:
@@ -107,10 +124,20 @@ class ResourceBaseH5Model(om.ExplicitComponent):
     """Base model for downloading resource data from API calls or loading resource
     data for a single site from a file.
 
-    Attributes
-        resource_data (dict | None): resource data that is created in setup() method.
+    Attributes:
+        resource_data (dict | None): resource data that is created in ``setup()`` method.
         dt (int): timestep in seconds.
-        config (object): configuration class that inherits ResourceBaseAPIConfig.
+        n_timesteps (int): number of timesteps in a simulation
+        config (object): configuration class that inherits ResourceBaseH5Config.
+        resource_site (list[float]): latitude and longitude of current resource data
+        hpc_path (str): folder containing the subclass resource dataset on the HPC
+        hsds_path (str): folder containing the subclass resource dataset on an HSDS server
+        dt_min (int): minimum dataset timestep in minutes. Set in a subclass
+        interval (int): simulation timestep interval in minutes (based on dt_min and dt).
+            Set in a subclass.
+
+    Note:
+        Attributes `hpc_path`, `hsds_path`, `dt_min`, and `config` should be set in a subclass.
 
     Inputs:
         latitude (float): latitude corresponding to location for resource data
@@ -127,7 +154,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
     def setup(self):
         # create attributes that will be commonly used for resource classes.
-        self.lat_lon_fmt = ".3f"
+        self.lat_lon_fmt = ".3f"  # format for lat/lon formatting in csv filenaming
 
         self.resource_data = None
         self.resource_site = [self.config.latitude, self.config.longitude]
@@ -172,7 +199,8 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         and the timestep is represented in seconds.
 
         Args:
-            data (dict): dictionary of resource data
+            data (dict): dictionary of resource data containing time information keys named
+                'year', 'month', 'day', 'hour', 'minute', etc.
 
         Returns:
             data (dict): resource data dictionary with added time strings, modified in place
@@ -180,6 +208,10 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         time_keys = ["year", "month", "day", "hour", "minute", "second"]
         time_dict = {k: data.get(k) for k in time_keys if k in data}
+
+        if not bool(time_dict):
+            # Check if time-data keys are capitalized
+            time_dict = {k: data.get(k.capitalize()) for k in time_keys if k.capitalize() in data}
 
         # If no time information is in the resource data, return the dictionary unchanged
         if not bool(time_dict):
@@ -225,8 +257,9 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         the length of the data matches the expected number of timesteps.
 
         Args:
-            data (dict): DataFrame-like dictionary of resource data containing
-                "Month" and "Day" columns.
+            data_in (dict): DataFrame-like dictionary of resource data containing
+            "Month" and "Day" columns.
+
         Returns:
             dict: Processed resource data with leap day handled according to configuration.
 
@@ -237,7 +270,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         if isinstance(data_in, dict):
             data = pd.DataFrame(data_in)
         else:
-            data = data
+            data = data_in
 
         # Check if data includes leap day
         data_has_leap_day = int(data[data["month"] == 2]["day"].max()) == 29
@@ -276,6 +309,27 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         return data_out
 
     def search_for_csv_file_from_lat_lon(self, latitude, longitude):
+        """Search the directory specified in `config.csv_output_dir` for a csv
+        file that follows the naming convention in ``create_csv_filename()``. Looks for a file
+        whose name contains the following string:
+
+        "{latitude}_{longitude}_{resource_year}_{dataset_desc}"
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+
+        Note:
+            latitude and longitude for filenaming are formatted based on the attribute
+            ``lat_lon_fmt``
+
+        Raises:
+            UserWarning: If multiple files are found that match the location and resource dataset
+
+        Returns:
+            Path | None: If a csv file is found with a matching name, returns the entire
+            filepath to that file. Returns None is no csv files are found that match the file format
+        """
         loc_str = f"{latitude:{self.lat_lon_fmt}}_{longitude:{self.lat_lon_fmt}}"
         filename_desc = f"{loc_str}_{self.config.resource_year}_{self.config.dataset_desc}"
         close_match_files = [
@@ -286,7 +340,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
             return None
         if len(close_match_files) == 1:
             return close_match_files[0]
-        # multiple files match. This would be a bit unexpected.
+
         chosen_file = close_match_files[0]
         msg = (
             f"Found {len(close_match_files)} potential csv files for location "
@@ -298,15 +352,19 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         return chosen_file
 
     def create_csv_filename(self, site_gid, latitude, longitude):
-        """Create default filename to save downloaded data to. Suggested filename formatting is:
+        """Create default filename to save loaded data to. The filename format is:
 
-        "{latitude}_{longitude}_{resource_year}_{dataset_desc}_{interval}min_{tz_desc}_tz.csv"
-        where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
+        "{site_gid}_{latitude}_{longitude}_{resource_year}_{dataset_desc}_{dt_min}min_utc_tz.csv"
+        where "utc" refers to the dataset timezone is in UTC.
 
         Args:
             site_gid (int): dataset specific site identification number
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+
+        Note:
+            latitude and longitude for filenaming are formatted based on the attribute
+            ``lat_lon_fmt``
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
@@ -319,10 +377,83 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         filename = f"{loc_str}_{end_name}"
         return filename
 
+    def create_dataset_filepath(self):
+        # NOTE: if other dataset models are added that dont use
+        # the resource year in the filename, we will need to put this
+        # method in individual subclasses
+
+        if self.config.use_hsds:
+            # Using HSDS server
+            dataset_path = self.hsds_path.format(year=self.config.resource_year)
+            return Path(dataset_path)
+
+        # Pulling from super computer
+        dataset_path = Path(self.hpc_path.format(year=self.config.resource_year))
+
+        if dataset_path.exists():
+            return dataset_path
+
+        msg = (
+            f"Dataset file {dataset_path} is not a valid filepath. Please ensure you're logged "
+            "onto the NLR supercomputer or, if using an hsds setup, set `use_hsds` to True "
+            "and provide the `hsds_kwargs` in the input configuration class. If this error "
+            "is unexpected, please open an issue on the H2Integrate GitHub repo."
+        )
+        raise FileNotFoundError(msg)
+
     def load_data_from_dataset(self, latitude, longitude):
+        """Load resource data from an .h5 dataset. This method should do the following:
+
+        1. Create the dataset filepath
+
+        2. Load the dataset with the corresponding resource extraction class
+
+        3. Get the site_gid from the input latitude/longitude
+
+        4. Extract timeseries data, unit information, and meta data from the dataset
+
+        5. If saving to a csv file is enabled, then do the following two things:
+
+            a. Create the filename for the csv by calling ``create_csv_filename()``
+            b. Save the data to a csv by calling ``save_to_csv()``.
+
+        6. Update data to use the same naming convention and units as specified in
+        the resource-specific baseclass.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+
+        Raises:
+            NotImplementedError: if this method is not implemented in a subclass
+
+        Returns:
+            tuple[dict,dict]: tuple of resource data formatted as [timeseries data, meta data]
+        """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def load_data_from_csv(self, fpath):
+        """Load resource data from a pre-saved csv file. This method should do the following:
+
+        1. Load the resource data, extracting both units information meta data from the header,
+        and timeseries information from the remaining rows.
+
+        2. Extract units information from the meta-data.
+
+        3. Convert numeric meta-data information from strings to floats or integers.
+
+        4. Update timeseries data to use the same naming convention and units as specified in
+        the resource-specific baseclass.
+
+        Args:
+            fpath (Path | str): Filepath of a pre-saved csv file containing resource data.
+
+        Raises:
+            NotImplementedError: if this method is not implemented in a subclass
+
+        Returns:
+            tuple[dict,dict]: tuple of resource data formatted as [timeseries data, meta data]
+        """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def sample_data_to_interval(self, data):
@@ -338,7 +469,11 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         if dt_minutes == self.interval:
             return data
         if dt_minutes > self.interval:
-            raise ValueError("This should not happen")
+            msg = (
+                f"A simulation timestep of {dt_minutes} minutes is not compatible with a "
+                f"a resource dataset with a minimum timestep of {self.interval} minutes"
+            )
+            raise ValueError(msg)
         # at this point, we have to downsample the data
         year = self.config.resource_year
         is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
@@ -362,63 +497,72 @@ class ResourceBaseH5Model(om.ExplicitComponent):
     def get_data(self, latitude, longitude, first_call=True):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
-        0) If this is not the first resource call of the simulation, check if latitude and longitude
-            inputs are different than the previous latitude and longitude values. If resource data
-            has not been already loaded for the site, continue to Step 1.
-        1) If either saving or loading from a csv file, check if a csv file matching
-            either the sitelat/lon exists. If a csv file is found, load data from
-            the csv file. Otherwise, continue to Step 2
-        2) Load data from the dataset
+        1. If this is not the first resource call of the simulation, check if latitude and longitude
+        inputs are different than the previous latitude and longitude values. If resource data
+        has not been already loaded for the site, continue to Step 2.
+
+        2. If either saving or loading from a csv file, check if a csv file matching
+        either the sitelat/lon exists. If a csv file is found, load data from
+        the csv file and continue to Step 4. Otherwise, continue to Step 3.
+
+        3. Load data from the dataset, continue to Step 4.
+
+        4. Finalize and format data: sample the data to the simulation timestep (``interval``),
+        remove leap day data if necessary, add simulation start and end times to the
+        data dictionary.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
             first_call (bool): True if called from `setup()` method, False if called from
-                `compute()` method to prevent unnecessary reloading of data.
-
-        Raises:
-            ValueError: If data was not successfully downloaded from the API
-            ValueError: An unexpected case was encountered in handling data
+                ``compute()`` method to prevent unnecessary reloading of data.
 
         Returns:
-            Any: resource data in the format expected by the subclass.
+            dict: resource data in the format expected by the subclass.
         """
 
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
-        # 0) If site hasn't changed and resource data has already been loaded
+        # 1) If site hasn't changed and resource data has already been loaded
         # just return the resource data that was loaded in the setup() method
         if (not first_call) and (self.resource_data is not None):
             if not site_changed:
                 return self.resource_data
 
+        # Load data from either a pre-saved csv or load it from the dataset
         csv_file = None
         if self.config.load_from_csv or self.config.save_to_csv:
-            # first check to see if a csv file exists
+            # 2. Check to see if a csv file exists
             csv_file = self.search_for_csv_file_from_lat_lon(latitude, longitude)
         if csv_file is not None:
-            # found csv file and csv file usage is enabled, load data from the csv
+            # 2 cont. Found csv file and csv file usage is enabled, load data from the csv
             data, meta_data = self.load_data_from_csv(csv_file)
         else:
-            # didn't file csv file, load from dataset
+            # 3. csv usage is not enabled or csv file was not found for this site
+            # load data from the dataset
             data, meta_data = self.load_data_from_dataset(latitude, longitude)
 
+        # 4. Finalize data formatting
+
+        # Sample data to the proper timestep interval
         data = self.sample_data_to_interval(data)
+        # Remove leap day (if necessary)
         data = self.process_leap_day(data)
+        # Add start/end times to the resource data
         data = self.add_resource_start_end_times(data)
 
+        # Return timeseries data and meta-data
         return data | meta_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        # update the resource data based on the input site information
+        # Update the resource data based on the input site information
         data = self.get_data(
             inputs["latitude"][0],
             inputs["longitude"][0],
             first_call=False,
         )
-        # update the stored resource data and site
 
+        # Update the stored resource data and site
         self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
         self.resource_data = data
-        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
         discrete_outputs[f"{self.config.resource_type}_resource_data"] = data

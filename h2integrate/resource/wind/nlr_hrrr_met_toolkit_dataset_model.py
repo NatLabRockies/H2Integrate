@@ -49,6 +49,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             additional_cls_name=self.__class__.__name__,
         )
 
+        # dataset timestep in minutes
         self.dt_min = min(self.config.valid_intervals)
 
         super().setup()
@@ -90,10 +91,10 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             return dataset_path
 
         msg = (
-            f"Dataset flie {dataset_path} is not a valid filepath. Please ensure you're logged "
+            f"Dataset file {dataset_path} is not a valid filepath. Please ensure you're logged "
             "onto the NLR supercomputer or, if using an hsds setup, set `use_hsds` to True "
             "and provide the `hsds_kwargs` in the input configuration class. If this error "
-            "is unexpected, please contact an H2Integrate developer"
+            "is unexpected, please open an issue on the H2Integrate GitHub repo."
         )
         raise FileNotFoundError(msg)
 
@@ -109,20 +110,33 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         data_df.to_csv(fpath, encoding="utf-8", mode="a")
 
     def load_data_from_dataset(self, latitude, longitude):
+        """Load resource data from an .h5 dataset.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+
+        Returns:
+            tuple[dict,dict]: tuple of resource data formatted as [timeseries data, meta data]
+        """
         # NOTE: if more wind resource datasets are added,
         # this method could likely be moved into a baseclass
 
         # Get filepath of the .h5 dataset
+        # 1. Get filepath of the .h5 dataset
         dataset_path = self.create_dataset_filepath()
 
-        # Load the .h5 file
+        # 2. Load the dataset from the .h5 file using the WindX resource extraction tool
         with WindX(dataset_path, hsds=self.config.use_hsds) as res:
+            # 3. Get the site_gid from the input latitude/longitude
             site_gid = res.lat_lon_gid((latitude, longitude))
-            # NOTE: should we check the site_gid even if its provided?
-
+            # 4. Extract timeseries data, unit information, and meta data
             site_meta = res.meta.loc[int(site_gid)].to_dict()
             time_index = res.time_index
             resource_units = res.resource.units
+
+            # Below is a more generalized way than using `c!=fill_flag`
+            # which may be useful if this method is used for other datasets
             # resource_data_cols = [
             #     k for k in res.resource_datasets if resource_units.get(k) is not None
             #     ]
@@ -147,8 +161,8 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             "county": site_meta.get("county"),
         }
 
-        # Rename resource data keys in the data and units dictionaries
-        # to align with the naming in the wind resource baseclass
+        # Rename resource data keys in the resource_data and resource_units dictionaries
+        # to align with the resource data naming in the wind resource baseclass
         for oldname, newname in self.columns_translation.items():
             key_renames = {
                 k: k.replace(oldname, newname) for k in list(resource_data.keys()) if oldname in k
@@ -157,7 +171,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
                 resource_data[new_key] = resource_data.pop(old_key)
                 resource_units[new_key] = resource_units.pop(old_key)
 
-        # Rename units as necessary
+        # Rename units as necessary (renaming to OpenMDAO compatible formatting)
         data_units = {
             k: self.units_translation.get(v, v)
             for k, v in resource_units.items()
@@ -165,26 +179,27 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         }
 
         if self.config.save_to_csv:
-            # NOTE: if site_gid is input, then should use the lat/lon
-            # from the meta data instead for csv filenaming?
             data_df = pd.DataFrame(resource_data, index=time_index)
             data_df.index.name = "time"
-            # save before units-correction (idk why I'm doing it this way)
             # create the filename for the csv
             csv_filename = self.create_csv_filename(site_gid, latitude, longitude)
-            # save the data to a csv
+            # save before units-correction in case theres a future change in units-correction
             self.save_to_csv(data_df, site_data, data_units, csv_filename)
 
+        # Convert the time index to a dictionary
         time_cols = ["year", "month", "day", "hour", "minute"]
         time_dict = {k: getattr(time_index, k).values for k in time_cols}
 
-        # could clean-up the below code to not make a new variable
+        # Ensure that time-series data are numpy arrays
         data_dict = {k: np.array(v) for k, v in resource_data.items()}
 
+        # Combine the time information and timeseries resource data
         data_dict |= time_dict
 
+        # Update data to the units defined in the baseclass
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
+        # Create the meta-data dictionary
         meta_data = site_data | {"units": data_units}
 
         return data_dict, meta_data
@@ -193,41 +208,48 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # NOTE: if more wind resource datasets are added,
         # this method could likely be moved into a baseclass
 
+        # Load the resource time-series information
         data = pd.read_csv(fpath, header=2)
+
+        # Load the resource meta-data (units, site information, etc)
         header = pd.read_csv(fpath, nrows=2, header=None)
         header_keys = header.iloc[0].to_list()
         header_vals = header.iloc[1].to_list()
         header_dict = dict(zip(header_keys, header_vals))
 
+        # Convert the "time" column to a dictionary of time keys
         time_data = pd.DatetimeIndex(data["time"])
         time_cols = ["year", "month", "day", "hour", "minute"]
         time_dict = {k: getattr(time_data, k).values for k in time_cols}
 
+        # Create a dictionary of units for each column of resource data
         data_units = {k.replace(" Units", ""): v for k, v in header_dict.items() if " Units" in k}
 
+        # Extract site metadata from the header information
         site_data = {
             k: v for k, v in header_dict.items() if k.replace(" Units", "") not in data_units
         }
 
-        # All the header data is loaded as strings, get the keys numeric meta data
+        # All the header data is loaded as strings, get the keys of numeric site metadata
         numeric_site_data = [
             k for k, v in site_data.items() if bool(re.fullmatch(r"[+-]?\d+(\.\d+)?", str(v)))
         ]
-
         int_numeric_site_data = [
             k
             for k, v in site_data.items()
             if bool(re.fullmatch(r"[+-]?\d+", str(v))) or bool(re.fullmatch(r"[+-]?\d+", v))
         ]
 
-        # Convert the meta-data with numeric values to their corresponding numeric type
+        # Convert the metadata with numeric values to their corresponding numeric type
         site_data |= {k: float(v) for k, v in site_data.items() if k in numeric_site_data}
         site_data |= {k: int(v) for k, v in site_data.items() if k in int_numeric_site_data}
 
+        # Convert the timeseries data to a dictionary
         data_dict = {
             c: np.array(data[c].astype(float).values) for c in data.columns.to_list() if c != "time"
         }
 
+        # Add the time information to the timeseries data dictionary
         data_dict |= time_dict
 
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
