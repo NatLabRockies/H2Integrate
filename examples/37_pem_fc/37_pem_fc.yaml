@@ -1,5 +1,0 @@
-name: H2Integrate_config
-system_summary: This reference contains a hydrogen fuel cell meeting an electricity demand
-driver_config: driver_config.yaml
-technology_config: tech_config.yaml
-plant_config: plant_config.yaml
