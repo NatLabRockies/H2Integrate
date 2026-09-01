@@ -1,7 +1,7 @@
 (h5_dataset:overview)=
 # NLR Dataset Resource Extraction Models
 
-These resource models use the [REsource eXtraction tool (rex)](https://github.com/NatLabRockies/rex) to load resource data from NLR datasets. Internal users can access these datasets on the [NLR HPC](https://www.nlr.gov/hpc/). External users can access these datasets through AWS S3 on your local computer using an [NLR API Key](https://developer.nlr.gov/signup/) (additional set-up and packages may be required, please see the notes)
+These resource models use the [REsource eXtraction tool (rex)](https://github.com/NatLabRockies/rex) to load resource data from NLR datasets. Internal users can access these datasets on the [NLR HPC](https://www.nlr.gov/hpc/). External users can access these datasets through AWS S3 on your local computer using an [NLR API Key](https://developer.nlr.gov/signup/) (additional set-up and packages may be required, please see the 'External Users' section for more information)
 
 # Model Overview
 
