@@ -1,4 +1,5 @@
 from math import log
+from pathlib import Path
 
 import numpy as np
 import openmdao.api as om
@@ -86,9 +87,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         )
 
         # Simulation length (time-series shape)
-        self.n_timesteps = int(
-            self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
-        )
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         # Multivariable-stream inputs (both inlet streams). The variables are
         # setup directly (rather than via ``add_multivariable_input``) so that
@@ -123,7 +122,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         add_multivariable_output(self, "working_fluid", self.n_timesteps)
 
         # Additional performance outputs (time-series)
-        ts = dict(shape=self.n_timesteps, val=0.0)
+        ts = {"shape": self.n_timesteps, "val": 0.0}
         self.add_output(
             "total_heat_transfer_rate", units="kW", desc="Total heat transfer rate", **ts
         )
@@ -152,9 +151,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "entropy_generation_rate", units="W/K", desc="Entropy generation rate", **ts
         )
-        self.add_output(
-            "exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts
-        )
+        self.add_output("exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts)
         self.add_output(
             "roles_swapped",
             desc=(
@@ -565,6 +562,10 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         Tc_out0_guess = Tc_in + 0.7 * (Th_in - Tc_in)
 
         def march_segments(Th_in_local, Tc_out0_local):
+            """
+            March through the segments of the heat exchanger to calculate temperatures,
+            heat transfer, and other relevant parameters for each segment.
+            """
             N_seg = geom["N_seg"]
             A_seg = geom["A_seg"]
             A_tube_flow = geom["A_tube_flow"]
@@ -681,12 +682,22 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             )
 
         def residual_Tc_out(Tc_out0):
+            """
+            Residual function for the shooting method to find the correct outlet temperature of the
+            cold fluid. It calculates the difference between the calculated cold outlet temperature
+            at the end of the heat exchanger and the specified cold inlet temperature.
+            """
             Th_, Tc_, *_ = march_segments(Th_in, Tc_out0)
             Tc_at_L = Tc_[-1]
             return Tc_at_L - Tc_in
 
         # Simple bisection
         def find_root_bisect(f, a, b, tol, maxit):
+            """
+            Simple bisection method to find the root of a function f within the interval [a, b].
+            It iteratively narrows down the interval until the function value at the midpoint is
+            within the specified tolerance or the maximum number of iterations is reached.
+            """
             fa = f(a)
             fb = f(b)
             if fa * fb > 0:
@@ -1029,6 +1040,15 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     # 4) Printing summary utility
     # ----------------------------------------------------------------------
     def print_summary(self, res, label="Python + CoolProp"):
+        """
+        Print a detailed summary of the heat exchanger performance based on the results dictionary.
+        Includes temperatures, heat transfer rates, effectiveness, NTU, overall heat transfer
+        coefficients, and flow regimes.
+
+        Args:
+            res (dict): Results dictionary containing heat exchanger performance data.
+            label (str, optional): Label for the summary printout. Defaults to "Python + CoolProp".
+        """
         Th_in = res["params"]["Th_in"]
         Tc_in = res["params"]["Tc_in"]
         Th_out = res["Th"][-1]
@@ -1118,7 +1138,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         Returns:
             List of the four ``matplotlib.figure.Figure`` objects created.
         """
-        import os
 
         import matplotlib.pyplot as plt
 
@@ -1212,7 +1231,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         figures.append(fig4)
 
         if save_dir is not None:
-            os.makedirs(save_dir, exist_ok=True)
+            Path(save_dir).mkdir(parents=True, exist_ok=True)
             fname_prefix = f"{label}_" if label else ""
             names = [
                 "temperature_profiles",
@@ -1221,7 +1240,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 "reynolds_numbers",
             ]
             for fig, name in zip(figures, names):
-                fig.savefig(os.path.join(save_dir, f"{fname_prefix}{name}.png"), dpi=100)
+                fig.savefig(Path(save_dir) / f"{fname_prefix}{name}.png", dpi=100)
 
         if show:
             plt.show()
