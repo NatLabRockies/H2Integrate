@@ -7,9 +7,11 @@ properties:
   name:
     type: string
     description: Name of the configuration
+    default: driver_config
   description:
     type: string
     description: Description of the configuration
+    default: driver configuration file
   general:
     type: object
     properties:
@@ -23,9 +25,14 @@ properties:
         default: true
   driver:
     type: object
+    description: >-
+      Driver setup. At most one of optimization or parameter_sweep should have
+      its flag set to true. If neither is present, the model is evaluated once
+      at the values given in the technology and plant configs.
     properties:
       optimization:
         type: object
+        description: Settings for an optimization driver.
         properties:
           flag:
             type: boolean
@@ -40,21 +47,216 @@ properties:
             default: 100
           solver:
             type: string
-            description: Optimization solver to use
+            description: >-
+              Optimization solver to use. SLSQP, Nelder-Mead, and COBYLA use
+              the Scipy driver. SNOPT, CONMIN, and NSGA2 require pyOptSparse.
+              GA uses the OpenMDAO SimpleGADriver.
           step_size:
             type: number
-            description: Step size for the optimizer
+            description: Step size for the driver-level finite differencing
             default: 1.e-3
           form:
             type: string
-            description: Derivative form for optimization
+            description: >-
+              Derivative form for optimization. Use None to fall back on the
+              OpenMDAO default.
+            enum: [forward, backward, central, None]
             default: forward
+          step_calc:
+            type: string
+            description: >-
+              How the finite-difference step is scaled. Use None to fall back
+              on the OpenMDAO default of an absolute step.
+            enum: [abs, rel, rel_avg, rel_element, rel_legacy, None]
+            default: None
           debug_print:
             type: boolean
             description: Debug print flag
             default: false
+          autoscaler:
+            type: string
+            description: >-
+              Automatic scaling strategy applied to the driver. Use bounds to
+              scale design variables and constraints by their declared bounds.
+            enum: [bounds, none, default]
+
+          # Scipy driver settings
+          disp:
+            type: [boolean, integer]
+            description: Verbosity of the Scipy optimizer output
+          rhobeg:
+            type: number
+            description: Initial trust region radius, used by COBYLA
+          catol:
+            type: number
+            description: Absolute constraint violation tolerance, used by COBYLA
+          adaptive:
+            type: boolean
+            description: Whether to use the adaptive variant of Nelder-Mead
+
+          # pyOptSparse driver settings
+          gradient_method:
+            type: string
+            description: >-
+              Method pyOptSparse uses to compute gradients, for example
+              openmdao, pyopt_fd, or snopt_fd
+            default: openmdao
+          max_major_iter:
+            type: integer
+            description: Major iterations limit, used by SNOPT
+          max_minor_iter:
+            type: integer
+            description: Total iterations limit, used by SNOPT
+          time_limit:
+            type: integer
+            description: Wall clock time limit in seconds, used by SNOPT
+          verify_level:
+            type: integer
+            description: Derivative verification level, used by SNOPT
+          hist_file_name:
+            type: string
+            description: Path of the pyOptSparse history file to write
+          hotstart_file:
+            type: string
+            description: Path of a pyOptSparse history file to hot start from
+          warmstart_file:
+            type: string
+            description: >-
+              Path of a pyOptSparse SQLite history file whose last recorded
+              design variables are used as the starting point
+
+          # NSGA2 settings
+          PopSize:
+            type: integer
+            description: Population size, used by NSGA2
+          maxGen:
+            type: integer
+            description: Maximum number of generations, used by NSGA2
+          pCross_real:
+            type: number
+            description: Crossover probability for real variables, used by NSGA2
+          pMut_real:
+            type: number
+            description: Mutation probability for real variables, used by NSGA2
+          eta_c:
+            type: number
+            description: Distribution index for crossover, used by NSGA2
+          eta_m:
+            type: number
+            description: Distribution index for mutation, used by NSGA2
+          pCross_bin:
+            type: number
+            description: Crossover probability for binary variables, used by NSGA2
+          pMut_bin:
+            type: number
+            description: Mutation probability for binary variables, used by NSGA2
+          PrintOut:
+            type: integer
+            description: Output verbosity, used by NSGA2
+          seed:
+            type: number
+            description: Random seed, used by NSGA2
+          xinit:
+            type: integer
+            description: Whether to seed the population with the initial point, used by NSGA2
+
+          # SimpleGADriver settings
+          Pc:
+            type: number
+            description: Crossover probability, used by GA
+          Pm:
+            type: number
+            description: Mutation rate, used by GA
+          bits:
+            type: object
+            description: Number of bits used to encode each named design variable, used by GA
+          compute_pareto:
+            type: boolean
+            description: Whether to compute a Pareto front for multiple objectives, used by GA
+          cross_bits:
+            type: boolean
+            description: Whether to cross over at the bit level rather than the variable level
+          elitism:
+            type: boolean
+            description: Whether to carry the best individual into the next generation
+          gray:
+            type: boolean
+            description: Whether to use Gray code for the binary encoding
+          max_gen:
+            type: integer
+            description: Maximum number of generations, used by GA
+          multi_obj_exponent:
+            type: number
+            description: Exponent used in the weighted sum multi-objective formulation
+          multi_obj_weights:
+            type: object
+            description: Weight applied to each named objective in the weighted sum
+          penalty_exponent:
+            type: number
+            description: Exponent of the constraint penalty term, used by GA
+          penalty_parameter:
+            type: number
+            description: Multiplier of the constraint penalty term, used by GA
+          pop_size:
+            type: integer
+            description: Population size, used by GA
+          procs_per_model:
+            type: integer
+            description: Number of processors allocated to each model evaluation, used by GA
+          run_parallel:
+            type: boolean
+            description: Whether to evaluate the population in parallel, used by GA
+      parameter_sweep:
+        type: object
+        description: >-
+          Settings for a parameter sweep, run through the OpenMDAO DOEDriver.
+        properties:
+          flag:
+            type: boolean
+            default: false
+          generator:
+            type: string
+            description: >-
+              Case generator used to build the sweep. Matching is case
+              insensitive.
+            enum: [uniform, fullfact, plackettburman, boxbehnken, latinhypercube, csvgen]
+          num_samples:
+            type: integer
+            description: Number of samples, used by the uniform and latinhypercube generators
+          seed:
+            type: [number, 'null']
+            description: Random seed, used by the uniform and latinhypercube generators
+            default: null
+          criterion:
+            type: [string, 'null']
+            description: Sampling criterion, used by the latinhypercube generator
+            default: null
+          levels:
+            type: integer
+            description: Number of levels per design variable, used by the fullfact generator
+          filename:
+            type: [string, Path]
+            description: >-
+              Path of the CSV file of cases, used by the csvgen generator. The
+              column headers must match the design variable names.
+          run_parallel:
+            type: boolean
+            description: Whether to evaluate the cases in parallel
+            default: false
+          debug_print:
+            type: boolean
+            description: Debug print flag
+            default: false
+      design_of_experiments:
+        type: object
+        description: >-
+          Deprecated alias for parameter_sweep, kept for backwards
+          compatibility. It accepts the same properties as parameter_sweep.
   design_variables:
     type: object
+    description: >-
+      Design variables, keyed by technology (or subgroup) name and then by
+      variable name, so that the OpenMDAO variable is {technology}.{variable}.
     additionalProperties:
       type: object
       additionalProperties:
@@ -63,7 +265,7 @@ properties:
         properties:
           flag:
             type: boolean
-            description: Activates as a design variable or constraint
+            description: Activates as a design variable
           lower:
             type: number
             description: Lower bound for the variable
@@ -75,13 +277,164 @@ properties:
           units:
             type: [string, 'null']
             description: Units of the variable
+          ref:
+            type: [number, 'null']
+            description: Value of the variable that the driver scales to 1.0
+          ref0:
+            type: [number, 'null']
+            description: Value of the variable that the driver scales to 0.0
+          scaler:
+            type: [number, 'null']
+            description: Multiplicative scale factor applied before the driver sees the variable
+          adder:
+            type: [number, 'null']
+            description: Additive offset applied before the driver sees the variable
+          indices:
+            type: [array, 'null']
+            description: Indices of a vector valued variable to use as design variables
+          flat_indices:
+            type: boolean
+            description: Whether indices refer to the flattened variable
+  constraints:
+    type: object
+    description: >-
+      Constraints, keyed by technology (or subgroup) name and then by variable
+      name, so that the OpenMDAO variable is {technology}.{variable}. Give at
+      least one of lower, upper, or equals.
+    additionalProperties:
+      type: object
+      additionalProperties:
+        type: object
+        required: [flag, units]
+        properties:
+          flag:
+            type: boolean
+            description: Activates a constraint
+          lower:
+            type: [number, 'null']
+            description: Lower bound for the variable
+            default: null
+          upper:
+            type: [number, 'null']
+            description: Upper bound for the variable
+            default: null
+          equals:
+            type: [number, 'null']
+            description: Value that the variable is constrained to equal
+          units:
+            type: [string, 'null']
+            description: Units of the variable
+          ref:
+            type: [number, 'null']
+            description: Value of the constraint that the driver scales to 1.0
+          ref0:
+            type: [number, 'null']
+            description: Value of the constraint that the driver scales to 0.0
+          scaler:
+            type: [number, 'null']
+            description: Multiplicative scale factor applied before the driver sees the constraint
+          adder:
+            type: [number, 'null']
+            description: Additive offset applied before the driver sees the constraint
+          indices:
+            type: [array, 'null']
+            description: Indices of a vector valued variable to constrain
+          flat_indices:
+            type: boolean
+            description: Whether indices refer to the flattened variable
+          linear:
+            type: boolean
+            description: Whether the constraint is linear in the design variables
+          alias:
+            type: [string, 'null']
+            description: >-
+              Alternate name, needed when the same variable is constrained more
+              than once
   objective:
     type: object
+    description: >-
+      Objective for the driver. The driver always minimizes, so use a negative
+      ref to maximize.
     properties:
       name:
         type: string
-        description: Name of the objective function
+        description: >-
+          Name of the objective function, given as the full OpenMDAO variable
+          name, for example finance_subgroup_hydrogen.LCOH
       ref:
         type: number
         description: Reference value for normalization
+    required: [name]
+  recorder:
+    type: object
+    properties:
+      flag:
+        type: boolean
+        description: whether to save the data to a .sql file
+      file:
+        type: string
+        description: >-
+          filename to save the .sql file to, written inside
+          general/folder_output
+      overwrite_recorder:
+        type: boolean
+        description: >-
+          whether to overwrite any previous .sql files with the name specified
+          by file. Defaults to False, which appends a unique suffix instead.
+      recorder_attachment:
+        type: string
+        description: >-
+          whether to attach the recorder to the driver or model. Defaults to
+          driver, which is recommended when running in parallel.
+        enum: [driver, model]
+      includes:
+        type: array
+        description: >-
+          Glob patterns of variable names to record. Defaults to ['*'].
+        items:
+          type: string
+      excludes:
+        type: array
+        description: >-
+          Glob patterns of variable names to skip. Defaults to
+          ['*resource_data'] because resource time series are large and
+          constant.
+        items:
+          type: string
+      record_inputs:
+        type: boolean
+        description: whether to record component inputs
+      record_outputs:
+        type: boolean
+        description: whether to record component outputs
+      record_residuals:
+        type: boolean
+        description: whether to record component residuals
+      options_excludes:
+        type: array
+        description: >-
+          Component option names to skip when recording. Only used when
+          recorder_attachment is model.
+        items:
+          type: string
+      record_desvars:
+        type: boolean
+        description: >-
+          whether to record design variables. Only used when
+          recorder_attachment is driver.
+      record_objectives:
+        type: boolean
+        description: >-
+          whether to record objectives. Only used when recorder_attachment is
+          driver.
+      record_constraints:
+        type: boolean
+        description: >-
+          whether to record constraints. Only used when recorder_attachment is
+          driver.
+      record_derivative:
+        type: boolean
+        description: >-
+          whether to record derivatives. Only used when recorder_attachment is
+          driver.
 required: [name, description, general]
