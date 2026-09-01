@@ -1860,6 +1860,19 @@ class H2IntegrateModel:
                     # Connect the resource output to the technology input
                     self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
+                    if variable in ["latitude", "longitude"]:
+                        other_loc_var = "longitude" if variable == "latitude" else "latitude"
+                        # If latitude is connected, make sure longitude is also connected
+                        other_connection = [resource_name, tech_name, other_loc_var]
+                        if other_connection not in resource_to_tech_connections:
+                            msg = (
+                                f"{variable} is connected between {resource_name} and "
+                                f"{tech_name}, but {other_loc_var} is not. Please ensure that "
+                                f"both latitude and longitude are connected from "
+                                f"'{resource_name}' to technology '{tech_name}'"
+                            )
+                            raise ValueError(msg)
+
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
         if "finance_parameters" in self.plant_config:
