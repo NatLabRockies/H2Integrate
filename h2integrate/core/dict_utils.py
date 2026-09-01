@@ -424,9 +424,9 @@ def find_nonzero_percent_diffs(pd_dict, ref_dict):
         ref_dict (dict): H2I inputs or outputs dict
 
     Returns:
-        (dict): Only the keys and items that have percent difference larger than 1e-8
-        (dict): Only the keys and items that have percent difference larger than 1e-8
-            and a norm of the original value larger than 1e-8
+        tuple[dict, dict]: First dict is only the keys and items that have percent difference larger
+            than 1e-8. Second dict is only the keys and items that have percent difference larger
+            than 1e-8 and a norm of the original value larger than 1e-8.
     """
 
     # Return only the dict items that are non-zero
