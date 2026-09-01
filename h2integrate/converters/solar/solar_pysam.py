@@ -340,6 +340,8 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         pass
 
     def _compute_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # Range object for the slice of the total simulation to run in this
+        # compute call
         simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # assign outputs

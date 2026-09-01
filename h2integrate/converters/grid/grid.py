@@ -127,10 +127,12 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         )
 
     def compute(self, inputs, outputs):
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
-
-        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # Selling: electricity flows into grid, limited by interconnection size
         electricity_sold = np.clip(

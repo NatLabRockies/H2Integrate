@@ -154,7 +154,6 @@ class StoragePerformanceModel(StoragePerformanceBase):
             discharge_rate = inputs["max_discharge_rate"][0]
         else:
             discharge_rate = inputs["max_charge_rate"][0]
-
         storage_capacity = inputs["storage_capacity"][0]
 
         outputs = self.run_storage(

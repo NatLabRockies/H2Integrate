@@ -172,6 +172,7 @@ class OpenLoopControlBase(om.ExplicitComponent):
 
     def setup(self):
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # n_steps_per_compute is the number of timesteps simulated per compute call
         self.n_steps_per_compute = int(
             self.options["plant_config"]["plant"]["simulation"].get(
                 "n_steps_per_compute", self.n_timesteps
@@ -182,6 +183,7 @@ class OpenLoopControlBase(om.ExplicitComponent):
 
         demand_data = self.config.demand_profile
 
+        # The index to start the simulation slice when compute is called.
         self.add_input("timestep_index", val=0, desc="Time step index")
 
         self.add_input(
@@ -209,7 +211,16 @@ class OpenLoopControlBase(om.ExplicitComponent):
         )
 
     def _get_compute_time_range(self, time_index):
-        # TODO add comment
+        """
+        This method gets the range of timestep indices that are simulated in a
+        single call to compute call.
+
+        Args:
+            time_index (numpy array): Starting time index of the simulation range.
+
+        Returns:
+            range: range of time indices
+        """
         ti = int(time_index[0])
         return range(ti, ti + self.n_steps_per_compute)
 

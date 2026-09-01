@@ -184,3 +184,5 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
     # plot_diff('plant.battery.StoragePerformanceModel.SOC')
 
     plot_diff("plant.battery.DemandOpenLoopStorageController.electricity_command_value")
+
+    plt.show()

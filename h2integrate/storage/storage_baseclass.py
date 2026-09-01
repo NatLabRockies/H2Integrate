@@ -51,7 +51,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "storage"
 
-    _soc_timeseries = np.zeros(8760)  # Default to 1 year
+    _soc_timeseries = np.zeros(8760)  # state of charge storage array
 
     def setup(self):
         """Set up the storage performance model in OpenMDAO.
@@ -74,7 +74,11 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         commodity_amount_units = self.commodity_amount_units
         n_timesteps = self.n_timesteps
 
+        # Ensure _soc_timeseries is consistent length with simulation
         self._soc_timeseries = np.zeros(self.n_timesteps)
+
+        # Initialize soc to the value in the config, if given or halfway between
+        # the minimum and maximum limits otherwise.
         if hasattr(self.config, "init_soc_fraction"):
             soc_init = self.config.init_soc_fraction
         else:
@@ -272,6 +276,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             om.vectors.default_vector.DefaultVector: calculated OpenMDAO outputs.
         """
 
+        # Range object for the slice of the total simulation to run in this
+        # compute call
         simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         if "pyomo_dispatch_solver" in discrete_inputs:
@@ -418,7 +424,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
                     (0-100).
         """
 
-        # n = len(storage_dispatch_commands)
         n = sim_end_index - sim_start_index
         storage_commodity_out_timesteps = np.zeros(n)
         soc_timesteps = np.zeros(n)
@@ -443,7 +448,6 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         else:
             commands = np.asarray(storage_dispatch_commands, dtype=float)
 
-        # soc = float(self.current_soc)
         if sim_start_index == 0:
             if hasattr(self.config, "init_soc_fraction"):
                 soc = self.config.init_soc_fraction
