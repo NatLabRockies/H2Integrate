@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from requests.exceptions import HTTPError
 
 from h2integrate.preprocess import eia
 
@@ -172,22 +171,22 @@ def test_get_eia_api_key(subtests, EIA_API_key_file):
         del os.environ["EIA_API_KEY"]
 
     with subtests.test("Error is raised for no file nor env variable"):
-        msg = "No `api_key_file` provided for the EIA API, and 'EIA_API_KEY'"
+        msg = "`EIA_API_KEY` has not been set. "
         with pytest.raises(ValueError, match=msg):
             eia.get_eia_api_key(None)
 
     with subtests.test("Error is raised for file with bad key name"):
-        msg = "No 'EIA_API_KEY' defined"
+        msg = "`EIA_API_KEY` has not been set. "
         with pytest.raises(ValueError, match=msg):
             eia.get_eia_api_key(bad_api_fn)
 
 
 @pytest.mark.unit
-def test_create_eia_ng_api_url(subtests):
+def test_create_eia_ng_api_url(subtests, monkeypatch):
     """Tests API URL generation for basic parameterizations."""
     if not VALID_API_KEY_EXISTS:
         api_key = DUMMY_KEY
-        os.environ["EIA_API_KEY"] = api_key
+        monkeypatch.setenv("EIA_API_KEY", api_key)
 
     correct_single_url = (
         "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
@@ -234,9 +233,11 @@ def test_create_eia_ng_api_url(subtests):
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(VALID_API_KEY_EXISTS, reason="No valid API key found to test data download")
+@pytest.mark.skipif(
+    VALID_API_KEY_EXISTS, reason="Valid API key found to test data download; skipping"
+)
 def test_failed_get_eia_ng_data():
-    with pytest.raises(HTTPError):
+    with pytest.raises(ValueError):
         eia.get_eia_ng_data(
             state="ak",
             resource_year=2022,

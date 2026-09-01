@@ -48,8 +48,10 @@ supported_models = _ModelRegistry(
     {
         # Resources
         "TidalResource": "resource.tidal:TidalResource",
+        "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
+        "HRRRMETToolkitWindAPI": "resource.wind:HRRRMETToolkitWindAPI",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
         "OpenMeteoHistoricalSolarResource": "resource.solar:OpenMeteoHistoricalSolarResource",
         "GOESAggregatedSolarAPI": "resource.solar:GOESAggregatedSolarAPI",
@@ -71,10 +73,13 @@ supported_models = _ModelRegistry(
         "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
         "ATBResComPVCostModel": "converters.solar:ATBResComPVCostModel",
         "PySAMTidalPerformanceModel": "converters.water_power:PySAMTidalPerformanceModel",
+        "PySAMWavePerformanceModel": "converters.water_power:PySAMWavePerformanceModel",
         "PySAMMarineCostModel": "converters.water_power:PySAMMarineCostModel",
         "RunOfRiverHydroPerformanceModel": "converters.water_power:RunOfRiverHydroPerformanceModel",
         "RunOfRiverHydroCostModel": "converters.water_power:RunOfRiverHydroCostModel",
         "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
+        "HTSEPerformanceModel": "converters.hydrogen:HTSEPerformanceModel",
+        "HTSECostModel": "converters.hydrogen:HTSECostModel",
         "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
         "BasicElectrolyzerCostModel": "converters.hydrogen:BasicElectrolyzerCostModel",
         "CustomElectrolyzerCostModel": "converters.hydrogen:CustomElectrolyzerCostModel",
@@ -86,8 +91,10 @@ supported_models = _ModelRegistry(
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
         "HOPPComponent": "converters.hopp:HOPPComponent",
-        "MartinIronMinePerformanceComponent": "converters.iron:MartinIronMinePerformanceComponent",
-        "MartinIronMineCostComponent": "converters.iron:MartinIronMineCostComponent",
+        "SimpleIronMinePerformanceComponent": "converters.iron:SimpleIronMinePerformanceComponent",
+        "SimpleIronMineCostComponent": "converters.iron:SimpleIronMineCostComponent",
+        "NRRIIronMinePerformanceComponent": "converters.iron:NRRIIronMinePerformanceComponent",
+        "NRRIIronMineCostComponent": "converters.iron:NRRIIronMineCostComponent",
         "NaturalGasIronReductionPlantPerformanceComponent": "converters.iron:NaturalGasIronReductionPlantPerformanceComponent",
         "NaturalGasIronReductionPlantCostComponent": "converters.iron:NaturalGasIronReductionPlantCostComponent",
         "HydrogenIronReductionPlantPerformanceComponent": "converters.iron:HydrogenIronReductionPlantPerformanceComponent",
@@ -128,7 +135,10 @@ supported_models = _ModelRegistry(
         "NaturalGasPerformanceModel": "converters.natural_gas:NaturalGasPerformanceModel",
         "QuinnNuclearPerformanceModel": "converters.nuclear:QuinnNuclearPerformanceModel",
         "QuinnNuclearCostModel": "converters.nuclear:QuinnNuclearCostModel",
+        "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
+        "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
@@ -160,6 +170,7 @@ supported_models = _ModelRegistry(
         "OptimizedDispatchStorageController": "control.control_strategies.storage:OptimizedDispatchStorageController",
         "GenericDemandComponent": "demand:GenericDemandComponent",
         "FlexibleDemandComponent": "demand:FlexibleDemandComponent",
+        "PLMHeuristicOpenLoopConverterController": "control.control_strategies.converters:PLMHeuristicOpenLoopConverterController",
         # Dispatch
         "PyomoDispatchGenericConverter": "control.control_rules.converters:PyomoDispatchGenericConverter",
         "PyomoRuleStorageBaseclass": "control.control_rules.storage:PyomoRuleStorageBaseclass",
@@ -189,11 +200,9 @@ supported_models = _ModelRegistry(
     }
 )
 
-
 # This next section is to demarcate specific models that belong to certain categories that are
 # relevant for processing in the model stackup. Right now, these designations are
 # used in `h2integrate_model.py`.
-
 
 # Model classes that do not contribute costs to the finance stackup because they are essentially
 # internal-only models that aren't categorized as a specific technology (e.g. a generic combiner
@@ -205,6 +214,7 @@ no_cost_models = {
     "GasStreamCombinerPerformanceModel",
     "CablePerformanceModel",
     "PipePerformanceModel",
+    "GenericTransporterPerformanceModel",
 }
 
 no_replacement_schedule_models = {

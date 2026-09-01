@@ -3,12 +3,11 @@ import copy
 import numpy as np
 import pandas as pd
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 from geopy import distance
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
@@ -18,7 +17,7 @@ class IronTransportPerformanceConfig(BaseConfig):
     find_closest_ship_site: bool = field()
     shipment_site: str = field(
         converter=(str.lower, str.capitalize),
-        validator=contains(["None", "Duluth", "Chicago", "Cleveland", "Buffalo"]),
+        validator=validators.in_(["None", "Duluth", "Chicago", "Cleveland", "Buffalo"]),
     )
 
     #
@@ -87,7 +86,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         lon = self.options["plant_config"]["sites"].get("site", {}).get("longitude")
         site_location = (lat, lon)
         shipping_coord_fpath = (
-            ROOT_DIR / "converters" / "iron" / "martin_transport" / "shipping_coords.csv"
+            ROOT_DIR / "converters" / "iron" / "simple_transport" / "shipping_coords.csv"
         )
         shipping_locations = pd.read_csv(shipping_coord_fpath, index_col="Unnamed: 0")
 
@@ -163,8 +162,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 
 @define(kw_only=True)
 class IronTransportCostConfig(BaseConfig):
-    transport_year: int = field(converter=int, validator=range_val(2022, 2065))
-    cost_year: int = field(converter=int, validator=range_val(2010, 2024))
+    transport_year: int = field(converter=int, validator=(validators.ge(2022), validators.le(2065)))
+    cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
     marginal_cost: float = field(default=0.0)
 
 

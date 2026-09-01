@@ -19,11 +19,11 @@ class TestCalcTiltAngle:
         """Create a lightweight mock of PYSAMSolarPlantPerformanceModel
         with the minimum attributes needed by calc_tilt_angle."""
         model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
-        model.design_config = MagicMock()
-        model.design_config.tilt_angle_func = tilt_angle_func
-        model.design_config.tilt = tilt
-        model.design_config.create_model_from = create_model_from
-        model.design_config.pysam_options = {}
+        model.config = MagicMock()
+        model.config.tilt_angle_func = tilt_angle_func
+        model.config.tilt = tilt
+        model.config.create_model_from = create_model_from
+        model.config.pysam_options = {}
         model.system_model = MagicMock()
         model.system_model.value.return_value = 20.0  # default tilt from PySAM model
         return model
@@ -99,7 +99,7 @@ class TestCalcTiltAngle:
 
     def test_none_mode_new_without_user_tilt(self):
         model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="new")
-        model.design_config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
+        model.config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(22.0)
 
@@ -119,14 +119,14 @@ class TestCalcAzimuthAngle:
         """Create a lightweight mock of PYSAMSolarPlantPerformanceModel
         with the minimum attributes needed by calc_tilt_angle."""
         model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
-        model.design_config = MagicMock()
-        model.design_config.tilt_angle_func = "none"
-        model.design_config.tilt = 0.0
-        model.design_config.create_model_from = "default"
+        model.config = MagicMock()
+        model.config.tilt_angle_func = "none"
+        model.config.tilt = 0.0
+        model.config.create_model_from = "default"
         if azimuth is not None:
-            model.design_config.pysam_options = {"SystemDesign": {"azimuth": azimuth}}
+            model.config.pysam_options = {"SystemDesign": {"azimuth": azimuth}}
         else:
-            model.design_config.pysam_options = {}
+            model.config.pysam_options = {}
         model.system_model = MagicMock()
         model.system_model.value.return_value = 20.0  # default tilt from PySAM model
         return model
@@ -411,7 +411,6 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
         "resource_year": 2012,
         "resource_dir": None,
         "resource_filename": "35.2018863_-101.945027_psmv3_60_2012.csv",
-        "use_fixed_resource_location": False,
     }
 
     prob = om.Problem()

@@ -5,6 +5,9 @@ import networkx as nx
 from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
+from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+    SystemLevelControlBase,
+)
 
 
 @fixture
@@ -26,13 +29,13 @@ def tech_control_classifiers(connection_case):
         if (classifier := config["control_classifiers"].get(tech, None)) is not None:
             tech_control_classification[tech] = classifier
             continue
-        if "combiner" in tech or "splitter" in tech:
-            tech_control_classification[tech] = "connector"
+        if "combiner" in tech:
+            tech_control_classification[tech] = "combiner"
             continue
-
-    tech_control_classification = {
-        tech: config["control_classifiers"].get(tech, "connector") for tech in all_techs
-    }
+        if "splitter" in tech:
+            tech_control_classification[tech] = "splitter"
+            continue
+        tech_control_classification[tech] = "connector"
     return tech_control_classification
 
 
@@ -75,9 +78,9 @@ def test_slc_topology_missing_demand(plant_config, tech_control_classifiers, sub
     with subtests.test("Error raised when missing demand_component"):
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert "Please specify the technology name for the demand component in" in str(
-                excinfo.value
-            )
+        assert "Please specify the technology name for the demand component in" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit
@@ -99,9 +102,9 @@ def test_slc_topology_demand_not_in_tech(plant_config, tech_control_classifiers,
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert f"``{demand_tech}`` not defined in the tech configuration file." in str(
-                excinfo.value
-            )
+        assert f"``{demand_tech}``,not defined in the tech configuration file." in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit
@@ -124,10 +127,10 @@ def test_slc_topology_invalid_demand_tech(plant_config, tech_control_classifiers
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert (
-                "Demand component ``AmmoniaPlant`` is not a supported model for the system level"
-                in str(excinfo.value)
-            )
+        assert (
+            "Demand component ``AmmoniaPlant`` is not a supported model for the system level"
+            in str(excinfo.value)
+        )
 
 
 @pytest.mark.unit
@@ -155,10 +158,9 @@ def test_slc_topology_unconnected_demand(plant_config, tech_control_classifiers,
         demand_tech = plant_config["system_level_control"]["demand_component"]
         with pytest.raises(ValueError) as excinfo:
             model._classify_slc_technologies()
-            assert (
-                f"Please ensure that the demand technology ``{demand_tech}`` is connected"
-                in str(excinfo.value)
-            )
+        assert f"Please ensure that the demand technology ``{demand_tech}`` is connected" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.unit
@@ -301,3 +303,52 @@ def test_slc_topology_nh3_system_with_h2_demand(plant_config, tech_control_class
 
     with subtests.test("All upstream techs in SLC graph"):
         assert upstream_techs == slc_techs.difference({demand_tech})
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("connection_case", ["fake_complex_system"])
+def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers, subtests):
+    # multiple commodities are connected between electrolyzer and haber bosch
+    model = object.__new__(H2IntegrateModel)
+    model.slc = True
+    model.plant_config = plant_config
+    model.tech_control_classifiers = tech_control_classifiers
+    demand_tech = plant_config["system_level_control"]["demand_component"]
+    storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
+    tech_config = make_mock_tech_config(demand_tech, storage_techs)
+    model.technology_config = tech_config
+    model.technology_graph = model.create_technology_graph(
+        plant_config.get("technology_interconnections", {})
+    )
+    slc_topology = model._classify_slc_technologies()
+
+    with subtests.test("Multi-commodity edge"):
+        pem_to_hb = model.technology_graph.edges["electrolyzer", "haber_bosch"].get("commodity")
+        assert len(pem_to_hb) == 3
+        assert set(pem_to_hb) == {"hydrogen", "oxygen", "heat"}
+
+    electrolyzer_commodities = [("electrolyzer", cmod) for cmod in ["hydrogen", "oxygen", "heat"]]
+    with subtests.test("Multi-commodity tech_to_commodity"):
+        assert all(
+            tech_cmod in slc_topology["tech_to_commodity"] for tech_cmod in electrolyzer_commodities
+        )
+
+    slc_base = object.__new__(SystemLevelControlBase)
+    input_tech_classifiers = ["fixed", "flexible", "dispatchable", "storage"]
+    input_techs = [
+        k
+        for k, v in slc_topology["tech_control_classifiers"].items()
+        if v in input_tech_classifiers
+    ]
+    feedstock_techs = [
+        k for k, v in slc_topology["tech_control_classifiers"].items() if v == "feedstock"
+    ]
+    slc_base.technology_graph = slc_topology["technology_graph"]
+    slc_base.input_techs = set(input_techs)
+    slc_base.feedstock_comps = feedstock_techs
+
+    upstream_techs = slc_base.get_upstream_techs_for_commodity(
+        "haber_bosch", "hydrogen", include_feedstock_sources=True
+    )
+    with subtests.test("Electrolyzer is upstream of Haber Bosch"):
+        assert upstream_techs == ["electrolyzer"]

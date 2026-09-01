@@ -13,3 +13,7 @@ from h2integrate.converters.hydrogen.steam_methane_reformer import (
     SteamMethaneReformerPerformanceModel,
     SteamMethaneReformerCostModel,
 )
+from h2integrate.converters.hydrogen.htse_electrolyzer import (
+    HTSEPerformanceModel,
+    HTSECostModel,
+)

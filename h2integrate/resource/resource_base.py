@@ -19,7 +19,7 @@ class ResourceBaseAPIConfig(BaseConfig):
     Subclasses should include the following attributes that are not set in this BaseConfig:
 
         - **resource_year** (*int*): Year to download resource data for.
-            Recommended to have a range_val validator.
+            Recommended to have a validator for upper and lower limits.
         - **resource_data** (*dict*, optional): Dictionary of user-provided resource data.
             Defaults to {}.
         - **resource_dir** (*str | Path*, optional): Folder to save resource files to or
@@ -39,12 +39,12 @@ class ResourceBaseAPIConfig(BaseConfig):
         timezone (float | int): timezone to output data in. May be used to determine whether
             to download data in UTC or local timezone. This should be populated by the value
             in sim_config['timezone']
-        use_fixed_resource_location (bool): Whether to update resource data in the `compute()`
-            method. Set to False if the site location is being swept, set to True if the
-            resource data should not be updated to the location
-            (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
-            to reduce computation time during optimizations or design sweeps if site location is
-            not being swept. Defaults to True.
+        resource_data (dict | object, optional): Dictionary of user-input resource data.
+            Defaults to an empty dictionary.
+        resource_dir (str | Path, optional): Folder to save resource files to or
+            load resource files from. Defaults to "".
+        resource_filename (str, optional): Filename to save resource data to or load
+            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -58,9 +58,11 @@ class ResourceBaseAPIConfig(BaseConfig):
 
     timezone: int | float = field()
 
-    use_fixed_resource_location: bool = field(default=True, kw_only=True)
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
+    resource_data: dict | object = field(default={})
+    resource_filename: Path | str = field(default="")
+    resource_dir: Path | str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -188,8 +190,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         the length of the data matches the expected number of timesteps.
 
         Args:
-            data (dict): DataFrame-like dictionary of resource data containing
-                "Month" and "Day" columns.
+            data (dict | pd.DataFrame): DataFrame-like dictionary of timeseries resource
+                data containing "Month" and "Day" columns.
+
         Returns:
             dict: Processed resource data with leap day handled according to configuration.
 
@@ -197,6 +200,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             ValueError: If the length of the data does not match ``self.n_timesteps``
                 after leap day processing.
         """
+
+        convert_to_dict = False
+        if isinstance(data, dict):
+            data = pd.DataFrame(data)
+            convert_to_dict = True
+
+        case_of_time_cols = "lower" if "month" in data.columns.to_list() else "upper"
+        data = data.rename(columns={"month": "Month", "day": "Day"})
 
         # Check if data includes leap day
         data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
@@ -231,6 +242,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
+        if case_of_time_cols == "lower":
+            data = data.rename(columns={"Month": "month", "Day": "day"})
+
+        if convert_to_dict:
+            data_out = {k: data[k].values for k in data.columns.to_list()}
+            return data_out
         return data
 
     def create_filename(self, latitude, longitude):
@@ -411,10 +428,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             raise ValueError("Did not successfully download resource data.")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if not self.config.use_fixed_resource_location:
-            # update the resource data based on the input latitude and longitude
-            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
-            # update the stored resource data and site
-            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
-            self.resource_data = data
-            discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+        # update the resource data based on the input latitude and longitude
+        data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
+        # update the stored resource data and site
+        self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
+        self.resource_data = data
+        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data

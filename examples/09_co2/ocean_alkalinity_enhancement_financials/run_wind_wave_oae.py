@@ -1,7 +1,6 @@
 from h2integrate import H2IntegrateModel
 
 
-# Create a GreenHEART model
 h2i_model = H2IntegrateModel("offshore_plant_oae.yaml")
 
 # Run the model
