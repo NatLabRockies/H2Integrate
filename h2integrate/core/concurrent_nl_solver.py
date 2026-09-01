@@ -1,4 +1,3 @@
-import tqdm
 import numpy as np
 from openmdao.recorders.recording_iteration_stack import Recording
 from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
@@ -42,7 +41,7 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
             system._discrete_inputs[sk] = True
 
         with Recording("NLRunOnce", 0, self) as rec:
-            for ss in tqdm.tqdm(sim_starts):
+            for ss in sim_starts:
                 # Update timestep_index in all subsystems
                 for tk in timestep_keys:
                     system._inputs[tk] = ss
