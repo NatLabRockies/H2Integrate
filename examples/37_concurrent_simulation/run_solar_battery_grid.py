@@ -3,8 +3,6 @@ from copy import deepcopy
 from pathlib import Path
 
 import yaml
-import numpy as np
-import matplotlib.pyplot as plt
 
 from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent_diffs
@@ -15,7 +13,6 @@ run_dict = {
     "run_sequential": True,
     "run_concurrent": True,
 }
-
 
 # Load config files into dict
 config_root = Path(__file__).parent
@@ -28,7 +25,6 @@ with Path(config_path).open() as f:
 config["driver_config"] = load_driver_yaml(config_root / config["driver_config"])
 config["technology_config"] = load_tech_yaml(config_root / config["technology_config"])
 config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
-
 
 # Run simulation sequentially one subsystem at a time
 if run_dict.get("run_sequential", False):
@@ -68,11 +64,6 @@ if run_dict.get("run_concurrent", False):
     # Create an H2I model for steppable simulation
     h2i_con = H2IntegrateModel(config_con)
 
-    # Set plant group nonlinear solver to custom steppable solver
-    # h2i_con.prob.model.plant.nonlinear_solver = ConcurrentPlantNLSolver(
-    #     plant_config=h2i_con.plant_config
-    # )
-
     t0 = time.time()
     # Run the model
     h2i_con.run()
@@ -98,35 +89,38 @@ if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", Fals
     in_abs, in_rel = find_nonzero_percent_diffs(inputs_pd_dict, dict(inputs_seq))
     out_abs, out_rel = find_nonzero_percent_diffs(outputs_pd_dict, dict(outputs_seq))
 
-    def plot_diff(key, io="outputs"):
-        if io == "outputs":
-            seq = dict(outputs_seq)
-            con = dict(outputs_con)
-        elif io == "inputs":
-            seq = dict(inputs_seq)
-            con = dict(inputs_con)
+    print(in_abs)
+    print(out_abs)
 
-        fig, ax = plt.subplots(2, 1, sharex="all", sharey="all", layout="constrained")
+    # def plot_diff(key, io="outputs"):
+    #     if io == "outputs":
+    #         seq = dict(outputs_seq)
+    #         con = dict(outputs_con)
+    #     elif io == "inputs":
+    #         seq = dict(inputs_seq)
+    #         con = dict(inputs_con)
 
-        ax[0].plot(seq[key]["val"], label="sequential")
-        ax[0].plot(con[key]["val"], label="concurrent")
-        ax[0].legend()
+    #     fig, ax = plt.subplots(2, 1, sharex="all", sharey="all", layout="constrained")
 
-        ax[1].axhline(0, color="black", linewidth=1)
-        ax[1].fill_between(
-            np.arange(0, len(seq[key]["val"]), 1),
-            np.zeros_like(seq[key]["val"]),
-            seq[key]["val"] - con[key]["val"],
-        )
+    #     ax[0].plot(seq[key]["val"], label="sequential")
+    #     ax[0].plot(con[key]["val"], label="concurrent")
+    #     ax[0].legend()
 
-        ax[0].set_title(key)
+    #     ax[1].axhline(0, color="black", linewidth=1)
+    #     ax[1].fill_between(
+    #         np.arange(0, len(seq[key]["val"]), 1),
+    #         np.zeros_like(seq[key]["val"]),
+    #         seq[key]["val"] - con[key]["val"],
+    #     )
 
-    plot_diff("plant.battery.StoragePerformanceModel.electricity_out")
+    #     ax[0].set_title(key)
 
-    # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
-    plot_diff("plant.grid_buy.GridPerformanceModel.electricity_out")
-    # plot_diff('plant.battery.StoragePerformanceModel.SOC')
+    # plot_diff("plant.battery.StoragePerformanceModel.electricity_out")
 
-    plot_diff("plant.battery.DemandOpenLoopStorageController.electricity_command_value")
+    # # plot_diff("plant.electrical_load_demand.GenericDemandComponent.electricity_out")
+    # plot_diff("plant.grid_buy.GridPerformanceModel.electricity_out")
+    # # plot_diff('plant.battery.StoragePerformanceModel.SOC')
 
-    plt.show()
+    # plot_diff("plant.battery.DemandOpenLoopStorageController.electricity_command_value")
+
+    # plt.show()
