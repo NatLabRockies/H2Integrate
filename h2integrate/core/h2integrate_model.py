@@ -866,17 +866,6 @@ class H2IntegrateModel:
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
 
-        if (
-            len(self.technology_config["technologies"]) > 1
-            and len(self.plant_config.get("technology_interconnections", [])) == 0
-        ):
-            msg = (
-                f"{len(self.technology_config['technologies'])} technologies have been defined "
-                "in the technology config but are not connected. Please add or populate "
-                "`technology_interconnections` in the plant configuration."
-            )
-            raise ValueError(msg)
-
         self.tech_names = []
         self.performance_models = []
         self.control_strategies = []
@@ -1056,6 +1045,20 @@ class H2IntegrateModel:
                 )
                 self._check_time_step(tech_name, comp)
                 self.plant.add_subsystem(tech_name, comp)
+        n_non_transport_techs = sum(
+            1 for _, v in self.tech_control_classifiers.items() if v != "transport"
+        )
+        if (
+            len(self.technology_config["technologies"]) > 1
+            and len(self.plant_config.get("technology_interconnections", [])) == 0
+            and n_non_transport_techs > 1
+        ):
+            msg = (
+                f"{len(self.technology_config['technologies'])} technologies have been defined "
+                "in the technology config but are not connected. Please add or populate "
+                "`technology_interconnections` in the plant configuration."
+            )
+            raise ValueError(msg)
 
     def _process_model(self, model_type, individual_tech_config, tech_group):
         # Generalized function to process model definitions
@@ -1814,8 +1817,48 @@ class H2IntegrateModel:
 
                 resource_name, tech_name, variable = connection
 
-                # Connect the resource output to the technology input
-                self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
+                if isinstance(variable, list | tuple):
+                    # Connect a site parameter to a technology
+                    site_parameter, tech_parameter = variable
+                    self.model.connect(
+                        f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}"
+                    )
+
+                    if site_parameter in ["latitude", "longitude"]:
+                        # If site_parameter is latitude, make sure destination is not longitude
+                        # (and vice versa)
+                        other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
+                        # NOTE: this assumes that technologies with location inputs use full names,
+                        # rather than shorthand versions like 'lat' and 'lon'
+                        if other_loc_var in tech_parameter:
+                            # connecting site latitude to tech longitude or
+                            # site longitude to tech latitude
+                            msg = (
+                                f"Invalid connection of {site_parameter} to {other_loc_var} "
+                                f"(from {resource_name} to {tech_name}). Please update the "
+                                f"connection so that {site_parameter} is connected to "
+                                f"{tech_parameter.replace(other_loc_var, site_parameter)}."
+                            )
+                            raise ValueError(msg)
+
+                        # If latitude is connected, make sure longitude is also connected
+                        other_connection = [
+                            resource_name,
+                            tech_name,
+                            [other_loc_var, tech_parameter.replace(site_parameter, other_loc_var)],
+                        ]
+                        if other_connection not in resource_to_tech_connections:
+                            msg = (
+                                f"{site_parameter} is connected between {resource_name} and "
+                                f"{tech_name}, but {other_loc_var} is not. Please ensure that "
+                                f" both latitude and longitude are connected from "
+                                f"'{resource_name}' to technology '{tech_name}'"
+                            )
+                            raise ValueError(msg)
+
+                else:
+                    # Connect the resource output to the technology input
+                    self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
@@ -1851,7 +1894,8 @@ class H2IntegrateModel:
                 for tech_name in tech_configs.keys():
                     # Skip technologies whose models doesn't add costs
                     perf_model = tech_configs[tech_name].get("performance_model").get("model")
-                    if perf_model in no_cost_models:
+                    cost_model = tech_configs[tech_name].get("cost_model", {}).get("model")
+                    if perf_model in no_cost_models and cost_model is None:
                         continue
 
                     self.plant.connect(

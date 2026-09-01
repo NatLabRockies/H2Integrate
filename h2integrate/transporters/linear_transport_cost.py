@@ -1,15 +1,14 @@
-from attrs import field, define
+from attrs import field, define, validators
 from geopy import distance
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gte_zero
 from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)
 class LinearTransportCostConfig(CostModelBaseConfig):
-    capex_per_km: float = field(validator=gte_zero)  # USD/km
-    fixed_opex_per_km: float = field(validator=gte_zero)  # USD/km
+    capex_per_km: float = field(validator=validators.ge(0))  # USD/km
+    fixed_opex_per_km: float = field(validator=validators.ge(0))  # USD/km
 
 
 class LinearDistanceCostModel(CostModelBaseClass):
@@ -19,6 +18,8 @@ class LinearDistanceCostModel(CostModelBaseClass):
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
     """
+
+    _time_step_bounds = (1, 1e9)
 
     def setup(self):
         self.add_input("source_latitude", 0.0, shape=1, require_connection=True, units="deg")
@@ -31,6 +32,8 @@ class LinearDistanceCostModel(CostModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
+
+        super().setup()
 
         self.add_input("unit_capex", self.config.capex_per_km, units="USD/km")
         self.add_input("unit_fixed_opex", self.config.fixed_opex_per_km, units="USD/km/year")

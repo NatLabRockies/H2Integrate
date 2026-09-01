@@ -27,6 +27,7 @@ class GenericTransporterPerformanceModel(om.ExplicitComponent):
         1,
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "transport"
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)

@@ -219,4 +219,5 @@ no_cost_models = {
 
 no_replacement_schedule_models = {
     "IronTransportPerformanceComponent",
+    "GenericTransporterPerformanceModel",
 }
