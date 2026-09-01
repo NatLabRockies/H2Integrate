@@ -11,6 +11,22 @@ from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
 @define(kw_only=True)
 class NSRDBDatasetH5Config(ResourceBaseH5Config):
+    """Configuration class to access solar resource data from NLR datasets.
+    Resource data is available from 1998-2025.
+
+    Args:
+        resource_year (int): Year to use for resource data.
+            Must been between 1998 and 2025 (inclusive).
+
+    Attributes:
+        dataset_desc (str): description of the dataset, used in file naming.
+            For this dataset, the `dataset_desc` is "nsrdb_current".
+        resource_type (str): type of resource data downloaded, used in folder naming.
+            For this dataset, the `resource_type` is "solar".
+        valid_intervals (list[int]): time interval(s) in minutes that resource data can be
+            downloaded in. For this dataset, `valid_intervals` are 30 and 60 minutes.
+    """
+
     resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2025)))
     dataset_desc: str = "nsrdb_current"
     resource_type: str = "solar"
