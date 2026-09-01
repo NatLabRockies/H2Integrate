@@ -162,8 +162,10 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         self.config.price = price.price.to_numpy()
         super().setup()
 
-        self.add_input("latitude", self.config.latitude, shape=1, units="deg")
-        self.add_input("longitude", self.config.longitude, shape=1, units="deg")
+        if self.config.latitude is not None and self.config.longitude is not None:
+            self.add_input("latitude", self.config.latitude, shape=1, units="deg")
+            self.add_input("longitude", self.config.longitude, shape=1, units="deg")
+        # else:
 
         self.price_state = self.config.state
 
@@ -191,7 +193,10 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         return self.config.price
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        price = self.get_price(inputs["latitude"][0], inputs["longitude"][0])
+        if "latitude" in inputs:
+            price = self.get_price(inputs["latitude"][0], inputs["longitude"][0])
+        else:
+            price = self.config.price
 
         if not np.isclose(inputs["price"], price, rtol=1e-6).all():
             # User changed input price, leave the price as-is
