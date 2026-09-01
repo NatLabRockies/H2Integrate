@@ -54,6 +54,8 @@ class GeospatialMapConfig(BaseConfig):
             Defaults to 's' == 'square'.
         markersize (float, optional): A float used to set the gpd.GeoDataFrame.plot() markersize
             parameter. Defaults to 36.0.
+        markerfacecolor (str, optional): A string used to set the gpd.GeoDataFrame.plot()
+            markerfacecolor parameter. Defaults to 'k'.
         edgecolor (str, optional): A string used to set the gpd.GeoDataFrame.plot() edgecolor
             parameter. Defaults to 'black'.
         colorbar_label (str, optional): A string used to set the colorbar label text.
@@ -151,7 +153,7 @@ class GeospatialMapConfig(BaseConfig):
         label_offset_y (list[float], optional): A list of floats used to set the y offset of labels
             for each point plotted. Must be the same length as the number of points or
             single-element list to use same alignment for all labels. Defaults to [3].
-
+        label_format_string (str, optional): A string used to format the label text for each point.
     """
 
     lat_long_crs: str = field(default="EPSG:4326")
@@ -163,6 +165,7 @@ class GeospatialMapConfig(BaseConfig):
     alpha: float = field(default=0.8)
     marker: str = field(default="s")
     markersize: float = field(default=36.0)
+    markerfacecolor: str = field(default="k")
     edgecolor: str = field(default="black")
     colorbar_label: str = field(default="UPDATE LABEL")
     colorbar_label_font_size: float = field(default=8.0)
@@ -209,6 +212,7 @@ class GeospatialMapConfig(BaseConfig):
     vert_alignment: list[str] = field(default=["bottom"])
     label_offset_x: list[float] = field(default=[3])
     label_offset_y: list[float] = field(default=[3])
+    label_format_string: str = field(default=".3f")
 
 
 def plot_geospatial_point_heat_map(
@@ -315,7 +319,8 @@ def plot_geospatial_point_heat_map(
         raise TypeError(msg)
 
     # Multiply the metric of interest by a constant factor if provided
-    results_df[metric_to_plot] = results_df[metric_to_plot] * metric_multiplier
+    if results_df[metric_to_plot].dtype in (np.float64, np.float32, np.int64, np.int32):
+        results_df[metric_to_plot] = results_df[metric_to_plot] * metric_multiplier
 
     # Check that label alignment and offset lists are the same length as number of points to plot
     num_points = len(results_df)
@@ -391,7 +396,12 @@ def plot_geospatial_point_heat_map(
         gdfs_for_bounds.extend(base_layer_gdf)
 
     # Determine appropriate lower and upper bounds for the colormap and legend
-    if map_preferences.colorbar_limits is None:
+    if map_preferences.colorbar_limits is None and results_gdf[metric_to_plot].dtype in (
+        np.float64,
+        np.float32,
+        np.int64,
+        np.int32,
+    ):
         vmin, vmax = auto_colorbar_limits(results_gdf[metric_to_plot])
     else:
         vmin, vmax = map_preferences.colorbar_limits
@@ -400,8 +410,9 @@ def plot_geospatial_point_heat_map(
 
     # Plot data labels
     for idx, result in results_gdf.iterrows():
+        labeltext = f"{result[metric_to_plot]:{map_preferences.label_format_string}}"
         ax.annotate(
-            text=f"{result[metric_to_plot]:.3f}",
+            text=labeltext,
             xy=(result.geometry.x, result.geometry.y),
             xytext=(
                 map_preferences.label_offset_x[idx],
@@ -415,17 +426,31 @@ def plot_geospatial_point_heat_map(
             verticalalignment=map_preferences.vert_alignment[idx],
         )
 
-    results_gdf.plot(
-        ax=ax,
-        column=metric_to_plot,
-        cmap=map_preferences.colormap,
-        alpha=map_preferences.alpha,
-        marker=map_preferences.marker,
-        markersize=map_preferences.markersize,
-        edgecolor=map_preferences.edgecolor,
-        norm=norm,
-        zorder=map_preferences.zorder,
-    )
+    # If data is text, just plot a single color for all points,
+    # otherwise plot the heat map with colormap
+    if results_gdf[metric_to_plot].dtype not in (np.float64, np.float32, np.int64, np.int32):
+        results_gdf.plot(
+            ax=ax,
+            color=map_preferences.markerfacecolor,
+            alpha=map_preferences.alpha,
+            marker=map_preferences.marker,
+            markersize=map_preferences.markersize,
+            edgecolor=map_preferences.edgecolor,
+            norm=norm,
+            zorder=map_preferences.zorder,
+        )
+    else:
+        results_gdf.plot(
+            ax=ax,
+            column=metric_to_plot,
+            cmap=map_preferences.colormap,
+            alpha=map_preferences.alpha,
+            marker=map_preferences.marker,
+            markersize=map_preferences.markersize,
+            edgecolor=map_preferences.edgecolor,
+            norm=norm,
+            zorder=map_preferences.zorder,
+        )
 
     # Create inset axis for color bar legend
     inset_ax = inset_axes(
