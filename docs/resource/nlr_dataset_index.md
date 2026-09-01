@@ -13,9 +13,6 @@ These resource models use the [REsource eXtraction tool (rex)](https://github.co
 - `NSRDBDatasetH5`: dataset extraction equivalent of the [`GOESConusSolarAPI` API resource model](#solar_resource:goes_v4_api)
 
 
-
-
-
 # External Users
 
 External users should follow the install and set-up instructions [available here](https://natlabrockies.github.io/rex/misc/examples.nlr_data.html#data-location-external-users). Additional set-up information and examples are available [here](https://natlabrockies.github.io/rex/misc/examples.hsds.html). If running with a local HSDS server, please set `use_hsds` to True in the `resource_parameters`. Also note that the `hsds_enpoint` in the rex documentation should be set as `hs_endpoint = https://developer.nlr.gov/api/hsds`
