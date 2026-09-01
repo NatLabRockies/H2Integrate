@@ -14,6 +14,7 @@ from h2integrate.core.supported_models import (
     supported_models,
     no_replacement_schedule_models,
 )
+from h2integrate.core.concurrent_nl_solver import ConcurrentPlantNLSolver
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
@@ -471,6 +472,24 @@ class H2IntegrateModel:
 
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
+
+        # Identify whether concurrent simulation framework is required
+        if n_steps_per_compute := self.plant_config["plant"]["simulation"].get(
+            "n_steps_per_compute", False
+        ):
+            n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
+
+            if n_steps_per_compute != n_timesteps:
+                if n_steps_per_compute > n_timesteps:
+                    raise AssertionError("n_steps_per_compute cannot be greater than n_timesteps")
+
+                if n_timesteps % n_steps_per_compute != 0:
+                    raise AssertionError("n_timesteps must be divisible by n_steps_per_compute")
+
+                # Assign custom nonlinear solver to plant group to manage concurrent simulation
+                self.plant.nonlinear_solver = ConcurrentPlantNLSolver(
+                    plant_config=self.plant_config
+                )
 
     def _classify_slc_technologies(self):
         """Classify technologies for system-level control.
