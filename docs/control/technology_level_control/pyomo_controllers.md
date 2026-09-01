@@ -113,7 +113,7 @@ tech_to_dispatch_connections: [
 
 ## Optimized Demand Response Controller
 
-The optimized demand response controller is specified by setting the storage control to `PeakLoadManagementOptimizedStorageController`. This controller optimizes the dispatch of a Battery Energy Storage System (BESS). It is demonstrated for a scenario in which a Generation and Transmission cooperative (G&T) is connected to a Distribution Co-operative (Co-op). The battery is owned and operated by the Co-op, primarily to reduce its electricity cost; in addition, the G&T can request battery dispatch a limited number of times during peak LMP periods, in exchange for incentive payments. Using a pre-defined Locational Marginal Price (LMP) profile and consumer power demand profile as inputs, the controller maximizes the incentive payments earned from G&T-requested dispatches while minimizing the Co-op's electricity cost, subject to constraints on the maximum number of dispatch events per month and the battery's state of charge. The result demonstrates peak load management and demand response from a single coordinated controller.
+The optimized demand response controller is specified by setting the storage control to `PeakLoadManagementOptimizedStorageController`. This controller optimizes the dispatch of a Battery Energy Storage System (BESS). It is demonstrated for a scenario in which a Generation and Transmission Cooperative (G&T) is connected to a Distribution Cooperative (Coop). The battery is owned and operated by the Coop, primarily to reduce its electricity cost; in addition, the G&T can request battery dispatch a limited number of times during peak LMP periods, in exchange for incentive payments. Using a pre-defined Locational Marginal Price (LMP) profile and consumer power demand profile as inputs, the controller maximizes the incentive payments earned from G&T-requested dispatches while minimizing the Coop's electricity cost, subject to constraints on the maximum number of dispatch events per month and the battery's state of charge. The result demonstrates peak load management and demand response from a single coordinated controller.
 
 The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
 
@@ -128,13 +128,13 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - `min_peak_separation` := minimum required time between two eligible peaks, expressed as a ``{units, val}`` dict. When set, only the first eligible peak is chosen.
 - $\mathcal{E}$ := eligible peak timesteps: $\{t \in \mathcal{W} : \lambda_t \geq \lambda_*\}$, respecting `min_peak_separation`
 - `event_duration` := total duration of one discharge event, expressed as a ``{units, val}`` dict (e.g. ``{units: h, val: 4}`` for a 4-hour event)
-- $\mathcal{D}$ := dispatch window: $\pm$`event_duration`/2 neighbourhoods around each peak in $\mathcal{E}$ (equals $\mathcal{E}$ when `event_duration` is `null`)
+- $\mathcal{D}$ := dispatch window: $\pm$`event_duration`/2 neighbourhoods around each peak in $\mathcal{E}$ (equals $\mathcal{E}$ when `event_duration` is not provided)
 - $\gamma$ := incentive revenue per kWh discharged (\$/kWh). Specified directly via `performance_incentive`, or derived from `performance_incentive_per_event` (\$/event) as $\gamma = \gamma_{\text{event}} / (\tau \cdot \Delta t \cdot P_{\max})$
 - $P_{\max}$ := `max_charge_rate` (kW): maximum charge and discharge rate
 - $E_{\max} :=$ `max_capacity` $\times$ (`max_soc_fraction` $-$ `min_soc_fraction`): usable energy capacity (kWh)
 - $\eta_c$ := `charge_efficiency`, $\quad \eta_d$ := `discharge_efficiency`
 - $\text{SoC}_{\max}$ := `max_soc_fraction`, $\quad \text{SoC}_{\min}$ := `min_soc_fraction`
-- $\text{gt2coop_limit}$ := upper limit on power transmitted from G&T to Co-Op.
+- $\text{gt2coop_limit}$ := upper limit on power transmitted from G&T to Coop.
 - `n_control_window_hours` := rolling horizon length in hours; converted to $T =$ `n_control_window_hours` / $\Delta t$ timesteps
 - $\mathcal{T} := \{0, 1, \ldots, T-1\}$: timesteps in the current rolling window
 - $\mathcal{M}_m$ := set of timesteps in month $m$, for $m = 1, \ldots, 12$
@@ -153,12 +153,12 @@ Before the MILP is solved, the dispatch window $\mathcal{D}$ is built in two ste
 ### Decision Variables
 
 - $u_{gt,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at G&T's command is active at timestep $t$; used for event counting and window feasibility constraints only
-- $u_{coop,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at Co-op's command is active at timestep $t$; used for event counting and window feasibility constraints only
+- $u_{coop,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at Coop's command is active at timestep $t$; used for event counting and window feasibility constraints only
 - $v_t \in \{0, 1\}$ := charge binary: 1 if a charge event is active at timestep $t$
 - $p^d_{gt,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at G&Ts command at timestep $t$
-- $p^d_{coop,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at Co-op's command timestep $t$
+- $p^d_{coop,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at Coop's command timestep $t$
 - $pc_{t} \in [0,\, P_{\max}]$ := charge power (kW) consumed at timestep $t$
-- $p_{gt2coop,t}$  := Energy supplied by the G&T to Co-op at timestep $t$
+- $p_{gt2coop,t}$  := Energy supplied by the G&T to Coop at timestep $t$
 - $\text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}]$ := state of charge (fraction) at timestep $t$
 
 ### Optimization Problem
@@ -167,7 +167,7 @@ This optimization is executed for each rolling window. At each window boundary t
 
 #### Objective
 
-Minimize Co-op's cost and maximize total incentive revenue over the optimization window:
+Minimize Coop's cost and maximize total incentive revenue over the optimization window:
 
 $$
 \min_{u_{gt,t},u_{coop,t},v_t,p^d_{gt,t},p^d_{coop,t},pc_t,\text{SOC}_t,p_{gt2coop,t}} \quad
@@ -175,7 +175,7 @@ $$
 -\gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p^d_{gt,t}
 $$
 
-where $f(\lambda_t)$ describes the price charged by the G&T to the Co-Op.
+where $f(\lambda_t)$ describes the price charged by the G&T to the Coop.
 
 The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled at any timestep resolution.
 
@@ -251,7 +251,7 @@ $$
 \quad \text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}] \qquad \forall\, t
 $$
 
-- Energy balance at Co-Op level
+- Energy balance at Coop level
 
 $$
 \delta_t = p_{gt2coop,t} + p^d_{gt,t} + p^d_{coop,t} - p_{c,t}

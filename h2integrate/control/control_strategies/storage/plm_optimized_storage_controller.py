@@ -34,7 +34,11 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
         demand_signal (list[float]): Consumer demand forecast time series (kW).
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
-        GnT_pricingfunction_coeffs (list[float]): Coefficients for G&T pricing function
+        GnT_pricingfunction_coeffs (list[float]): Coefficients for G&T pricing function.
+            The coefficients of the polynominal function representing the price G&T charges
+            the Coop based on the LMP. The list contains the coefficients of the polynomial
+            function in decreasing order. (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent
+            1*x^2 + 2*x + 3)
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in
@@ -75,7 +79,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
         pyomo_solver (str): Name of the solver used by pyomo to solve the MILP.
             Can be any of ``highs`` or ``glpk``. Default is ``highs``.
         pyomo_solver_options (dict): A dictionary containing options for pyomo solver.
-        gt2coop_limit (float): Upper limit of power transferred by G&T to CoOp (kW)
+        gt2coop_limit (float): Upper limit of power transferred by G&T to Coop (kW)
     """
 
     max_charge_rate: float = field()
@@ -540,7 +544,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             Event indicator — 1 if a discharge event due to G&T is active at timestep t.
             Used for event counting and window feasibility constraints only.
         discharge_coop[t] : binary
-            Event indicator — 1 if a discharge event due to CoOp is active at timestep t.
+            Event indicator — 1 if a discharge event due to Coop is active at timestep t.
             Used for event counting and window feasibility constraints only.
         charge[t] : binary
             Event indicator — 1 if a charge event is active at timestep t.
@@ -548,12 +552,12 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             Actual discharge power (kW) due to G&T. Linked to the binary via the
             McCormick upper-bound constraint ``p_discharge_gt[t] <= P_max * discharge_gt[t]``.
         p_discharge_coop[t] : continuous in [0, P_max]
-            Actual discharge power (kW) due to CoOp. Linked to the binary via the
+            Actual discharge power (kW) due to Coop. Linked to the binary via the
             McCormick upper-bound constraint ``p_discharge_coop[t] <= P_max * discharge_coop[t]``.
         p_charge[t] : continuous in [0, P_max]
             Actual charge power (kW). Linked via ``p_charge[t] <= P_max * charge[t]``.
         p_tocoop[t]: continuous
-            Power supplied (kW) by G&T to CoOp
+            Power supplied (kW) by G&T to Coop
         soc[t] : continuous in [soc_min, soc_max]
             State of charge (fraction).
 
@@ -652,7 +656,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             doc="State of charge SoC_t",
         )
 
-        # Power transmitted to CoOp
+        # Power transmitted to Coop
         m.p_tocoop = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
@@ -661,7 +665,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         )
 
         # Objective is maximizing incentive revenue is earned for every kWh discharged and
-        # minimizing the cost of energy for the CoOp.
+        # minimizing the cost of energy for the Coop.
         m.objective = pyomo.Objective(
             expr=-incentive * dt_hours * sum(m.p_discharge_gt[t] for t in m.T)
             + dt_hours * sum(self._GnT_pricingfunction(signal_w[t]) * m.p_tocoop[t] for t in m.T),
@@ -863,7 +867,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         ]
 
     def _GnT_pricingfunction(self, lmp: float) -> float:
-        """Compute the cost a G&T charges to a CoOp based on the current grid price.
+        """Compute the cost a G&T charges to a Coop based on the current grid price.
 
         Args:
             lmp (float): Current grid price (locational marginal price), e.g., in $/kWh.
