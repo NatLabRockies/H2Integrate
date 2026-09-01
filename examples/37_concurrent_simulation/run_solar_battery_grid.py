@@ -1,4 +1,3 @@
-import sys
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -7,12 +6,13 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate import H2IntegrateModel
+from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent_diffs
+from h2integrate.core.concurrent_nl_solver import CustomNonLinearRunOnce
 
 
-sys.path.append(str(Path(__file__).resolve().parents[0]))
-from CustomNLSolver import CustomNonLinearRunOnce
-
+# sys.path.append(str(Path(__file__).resolve().parents[0]))
+# from CustomNLSolver import CustomNonLinearRunOnce
 
 # Run one of both simulation paradigms by changing the flags in this dict
 run_dict = {
@@ -21,35 +21,17 @@ run_dict = {
 }
 
 
-def load_yaml_to_dict(fpath):
-    with Path(fpath).open() as f:
-        config = yaml.safe_load(f)
-    return config
-
-
 # Load config files into dict
 config_root = Path(__file__).parent
 config_path = config_root / "solar_battery_grid.yaml"
 
 # Load top level config
-config = load_yaml_to_dict(config_path)
+with Path(config_path).open() as f:
+    config = yaml.safe_load(f)
 
-# Fill driver config
-driver_config_path = config_root / config["driver_config"]
-config["driver_config"] = load_yaml_to_dict(driver_config_path)
-
-# Fill technology config
-technology_config_path = config_root / config["technology_config"]
-config["technology_config"] = load_yaml_to_dict(technology_config_path)
-
-# Fill plant config
-plant_config_path = config_root / config["plant_config"]
-config["plant_config"] = load_yaml_to_dict(plant_config_path)
-
-
-def get_io(name, io_list):
-    # Get the value of a specific input or output from the H2I inputs and outputs
-    return [io[1]["val"] for io in io_list if io[0] == name][0]
+config["driver_config"] = load_driver_yaml(config_root / config["driver_config"])
+config["technology_config"] = load_tech_yaml(config_root / config["technology_config"])
+config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 
 
 # Run simulation sequentially one subsystem at a time
@@ -71,13 +53,13 @@ if run_dict.get("run_sequential", False):
     # Post-process the results
     h2i_seq.post_process(print_results=False)
 
-    inputs_seq = h2i_seq.model.list_inputs(out_stream=None)
-    outputs_seq = h2i_seq.model.list_outputs(out_stream=None)
+    inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
+    outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
 
-    lcoe_seq = get_io(
-        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE",
-        outputs_seq,
-    )
+    lcoe_seq = outputs_seq[
+        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"
+    ]
+
 
 # Run the simulation concurrently for all subsystems one step at a time
 if run_dict.get("run_concurrent", False):
@@ -105,49 +87,15 @@ if run_dict.get("run_concurrent", False):
     # Post-process the results
     h2i_con.post_process(print_results=False)
 
-    inputs_con = h2i_con.model.list_inputs(out_stream=None)
-    outputs_con = h2i_con.model.list_outputs(out_stream=None)
+    inputs_con = dict(h2i_con.model.list_inputs(out_stream=None))
+    outputs_con = dict(h2i_con.model.list_outputs(out_stream=None))
 
-    lcoe_con = get_io(
-        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE",
-        outputs_con,
-    )
+    lcoe_con = outputs_con[
+        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"
+    ]
 
 # Compare results
 if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", False):
-
-    def percent_diff(v1, v2):
-        # Calculate the percent difference between two numbers or arrays
-        pd = np.nan_to_num((v2 - v1) / (0.5 * (v1 + v2)))
-        pd = np.where(np.max(np.abs(np.stack([v1, v2])), axis=0) <= 1e-8, 0, pd)
-        return pd
-
-    def percent_diff_dicts(d1, d2):
-        # Construct a dict of percent differences from two dicts with the same entries
-        d1 = dict(d1)
-        d2 = dict(d2)
-
-        d_out = {}
-        for k1, v1 in d1.items():
-            assert k1 in d2.keys()
-            v2 = d2[k1]
-
-            if isinstance(v1["val"], dict | bool):
-                # If the H2I input or output is more complicated than an array, skip it
-                continue
-
-            pd = percent_diff(v1["val"], v2["val"])
-
-            d_out.update({k1: np.linalg.norm(pd)})
-
-        return d_out
-
-    def find_nonzero_percent_diffs(pd_dict, ref_dict):
-        # Return only the dict items that are non-zero
-        abs_pd = {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
-        rel_pd = {k: v for k, v in abs_pd.items() if np.linalg.norm(ref_dict[k]["val"]) > 1e-8}
-        return abs_pd, rel_pd
-
     inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
     outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
 
