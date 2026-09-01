@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Add concurrent simulation capability to h2integrate framework and some example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 - Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
