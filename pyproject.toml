@@ -51,6 +51,7 @@ dependencies = [
   "pint",
   "ProFAST",
   "Pyomo>=6.1.2",
+  "pyfluids>=4.0",
   "rainflow",
   "requests",
   "requests-cache",
@@ -58,12 +59,12 @@ dependencies = [
   "rich>=13.7.0",
   "ruamel.yaml",
   "scipy",
-  "orbit-nrel",
   "floris",
   "timezonefinder==6.5.9",
   "turbine-models>=0.2.1",
   "wombat>=0.13.3",
   "charset_normalizer==3.4.9",
+  "statsmodels==0.14.6",
 ]
 keywords = [
     "python3",
@@ -118,8 +119,7 @@ gis = [
   "reverse_geocoder"
 ]
 ard = ["ard-nrel"]
-thermo = ["pyfluids>=4.0"]
-extras = ["h2integrate[gis,ard,thermo]"]
+extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 
 [tool.setuptools]
