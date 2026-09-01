@@ -8,11 +8,8 @@ import matplotlib.pyplot as plt
 
 from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent_diffs
-from h2integrate.core.concurrent_nl_solver import CustomNonLinearRunOnce
+from h2integrate.core.concurrent_nl_solver import ConcurrentPlantNLSolver
 
-
-# sys.path.append(str(Path(__file__).resolve().parents[0]))
-# from CustomNLSolver import CustomNonLinearRunOnce
 
 # Run one of both simulation paradigms by changing the flags in this dict
 run_dict = {
@@ -72,10 +69,9 @@ if run_dict.get("run_concurrent", False):
     h2i_con = H2IntegrateModel(config_con)
 
     # Set plant group nonlinear solver to custom steppable solver
-    h2i_con.prob.model.plant.nonlinear_solver = CustomNonLinearRunOnce(
+    h2i_con.prob.model.plant.nonlinear_solver = ConcurrentPlantNLSolver(
         plant_config=h2i_con.plant_config
     )
-    # h2i_con.prob.model.plant.linear_solver = CustomLinearRunOnce()
 
     t0 = time.time()
     # Run the model
