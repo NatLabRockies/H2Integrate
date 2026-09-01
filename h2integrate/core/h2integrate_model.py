@@ -1851,7 +1851,7 @@ class H2IntegrateModel:
                             msg = (
                                 f"{site_parameter} is connected between {resource_name} and "
                                 f"{tech_name}, but {other_loc_var} is not. Please ensure that "
-                                f" both latitude and longitude are connected from "
+                                f"both latitude and longitude are connected from "
                                 f"'{resource_name}' to technology '{tech_name}'"
                             )
                             raise ValueError(msg)
