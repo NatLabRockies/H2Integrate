@@ -97,7 +97,7 @@ issues = "https://github.com/NatLabRockies/H2Integrate/issues"
 changelog = "https://github.com/NatLabRockies/H2Integrate/blob/main/CHANGELOG.md"
 
 [project.scripts]
-populate_tech_config = "h2integrate.preprocess.populate_tech_yaml:main"
+populate_tech_yaml = "h2integrate.preprocess.populate_tech_yaml:main"
 
 [project.optional-dependencies]
 develop = [

@@ -19,7 +19,7 @@ Usage (CLI):
         [--output-path <output_path>]
 
     Or use the command-line entry point:
-    populate_tech_config <path_to_skeleton_tech_config.yaml> \\
+    populate_tech_yaml <path_to_skeleton_tech_config.yaml> \\
         [--output-path <output_path>]
 
 Usage (Python):
@@ -246,7 +246,7 @@ def organize_model_parameters(
     return model_inputs
 
 
-def populate_tech_config(tech_config: dict) -> dict:
+def populate_tech_yaml(tech_config: dict) -> dict:
     """Populate a skeleton tech config with model_inputs.
 
     Args:
@@ -323,7 +323,7 @@ def populate_tech_yaml_from_file(
 
     # Populate it
     print("Populating model_inputs sections...")
-    populated_config = populate_tech_config(tech_config)
+    populated_config = populate_tech_yaml(tech_config)
 
     # Clean up description field formatting (remove extra newlines)
     if "description" in populated_config and isinstance(populated_config["description"], str):
@@ -351,7 +351,7 @@ def main():
     """Command-line entry point for populate_tech_yaml."""
     parser = argparse.ArgumentParser(
         description="Populate technology configuration with model input templates.",
-        epilog=("Example: " "populate_tech_config path/to/skeleton_tech_config.yaml"),
+        epilog=("Example: " "populate_tech_yaml path/to/skeleton_tech_config.yaml"),
     )
     parser.add_argument(
         "config_path",

@@ -7,8 +7,8 @@ import yaml
 import pytest
 
 from h2integrate.preprocess.populate_tech_yaml import (
+    populate_tech_yaml,
     extract_model_inputs,
-    populate_tech_config,
     organize_model_parameters,
     populate_tech_yaml_from_file,
 )
@@ -106,7 +106,7 @@ class TestOrganizeModelParameters:
 
 @pytest.mark.unit
 class TestPopulateTechConfig:
-    """Tests for populate_tech_config function."""
+    """Tests for populate_tech_yaml function."""
 
     def test_populate_simple_config(self):
         """Test populating a simple tech config."""
@@ -121,7 +121,7 @@ class TestPopulateTechConfig:
             },
         }
 
-        populated = populate_tech_config(config)
+        populated = populate_tech_yaml(config)
 
         # Original tech info should still be there
         assert "wind" in populated["technologies"]
@@ -151,7 +151,7 @@ class TestPopulateTechConfig:
             },
         }
 
-        populated = populate_tech_config(config)
+        populated = populate_tech_yaml(config)
 
         assert "wind" in populated["technologies"]
         assert "battery" in populated["technologies"]
@@ -159,7 +159,7 @@ class TestPopulateTechConfig:
         assert len(populated["technologies"]["battery"]["model_inputs"]) > 0
 
     def test_populate_preserves_existing_values(self):
-        """Test that populate_tech_config preserves existing non-empty model_inputs."""
+        """Test that populate_tech_yaml preserves existing non-empty model_inputs."""
         config = {
             "name": "test",
             "technologies": {
@@ -176,7 +176,7 @@ class TestPopulateTechConfig:
 
         copy.deepcopy(config["technologies"]["wind"]["model_inputs"])
 
-        populated = populate_tech_config(config)
+        populated = populate_tech_yaml(config)
 
         # If model_inputs was already populated, it should remain populated
         new_inputs = populated["technologies"]["wind"]["model_inputs"]

@@ -29,7 +29,7 @@ When building a new H2Integrate model, you often start with a "skeleton" tech co
 
 Basic usage:
 ```bash
-populate_tech_config path/to/skeleton_tech_config.yaml
+populate_tech_yaml path/to/skeleton_tech_config.yaml
 ```
 
 Or run as a Python module:
@@ -39,7 +39,7 @@ python -m h2integrate.preprocess.populate_tech_yaml path/to/skeleton_tech_config
 
 With output to a different file:
 ```bash
-populate_tech_config path/to/skeleton_tech_config.yaml \
+populate_tech_yaml path/to/skeleton_tech_config.yaml \
     --output-path path/to/populated_tech_config.yaml
 ```
 
@@ -57,7 +57,7 @@ populated_config = populate_tech_yaml_from_file(
 
 Or work directly with dictionaries:
 ```python
-from h2integrate.preprocess.populate_tech_yaml import populate_tech_config
+from h2integrate.preprocess.populate_tech_yaml import populate_tech_yaml
 
 skeleton_config = {
     "technologies": {
@@ -70,7 +70,7 @@ skeleton_config = {
     }
 }
 
-populated = populate_tech_config(skeleton_config)
+populated = populate_tech_yaml(skeleton_config)
 # Now populated["technologies"]["battery"]["model_inputs"] is fully organized
 ```
 
@@ -297,4 +297,3 @@ When `populate_tech_yaml` processes this:
 - [Technology Configuration Guide](tech_config.md) - Full tech config structure
 - [Model Base Classes](../api/core/model_baseclasses.md) - Config class patterns
 - [Storage Models Documentation](../storage/storage_models.md) - Storage-specific configs
-- [Example 99: populate_tech_yaml](../../examples/99_populate_tech_yaml/) - Working example
