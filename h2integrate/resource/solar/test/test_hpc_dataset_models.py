@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 import openmdao.api as om
 from pytest import fixture
+from openmdao.utils.units import valid_units
 
 from h2integrate import RESOURCE_DEFAULT_DIR
 from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceModel
@@ -211,3 +212,81 @@ def test_nsrdb_dataset_from_dataset_pvwatts(
 
     with subtests.test("AEP"):
         assert pytest.approx(aep, rel=1e-6) == expected_aep
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,lat,lon,resource_year,timezone,dt,n_timesteps",
+    [
+        ("NSRDBDatasetH5", 39.7555, -105.2211, 2024, 0, 3600, 8760),
+        ],
+    ids=[
+        "NSRDBDatasetH5-60min-csv",
+    ]
+)
+def test_nsrdb_dataset_resource(
+    subtests,
+    plant_simulation_config,
+    solar_site_config,
+):
+
+    resource_config = {
+        "save_to_csv": False,
+        "load_from_csv": True,
+        "csv_output_dir": RESOURCE_DEFAULT_DIR/"solar",
+        "use_hsds": False,
+    }
+    solar_site_config["resources"]["solar_resource"]["resource_parameters"] |= resource_config
+
+    plant_config = {
+        "site": solar_site_config,
+        "plant": plant_simulation_config,
+    }
+
+    prob = om.Problem()
+    resource_comp = NSRDBDatasetH5(
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("solar_resource", resource_comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+    resource_data = prob.model.get_val("solar_resource_data")
+    units_data = resource_data.pop("units")
+
+    ratio_data_to_check = ["aod", "asymmetry","surface_albedo"]
+
+    with subtests.test("Data as ratios has all values < 1"):
+        assert all(all(resource_data[k]<1.0) for k in ratio_data_to_check)
+
+    with subtests.test("Data in percent units has some value > 1"):
+        assert all(any(resource_data[k]>1.0) for k,v in units_data.items() if v=="percent")
+
+    with subtests.test("Resource data exists"):
+        assert bool(resource_data)
+    with subtests.test("fill_flag timeseries exists"):
+        assert len(resource_data["fill_flag"]) == 8760
+
+    with subtests.test("fill_flag_mapper"):
+        assert isinstance(resource_data["fill_flag_mapper"], dict)
+
+    with subtests.test("irrandiance units"):
+        assert all(units_data[k] == "W/m**2" for k in resource_data if k.endswith("ni"))
+
+    with subtests.test("All resource units are valid"):
+        assert all(valid_units(v) for k, v in units_data.items())
+
+    with subtests.test("Data renamed properly"):
+        assert all(k not in resource_data for k,v in resource_comp.columns_translation.items())
+        assert all(v in resource_data for k,v in resource_comp.columns_translation.items())
+
+    with subtests.test("All units keys are in resource data"):
+        assert not bool(set(units_data) - set(resource_data))
+
+    with subtests.test("dataset filepath"):
+        assert resource_data["dataset_filepath"] == "/datasets/NSRDB/current/nsrdb_2024.h5"
+
+    with subtests.test("site GID"):
+        assert resource_data["id"] == 478473

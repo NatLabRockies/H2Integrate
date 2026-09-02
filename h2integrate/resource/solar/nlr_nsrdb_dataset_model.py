@@ -188,7 +188,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
         # Update data to the units defined in the baseclass
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        meta_data = site_data | {"fill_flag": fill_flag_mapper} | {"units": data_units}
+        meta_data = site_data | {"fill_flag_mapper": fill_flag_mapper} | {"units": data_units}
 
         # Create the meta-data dictionary
         return data_dict, meta_data
@@ -289,7 +289,7 @@ class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
         # Convert the data to standardized units defined in the solar resource baseclass
         data_dict, data_units = self.compare_units_and_correct(data_dict, data_units)
 
-        meta_data = site_data | {"fill_flag": fill_flag_mapper}
+        meta_data = site_data | {"fill_flag_mapper": fill_flag_mapper}
 
         # Update the meta-data to include the filepath of this csv file
         meta_data["dataset_filepath"] = meta_data.pop("filepath")
