@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import attrs
 import numpy as np
 from attrs import field, define, validators
 from numpy.typing import ArrayLike
@@ -10,8 +11,7 @@ from h2integrate.core.utilities import BaseConfig
 # generated from np.random.SeedSequence().entropy
 rng = np.random.default_rng(279299947538423226929715083173412195503)
 
-
-N_TIMESTEPS = 8760
+SECONDS_IN_YEAR = 8760 * 60 * 60
 
 
 def create_failure_model(config: dict):
@@ -85,6 +85,18 @@ def int_array_converter(val: int | float | ArrayLike):
     return np.array(val).astype(int).reshape(-1, 1)
 
 
+def calculate_simulation_years(value, self_) -> float:
+    """Calculates the length of the simulation period, in years from the :py:attr:`self_.dt` and
+    :py:attr:`self_.n_timesteps` provided from a configuration.
+    """
+    return self_.dt * self_.n_timesteps / SECONDS_IN_YEAR
+
+
+def calculate_annual_timesteps(value, self_) -> float:
+    """Calculates the number of timesteps in a year from the :py:attr:`self_.dt`, rounded up."""
+    return int(np.ceil(SECONDS_IN_YEAR / self_.dt))
+
+
 # NOTE: yes, I see the irony in creating a custom converter after removing all the attrs duplicates
 # NOTE: yes, I'll also be removing the above comment, but I'm sure someone will appreciate it
 def array_ge(val):
@@ -135,6 +147,8 @@ class BaseReliability(ABC, BaseConfig):
     """Base reliability class responsible for common definitions and functionality.
 
     Args:
+        dt (int): Timestep in seconds.
+        n_timesteps (int): Number of timesteps in a simulation.
         burn_in (float): Number of years into the simulation to use as the starting point of the
             the simulation's availability record. Defaults to 0.
         n_components (int): Number of identical components to sample to avoid defining an array of
@@ -154,6 +168,8 @@ class BaseReliability(ABC, BaseConfig):
             time step of the simulation.
     """
 
+    dt: int = field(converter=int, validator=validators.gt(0))
+    n_timesteps: int = field(converter=int, validator=validators.gt(0))
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: dict | BaseDowntime = field(converter=generate_downtime_model)
@@ -163,6 +179,14 @@ class BaseReliability(ABC, BaseConfig):
     availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     system_availability: np.ndarray = field(
         init=False, validator=validators.instance_of(np.ndarray)
+    )
+    n_timesteps_in_year: int = field(
+        init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
+    )
+    simulation_years: float = field(
+        init=False,
+        converter=attrs.Converter(calculate_simulation_years, takes_self=True),
+        validator=validators.instance_of(float),
     )
 
     def sample_events(self) -> np.ndarray:
@@ -175,8 +199,8 @@ class BaseReliability(ABC, BaseConfig):
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
-        burn_in_time = np.ceil(self.burn_in * N_TIMESTEPS).astype(int)
-        simulation_end = burn_in_time + N_TIMESTEPS
+        burn_in_time = np.ceil(self.burn_in * self.n_timesteps_in_year).astype(int)
+        simulation_end = burn_in_time + self.n_timesteps
 
         accumulated = np.zeros((self.n_components, 1), dtype=int)
         availability = np.ones((self.n_components, simulation_end), dtype=float)
@@ -279,10 +303,6 @@ class WeibullReliability(BaseReliability):
 
     Attributes:
         rng (np.random._generator.Generator): NumPy random generator object.
-
-    TODO:
-        - how to pass n_timesteps through from plant?
-        - burn-in
     """
 
     scale: float = field(
@@ -305,7 +325,9 @@ class WeibullReliability(BaseReliability):
     def sample_events(self):
         """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
         return np.ceil(
-            rng.weibull(self.shape, size=(self.shape.size, 100)) * self.scale * N_TIMESTEPS
+            rng.weibull(self.shape, size=(self.shape.size, 100))
+            * self.scale
+            * self.n_timesteps_in_year
         ).astype(int)
 
 
