@@ -294,6 +294,6 @@ When `populate_tech_yaml` processes this:
 
 ## See Also
 
-- [Technology Configuration Guide](tech_config.md) - Full tech config structure
-- [Model Base Classes](../api/core/model_baseclasses.md) - Config class patterns
-- [Storage Models Documentation](../storage/storage_models.md) - Storage-specific configs
+- [Set Up an Analysis](how_to_set_up_an_analysis.md) - H2Integrate configuration workflow
+- [Class Structure](../developer_guide/class_structure.md) - Model and configuration class patterns
+- [Storage Models Documentation](../storage/storage_models_index.md) - Storage-specific configs
