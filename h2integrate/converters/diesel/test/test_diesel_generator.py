@@ -24,6 +24,7 @@ def diesel_cost_params():
     """Diesel generator cost parameters."""
     cost_params = {
         "capex_per_kw": 900,  # $/kW
+        "capex_battery_total": 10000,  # $ total
         "fixed_opex_per_kw_per_year": 20.0,  # $/kW/year
         "variable_opex_per_kwh": 0.008,  # $/kWh (excluding fuel)
         "system_capacity_kw": 5000.0,  # 5 MW in kW
@@ -226,9 +227,10 @@ def test_diesel_cost(plant_config, diesel_cost_params, subtests):
 
     capex = prob.get_val("CapEx", units="USD")[0]
     opex = prob.get_val("OpEx", units="USD/year")[0]
+    capex_battery = tech_config_dict["model_inputs"]["cost_parameters"]["capex_battery_total"]
     cost_year = prob.get_val("cost_year")
 
-    expected_capex = diesel_cost_params["capex_per_kw"] * system_capacity_kw
+    expected_capex = diesel_cost_params["capex_per_kw"] * system_capacity_kw + capex_battery
     expected_fixed_om = diesel_cost_params["fixed_opex_per_kw_per_year"] * system_capacity_kw
     expected_variable_om = diesel_cost_params["variable_opex_per_kwh"] * sum(electricity_out)
     expected_opex = expected_fixed_om + expected_variable_om
