@@ -92,7 +92,6 @@ supported_models = _ModelRegistry(
         "SONGFuelCellPerformanceModel": "converters.natural_gas:SONGFuelCellPerformanceModel",
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
-        "HOPPComponent": "converters.hopp:HOPPComponent",
         "SimpleIronMinePerformanceComponent": "converters.iron:SimpleIronMinePerformanceComponent",
         "SimpleIronMineCostComponent": "converters.iron:SimpleIronMineCostComponent",
         "NRRIIronMinePerformanceComponent": "converters.iron:NRRIIronMinePerformanceComponent",
