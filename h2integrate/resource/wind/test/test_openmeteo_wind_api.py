@@ -57,7 +57,7 @@ def test_wind_resource_web_download(
     with subtests.test("Site Elevation"):
         assert pytest.approx(wind_data["elevation"], rel=1e-6) == elevation
 
-    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str)]
+    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str | dict)]
     for k in data_keys:
         with subtests.test(f"{k} resource data is 8760"):
             assert len(wind_data[k]) == 8760
@@ -116,7 +116,7 @@ def test_wind_resource_h2i_download(
     with subtests.test("Site Elevation"):
         assert pytest.approx(wind_data["elevation"], rel=1e-6) == elevation
 
-    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str)]
+    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str | dict)]
     for k in data_keys:
         with subtests.test(f"{k} resource data is 8760"):
             assert len(wind_data[k]) == 8760
@@ -176,7 +176,7 @@ def test_wind_resource_h2i_download_leap_year(
     with subtests.test("Site Elevation"):
         assert pytest.approx(wind_data["elevation"], rel=1e-6) == elevation
 
-    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str)]
+    data_keys = [k for k, v in wind_data.items() if not isinstance(v, float | int | str | dict)]
     for k in data_keys:
         with subtests.test(f"{k} resource data is 8760"):
             assert len(wind_data[k]) == 8760

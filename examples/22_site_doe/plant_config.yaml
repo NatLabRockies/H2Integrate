@@ -9,7 +9,6 @@ sites:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
           resource_year: 2012
-          use_fixed_resource_location: false  # set to False since sweeping sites
 resource_to_tech_connections:
   # connect the solar resource to the solar technology
   - [site.solar_resource, solar, solar_resource_data]

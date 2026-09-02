@@ -3,8 +3,8 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.converters.iron.martin_mine_cost_model import MartinIronMineCostComponent
-from h2integrate.converters.iron.martin_mine_perf_model import MartinIronMinePerformanceComponent
+from h2integrate.converters.iron.simple_mine_cost_model import SimpleIronMineCostComponent
+from h2integrate.converters.iron.simple_mine_perf_model import SimpleIronMinePerformanceComponent
 
 
 @fixture
@@ -27,7 +27,7 @@ def test_iron_mine_performance_outputs(
     plant_config, driver_config, iron_ore_config_martin_om, subtests
 ):
     prob = om.Problem()
-    iron_ore_perf = MartinIronMinePerformanceComponent(
+    iron_ore_perf = SimpleIronMinePerformanceComponent(
         plant_config=plant_config,
         tech_config=iron_ore_config_martin_om,
         driver_config=driver_config,
@@ -124,17 +124,17 @@ def test_iron_mine_performance_outputs(
 
 @pytest.mark.regression
 def test_baseline_iron_ore_costs(plant_config, driver_config, iron_ore_config_martin_om, subtests):
-    martin_ore_capex = 1221599018.626594
-    martin_ore_fixed_om = 0.0
+    simple_ore_capex = 1221599018.626594
+    simple_ore_fixed_om = 0.0
 
     prob = om.Problem()
-    iron_ore_perf = MartinIronMinePerformanceComponent(
+    iron_ore_perf = SimpleIronMinePerformanceComponent(
         plant_config=plant_config,
         tech_config=iron_ore_config_martin_om,
         driver_config=driver_config,
     )
 
-    iron_ore_cost = MartinIronMineCostComponent(
+    iron_ore_cost = SimpleIronMineCostComponent(
         plant_config=plant_config,
         tech_config=iron_ore_config_martin_om,
         driver_config=driver_config,
@@ -162,12 +162,12 @@ def test_baseline_iron_ore_costs(plant_config, driver_config, iron_ore_config_ma
     with subtests.test("CapEx"):
         assert (
             pytest.approx(prob.get_val("ore_cost.CapEx", units="USD")[0], rel=1e-6)
-            == martin_ore_capex
+            == simple_ore_capex
         )
     with subtests.test("OpEx"):
         assert (
             pytest.approx(prob.get_val("ore_cost.OpEx", units="USD/year")[0], rel=1e-6)
-            == martin_ore_fixed_om
+            == simple_ore_fixed_om
         )
     with subtests.test("VarOpEx"):
         varopex_per_t = prob.get_val("ore_cost.VarOpEx", units="USD/year")[0] / annual_ore_produced

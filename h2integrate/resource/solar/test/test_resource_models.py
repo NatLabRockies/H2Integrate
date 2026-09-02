@@ -185,7 +185,7 @@ def test_solar_resource_h2i_download(
     with subtests.test("Site Elevation"):
         assert pytest.approx(solar_data["elevation"], rel=1e-6) == 449
 
-    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str)]
+    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str | dict)]
     for k in data_keys:
         with subtests.test(f"{k} resource data is 8760"):
             assert len(solar_data[k]) == 8760
@@ -243,7 +243,7 @@ def test_solar_resource_h2i_download_leap_year(
     with subtests.test("Site Elevation"):
         assert pytest.approx(solar_data["elevation"], rel=1e-6) == 71
 
-    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str)]
+    data_keys = [k for k, v in solar_data.items() if not isinstance(v, float | int | str | dict)]
     for k in data_keys:
         with subtests.test(f"{k} resource data is 8760"):
             assert len(solar_data[k]) == 8760

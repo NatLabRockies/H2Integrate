@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_base import ResourceBaseAPIConfig
@@ -15,12 +13,6 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1998 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -36,9 +28,6 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -64,12 +53,6 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -85,9 +68,6 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -114,12 +94,6 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -135,9 +109,6 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -165,12 +136,6 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
         resource_year (str): Year to use for resource data. Can be any of the following:
             tmy-2022, tdy-2022, tgy-2022, tmy-2023, tdy-2023, tgy-2023, tmy-2024, tdy-2024,
             or tgy-2024.
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -201,9 +166,6 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_tmy_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
     def __attrs_post_init__(self):
         if "tmy" in self.resource_year:

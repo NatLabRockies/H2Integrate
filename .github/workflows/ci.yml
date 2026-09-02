@@ -55,20 +55,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
           auto-activate: true
           activate-environment: h2integrate
-      - name: Install base dependencies
+      - name: Install base conda dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
+      - if: ${{ matrix.optional }}
+        name: Install optional conda dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge wisdem
+      - name: Install H2Integrate
         shell: bash -el {0}
         env:
           SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: true
         run: |
-          conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
-          pip install ".[develop]"
-      - if: ${{ matrix.optional }}
-        name: Install optional dependencies
-        shell: bash -el {0}
-        run: |
-          conda install -y -c conda-forge wisdem
-          pip install ".[extras]"
+          pip install ".[develop${{ matrix.optional && ',extras' || '' }}]"
       - name: Create env file
         run: |
           touch .env

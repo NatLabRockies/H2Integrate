@@ -411,7 +411,6 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
         "resource_year": 2012,
         "resource_dir": None,
         "resource_filename": "35.2018863_-101.945027_psmv3_60_2012.csv",
-        "use_fixed_resource_location": False,
     }
 
     prob = om.Problem()

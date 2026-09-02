@@ -185,3 +185,62 @@ def test_generic_converter_cost_opex_value(plant_config, model_inputs, subtests)
         assert pytest.approx(expected_varopex, rel=1e-6) == prob.get_val(
             "VarOpEx", units="USD/year"
         )
+
+
+@pytest.mark.unit
+def test_generic_converter_cost_extra_costs(plant_config, model_inputs, subtests):
+    extra_capex0 = 10.0
+    extra_opex0 = 4.0
+    extra_varopex0 = -2.0
+
+    extra_costs = {
+        "additional_capex_USD": extra_capex0,
+        "additional_opex_USD_per_year": extra_opex0,
+        "additional_varopex_USD_per_year": extra_varopex0,
+    }
+    model_inputs["cost_parameters"].update(extra_costs)
+    model_inputs["cost_parameters"]["unit_opex"] = 1.0
+    model_inputs["cost_parameters"]["opex_fraction"] = None
+
+    prob = om.Problem()
+
+    comp = GenericConverterCostModel(
+        plant_config=plant_config,
+        tech_config={"model_inputs": model_inputs},
+    )
+
+    unit_opex = 1.0
+    unit_capex = 10.0
+    unit_varom = 5.0
+    hourly_rated_production = 1.0
+    annual_production = 8760 * hourly_rated_production
+    rated_prod_comp = om.IndepVarComp(
+        name="rated_hydrogen_production", val=hourly_rated_production, units="kg/h"
+    )
+    annual_prod_comp = om.IndepVarComp(
+        name="annual_hydrogen_produced", val=annual_production, shape=30, units="kg/yr"
+    )
+    prob.model.add_subsystem("cost", comp, promotes=["*"])
+    prob.model.add_subsystem("IVC1", rated_prod_comp, promotes=["*"])
+    prob.model.add_subsystem("IVC2", annual_prod_comp, promotes=["*"])
+
+    prob.setup()
+
+    prob.set_val("cost.unit_opex", val=unit_opex, units="USD/(kg/h)/year")
+    prob.set_val("cost.unit_capex", val=unit_capex, units="USD/(kg/h)")
+    prob.set_val("cost.unit_varopex", val=unit_varom, units="USD/kg")
+    prob.run_model()
+
+    with subtests.test("CapEx"):
+        expected_capex = (unit_capex * hourly_rated_production) + extra_capex0
+        assert pytest.approx(expected_capex, rel=1e-6) == prob.get_val("CapEx", units="USD")
+
+    with subtests.test("Fixed OpEx"):
+        expected_opex = (hourly_rated_production * unit_opex) + extra_opex0
+        assert pytest.approx(expected_opex, rel=1e-6) == prob.get_val("OpEx", units="USD/year")
+
+    with subtests.test("Variable OpEx"):
+        expected_varopex = np.full(30, (unit_varom * annual_production) + extra_varopex0)
+        assert pytest.approx(expected_varopex, rel=1e-6) == prob.get_val(
+            "VarOpEx", units="USD/year"
+        )

@@ -7,15 +7,17 @@ properties:
   name:
     type: string
     description: Name of the plant configuration
+    default: plant_config
   description:
     type: string
     description: Description of the plant configuration
+    default: plant configuration
   sites:
     type: object
-    properties:
-      site:
+    description: Sites included in the configuration
+    patternProperties:
+      .*:  # Allows any string as the key (e.g., site, wind_site, etc)
         type: object
-        default: {}
         properties:
           latitude:
             type: number
@@ -31,6 +33,24 @@ properties:
             type: number
             description: Elevation of the site in meters
             minimum: 0
+          resources:
+            type: object
+            description: Resource models for this site
+            patternProperties:
+              .*:  # Allows any string as the key (e.g., wind_resource, solar_resource)
+                type: object
+                properties:
+                  resource_model:
+                    type: string
+                    description: Name of the resource model class
+                  resource_model_location:
+                    type: [string, Path]
+                    description: Filepath containing a custom resource model
+                  resource_parameters:
+                    type: object
+                    description: Input parameters for the resource model
+              required: [resource_model, resource_parameters]
+              additionalProperties: false
           required: [latitude, longitude]
   plant:
     type: object
@@ -73,4 +93,70 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
-required: [name, description]
+  resource_to_tech_connections:
+    type: array
+    description: Array of arrays representing resource to technology connections
+    items:
+      type: array
+      items:
+        type: [string, array]
+        description: Connecting resource data from a site to a performance model
+  # include tech_to_dispatch_connections?
+  finance_parameters:
+    type: object
+    properties:
+      finance_groups:
+        type: object
+        description: Contains finance models and parameters, either within groups or top-level
+        additionalProperties: true
+      finance_subgroups:
+        type: object
+        description: Collections of technologies and/or commodity streams to calculate financials for
+        patternProperties:
+          .*:  # Allows any string as the key (e.g., electricity, hydrogen, etc)
+            type: object
+            properties:
+              commodity:
+                type: string
+                description: Name of the commodity whose financial performance is being analyzed
+              commodity_stream:
+                type: string
+                description: Name of technology that outputs the specified commodity or commodity_stream_output
+              technologies:
+                type: array
+                description: Technologies to include in the cost calculations
+                items:
+                  type: string
+              finance_groups:
+                type: [array, string]
+                description: Name(s) of finance_groups to run for this subgroup
+              commodity_desc:
+                type: string
+                description: Optional text label to further distinguish outputs for a commodity
+              use_commodity_stream_timeseries:
+                type: boolean
+                description: Whether to use the commodity_stream_output profile instead of the capacity factor of the technology
+                  specified as the commodity stream
+              commodity_stream_output:
+                type: string
+                description: Name of timeseries profile output variable from commodity_stream to use in finance calculations.
+                  Only used if use_commodity_stream_timeseries is True
+            required: [commodity, technologies]
+            additionalProperties: false
+      cost_adjustment_parameters:
+        type: object
+        description: Information to adjust costs to a consistent dollar-year
+        properties:
+          cost_year_adjustment_inflation:
+            type: number
+            minimum: -1
+            maximum: 1
+          target_dollar_year:
+            type: number
+            minimum: 0
+            maximum: 3000
+        required: [cost_year_adjustment_inflation, target_dollar_year]
+        additionalProperties: false
+    additionalProperties: false
+    required: [finance_groups, cost_adjustment_parameters]
+required: [name, description, plant]  # should plant be required?

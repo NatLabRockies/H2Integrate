@@ -130,6 +130,8 @@ auto-generated API page.
     + {py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModel` - An OpenMDAO component that computes the cost of a reverse osmosis desalination system.
 
 - `generic`: generic converter components
+  - performance models:
+    + {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel` - Performance model for simple Brayton-cycle turbines.
   - cost models:
     + {py:class}`~h2integrate.converters.generic_converter_cost.GenericConverterCostModel`
 
@@ -168,14 +170,16 @@ auto-generated API page.
   - performance models:
     + {py:class}`~h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponent` - OpenMDAO component for the Humbert iron electrowinning performance model.
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.HydrogenIronReductionPlantPerformanceComponent` - Performance component for hydrogen-based direct reduced iron (DRI) plant using the Rosner performance model.
-    + {py:class}`~h2integrate.converters.iron.martin_mine_perf_model.MartinIronMinePerformanceComponent`
+    + {py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMinePerformanceComponent`
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.NaturalGasIronReductionPlantPerformanceComponent` - Performance component for natural gas-based direct reduced iron (DRI) plant using the Rosner performance model.
+    + {py:class}`~h2integrate.converters.iron.simple_mine_perf_model.SimpleIronMinePerformanceComponent`
   - cost models:
     + {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent` - OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.HydrogenIronReductionPlantCostComponent` - Cost component for hydrogen-based direct reduced iron (DRI) plant using the Rosner cost model.
     + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponent`
-    + {py:class}`~h2integrate.converters.iron.martin_mine_cost_model.MartinIronMineCostComponent`
+    + {py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponent`
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.NaturalGasIronReductionPlantCostComponent` - Cost component for natural gas-based direct reduced iron (DRI) plant using the Rosner cost model.
+    + {py:class}`~h2integrate.converters.iron.simple_mine_cost_model.SimpleIronMineCostComponent`
   - other components:
     + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponent`
 

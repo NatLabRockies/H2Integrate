@@ -11,45 +11,57 @@ technologies:
         commodity: electricity
         commodity_rate_units: MW
       performance_parameters:
-        rated_capacity: 30.  # MW, need 27.913 MW per timestep for iron ore
+        rated_capacity: 30
       cost_parameters:
-        cost_year: 2022
-        price: 0.  # Electricity costs are already priced in to current mine model
+        cost_year: 2021
+        price: 105.097
         annual_cost: 0.
         start_up_cost: 0.
-  mine_crude_ore_feedstock:  # iron ore feedstock
+  mine_natural_gas_feedstock:  # natural gas feedstock for iron ore
     performance_model:
       model: FeedstockPerformanceModel
     cost_model:
       model: FeedstockCostModel
     model_inputs:
       shared_parameters:
-        commodity: crude_ore
-        commodity_rate_units: t/h
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
       performance_parameters:
-        rated_capacity: 2000.  # need 828.50385048 t/h
+        rated_capacity: 1000.
       cost_parameters:
-        cost_year: 2022
-        price: 0.  # USD/t
+        cost_year: 2021
+        price: 5.275
         annual_cost: 0.
         start_up_cost: 0.
-  crude_ore_transport:
+  mine_diesel_feedstock:  # diesel feedstock for iron ore
     performance_model:
-      model: GenericTransporterPerformanceModel
-    model_inputs:
-      performance_parameters:
-        commodity: crude_ore
-        commodity_rate_units: t/h
-  iron_mine:
-    performance_model:
-      model: SimpleIronMinePerformanceComponent
+      model: FeedstockPerformanceModel
     cost_model:
-      model: SimpleIronMineCostComponent
+      model: FeedstockCostModel
     model_inputs:
       shared_parameters:
-        mine: Northshore
-        taconite_pellet_type: drg
+        commodity: diesel
+        commodity_rate_units: galUS/h
+      performance_parameters:
+        rated_capacity: 1000.
+      cost_parameters:
+        cost_year: 2021
+        price: 2.679
+        annual_cost: 0.
+        start_up_cost: 0.
+  iron_mine:
+    performance_model:
+      model: NRRIIronMinePerformanceComponent
+    cost_model:
+      model: NRRIIronMineCostComponent
+    model_inputs:
+      performance_parameters:
         max_ore_production_rate_tonnes_per_hr: 221.2592636
+      cost_parameters:
+        taconite_pellet_type: drg
+        cost_year: 2021
+      shared_parameters:
+        mine: Northshore
   iron_ore_transport:
     performance_model:
       model: GenericTransporterPerformanceModel
