@@ -41,3 +41,13 @@ Helper functions for cost-aware controllers.
    :undoc-members:
    :show-inheritance:
 ```
+
+
+## Heterogeneous Commodity Hybrid System
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.system_level.system_level_control_base.HCHSConfig
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```

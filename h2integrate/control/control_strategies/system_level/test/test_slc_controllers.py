@@ -2,9 +2,9 @@
 
 import numpy as np
 import pytest
-import networkx as nx
 import openmdao.api as om
 
+from h2integrate import H2IntegrateModel
 from h2integrate.control.control_strategies.system_level.demand_following_control import (
     DemandFollowingControl,
 )
@@ -38,14 +38,8 @@ def _build_plant_config(
 
 
 def _build_technology_graph(technology_interconnections):
-    technology_graph = nx.DiGraph()
-    for connection in technology_interconnections:
-        source = connection[0]
-        destination = connection[1]
-        if len(connection) == 4:
-            technology_graph.add_edge(source, destination, commodity=connection[2])
-        else:
-            technology_graph.add_edge(source, destination)
+    model = object.__new__(H2IntegrateModel)
+    technology_graph = model.create_technology_graph(technology_interconnections)
     return technology_graph
 
 
@@ -68,9 +62,10 @@ def _build_slc_topology(
     demand_commodity_rate_units: str = "kW",
     storage_techs_with_control: list = [],
 ):
-    sources_to_commodities = {
-        (e[0], e[-1]) for e in technology_graph.edges(data="commodity") if e[-1] is not None
-    }
+    sources_to_commodities = set()
+    for source, _, commodities in technology_graph.edges(data="commodity"):
+        if commodities is not None:
+            sources_to_commodities.update((source, commodity) for commodity in commodities)
 
     tech_to_commodities = {
         (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers

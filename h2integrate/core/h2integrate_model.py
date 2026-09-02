@@ -593,7 +593,6 @@ class H2IntegrateModel:
             for k, v in self.tech_control_classifiers.items()
             if k in upstream_controllable_techs
         }
-
         # Check if storage models have a controller
         storage_tech_to_control = {}
         for tech, classifier in upstream_tech_control_classifiers.items():

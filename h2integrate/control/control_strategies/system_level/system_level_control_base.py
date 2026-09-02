@@ -1,3 +1,6 @@
+import warnings
+import itertools
+
 import numpy as np
 import networkx as nx
 import openmdao.api as om
@@ -79,6 +82,149 @@ def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_
         return default_price, 1
 
     return 0.0, n_timesteps
+
+
+class HCHSConfig:
+    """Configuration class for a Heterogeneous Commodity Hybrid System.
+    The inputs to this configuration class are made in the
+    ``_post_setup_multi_commodity()`` method of ``SystemLevelControlBase``.
+
+    Attributes:
+        converter_upstreams (dict): describes the technologies that provide
+            each of the input commodities for converter technologies
+        converters (set[tuple]): set of tuples describing the commodity conversions of
+            all technologies that convert one commodity into another
+        grouped_techs (dict): groups of technologies based on the commodities they produce.
+            This is built from ``converter_upstreams``
+        simple_graph (nx.DiGraph): directional graph representation of ``grouped_techs``
+        converter_tech_names (set[str]): names of the converter technologies in the system
+        conversion_recipes (dict): instructions on how to convert the demanded commodity
+            into a demand profile for each group of technologies
+        non_converter_conversion_factor_keys (set[tuple]): equivalent of ``converters``
+            but for all other technologies in the system that are not in ``converters``
+
+    Examples:
+        Below highlights what these attributes look like if we have the following system:
+
+        >>> technology_interconnections = [
+        ...     ["wind", "elec_combiner", "electricity", "cable"],
+        ...     ["solar", "elec_combiner", "electricity", "cable"],
+        ...     ["elec_combiner", "electrolyzer", "electricity", "cable"],
+        ...     ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+        ...     ["electricity_feedstock", "haber_bosch", "electricity", "cable"],
+        ...     ["haber_bosch", "nh3_storage", "ammonia", "pipe"],
+        ...     ["haber_bosch", "nh3_combiner", "ammonia", "pipe"],
+        ...     ["nh3_storage", "nh3_combiner", "ammonia", "pipe"],
+        ...     ["nh3_combiner", "nh3_load_demand", "ammonia", "pipe"],
+        ... ]
+
+        >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+        {
+            # (input_commodity, tech_name, output_commodity)
+            ("electricity", "electrolyzer", "hydrogen"),
+            ("electricity", "haber_bosch", "ammonia"),
+            ("hydrogen", "haber_bosch", "ammonia")
+        }
+
+        >>> converter_upstreams  # keys formatted as (input_commodity, tech)
+        {
+            # (input_commodity, tech): [upstream technologies providing input_commodity to tech]
+            ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+            ("electricity", "haber_bosch"): ["electricity_feedstock"],
+            ("hydrogen", "haber_bosch"): ["electrolyzer"],
+            ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+        }
+
+        >>> converter_tech_names  # set of strings
+        {"electrolyzer", "haber_bosch"}
+
+        >>> non_converter_conversion_factor_keys
+        {
+            # (output_commodity, tech, output_commodity)
+            ("ammonia", "nh3_combiner", "ammonia"),
+            ("ammonia", "nh3_storage", "ammonia"),
+            ("electricity", "elec_combiner", "electricity"),
+            ("electricity", "wind", "electricity"),
+            ("electricity", "solar", "electricity"),
+            ("electricity", "electricity_feedstock", "electricity"),
+        }
+
+        >>> grouped_techs
+        {
+            # group_name: [technologies in group]
+            "electricity-0": ["solar", "wind", "elec_combiner"],
+            "electricity-1": ["electricity_feedstock"],
+            "hydrogen-2": ["electrolyzer"],
+            "ammonia-3": ["nh3_combiner", "nh3_storage", "haber_bosch"]
+        }
+
+        >>> list(conversion_recipes.keys(())
+        [
+            # (input_commodity, output_commodity, group_name)
+            ('ammonia', 'electricity', 'ammonia-3'),
+            ('ammonia', 'hydrogen', 'ammonia-3'),
+            ('hydrogen', 'electricity', 'hydrogen-2')
+        ]
+
+        Recipe to calculate electricity demand for ammonia plant
+
+        >>> conversion_recipes[("ammonia", "electricity", "ammonia-3")]
+        [
+            [
+                ('ammonia', 'nh3_combiner', 'ammonia'),
+                ('ammonia', 'nh3_storage', 'ammonia'),
+                ('electricity', 'haber_bosch', 'ammonia')
+            ]
+        ]
+
+        Recipe to calculate hydrogen demand for ammonia plant
+
+        >>> conversion_recipes[("ammonia", "hydrogen", "ammonia-3")]
+        [
+            [
+                ('ammonia', 'nh3_combiner', 'ammonia'),
+                ('ammonia', 'nh3_storage', 'ammonia'),
+                ('hydrogen', 'haber_bosch', 'ammonia')
+            ]
+        ]
+
+        Recipe to calculate electricity demand for hydrogen used in the ammonia plant
+
+        >>> conversion_recipes[("hydrogen", "electricity", "hydrogen-2")]
+        [
+            # recipe of hydrogen to ammonia
+            [
+                ('ammonia', 'nh3_combiner', 'ammonia'),
+                ('ammonia', 'nh3_storage', 'ammonia'),
+                ('hydrogen', 'haber_bosch', 'ammonia')
+            ],
+            # recipe of electricity to hydrogen
+            [
+                ('electricity', 'electrolyzer', 'hydrogen'),
+                ('hydrogen', 'h2_combiner', 'hydrogen'),
+                ('hydrogen', 'h2_storage', 'hydrogen')
+            ]
+        ]
+
+    """
+
+    def __init__(
+        self,
+        converter_upstreams: dict,
+        converters: set,
+        grouped_techs: dict,
+        simple_graph: nx.DiGraph,
+        converter_tech_names: set,
+        conversion_recipes: dict,
+        non_converter_keys: set,
+    ):
+        self.converter_upstreams = converter_upstreams
+        self.converters = converters
+        self.grouped_techs = grouped_techs
+        self.simple_graph = simple_graph
+        self.converter_tech_names = converter_tech_names
+        self.conversion_recipes = conversion_recipes
+        self.non_converter_conversion_factor_keys = non_converter_keys
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -201,6 +347,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("dispatchable", self.dispatchable_techs)
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
+
+        self._post_setup_multi_commodity()
 
     def _setup_commodity(
         self,
@@ -560,6 +708,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             # Storage tech has its own sub-controller: emit a combined demand
             # signal (always positive) equal to the commodity flowing into
             # storage from upstream techs plus any remaining demand.
+            # TODO: possibly replace self.get_upstream_techs_for_commodity with
+            # get_successors_for_tech_with_input_cmod
             upstream_techs = self.get_upstream_techs_for_commodity(storage_tech, commodity)
             commodity_into_storage = np.zeros(self.n_timesteps)
             for tech_name in upstream_techs:
@@ -821,6 +971,142 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return np.full(self.n_timesteps, marginal_cost_scalar)
 
+    def _post_setup_multi_commodity(self):
+        """This method creates sets the attribute ``rename_me_config``, which is a
+        ``HCHSConfig`` object. This method is only used in
+        heterogeneous commodity hybrid system (HCHS). Below is a summary of what this method does:
+
+        1. Find the converter technologies and the technologies upstream of them.
+        This is done by calling the method ``_find_converter_techs()``.
+
+        2. Use the ``converter_upstreams`` made in Step 1 to group together technologies
+        with the same output commodity and the same downstream converter. A single
+        technology may exist in multiple groups if it has multiple commodities
+        connected to another component.
+
+        3. Create ``simple_graph`` - a directional graph representation of the
+        grouped technologies from Step 2.
+
+        4. Create keys for a conversion recipe based on the technologies that
+        are do not convert one commodity to another.
+
+        5. Create recipes to convert from the demand to the demand for each group
+        of technologies/commodities, using ``_make_conversion_factor_recipes()``
+
+        """
+        if not self.multi_commodity_system:
+            return
+        # converter upstreams now has values of lists intead of sets
+        converters, converter_upstreams = self._find_converter_techs()
+
+        demand_group_techs = self.get_successors_for_tech_with_input_cmod(
+            self.demand_tech, self.commodity
+        )
+
+        converter_upstreams[(self.commodity, self.demand_tech)] = demand_group_techs
+        # converter_info.add((self.commodity, self.demand_tech, self.commodity))
+        # conversion fator recipes requires simple_graph, converters, demand_tech, grouped_techs
+        # grouped_techs[f"{self.commodity}-{len(converter_upstreams)+1}"] = demand_group_techs
+        # alt_grouped_techs[(self.commodity, f"{len(converter_upstreams)+1}")] = demand_group_techs
+
+        # dictionary with keys as a group name mapping to a list of technologies in that groups
+        grouped_techs = {}
+        groups_to_commodities = {}
+        # Not doing this as 1-liners just in case any ordering could change (unlikely)
+        # for i, (key, value) in enumerate(converter_upstreams.items()):
+        #     grouped_techs[f"{key[0]}-{i}"] = value
+        #     groups_to_commodities[f"{key[0]}-{i}"] = key[0]
+
+        for i, ((commodity, _), upstream_commodity_techs) in enumerate(converter_upstreams.items()):
+            group_name = f"{commodity}-{i}"
+            grouped_techs[group_name] = upstream_commodity_techs
+            groups_to_commodities[group_name] = commodity
+
+        reversed_grouped_techs = {}
+        reversed_commodity_groups = {}
+        for group_name, techs_in_group in grouped_techs.items():
+            group_commodity = groups_to_commodities[group_name]
+
+            for tech_name in list(techs_in_group):
+                if (tech_name, group_commodity) in reversed_commodity_groups:
+                    msg = (
+                        f"The tech/commodity pair {tech_name}/{group_commodity} "
+                        "should not be duplicated. This may be due to a splitter "
+                        "in the system which is not currently supported."
+                    )
+                    # this error will get raised if using a splitter.
+                    raise ValueError(msg)
+
+                reversed_commodity_groups[(tech_name, group_commodity)] = group_name
+
+                if tech_name in reversed_grouped_techs:
+                    reversed_grouped_techs[tech_name] = reversed_grouped_techs[tech_name] + [
+                        group_name
+                    ]
+                else:
+                    reversed_grouped_techs[tech_name] = [group_name]
+
+        simple_graph = nx.DiGraph()
+        for e in list(self.technology_graph.edges(data="commodity")):
+            source_tech, dest_tech, commodities = e  # source_tech, dest_tech, commodity
+            if commodities is None or len(commodities) == 0:
+                # skip if no commodity is passed
+                continue
+
+            for commod in commodities:
+                if (source_tech, commod) not in reversed_commodity_groups:
+                    msg = (
+                        f"The technology/commodity pair {source_tech}/{commod} " "is not in a group"
+                    )
+                    raise ValueError(msg)
+                # groups containing ``dest_tech``
+                destination_groups = reversed_grouped_techs.get(dest_tech, [dest_tech])
+                # group containing ``source_tech`` that output ``commod``
+                source_group = reversed_commodity_groups[(source_tech, commod)]
+                for dest_group in destination_groups:
+                    if dest_group == source_group:
+                        # skip if in same group
+                        continue
+                    if not simple_graph.has_edge(source_group, dest_group):
+                        # does not have edge
+                        simple_graph.add_edge(source_group, dest_group, commodity=commod)
+
+                    else:
+                        msg = (
+                            f"The edge for ({source_group}, {dest_group}, {commod}) "
+                            "should not already exist."
+                        )
+                        warnings.warn(msg, UserWarning, stacklevel=3)
+
+        non_converter_keys = set()
+        converter_tech_names = {c[1] for c in converters}
+
+        for converter_info, upstream_techs in converter_upstreams.items():
+            input_cmod, _ = converter_info
+            non_converter_keys |= {
+                (input_cmod, t, input_cmod) for t in upstream_techs if t not in converter_tech_names
+            }
+
+        non_converter_keys |= {
+            (self.commodity, t, self.commodity)
+            for t in demand_group_techs
+            if t not in converter_tech_names
+        }
+
+        conversion_recipes = self._make_conversion_factor_recipes(
+            converters, simple_graph, grouped_techs
+        )
+
+        self.rename_me_config = HCHSConfig(
+            converter_upstreams,
+            converters,
+            grouped_techs,
+            simple_graph,
+            converter_tech_names,
+            conversion_recipes,
+            non_converter_keys,
+        )
+
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
     ):
@@ -844,8 +1130,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if include_feedstock_sources:
             input_techs = self.input_techs | set(self.feedstock_comps)
         else:
-            input_techs = self.input_techs.copy()
+            input_techs = set(self.input_techs)
 
+        # TODO: refactor to call get_successors_for_tech_with_input_cmod
         # All graph ancestors of tech_name (any depth)
         ancestors = nx.ancestors(self.technology_graph, tech_name)
 
@@ -860,79 +1147,454 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Intersect with controller-managed techs
         return list(ancestors_with_commodity & input_techs)
 
-    def find_converter_techs(self, include_feedstock_sources=True):
+    def get_successors_for_tech_with_input_cmod(self, tech, input_commodity):
+        """Find technologies upstream of ``tech`` that produce ``input_commodity``
+        for ``tech``.
+
+        Args:
+            tech (str): Technology whose upstream suppliers are sought.
+            commodity (str): Commodity of interest that is an input commodity to ``tech``
+                (e.g. ``"electricity"``).
+
+        Returns:
+            list[str]: Controller-managed technologies upstream of ``tech``
+            that produce ``commodity``.
+        """
+        in_flows = dict(self.technology_graph.in_degree)
+        if in_flows[tech] < 1:
+            # Tech does not have any input commodiites
+            return []
+
+        successor_techs_with_commod = set()
+        upstream_techs = set(self.technology_graph.predecessors(tech))
+        for upstream_tech in upstream_techs:
+            produces_cmod = False
+            if (
+                commod := self.technology_graph.edges[upstream_tech, tech].get("commodity")
+            ) is not None:
+                if isinstance(commod, str) and commod == input_commodity:
+                    # this if-statement is outdated and could be removed
+                    successor_techs_with_commod.add(upstream_tech)
+                    produces_cmod = True
+                if isinstance(commod, list) and input_commodity in commod:
+                    successor_techs_with_commod.add(upstream_tech)
+                    produces_cmod = True
+            if in_flows[upstream_tech] > 1 and produces_cmod:
+                # if only use >1, then it wouldn't catch splitters
+                # use `in_flows[upstream_tech] >= 1` to properly handle splitters
+                new_techs = self.get_successors_for_tech_with_input_cmod(
+                    upstream_tech, input_commodity
+                )
+                if new_techs:
+                    successor_techs_with_commod |= set(new_techs)
+
+        return list(successor_techs_with_commod)
+
+    def _find_converter_techs(self):
         """Identify technologies that transform one commodity into another.
 
         A "converter" is a tech whose output commodities differ from the commodities
         produced by its upstream ancestors (e.g. an electrolyzer: electricity → hydrogen).
 
-        Args:
-            include_feedstock_sources (bool, optional): If True, include feedstock techs
-                in the set of candidate technologies. Defaults to True.
-
         Returns:
-            set[tuple[str, str, str]]: Set of ``(input_commodity, tech_name, output_commodity)``
-                tuples for each detected conversion. Returns ``None`` for single-commodity systems.
+            tuple[set, dict]: 2-element tuple containing ``converters`` and ``converter_upstreams``.
+
+            **converters** *(set[tuple])*: Set of tuples formatted as
+            ``(input_commodity, tech_name, output_commodity)`` tuples.
+
+                >>> converters  # tuples formatted as (input_commodity, tech_name, output_commodity)
+                {
+                    # (input_commodity, tech_name, output_commodity)
+                    ("electricity", "electrolyzer", "hydrogen"),
+                    ("electricity", "haber_bosch", "ammonia"),
+                    ("hydrogen", "haber_bosch", "ammonia")
+                }
+
+            **converter_upstreams** *(dict[tuple[str,str], list[str]])*: Keys are set of
+            ``(input_commodity, tech_name)`` and the values are a set of
+            upstream technologies that output the `input_commodity` to `tech_name`. An
+            example of this variable is shown below.
+
+                >>> converter_upstreams  # keys formatted as (input_commodity, tech)
+                {
+                    #  (input_commodity, tech) : [techs that provide input_commodity to tech]
+                    ("electricity", "electrolyzer"): ["wind", "solar", "elec_combiner"],
+                    ("electricity", "haber_bosch"): ["electricity_feedstock"],
+                    ("hydrogen", "haber_bosch"): ["electrolyzer"],
+                    ("ammonia", "nh3_load_demand"): ["nh3_combiner", "nh3_storage", "haber_bosch"]
+                }
+
         """
-        if include_feedstock_sources:
-            input_techs = self.input_techs | set(self.feedstock_comps)
-        else:
-            input_techs = self.input_techs.copy()
+        in_flows = dict(self.technology_graph.in_degree)
+        out_flows = dict(self.technology_graph.out_degree)
 
-        # Single-commodity systems have no special handling by definition
-        if not self.multi_commodity_system:
-            return
+        non_converter_techs = [
+            k for k in list(self.technology_graph.nodes) if in_flows[k] < 1 or out_flows[k] < 1
+        ]
+        likely_converter_techs = (
+            set(self.technology_graph.nodes) - set(non_converter_techs) - set(self.storage_techs)
+        ) & set(self.input_techs)
 
-        converter_techs = set()
-        node_order = list(self.technology_graph.nodes())
-        edges = list(self.technology_graph.edges(data="commodity"))
+        converter_info = set()
+        converter_upstreams = {}
+        for converter in list(likely_converter_techs):
+            # predecessors are upstream and directly connected to the converter
+            predecessor_techs = set(self.technology_graph.predecessors(converter))
+            # succesor techs are directly downstream of the converter
+            successor_techs = set(self.technology_graph.successors(converter))
 
-        # Track the most recently discovered converter so we can scope
-        # upstream searches for chained converters (A→B→C where B and C
-        # both convert). Without this, C would see A's commodity as upstream
-        # input even though B already consumed it.
-        last_converter = None
+            input_commods = set()
+            for upstream_tech in predecessor_techs:
+                if (
+                    cmod := self.technology_graph.edges[upstream_tech, converter].get("commodity")
+                ) is not None:
+                    if isinstance(cmod, str):
+                        input_commods.add(cmod)
+                    else:
+                        input_commods |= set(cmod)
 
-        for source_tech, _, _ in edges:
-            if source_tech not in input_techs:
-                continue
-
-            # Get the commodities produced by this tech (the "output" side of the conversion)
-            output_commodities = set(self._get_commodity_for_tech(source_tech))
-
-            # Find controlled ancestors of this tech
-            all_ancestors = nx.ancestors(self.technology_graph, source_tech) & input_techs
-
-            if last_converter is not None:
-                # Only consider ancestors that appear after the last converter
-                # in topological order, preventing double-counting across
-                # chained converters.
-                converter_idx = node_order.index(last_converter)
-                nodes_after_converter = set(node_order[converter_idx + 1 :])
-                ancestors = all_ancestors & nodes_after_converter
-            else:
-                ancestors = all_ancestors
-
-            # Keep only ancestors actually connected (reachable) to this tech
-            connected_ancestors = [
-                t for t in ancestors if nx.has_path(self.technology_graph, t, source_tech)
-            ]
-
-            # Gather all commodities produced by connected ancestors
-            input_commodities = set()
-            for ancestor in connected_ancestors:
-                input_commodities.update(self._get_commodity_for_tech(ancestor))
-
+            output_commods = set()
+            for downstream_tech in list(successor_techs):
+                if (
+                    cmod := self.technology_graph.edges[converter, downstream_tech].get("commodity")
+                ) is not None:
+                    if isinstance(cmod, str):
+                        output_commods.add(cmod)
+                    else:
+                        output_commods |= set(cmod)
             # A converter has commodities that appear only on one side:
             # upstream-only commodities are consumed, output-only are produced.
-            consumed = input_commodities - output_commodities
-            produced = output_commodities - input_commodities
-
-            # If both sides have unique commodities, this tech is a converter
+            consumed = input_commods - output_commods
+            produced = output_commods - input_commods
             if consumed and produced:
-                for in_comm in consumed:
-                    for out_comm in produced:
-                        converter_techs.add((in_comm, source_tech, out_comm))
-                last_converter = source_tech
+                # If both sides have unique commodities, this tech is a converter
 
-        return converter_techs
+                for input_commod in input_commods:
+                    upstream_techs_with_commod = self.get_successors_for_tech_with_input_cmod(
+                        converter, input_commod
+                    )
+                    converter_upstreams[(input_commod, converter)] = upstream_techs_with_commod
+                    for output_commod in output_commods:
+                        converter_info.add((input_commod, converter, output_commod))
+
+        return converter_info, converter_upstreams
+
+    def get_converter_capacity_ratio(
+        self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
+    ):
+        """Get capacity ratio of ``in_cmod/out_cmod`` for technology ``converter_tech``
+
+        Args:
+            inputs (dict): OpenMDAO inputs
+            in_cmod (str): commodity input to the ``converter_tech``
+            out_cmod (str): commodity output from the ``converter_tech``
+            converter_tech (str): name of the converter technologies
+            tech_ancestors (list[str] | set[str] | tuple[str]): upstream technologies
+                that produce ``in_cmod`` to the ``converter_tech``
+
+        Returns:
+            float | np.ndarray: capacity ratio of ``in_cmod/out_cmod``.
+        """
+        rated_name_fmt = "{tech}_rated_{commod}_production"
+        feedstock_name_fmt = "{tech}_{commod}_out"
+        in_names = [rated_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
+        in_feedstock_names = [
+            feedstock_name_fmt.format(tech=t, commod=in_cmod)
+            for t in list(tech_ancestors)
+            if t in self.feedstock_comps
+        ]
+
+        total_in_cmod_capac = [inputs[n] for n in in_names if n in inputs]
+        avg_feedstock_capac = [inputs[n].mean() for n in in_feedstock_names if n in inputs]
+
+        total_input_capac = np.array(total_in_cmod_capac).sum()
+        total_feedstock_capac = np.array(avg_feedstock_capac).sum()
+
+        total_commodity_in_capacity = total_input_capac + total_feedstock_capac
+
+        total_output_capac = inputs[rated_name_fmt.format(tech=converter_tech, commod=out_cmod)]
+        return total_commodity_in_capacity / total_output_capac[0]
+
+    def get_converter_conversion_ratio(
+        self, inputs, in_cmod, out_cmod, converter_tech, tech_ancestors
+    ):
+        """Get conversion ratio of ``in_cmod/out_cmod`` for technology ``converter_tech``
+
+        Args:
+            inputs (dict): OpenMDAO inputs
+            in_cmod (str): commodity input to the ``converter_tech``
+            out_cmod (str): commodity output from the ``converter_tech``
+            converter_tech (str): name of the converter technologies
+            tech_ancestors (list[str] | set[str] | tuple[str]): upstream technologies
+                that produce ``in_cmod`` to the ``converter_tech``
+
+        Returns:
+            np.ndarray: conversion ratio of ``in_cmod/out_cmod``.
+        """
+        input_name_fmt = "{tech}_{commod}_out"
+        in_names = [input_name_fmt.format(tech=t, commod=in_cmod) for t in list(tech_ancestors)]
+        total_in_cmod = [inputs[n] for n in in_names if n in inputs]
+        total_input = np.array(total_in_cmod).sum(axis=0)
+        total_output = inputs[input_name_fmt.format(tech=converter_tech, commod=out_cmod)]
+
+        conversion_factor = total_input / np.abs(total_output)
+        return conversion_factor
+
+    def _make_recipe_from_grouped_path(
+        self, simple_graph, grouped_techs, converter_tech_names, path
+    ):
+        compounding_conversion_factor_recipes = {}
+
+        reverse_path = path[::-1]
+        commodity_conversions = [
+            simple_graph.edges[p0, p1].get("commodity", None)
+            for p0, p1 in zip(reverse_path[1:], reverse_path[:-1])
+        ]
+        commodity_nodes = list(itertools.pairwise(commodity_conversions))
+        techs = reverse_path[1:]
+
+        commodity_graph = nx.DiGraph()  # nodes are commodities
+        for i, commod_node in enumerate(commodity_nodes):
+            # ammonia, hydrogen
+            down_cmod, up_cmod = commod_node
+            commodity_graph.add_edge(down_cmod, up_cmod, tech=techs[i])
+
+        commodity_edges = commodity_graph.edges(data="tech")
+
+        path_recipe = []
+
+        for edge in commodity_edges:
+            # in_cmod is demand of next tech
+            out_cmod, in_cmod, tech = edge
+            if tech in grouped_techs:
+                techs_in_group = list(grouped_techs[tech])
+
+                recipe = []
+                for t in techs_in_group:
+                    if t in converter_tech_names:
+                        recipe.append((in_cmod, t, out_cmod))
+                    else:
+                        recipe.append((out_cmod, t, out_cmod))
+                # TODO: add check if any other non-converter techs have a non-1 conversion factor
+            else:
+                recipe = [(in_cmod, tech, out_cmod)]
+
+            path_recipe.append(recipe)
+            compounding_conversion_factor_recipes[(out_cmod, in_cmod, tech)] = path_recipe.copy()
+        return compounding_conversion_factor_recipes
+
+    def _make_conversion_factor_recipes(
+        self, converters, simple_graph, grouped_techs, use_complex_keys=False
+    ):
+        """Make recipes to for compounding conversion factor calculations.
+
+        Args:
+            converters (set[tuple]): Set of tuples formatted as
+                ``(input_commodity, tech_name, output_commodity)``. An
+                example of this variable is shown below:
+
+                >>> converters
+                {
+                    # (input_commodity, tech_name, output_commodity)
+                    ("electricity", "electrolyzer", "hydrogen"),
+                    ("electricity", "haber_bosch", "ammonia"),
+                    ("hydrogen", "haber_bosch", "ammonia")
+                }
+
+            simple_graph (nx.DiGraph): graph representing the connections
+                of the technology groups in ``grouped_techs``
+            grouped_techs (dict): dictionary with keys as the group name
+                and values of the technologies within that group.
+
+                >>> grouped_techs
+                {
+                    "electricity-0": ["solar", "wind", "elec_combiner"],
+                    "electricity-1": ["electricity_feedstock"],
+                    "hydrogen-2": ["electrolyzer"],
+                    "ammonia-3": ["nh3_combiner", "nh3_storage", "haber_bosch"]
+                }
+
+            use_complex_keys (bool, optional): If True, use key names formatted as
+                ``(output_commodity, input_commodity, (i, converter_tech_group))``.
+                Defaults to False.
+
+        Returns:
+            dict[tuple[str], list[list]]: recipes to calculate the conversion ratio from
+            the demand commodity to all upstream subsystems. Keys are the recipe name, which
+            are tuples ``(output_commodity, input_commodity, converter_tech_group)``.
+
+            Values are embedded lists. Each list defines the technologies in a
+            step of the conversion. Each element of a list is a tuple formatted as
+            ``(input_commodity, technology, output_commodity)``. An example is shown below.
+
+            >>> conversion_recipes[("hydrogen", "electricity", "hydrogen-2")]
+            [
+                [
+                    ('ammonia', 'nh3_combiner', 'ammonia'),
+                    ('ammonia', 'nh3_storage', 'ammonia'),
+                    ('hydrogen', 'haber_bosch', 'ammonia')
+                ],
+                [
+                    ('electricity', 'electrolyzer', 'hydrogen'),
+                    ('hydrogen', 'h2_combiner', 'hydrogen'),
+                    ('hydrogen', 'h2_storage', 'hydrogen')
+                ]
+            ]
+
+            Note:
+                For more complext system architecturs, the conversion recipe keys
+                may be formatted as
+                ``(output_commodity, input_commodity, (i, converter_tech_group))``
+                where ``i`` is a unique number to distinguish the recipe.
+
+        """
+        if not self.multi_commodity_system:
+            return {}
+
+        converter_tech_names = {v[1] for v in list(converters)}
+
+        # 6. Get the compounding conversion factors
+        in_degs = dict(simple_graph.in_degree)
+        starting_techs = {k for k, v in in_degs.items() if v == 0}
+        needs_complex_keys = False
+        compounding_conversion_factor_recipes = {}
+        cnt = 0
+        for starting_tech in list(starting_techs):
+            paths = list(nx.all_simple_paths(simple_graph, starting_tech, self.demand_tech))
+            for path in paths:
+                res = self._make_recipe_from_grouped_path(
+                    simple_graph, grouped_techs, converter_tech_names, path
+                )
+
+                if duplicate_recipe := set(res) & set(compounding_conversion_factor_recipes):
+                    mismatched_recipes = []
+
+                    for recipe_name in list(duplicate_recipe):
+                        recipe_1 = compounding_conversion_factor_recipes[recipe_name]
+                        recipe_2 = res[recipe_name]
+                        if len(recipe_1) != len(recipe_2):
+                            mismatched_recipes.append(recipe_name)
+
+                            continue
+                        # have the same length of recipes
+                        for i in range(len(recipe_1)):
+                            if len(recipe_1[i]) != len(recipe_2[i]):
+                                mismatched_recipes.append(recipe_name)
+
+                                continue
+                            if set(recipe_1[i]) != set(recipe_2[i]):
+                                mismatched_recipes.append(recipe_name)
+
+                        if mismatched_recipes:
+                            needs_complex_keys = True
+
+                # if needs_complex_keys:
+                #     break
+
+                if use_complex_keys:
+                    new_res = {
+                        (k[0], k[1], (cnt + i, k[2])): v for i, (k, v) in enumerate(res.items())
+                    }
+                    compounding_conversion_factor_recipes |= new_res
+                    cnt += len(res)
+                else:
+                    compounding_conversion_factor_recipes |= res
+
+        if needs_complex_keys and use_complex_keys:
+            warnings.warn(
+                "Duplicate recipes still exist with complex keys", UserWarning, stacklevel=3
+            )
+
+        if needs_complex_keys and not use_complex_keys:
+            compounding_conversion_factor_recipes = self._make_conversion_factor_recipes(
+                converters, simple_graph, grouped_techs, use_complex_keys=True
+            )
+            return compounding_conversion_factor_recipes
+
+        return compounding_conversion_factor_recipes
+
+    def get_techs_to_demand_from_recipe(self, recipe_name):
+        """Get a list of technologies that are in a subsystem that
+        outputs ``input_commodity`` to the ``tech_group_name``.
+
+        Args:
+            recipe_name (tuple): name of recipe formatted as a tuple of
+                ``(input_commodity, output_commodity, tech_group_name)`` or
+                ``(input_commodity, output_commodity, (i,tech_group_name))``.
+                This should be a key from the dictionary returned from
+                ``_make_conversion_factor_recipes()``.
+
+        Raises:
+            ValueError: there are multiple techs
+
+        Returns:
+            list[str]: list of technologies that output the ``input_commodity``
+            and are connected upstream of ``tech_group_name``
+        """
+        _, input_cmod, tech_group = recipe_name
+        if isinstance(tech_group, tuple):
+            _, tech_group = tech_group
+
+        techs_to_demand = [
+            s
+            for s in list(self.rename_me_config.simple_graph.predecessors(tech_group))
+            if self.rename_me_config.simple_graph.edges[s, tech_group].get("commodity", "")
+            == input_cmod
+        ]
+        if len(techs_to_demand) != 1:
+            raise ValueError("Unexpected situation!")
+        if techs_to_demand[0] in self.rename_me_config.grouped_techs:
+            techs_in_group = list(self.rename_me_config.grouped_techs[techs_to_demand[0]])
+        else:
+            techs_in_group = techs_to_demand[0]
+        return techs_in_group
+
+    def get_conversion_from_recipe(self, conversion_factors, recipe):
+        """Get the conversion factor from a recipe.
+
+        Args:
+            conversion_factors (dict): dictionary with keys of 3 element tuples
+                formatted as ``(input_commodity, tech, output_commodity)``.
+                Values are an array or float of the conversion factor
+                ``input_commodity/output_commodity``. An example is shown below:
+
+                >>> conversion_factors
+                {
+                    ('electricity','electrolyzer','hydrogen'): 55.5,
+                    ('water','electrolyzer','hydrogen'): 40.0,
+                    ('electricity','electrolyzer','oxygen'): 60.0
+                }
+
+            recipe (list[list[tuples]]): embedded list of conversions,
+                a value from from the ``conversion_recipes`` attribute.
+                This should be a value from the dictionary returned from
+                ``_make_conversion_factor_recipes()``.
+
+                >>> recipe
+                [
+                    [
+                        ('ammonia', 'nh3_combiner', 'ammonia'),
+                        ('ammonia', 'nh3_storage', 'ammonia'),
+                        ('hydrogen', 'haber_bosch', 'ammonia')
+                    ],
+                    [
+                        ('electricity', 'electrolyzer', 'hydrogen'),
+                        ('hydrogen', 'h2_combiner', 'hydrogen'),
+                        ('hydrogen', 'h2_storage', 'hydrogen')
+                    ]
+                ]
+
+
+        Returns:
+            float | np.ndarray: conversion factor created from the recipe.
+
+
+        """
+        path_conversion = 1.0
+        # TODO: update to handle more complex systems
+        # (or maybe do it external to this method)
+        for path in recipe:
+            for tech_conversion in path:
+                path_conversion *= conversion_factors.get(tech_conversion, 1.0)
+
+        return path_conversion
