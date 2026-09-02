@@ -60,7 +60,7 @@ dependencies = [
   "ruamel.yaml",
   "scipy",
   "floris",
-  "timezonefinder==6.5.9",
+  "timezonefinder",
   "turbine-models>=0.2.1",
   "wombat>=0.13.3",
   "charset_normalizer==3.4.9",
@@ -95,6 +95,9 @@ source = "https://github.com/NatLabRockies/H2Integrate"
 documentation = "https://h2integrate.readthedocs.io/"
 issues = "https://github.com/NatLabRockies/H2Integrate/issues"
 changelog = "https://github.com/NatLabRockies/H2Integrate/blob/main/CHANGELOG.md"
+
+[project.scripts]
+populate_tech_config = "h2integrate.preprocess.populate_tech_yaml:main"
 
 [project.optional-dependencies]
 develop = [
@@ -274,3 +277,26 @@ none_representation = "null"
 explicit_start = false
 # quote_representation = '"'  # NOTE: uncomment when issue is resolved: https://github.com/lyz-code/yamlfix/issues/252
 sequence_style = "keep_style"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.pypi-dependencies]
+h2integrate = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+all = { features = ["all"], solve-group = "default" }
+ard = { features = ["ard"], solve-group = "default" }
+develop = { features = ["develop"], solve-group = "default" }
+examples = { features = ["examples"], solve-group = "default" }
+extras = { features = ["extras"], solve-group = "default" }
+gis = { features = ["gis"], solve-group = "default" }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+vim = ">=9.2.785,<10"
+git = ">=2.55.0,<3"
+pre-commit = ">=4.6.2,<5"
