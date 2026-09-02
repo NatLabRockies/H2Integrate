@@ -177,16 +177,12 @@ class DieselGeneratorCostModelConfig(CostModelBaseConfig):
 
     Attributes:
         system_capacity_kw (float | int): Generator capacity in kW.
-
         capex_per_kw (float | int): Capital cost per unit capacity in $/kW.
             Typical values: 500-1500 $/kW.
-
         fixed_opex_per_kw_per_year (float | int): Fixed operating expenses per unit
             capacity in $/kW/year. Typical values: 15-35 $/kW/year.
-
         variable_opex_per_kwh (float | int): Variable operating expenses per unit
             generation in $/kWh (excluding fuel). Typical values: 0.005-0.015 $/kWh.
-
         cost_year (int): Dollar year corresponding to input costs.
     """
 
