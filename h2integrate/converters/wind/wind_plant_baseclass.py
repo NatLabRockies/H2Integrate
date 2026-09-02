@@ -1,3 +1,5 @@
+import re
+
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -52,10 +54,11 @@ class WindPerformanceBaseClass(PerformanceModelBaseClass):
         # for the resource parameters `resource_vars`
         for param in resource_vars:
             params_heights = [
-                int(k.split("_")[-1].replace("m", "").strip())
-                for k, v in resource_data.items()
-                if param in k and "m" in k.split("_")[-1]
+                int(re.findall(r"_\d+m", txt)[0].strip("_").strip("m"))
+                for txt in list(resource_data.keys())
+                if bool(re.fullmatch(rf"{param}_\d+m", txt))
             ]
+
             if len(params_heights) > 0:
                 heights_per_parameter.update({param: params_heights})
                 allowed_hub_height_meters.update(params_heights)

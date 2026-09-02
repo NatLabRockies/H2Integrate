@@ -1,14 +1,13 @@
 import warnings
 from pathlib import Path
-from datetime import timezone, timedelta
 
 import numpy as np
-import pandas as pd
 import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
+from h2integrate.resource.utilities.time_tools import add_resource_start_end_times
 from h2integrate.resource.utilities.download_tools import download_from_api
 
 
@@ -39,12 +38,12 @@ class ResourceBaseAPIConfig(BaseConfig):
         timezone (float | int): timezone to output data in. May be used to determine whether
             to download data in UTC or local timezone. This should be populated by the value
             in sim_config['timezone']
-        use_fixed_resource_location (bool): Whether to update resource data in the `compute()`
-            method. Set to False if the site location is being swept, set to True if the
-            resource data should not be updated to the location
-            (plant_config['site']['latitude'], plant_config['site']['longitude']). Set to True
-            to reduce computation time during optimizations or design sweeps if site location is
-            not being swept. Defaults to True.
+        resource_data (dict | object, optional): Dictionary of user-input resource data.
+            Defaults to an empty dictionary.
+        resource_dir (str | Path, optional): Folder to save resource files to or
+            load resource files from. Defaults to "".
+        resource_filename (str, optional): Filename to save resource data to or load
+            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -58,9 +57,11 @@ class ResourceBaseAPIConfig(BaseConfig):
 
     timezone: int | float = field()
 
-    use_fixed_resource_location: bool = field(default=True, kw_only=True)
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
+    resource_data: dict | object = field(default={})
+    resource_filename: Path | str = field(default="")
+    resource_dir: Path | str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -127,111 +128,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         resource_specs.setdefault("timezone", sim_config.get("timezone", 0))
 
         return resource_specs
-
-    def add_resource_start_end_times(self, data: dict):
-        """Add resource data start time, end time, and timestep to the resource data dictionary.
-
-        The start and end time are represented as strings formatted as "yyyy/mm/dd hh:mm:ss (tz)"
-        and the timestep is represented in seconds.
-
-        Args:
-            data (dict): dictionary of resource data
-
-        Returns:
-            data (dict): resource data dictionary with added time strings, modified in place
-        """
-
-        time_keys = ["year", "month", "day", "hour", "minute", "second"]
-        time_dict = {k: data.get(k) for k in time_keys if k in data}
-
-        # If no time information is in the resource data, return the dictionary unchanged
-        if not bool(time_dict):
-            return data
-
-        df = pd.to_datetime(time_dict)
-
-        # If theres not enough time information, return the dictionary unchanged
-        if len(df) <= 1:
-            return data
-
-        start_date = df.iloc[0].strftime("%Y/%m/%d %H:%M:%S")
-        end_date = df.iloc[-1].strftime("%Y/%m/%d %H:%M:%S")
-
-        # Get resource time interval
-        dt = df.iloc[1] - df.iloc[0]
-
-        # Get timezone string
-        tz_utc_offset = timedelta(hours=data.get("data_tz", 0))
-        tz = timezone(offset=tz_utc_offset)
-        tz_str = str(tz).replace("UTC", "").replace(":", "")
-        if tz_str == "":
-            tz_str = "+0000"
-
-        # Create dictionary of time information with dt in seconds
-        time_start_end_info = {
-            "start_time": f"{start_date} ({tz_str})",
-            "end_time": f"{end_date} ({tz_str})",
-            "dt": dt.seconds,
-        }
-
-        # Update resource data with time information
-        data.update(time_start_end_info)
-
-        return data
-
-    def process_leap_day(self, data: dict):
-        """Process leap day data by optionally removing it and validating data length.
-
-        Checks whether the provided resource data contains a leap day (February 29th).
-        If ``include_leap_day`` is set to False in the config and the data contains a
-        leap day, the leap day entries are removed. After processing, validates that
-        the length of the data matches the expected number of timesteps.
-
-        Args:
-            data (dict): DataFrame-like dictionary of resource data containing
-                "Month" and "Day" columns.
-        Returns:
-            dict: Processed resource data with leap day handled according to configuration.
-
-        Raises:
-            ValueError: If the length of the data does not match ``self.n_timesteps``
-                after leap day processing.
-        """
-
-        # Check if data includes leap day
-        data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
-
-        # Remove leap day if needed
-        if not self.config.include_leap_day and data_has_leap_day:
-            # Get index of dataframe that includes leap day
-            leap_day_index = (
-                data.reset_index(drop=False)
-                .set_index(keys=["Month", "Day"], drop=True)
-                .loc[(2, 29)]["index"]
-                .to_list()
-            )
-            # Drop the leap day data from the dataframe
-            data = data.drop(index=leap_day_index)
-
-        # Check if data is the same length as the number of timesteps
-        if len(data) != self.n_timesteps:
-            leap_day_msg = ""
-            if data_has_leap_day and len(data) > self.n_timesteps:
-                # Add extra detail to error message if error may be due to leap day
-                leap_day_msg = (
-                    "This may be because the resource data includes a leap day. ",
-                    "To remove data from a leap day from resource data, please set "
-                    "`include_leap_day` to False.",
-                )
-
-            msg = (
-                f"{self.__class__.__name__}: Resource data is not the same length as n_timesteps. "
-                f"Resource data has length {len(data)}, n_timesteps is {self.n_timesteps}. "
-                f"{leap_day_msg}"
-            )
-            raise ValueError(msg)
-
-        return data
 
     def create_filename(self, latitude, longitude):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
@@ -336,7 +232,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # 1) check if user provided data, add start and end times if so
         # and return the data
         if bool(self.config.resource_data):
-            data = self.add_resource_start_end_times(self.config.resource_data)
+            data = add_resource_start_end_times(self.config.resource_data)
             return data
 
         # check if user provided directory or filename
@@ -391,7 +287,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if filepath.is_file():
             self.filepath = filepath
             data = self.load_data(filepath)
-            data = self.add_resource_start_end_times(data)
+            data = add_resource_start_end_times(data)
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -404,17 +300,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()`
             data = self.load_data(filepath)
-            data = self.add_resource_start_end_times(data)
+            data = add_resource_start_end_times(data)
             return data
 
         else:
             raise ValueError("Did not successfully download resource data.")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if not self.config.use_fixed_resource_location:
-            # update the resource data based on the input latitude and longitude
-            data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
-            # update the stored resource data and site
-            self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
-            self.resource_data = data
-            discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+        # update the resource data based on the input latitude and longitude
+        data = self.get_data(inputs["latitude"][0], inputs["longitude"][0], first_call=False)
+        # update the stored resource data and site
+        self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
+        self.resource_data = data
+        discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
