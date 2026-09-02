@@ -162,6 +162,8 @@ supported_models = _ModelRegistry(
         "PipeStorageCostModel": "storage.hydrogen:PipeStorageCostModel",
         "ATBBatteryCostModel": "storage.battery:ATBBatteryCostModel",
         "GenericStorageCostModel": "storage:GenericStorageCostModel",
+        "ETESPerformanceModel": "storage.heat.etes:ETESPerformanceModel",
+        "ETESCostModel": "storage.heat.etes_cost_model:ETESCostModel",
         # Control
         "SimpleStorageOpenLoopController": "control.control_strategies.storage:SimpleStorageOpenLoopController",
         "DemandOpenLoopStorageController": "control.control_strategies.storage:DemandOpenLoopStorageController",
