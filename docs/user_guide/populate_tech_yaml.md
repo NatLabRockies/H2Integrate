@@ -1,4 +1,4 @@
-# Populate Tech Config - Technology Configuration Generator
+# Populate Tech YAML from Skeleton
 
 ## Overview
 
@@ -14,7 +14,7 @@ When building a new H2Integrate model, you often start with a "skeleton" tech co
 
 ## Why Use This?
 
-**Problem:** Storage models (and many other converters) require careful organization of parameters across multiple configuration sections. When changing models, you need to shuffle parameters between `control_parameters`, `performance_parameters`, `cost_parameters`, and `shared_parameters`. This is error-prone and time-consuming.
+**Problem:** Many technologies (converters, storage models, etc.) require careful organization of parameters across multiple configuration sections. When changing models, you need to shuffle parameters between `control_parameters`, `performance_parameters`, `cost_parameters`, and `shared_parameters`. This is error-prone and time-consuming.
 
 **Solution:** `populate_tech_yaml` automatically:
 1. Inspects all model classes you specified
