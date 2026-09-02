@@ -30,12 +30,21 @@ class ResourceBaseH5Config(BaseConfig):
     Args:
         latitude (float): latitude to download resource data for.
         longitude (float): longitude to download resource data for.
-        timezone (float | int): timezone to output data in. May be used to determine whether
-            to download data in UTC or local timezone. This should be populated by the value
-            in sim_config['timezone']
-        save_to_csv (bool):
-        load_from_csv (bool):
-        csv_output_dir (Path | str | None, optional):
+        timezone (float | int, optional): timezone to output data in.
+            May be used to determine whether to download data in UTC or local timezone.
+        save_to_csv (bool, optional): If True, save data loaded from the dataset to a csv.
+            If this is true,  then data may be loaded from a csv file if it exists
+            (even if ``load_from_csv`` is False). Defaults to False.
+        load_from_csv (bool, optional): If True, check if a csv file was pre-saved with the
+            resource data for a given site and if so, load data from the csv file.
+            Defaults to False.
+        csv_output_dir (Path | str | None, optional): The directory to save csv files to or
+            load csv files from. Only used if ``save_to_csv`` or ``load_from_csv`` is True.
+            Defaults to None.
+        include_leap_day (bool, optional): Whether to include leap day if the resource year is a
+            leap year. If True, please ensure that ``n_timesteps`` reflects this. Defaults to False.
+        use_hsds (bool, optional): If True, load data from an HSDS server. Otherwise,
+            load data from the NLR HPC. Defaults to False.
 
 
     Attributes:
@@ -57,13 +66,22 @@ class ResourceBaseH5Config(BaseConfig):
 
     include_leap_day: bool = field(default=False)
     use_hsds: bool = field(default=False, kw_only=True)
-    hsds_kwargs: dict = field(default={}, kw_only=True)
 
     # Attributes to be populated by parent classes
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
 
     def get_csv_dir(self, provided_dir):
+        """Check for a valid folder to save or load csv files from. By default,
+        this method prioritizes using sub-folders per resource type if the
+        csv output directory is not user provided.
+
+        Args:
+            provided_dir (bool): True is ``csv_output_dir`` was user provided.
+
+        Returns:
+            Path: folder to load/save csv files from
+        """
         # Get valid resource_dir with the function check_resource_dir()
         csv_dir = check_resource_dir(data_dir=self.csv_output_dir)
 
@@ -102,22 +120,20 @@ class ResourceBaseH5Config(BaseConfig):
             )
             warnings.warn(msg, UserWarning, stacklevel=3)
 
-        if bool(self.hsds_kwargs) and not self.use_hsds:
-            msg = (
-                "Provided `hsds_kwargs` but `use_hsds` if False. Please set `use_hsds` "
-                "to True to run this resource model with hsds enabled. If running on an "
-                "NLR super-computer, remove `hsds_kwargs` from the inputs. "
-            )
-
-            raise AttributeError(msg)
-
         if int(self.timezone) != 0:
             msg = (
-                "Data from HPC datasets is natively in UTC. Timeseries data will be rolled to "
-                "local timezone (in standard time), but time data (year, month, etc) will not "
-                "be rolled to prevent unexpected behavior in performance models."
+                "Data from HPC datasets is natively in UTC, please set the ``timezone`` "
+                f"to 0 for these resource models instead of {self.timezone}"
             )
-            warnings.warn(msg, UserWarning, stacklevel=3)
+            raise NotImplementedError(msg)
+
+            # NOTE: below warning can be used in the future when timeseries data is rolled
+            # msg = (
+            #     "Data from HPC datasets is natively in UTC. Timeseries data will be rolled to "
+            #     "local timezone (in standard time), but time data (year, month, etc) will not "
+            #     "be rolled to prevent unexpected behavior in performance models."
+            # )
+            # warnings.warn(msg, UserWarning, stacklevel=3)
 
 
 class ResourceBaseH5Model(om.ExplicitComponent):
