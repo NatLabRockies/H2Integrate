@@ -38,7 +38,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             The coefficients of the polynominal function representing the price G&T charges
             the Coop based on the LMP. The list contains the coefficients of the polynomial
             function in decreasing order. (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent
-            1*x^2 + 2*x + 3)
+            1*x^2 + 2*x + 3). This function should be a monotonially non-decreasing function.
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in

@@ -139,7 +139,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $\mathcal{T} := \{0, 1, \ldots, T-1\}$: timesteps in the current rolling window
 - $\mathcal{M}_m$ := set of timesteps in month $m$, for $m = 1, \ldots, 12$
 - $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month
-- $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is `null`)
+- $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is not provided)
 - $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
 
 ### Dispatch Window Construction
@@ -148,7 +148,7 @@ Before the MILP is solved, the dispatch window $\mathcal{D}$ is built in two ste
 
 **Step 1 : Peak selection:** Within $\mathcal{W}$, timesteps at or above the `signal_threshold_percentile` of $\lambda_t$ are marked eligible: $\mathcal{E} = \{t \in \mathcal{W} : \lambda_t \geq \lambda_*\}$. If `min_peak_separation` is set, only the first peak is chosen.
 
-**Step 2 : Event window expansion:** If `event_duration` is specified, each peak in $\mathcal{E}$ is expanded by $\pm$ `event_duration`/2 timesteps to form $\mathcal{D}$. If `event_duration` is `null`, $\mathcal{D} = \mathcal{E}$.
+**Step 2 : Event window expansion:** If `event_duration` is specified, each peak in $\mathcal{E}$ is expanded by $\pm$ `event_duration`/2 timesteps to form $\mathcal{D}$. If `event_duration` is not provided, $\mathcal{D} = \mathcal{E}$.
 
 ### Decision Variables
 
