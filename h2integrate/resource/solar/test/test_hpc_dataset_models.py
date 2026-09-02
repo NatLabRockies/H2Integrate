@@ -93,7 +93,6 @@ def solar_site_config(lat, lon, model, resource_year):
                     "latitude": lat,
                     "longitude": lon,
                     "use_hsds": False,
-                    "hsds_kwargs": {},
                 },
             }
         },
@@ -128,7 +127,6 @@ def test_nsrdb_dataset_from_csv_pvwatts(
         "load_from_csv": True,
         "csv_output_dir": RESOURCE_DEFAULT_DIR/"solar",
         "use_hsds": False,
-        "hsds_kwargs": {},
     }
     solar_site_config["resources"]["solar_resource"]["resource_parameters"] |= resource_config
 
@@ -185,7 +183,6 @@ def test_nsrdb_dataset_from_dataset_pvwatts(
         "save_to_csv": False,
         "load_from_csv": False,
         "use_hsds": False,
-        "hsds_kwargs": {},
     }
     solar_site_config["resources"]["solar_resource"]["resource_parameters"] |= resource_config
 

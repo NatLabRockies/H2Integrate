@@ -9,6 +9,7 @@ from attrs import field, define, validators
 from retry_requests import retry
 
 from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.utilities.time_tools import process_leap_day
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
@@ -298,7 +299,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
 
         data = data.reset_index(drop=True)
 
-        data = self.process_leap_day(data)
+        data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units

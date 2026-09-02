@@ -25,7 +25,6 @@ def wind_site_config(lat, lon, model, resource_year):
                     "latitude": lat,
                     "longitude": lon,
                     "use_hsds": False,
-                    "hsds_kwargs": {},
                     "save_to_csv": True,
                     "load_from_csv": True,
                     "csv_output_dir": RESOURCE_DEFAULT_DIR / "wind",
