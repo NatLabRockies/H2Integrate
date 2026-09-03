@@ -17,6 +17,11 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
+- Add resource models that can extract resource data from NLR resource datasets using the `rex` package [PR 854](https://github.com/NatLabRockies/H2Integrate/pull/854)
+  - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
+  - `NSRDBDatasetH5` to access data from the NSRDB dataset
+  - `ResourceBaseH5Config` and `ResourceBaseH5Model` are base configuration classes for these resource datasets
 
 ## 0.9 [August 10, 2026]
 
@@ -86,6 +91,7 @@
 - Adds `feedstock_dir` to the EIA natural gas retrieval to align the downloading or loading of the feedstock data with the resource data methodology [PR 801](https://github.com/NatLabRockies/H2Integrate/pull/801).
 - Add support for slice notation in technology connections to allow users to connect between variables of different shapes. [PR 774](https://github.com/NatLabRockies/H2Integrate/pull/774)
 - Updated edge attribute `commodity` of in `H2Integrate.create_technology_graph` to use lists instead of strings to account for systems with multiple commodities connected between two technologies [PR 823](https://github.com/NatLabRockies/H2Integrate/pull/823)
+- Added two new fuel cell models: `PEMH2FuelCellPerformanceModel` to model a PEM hydrogen fuel cell and `SONGFuelCellPerformanceModel` to model a natural gas solid oxide fuel cell [PR 794](https://github.com/NatLabRockies/H2Integrate/pull/794)
 
 ### Fixes
 - Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
