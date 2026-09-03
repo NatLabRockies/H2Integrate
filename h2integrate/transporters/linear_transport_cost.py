@@ -7,8 +7,15 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBase
 
 @define(kw_only=True)
 class LinearTransportCostConfig(CostModelBaseConfig):
-    capex_per_km: float = field(validator=validators.ge(0))  # USD/km
-    fixed_opex_per_km: float = field(validator=validators.ge(0))  # USD/km
+    """Configuration class for LinearDistanceCostModel
+
+    Attributes:
+        capex_per_km (float): Capital cost in USD/km.
+        fixed_opex_per_km (float): Annual operating cost in USD/km/year
+    """
+
+    capex_per_km: float = field(validator=validators.ge(0))
+    fixed_opex_per_km: float = field(validator=validators.ge(0))
 
 
 class LinearDistanceCostModel(CostModelBaseClass):
@@ -42,6 +49,7 @@ class LinearDistanceCostModel(CostModelBaseClass):
         source_location = (inputs["source_latitude"][0], inputs["source_longitude"][0])
         destination_location = (inputs["dest_latitude"][0], inputs["dest_longitude"][0])
 
+        # Calculate the distance bewteen the source and destination locations
         transport_distance = distance.geodesic(
             source_location, destination_location, ellipsoid="WGS-84"
         ).km
