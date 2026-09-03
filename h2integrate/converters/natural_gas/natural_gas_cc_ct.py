@@ -77,8 +77,15 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             additional_cls_name=self.__class__.__name__,
         )
         if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
+            plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
+            simulation_config = {
+                "dt": plant_simulation_config.get("dt", 3600),
+                "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+            }
+            # TODO: replace this with an overarching reliability model once available
             self.reliability_model = WeibullReliabilityModel.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability"),
+                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
+                | simulation_config,
                 additional_cls_name=self.__class__.__name__,
             )
         self.use_reliability = use_reliability
