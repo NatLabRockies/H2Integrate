@@ -143,6 +143,8 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "ShellTubeHXPerformanceModel": "converters.heat.shell_tube_hx:ShellTubeHXPerformanceModel",
+        "ShellTubeHXCostModel": "converters.heat.shell_tube_hx_cost_model:ShellTubeHXCostModel",
         "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
         "DieselGeneratorPerformanceModel": "converters.diesel:DieselGeneratorPerformanceModel",
         "DieselGeneratorCostModel": "converters.diesel:DieselGeneratorCostModel",
