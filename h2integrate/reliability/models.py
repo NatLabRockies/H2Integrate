@@ -183,6 +183,57 @@ class BaseReliability(ABC, BaseConfig):
         self.system_availability = np.min(self.availability, axis=0)
 
 
+@define
+class PerformanceReliability:
+    config: dict = field()
+    failure_model: BaseReliability = field(init=False)
+    maintenance_model: BaseReliability = field(init=False)
+    availability: np.ndarray = field(
+        validator=validators.optional(validators.instance_of(np.ndarray)), init=False
+    )
+
+    @config.validate
+    def validate_config(self, attribute, value: dict):
+        """Ensures that the simulation details and one of "failure_model" or "maintenance_model"
+        are provided.
+        """
+        bad_sim = "simulation" not in value
+        if not bad_sim:
+            bad_sim = all(x in value["simulation"] for x in ("dt", "n_timesteps"))
+        if bad_sim:
+            msg = (
+                "The reliability configuration should contain a dictionary with keys:"
+                " 'dt' and 'n_timesteps'."
+            )
+            raise ValueError(msg)
+
+        if has_failure := "failure_model" in value:
+            if "failure_parameters" not in value:
+                raise ValueError("'failure_parameters' must be provided for a failure model.")
+        if has_maintenance := "maintenance_model" in value:
+            if "maintenance_parameters" not in value:
+                msg = "'maintenance_parameters' must be provided for a maintenance_model model."
+                raise ValueError(msg)
+        if not (has_failure or has_maintenance):
+            msg = (
+                "One of 'failure_model' or 'maintenance_model' must be provided to"
+                " model reliability."
+            )
+            raise ValueError(msg)
+
+    def __attrs_post_init__(self):
+        """Creates and runs the failure and maintenance models."""
+        self.failure_model = create_failure_model(self.config)
+        self.maintenance_model = create_maintenance_model(self.config)
+        self.calculate_availability()
+
+    def calculate_availability(self):
+        self.availability = np.minimum(
+            self.failure_model.system_availability,
+            self.maintenance_model.system_availability,
+        )
+
+
 @define(kw_only=True)
 class FixedDowntime(BaseDowntime):
     """Basic log-normal downtime model for generating the length of downtime for a given event.
