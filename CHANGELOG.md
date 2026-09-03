@@ -23,6 +23,8 @@
   - `NSRDBDatasetH5` to access data from the NSRDB dataset
   - `ResourceBaseH5Config` and `ResourceBaseH5Model` are base configuration classes for these resource datasets
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
+- Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
+
 ## 0.9 [August 10, 2026]
 
 ### New Features
