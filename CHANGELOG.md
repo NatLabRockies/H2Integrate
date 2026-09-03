@@ -22,6 +22,7 @@
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
   - `NSRDBDatasetH5` to access data from the NSRDB dataset
   - `ResourceBaseH5Config` and `ResourceBaseH5Model` are base configuration classes for these resource datasets
+- Synced peak load management (PLM) with the system-level control (SLC) paradigm: `PeakLoadManagementOptimizedStorageController` can now be used as a storage tech's SLC sub-controller via a new opt-in `constrain_dispatch_to_set_point` config field, which caps dispatch at the provided demand signal without changing its existing peak-window behavior by default. [Issue 749](https://github.com/NatLabRockies/H2Integrate/issues/749)
 
 ## 0.9 [August 10, 2026]
 

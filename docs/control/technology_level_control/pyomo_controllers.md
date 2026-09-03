@@ -111,6 +111,7 @@ tech_to_dispatch_connections: [
 ]
 ```
 
+(optimized-demand-response-controller)=
 # Optimized Demand Response Controller
 
 This controller optimizes the dispatch of a Battery Energy Storage System (BESS) based on a pre-defined supervisory signal. This signal could be the Locational Marginal Price (LMP), a demand profile, or an $LMP\times demand$ product depending on the application. The objective is to maximize incentive payments to the battery, subject to constraints on the maximum number of dispatch events per month and on the battery state of charge.
