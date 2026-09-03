@@ -357,3 +357,79 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
             f"{tech_location}"
         )
         raise AttributeError(msg)
+
+
+def percent_diff(v1, v2):
+    """
+    Calculate the percent difference between two numbers or arrays. Return 0
+    percent difference if either value is smaller than 1e-8.
+
+    Args:
+        v1 (number | array-like): First value to compare
+        v2 (number | array-like): Second value to compare
+
+    Returns:
+        (number | array-like): Percent differences
+    """
+
+    # Compute percent difference
+    pd = np.nan_to_num((v2 - v1) / (0.5 * (v1 + v2)))
+
+    # Clamp to zero if either value is smaller than 1e-8
+    pd = np.where(np.max(np.abs(np.stack([v1, v2])), axis=0) <= 1e-8, 0, pd)
+
+    return pd
+
+
+def percent_diff_dicts(d1, d2):
+    """
+    Take two input dicts with matching keys and return a third dict with the
+    percent difference for each value stored in matching keys.
+
+    Note: This function assumes the dicts come from opemdao inputs and outputs.
+
+    Args:
+        d1 (dict): First dict to compare
+        d2 (dict): Second dict to compare
+
+    Returns:
+        (dict): Dict of percent differences between d1 and d2
+
+    """
+
+    d_out = {}
+    for k1, v1 in d1.items():
+        assert k1 in d2.keys(), "Dicts do not have the same set of keys."
+
+        v2 = d2[k1]
+
+        if isinstance(v1["val"], dict | bool):
+            # If the H2I input or output is more complicated than an array, skip it
+            continue
+
+        pd = percent_diff(v1["val"], v2["val"])
+
+        # Use the norm of any percent difference arrays so output is always a scalar
+        d_out.update({k1: np.linalg.norm(pd)})
+
+    return d_out
+
+
+def find_nonzero_percent_diffs(pd_dict, ref_dict):
+    """
+    Find the keys that correspond to percent difference values, that are sufficiently non-zero.
+
+    Args:
+        pd_dict (dict): Percent difference dict
+        ref_dict (dict): H2I inputs or outputs dict
+
+    Returns:
+        tuple[dict, dict]: First dict is only the keys and items that have percent difference larger
+            than 1e-8. Second dict is only the keys and items that have percent difference larger
+            than 1e-8 and a norm of the original value larger than 1e-8.
+    """
+
+    # Return only the dict items that are non-zero
+    abs_pd = {k: v for k, v in pd_dict.items() if np.abs(v) > 1e-8}
+    rel_pd = {k: v for k, v in abs_pd.items() if np.linalg.norm(ref_dict[k]["val"]) > 1e-8}
+    return abs_pd, rel_pd

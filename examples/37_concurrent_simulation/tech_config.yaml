@@ -1,0 +1,172 @@
+name: technology_config
+description: This plant produces electricity from natural gas using a combined cycle turbine
+technologies:
+  solar:
+    performance_model:
+      model: PYSAMSolarPlantPerformanceModel
+    cost_model:
+      model: ATBUtilityPVCostModel
+    model_inputs:
+      performance_parameters:
+        pv_capacity_kWdc: 200000  # 200 MWdc
+        dc_ac_ratio: 1.34
+        create_model_from: new
+        tilt_angle_func: none
+        tilt: 0
+        pysam_options:
+          SystemDesign:
+            gcr: 0.3
+            array_type: 2
+            bifaciality: 0.65
+            inv_eff: 96.0
+            losses: 14.6
+            module_type: 1
+            azimuth: 180
+            rotlim: 45
+          SolarResource:
+            albedo_default: 0.2
+      cost_parameters:
+        capex_per_kWac: 1193
+        opex_per_kWac_per_year: 18
+        cost_year: 2024
+  #  # =======================================
+  #  # PySAMBattery model with DemandOpenLoopStorageController
+  # battery:
+  #   performance_model:
+  #     model: PySAMBatteryPerformanceModel
+  #   control_strategy:
+  #     model: HeuristicLoadFollowingStorageController
+  #  # model: DemandOpenLoopStorageController
+  #   dispatch_rule_set:
+  #     model: PyomoRuleStorageBaseclass
+  #   cost_model:
+  #     model: ATBBatteryCostModel
+  #   model_inputs:
+  #     shared_parameters:
+  #       commodity: electricity
+  #       commodity_rate_units: kW
+  #       max_charge_rate: 25000.0  # kW/time step, 25 MW
+  #       max_capacity: 200000.0  # kWh, 200 MWh
+  #       max_soc_fraction: 1.0  # fraction (0-1)
+  #       min_soc_fraction: 0.1  # fraction (0-1)
+  #       init_soc_fraction: 0.1  # fraction (0-1)
+  #       # max_discharge_rate: 25000.0  # kW/time step
+  #       # charge_efficiency: 1.0  # fraction (0-1)
+  #       # discharge_efficiency: 1.0  # fraction (0-1)
+  #     performance_parameters:
+  #       chemistry: LFPGraphite
+  #       demand_profile: 100000  # kW, 100 MW
+  #     cost_parameters:
+  #       cost_year: 2022
+  #       energy_capex: 300  # $/kWh
+  #       power_capex: 100  # $/kW
+  #       opex_fraction: 0.05  # percent of capex
+  #     control_parameters:
+  #       system_commodity_interface_limit: 1e12
+  #       n_control_window_hours: 24
+  #  # =======================================
+  #  # HeuristicLoadFollowingStorageController with basic StoragePerformanceModel battery model
+  # battery:
+  #   performance_model:
+  #     model: StoragePerformanceModel
+  #   cost_model:
+  #     model: ATBBatteryCostModel
+  #   control_strategy:
+  #     model: HeuristicLoadFollowingStorageController
+  #   model_inputs:
+  #     shared_parameters:
+  #       commodity: electricity
+  #       commodity_rate_units: kW
+  #       max_charge_rate: 25000.0  # kW/time step, 25 MW
+  #       max_capacity: 200000.0  # kWh, 200 MWh
+  #       max_soc_fraction: 1.0  # fraction (0-1)
+  #       min_soc_fraction: 0.1  # fraction (0-1)
+  #       init_soc_fraction: 0.1  # fraction (0-1)
+  #       charge_efficiency: 1.0  # fraction (0-1)
+  #       discharge_efficiency: 1.0  # fraction (0-1)
+  #       demand_profile: 100000  # kW, 100 MW
+  #       max_discharge_rate: 25000.0  # kW/time step
+  #     cost_parameters:
+  #       cost_year: 2022
+  #       energy_capex: 300  # $/kWh
+  #       power_capex: 100  # $/kW
+  #       opex_fraction: 0.05  # percent of capex
+  #     control_parameters:
+  #       system_commodity_interface_limit: 1e12
+  #       n_control_window_hours: 24
+  #  # =======================================
+  battery:
+    performance_model:
+      model: StoragePerformanceModel
+    cost_model:
+      model: ATBBatteryCostModel
+    control_strategy:
+      model: DemandOpenLoopStorageController
+    model_inputs:
+      shared_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        max_charge_rate: 25000.0  # kW/time step, 25 MW
+        max_capacity: 200000.0  # kWh, 200 MWh
+        max_soc_fraction: 1.0  # fraction (0-1)
+        min_soc_fraction: 0.1  # fraction (0-1)
+        init_soc_fraction: 0.1  # fraction (0-1)
+        max_discharge_rate: 25000.0  # kW/time step
+        charge_efficiency: 1.0  # fraction (0-1)
+        discharge_efficiency: 1.0  # fraction (0-1)
+        demand_profile: 100000  # kW, 100 MW
+      cost_parameters:
+        cost_year: 2022
+        energy_capex: 300  # $/kWh
+        power_capex: 100  # $/kW
+        opex_fraction: 0.05  # percent of capex
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 100000  # kW, 100 MW
+  bat_combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e6  # kW
+      cost_parameters:
+        cost_year: 2022
+        electricity_buy_price: 0.10  # $/kWh - only buying, no selling
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost
+  grid_sell:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e6  # kW
+      cost_parameters:
+        cost_year: 2022
+        electricity_sell_price: 0.0  # $/kWh - only selling, no buying
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost
+  combiner:
+    performance_model:
+      model: GenericCombinerPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW

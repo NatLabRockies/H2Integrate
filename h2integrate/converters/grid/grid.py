@@ -127,24 +127,47 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         )
 
     def compute(self, inputs, outputs):
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
+        # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
 
         # Selling: electricity flows into grid, limited by interconnection size
-        electricity_sold = np.clip(inputs["electricity_in"], 0, interconnection_size)
-        outputs["electricity_sold"] = electricity_sold
+        electricity_sold = np.clip(
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_sold"][simulation_range.start : simulation_range.stop] = (
+            electricity_sold
+        )
 
-        # Buying: electricity flows out of grid to meet command value, limited by interconnection
-        electricity_bought = np.clip(inputs["electricity_command_value"], 0, interconnection_size)
-        outputs["electricity_out"] = electricity_bought
+        # Buying: electricity flows out of grid to meet command value,
+        # limited by interconnection
+        electricity_bought = np.clip(
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_out"][simulation_range.start : simulation_range.stop] = (
+            electricity_bought
+        )
 
         # Unmet demand if command value exceeds interconnection size
-        outputs["electricity_unmet_demand"] = (
-            inputs["electricity_command_value"] - electricity_bought
+        outputs["electricity_unmet_demand"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop]
+            - electricity_bought
         )
 
         # Not sold electricity if demand exceeds interconnection size
-        outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
+        outputs["electricity_excess"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop]
+            - electricity_sold
+        )
 
+        # Scalar outputs
         max_production = (
             inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
         )
@@ -157,7 +180,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             1 / self.fraction_of_year_simulated
         )
 
-        total_electricity_sold = np.sum(electricity_sold) * (self.dt / 3600)
+        total_electricity_sold = np.sum(outputs["electricity_sold"]) * (self.dt / 3600)
         outputs["annual_electricity_sold"] = total_electricity_sold * (
             1 / self.fraction_of_year_simulated
         )
@@ -304,37 +327,38 @@ class GridCostModel(CostModelBaseClass):
             )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        interconnection_size = inputs["interconnection_size"]
+        if not discrete_inputs["skip_compute"]:
+            interconnection_size = inputs["interconnection_size"]
 
-        # Capital costs based on interconnection size
-        capex_per_kw = self.config.interconnection_capex_per_kw
-        fixed_cost = self.config.fixed_interconnection_cost
-        outputs["CapEx"] = (interconnection_size * capex_per_kw) + fixed_cost
+            # Capital costs based on interconnection size
+            capex_per_kw = self.config.interconnection_capex_per_kw
+            fixed_cost = self.config.fixed_interconnection_cost
+            outputs["CapEx"] = (interconnection_size * capex_per_kw) + fixed_cost
 
-        # Fixed operating costs based on interconnection size
-        opex_per_kw = self.config.interconnection_opex_per_kw
-        outputs["OpEx"] = interconnection_size * opex_per_kw
+            # Fixed operating costs based on interconnection size
+            opex_per_kw = self.config.interconnection_opex_per_kw
+            outputs["OpEx"] = interconnection_size * opex_per_kw
 
-        # Variable operating costs (positive cost for buying, negative for selling)
-        varopex = np.zeros(self.plant_life)
+            # Variable operating costs (positive cost for buying, negative for selling)
+            varopex = np.zeros(self.plant_life)
 
-        # Add buying costs if buy price is configured
-        if self.config.electricity_buy_price is not None:
-            buy_price = inputs["electricity_buy_price"]
-            if self._buy_price_mode == "per_year":
-                # annual_electricity_out is already in kW*h/yr (shape=plant_life)
-                varopex += inputs["annual_electricity_out"] * buy_price
-            else:
-                # Scalar or per-timestep: same cost each year
-                varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+            # Add buying costs if buy price is configured
+            if self.config.electricity_buy_price is not None:
+                buy_price = inputs["electricity_buy_price"]
+                if self._buy_price_mode == "per_year":
+                    # annual_electricity_out is already in kW*h/yr (shape=plant_life)
+                    varopex += inputs["annual_electricity_out"] * buy_price
+                else:
+                    # Scalar or per-timestep: same cost each year
+                    varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
 
-        # Add selling revenue if sell price is configured
-        if self.config.electricity_sell_price is not None:
-            sell_price = inputs["electricity_sell_price"]
-            if self._sell_price_mode == "per_year":
-                # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
-                varopex -= inputs["annual_electricity_sold"] * sell_price
-            else:
-                varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+            # Add selling revenue if sell price is configured
+            if self.config.electricity_sell_price is not None:
+                sell_price = inputs["electricity_sell_price"]
+                if self._sell_price_mode == "per_year":
+                    # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
+                    varopex -= inputs["annual_electricity_sold"] * sell_price
+                else:
+                    varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
 
-        outputs["VarOpEx"] = varopex
+            outputs["VarOpEx"] = varopex

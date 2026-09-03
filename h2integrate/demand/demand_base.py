@@ -126,7 +126,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def calculate_outputs(self, commodity_in, commodity_demand, outputs):
+    def calculate_outputs(self, commodity_in, commodity_demand, inputs, outputs):
         """Compute unmet demand, unused commodity, and converter output.
 
         This method compares the demand profile to the supplied commodity for
@@ -137,6 +137,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
         Args:
             commodity_in (np.array): supplied commodity profile
             commodity_demand (np.array): entire commodity demand profile
+            inputs (dict-like): OM inputs to `compute()` method.
             outputs (dict-like): Mapping of output variable names where results
                 will be written, including:
 
@@ -153,22 +154,41 @@ class DemandComponentBase(PerformanceModelBaseClass):
             ``curtailment_percent``, which are scalar summary outputs.
         """
 
-        outputs[f"{self.commodity}_demand_out"] = commodity_demand
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
-        remaining_demand = commodity_demand - commodity_in
+        # Arrays relevant to the current simulation range
+        commodity_in_sim = commodity_in[simulation_range.start : simulation_range.stop]
+        commodity_demand_sim = commodity_demand[simulation_range.start : simulation_range.stop]
+
+        outputs[f"{self.commodity}_demand_out"][simulation_range.start : simulation_range.stop] = (
+            commodity_demand_sim
+        )
+
+        remaining_demand = commodity_demand_sim - commodity_in_sim
 
         # Calculate missed load and curtailed production
-        outputs[f"unmet_{self.commodity}_demand_out"] = np.where(
-            remaining_demand > 0, remaining_demand, 0
-        )
-        outputs[f"unused_{self.commodity}_out"] = np.where(
-            remaining_demand < 0, -1 * remaining_demand, 0
+        outputs[f"unmet_{self.commodity}_demand_out"][
+            simulation_range.start : simulation_range.stop
+        ] = np.where(remaining_demand > 0, remaining_demand, 0)
+        outputs[f"unused_{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
+            np.where(remaining_demand < 0, -1 * remaining_demand, 0)
         )
 
         # Calculate actual output based on demand met and curtailment
-        outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
+        outputs[f"{self.commodity}_out"][simulation_range.start : simulation_range.stop] = (
+            commodity_in_sim
+            - outputs[f"unused_{self.commodity}_out"][
+                simulation_range.start : simulation_range.stop
+            ]
+        )
 
-        outputs[f"rated_{self.commodity}_production"] = commodity_demand.mean()
+        # Simulation-length commodity_demand vector for bulk calculations
+        commodity_demand_full = commodity_demand
+        commodity_in_full = commodity_in
+
+        outputs[f"rated_{self.commodity}_production"] = commodity_demand_full.mean()
 
         outputs[f"total_{self.commodity}_produced"] = np.sum(outputs[f"{self.commodity}_out"]) * (
             self.dt / 3600
@@ -178,10 +198,12 @@ class DemandComponentBase(PerformanceModelBaseClass):
             outputs[f"total_{self.commodity}_produced"] / self.fraction_of_year_simulated
         )
 
-        outputs["capacity_factor"] = outputs[f"{self.commodity}_out"].sum() / commodity_demand.sum()
+        outputs["capacity_factor"] = (
+            outputs[f"{self.commodity}_out"].sum() / commodity_demand_full.sum()
+        )
 
-        total_demand = commodity_demand.sum()
-        total_gen = commodity_in.sum()
+        total_demand = commodity_demand_full.sum()
+        total_gen = commodity_in_full.sum()
         if total_demand > 0:
             outputs["percent_load_missed"] = (
                 100.0 * outputs[f"unmet_{self.commodity}_demand_out"].sum() / total_demand

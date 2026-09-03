@@ -86,7 +86,7 @@ class ProFastNPV(ProFastBase):
             units=self.commodity_sell_price_units,
         )
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Compute the NPV of the commodity using ProFAST cash flows.
 
         Args:

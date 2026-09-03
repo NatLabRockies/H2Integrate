@@ -51,6 +51,6 @@ class GenericDemandComponent(DemandComponentBase):
             array shape ``(n_timesteps,)``.
         """
 
-        outputs = self.calculate_outputs(
-            inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
-        )
+        commodity_in = inputs[f"{self.commodity}_in"]
+        commodity_demand = inputs[f"{self.commodity}_demand"]
+        outputs = self.calculate_outputs(commodity_in, commodity_demand, inputs, outputs)

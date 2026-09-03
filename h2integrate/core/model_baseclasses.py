@@ -32,6 +32,11 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
+        # n_steps_per_compute is the number of timesteps simulated per compute call
+        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
+            "n_steps_per_compute", self.n_timesteps
+        )
+
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
@@ -62,6 +67,9 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 "documentation."
             )
             raise NotImplementedError(msg)
+
+        # The index to start the simulation slice when compute is called.
+        self.add_input("timestep_index", val=0, desc="Time step index")
 
         # timeseries profiles
         self.add_output(
@@ -115,6 +123,20 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 units=self.commodity_rate_units,
                 desc=f"Full (uncurtailed) {self.commodity} output",
             )
+
+    def _get_compute_time_range(self, time_index):
+        """
+        This method gets the range of timestep indices that are simulated in a
+        single call to compute call.
+
+        Args:
+            time_index (numpy array): Starting time index of the simulation range.
+
+        Returns:
+            range: range of time indices
+        """
+        ti = int(time_index[0])
+        return range(ti, ti + self.n_steps_per_compute)
 
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
@@ -214,6 +236,10 @@ class CostModelBaseClass(om.ExplicitComponent):
             val=getattr(self.config, "marginal_cost", 0.0),
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
+        )
+
+        self.add_discrete_input(
+            "skip_compute", val=False, desc="Flag for skipping the calculations in compute()"
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
