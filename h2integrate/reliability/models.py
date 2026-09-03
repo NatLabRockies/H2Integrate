@@ -23,6 +23,12 @@ from h2integrate.reliability.utilities import (
 rng = np.random.default_rng(279299947538423226929715083173412195503)
 
 
+VALID_RELIABILITY = (
+    "WeibullReliability",
+    "FixedIntervalReliability",
+)
+
+
 def create_failure_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config["failure_model"]
@@ -63,17 +69,10 @@ def create_downtime_model(config: dict | int):
             raise NotImplementedError(f"{name} is not a valid model name")
 
 
-@define(kw_only=True)
-class BaseDowntime(ABC, BaseConfig):
-    """Base downtime class responsible for common definitions and functionality.
-
-    Args:
-        dt (int): Timestep in seconds.
-        n_timesteps (int): Number of timesteps in a simulation.
-    """
-
-    dt: int = field(converter=int, validator=validators.gt(0))
-    n_timesteps: int = field(converter=int, validator=validators.gt(0))
+@define
+class SimulationConfig(BaseConfig):
+    dt: int = field(validator=validators.gt(0))
+    n_timesteps: int = field(validator=validators.gt(0))
     n_timesteps_in_year: int = field(
         init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
     )
@@ -84,6 +83,20 @@ class BaseDowntime(ABC, BaseConfig):
         init=False,
         converter=attrs.Converter(calculate_simulation_years, takes_self=True),
         validator=validators.instance_of(float),
+    )
+
+
+@define(kw_only=True)
+class BaseDowntime(ABC, BaseConfig):
+    """Base downtime class responsible for common definitions and functionality.
+
+    Args:
+        dt (int): Timestep in seconds.
+        n_timesteps (int): Number of timesteps in a simulation.
+    """
+
+    simulation: SimulationConfig = field(
+        convert=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
 
     @abstractmethod
@@ -116,8 +129,9 @@ class BaseReliability(ABC, BaseConfig):
             time step of the simulation.
     """
 
-    dt: int = field(converter=int, validator=validators.gt(0))
-    n_timesteps: int = field(converter=int, validator=validators.gt(0))
+    simulation: SimulationConfig = field(
+        convert=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
+    )
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: dict | BaseDowntime = field(validator=validators.instance_of((dict, BaseDowntime)))
@@ -127,17 +141,6 @@ class BaseReliability(ABC, BaseConfig):
     availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     system_availability: np.ndarray = field(
         init=False, validator=validators.instance_of(np.ndarray)
-    )
-    n_timesteps_in_year: int = field(
-        init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
-    )
-    n_timesteps_in_hour: int = field(
-        init=False, converter=attrs.Converter(calculate_hourly_timesteps, takes_self=True)
-    )
-    simulation_years: float = field(
-        init=False,
-        converter=attrs.Converter(calculate_simulation_years, takes_self=True),
-        validator=validators.instance_of(float),
     )
 
     def __attrs_post_init__(self):
@@ -185,53 +188,74 @@ class BaseReliability(ABC, BaseConfig):
 
 @define
 class PerformanceReliability:
-    config: dict = field()
-    failure_model: BaseReliability = field(init=False)
-    maintenance_model: BaseReliability = field(init=False)
+    """General performance model to coordinate downtime from failure and maintenance events. Does
+    not consider the timing within or between models to coordinate downtime. This is a highly
+    simplified version of WOMBAT (https://github.com/NLRWindSystems/WOMBAT) without any
+    advanced scheduling, equipment dispatching, site conditions, etc.
+
+    Args:
+        simulation (dict | SimulationConfig): Simulation configuration based on
+            :py:class:`SimulationConfig`.
+        failure_model (str | None): Name of the failure model to use, when modeling.
+        maintenance_model (str | None): Name of the maintenance model to use, when modeling.
+        failure_parameters (str | None): Configuration for the failure model, when modeling. The
+            simulation configuration will be provided through the initialization process, and does
+            not need to be defined here.
+        maintenance_model (str | None): Configuration the maintenance model, when modeling. The
+            simulation configuration will be provided through the initialization process, and does
+            not need to be defined here.
+
+    Attributes:
+        availability (np.ndarray): Total availability, shape: (:py:attr:`simulation.n_timesteps`).
+        failures (BaseReliability): Reliability model for the failure-based downtime events.
+        maintenance (BaseReliability): Reliability model for the maintenance downtime events.
+    """
+
+    simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
+    failure_model: str | None = field(
+        default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
+    )
+    maintenance_model: str | None = field(
+        default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
+    )
+    failure_parameters: dict | None = field(
+        default=None, validator=validators.optional(validators.instance_of(dict))
+    )
+    maintenance_parameters: dict | None = field(
+        default=None, validator=validators.optional(validators.instance_of(dict))
+    )
     availability: np.ndarray = field(
         validator=validators.optional(validators.instance_of(np.ndarray)), init=False
     )
-
-    @config.validate
-    def validate_config(self, attribute, value: dict):
-        """Ensures that the simulation details and one of "failure_model" or "maintenance_model"
-        are provided.
-        """
-        bad_sim = "simulation" not in value
-        if not bad_sim:
-            bad_sim = all(x in value["simulation"] for x in ("dt", "n_timesteps"))
-        if bad_sim:
-            msg = (
-                "The reliability configuration should contain a dictionary with keys:"
-                " 'dt' and 'n_timesteps'."
-            )
-            raise ValueError(msg)
-
-        if has_failure := "failure_model" in value:
-            if "failure_parameters" not in value:
-                raise ValueError("'failure_parameters' must be provided for a failure model.")
-        if has_maintenance := "maintenance_model" in value:
-            if "maintenance_parameters" not in value:
-                msg = "'maintenance_parameters' must be provided for a maintenance_model model."
-                raise ValueError(msg)
-        if not (has_failure or has_maintenance):
-            msg = (
-                "One of 'failure_model' or 'maintenance_model' must be provided to"
-                " model reliability."
-            )
-            raise ValueError(msg)
+    failures: BaseReliability | None = field(default=None, init=False)
+    maintenance: BaseReliability | None = field(default=None, init=False)
 
     def __attrs_post_init__(self):
-        """Creates and runs the failure and maintenance models."""
-        self.failure_model = create_failure_model(self.config)
-        self.maintenance_model = create_maintenance_model(self.config)
+        """Creates and runs the failure and maintenance models, and calculates availability."""
+        simulation_config = {"simulation": self.simulation}
+        self.availability = np.ones(self.simulation.n_timesteps)
+
+        if self.failure_model is not None:
+            if self.failure_parameters is not None:
+                self.failures = create_failure_model(self.failure_parameters | simulation_config)
+
+        if self.maintenance_model is not None:
+            if self.maintenance_parameters is not None:
+                self.maintenance = create_maintenance_model(self.config | simulation_config)
+
         self.calculate_availability()
 
     def calculate_availability(self):
-        self.availability = np.minimum(
-            self.failure_model.system_availability,
-            self.maintenance_model.system_availability,
-        )
+        """Calculates the final system availability as the minimum availability between the
+        failure-based downtime and maintenance-based downtime with shape
+        :py:attr:`simulation.n_timesteps`.
+        """
+        failure_availability = maintenance_availability = self.availability
+        if self.failures is not None:
+            failure_availability = self.failures.system_availability
+        if self.maintenance is not None:
+            maintenance_availability = self.maintenance.system_availability
+        self.availability = np.minimum(failure_availability, maintenance_availability)
 
 
 @define(kw_only=True)
