@@ -2398,9 +2398,12 @@ class H2IntegrateModel:
 
         # --- Check 4: prevent commodity double-counting via demand components ---
         # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). However, if a source does this it
-        # must NOT also send the same commodity directly to another real consumer,
-        # because the flow would be counted twice.
+        # (e.g. acting as a profile regularizer). A demand component may also route
+        # unused commodity to storage (e.g. battery charging), which is allowed.
+        #
+        # However, if a source sends a commodity directly to a real consumer and also
+        # sends that commodity to a demand component that re-emits it to another real
+        # consumer, the flow can be double-counted and should fail.
         #
         # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
         # Valid:   source -> demand_comp (pure observer)
@@ -2408,11 +2411,14 @@ class H2IntegrateModel:
         # Invalid: source -> real_consumer_A                (competing direct path)
         #          source -> demand_comp -> real_consumer_B (and also via demand)
         #
-        # The check is transitive: a demand component "reaches a real consumer" even
-        # when the path passes through a chain of other demand components first.
+        # The check is transitive across demand-component chains only.
 
-        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+        def _demand_reaches_competing_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech reaches a non-storage real consumer.
+
+            Demand chains that terminate at storage are allowed and do not count
+            as competing direct-consumer paths for this check.
+            """
             visited: set[str] = set()
             stack = [demand_tech]
             while stack:
@@ -2423,9 +2429,14 @@ class H2IntegrateModel:
                 for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
                     if not c:
                         continue
-                    if self.tech_control_classifiers.get(d) != "demand":
-                        return True
-                    stack.append(d)
+                    d_classifier = self.tech_control_classifiers.get(d)
+                    if d_classifier == "demand":
+                        stack.append(d)
+                        continue
+                    if d_classifier == "storage":
+                        # Demand -> storage is explicitly allowed.
+                        continue
+                    return True
             return False
 
         # Build per-(source, commodity) destination lists from L4 edges.
@@ -2444,7 +2455,7 @@ class H2IntegrateModel:
                 d
                 for d in dests
                 if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_real_consumer(d)
+                and _demand_reaches_competing_consumer(d)
             ]
             if direct_real_dests and outputting_demand_dests:
                 raise ValueError(

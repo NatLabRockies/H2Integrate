@@ -490,6 +490,29 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     with subtests.test("source to real consumer + demand reporter passes validation"):
         H2IntegrateModel._validate_technology_interconnections(fake_valid)  # must not raise
 
+    # Demand can pass UNUSED commodity to storage while the source also serves a
+    # real consumer directly. This should be allowed and mirrors the pattern:
+    # [demand_comp, battery, [unused_electricity_out, electricity_in]]
+    interconnections_storage_passthrough = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["grid", "battery", "electricity", "cable"],
+        ["demand_reporter", "battery", ["unused_electricity_out", "electricity_in"]],
+    ]
+    classifiers_storage_passthrough = {
+        "wind": "flexible",
+        "grid": "dispatchable",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "battery": "storage",
+    }
+    fake_storage_passthrough = _make_fake_model(
+        interconnections_storage_passthrough, classifiers_storage_passthrough
+    )
+
+    with subtests.test("source direct consumer plus demand unused_out->storage passes"):
+        H2IntegrateModel._validate_technology_interconnections(fake_storage_passthrough)
+
     # Two real (non-demand) consumers of the same commodity from one source must still fail.
     interconnections_bad = [
         ["wind", "electrolyzer", "electricity", "cable"],
