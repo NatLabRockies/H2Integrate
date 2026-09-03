@@ -162,51 +162,8 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
         self.config.price = price.price.to_numpy()
         super().setup()
 
-        if self.config.latitude is not None and self.config.longitude is not None:
-            self.add_input("latitude", self.config.latitude, shape=1, units="deg")
-            self.add_input("longitude", self.config.longitude, shape=1, units="deg")
-        # else:
-
-        self.price_state = self.config.state
-
-    def get_price(self, latitude, longitude):
-        state = geospatial.get_state_from_coords(latitude=latitude, longitude=longitude)
-        if state == self.price_state:
-            return self.config.price
-
-        # State changed, re-download feedstock data
-        price = eia.get_eia_ng_data(
-            api_key_file=self.config.api_key_file,
-            resource_year=self.config.resource_year,
-            price_category=self.config.price_category,
-            state=state,
-            monthly=self.config.monthly,
-            filename=self.config.filename,
-            feedstock_dir=self.config.feedstock_dir,
-        )
-        price = eia.convert_to_hourly(price)
-        self.price_state = state
-
-        # Update config price
-        self.config.price = price.price.to_numpy()
-
-        return self.config.price
-
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if "latitude" in inputs:
-            price = self.get_price(inputs["latitude"][0], inputs["longitude"][0])
-        else:
-            price = self.config.price
-
-        if not np.isclose(inputs["price"], price, rtol=1e-6).all():
-            # User changed input price, leave the price as-is
+        if not np.isclose(inputs["price"], self.config.price, rtol=1e-6).all():
             warn_msg = "The NG price has changed from EIA price. This may be intended."
             warnings.warn(warn_msg, UserWarning)
-            super().compute(inputs, outputs, discrete_inputs, discrete_outputs)
-            return
-
-        # User did not change price but site may have changed
-        inputs_adjusted = dict(inputs.items()).copy()
-        inputs_adjusted["price"] = price
-
-        super().compute(inputs_adjusted, outputs, discrete_inputs, discrete_outputs)
+        super().compute(inputs, outputs, discrete_inputs, discrete_outputs)
