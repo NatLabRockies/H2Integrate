@@ -291,8 +291,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
             # positive = discharge, negative = charge.
             net_demand = (
-                inputs[f"{commodity_name}_set_point"]
-                - inputs[f"{commodity_name}_in"]
+                inputs[f"{commodity_name}_set_point"] - inputs[f"{commodity_name}_in"]
                 if self.config.constrain_dispatch_to_set_point
                 else None
             )
