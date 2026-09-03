@@ -86,6 +86,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI`
     + {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI`
     + {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI`
+    + {py:class}`~h2integrate.resource.solar.nlr_nsrdb_dataset_model.NSRDBDatasetH5`
     + {py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResource`
 
 - `tidal`
@@ -100,6 +101,7 @@ auto-generated API page.
   - other components:
     + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI`
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
+    + {py:class}`~h2integrate.resource.wind.nlr_hrrr_met_toolkit_dataset_model.WTKHRRRMETDatasetH5`
     + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=

@@ -51,6 +51,7 @@ parts:
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
       - file: technology_models/steel_eaf_cmu.md
+      - file: technology_models/diesel.md
       - file: technology_models/PEM_h2_fuel_cell.md
       - file: technology_models/SO_NG_fuel_cell.md
   - caption: Storage Models
@@ -76,6 +77,7 @@ parts:
               - file: resource/openmeteo_solar_archive
           - file: resource/tidal_resource
           - file: resource/wave_resource
+          - file: resource/nlr_dataset_index
   - caption: Control
     chapters:
       - file: control/system_level_control/system_level_control
