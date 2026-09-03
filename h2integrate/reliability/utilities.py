@@ -2,7 +2,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-SECONDS_IN_YEAR = 8760 * 60 * 60
+SECONDS_IN_HOUR = 60 * 60
+SECONDS_IN_YEAR = 8760 * SECONDS_IN_HOUR
 
 
 def update_dimensions(n_components: int, *args: np.ndarray):
@@ -46,6 +47,11 @@ def calculate_simulation_years(value, self_) -> float:
 def calculate_annual_timesteps(value, self_) -> float:
     """Calculates the number of timesteps in a year from the :py:attr:`self_.dt`, rounded up."""
     return int(np.ceil(SECONDS_IN_YEAR / self_.dt))
+
+
+def calculate_hourly_timesteps(value, self_) -> float:
+    """Calculates the number of timesteps in an hour from the :py:attr:`self_.dt`, rounded up."""
+    return int(np.ceil(SECONDS_IN_HOUR / self_.dt))
 
 
 def array_ge(val):

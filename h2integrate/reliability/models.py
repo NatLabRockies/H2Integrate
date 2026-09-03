@@ -14,6 +14,7 @@ from h2integrate.reliability.utilities import (
     int_array_converter,
     float_array_converter,
     calculate_annual_timesteps,
+    calculate_hourly_timesteps,
     calculate_simulation_years,
 )
 
@@ -108,6 +109,9 @@ class BaseReliability(ABC, BaseConfig):
     )
     n_timesteps_in_year: int = field(
         init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
+    )
+    n_timesteps_in_hour: int = field(
+        init=False, converter=attrs.Converter(calculate_hourly_timesteps, takes_self=True)
     )
     simulation_years: float = field(
         init=False,
@@ -283,14 +287,16 @@ class FixedIntervalReliability(BaseReliability):
 
     def sample_events(self):
         """Creates the time to next failure array for each event's modality with the first event
-        occurring randomly either in the first year or first failure interval, whichever
-        comes first.
+        occurring randomly either in the simulation period or first downtime interval, whichever
+        is shorter.
 
         Returns:
             time_to_failures (np.ndarray): An array of the next 100 events' time to next failure.
         """
-        interval = np.ceil(8760 / (1 / self.frequency)).astype(int)
-        first_occurrence = rng.integers(0, np.where(interval > 8760, 8760, interval))
+        interval = np.ceil(8760 / (1 / self.frequency) / self.n_timesteps_in_hour).astype(int)
+        first_occurrence = rng.integers(
+            0, np.where(interval > self.n_timesteps, self.n_timesteps, interval)
+        )
         time_to_failures = np.hstack(
             (first_occurrence, np.broadcast_to(interval, (interval.size, 99)))
         )
