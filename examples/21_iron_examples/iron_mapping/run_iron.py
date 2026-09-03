@@ -72,7 +72,8 @@ if rerun_model:
         ore_cost = float(
             mine_model.model.get_val("finance_subgroup_iron_ore.LCOI", units="USD/t")[0]
         )
-        ore_prices[casename] = ore_cost
+        ore_prices.loc[casename, "ore_cost_per_tonne"] = ore_cost
+        mine_model.post_process(summarize_sql=True)
     ore_prices.to_csv(ore_prices_filepath)
 
     # Run transport sweep
@@ -88,18 +89,19 @@ if rerun_model:
     iron_plant_model.post_process(summarize_sql=True)
 
 # Add a layer for example ore cost prices from select mines
-fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
+fig, ax, _, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=ore_prices_filepath,
-    metric_to_plot="ore_cost_per_kg",
+    metric_to_plot="ore_cost_per_tonne",
+    metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={
         "figsize": (5, 4),
         "colormap": "Greens",
         "marker": "o",
         "colorbar_bbox_to_anchor": (0.1, 0.97, 1, 1),
         "colorbar_label": "Levelized Cost of\nIron Ore Pellets\n[$/kg ore]",
-        "colorbar_limits": (0.11, 0.14),
+        "colorbar_limits": (0.12, 0.16),
         "colorbar_width": "35%",
-        "colorbar_num_ticks": 4,
+        "colorbar_num_ticks": 3,
         "horz_alignment": ["left", "center", "right"],
         "vert_alignment": ["bottom", "top", "bottom"],
         "label_offset_x": [3, 0, -3],
@@ -108,7 +110,7 @@ fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
 )
 
 # Add a layer for example waterway shipping cost from select mines to select ports
-fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
+fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=transport_results_filepath,
     metric_to_plot="iron_transport.iron_transport_cost (USD/t)",
     metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
@@ -119,7 +121,7 @@ fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
         "markersize": 80,
         "colorbar_bbox_to_anchor": (0.6, 0.85, 1, 1),
         "colorbar_label": "Waterway\nShipping Cost\n[$/kg ore]",
-        "colorbar_limits": (0.026, 0.03),
+        "colorbar_limits": (0.025, 0.029),
         "colorbar_width": "35%",
         "colorbar_num_ticks": 3,
         "horz_alignment": ["right", "left"],
@@ -132,17 +134,17 @@ fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
 
 # Plot the LCOI results with geopandas and contextily
 # NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
-fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+fig, ax, _, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=iron_plant_results_filepath,
     metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
     metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={
         "figsize": (5, 4),
         "colorbar_label": "Levelized Cost of\nIron [$/kg]",
-        "colorbar_limits": (0.3, 0.45),
+        "colorbar_limits": (0.25, 0.45),
         "colorbar_width": "35%",
-        "colorbar_num_ticks": 4,
-        "colorbar_bbox_to_anchor": (0.6, 0.27, 1.0, 1.0),
+        "colorbar_num_ticks": 3,
+        "colorbar_bbox_to_anchor": (0.6, 0.37, 1.0, 1.0),
         "horz_alignment": ["right", "left", "left", "right", "left"],
         "vert_alignment": ["top"],
         "label_offset_x": [3, 3, 3, -3, 3],
@@ -218,7 +220,7 @@ fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
     shipping_coords_fpath=shipping_coords_filepath,
     shipping_route=chicago_route,
     map_preferences={
-        "figure_title": "Example H2 DRI Iron Costs",
+        "figure_title": "Example Iron Costs",
         "figsize": (5, 4),
         "basemap_upperpad": 0.5,
         "basemap_lowerpad": 0.2,

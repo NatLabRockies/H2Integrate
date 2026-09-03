@@ -243,6 +243,8 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
                 water_distance_km = self.calculate_water_distance(waypoints, barge_waypoint_coords)
 
                 if land_distance_dest_km < min_distance:
+                    min_distance = land_distance_dest_km
+
                     land_distance_for_min = self.calculate_land_distance(
                         barge_dest_coords, final_dest_coords
                     )
@@ -252,8 +254,11 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
                     # Add in distance from mine to Duluth
                     land_distance_for_min += land_distance_origin_km
 
+                    # final_dest = barge_dest
+
             outputs["land_transport_distance_great_lakes"] = land_distance_for_min
             outputs["water_transport_distance_great_lakes"] = water_distance_for_min
+            # print(f"final_dest: {final_dest}")
         else:
             barge_dest = self.config.shipment_site
             barge_lat = barge_waypoint_coords.loc[barge_dest]["Lat"]

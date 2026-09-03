@@ -212,8 +212,8 @@ class GeospatialMapConfig(BaseConfig):
     linewidth: float = field(default=1.5)
     horz_alignment: list[str] = field(default=["left"])
     vert_alignment: list[str] = field(default=["bottom"])
-    label_offset_x: list[float] = field(default=[3])
-    label_offset_y: list[float] = field(default=[3])
+    label_offset_x: list[float] = field(default=[0])
+    label_offset_y: list[float] = field(default=[0])
     label_format_string: str = field(default=".3f")
     legend_label: str = field(default="UPDATE LEGEND LABEL")
 
