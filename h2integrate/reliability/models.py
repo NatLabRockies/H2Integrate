@@ -26,7 +26,7 @@ rng = np.random.default_rng(279299947538423226929715083173412195503)
 def create_failure_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config["failure_model"]
-    fail_config = config["failure_parameters"]
+    fail_config = config["failure_parameters"] | config["simulation"]
     match name:
         case "WeibullReliability":
             return WeibullReliability.from_dict(fail_config)
@@ -39,7 +39,7 @@ def create_failure_model(config: dict):
 def create_maintenance_model(config: dict):
     """Retrieves and initializes a matching reliability model."""
     name = config["maintenance_model"]
-    maintenance_config = config["maintenance_parameters"]
+    maintenance_config = config["maintenance_parameters"] | config["simulation"]
     match name:
         case "WeibullReliability":
             return WeibullReliability.from_dict(maintenance_config)
@@ -65,6 +65,27 @@ def create_downtime_model(config: dict | int):
 
 @define(kw_only=True)
 class BaseDowntime(ABC, BaseConfig):
+    """Base downtime class responsible for common definitions and functionality.
+
+    Args:
+        dt (int): Timestep in seconds.
+        n_timesteps (int): Number of timesteps in a simulation.
+    """
+
+    dt: int = field(converter=int, validator=validators.gt(0))
+    n_timesteps: int = field(converter=int, validator=validators.gt(0))
+    n_timesteps_in_year: int = field(
+        init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
+    )
+    n_timesteps_in_hour: int = field(
+        init=False, converter=attrs.Converter(calculate_hourly_timesteps, takes_self=True)
+    )
+    simulation_years: float = field(
+        init=False,
+        converter=attrs.Converter(calculate_simulation_years, takes_self=True),
+        validator=validators.instance_of(float),
+    )
+
     @abstractmethod
     def sample_downtime(self) -> np.ndarray: ...
 
@@ -99,7 +120,7 @@ class BaseReliability(ABC, BaseConfig):
     n_timesteps: int = field(converter=int, validator=validators.gt(0))
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
-    downtime: dict | BaseDowntime = field(converter=create_downtime_model)
+    downtime: dict | BaseDowntime = field(validator=validators.instance_of((dict, BaseDowntime)))
 
     time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
@@ -118,6 +139,10 @@ class BaseReliability(ABC, BaseConfig):
         converter=attrs.Converter(calculate_simulation_years, takes_self=True),
         validator=validators.instance_of(float),
     )
+
+    def __attrs_post_init__(self):
+        downtime_config = self.downtime | {"dt": self.dt, "n_timesteps": self.n_timesteps}
+        self.downtime = create_downtime_model(downtime_config)
 
     def sample_events(self) -> np.ndarray:
         raise NotImplementedError("Failed to successfully subclass, please implement me.")
@@ -179,7 +204,7 @@ class FixedDowntime(BaseDowntime):
 
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
-        return np.ones((1, 100), dtype=int) * self.hours
+        return np.ones((1, 100), dtype=int) * self.hours * self.n_timesteps_in_hour
 
 
 @define(kw_only=True)
@@ -208,9 +233,10 @@ class LogNormalDowntime(BaseDowntime):
 
     def sample_downtime(self) -> np.ndarray:
         """Return an array of 100 samples of each lognormal distribution."""
-        return np.ceil(rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))).astype(
-            int
-        )
+        return np.ceil(
+            rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
+            / self.n_timesteps_in_hour
+        ).astype(int)
 
 
 @define(kw_only=True)
@@ -245,6 +271,7 @@ class WeibullReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         self.n_components, self.scale, self.shape = update_dimensions(
             self.n_components, self.scale, self.shape
         )
@@ -280,6 +307,7 @@ class FixedIntervalReliability(BaseReliability):
     )
 
     def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         self.n_components, self.frequency = update_dimensions(self.n_components, self.frequency)
 
         self.create_downtime_events()
