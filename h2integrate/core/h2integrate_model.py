@@ -1046,7 +1046,7 @@ class H2IntegrateModel:
                 self._check_time_step(tech_name, comp)
                 self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
-            1 for _, v in self.tech_control_classifiers.items() if v != "transport"
+            1 for v in self.tech_control_classifiers.values() if v != "transport"
         )
         if (
             len(self.technology_config["technologies"]) > 1
