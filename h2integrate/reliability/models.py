@@ -294,9 +294,8 @@ class FixedIntervalReliability(BaseReliability):
             time_to_failures (np.ndarray): An array of the next 100 events' time to next failure.
         """
         interval = np.ceil(8760 / (1 / self.frequency) / self.n_timesteps_in_hour).astype(int)
-        first_occurrence = rng.integers(
-            0, np.where(interval > self.n_timesteps, self.n_timesteps, interval)
-        )
+        max_first_occurrence = np.where(interval > self.n_timesteps, self.n_timesteps, interval)
+        first_occurrence = rng.integers(0, max_first_occurrence)
         time_to_failures = np.hstack(
             (first_occurrence, np.broadcast_to(interval, (interval.size, 99)))
         )
