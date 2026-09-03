@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.reliability.models import WeibullReliabilityModel
+from h2integrate.reliability.models import PerformanceReliability
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -79,15 +79,13 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
             plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
             simulation_config = {
-                "dt": plant_simulation_config.get("dt", 3600),
-                "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+                "simulation": {
+                    "dt": plant_simulation_config.get("dt", 3600),
+                    "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+                },
             }
-            # TODO: replace this with an overarching reliability model once available
-            self.reliability_model = WeibullReliabilityModel.from_dict(
-                merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
-                | simulation_config,
-                additional_cls_name=self.__class__.__name__,
-            )
+            config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
+            self.reliability_model = PerformanceReliability(config=config | simulation_config)
         self.use_reliability = use_reliability
 
         # Add natural gas consumed output
