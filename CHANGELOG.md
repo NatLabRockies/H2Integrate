@@ -25,7 +25,9 @@
   - `ResourceBaseH5Config` and `ResourceBaseH5Model` are base configuration classes for these resource datasets
 - Synced peak load management (PLM) with the system-level control (SLC) paradigm: `PeakLoadManagementOptimizedStorageController` can now be used as a storage tech's SLC sub-controller via a new opt-in `constrain_dispatch_to_set_point` config field, which caps dispatch at the provided demand signal without changing its existing peak-window behavior by default. [Issue 749](https://github.com/NatLabRockies/H2Integrate/issues/749)
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
-
+- Enable `BaseConfig.from_dict` to receive an instance of the object it should be creating to enable
+  `attrs` converter routines to safely handle instances of existing configuration objects or
+  configuration dictionaries for defining objects once.
 
 ## 0.9 [August 10, 2026]
 
