@@ -144,6 +144,8 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
         "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
+        "DieselGeneratorPerformanceModel": "converters.diesel:DieselGeneratorPerformanceModel",
+        "DieselGeneratorCostModel": "converters.diesel:DieselGeneratorCostModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
