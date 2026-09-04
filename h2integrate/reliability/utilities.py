@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.typing import ArrayLike
 
 
 SECONDS_IN_HOUR = 60 * 60
@@ -29,14 +28,6 @@ def update_dimensions(n_components: int, *args: np.ndarray):
     return n_components, *args
 
 
-def float_array_converter(val: int | float | ArrayLike):
-    return np.array(val).astype(float).reshape(-1, 1)
-
-
-def int_array_converter(val: int | float | ArrayLike):
-    return np.array(val).astype(int).reshape(-1, 1)
-
-
 def calculate_simulation_years(value, self_) -> float:
     """Calculates the length of the simulation period, in years from the :py:attr:`self_.dt` and
     :py:attr:`self_.n_timesteps` provided from a configuration.
@@ -52,40 +43,3 @@ def calculate_annual_timesteps(value, self_) -> float:
 def calculate_hourly_timesteps(value, self_) -> float:
     """Calculates the number of timesteps in an hour from the :py:attr:`self_.dt`, rounded up."""
     return int(np.ceil(SECONDS_IN_HOUR / self_.dt))
-
-
-def array_ge(val):
-    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
-
-    def validator(instance, attribute, value):
-        if any(value < val):
-            raise ValueError(f"'{attribute.name}' must have all values of at least {val}.")
-
-    return validator
-
-
-def array_gt(val):
-    """Validates that all values of an array are greater than or equal to :py:attr:`val`."""
-
-    def validator(instance, attribute, value):
-        if any(value <= val):
-            raise ValueError(f"'{attribute.name}' must have all values greater than {val}.")
-
-    return validator
-
-
-def match_shape(other):
-    """Validates the shape of an array matches the shape of :py:attr:`other`."""
-
-    def validator(instance, attribute, value):
-        other_arr = getattr(instance, other, None)
-        if other_arr is None:
-            raise ValueError(f"'{other}' does not exist.")
-        if other_arr.shape != value.shape:
-            msg = (
-                f"Shape of '{attribute.name}' {value.shape} does not match"
-                f" '{other}' {other_arr.shape}."
-            )
-            raise ValueError(msg)
-
-    return validator
