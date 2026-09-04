@@ -63,7 +63,7 @@ def create_downtime_model(config: dict | int):
 
 
 @define
-class SimulationConfig:
+class SimulationConfig(BaseConfig):
     dt: int = field(validator=validators.gt(0))
     n_timesteps: int = field(validator=validators.gt(0))
     n_timesteps_in_year: int = field(
@@ -155,8 +155,8 @@ class BaseReliability(ABC, BaseConfig):
 
     def calculate_availability(self):
         """Determine the timing and duration of outages for a single year of simulation time."""
-        burn_in_time = np.ceil(self.burn_in * self.n_timesteps_in_year).astype(int)
-        simulation_end = burn_in_time + self.n_timesteps
+        burn_in_time = np.ceil(self.burn_in * self.simulation.n_timesteps_in_year).astype(int)
+        simulation_end = burn_in_time + self.simulation.n_timesteps
 
         accumulated = np.zeros((self.n_components, 1), dtype=int)
         availability = np.ones((self.n_components, simulation_end), dtype=float)
@@ -242,7 +242,7 @@ class PerformanceReliability(BaseConfig):
         if self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
                 self.maintenance = create_maintenance_model(
-                    self.maintenance_model, self.config | simulation_config
+                    self.maintenance_model, self.maintenance_parameters | simulation_config
                 )
 
         self.calculate_availability()
