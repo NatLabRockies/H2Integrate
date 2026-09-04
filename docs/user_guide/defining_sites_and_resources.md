@@ -47,7 +47,7 @@ resource_to_tech_connections: [
     - "discharge" for river resource models and water power technology models
 
 ### Connecting Site Data to Technologies
-Some technologies may have calculations that depend on the latitude and longitude of the site but not require resource data (for example, the `LinearDistanceCostModel` used in Example 22 `22_site_doe`). Length-3 connections are still used to connect site location information to a technology and are similar to length-3 connections in `technology_interconnections`, which is documented [here](#connecting_technologies).
+Some technologies may have calculations that depend on the latitude and longitude of the site but not require resource data (for example, the `LinearDistanceCostModel` used in Example 22 `22_site_doe`). Length-3 connections are still used to connect site location information to a technology and are similar to length-3 connections in `technology_interconnections`, which is documented [here](#connecting_technologies:overview).
 
 #### 3-element connections (direct connections)
 ##### Same shared location names
