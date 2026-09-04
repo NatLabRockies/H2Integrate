@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.reliability.models import PerformanceReliability
 from h2integrate.core.model_baseclasses import (
     CostModelBaseClass,
     CostModelBaseConfig,
@@ -66,6 +67,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
+        self.reliability_model = None
 
     def setup(self):
         super().setup()
@@ -74,6 +76,17 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
+            plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
+            simulation_config = {
+                "simulation": {
+                    "dt": plant_simulation_config.get("dt", 3600),
+                    "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+                },
+            }
+            config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
+            self.reliability_model = PerformanceReliability(config=config | simulation_config)
+        self.use_reliability = use_reliability
 
         # Add natural gas consumed output
         self.add_output(
@@ -153,6 +166,8 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             inputs["electricity_command_value"],
         )
         natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
+        if self.use_reliability:
+            natural_gas_demand * self.reliability_model.availability
 
         # available feedstock, saturated at maximum system feedstock consumption
         natural_gas_available = np.where(
