@@ -112,7 +112,7 @@ tech_to_dispatch_connections: [
 ```
 
 (optimized-demand-response-controller)=
-# Optimized Demand Response Controller
+## Optimized Demand Response Controller
 
 The optimized demand response controller is specified by setting the storage control to `PeakLoadManagementOptimizedStorageController`. This controller optimizes the dispatch of a Battery Energy Storage System (BESS). It is demonstrated for a scenario in which a Generation and Transmission Cooperative (G&T) is connected to a Distribution Cooperative (Coop). The battery is owned and operated by the Coop, primarily to reduce its electricity cost; in addition, the G&T can request battery dispatch a limited number of times during peak LMP periods, in exchange for incentive payments. Using a pre-defined Locational Marginal Price (LMP) profile and consumer power demand profile as inputs, the controller maximizes the incentive payments earned from G&T-requested dispatches while minimizing the Coop's electricity cost, subject to constraints on the maximum number of dispatch events per month and the battery's state of charge. The result demonstrates peak load management and demand response from a single coordinated controller.
 
