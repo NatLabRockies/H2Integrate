@@ -21,9 +21,9 @@ def update_dimensions(n_components: int, *args: np.ndarray):
         args: The arrays as passed or the arrays reshaped to shape (:py:attr:`n_components`, 1).
     """
     if args[0].size == 1 and n_components > 1:
+        args = list(args)
         shape = (n_components, 1)
-        for arg in args:
-            arg = np.broadcast_to(arg, shape)
+        args = [np.broadcast_to(arg, shape) for arg in args]
     n_components = args[0].size
     return n_components, *args
 
