@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from h2integrate.reliability.models import SimulationConfig
 from h2integrate.reliability.utilities import update_dimensions
 
 
@@ -25,3 +26,27 @@ def test_update_dimensions(subtests):
         assert (new_arr1 == 1).all()
         assert new_arr2.shape == (n_components, 1)
         assert (new_arr2 == 3).all()
+
+
+@pytest.mark.unit
+def test_simulation_calculations(subtests):
+    """Tests ``calculate_simulation_years``, ``calculate_annual_timesteps``, and
+    ``calculate_hourly_timesteps``.
+    """
+    with subtests.test("Hourly simulation, single year"):
+        sim = SimulationConfig(dt=3600, n_timesteps=8760)
+        assert sim.n_timesteps_in_year == 8760
+        assert sim.n_timesteps_in_hour == 1
+        assert sim.simulation_years == 1
+
+    with subtests.test("Hourly simulation, two years"):
+        sim = SimulationConfig(dt=3600, n_timesteps=8760 * 2)
+        assert sim.n_timesteps_in_year == 8760
+        assert sim.n_timesteps_in_hour == 1
+        assert sim.simulation_years == 2
+
+    with subtests.test("Minutely simulation, half a year"):
+        sim = SimulationConfig(dt=60, n_timesteps=8760 * 60 / 2)
+        assert sim.n_timesteps_in_year == 8760 * 60
+        assert sim.n_timesteps_in_hour == 60
+        assert sim.simulation_years == 0.5
