@@ -24,6 +24,10 @@ VALID_RELIABILITY = (
     "WeibullReliability",
     "FixedIntervalReliability",
 )
+AVAILABILITY_TYPES = (
+    "minimum",
+    "fractional",
+)
 
 
 def create_failure_model(name: str, config: dict):
@@ -108,6 +112,15 @@ class BaseReliability(ABC, BaseConfig):
     Args:
         dt (int): Timestep in seconds.
         n_timesteps (int): Number of timesteps in a simulation.
+        availability_type (str): One of "minimum" or "fractional". Defaults to "minimum".
+
+            - fractional: Use when components are representative of different systems, i.e., 100
+                wind turbines instead.
+                :math:`availability_{system} = \frac{1}{N} \\sum_{i=0}^{N} availability_{turbine}
+            - minimum: Minimum of all components at all timesteps. Use when components are
+                representative of a single system, i.e., multiple components of a single wind
+                turbine.
+
         burn_in (float): Number of years into the simulation to use as the starting point of the
             the simulation's availability record. Defaults to 0.
         n_components (int): Number of identical components to sample to avoid defining an array of
@@ -130,6 +143,7 @@ class BaseReliability(ABC, BaseConfig):
     simulation: SimulationConfig = field(
         converter=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
+    availability_type: str = field(validator=validators.in_([AVAILABILITY_TYPES]))
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: dict | BaseDowntime = field(validator=validators.instance_of((dict, BaseDowntime)))
@@ -181,7 +195,12 @@ class BaseReliability(ABC, BaseConfig):
             accumulated = end
 
         self.availability = availability[:, burn_in_time:simulation_end]
-        self.system_availability = np.min(self.availability, axis=0)
+
+        match self.availability_type:
+            case "fractional":
+                self.system_availability = np.sum(self.availability, axis=0) / self.n_components
+            case "minimum":
+                self.system_availability = np.min(self.availability, axis=0)
 
 
 @define
@@ -199,7 +218,7 @@ class PerformanceReliability(BaseConfig):
         failure_parameters (str | None): Configuration for the failure model, when modeling. The
             simulation configuration will be provided through the initialization process, and does
             not need to be defined here.
-        maintenance_model (str | None): Configuration the maintenance model, when modeling. The
+        maintenance_parameters (str | None): Configuration the maintenance model, when modeling. The
             simulation configuration will be provided through the initialization process, and does
             not need to be defined here.
 
