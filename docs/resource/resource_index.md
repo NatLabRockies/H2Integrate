@@ -4,6 +4,7 @@
 - [Wind Resource Data](wind_resource:models)
 - [Solar Resource Data](solar_resource:models)
 - [Tidal Resource Data](tidal_resource:models)
+- [Resource Datasets](h5_dataset:overview)
 
 ## Common Resource Datasets and Considerations
 

@@ -111,6 +111,7 @@ tech_to_dispatch_connections: [
 ]
 ```
 
+(optimized-demand-response-controller)=
 # Optimized Demand Response Controller
 
 This controller optimizes the dispatch of a Battery Energy Storage System (BESS) based on a pre-defined supervisory signal. This signal could be the Locational Marginal Price (LMP), a demand profile, or an $LMP\times demand$ product depending on the application. The objective is to maximize incentive payments to the battery, subject to constraints on the maximum number of dispatch events per month and on the battery state of charge.
@@ -139,6 +140,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month
 - $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is `null`)
 - $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
+- $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own controller is a combined *gross* demand signal. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`).
 
 ## Dispatch Window Construction
 
@@ -221,6 +223,12 @@ $$
 v_t = 0 \qquad \forall\, t \in \mathcal{D}
 $$
 
+- **Optional** (`constrain_dispatch_to_set_point: True`): cap dispatch at what the system-level controller (SLC) actually needs/can absorb, on top of the $P_{\max}$ bound above:
+
+$$
+p_{d,t} \leq \max(s_t,\, 0), \qquad p_{c,t} \leq \max(-s_t,\, 0) \qquad \forall\, t \in \mathcal{T}
+$$
+
 - Variable domains:
 
 $$
@@ -231,3 +239,7 @@ $$
 Example 34 performs the optimization with a synthetic LMP signal. The look-ahead horizon (`n_control_window_hours`) controls how many hours are optimized at once. Larger values improve solution quality but increase solve time. See the figure below for results.
 
 ![](./figures/plm_optimized_dispatch.png)
+
+## Use as a system-level control (SLC) sub-controller
+
+Like every other storage controller, `PeakLoadManagementOptimizedStorageController` can also be used as a storage tech's sub-controller under a [system-level controller](../system_level_control/system_level_control.md). Declaring `control_strategy` on the tech is what SLC's storage-tech classification looks for, and the SLC's `{tech_name}_{commodity}_set_point` output is wired to the tech group the same way regardless of which mechanism populates the input, so no extra wiring is required. Set `constrain_dispatch_to_set_point: true` to have the SLC's demand signal cap dispatch as described above.

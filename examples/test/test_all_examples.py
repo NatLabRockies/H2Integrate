@@ -2274,7 +2274,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_dir = example_folder
     ex_out_dir = ex_dir / "ex_out"
     ore_prices_filepath = ex_dir / "example_ore_prices.csv"
-    shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+    shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
     shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
     cases_csv_fpath = ex_out_dir / "cases.csv"
     ex_png_fpath = ex_out_dir / "example_iron_map.png"
@@ -2561,6 +2561,30 @@ def test_iron_dri_eaf_example(subtests, temp_copy_of_example):
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
         assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri_nrri", None)]
+)
+def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    h2i = H2IntegrateModel(example_folder / "single_site_iron.yaml")
+
+    h2i.run()
+
+    with subtests.test("Value check on LCOI"):
+        lcoi = h2i.model.get_val("finance_subgroup_iron_ore.LCOI", units="USD/t")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 129.083
+
+    with subtests.test("Value check on LCOS"):
+        lcos = h2i.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcos, rel=1e-4) == 350.302
+
+    with subtests.test("Value check on LCOS"):
+        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcos, rel=1e-4) == 520.417
 
 
 @pytest.mark.integration
