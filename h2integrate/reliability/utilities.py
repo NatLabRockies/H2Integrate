@@ -6,11 +6,11 @@ SECONDS_IN_YEAR = 8760 * SECONDS_IN_HOUR
 
 
 def update_dimensions(n_components: int, *args: np.ndarray):
-    """Update the dimensionality of a series of arrays and the value of :py:attr:`n_components`
-    to match. If the size of an array passed :py:attr:`args` is 1 and :py:attr:`n_components`
-    is greater than 1, all arrays passed to :py:attr:`args` will be broadcast to an array shaped
-    (:py:attr:`n_components`, 1). If the arrays are already larger than 1, then
-    :py:attr:`n_components will be updated to the size of the arrays.
+    """Update the dimensionality of a series of columnar arrays and the value of
+    :py:attr:`n_components` to match. If the size of an array passed :py:attr:`args` is 1 and
+    :py:attr:`n_components` is greater than 1, all arrays passed to :py:attr:`args` will be
+    broadcast to an array shaped (:py:attr:`n_components`, 1). If the arrays are already larger
+    than 1, then :py:attr:`n_components will be updated to the size of the arrays.
 
     Args:
         n_components (int): Number of components in the model
