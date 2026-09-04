@@ -1962,11 +1962,31 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
         aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
         lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
+        lcoe_transported = case.get_val(
+            "finance_subgroup_transported_electricity.LCOE_optimistic", units="USD/(MW*h)"
+        )[0]
+        transport_distance = case.get_val("electricity_transport.transport_distance", units="km")[0]
+        transport_capex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.capex_electricity_transport", units="USD"
+        )
+        transport_opex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.opex_electricity_transport", units="USD/year"
+        )
+        transport_capex = case.get_val("electricity_transport.CapEx", units="USD")
+        transport_opex = case.get_val("electricity_transport.OpEx", units="USD/year")
 
         site_res = pd.DataFrame(
-            [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
+            [aep, lcoe, lcoe_transported, solar_capacity, transport_distance],
+            index=["AEP", "LCOE", "LCOE-T", "solar_capacity", "Distance"],
+            columns=[lat_lon],
         ).T
         res_df = pd.concat([site_res, res_df], axis=0)
+
+        with subtests.test(f"Case {ci}: Transport Costs are Non-zero"):
+            assert transport_capex_adj == transport_capex
+            assert transport_opex_adj == transport_opex
+            assert transport_capex_adj > 0
+            assert transport_opex_adj > 0
 
         with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
             assert (
@@ -1978,6 +1998,26 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
                 pytest.approx(case.get_val("site.longitude", units="deg"), abs=0.1)
                 == solar_resource_data["site_lon"]
             )
+        with subtests.test(f"Case {ci}: Site longitude matches transport source longitude"):
+            assert pytest.approx(
+                case.get_val("site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_longitude", units="deg")
+        with subtests.test(f"Case {ci}: Site latitude matches transport source latitude"):
+            assert pytest.approx(
+                case.get_val("site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_latitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site longitude matches transport source longitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_longitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site latitude matches transport source latitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_latitude", units="deg")
 
     locations = list(set(res_df.index.to_list()))
     solar_sizes = list(set(res_df["solar_capacity"].to_list()))
@@ -1986,12 +2026,21 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         assert len(solar_sizes) == 2
     with subtests.test("Two unique sites"):
         assert len(locations) == 2
+    with subtests.test("Two unique transport distances"):
+        assert len(list(set(res_df["Distance"].to_list()))) == 2
 
     with subtests.test("Unique AEPs per case"):
         assert len(list(set(res_df["AEP"].to_list()))) == len(res_df)
 
+    with subtests.test("Unique LCOE (transported) per case"):
+        assert len(list(set(res_df["LCOE-T"].to_list()))) == len(res_df)
+
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
+
+    with subtests.test("Transported LCOE > LCOE"):
+        lcoe_comp = (res_df["LCOE-T"] > res_df["LCOE"]).to_list()
+        assert all(k for k in lcoe_comp)
 
 
 @pytest.mark.integration
