@@ -291,7 +291,7 @@ class PerformanceReliability(BaseConfig):
 
 @define(kw_only=True)
 class FixedDowntime(BaseDowntime):
-    """Basic log-normal downtime model for generating the length of downtime for a given event.
+    """Basic fixed downtime model for generating the length of downtime for a given event.
 
     Args:
         hours (int | array-like): Length of downtime per event, in hours. Must be at least 1 hour.
@@ -311,6 +311,49 @@ class FixedDowntime(BaseDowntime):
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
         return np.ones((1, 100), dtype=int) * self.hours * self.simulation.n_timesteps_in_hour
+
+
+@define(kw_only=True)
+class UniformDowntime(BaseDowntime):
+    """Basic uniform downtime model for generating the length of downtime for a given event.
+
+    Args:
+        min_hours (int | array-like): Minimum length of downtime per event, in hours. Must be at
+            least 1 hour.
+        max_hours (int | array-like): Maximum length of downtime per event, in hours. Must be at
+            least 1 hour and greater than :py:attr:`min_hours`.
+        n_components (int): Number of identical components to sample to avoid defining an array of
+            :py:attr:`hours` values when they are the same. Defaults to 1.
+    """
+
+    min_hours: int | ArrayLike = field(
+        converter=to_array(int, (-1, 1)),
+        validator=(validators.instance_of(np.ndarray), array_ge(1)),
+    )
+    max_hours: int | ArrayLike = field(
+        converter=to_array(int, (-1, 1)),
+        validator=(validators.instance_of(np.ndarray), array_ge(1)),
+    )
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
+
+    @max_hours.validate
+    def validate_max_hours(self, attribute, value: int):
+        """Ensures that :py:attr:`value` is greater than :py:attr:`min_hours`."""
+        if (value <= self.min_hours).any():
+            msg = f"'max_hours' ({value}) must be greater than 'min_hours'({self.min_hours})."
+            raise ValueError(msg)
+
+    def __attrs_post_init__(self):
+        self.n_components, self.min_hours, self.max_hours = update_dimensions(
+            self.n_components, self.min_hours, self.max_hours
+        )
+
+    def sample_downtime(self):
+        """Return an array of 100 :py:attr:`hours`."""
+        return (
+            rng.integers(self.min_hours, self.max_hours, size=(self.n_components, 100))
+            * self.simulation.n_timesteps_in_hour
+        )
 
 
 @define(kw_only=True)
