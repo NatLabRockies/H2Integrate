@@ -125,7 +125,8 @@ class BaseConfig:
         """Maps a data dictionary to an ``attrs``-defined class.
 
         Args:
-            data (dict): The data dictionary to be mapped.
+            data (dict | BaseConfig): The data dictionary to be mapped or an existing object of
+                the type that would otherwise be created.
             strict (bool): A flag enabling strict parameter processing, meaning that no extra
                 parameters may be passed in or an AttributeError will be raised.
             additional_cls_name (str | None): The name of the model class creating the configuration
