@@ -424,6 +424,80 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
             ), f"Dispatch mismatch at t={t}"
 
 
+@pytest.mark.regression
+def test_optimizer_respects_set_point_cap(subtests):
+    """p_discharge/p_charge are capped by set_point_w's magnitude when the new
+    constrain_dispatch_to_set_point flag is set, on top of the usual P_max bound."""
+    n = 24
+    config = PeakLoadManagementOptimizedControllerConfig(
+        max_capacity=10.0,
+        max_soc_fraction=1.0,
+        min_soc_fraction=0.0,
+        init_soc_fraction=1.0,
+        n_control_window_hours=n,
+        commodity="electricity",
+        commodity_rate_units="kW",
+        tech_name="battery",
+        system_commodity_interface_limit=100.0,
+        max_charge_rate=1.0,
+        supervisory_signal=list(range(n)),
+        # Full-day peak window and zero-percentile threshold so the only binding
+        # constraint under test is the new set-point cap, not eligibility.
+        peak_window={"start": "00:00:00", "end": "23:59:59"},
+        performance_incentive=10.0,
+        n_max_events=n,
+        signal_threshold_percentile=0.0,
+        constrain_dispatch_to_set_point=True,
+    )
+    controller = _make_controller_with_config(config)
+
+    # Positive = system needs discharge (capped there); negative = system has
+    # surplus to absorb (charge capped there); well below P_max=1.0 either way.
+    set_point_w = np.array([0.3 if t % 2 == 0 else -0.2 for t in range(n)])
+
+    model = controller._build_dr_model(
+        window_start=0,
+        window_len=n,
+        init_soc=config.init_soc_fraction,
+        remaining_budget={1: config.n_max_events},
+        P_max=config.max_charge_rate,
+        storage_capacity=config.max_capacity,
+        set_point_w=set_point_w,
+    )
+
+    PeakLoadManagementOptimizedStorageController.glpk_solve_call(model)
+
+    for t in range(n):
+        p_discharge = pyomo.value(model.p_discharge[t])  # type: ignore[index]
+        p_charge = pyomo.value(model.p_charge[t])  # type: ignore[index]
+        cap_discharge = max(float(set_point_w[t]), 0.0)
+        cap_charge = max(-float(set_point_w[t]), 0.0)
+        with subtests.test(f"discharge capped at t={t}"):
+            assert p_discharge <= cap_discharge + 1e-6
+        with subtests.test(f"charge capped at t={t}"):
+            assert p_charge <= cap_charge + 1e-6
+
+
+@pytest.mark.unit
+def test_build_dr_model_set_point_cap_omitted_by_default(base_config):
+    """No set-point-cap constraint is added when set_point_w is left at its default (None) —
+    the state ``pyomo_dispatch_solver`` leaves it in whenever
+    ``constrain_dispatch_to_set_point`` is False (the default)."""
+    controller = _make_controller_with_config(base_config)
+    assert base_config.constrain_dispatch_to_set_point is False
+
+    model = controller._build_dr_model(
+        window_start=0,
+        window_len=24,
+        init_soc=base_config.init_soc_fraction,
+        remaining_budget={1: base_config.n_max_events},
+        P_max=base_config.max_charge_rate,
+        storage_capacity=base_config.max_capacity,
+    )
+    assert not hasattr(model, "discharge_set_point_cap")
+    assert not hasattr(model, "charge_set_point_cap")
+
+
 @pytest.fixture
 def om_plant_config():
     return {
