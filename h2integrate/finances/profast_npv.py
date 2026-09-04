@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 import numpy as np
-from openmdao.utils.units import convert_units
+from openmdao.utils.units import convert_units, simplify_unit
 
 from h2integrate.finances.tools import _compute_rate_units
 from h2integrate.finances.profast_base import ProFastBase
@@ -98,9 +98,7 @@ class ProFastNPV(ProFastBase):
         """
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
-        self.commodity_amount_units = self.commodity_sell_price_units.replace("USD/", "").strip(
-            "()"
-        )
+        self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
         # compute rate_units from the price
         rate_units_from_price = _compute_rate_units(
