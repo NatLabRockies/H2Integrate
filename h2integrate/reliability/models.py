@@ -143,7 +143,7 @@ class BaseReliability(ABC, BaseConfig):
     simulation: SimulationConfig = field(
         converter=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
-    availability_type: str = field(validator=validators.in_([AVAILABILITY_TYPES]))
+    availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
     downtime: dict | BaseDowntime = field(validator=validators.instance_of((dict, BaseDowntime)))
@@ -213,6 +213,14 @@ class PerformanceReliability(BaseConfig):
     Args:
         simulation (dict | SimulationConfig): Simulation configuration based on
             :py:class:`SimulationConfig`.
+        availability_type (str): One of "minimum" or "fractional". Defaults to "minimum".
+
+            - fractional: Use when components are representative of different systems, i.e., 100
+                wind turbines instead.
+                :math:`availability_{system} = \frac{1}{N} \\sum_{i=0}^{N} availability_{turbine}
+            - minimum: Minimum of all components at all timesteps. Use when components are
+                representative of a single system, i.e., multiple components of a single wind
+                turbine.
         failure_model (str | None): Name of the failure model to use, when modeling.
         maintenance_model (str | None): Name of the maintenance model to use, when modeling.
         failure_parameters (str | None): Configuration for the failure model, when modeling. The
@@ -229,6 +237,7 @@ class PerformanceReliability(BaseConfig):
     """
 
     simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
+    availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
     failure_model: str | None = field(
         default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
     )
@@ -250,18 +259,20 @@ class PerformanceReliability(BaseConfig):
     def __attrs_post_init__(self):
         """Creates and runs the failure and maintenance models, and calculates availability."""
         simulation_config = {"simulation": self.simulation}
+        availability = {"availability_type": self.availability_type}
         self.availability = np.ones(self.simulation.n_timesteps)
 
         if self.failure_model is not None:
             if self.failure_parameters is not None:
                 self.failures = create_failure_model(
-                    self.failure_model, self.failure_parameters | simulation_config
+                    self.failure_model, self.failure_parameters | simulation_config | availability
                 )
 
         if self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
                 self.maintenance = create_maintenance_model(
-                    self.maintenance_model, self.maintenance_parameters | simulation_config
+                    self.maintenance_model,
+                    self.maintenance_parameters | simulation_config | availability,
                 )
 
         self.calculate_availability()
