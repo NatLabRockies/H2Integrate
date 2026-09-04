@@ -93,7 +93,7 @@ class BaseDowntime(ABC, BaseConfig):
     """
 
     simulation: SimulationConfig = field(
-        convert=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
+        converter=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
 
     @abstractmethod
@@ -127,7 +127,7 @@ class BaseReliability(ABC, BaseConfig):
     """
 
     simulation: SimulationConfig = field(
-        convert=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
+        converter=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
     burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
