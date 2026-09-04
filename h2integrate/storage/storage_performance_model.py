@@ -203,7 +203,7 @@ class StoragePerformanceModel(StoragePerformanceBase):
             available_discharge
             * self.config.discharge_efficiency  # i could dump this much power out total
             - outputs[
-                f"{self.commodity}_out"
+                f"storage_{self.commodity}_charge"
             ]  #  remove current discharge, ADD charge also (not sure if accounting is correct)
             # # the below was my first attempt, to ignore charging, but I think the
             # # current charging current should be treated as "available" and *should*
