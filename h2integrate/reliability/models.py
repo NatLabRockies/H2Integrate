@@ -6,13 +6,10 @@ from attrs import field, define, validators
 from numpy.typing import ArrayLike
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.array_validators import array_ge, array_gt, to_array
 from h2integrate.reliability.utilities import (
-    array_ge,
-    array_gt,
     match_shape,
     update_dimensions,
-    int_array_converter,
-    float_array_converter,
     calculate_annual_timesteps,
     calculate_hourly_timesteps,
     calculate_simulation_years,
@@ -269,7 +266,7 @@ class FixedDowntime(BaseDowntime):
     """
 
     hours: int | ArrayLike = field(
-        converter=int_array_converter,
+        converter=to_array(int),
         validator=(validators.instance_of(np.ndarray), array_ge(1)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
@@ -292,11 +289,11 @@ class LogNormalDowntime(BaseDowntime):
     """
 
     mean: float = field(
-        converter=float_array_converter,
+        converter=to_array(float),
         validator=(validators.instance_of(np.ndarray), array_ge(0)),
     )
     sigma: float = field(
-        converter=float_array_converter,
+        converter=to_array(float),
         validator=(validators.instance_of(np.ndarray), match_shape("mean"), array_ge(0)),
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
@@ -337,11 +334,11 @@ class WeibullReliability(BaseReliability):
     """
 
     scale: float = field(
-        converter=float_array_converter,
+        converter=to_array(float),
         validator=validators.instance_of(np.ndarray),
     )
     shape: float = field(
-        converter=float_array_converter,
+        converter=to_array(float),
         validator=(validators.instance_of(np.ndarray), match_shape("scale")),
     )
 
@@ -377,7 +374,7 @@ class FixedIntervalReliability(BaseReliability):
     """
 
     frequency: float = field(
-        converter=float_array_converter,
+        converter=to_array(float),
         validator=(validators.instance_of(np.ndarray), array_gt(0)),
     )
 
