@@ -27,7 +27,7 @@
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
 - Enable `BaseConfig.from_dict` to receive an instance of the object it should be creating to enable
   `attrs` converter routines to safely handle instances of existing configuration objects or
-  configuration dictionaries for defining objects once.
+  configuration dictionaries for defining objects once. [PR 869](https://github.com/NatLabRockies/H2Integrate/pull/869)
 
 ## 0.9 [August 10, 2026]
 
