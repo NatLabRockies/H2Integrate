@@ -26,28 +26,24 @@ VALID_RELIABILITY = (
 )
 
 
-def create_failure_model(config: dict):
+def create_failure_model(name: str, config: dict):
     """Retrieves and initializes a matching reliability model."""
-    name = config["failure_model"]
-    fail_config = config["failure_parameters"] | config["simulation"]
     match name:
         case "WeibullReliability":
-            return WeibullReliability.from_dict(fail_config)
+            return WeibullReliability.from_dict(config)
         case "FixedIntervalReliability":
-            return FixedIntervalReliability.from_dict(fail_config)
+            return FixedIntervalReliability.from_dict(config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
 
-def create_maintenance_model(config: dict):
+def create_maintenance_model(name: str, config: dict):
     """Retrieves and initializes a matching reliability model."""
-    name = config["maintenance_model"]
-    maintenance_config = config["maintenance_parameters"] | config["simulation"]
     match name:
         case "WeibullReliability":
-            return WeibullReliability.from_dict(maintenance_config)
+            return WeibullReliability.from_dict(config)
         case "FixedIntervalReliability":
-            return FixedIntervalReliability.from_dict(maintenance_config)
+            return FixedIntervalReliability.from_dict(config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -67,17 +63,22 @@ def create_downtime_model(config: dict | int):
 
 
 @define
-class SimulationConfig(BaseConfig):
+class SimulationConfig:
     dt: int = field(validator=validators.gt(0))
     n_timesteps: int = field(validator=validators.gt(0))
     n_timesteps_in_year: int = field(
-        init=False, converter=attrs.Converter(calculate_annual_timesteps, takes_self=True)
+        default=0,
+        init=False,
+        converter=attrs.Converter(calculate_annual_timesteps, takes_self=True),
     )
     n_timesteps_in_hour: int = field(
-        init=False, converter=attrs.Converter(calculate_hourly_timesteps, takes_self=True)
+        default=0,
+        init=False,
+        converter=attrs.Converter(calculate_hourly_timesteps, takes_self=True),
     )
     simulation_years: float = field(
         init=False,
+        default=0,
         converter=attrs.Converter(calculate_simulation_years, takes_self=True),
         validator=validators.instance_of(float),
     )
@@ -141,7 +142,7 @@ class BaseReliability(ABC, BaseConfig):
     )
 
     def __attrs_post_init__(self):
-        downtime_config = self.downtime | {"dt": self.dt, "n_timesteps": self.n_timesteps}
+        downtime_config = self.downtime | {"simulation": self.simulation}
         self.downtime = create_downtime_model(downtime_config)
 
     def sample_events(self) -> np.ndarray:
@@ -184,7 +185,7 @@ class BaseReliability(ABC, BaseConfig):
 
 
 @define
-class PerformanceReliability:
+class PerformanceReliability(BaseConfig):
     """General performance model to coordinate downtime from failure and maintenance events. Does
     not consider the timing within or between models to coordinate downtime. This is a highly
     simplified version of WOMBAT (https://github.com/NLRWindSystems/WOMBAT) without any
@@ -234,11 +235,15 @@ class PerformanceReliability:
 
         if self.failure_model is not None:
             if self.failure_parameters is not None:
-                self.failures = create_failure_model(self.failure_parameters | simulation_config)
+                self.failures = create_failure_model(
+                    self.failure_model, self.failure_parameters | simulation_config
+                )
 
         if self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
-                self.maintenance = create_maintenance_model(self.config | simulation_config)
+                self.maintenance = create_maintenance_model(
+                    self.maintenance_model, self.config | simulation_config
+                )
 
         self.calculate_availability()
 
@@ -276,7 +281,7 @@ class FixedDowntime(BaseDowntime):
 
     def sample_downtime(self):
         """Return an array of 100 :py:attr:`hours`."""
-        return np.ones((1, 100), dtype=int) * self.hours * self.n_timesteps_in_hour
+        return np.ones((1, 100), dtype=int) * self.hours * self.simulation.n_timesteps_in_hour
 
 
 @define(kw_only=True)
@@ -307,7 +312,7 @@ class LogNormalDowntime(BaseDowntime):
         """Return an array of 100 samples of each lognormal distribution."""
         return np.ceil(
             rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
-            / self.n_timesteps_in_hour
+            / self.simulation.n_timesteps_in_hour
         ).astype(int)
 
 
@@ -356,7 +361,7 @@ class WeibullReliability(BaseReliability):
         return np.ceil(
             rng.weibull(self.shape, size=(self.shape.size, 100))
             * self.scale
-            * self.n_timesteps_in_year
+            * self.simulation.n_timesteps_in_year
         ).astype(int)
 
 
@@ -393,8 +398,12 @@ class FixedIntervalReliability(BaseReliability):
         Returns:
             time_to_failures (np.ndarray): An array of the next 100 events' time to next failure.
         """
-        interval = np.ceil(8760 / (1 / self.frequency) / self.n_timesteps_in_hour).astype(int)
-        max_first_occurrence = np.where(interval > self.n_timesteps, self.n_timesteps, interval)
+        interval = np.ceil(
+            8760 / (1 / self.frequency) / self.simulation.n_timesteps_in_hour
+        ).astype(int)
+        max_first_occurrence = np.where(
+            interval > self.simulation.n_timesteps, self.simulation.n_timesteps, interval
+        )
         first_occurrence = rng.integers(0, max_first_occurrence)
         time_to_failures = np.hstack(
             (first_occurrence, np.broadcast_to(interval, (interval.size, 99)))
