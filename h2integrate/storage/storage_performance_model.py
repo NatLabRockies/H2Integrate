@@ -142,6 +142,20 @@ class StoragePerformanceModel(StoragePerformanceBase):
 
         super().setup()
 
+        self.add_output(
+            f"{self.commodity}_charge_demand",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )  # the current demand to charge the system at maximum rate
+
+        self.add_output(
+            f"{self.commodity}_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )  # this represents the excess capacity that could have been dumped
+
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
@@ -154,4 +168,46 @@ class StoragePerformanceModel(StoragePerformanceBase):
         storage_capacity = inputs["storage_capacity"][0]
         outputs = self.run_storage(
             charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
+        )
+
+        # add charge demand calculation
+        headroom_capacity_charge = (
+            (self.config.max_soc_fraction - outputs["SOC"] / 100.0) * storage_capacity / self.dt_hr
+        )
+        available_charge = np.maximum(
+            0.0,  # at worst no charge is available
+            np.minimum(
+                charge_rate,  # the fundamental limit on charge rate is the max
+                headroom_capacity_charge,  # but that could be limited by the available capacity
+            ),
+        )  # this is the max i could charge right now
+
+        # add headroom calculation
+        headroom_capacity_discharge = (
+            (outputs["SOC"] / 100.0 - self.config.min_soc_fraction) * storage_capacity / self.dt_hr
+        )  # i *could've* dumped the state of charge by this much
+
+        available_discharge = np.maximum(
+            0.0,  # at worst no discharge is available
+            np.minimum(
+                discharge_rate,  # the fundamental limit on discharge rate is the max
+                headroom_capacity_discharge,  # but that could be limited by the available capacity
+            ),
+        )  # this is the max i could discharge right now
+
+        # add the charge/discharge outputs
+        outputs[f"{self.commodity}_charge_demand"] = (
+            available_charge / self.config.charge_efficiency
+        )
+        outputs[f"{self.commodity}_headroom"] = (
+            available_discharge
+            * self.config.discharge_efficiency  # i could dump this much power out total
+            - outputs[
+                f"storage_{self.commodity}_charge"
+            ]  #  remove current discharge, ADD charge also (not sure if accounting is correct)
+            # # the below was my first attempt, to ignore charging, but I think the
+            # # current charging current should be treated as "available" and *should*
+            # # be accounted as reserve power
+            # - np.maximum(0.0, outputs[f"{self.commodity}_out"])
+            # #  remove current discharge, throw away current charging?
         )
