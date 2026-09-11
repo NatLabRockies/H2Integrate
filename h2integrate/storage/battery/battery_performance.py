@@ -495,87 +495,11 @@ class BatteryPerformanceModel(StoragePerformanceBase):
                 discharge_rate * self.n_timesteps * self.dt_amount
             )
 
-            # Per-year discharge capacity factor and year-end capacity state-of-health over
-            # the simulated horizon. The simulation may span whole years plus an optional
-            # partial trailing year; each simulated year gets its own capacity factor and
-            # end-of-year SOH.
-            steps_per_year = round(31_536_000 / self.dt)  # timesteps in one year
-            n_sim_years = math.ceil(self.n_timesteps / steps_per_year)
-            soh_capacity_ts = log["soh_Q"]
-            sim_cf = np.zeros(n_sim_years)
-            sim_soh_year_end = np.zeros(n_sim_years)
-            for year in range(n_sim_years):
-                start = year * steps_per_year
-                end = min(start + steps_per_year, self.n_timesteps)
-                segment_hours = (end - start) * self.dt_amount
-                sim_cf[year] = (discharge_ts[start:end].sum() * self.dt_amount) / (
-                    discharge_rate * segment_hours
-                )
-                sim_soh_year_end[year] = soh_capacity_ts[end - 1]
-
-            # Annual capacity-SOH degradation rate used to project SOH beyond the simulated
-            # horizon (i.e. once the simulated years are exhausted before the battery hits
-            # end-of-life):
-            #   - Less than one year simulated: extrapolate the average degradation over the
-            #     whole simulation to a per-year rate.
-            #   - One year or more simulated: use the degradation over the last full
-            #     simulated year.
-            years_simulated = self.n_timesteps / steps_per_year
-            soh_start = soh_capacity_ts[0]
-            if years_simulated < 1.0:
-                annual_deg_rate = (soh_start - sim_soh_year_end[-1]) / years_simulated
-            else:
-                n_full_years = int(self.n_timesteps // steps_per_year)
-                idx_after = n_full_years * steps_per_year - 1
-                idx_before = (n_full_years - 1) * steps_per_year - 1
-                soh_before = soh_capacity_ts[idx_before] if idx_before >= 0 else soh_start
-                annual_deg_rate = soh_before - soh_capacity_ts[idx_after]
-            annual_deg_rate = max(float(annual_deg_rate), 0.0)
-
-            # Build one battery-life cycle of per-year year-end SOH and capacity factor,
-            # long enough to cover the whole plant life. Within the simulated years the
-            # actual per-year values are used. Beyond the simulated horizon the SOH keeps
-            # degrading at annual_deg_rate and the capacity factor is scaled down in
-            # proportion to the declining SOH (relative to the last simulated year), so the
-            # capacity factor tracks degradation rather than being held constant.
-            if years_simulated < 1.0:
-                # A sub-year simulation never completes a full year, so project every year
-                # from the start-of-life SOH at the extrapolated annual rate.
-                cycle_soh_end = soh_start - annual_deg_rate * (np.arange(self.plant_life) + 1)
-            else:
-                cycle_soh_end = np.array(
-                    [
-                        sim_soh_year_end[y]
-                        if y < n_sim_years
-                        else sim_soh_year_end[-1] - annual_deg_rate * (y - (n_sim_years - 1))
-                        for y in range(self.plant_life)
-                    ]
-                )
-
-            soh_ref = sim_soh_year_end[-1]
-            cycle_cf = np.array(
-                [
-                    sim_cf[y]
-                    if y < n_sim_years
-                    else sim_cf[-1] * max(cycle_soh_end[y], 0.0) / soh_ref
-                    for y in range(self.plant_life)
-                ]
+            cf_per_year, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
+                discharge_ts,
+                discharge_rate,
+                log["soh_Q"],
+                self.config.eol_soh_capacity,
             )
-
-            # Walk the plant life. When the projected year-end SOH reaches the user-specified
-            # end-of-life threshold, the battery is replaced (fresh unit) at the start of the
-            # following year and the degradation / capacity-factor cycle restarts.
-            eol_soh = self.config.eol_soh_capacity
-            cf_per_year = np.zeros(self.plant_life)
-            replacement_schedule = np.zeros(self.plant_life)
-            cycle_year = 0
-            for plant_year in range(self.plant_life):
-                cf_per_year[plant_year] = cycle_cf[cycle_year]
-                if cycle_soh_end[cycle_year] <= eol_soh:
-                    if plant_year + 1 < self.plant_life:
-                        replacement_schedule[plant_year + 1] = 1.0
-                    cycle_year = 0
-                else:
-                    cycle_year += 1
             outputs["capacity_factor"] = cf_per_year
             outputs["replacement_schedule"] = replacement_schedule
