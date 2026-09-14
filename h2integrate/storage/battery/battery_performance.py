@@ -1,15 +1,17 @@
+import math
+
+import numpy as np
+
+
 """
 # NOTE: ``simses.battery`` must be imported before ``simses.degradation`` to avoid a
 # circular import within simses (>=2.1.1): importing ``simses.degradation`` first leaves
 # ``simses.degradation.calendar`` partially initialized when ``simses.battery.cell`` pulls
 # in ``simses.degradation.degradation``. Importing the battery package first fully loads
 # both sub-packages in a safe order. (Plain ``import`` sorts above ``from`` imports.)
+import simses.battery  # noqa: F401  (import-order side effect; see note above)
 """
 
-import math
-
-import numpy as np
-import simses.battery  # noqa: F401  (import-order side effect; see note above)
 from attrs import field, define, validators
 from openmdao.utils import units as om_units
 from simses.degradation import DegradationModel
@@ -201,34 +203,18 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
     charge_efficiency: float | None = field(
         default=None,
-        validator=validators.optional(
-            validators.and_(
-                validators.ge(0),
-                validators.le(1),
-            )
-        ),
+        validator=validators.optional((validators.ge(0), validators.le(1))),
     )
     discharge_efficiency: float | None = field(
         default=None,
-        validator=validators.optional(
-            validators.and_(
-                validators.ge(0),
-                validators.le(1),
-            )
-        ),
+        validator=validators.optional((validators.ge(0), validators.le(1))),
     )
     round_trip_efficiency: float | None = field(
         default=None,
-        validator=validators.optional(
-            validators.and_(
-                validators.ge(0),
-                validators.le(1),
-            )
-        ),
+        validator=validators.optional((validators.ge(0), validators.le(1))),
     )
 
-    deg_scale: float = field(default=0.7056, validator=(validators.ge(0), validators.le(1)))
-    eol_soh_capacity: float = field(default=0.8, validator=(validators.ge(0), validators.le(1)))
+    _DEG_SCALE: float = field(default=0.7056, validator=(validators.ge(0), validators.le(1)))
     # TODO convert from power and energy ratings (see math in chat)
     series_count: int = field(default=336, converter=int, validator=validators.gt(0))
     parallel_count: int = field(default=16, converter=int, validator=validators.gt(0))
@@ -328,47 +314,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             desc="Electricity demand for running battery auxiliary systems",
         )
 
-        # Internal SimSES timeseries exposed as OpenMDAO outputs (one per quantity) for
-        # downstream diagnostics/plotting.
-        self.add_output(
-            "voltage", shape=self.n_timesteps, units="V", desc="Battery terminal voltage"
-        )
-        self.add_output("current", shape=self.n_timesteps, units="A", desc="Battery current")
-        self.add_output(
-            "temperature", shape=self.n_timesteps, units="degC", desc="Battery temperature"
-        )
-        self.add_output(
-            "battery_loss", shape=self.n_timesteps, units="W", desc="Battery internal loss"
-        )
-        self.add_output(
-            "battery_heat", shape=self.n_timesteps, units="W", desc="Battery heat generation"
-        )
-        self.add_output(
-            "soh_capacity",
-            shape=self.n_timesteps,
-            units="unitless",
-            desc="State of health, capacity (fraction of nominal capacity)",
-        )
-        self.add_output(
-            "soh_resistance",
-            shape=self.n_timesteps,
-            units="unitless",
-            desc="State of health, resistance (multiple of nominal resistance)",
-        )
-        self.add_output(
-            "power_ac",
-            shape=self.n_timesteps,
-            units="W",
-            desc="AC-side power (positive = charge)",
-        )
-        self.add_output(
-            "power_dc",
-            shape=self.n_timesteps,
-            units="W",
-            desc="DC-side power (positive = charge)",
-        )
-        self.add_output("converter_loss", shape=self.n_timesteps, units="W", desc="Converter loss")
-
         # TODO degradation: adjustments for degradation
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
@@ -385,6 +330,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         # H2I dispatch command: positive = discharge, negative = charge (commodity_rate_units)
         power_profile = inputs[f"{self.commodity}_command_value"]
 
+        ### from Ankit
+
         # ---------------------------------------------------------------------------
         # Battery pack + inverter (fixed Megapack-style topology, from config)
         # ---------------------------------------------------------------------------
@@ -399,8 +346,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
                 "start_T": self.config.battery_temperature_c,
             },
             degradation=DegradationModel(
-                calendar=ScaledLFPCalendarDegradation(self.config.deg_scale),
-                cyclic=ScaledLFPCyclicDegradation(self.config.deg_scale),
+                calendar=ScaledLFPCalendarDegradation(self.config._DEG_SCALE),
+                cyclic=ScaledLFPCyclicDegradation(self.config._DEG_SCALE),
                 initial_soc=self.config.init_soc_fraction,
                 initial_state=DegradationState(qloss_cal=1e-4),
             ),
@@ -445,30 +392,37 @@ class BatteryPerformanceModel(StoragePerformanceBase):
 
         #############
 
+        # Store the full SimSES timeseries for downstream diagnostics/plotting
+        # (e.g. example 98 degradation, temperature, voltage, and loss plots).
+        self.results = {
+            "soc": log["soc"],
+            "voltage": log["v"],
+            "current": log["i"],
+            "temperature": log["T"],
+            "battery_loss": log["loss"],
+            "battery_heat": log["heat"],
+            "soh_capacity": log["soh_Q"],
+            "soh_resistance": log["soh_R"],
+            "power_ac": power_ac,
+            "power_dc": power_dc,
+            "converter_loss": conv_loss,
+        }
+
         # Populate all OpenMDAO outputs defined in this class and its parent classes.
         # Convert SimSES AC power (W, +charge) back to H2I convention
         # (commodity_rate_units, +discharge).
+        soc_ts = log["soc"]
         power_ts = -om_units.convert_units(power_ac, "W", self.commodity_rate_units)
 
         # --- BatteryPerformanceModel outputs ---
         # TODO calc aux power
         outputs[f"{self.commodity}_auxiliary_demand"] = np.zeros(self.n_timesteps)
-        outputs["voltage"] = log["v"]
-        outputs["current"] = log["i"]
-        outputs["temperature"] = log["T"]
-        outputs["battery_loss"] = log["loss"]
-        outputs["battery_heat"] = log["heat"]
-        outputs["soh_capacity"] = log["soh_Q"]
-        outputs["soh_resistance"] = log["soh_R"]
-        outputs["power_ac"] = power_ac
-        outputs["power_dc"] = power_dc
-        outputs["converter_loss"] = conv_loss
 
         # --- StoragePerformanceBase outputs ---
         outputs["storage_duration"] = (
             storage_capacity / discharge_rate if discharge_rate > 0 else 0.0
         )
-        outputs["SOC"] = log["soc"] * 100.0  # fraction -> percent
+        outputs["SOC"] = soc_ts * 100.0  # fraction -> percent
         outputs[f"storage_{self.commodity}_charge"] = np.where(power_ts < 0, power_ts, 0.0)
         outputs[f"storage_{self.commodity}_discharge"] = np.where(power_ts > 0, power_ts, 0.0)
 
@@ -486,20 +440,12 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             outputs["capacity_factor"] = 0.0
             outputs["standard_capacity_factor"] = 0.0
         else:
-            # Gross discharge timeseries (commodity_rate_units, discharge only).
-            discharge_ts = outputs[f"storage_{self.commodity}_discharge"]
-            total_commodity_discharged = discharge_ts.sum() * self.dt_amount
-
-            # Scalar average discharge capacity factor over the whole simulation.
+            outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
+                discharge_rate * self.n_timesteps * self.dt_amount
+            )
+            total_commodity_discharged = (
+                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
+            )
             outputs["standard_capacity_factor"] = total_commodity_discharged / (
                 discharge_rate * self.n_timesteps * self.dt_amount
             )
-
-            cf_per_year, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
-                discharge_ts,
-                discharge_rate,
-                log["soh_Q"],
-                self.config.eol_soh_capacity,
-            )
-            outputs["capacity_factor"] = cf_per_year
-            outputs["replacement_schedule"] = replacement_schedule
