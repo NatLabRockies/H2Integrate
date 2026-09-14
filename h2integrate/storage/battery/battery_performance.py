@@ -4,6 +4,40 @@ import numpy as np
 
 
 """
+Integration notes:
+
+- added container model (should not need ambient
+- added hvac model
+- see init update
+- may need time series, but may not
+- prefer running at one minute
+- may need to upsample data before running and then down sample
+    since simses does not work with hourly
+- expecting hourly input, but giving minute output
+- _DEG_Scale changed as well: would like a better way to define,
+    but current values should be reasonable across a range of
+        operating conditions
+- replace power profile with charge/discharge command
+    (- discharge, + charge)
+- may need to allow simses to run at alternate
+    timestep internally - model-specific dt
+- key update
+    - hvac model
+    - battery thermal model
+        - do not change container properties
+        - connect lat long to SolarConfig
+        - azimuth - not sure what it is doing exactly , maybe whether
+            container is level? Xi to check
+        - initial temp and set point can be set or not and left alone
+        - should not change T batt safe range
+        - max power kw is for HVAC and is user defined value, but suggest not changing much
+        - cop snominal values hould probably not change
+        - container.add_component(battery) connects the battery and container models
+        - note additional loging params
+
+"""
+
+"""
 # NOTE: ``simses.battery`` must be imported before ``simses.degradation`` to avoid a
 # circular import within simses (>=2.1.1): importing ``simses.degradation`` first leaves
 # ``simses.degradation.calendar`` partially initialized when ``simses.battery.cell`` pulls
