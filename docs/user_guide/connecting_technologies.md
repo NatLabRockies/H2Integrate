@@ -1,4 +1,4 @@
-(connecting_technologies)=
+(connecting_technologies:overview)=
 # Connecting technologies
 
 This guide covers how to connect different technologies within H2Integrate, focusing on the `technology_interconnections` configuration and the power combiner and splitter components that enable complex system architectures.

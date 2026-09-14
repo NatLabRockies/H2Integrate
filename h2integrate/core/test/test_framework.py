@@ -490,6 +490,29 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     with subtests.test("source to real consumer + demand reporter passes validation"):
         H2IntegrateModel._validate_technology_interconnections(fake_valid)  # must not raise
 
+    # Demand can pass UNUSED commodity to storage while the source also serves a
+    # real consumer directly. This should be allowed and mirrors the pattern:
+    # [demand_comp, battery, [unused_electricity_out, electricity_in]]
+    interconnections_storage_passthrough = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["grid", "battery", "electricity", "cable"],
+        ["demand_reporter", "battery", ["unused_electricity_out", "electricity_in"]],
+    ]
+    classifiers_storage_passthrough = {
+        "wind": "flexible",
+        "grid": "dispatchable",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "battery": "storage",
+    }
+    fake_storage_passthrough = _make_fake_model(
+        interconnections_storage_passthrough, classifiers_storage_passthrough
+    )
+
+    with subtests.test("source direct consumer plus demand unused_out->storage passes"):
+        H2IntegrateModel._validate_technology_interconnections(fake_storage_passthrough)
+
     # Two real (non-demand) consumers of the same commodity from one source must still fail.
     interconnections_bad = [
         ["wind", "electrolyzer", "electricity", "cable"],
@@ -1083,6 +1106,50 @@ def test_reports_turned_off(temp_dir):
     assert (
         len(report_dirs) == 0
     ), f"Report directories were created despite create_om_reports=False: {report_dirs}"
+
+
+@pytest.mark.unit
+def test_invalid_resource_to_tech_connections(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+    valid_connection = plant_config.pop("resource_to_tech_connections")
+
+    invalid_connection = ["site", "wind", ["latitude", "dest_longitude"]]
+    plant_config["resource_to_tech_connections"] = [*valid_connection, invalid_connection]
+    h2i_config = {
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    with subtests.test("Test invalid connection of latitude to longitude"):
+        expected_msg_part = "Invalid connection of latitude to longitude"
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
+
+    # Connecting latitude but missing connection for longitude
+    valid_but_missing_connection = ["site", "wind", ["latitude", "dest_latitude"]]
+    plant_config["resource_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["resource_to_tech_connections"]
+
+    with subtests.test("Test missing connection for longitude (3rd element is list)"):
+        expected_msg_part = "latitude is connected between site and wind, but longitude is not."
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
+
+    # Connecting latitude but missing connection for longitude
+    valid_but_missing_connection = ["site", "wind", "longitude"]
+    plant_config["resource_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["resource_to_tech_connections"]
+
+    with subtests.test("Test missing connection for latitude"):
+        expected_msg_part = "longitude is connected between site and wind, but latitude is not."
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
 
 
 @pytest.mark.unit
