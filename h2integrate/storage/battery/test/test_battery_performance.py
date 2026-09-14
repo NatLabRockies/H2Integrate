@@ -63,3 +63,22 @@ def test_calculate_annual_cf_and_replacement_schedule_without_degradation_final_
 
     np.testing.assert_allclose(projected_values, [0.6, 0.5, 0.4, 0.4, 0.4, 0.4])
     np.testing.assert_allclose(replacement_schedule, np.zeros(6))
+
+
+@pytest.mark.regression
+def test_calculate_annual_cf_and_replacement_schedule_without_degradation_average_sim_value():
+    performance_timeseries = np.array([0.6, 0.5, 0.4])
+
+    projected_values, replacement_schedule = (
+        PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule(
+            _DummyPerformanceModel(),
+            performance_timeseries,
+            1.0,
+            None,
+            None,
+            no_degradation_extrapolation="average_sim_value",
+        )
+    )
+
+    np.testing.assert_allclose(projected_values, [0.6, 0.5, 0.4, 0.5, 0.5, 0.5])
+    np.testing.assert_allclose(replacement_schedule, np.zeros(6))
