@@ -228,7 +228,7 @@ def test_lcoe_with_selected_technologies():
 
 
 @pytest.mark.integration
-def test_lcoe_price_drives_profast_npv_to_zero():
+def test_lcoe_price_drives_profast_npv_to_zero(subtests):
     n_timesteps = 8760
     plant_life = 30
     grid_setpoint = 40000.0  # kW
@@ -250,100 +250,112 @@ def test_lcoe_price_drives_profast_npv_to_zero():
         "admin_expense": 0.00,
     }
 
-    h2i = H2IntegrateModel(
-        {
-            "name": "lcoe_npv_handoff_integration",
-            "system_summary": "Validate ProFast LCOE->NPV handoff on full H2I model",
-            "driver_config": {"general": {"create_om_reports": False}},
-            "technology_config": {
-                "technologies": {
-                    "grid": {
-                        "performance_model": {"model": "GridPerformanceModel"},
-                        "cost_model": {"model": "GridCostModel"},
-                        "model_inputs": {
-                            "shared_parameters": {"interconnection_size": 100000.0},
-                            "cost_parameters": {
-                                "cost_year": 2022,
-                                "interconnection_capex_per_kw": 50.0,
-                                "interconnection_opex_per_kw": 2.0,
-                                "fixed_interconnection_cost": 100000.0,
-                                "electricity_buy_price": None,
-                                "electricity_sell_price": 0.05,
-                            },
-                        },
-                    }
-                }
-            },
-            "plant_config": {
-                "plant": {
-                    "plant_life": plant_life,
-                    "simulation": {
-                        "n_timesteps": n_timesteps,
-                        "dt": 3600,
-                    },
-                },
-                "finance_parameters": {
-                    "finance_groups": {
-                        "lco": {
-                            "finance_model": "ProFastLCO",
+    def build_h2i(inflation_rate):
+        params = shared_params.copy()
+        params["inflation_rate"] = inflation_rate
+        h2i = H2IntegrateModel(
+            {
+                "name": "lcoe_npv_handoff_integration",
+                "system_summary": "Validate ProFast LCOE->NPV handoff on full H2I model",
+                "driver_config": {"general": {"create_om_reports": False}},
+                "technology_config": {
+                    "technologies": {
+                        "grid": {
+                            "performance_model": {"model": "GridPerformanceModel"},
+                            "cost_model": {"model": "GridCostModel"},
                             "model_inputs": {
-                                "params": shared_params.copy(),
-                                "capital_items": {
-                                    "depr_type": "MACRS",
-                                    "depr_period": 5,
-                                    "refurb": [0.0],
+                                "shared_parameters": {"interconnection_size": 100000.0},
+                                "cost_parameters": {
+                                    "cost_year": 2022,
+                                    "interconnection_capex_per_kw": 50.0,
+                                    "interconnection_opex_per_kw": 2.0,
+                                    "fixed_interconnection_cost": 100000.0,
+                                    "electricity_buy_price": None,
+                                    "electricity_sell_price": 0.05,
                                 },
                             },
-                        },
-                        "npv": {
-                            "finance_model": "ProFastNPV",
-                            "model_inputs": {
-                                "commodity_sell_price": 0.04,
-                                "commodity_sell_price_units": "USD/(kW*h)",
-                                "params": shared_params.copy(),
-                                "capital_items": {
-                                    "depr_type": "MACRS",
-                                    "depr_period": 5,
-                                    "refurb": [0.0],
-                                },
-                            },
-                        },
-                    },
-                    "cost_adjustment_parameters": {
-                        "target_dollar_year": 2022,
-                        "cost_year_adjustment_inflation": 0.0,
-                    },
-                    "finance_subgroups": {
-                        "electricity": {
-                            "commodity": "electricity",
-                            "commodity_stream": "grid",
-                            "commodity_desc": "all_electricity",
-                            "technologies": ["grid"],
-                            "finance_groups": ["lco", "npv"],
                         }
+                    }
+                },
+                "plant_config": {
+                    "plant": {
+                        "plant_life": plant_life,
+                        "simulation": {
+                            "n_timesteps": n_timesteps,
+                            "dt": 3600,
+                        },
+                    },
+                    "finance_parameters": {
+                        "finance_groups": {
+                            "lco": {
+                                "finance_model": "ProFastLCO",
+                                "model_inputs": {
+                                    "params": params.copy(),
+                                    "capital_items": {
+                                        "depr_type": "MACRS",
+                                        "depr_period": 5,
+                                        "refurb": [0.0],
+                                    },
+                                },
+                            },
+                            "npv": {
+                                "finance_model": "ProFastNPV",
+                                "model_inputs": {
+                                    "commodity_sell_price": 0.04,
+                                    "commodity_sell_price_units": "USD/(kW*h)",
+                                    "params": params.copy(),
+                                    "capital_items": {
+                                        "depr_type": "MACRS",
+                                        "depr_period": 5,
+                                        "refurb": [0.0],
+                                    },
+                                },
+                            },
+                        },
+                        "cost_adjustment_parameters": {
+                            "target_dollar_year": 2022,
+                            "cost_year_adjustment_inflation": 0.0,
+                        },
+                        "finance_subgroups": {
+                            "electricity": {
+                                "commodity": "electricity",
+                                "commodity_stream": "grid",
+                                "commodity_desc": "all_electricity",
+                                "technologies": ["grid"],
+                                "finance_groups": ["lco", "npv"],
+                            }
+                        },
                     },
                 },
-            },
-        }
-    )
+            }
+        )
+        h2i.setup()
+        h2i.prob.set_val(
+            "grid.electricity_set_point", np.full(n_timesteps, grid_setpoint), units="kW"
+        )
+        h2i.run()
+        return h2i
 
-    h2i.setup()
-    h2i.prob.set_val("grid.electricity_set_point", np.full(n_timesteps, grid_setpoint), units="kW")
-    h2i.run()
-
-    commodity_desc = h2i.plant_config["finance_parameters"]["finance_subgroups"]["electricity"][
-        "commodity_desc"
-    ]
+    commodity_desc = "all_electricity"
     lcoe_var = f"finance_subgroup_electricity.LCOE_{commodity_desc}_lco"
     sell_price_var = f"finance_subgroup_electricity.sell_price_electricity_{commodity_desc}_npv"
     npv_var = f"finance_subgroup_electricity.NPV_electricity_{commodity_desc}_npv"
 
-    lcoe = float(h2i.prob.get_val(lcoe_var, units="USD/(kW*h)")[0])
-    h2i.prob.set_val(sell_price_var, lcoe, units="USD/(kW*h)")
-    h2i.prob.run_model()
+    with subtests.test("Zero inflation rerun"):
+        h2i_not_inflated = build_h2i(0.0)
+        lcoe_not_inflated = float(h2i_not_inflated.prob.get_val(lcoe_var, units="USD/(kW*h)")[0])
+        h2i_not_inflated.prob.set_val(sell_price_var, lcoe_not_inflated, units="USD/(kW*h)")
+        h2i_not_inflated.prob.run_model()
+        npv_not_inflated = float(h2i_not_inflated.prob.get_val(npv_var, units="USD")[0])
+        assert npv_not_inflated == pytest.approx(0.0, abs=1e-3)
 
-    npv_at_lcoe = float(h2i.prob.get_val(npv_var, units="USD")[0])
-    assert npv_at_lcoe == pytest.approx(0.0, abs=1e-3)
+    with subtests.test("Nonzero inflation rerun"):
+        h2i_inflated = build_h2i(0.02)
+        lcoe_inflated = float(h2i_inflated.prob.get_val(lcoe_var, units="USD/(kW*h)")[0])
+        h2i_inflated.prob.set_val(sell_price_var, lcoe_inflated, units="USD/(kW*h)")
+        h2i_inflated.prob.run_model()
+        npv_inflated = float(h2i_inflated.prob.get_val(npv_var, units="USD")[0])
+        assert npv_inflated == pytest.approx(0.0, abs=1e-3)
 
 
 @pytest.mark.integration
