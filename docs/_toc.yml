@@ -50,6 +50,7 @@ parts:
       - file: technology_models/h2_htse.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
+      - file: technology_models/iron_transport.md
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
       - file: technology_models/steel_eaf_cmu.md

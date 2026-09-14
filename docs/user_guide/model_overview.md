@@ -181,12 +181,12 @@ auto-generated API page.
   - cost models:
     + {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent` - OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.HydrogenIronReductionPlantCostComponent` - Cost component for hydrogen-based direct reduced iron (DRI) plant using the Rosner cost model.
-    + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponent`
+    + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponent` - Component for calculating iron ore pellet transportation costs.
     + {py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponent`
     + {py:class}`~h2integrate.converters.iron.iron_dri_plant.NaturalGasIronReductionPlantCostComponent` - Cost component for natural gas-based direct reduced iron (DRI) plant using the Rosner cost model.
     + {py:class}`~h2integrate.converters.iron.simple_mine_cost_model.SimpleIronMineCostComponent`
   - other components:
-    + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponent`
+    + {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponent` - Component to calculate iron ore pellet transportation distances considering both land and water routes.
 
 - `methanol`: methanol synthesis
   - performance models:
