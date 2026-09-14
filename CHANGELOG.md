@@ -27,7 +27,7 @@
 - Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
 - Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
 - Added headroom outputs (`electricity_headroom` and `electricity_sell_headroom`) to the grid performance model. [PR #755](https://github.com/NatLabRockies/H2Integrate/pull/755)
-- Added `_check_dispatch_connections` to `H2IntegrateModel` to validate `tech_to_dispatch_connections` in the plant config against `dispatch_rule_set`/`control_strategy` declarations in the technology config, catching extraneous or missing dispatch connections at load time instead of deep inside the storage models. Also fixed a latent bug where dispatch rule connections were never wired due to an incorrect dictionary lookup, and removed unused `dispatch_rule_set` entries from examples 09 (direct ocean capture) and 11 (hybrid energy plant). [PR TBD]
+- Added `_check_dispatch_connections` to `H2IntegrateModel` to validate `tech_to_dispatch_connections` in the plant config against `dispatch_rule_set`/`control_strategy` declarations in the technology config, catching extraneous or missing dispatch connections at load time instead of deep inside the storage models. Also fixed a latent bug where dispatch rule connections were never wired due to an incorrect dictionary lookup, and removed unused `dispatch_rule_set` entries from examples 09 and 11. [PR 882](https://github.com/NatLabRockies/H2Integrate/pull/882)
 
 ## 0.9 [August 10, 2026]
 
