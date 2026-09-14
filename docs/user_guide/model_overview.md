@@ -133,8 +133,10 @@ auto-generated API page.
 
 - `generic`: generic converter components
   - performance models:
+    + {py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorPerformanceModel` - Performance model for diesel generators.
     + {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel` - Performance model for simple Brayton-cycle turbines.
   - cost models:
+    + {py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorCostModel` - Cost model for diesel generators.
     + {py:class}`~h2integrate.converters.generic_converter_cost.GenericConverterCostModel`
 
 - `geoh2`: geologic hydrogen well and surface processing
@@ -261,6 +263,8 @@ auto-generated API page.
 ## Transport models
 
 - `transport`: commodity transporters, combiners, and splitters
+  - cost models:
+    + {py:class}`~h2integrate.transporters.linear_transport_cost.LinearDistanceCostModel` - Combine any commodity or resource from multiple sources into one output without losses.
   - other components:
     + {py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModel` - Combine multiple gas streams into one using mass-weighted averaging.
     + {py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceModel` - Combine any commodity or resource from multiple sources into one output without losses.

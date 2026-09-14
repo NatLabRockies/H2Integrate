@@ -866,17 +866,6 @@ class H2IntegrateModel:
         # Loop through each technology and instantiate an OpenMDAO object (assume it exists)
         # for each technology
 
-        if (
-            len(self.technology_config["technologies"]) > 1
-            and len(self.plant_config.get("technology_interconnections", [])) == 0
-        ):
-            msg = (
-                f"{len(self.technology_config['technologies'])} technologies have been defined "
-                "in the technology config but are not connected. Please add or populate "
-                "`technology_interconnections` in the plant configuration."
-            )
-            raise ValueError(msg)
-
         self.tech_names = []
         self.performance_models = []
         self.control_strategies = []
@@ -1056,6 +1045,20 @@ class H2IntegrateModel:
                 )
                 self._check_time_step(tech_name, comp)
                 self.plant.add_subsystem(tech_name, comp)
+        n_non_transport_techs = sum(
+            1 for v in self.tech_control_classifiers.values() if v != "transport"
+        )
+        if (
+            len(self.technology_config["technologies"]) > 1
+            and len(self.plant_config.get("technology_interconnections", [])) == 0
+            and n_non_transport_techs > 1
+        ):
+            msg = (
+                f"{len(self.technology_config['technologies'])} technologies have been defined "
+                "in the technology config but are not connected. Please add or populate "
+                "`technology_interconnections` in the plant configuration."
+            )
+            raise ValueError(msg)
 
     def _process_model(self, model_type, individual_tech_config, tech_group):
         # Generalized function to process model definitions
@@ -1794,6 +1797,8 @@ class H2IntegrateModel:
                     missing_resource = [
                         k for k in resource_source_connections if k not in resource_models
                     ]
+
+                    missing_resource = list(set(missing_resource) - set(self.plant_config["sites"]))
                     # check if theres a resource model that isn't connected to a technology
                     if len(missing_resource) > 0:
                         msg = (
@@ -1812,8 +1817,53 @@ class H2IntegrateModel:
 
                 resource_name, tech_name, variable = connection
 
-                # Connect the resource output to the technology input
-                self.model.connect(f"{resource_name}.{variable}", f"{tech_name}.{variable}")
+                # Normalize both forms (paired [site_param, tech_param] vs a single shared
+                # name) into a common site_parameter/tech_parameter pair so the connection
+                # and latitude/longitude checks below only need to be written once.
+                is_pair = isinstance(variable, list | tuple)
+                if is_pair:
+                    site_parameter, tech_parameter = variable
+                else:
+                    site_parameter = tech_parameter = variable
+
+                self.model.connect(
+                    f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}"
+                )
+
+                if site_parameter in ["latitude", "longitude"]:
+                    # If site_parameter is latitude, make sure destination is not longitude
+                    # (and vice versa)
+                    other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
+                    if is_pair:
+                        # NOTE: this assumes that technologies with location inputs use full
+                        # names, rather than shorthand versions like 'lat' and 'lon'
+                        if other_loc_var in tech_parameter:
+                            # connecting site latitude to tech longitude or
+                            # site longitude to tech latitude
+                            msg = (
+                                f"Invalid connection of {site_parameter} to {other_loc_var} "
+                                f"(from {resource_name} to {tech_name}). Please update the "
+                                f"connection so that {site_parameter} is connected to "
+                                f"{tech_parameter.replace(other_loc_var, site_parameter)}."
+                            )
+                            raise ValueError(msg)
+                        other_variable = [
+                            other_loc_var,
+                            tech_parameter.replace(site_parameter, other_loc_var),
+                        ]
+                    else:
+                        other_variable = other_loc_var
+
+                    # If latitude is connected, make sure longitude is also connected
+                    other_connection = [resource_name, tech_name, other_variable]
+                    if other_connection not in resource_to_tech_connections:
+                        msg = (
+                            f"{site_parameter} is connected between {resource_name} and "
+                            f"{tech_name}, but {other_loc_var} is not. Please ensure that "
+                            f"both latitude and longitude are connected from "
+                            f"'{resource_name}' to technology '{tech_name}'"
+                        )
+                        raise ValueError(msg)
 
         # connect outputs of the technology models to the cost and finance models of the
         # same name if the cost and finance models are not None
@@ -1849,7 +1899,8 @@ class H2IntegrateModel:
                 for tech_name in tech_configs.keys():
                     # Skip technologies whose models doesn't add costs
                     perf_model = tech_configs[tech_name].get("performance_model").get("model")
-                    if perf_model in no_cost_models:
+                    cost_model = tech_configs[tech_name].get("cost_model", {}).get("model")
+                    if perf_model in no_cost_models and cost_model is None:
                         continue
 
                     self.plant.connect(
@@ -2398,9 +2449,12 @@ class H2IntegrateModel:
 
         # --- Check 4: prevent commodity double-counting via demand components ---
         # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). However, if a source does this it
-        # must NOT also send the same commodity directly to another real consumer,
-        # because the flow would be counted twice.
+        # (e.g. acting as a profile regularizer). A demand component may also route
+        # unused commodity to storage (e.g. battery charging), which is allowed.
+        #
+        # However, if a source sends a commodity directly to a real consumer and also
+        # sends that commodity to a demand component that re-emits it to another real
+        # consumer, the flow can be double-counted and should fail.
         #
         # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
         # Valid:   source -> demand_comp (pure observer)
@@ -2408,11 +2462,14 @@ class H2IntegrateModel:
         # Invalid: source -> real_consumer_A                (competing direct path)
         #          source -> demand_comp -> real_consumer_B (and also via demand)
         #
-        # The check is transitive: a demand component "reaches a real consumer" even
-        # when the path passes through a chain of other demand components first.
+        # The check is transitive across demand-component chains only.
 
-        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+        def _demand_reaches_competing_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech reaches a non-storage real consumer.
+
+            Demand chains that terminate at storage are allowed and do not count
+            as competing direct-consumer paths for this check.
+            """
             visited: set[str] = set()
             stack = [demand_tech]
             while stack:
@@ -2423,9 +2480,14 @@ class H2IntegrateModel:
                 for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
                     if not c:
                         continue
-                    if self.tech_control_classifiers.get(d) != "demand":
-                        return True
-                    stack.append(d)
+                    d_classifier = self.tech_control_classifiers.get(d)
+                    if d_classifier == "demand":
+                        stack.append(d)
+                        continue
+                    if d_classifier == "storage":
+                        # Demand -> storage is explicitly allowed.
+                        continue
+                    return True
             return False
 
         # Build per-(source, commodity) destination lists from L4 edges.
@@ -2444,7 +2506,7 @@ class H2IntegrateModel:
                 d
                 for d in dests
                 if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_real_consumer(d)
+                and _demand_reaches_competing_consumer(d)
             ]
             if direct_real_dests and outputting_demand_dests:
                 raise ValueError(

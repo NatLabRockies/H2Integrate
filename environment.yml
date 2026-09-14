@@ -3,6 +3,7 @@ channels: [conda-forge, defaults]
 dependencies:
   - python=3.11
   - glpk
+  - highspy
   - coin-or-cbc>=2.10.12
   # - wisdem  # NOTE: uncomment if installing with Ard
   - pip

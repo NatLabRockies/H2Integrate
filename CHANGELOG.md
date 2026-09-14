@@ -22,6 +22,11 @@
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
   - `NSRDBDatasetH5` to access data from the NSRDB dataset
   - `ResourceBaseH5Config` and `ResourceBaseH5Model` are base configuration classes for these resource datasets
+- Synced peak load management (PLM) with the system-level control (SLC) paradigm: `PeakLoadManagementOptimizedStorageController` can now be used as a storage tech's SLC sub-controller via a new opt-in `constrain_dispatch_to_set_point` config field, which caps dispatch at the provided demand signal without changing its existing peak-window behavior by default. [Issue 749](https://github.com/NatLabRockies/H2Integrate/issues/749)
+- Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
+- Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
+- Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
+- Added headroom outputs (`electricity_headroom` and `electricity_sell_headroom`) to the grid performance model. [PR #755](https://github.com/NatLabRockies/H2Integrate/pull/755)
 
 ## 0.9 [August 10, 2026]
 
