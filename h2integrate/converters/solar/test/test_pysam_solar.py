@@ -511,3 +511,101 @@ def test_pvwatts_singleowner_withtilt(
 
     with subtests.test("Capacity in kW-DC"):
         assert pytest.approx(system_capacity_DC, rel=1e-6) == pv_design_dict["pv_capacity_kWdc"]
+
+
+@pytest.mark.unit
+def test_pvwatts_input_tilt_azimuth(
+    basic_pysam_options, solar_resource_dict, plant_config, subtests
+):
+    """Test PYSAMSolarPlantPerformanceModel with tilt angle calculated using 'lat-func' option.
+    The AEP of this test should be higher than the AEP in `test_pvwatts_singleowner_notilt`.
+    """
+
+    basic_pysam_options["SystemDesign"].update({"tilt": 0.0})
+    pv_design_dict = {
+        "pv_capacity_kWdc": 250000.0,
+        "dc_ac_ratio": 1.23,
+        "create_model_from": "default",
+        "config_name": "PVWattsSingleOwner",
+        "tilt_angle_func": "input",
+        "tilt": 0.0,
+        "azimuth_angle_opt": "input",
+        "pysam_options": basic_pysam_options,
+    }
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": pv_design_dict,
+        }
+    }
+
+    prob = om.Problem()
+    solar_resource = GOESAggregatedSolarAPI(
+        plant_config=plant_config,
+        resource_config=solar_resource_dict,
+        driver_config={},
+    )
+    comp = PYSAMSolarPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+    prob.model.add_subsystem("solar_resource", solar_resource, promotes=["*"])
+    prob.model.add_subsystem("pv_perf", comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep0 = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")[0]
+
+    with subtests.test("aep with 0 deg tilt, 180 deg azimuth, 1.23 dc/ac ratio"):
+        assert pytest.approx(aep0, rel=1e-6) == 527345996.21472853
+
+    with subtests.test("DC/AC ratio based on system capacity (1.23)"):
+        calc_dc_ac_ratio = (
+            prob.get_val("pv_perf.system_capacity_DC", units="kW")[0]
+            / prob.get_val("pv_perf.system_capacity_AC", units="kW")[0]
+        )
+        assert (
+            pytest.approx(calc_dc_ac_ratio, rel=1e-10)
+            == prob.get_val("pv_perf.dc_ac_ratio", units="unitless")[0]
+        )
+        assert (
+            pytest.approx(prob.get_val("pv_perf.dc_ac_ratio", units="unitless")[0], rel=1e-6)
+            == 1.23
+        )
+
+    # Change tilt angle
+    prob.set_val("pv_perf.tilt_angle", 45.0, units="deg")
+    prob.run_model()
+    aep1 = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")[0]
+    with subtests.test("aep with 45 deg tilt, 180 deg azimuth, 1.23 dc/ac ratio"):
+        assert pytest.approx(aep1, rel=1e-6) == 534645475.55370224
+
+    # Change azimuth angle
+    prob.set_val("pv_perf.azimuth_angle", 135.0, units="deg")
+    prob.run_model()
+    aep2 = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")[0]
+    with subtests.test("aep with 45 deg tilt, 135 deg azimuth, 1.23 dc/ac ratio"):
+        assert pytest.approx(aep2, rel=1e-6) == 474555682.8764362
+
+    # Change dc/ac ratio
+    prob.model.set_val("pv_perf.dc_ac_ratio", 1.34, units="unitless")
+    prob.run_model()
+    aep3 = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")[0]
+
+    with subtests.test("aep with 45 deg tilt, 135 deg azimuth, 1.34 dc/ac ratio"):
+        assert pytest.approx(aep3, rel=1e-6) == 464658159.38561577
+
+    with subtests.test("DC/AC ratio based on system capacity (1.34)"):
+        calc_dc_ac_ratio = (
+            prob.get_val("pv_perf.system_capacity_DC", units="kW")[0]
+            / prob.get_val("pv_perf.system_capacity_AC", units="kW")[0]
+        )
+        assert (
+            pytest.approx(calc_dc_ac_ratio, rel=1e-10)
+            == prob.get_val("pv_perf.dc_ac_ratio", units="unitless")[0]
+        )
+        assert (
+            pytest.approx(prob.get_val("pv_perf.dc_ac_ratio", units="unitless")[0], rel=1e-6)
+            == 1.34
+        )

@@ -34,6 +34,10 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
             - 'none': use value specific in 'tilt' (default).
             - 'lat-func': optimal tilt angle based on the latitude.
             - 'lat': tilt angle equal to the latitude of the solar resource.
+            - 'input': set 'tilt_angle' as an openmdao input and use value from inputs
+        azimuth_angle_opt (str):
+            - 'lat': calculate azimuth angle based on site latitude
+            - 'input': set 'azimuth_angle' as an openmdao input and use value from inputs
         pysam_options (dict, optional): dictionary of Pvwatts input parameters with
             top-level keys corresponding to the different Pvwattsv8 variable groups.
             (please refer to Pvwattsv8 documentation
@@ -65,8 +69,8 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
     )
 
     azimuth_angle_opt: str = field(
-        default="lon",
-        validator=validators.in_(["lon", "input"]),
+        default="lat",
+        validator=validators.in_(["lat", "input"]),
         converter=(str.strip, str.lower),
     )
 
