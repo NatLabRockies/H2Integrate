@@ -27,6 +27,7 @@
 - Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
 - Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
 - Renamed the plant-config site connection key from `resource_to_tech_connections` to `site_to_tech_connections` so it reflects both site metadata and technology connections such as latitude, longitude, and resource data. [PR 879](https://github.com/NatLabRockies/H2Integrate/pull/879)
+- Added headroom outputs (`electricity_headroom` and `electricity_sell_headroom`) to the grid performance model. [PR #755](https://github.com/NatLabRockies/H2Integrate/pull/755)
 
 ## 0.9 [August 10, 2026]
 
