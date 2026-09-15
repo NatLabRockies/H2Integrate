@@ -1,4 +1,5 @@
 import copy
+import math
 import hashlib
 from pathlib import Path
 
@@ -139,6 +140,199 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
             command_value = self._inputs[command_value_key]
             outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
+
+    def calculate_annual_cf_and_replacement_schedule(
+        self,
+        performance_timeseries,
+        rated_performance,
+        state_of_health_timeseries,
+        eol_soh,
+        no_degradation_extrapolation="tile",
+    ):
+        """Project annual capacity factors and replacement schedule across plant life.
+
+        Args:
+            performance_timeseries (array-like): timestep-level performance values used
+                to compute annual capacity factors over the simulated horizon.
+            rated_performance (float): rated performance value used in capacity-factor
+                calculation.
+            state_of_health_timeseries (array-like | None): timestep-level state-of-health
+                values. If None, no degradation/replacement projection is applied.
+                When provided, SOH is used to determine replacement timing.
+            eol_soh (float | None): State-of-health threshold at or below which the
+                technology is considered replaced. Only required when
+                ``state_of_health_timeseries`` is provided.
+            no_degradation_extrapolation (str): Extrapolation strategy when
+                ``state_of_health_timeseries`` is None. Options:
+                - ``"tile"``: repeat simulated annual values cyclically.
+                - ``"final_sim_value"``: hold the last simulated annual value constant for
+                    the rest of the plant life beyond simulated years.
+                - ``"average_sim_value"``: hold simulated average annual value constantfor
+                    the rest of the plant life beyond simulated years.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: projected annual capacity factors and
+            replacement schedule.
+        """
+
+        performance_timeseries = np.asarray(performance_timeseries, dtype=float)
+        if performance_timeseries.size == 0:
+            raise ValueError("performance_timeseries must contain at least one value.")
+
+        rated_performance = float(rated_performance)
+        if rated_performance <= 0.0:
+            raise ValueError("rated_performance must be greater than zero.")
+
+        valid_no_deg_modes = ("tile", "final_sim_value", "average_sim_value")
+        if no_degradation_extrapolation not in valid_no_deg_modes:
+            raise ValueError(
+                "no_degradation_extrapolation must be one of "
+                f"{valid_no_deg_modes}; got {no_degradation_extrapolation!r}."
+            )
+
+        use_degradation = state_of_health_timeseries is not None
+        if use_degradation:
+            if eol_soh is None:
+                raise ValueError("eol_soh is required when state_of_health_timeseries is provided.")
+            state_of_health_timeseries = np.asarray(state_of_health_timeseries, dtype=float)
+            if state_of_health_timeseries.size == 0:
+                raise ValueError(
+                    "state_of_health_timeseries must contain at least one value when provided."
+                )
+
+        steps_per_year = max(1, round(31_536_000 / self.dt))
+        n_sim_years = math.ceil(performance_timeseries.size / steps_per_year)
+        simulated_annual_capacity_factors = np.zeros(n_sim_years)
+
+        for year in range(n_sim_years):
+            start = year * steps_per_year
+            end = min(start + steps_per_year, performance_timeseries.size)
+            segment = performance_timeseries[start:end]
+            segment_seconds = (end - start) * self.dt
+            segment_hours = segment_seconds / 3600.0
+            simulated_annual_capacity_factors[year] = (
+                (segment.sum() * (self.dt / 3600.0)) / (rated_performance * segment_hours)
+                if segment_hours > 0.0
+                else 0.0
+            )  # performance units * h / (performance units * h)
+
+        if not use_degradation:
+            if no_degradation_extrapolation == "tile":
+                n_tiles = math.ceil(self.plant_life / n_sim_years)
+                annual_capacity_factors = np.tile(simulated_annual_capacity_factors, n_tiles)[
+                    : self.plant_life
+                ]
+            elif no_degradation_extrapolation == "final_sim_value":
+                annual_capacity_factors = np.array(
+                    [
+                        simulated_annual_capacity_factors[y]
+                        if y < n_sim_years
+                        else simulated_annual_capacity_factors[-1]
+                        for y in range(self.plant_life)
+                    ]
+                )
+            elif no_degradation_extrapolation == "average_sim_value":
+                simulated_average_capacity_factor = float(
+                    np.mean(simulated_annual_capacity_factors)
+                )
+                annual_capacity_factors = np.array(
+                    [
+                        simulated_annual_capacity_factors[y]
+                        if y < n_sim_years
+                        else simulated_average_capacity_factor
+                        for y in range(self.plant_life)
+                    ]
+                )
+            else:
+                raise ValueError(
+                    "no_degradation_extrapolation must be one of "
+                    f"{valid_no_deg_modes}; got {no_degradation_extrapolation!r}."
+                )
+            replacement_schedule = np.zeros(self.plant_life)
+            return annual_capacity_factors, replacement_schedule
+
+        else:
+            n_sim_years_from_soh = math.ceil(state_of_health_timeseries.size / steps_per_year)
+            if n_sim_years_from_soh != n_sim_years:
+                raise ValueError(
+                    "state_of_health_timeseries length must match the number of simulated years "
+                    "implied by performance_timeseries and dt."
+                )
+
+            sim_soh_year_end = np.zeros(n_sim_years)
+            for year in range(n_sim_years):
+                start = year * steps_per_year
+                end = min(start + steps_per_year, state_of_health_timeseries.size)
+                sim_soh_year_end[year] = state_of_health_timeseries[end - 1]
+
+            years_simulated = state_of_health_timeseries.size / steps_per_year
+            soh_start = state_of_health_timeseries[0]
+            if years_simulated < 1.0:
+                annual_deg_rate = (soh_start - sim_soh_year_end[-1]) / years_simulated
+            else:
+                n_full_years = int(state_of_health_timeseries.size // steps_per_year)
+                idx_after = n_full_years * steps_per_year - 1
+                idx_before = (n_full_years - 1) * steps_per_year - 1
+                soh_before = (
+                    state_of_health_timeseries[idx_before] if idx_before >= 0 else soh_start
+                )
+                annual_deg_rate = soh_before - state_of_health_timeseries[idx_after]
+            annual_deg_rate = max(float(annual_deg_rate), 0.0)
+
+            if years_simulated < 1.0:
+                cycle_soh_end = soh_start - annual_deg_rate * (np.arange(self.plant_life) + 1)
+            else:
+                cycle_soh_end = np.empty(self.plant_life)
+                n_sim_years_used = min(n_sim_years, self.plant_life)
+
+                # Use simulated year-end SOH where available.
+                cycle_soh_end[:n_sim_years_used] = sim_soh_year_end[:n_sim_years_used]
+
+                # Beyond simulated years, continue degrading at the annual rate.
+                if self.plant_life > n_sim_years_used:
+                    years_after_sim = np.arange(1, self.plant_life - n_sim_years_used + 1)
+                    cycle_soh_end[n_sim_years_used:] = (
+                        sim_soh_year_end[n_sim_years_used - 1] - annual_deg_rate * years_after_sim
+                    )
+
+            capacity_factor_cycle_values = np.empty(self.plant_life)
+            n_sim_years_used = min(n_sim_years, self.plant_life)
+
+            # Use simulated annual capacity factors where available.
+            capacity_factor_cycle_values[:n_sim_years_used] = simulated_annual_capacity_factors[
+                :n_sim_years_used
+            ]
+
+            # Beyond simulated years, scale the final simulated annual capacity
+            # factor by projected SOH decline.
+            if self.plant_life > n_sim_years_used:
+                cf_ref = simulated_annual_capacity_factors[n_sim_years_used - 1]
+                soh_ref = cycle_soh_end[n_sim_years_used - 1]
+                if soh_ref > 0.0:
+                    extrapolated_soh = np.maximum(cycle_soh_end[n_sim_years_used:], 0.0)
+                    capacity_factor_cycle_values[n_sim_years_used:] = (
+                        cf_ref * extrapolated_soh / soh_ref
+                    )
+                else:
+                    capacity_factor_cycle_values[n_sim_years_used:] = 0.0
+
+            annual_capacity_factors = np.zeros(self.plant_life)
+            replacement_schedule = np.zeros(self.plant_life)
+            cycle_year = 0
+            max_cycle_year = capacity_factor_cycle_values.size - 1
+
+            for plant_year in range(self.plant_life):
+                cycle_idx = min(cycle_year, max_cycle_year)
+                annual_capacity_factors[plant_year] = capacity_factor_cycle_values[cycle_idx]
+
+                if cycle_soh_end[cycle_idx] <= eol_soh:
+                    if plant_year + 1 < self.plant_life:
+                        replacement_schedule[plant_year + 1] = 1.0
+                    cycle_year = 0
+                else:
+                    cycle_year = min(cycle_year + 1, max_cycle_year)
+
+            return annual_capacity_factors, replacement_schedule
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
