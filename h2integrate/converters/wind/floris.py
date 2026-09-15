@@ -19,7 +19,7 @@ from h2integrate.converters.wind.layout.simple_grid_layout import (
 
 
 @define
-class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
+class FlorisWindPlantPerformanceModelConfig(CacheBaseConfig):
     """Configuration class for FlorisWindPlantPerformanceModel.
 
     Attributes:
@@ -125,7 +125,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         self.layout_mode = layout_mode
 
         # initialize wind turbine config
-        self.config = FlorisWindPlantPerformanceConfig.from_dict(
+        self.config = FlorisWindPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )

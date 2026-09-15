@@ -220,6 +220,43 @@ def rename_dict_keys(input_dict, init_keyname, new_keyname):
     return input_dict
 
 
+def split_shared_parameters(section_params: dict[str, dict]) -> tuple[dict, dict]:
+    """Split parameter dictionaries into shared and section-specific entries.
+
+    This helper identifies keys that appear in more than one section and returns
+    two dictionaries: the shared parameters and the remaining section-local
+    parameters. It preserves the first-seen value for each shared key.
+
+    Args:
+        section_params (dict[str, dict]): Mapping of section names to parameter
+            dictionaries.
+
+    Returns:
+        tuple[dict, dict]: shared_parameters and section-local parameters.
+    """
+    if not section_params:
+        return {}, {}
+
+    param_counts = Counter()
+    for params in section_params.values():
+        for param_key in params:
+            param_counts[param_key] += 1
+
+    shared_param_keys = {key for key, count in param_counts.items() if count > 1}
+    shared_parameters = {}
+    section_only = {}
+
+    for section_name, params in section_params.items():
+        section_only[section_name] = {
+            key: value for key, value in params.items() if key not in shared_param_keys
+        }
+        for param_key in shared_param_keys:
+            if param_key in params and param_key not in shared_parameters:
+                shared_parameters[param_key] = params[param_key]
+
+    return shared_parameters, section_only
+
+
 def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
     """Check the user-input technology configuration inputs against the
     instantiated technology configuration classes to ensure that:
@@ -283,13 +320,18 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
 
     # Check for overlapping keys between any two sets of configurations to reconstruct
     # the shared parameters, and create a restructured configuration
-    all_parameters = (control_params, dispatch_params, cost_params, performance_params)
-    _share_check = Counter([x for el in all_parameters for x in set(el)])
-    shared = {k for k, v in _share_check.items() if v > 1}
-    shared_params = {k: control_params.pop(k) for k in shared.intersection(control_params)}
-    shared_params |= {k: dispatch_params.pop(k) for k in shared.intersection(dispatch_params)}
-    shared_params |= {k: cost_params.pop(k) for k in shared.intersection(cost_params)}
-    shared_params |= {k: performance_params.pop(k) for k in shared.intersection(performance_params)}
+    shared_params, restructured_sections = split_shared_parameters(
+        {
+            "control_parameters": control_params,
+            "dispatch_parameters": dispatch_params,
+            "cost_parameters": cost_params,
+            "performance_parameters": performance_params,
+        }
+    )
+    control_params = restructured_sections.get("control_parameters", {})
+    dispatch_params = restructured_sections.get("dispatch_parameters", {})
+    cost_params = restructured_sections.get("cost_parameters", {})
+    performance_params = restructured_sections.get("performance_parameters", {})
     restructured_params = {
         "control_parameters": control_params,
         "dispatch_parameters": dispatch_params,

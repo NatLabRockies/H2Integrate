@@ -14,7 +14,7 @@ from h2integrate.core.commodity_stream_definitions import multivariable_streams
 
 
 @define(kw_only=True)
-class GasStreamCombinerConfig(BaseConfig):
+class GasStreamCombinerPerformanceModelConfig(BaseConfig):
     """Configuration for the gas stream combiner.
 
     Attributes:
@@ -52,7 +52,7 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = GasStreamCombinerConfig.from_dict(
+        self.config = GasStreamCombinerPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 

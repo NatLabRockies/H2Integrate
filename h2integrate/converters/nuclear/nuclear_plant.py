@@ -10,7 +10,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class NuclearPerformanceConfig(BaseConfig):
+class QuinnNuclearPerformanceModelConfig(BaseConfig):
     """Configuration class for the nuclear plant performance model.
 
     Args:
@@ -47,7 +47,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = NuclearPerformanceConfig.from_dict(
+        self.config = QuinnNuclearPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )

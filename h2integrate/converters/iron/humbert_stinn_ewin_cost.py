@@ -25,7 +25,7 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBase
 
 
 @define
-class HumbertStinnEwinCostConfig(CostModelBaseConfig):
+class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
     """Configuration class for the Humbert iron electrowinning cost model.
 
     Default values for the `labor_rate_cost`, `anode_cost_per_tonne`,
@@ -129,7 +129,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = HumbertStinnEwinCostConfig.from_dict(
+        self.config = HumbertStinnEwinCostComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=True,
         )
