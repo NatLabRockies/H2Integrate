@@ -7,6 +7,7 @@ from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.core.model_baseclasses import SkippableComputeMixin
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
@@ -454,7 +455,7 @@ class ProFASTDefaultIncentive(BaseConfig):
         return self.as_dict()
 
 
-class ProFastBase(om.ExplicitComponent):
+class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
     """
     Base component for using the ProFAST financial model within OpenMDAO.
 
@@ -497,6 +498,7 @@ class ProFastBase(om.ExplicitComponent):
 
     def initialize(self):
         """Declare OpenMDAO component options."""
+        super().initialize()
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
@@ -596,10 +598,6 @@ class ProFastBase(om.ExplicitComponent):
         coproduct_cost_params.setdefault("escalation", self.params.inflation_rate)
         coproduct_cost_params.setdefault("unit", self.price_units.replace("USD", "$"))
         self.coproduct_cost_settings = ProFASTDefaultCoproduct.from_dict(coproduct_cost_params)
-
-        self.add_discrete_input(
-            "skip_compute", val=False, desc="Flag for skipping the calculations in compute()"
-        )
 
     def populate_profast(self, inputs):
         """Populate and configure the ProFAST financial model for analysis.

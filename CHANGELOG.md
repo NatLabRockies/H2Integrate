@@ -18,6 +18,7 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Refactored `skip_compute` for the concurrent/steppable simulation solver into a `SkippableComputeMixin` used by `CostModelBaseClass` and `ProFastBase`. `skip_compute` is now a component option instead of a discrete input, and cost/finance model `compute()` methods are skipped automatically, so no individual model needs to check the flag itself. [PR TBD]
 
 ## 0.9 [August 10, 2026]
 

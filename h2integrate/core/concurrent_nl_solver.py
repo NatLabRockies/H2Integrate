@@ -21,12 +21,6 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
         # Should only be performance models
         timestep_keys = [k for k in system._inputs.keys() if k.endswith("timestep_index")]
 
-        # Find subsystems that take skip_compute as a discrete_input
-        # Should only be cost models
-        skip_compute_keys = [
-            k for k in system._discrete_inputs.keys() if k.endswith("skip_compute")
-        ]
-
         n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
         n_steps_per_compute = self.plant_config["plant"]["simulation"]["n_steps_per_compute"]
 
@@ -35,10 +29,19 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
 
         final_timestep_index = sim_starts[-1]
 
-        # Set skip_compute to True for relevant subsystems. This will skip
-        # unnecessary computation in most of the simulation periods.
-        for sk in skip_compute_keys:
-            system._discrete_inputs[sk] = True
+        # Subsystems whose compute() can be skipped on intermediate timesteps
+        # (cost/finance models; see SkippableComputeMixin). Found by option
+        # rather than by type to avoid coupling this solver to specific
+        # baseclasses.
+        skippable_subsystems = [
+            s
+            for s in system.system_iter(include_self=False, recurse=True)
+            if "skip_compute" in getattr(s, "options", {})
+        ]
+
+        # Skip those subsystems' calculations in most of the simulation periods.
+        for s in skippable_subsystems:
+            s.options["skip_compute"] = True
 
         with Recording("NLRunOnce", 0, self) as rec:
             for ss in sim_starts:
@@ -47,10 +50,10 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
                     system._inputs[tk] = ss
 
                 if ss == final_timestep_index:
-                    # Set skip_compute to False for the final simulation period so
-                    # that the relevant calculations will be computed just once.
-                    for sk in skip_compute_keys:
-                        system._discrete_inputs[sk] = False
+                    # Allow skippable subsystems to compute once, on the final
+                    # simulation period.
+                    for s in skippable_subsystems:
+                        s.options["skip_compute"] = False
 
                 # Run one GS iteration on the plant group
                 self._gs_iter()
