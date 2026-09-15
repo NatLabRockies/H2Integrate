@@ -1487,8 +1487,8 @@ def test_check_dispatch_connections_extraneous_raises():
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel._check_dispatch_connections(fake)
     err = str(excinfo.value)
-    assert "battery" in err
-    assert "tech_to_dispatch_connections" in err
+    assert "plant config references ['battery'], but this technology does not" in err
+    assert "corresponding entries for ['battery'] from `tech_to_dispatch_connections`" in err
 
 
 @pytest.mark.unit
@@ -1511,8 +1511,8 @@ def test_check_dispatch_connections_missing_raises():
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel._check_dispatch_connections(fake)
     err = str(excinfo.value)
-    assert "combiner" in err
-    assert "['combiner', 'battery']" in err
+    assert "Technology ['combiner'] declare a `dispatch_rule_set` but" in err
+    assert "(at least): [['combiner', 'battery']]." in err
 
 
 @pytest.mark.unit
@@ -1535,6 +1535,8 @@ def test_check_dispatch_connections_missing_key_entirely_raises():
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel._check_dispatch_connections(fake)
     err = str(excinfo.value)
-    assert "wave" in err
-    assert "combiner" in err
-    assert "battery" in err
+    assert "Technologies ['battery', 'combiner', 'wave'] declare a `dispatch_rule_set` but" in err
+    assert (
+        "(at least): [['battery', 'battery'], ['combiner', 'battery'], "
+        "['wave', 'combiner']]." in err
+    )

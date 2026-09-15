@@ -1130,12 +1130,12 @@ class H2IntegrateModel:
 
         Two checks are performed:
 
-        1. **Extraneous connections**: every technology named as the "dispatching"
+        1. Extraneous connections: every technology named as the "dispatching"
            technology (the second entry of each ``[tech_name, dispatching_tech_name]``
            pair) must declare a ``dispatch_rule_set`` or use a ``control_strategy`` that
            subclasses ``PyomoStorageControllerBaseClass``. Otherwise
            ``tech_to_dispatch_connections`` is stale.
-        2. **Missing connections**: every technology that declares a ``dispatch_rule_set``
+        2. Missing connections: every technology that declares a ``dispatch_rule_set``
            must appear in ``tech_to_dispatch_connections`` paired with the downstream
            technology it feeds (inferred from ``technology_interconnections``).
 
@@ -1148,6 +1148,14 @@ class H2IntegrateModel:
 
         technologies = self.technology_config.get("technologies", {})
         dispatch_connections = self.plant_config.get("tech_to_dispatch_connections") or []
+        invalid_connections = [
+            connection for connection in dispatch_connections if len(connection) != 2
+        ]
+        if invalid_connections:
+            raise ValueError(
+                "Invalid tech to dispatching_tech_name connection(s): "
+                f"{invalid_connections}. Each connection must contain exactly two technology names."
+            )
 
         def _has_pyomo_storage_controller(tech_name):
             """
@@ -1177,7 +1185,7 @@ class H2IntegrateModel:
                 {
                     connection[1]
                     for connection in dispatch_connections
-                    if len(connection) == 2 and not _is_dispatch_controlled(connection[1])
+                    if not _is_dispatch_controlled(connection[1])
                 }
             )
             if invalid_dispatching_techs:
@@ -1203,11 +1211,7 @@ class H2IntegrateModel:
         if not dispatch_rule_techs:
             return
 
-        existing_pairs = {
-            (connection[0], connection[1])
-            for connection in dispatch_connections
-            if len(connection) == 2
-        }
+        existing_pairs = {(connection[0], connection[1]) for connection in dispatch_connections}
 
         missing_techs = []
         required_pairs_by_tech = {}
