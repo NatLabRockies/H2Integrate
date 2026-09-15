@@ -1766,7 +1766,7 @@ class H2IntegrateModel:
                 err_msg = f"Invalid connection: {connection}"
                 raise ValueError(err_msg)
 
-        resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
+        site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
         if "sites" in self.plant_config:
             resource_models = {}
@@ -1774,7 +1774,7 @@ class H2IntegrateModel:
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
-            resource_source_connections = [c[0] for c in resource_to_tech_connections]
+            resource_source_connections = [c[0] for c in site_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
             if len(resource_models) != len(resource_source_connections):
                 if len(resource_models) > len(resource_source_connections):
@@ -1787,8 +1787,8 @@ class H2IntegrateModel:
                         msg = (
                             "Some resources are not connected to a technology. Resource models "
                             f"{non_connected_resource} are not included in "
-                            "`resource_to_tech_connections`. Please connect these resources "
-                            "to their technologies under `resource_to_tech_connections` in "
+                            "`site_to_tech_connections`. Please connect these resources "
+                            "to their technologies under `site_to_tech_connections` in "
                             "the plant config file."
                         )
                         raise ValueError(msg)
@@ -1804,13 +1804,13 @@ class H2IntegrateModel:
                         msg = (
                             "Missing resource(s) are not defined but are connected to a"
                             f" technology. Missing resource(s) are {missing_resource}. "
-                            "Please check ``resource_to_tech_connections`` in the plant"
+                            "Please check ``site_to_tech_connections`` in the plant"
                             " config file or add the missing resources"
                             " to plant_config['site']['resources']."
                         )
                         raise ValueError(msg)
 
-            for connection in resource_to_tech_connections:
+            for connection in site_to_tech_connections:
                 if len(connection) != 3:
                     err_msg = f"Invalid resource to tech connection: {connection}"
                     raise ValueError(err_msg)
@@ -1856,7 +1856,7 @@ class H2IntegrateModel:
 
                     # If latitude is connected, make sure longitude is also connected
                     other_connection = [resource_name, tech_name, other_variable]
-                    if other_connection not in resource_to_tech_connections:
+                    if other_connection not in site_to_tech_connections:
                         msg = (
                             f"{site_parameter} is connected between {resource_name} and "
                             f"{tech_name}, but {other_loc_var} is not. Please ensure that "
