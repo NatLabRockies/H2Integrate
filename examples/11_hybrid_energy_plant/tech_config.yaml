@@ -6,8 +6,6 @@ technologies:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
       model: ATBWindPlantCostModel
-    dispatch_rule_set:
-      model: PyomoDispatchGenericConverter
     model_inputs:
       performance_parameters:
         num_turbines: 2
@@ -30,16 +28,11 @@ technologies:
         capex_per_kW: 1228.308  # $/kW, from 2024 ATB land-based wind class 1 moderate year 2030
         opex_per_kW_per_year: 29.2638  # $/kW/year, from 2024 ATB
         cost_year: 2022
-      dispatch_rule_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
   solar:
     performance_model:
       model: PYSAMSolarPlantPerformanceModel
     cost_model:
       model: ATBUtilityPVCostModel
-    dispatch_rule_set:
-      model: PyomoDispatchGenericConverter
     model_inputs:
       performance_parameters:
         pv_capacity_kWdc: 2500.0  # kW-DC, initial value (design variable)
@@ -52,9 +45,6 @@ technologies:
         capex_per_kWac: 1043.702  # $/kW-AC, from 2024 ATB utility PV moderate year 2030
         opex_per_kWac_per_year: 17.9907  # $/kW-AC/year, from 2024 ATB
         cost_year: 2022
-      dispatch_rule_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
   combiner:
     performance_model:
       model: GenericCombinerPerformanceModel
