@@ -18,6 +18,8 @@ class GenericDemandComponent(DemandComponentBase):
     ``performance_parameters``.
     """
 
+    _is_steppable = True
+
     def setup(self):
         self.config = DemandComponentBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),

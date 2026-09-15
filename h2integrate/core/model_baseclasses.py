@@ -25,6 +25,11 @@ class SkippableComputeMixin:
 
     def initialize(self):
         super().initialize()
+
+        # If subclass is flagged as steppable, don't add skip_compute to options
+        if getattr(self, "_is_steppable", False):
+            return
+
         self.options.declare(
             "skip_compute",
             types=bool,
@@ -38,6 +43,11 @@ class SkippableComputeMixin:
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
+
+        # Skip if subclass is flagged as steppable
+        if getattr(cls, "_is_steppable", False):
+            return
+
         user_compute = cls.__dict__.get("compute")
         if user_compute is None or getattr(user_compute, "_skips_when_flagged", False):
             return
@@ -53,6 +63,10 @@ class SkippableComputeMixin:
 
 
 class PerformanceModelBaseClass(om.ExplicitComponent):
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # subclass performance model is capable of steppable simulation.
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
@@ -237,6 +251,10 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
     Options:
         - skip_compute (bool): see :class:`SkippableComputeMixin`.
     """
+
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # subclass cost model is capable of steppable simulation.
+    _is_steppable = False
 
     def initialize(self):
         super().initialize()

@@ -1111,6 +1111,40 @@ class H2IntegrateModel:
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
+    def _check_steppable_models(self):
+        error_msg_list = []
+
+        non_steppable_control_strategies = [
+            cs.__str__()
+            for cs in self.control_strategies
+            if ((not hasattr(cs, "_is_steppable")) or (not cs._is_steppable))
+        ]
+        if non_steppable_control_strategies:
+            control_msg = (
+                f"Control strategy(ies): {sorted(non_steppable_control_strategies)} are not flagged"
+                " as capable of steppable simulation."
+            )
+            error_msg_list.append(control_msg)
+
+        non_steppable_performance_models = [
+            pm.__str__()
+            for pm in self.performance_models
+            if ((not hasattr(pm, "_is_steppable")) or (not pm._is_steppable))
+        ]
+        if non_steppable_performance_models:
+            performance_msg = (
+                f"Performance model(s): {sorted(non_steppable_performance_models)} are not flagged"
+                " as capable of steppable simulation."
+            )
+            error_msg_list.append(performance_msg)
+
+        if error_msg_list:
+            error_msg = (
+                "Attempting to run a steppable simulation with unsupported models:\n\t"
+                + "\n\t".join(error_msg_list)
+            )
+            raise AttributeError(error_msg)
+
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
 
@@ -1956,6 +1990,8 @@ class H2IntegrateModel:
                 self.plant.nonlinear_solver = ConcurrentPlantNLSolver(
                     plant_config=self.plant_config
                 )
+
+                self._check_steppable_models()
 
     def create_driver_model(self):
         """

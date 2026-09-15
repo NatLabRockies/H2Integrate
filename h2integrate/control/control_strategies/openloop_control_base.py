@@ -165,6 +165,10 @@ class OpenLoopControlBase(om.ExplicitComponent):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # subclass controller is capable of steppable simulation.
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

@@ -11,7 +11,7 @@ from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent
 
 # Run one of both simulation paradigms by changing the flags in this dict
 run_dict = {
-    "run_sequential": True,
+    # "run_sequential": True,
     "run_concurrent": True,
 }
 

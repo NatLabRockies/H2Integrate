@@ -496,6 +496,8 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             is replaced in each year of the plant life.
     """
 
+    _is_steppable = False
+
     def initialize(self):
         """Declare OpenMDAO component options."""
         super().initialize()
