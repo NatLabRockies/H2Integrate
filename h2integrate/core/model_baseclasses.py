@@ -44,7 +44,7 @@ class SkippableComputeMixin:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        # Skip if subclass is flagged as steppable
+        # Skip the rest of this setup if subclass is flagged as steppable
         if getattr(cls, "_is_steppable", False):
             return
 
