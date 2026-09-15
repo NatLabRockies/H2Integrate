@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -524,3 +526,64 @@ def test_profast_npv_with_inflation(
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
             == 611288384.4121004
         )
+
+
+@pytest.mark.regression
+def test_profast_npv_uses_first_year_price_for_construction_padding(
+    profast_inputs_no2,
+    subtests,
+):
+    mock_pf = MagicMock()
+    mock_pf.cash_flow.return_value = 123.0
+
+    # A non-divisible by 12 installation period exercises the construction-year boundary case.
+    profast_inputs_no2["params"]["installation_time"] = 14
+    profast_inputs_no2["commodity_sell_price"] = [0.07] * 30
+    plant_life = 30
+    tech_config = {"grid": {"model_inputs": {}}}
+
+    plant_config = {
+        "plant": {
+            "plant_life": plant_life,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_life, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+
+    prob.set_val("pf.capex_adjusted_grid", 1.0e6, units="USD")
+    prob.set_val("pf.opex_adjusted_grid", 1.0e4, units="USD/year")
+    prob.set_val("pf.varopex_adjusted_grid", [0.0] * plant_life, units="USD/year")
+    prob.set_val("pf.replacement_schedule_grid", [0.0] * plant_life, units="unitless")
+
+    with patch.object(ProFastNPV, "populate_profast", return_value=mock_pf):
+        prob.run_model()
+
+    expected_prefix_len = int(np.ceil(profast_inputs_no2["params"]["installation_time"] / 12) + 1)
+    expected_price = profast_inputs_no2["commodity_sell_price"][0]
+    calculated_price = np.asarray(mock_pf.cash_flow.call_args.kwargs["price"], dtype=float)
+
+    with subtests.test("Construction-year padding uses first sell price"):
+        assert np.allclose(calculated_price[:expected_prefix_len], expected_price)
+
+    with subtests.test("First operating year keeps same sell price"):
+        assert calculated_price[expected_prefix_len] == pytest.approx(expected_price)
+
+    with subtests.test("NPV uses mocked cash_flow return"):
+        assert prob.get_val("pf.NPV_electricity_no2", units="USD")[0] == pytest.approx(123.0)

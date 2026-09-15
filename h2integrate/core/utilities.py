@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypeVar
 from collections import OrderedDict
 
 import attrs
@@ -11,6 +11,9 @@ try:
     from pyxdsm.XDSM import FUNC, XDSM
 except ImportError:
     pass
+
+
+BaseConfigType = TypeVar("BaseConfigType", bound="BaseConfig")
 
 
 def create_xdsm_from_config(config, output_file="connections_xdsm"):
@@ -113,11 +116,17 @@ class BaseConfig:
     """
 
     @classmethod
-    def from_dict(cls, data: dict, strict=True, additional_cls_name: str | None = None):
+    def from_dict(
+        cls: type[BaseConfigType],
+        data: dict | type[BaseConfigType],
+        strict=True,
+        additional_cls_name: str | None = None,
+    ) -> BaseConfigType:
         """Maps a data dictionary to an ``attrs``-defined class.
 
         Args:
-            data (dict): The data dictionary to be mapped.
+            data (dict | BaseConfig): The data dictionary to be mapped or an existing object of
+                the type that would otherwise be created.
             strict (bool): A flag enabling strict parameter processing, meaning that no extra
                 parameters may be passed in or an AttributeError will be raised.
             additional_cls_name (str | None): The name of the model class creating the configuration
@@ -127,6 +136,9 @@ class BaseConfig:
         Returns:
             cls: The ``attrs``-defined class.
         """
+        if isinstance(data, cls):
+            return data
+
         # Check for any inputs that aren't part of the class definition
         if strict is True:
             class_attr_names = [a.name for a in cls.__attrs_attrs__]
