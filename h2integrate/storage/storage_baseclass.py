@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 from attrs import field, define, validators
 from openmdao.utils import units as om_units
@@ -445,7 +447,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             commands = np.asarray(storage_dispatch_commands, dtype=float)
 
         if sim_start_index == 0:
-            soc = self.soc_init
+            soc = deepcopy(self.soc_init)
         else:
             soc = self._soc_timeseries[sim_start_index - 1]
 
