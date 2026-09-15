@@ -24,6 +24,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "wellhead_gas",
                 "water",
                 "oxygen",
+                "lignin",
                 "diesel",
             ],
         )

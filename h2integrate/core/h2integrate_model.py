@@ -1766,7 +1766,7 @@ class H2IntegrateModel:
                 err_msg = f"Invalid connection: {connection}"
                 raise ValueError(err_msg)
 
-        resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
+        site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
         if "sites" in self.plant_config:
             resource_models = {}
@@ -1774,7 +1774,7 @@ class H2IntegrateModel:
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
-            resource_source_connections = [c[0] for c in resource_to_tech_connections]
+            resource_source_connections = [c[0] for c in site_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
             if len(resource_models) != len(resource_source_connections):
                 if len(resource_models) > len(resource_source_connections):
@@ -1787,8 +1787,8 @@ class H2IntegrateModel:
                         msg = (
                             "Some resources are not connected to a technology. Resource models "
                             f"{non_connected_resource} are not included in "
-                            "`resource_to_tech_connections`. Please connect these resources "
-                            "to their technologies under `resource_to_tech_connections` in "
+                            "`site_to_tech_connections`. Please connect these resources "
+                            "to their technologies under `site_to_tech_connections` in "
                             "the plant config file."
                         )
                         raise ValueError(msg)
@@ -1804,13 +1804,13 @@ class H2IntegrateModel:
                         msg = (
                             "Missing resource(s) are not defined but are connected to a"
                             f" technology. Missing resource(s) are {missing_resource}. "
-                            "Please check ``resource_to_tech_connections`` in the plant"
+                            "Please check ``site_to_tech_connections`` in the plant"
                             " config file or add the missing resources"
                             " to plant_config['site']['resources']."
                         )
                         raise ValueError(msg)
 
-            for connection in resource_to_tech_connections:
+            for connection in site_to_tech_connections:
                 if len(connection) != 3:
                     err_msg = f"Invalid resource to tech connection: {connection}"
                     raise ValueError(err_msg)
@@ -1856,7 +1856,7 @@ class H2IntegrateModel:
 
                     # If latitude is connected, make sure longitude is also connected
                     other_connection = [resource_name, tech_name, other_variable]
-                    if other_connection not in resource_to_tech_connections:
+                    if other_connection not in site_to_tech_connections:
                         msg = (
                             f"{site_parameter} is connected between {resource_name} and "
                             f"{tech_name}, but {other_loc_var} is not. Please ensure that "
@@ -2449,9 +2449,12 @@ class H2IntegrateModel:
 
         # --- Check 4: prevent commodity double-counting via demand components ---
         # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). However, if a source does this it
-        # must NOT also send the same commodity directly to another real consumer,
-        # because the flow would be counted twice.
+        # (e.g. acting as a profile regularizer). A demand component may also route
+        # unused commodity to storage (e.g. battery charging), which is allowed.
+        #
+        # However, if a source sends a commodity directly to a real consumer and also
+        # sends that commodity to a demand component that re-emits it to another real
+        # consumer, the flow can be double-counted and should fail.
         #
         # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
         # Valid:   source -> demand_comp (pure observer)
@@ -2459,11 +2462,14 @@ class H2IntegrateModel:
         # Invalid: source -> real_consumer_A                (competing direct path)
         #          source -> demand_comp -> real_consumer_B (and also via demand)
         #
-        # The check is transitive: a demand component "reaches a real consumer" even
-        # when the path passes through a chain of other demand components first.
+        # The check is transitive across demand-component chains only.
 
-        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+        def _demand_reaches_competing_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech reaches a non-storage real consumer.
+
+            Demand chains that terminate at storage are allowed and do not count
+            as competing direct-consumer paths for this check.
+            """
             visited: set[str] = set()
             stack = [demand_tech]
             while stack:
@@ -2474,9 +2480,14 @@ class H2IntegrateModel:
                 for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
                     if not c:
                         continue
-                    if self.tech_control_classifiers.get(d) != "demand":
-                        return True
-                    stack.append(d)
+                    d_classifier = self.tech_control_classifiers.get(d)
+                    if d_classifier == "demand":
+                        stack.append(d)
+                        continue
+                    if d_classifier == "storage":
+                        # Demand -> storage is explicitly allowed.
+                        continue
+                    return True
             return False
 
         # Build per-(source, commodity) destination lists from L4 edges.
@@ -2495,7 +2506,7 @@ class H2IntegrateModel:
                 d
                 for d in dests
                 if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_real_consumer(d)
+                and _demand_reaches_competing_consumer(d)
             ]
             if direct_real_dests and outputting_demand_dests:
                 raise ValueError(

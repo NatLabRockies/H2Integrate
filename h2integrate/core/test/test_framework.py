@@ -490,6 +490,29 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     with subtests.test("source to real consumer + demand reporter passes validation"):
         H2IntegrateModel._validate_technology_interconnections(fake_valid)  # must not raise
 
+    # Demand can pass UNUSED commodity to storage while the source also serves a
+    # real consumer directly. This should be allowed and mirrors the pattern:
+    # [demand_comp, battery, [unused_electricity_out, electricity_in]]
+    interconnections_storage_passthrough = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["grid", "battery", "electricity", "cable"],
+        ["demand_reporter", "battery", ["unused_electricity_out", "electricity_in"]],
+    ]
+    classifiers_storage_passthrough = {
+        "wind": "flexible",
+        "grid": "dispatchable",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "battery": "storage",
+    }
+    fake_storage_passthrough = _make_fake_model(
+        interconnections_storage_passthrough, classifiers_storage_passthrough
+    )
+
+    with subtests.test("source direct consumer plus demand unused_out->storage passes"):
+        H2IntegrateModel._validate_technology_interconnections(fake_storage_passthrough)
+
     # Two real (non-demand) consumers of the same commodity from one source must still fail.
     interconnections_bad = [
         ["wind", "electrolyzer", "electricity", "cable"],
@@ -925,7 +948,7 @@ def test_resource_connection_error_missing_connection(temp_dir):
     plant_config_data = load_plant_yaml(temp_plant_config)
 
     # Remove resource to tech connection
-    plant_config_data.pop("resource_to_tech_connections")
+    plant_config_data.pop("site_to_tech_connections")
 
     # Save the modified tech_config YAML back
     with temp_plant_config.open("w") as f:
@@ -1005,11 +1028,11 @@ def test_no_resource_connection_error_resource_to_multiple_techs(temp_dir):
     # Add a second wind technology
     wind_tech = tech_config["technologies"]["wind"]
     tech_config["technologies"].update({"wind_plant2": wind_tech})
-    resource_to_tech_connections = [
+    site_to_tech_connections = [
         ["site.wind_resource", "wind", "wind_resource_data"],
         ["site.wind_resource", "wind_plant2", "wind_resource_data"],
     ]
-    plant_config["resource_to_tech_connections"] = resource_to_tech_connections
+    plant_config["site_to_tech_connections"] = site_to_tech_connections
     input_config = {
         "plant_config": plant_config,
         "technology_config": tech_config,
@@ -1098,14 +1121,14 @@ def test_reports_turned_off(temp_dir):
 
 
 @pytest.mark.unit
-def test_invalid_resource_to_tech_connections(subtests):
+def test_invalid_site_to_tech_connections(subtests):
     driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
     plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
-    valid_connection = plant_config.pop("resource_to_tech_connections")
+    valid_connection = plant_config.pop("site_to_tech_connections")
 
     invalid_connection = ["site", "wind", ["latitude", "dest_longitude"]]
-    plant_config["resource_to_tech_connections"] = [*valid_connection, invalid_connection]
+    plant_config["site_to_tech_connections"] = [*valid_connection, invalid_connection]
     h2i_config = {
         "driver_config": driver_config,
         "technology_config": tech_config,
@@ -1120,8 +1143,8 @@ def test_invalid_resource_to_tech_connections(subtests):
 
     # Connecting latitude but missing connection for longitude
     valid_but_missing_connection = ["site", "wind", ["latitude", "dest_latitude"]]
-    plant_config["resource_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
-    h2i_config["plant_config"]["resource_to_tech_connections"]
+    plant_config["site_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["site_to_tech_connections"]
 
     with subtests.test("Test missing connection for longitude (3rd element is list)"):
         expected_msg_part = "latitude is connected between site and wind, but longitude is not."
@@ -1131,8 +1154,8 @@ def test_invalid_resource_to_tech_connections(subtests):
 
     # Connecting latitude but missing connection for longitude
     valid_but_missing_connection = ["site", "wind", "longitude"]
-    plant_config["resource_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
-    h2i_config["plant_config"]["resource_to_tech_connections"]
+    plant_config["site_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["site_to_tech_connections"]
 
     with subtests.test("Test missing connection for latitude"):
         expected_msg_part = "longitude is connected between site and wind, but latitude is not."
