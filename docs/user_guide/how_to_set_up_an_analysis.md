@@ -119,7 +119,7 @@ The first entry in the list is the technology that is providing the input to the
 If the list is length 4, then the third entry in the list is what's being passed via a transporter of the type defined in the fourth entry.
 If the list is length 3, then the third entry in the list is what is connected directly between the technologies.
 
-The `resource_to_tech_connections` section defines how resources (like wind or solar data) are connected to the technologies that use them.
+The `site_to_tech_connections` section defines how resources (like wind or solar data) are connected to the technologies that use them.
 
 ```{note}
 For more information on how to define and interpret technology interconnections, see the {ref}`connecting_technologies:overview` page.
