@@ -14,7 +14,7 @@ sites:
 technology_interconnections:
   - [solar, electrolyzer, electricity, cable]
                                                      # connect solar power to electrolyzer
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the solar resource to the solar technology
   - [site.solar_resource, solar, solar_resource_data]
 plant:
