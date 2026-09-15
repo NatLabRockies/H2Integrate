@@ -153,7 +153,7 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
         if simulation_range.start == 0:
-            soc = self.soc_init
+            soc = deepcopy(self.soc_init)
         else:
             soc = self._soc_timeseries[simulation_range.start - 1]
 
