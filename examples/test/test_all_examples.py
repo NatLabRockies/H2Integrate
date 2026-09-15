@@ -3251,3 +3251,82 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     with subtests.test("Unused electricity is routed to grid sell"):
         assert pytest.approx(unused_electricity.sum(), rel=1e-6) == grid_electricity_in.sum()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("37_paper_mill", None)],
+)
+def test_paper_mill_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    h2i = H2IntegrateModel(example_folder / "37_paper_mill_mn.yaml")
+
+    h2i.run()
+
+    h2i.post_process()
+
+    paper_capacity = h2i.prob.get_val(
+        "paper_mill.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    paper_capacity_factor = h2i.prob.get_val(
+        "paper_mill.capacity_factor",
+    )[0]
+
+    saf_capacity = h2i.prob.get_val(
+        "saf.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    saf_capacity_factor = h2i.prob.get_val(
+        "saf.capacity_factor",
+    )[0]
+
+    lignin_in = h2i.prob.get_val(
+        "saf.lignin_in",
+        units="kg/h",
+    )
+
+    lignin_yield = 0.06  # t lignin/t paper
+    pulp_yield = 1.1  # t pulp/t paper
+    lignin_consumption = 1650  # kg lignin/t SAF
+
+    with subtests.test("Paper Mill CapEx"):
+        capex = h2i.prob.get_val("paper_mill.CapEx", units="USD")
+        assert pytest.approx(capex, rel=1e-2) == 2500 * paper_capacity
+
+    with subtests.test("Paper Mill OpEx"):
+        opex = h2i.prob.get_val("paper_mill.OpEx", units="USD/year")
+        assert pytest.approx(opex, rel=1e-2) == 1386000000
+
+    with subtests.test("Paper Mill Variable OpEx"):
+        varopex = h2i.prob.get_val("paper_mill.VarOpEx", units="USD/year")
+        assert pytest.approx(varopex, rel=1e-2) == 705431159.4
+
+    with subtests.test("Annual lignin production"):
+        lignin = h2i.prob.get_val("paper_mill.annual_lignin_produced", units="kg/year")
+        assert (
+            pytest.approx(lignin, rel=1e-2)
+            == paper_capacity * paper_capacity_factor * lignin_yield * 1000
+        )
+
+    with subtests.test("Annual pulp production"):
+        pulp = h2i.prob.get_val("paper_mill.annual_pulp_out_produced", units="t/year")
+        assert pytest.approx(pulp, rel=1e-2) == paper_capacity * paper_capacity_factor * pulp_yield
+
+    expected_hourly_saf = np.minimum(
+        saf_capacity * saf_capacity_factor / 8760,
+        lignin_in / lignin_consumption,
+    )
+
+    with subtests.test("Annual SAF production"):
+        saf = h2i.prob.get_val("saf.annual_saf_produced", units="t/year")
+        assert pytest.approx(saf, rel=1e-2) == expected_hourly_saf.sum()
+
+    with subtests.test("Paper mill lignin output is connected to SAF input"):
+        lignin_out = h2i.prob.get_val("paper_mill.lignin_out", units="kg/h")
+        lignin_in = h2i.prob.get_val("saf.lignin_in", units="kg/h")
+        np.testing.assert_allclose(lignin_in, lignin_out, rtol=1e-6)
