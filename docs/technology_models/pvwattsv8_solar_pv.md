@@ -14,8 +14,8 @@ technologies:
                 pv_capacity_kWdc: 1000.0
                 dc_ac_ratio: 1.3
                 create_model_from: "new" #"options are "default" and "new"
-                tilt: #panel tilt angle to use if tilt_angle_func is "none"
-                tilt_angle_func: "lat-func" #options are "lat-func", "lat", "none"
+                tilt: #panel tilt angle to use if tilt_angle_setting is "none"
+                tilt_angle_setting: "lat-func" #options are "lat-func", "lat", "none"
                 config_name: #only used if create_model_from is "default"
                 pysam_options: #user specified pysam inputs
                     SystemDesign:
@@ -37,8 +37,8 @@ $$
 \text{PV Capacity (kW-AC)} = \frac{\text{PV Capacity (kW-DC)}}{\text{dc_ac_ratio}}
 $$
 
-- `tilt` (optional): tilt angle of the PV panel (in degrees) used if `tilt_angle_func` is `"none"`. Must be between 0 and 90.
-- `tilt_angle_func` (optional): options are `"none"`, `"lat-func"` or `"lat"` and defaults to `"none"`.
+- `tilt` (optional): tilt angle of the PV panel (in degrees) used if `tilt_angle_setting` is `"none"`. Must be between 0 and 90.
+- `tilt_angle_setting` (optional): options are `"none"`, `"lat-func"` or `"lat"` and defaults to `"none"`.
     - `"none"`: use the tilt angle value specified in `'tilt'` input (if provided). If `tilt` is not provided, use the default value from the Pvwattsv8 module or config.
     - `"lat"`: set the panel tilt angle equal to the latitude of the site.
     - `"lat-func"`: calculate the tilt angle based on the latitude of the site using the equation below:
@@ -104,8 +104,8 @@ Some common design parameters that a user may want to specify within the [System
 
     ```{note}
     Do not specify tilt angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
-    - `tilt_angle_func` is set to either "lat" or "lat-func"
-    - `tilt_angle_func` is set to "none" and `tilt` is specified under the performance parameters.
+    - `tilt_angle_setting` is set to either "lat" or "lat-func"
+    - `tilt_angle_setting` is set to "none" and `tilt` is specified under the performance parameters.
     ```
 
 (solarresource-group)=

@@ -15,12 +15,12 @@ class TestCalcTiltAngle:
     with various latitudes including southern hemisphere (negative) values.
     """
 
-    def _make_model(self, tilt_angle_func, tilt=None, create_model_from="default"):
+    def _make_model(self, tilt_angle_setting, tilt=None, create_model_from="default"):
         """Create a lightweight mock of PYSAMSolarPlantPerformanceModel
         with the minimum attributes needed by calc_tilt_angle."""
         model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
         model.config = MagicMock()
-        model.config.tilt_angle_func = tilt_angle_func
+        model.config.tilt_angle_setting = tilt_angle_setting
         model.config.tilt = tilt
         model.config.create_model_from = create_model_from
         model.config.pysam_options = {}
@@ -28,7 +28,7 @@ class TestCalcTiltAngle:
         model.system_model.value.return_value = 20.0  # default tilt from PySAM model
         return model
 
-    # --- tilt_angle_func = "lat" ---
+    # --- tilt_angle_setting = "lat" ---
     @pytest.mark.parametrize(
         "latitude, expected_tilt",
         [
@@ -42,11 +42,11 @@ class TestCalcTiltAngle:
         ],
     )
     def test_lat_mode(self, latitude, expected_tilt):
-        model = self._make_model(tilt_angle_func="lat")
+        model = self._make_model(tilt_angle_setting="lat")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, latitude)
         assert result == pytest.approx(expected_tilt)
 
-    # --- tilt_angle_func = "lat-func" ---
+    # --- tilt_angle_setting = "lat-func" ---
     @pytest.mark.parametrize(
         "latitude, expected_tilt",
         [
@@ -69,42 +69,42 @@ class TestCalcTiltAngle:
         ],
     )
     def test_lat_func_mode(self, latitude, expected_tilt):
-        model = self._make_model(tilt_angle_func="lat-func")
+        model = self._make_model(tilt_angle_setting="lat-func")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, latitude)
         assert result == pytest.approx(expected_tilt)
 
     def test_lat_func_symmetric(self):
         """Verify that positive and negative latitudes produce identical tilt angles."""
-        model = self._make_model(tilt_angle_func="lat-func")
+        model = self._make_model(tilt_angle_setting="lat-func")
         for lat in [5, 15, 25, 30, 40, 50, 55, 70, 85]:
             pos = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, lat)
             neg = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -lat)
             assert pos == pytest.approx(neg), f"Mismatch at latitude {lat}: {pos} != {neg}"
 
-    # --- tilt_angle_func = "none" ---
+    # --- tilt_angle_setting = "none" ---
     def test_none_mode_default_with_user_tilt(self):
-        model = self._make_model(tilt_angle_func="none", tilt=15.0, create_model_from="default")
+        model = self._make_model(tilt_angle_setting="none", tilt=15.0, create_model_from="default")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(15.0)
 
     def test_none_mode_default_without_user_tilt(self):
-        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="default")
+        model = self._make_model(tilt_angle_setting="none", tilt=None, create_model_from="default")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(20.0)  # from system_model.value("tilt")
 
     def test_none_mode_new_with_user_tilt(self):
-        model = self._make_model(tilt_angle_func="none", tilt=10.0, create_model_from="new")
+        model = self._make_model(tilt_angle_setting="none", tilt=10.0, create_model_from="new")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(10.0)
 
     def test_none_mode_new_without_user_tilt(self):
-        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="new")
+        model = self._make_model(tilt_angle_setting="none", tilt=None, create_model_from="new")
         model.config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(22.0)
 
     def test_none_mode_new_no_tilt_anywhere(self):
-        model = self._make_model(tilt_angle_func="none", tilt=None, create_model_from="new")
+        model = self._make_model(tilt_angle_setting="none", tilt=None, create_model_from="new")
         result = PYSAMSolarPlantPerformanceModel.calc_tilt_angle(model, -33.0)
         assert result == pytest.approx(0)  # default fallback
 
@@ -120,7 +120,7 @@ class TestCalcAzimuthAngle:
         with the minimum attributes needed by calc_tilt_angle."""
         model = MagicMock(spec=PYSAMSolarPlantPerformanceModel)
         model.config = MagicMock()
-        model.config.tilt_angle_func = "none"
+        model.config.tilt_angle_setting = "none"
         model.config.tilt = 0.0
         model.config.create_model_from = "default"
         if azimuth is not None:
@@ -131,7 +131,7 @@ class TestCalcAzimuthAngle:
         model.system_model.value.return_value = 20.0  # default tilt from PySAM model
         return model
 
-    # --- tilt_angle_func = "lat" ---
+    # --- tilt_angle_setting = "lat" ---
     @pytest.mark.parametrize(
         "latitude, user_input_azimuth, expected_azimuth",
         [
@@ -192,7 +192,7 @@ def test_pvwatts_outputs(basic_pysam_options, solar_resource_dict, plant_config,
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "none",  # "lat-func",
         "pysam_options": basic_pysam_options,
     }
 
@@ -315,7 +315,7 @@ def test_pvwatts_singleowner_notilt(
     - `create_model_from` is set to 'default'
     - `config_name` is 'PVWattsSingleOwner', this is used to create the starting system model
         because `create_model_from` is default.
-    - `tilt_angle_func` is "none" and tilt is provided (in two separate places) as zero.
+    - `tilt_angle_setting` is "none" and tilt is provided (in two separate places) as zero.
     """
 
     basic_pysam_options["SystemDesign"].update({"tilt": 0.0})
@@ -325,7 +325,7 @@ def test_pvwatts_singleowner_notilt(
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "none",  # "lat-func",
         "pysam_options": basic_pysam_options,
     }
 
@@ -376,7 +376,7 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
     - `create_model_from` is set to 'default'
     - `config_name` is 'PVWattsSingleOwner', this is used to create the starting system model
         because `create_model_from` is default.
-    - `tilt_angle_func` is "none" and tilt is provided (in two separate places) as zero.
+    - `tilt_angle_setting` is "none" and tilt is provided (in two separate places) as zero.
     """
 
     driver_config = {
@@ -397,7 +397,7 @@ def test_pvwatts_singleowner_notilt_different_site(basic_pysam_options, plant_co
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "none",  # "lat-func",
         "pysam_options": basic_pysam_options,
     }
 
@@ -470,7 +470,7 @@ def test_pvwatts_singleowner_withtilt(
         "dc_ac_ratio": 1.23,
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
-        "tilt_angle_func": "lat-func",
+        "tilt_angle_setting": "lat-func",
         "pysam_options": basic_pysam_options,
     }
 
@@ -527,9 +527,9 @@ def test_pvwatts_input_tilt_azimuth(
         "dc_ac_ratio": 1.23,
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
-        "tilt_angle_func": "input",
+        "tilt_angle_setting": "input",
         "tilt": 0.0,
-        "azimuth_angle_opt": "input",
+        "azimuth_angle_setting": "input",
         "pysam_options": basic_pysam_options,
     }
 
