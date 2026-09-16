@@ -52,6 +52,15 @@ $$
         \end{cases}
         $$
 
+- `azimuth` (optional): azimuth angle of the PV panel (in degrees) used if `azimuth_angle_setting` is `"input"`. Must be between -360 and 360.
+    - East: 90
+    - South: 180 (default for most Pvwattsv8 configurations)
+    - West: 270
+    - North: 360
+- `azimuth_angle_setting` (optional): options are `"input"` or `"lat-func"`, defaults to `"lat-func"`
+    - `"input"`: use the azimuth angle value specified in `'azimuth'` input (if provided). If `azimuth` is not provided, use the default value from the Pvwattsv8 module or config.
+    - `"lat-func"`: if the latitude is negative, sets the azimuth angle to 0 (north-facing). If the latitude is positive, sets the azimuth angle to 180 (south-facing).
+
 - `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the PV model is initialized using `Pvwattsv8.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the PV model is initialized using `Pvwattsv8.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
 - `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"PVWattsSingleOwner"`. The available options and their default parameters are listed below:
     - [PVWattsCommercial](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommercial.json)
@@ -106,6 +115,10 @@ Some common design parameters that a user may want to specify within the [System
     Do not specify tilt angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
     - `tilt_angle_setting` is set to either "lat" or "lat-func"
     - `tilt_angle_setting` is set to "input" and `tilt` is specified under the performance parameters.
+
+    Do not specify azimuth angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
+    - `azimuth_angle_setting` is set to "lat-func"
+    - `azimuth_angle_setting` is set to "input" and `azimuth` is specified under the performance parameters.
     ```
 
 (solarresource-group)=
