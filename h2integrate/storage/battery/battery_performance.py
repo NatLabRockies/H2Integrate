@@ -48,9 +48,12 @@ import simses.battery  # noqa: F401  (import-order side effect; see note above)
 
 from attrs import field, define, validators
 from openmdao.utils import units as om_units
-from simses.degradation import DegradationModel  # noreorder
+
+
+# isort: off
 from simses.battery.state import BatteryState
 from simses.battery.battery import Battery
+from simses.degradation import DegradationModel
 from simses.thermal.ambient import AmbientThermalModel
 from simses.degradation.state import DegradationState
 from simses.converter.converter import Converter
@@ -81,6 +84,7 @@ from simses.model.degradation.sony_lfp_calendar import (
     R,
     SonyLFPCalendarDegradation,
 )
+# isort: on
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.storage.storage_baseclass import (
