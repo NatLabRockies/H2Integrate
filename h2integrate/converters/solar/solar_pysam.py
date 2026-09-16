@@ -261,8 +261,8 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 f"of 'tilt' or 'azimuth' (not {angle_name})"
             )
             raise ValueError(msg)
-        if getattr(self.config, f"{angle_name}_angle_func") != "input":
-            msg = f"This method should only be called if '{angle_name}_angle_func' is 'input'"
+        if getattr(self.config, f"{angle_name}_angle_setting") != "input":
+            msg = f"This method should only be called if '{angle_name}_angle_setting' is 'input'"
             warnings.warn(msg, UserWarning, stacklevel=3)
 
         default_vals = {
