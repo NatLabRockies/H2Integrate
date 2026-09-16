@@ -850,7 +850,7 @@ def test_build_bill_min_model_respects_soc_and_power_links(subtests, seasonal_co
             if controller.in_peak_window[t]:
                 assert charge < 0.5
                 assert p_charge < 1e-6
-    
+
 
 def _seasonal_nov_dec_configs(n_control_window_hours):
     """Build (plant_config, tech_config) for a 5-day Nov29->Dec3 sim, control_tier=4."""
