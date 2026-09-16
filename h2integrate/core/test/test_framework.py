@@ -1376,3 +1376,167 @@ def test_create_xdsm_propagates_file_not_found_error():
     ):
         with pytest.raises(FileNotFoundError, match="latex not found"):
             model.create_xdsm()
+
+
+# ---------------------------------------------------------------------------
+# Lightweight unit tests for _check_dispatch_connections
+#
+# These bypass OpenMDAO entirely by constructing a minimal fake model object
+# carrying only the attributes the validator reads: ``technology_config``,
+# ``plant_config``, ``supported_models``, and ``technology_graph``.
+# ---------------------------------------------------------------------------
+
+
+class _FakeOpenLoopController:
+    """Stand-in for an open-loop `control_strategy` class (not Pyomo-based)."""
+
+
+def _make_dispatch_fake_model(technologies, tech_to_dispatch_connections, interconnections=None):
+    """Build a minimal stub for testing `_check_dispatch_connections`.
+
+    Args:
+        technologies (dict): value for `technology_config["technologies"]`.
+        tech_to_dispatch_connections (list | None): value for
+            `plant_config["tech_to_dispatch_connections"]`. Omitted from `plant_config`
+            entirely if ``None``.
+        interconnections (list, optional): `technology_interconnections` entries used to
+            build the technology graph. Defaults to an empty list.
+
+    Returns:
+        types.SimpleNamespace: stub with `technology_config`, `plant_config`,
+            `supported_models`, and `technology_graph` set.
+    """
+    from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+        PyomoStorageControllerBaseClass,
+    )
+
+    class _FakePyomoStorageController(PyomoStorageControllerBaseClass):
+        pass
+
+    fake = types.SimpleNamespace()
+    fake.technology_config = {"technologies": technologies}
+    plant_config = {}
+    if tech_to_dispatch_connections is not None:
+        plant_config["tech_to_dispatch_connections"] = tech_to_dispatch_connections
+    fake.plant_config = plant_config
+    fake.supported_models = {
+        "PyomoStorageController": _FakePyomoStorageController,
+        "OpenLoopController": _FakeOpenLoopController,
+    }
+    fake.technology_graph = H2IntegrateModel.create_technology_graph(fake, interconnections or [])
+    return fake
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_valid_heuristic_style_passes():
+    """combiner (dispatch_rule_set) -> battery (dispatch_rule_set + Pyomo controller),
+    both registered in `tech_to_dispatch_connections`, must not raise."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["combiner", "battery"], ["battery", "battery"]],
+        interconnections,
+    )
+    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_valid_standalone_pyomo_controller_passes():
+    """A Pyomo storage controller that needs no `dispatch_rule_set` anywhere (e.g.
+    optimization-based controllers) is valid as long as it is listed."""
+    technologies = {
+        "feedstock": {"performance_model": {"model": "FeedstockPerformanceModel"}},
+        "battery": {"control_strategy": {"model": "PyomoStorageController"}},
+    }
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["feedstock", "battery"], ["battery", "battery"]],
+    )
+    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_no_op_when_key_absent():
+    """No `tech_to_dispatch_connections` and no `dispatch_rule_set` should be a no-op."""
+    technologies = {"wind": {"performance_model": {"model": "SomeWindModel"}}}
+    fake = _make_dispatch_fake_model(technologies, None)
+    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_extraneous_raises():
+    """A dispatching tech using an open-loop controller (no `dispatch_rule_set`, no Pyomo
+    `control_strategy`) left over in `tech_to_dispatch_connections` must raise."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {"control_strategy": {"model": "OpenLoopController"}},
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["combiner", "battery"], ["battery", "battery"]],
+        interconnections,
+    )
+    with pytest.raises(ValueError) as excinfo:
+        H2IntegrateModel._check_dispatch_connections(fake)
+    err = str(excinfo.value)
+    assert "plant config references ['battery'], but this technology does not" in err
+    assert "corresponding entries for ['battery'] from `tech_to_dispatch_connections`" in err
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_missing_raises():
+    """A technology declaring `dispatch_rule_set` but missing from
+    `tech_to_dispatch_connections` must raise and suggest the expected connection."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["battery", "battery"]],  # missing the [combiner, battery] entry
+        interconnections,
+    )
+    with pytest.raises(ValueError) as excinfo:
+        H2IntegrateModel._check_dispatch_connections(fake)
+    err = str(excinfo.value)
+    assert "Technology ['combiner'] declare a `dispatch_rule_set` but" in err
+    assert "(at least): [['combiner', 'battery']]." in err
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_missing_key_entirely_raises():
+    """A technology declaring `dispatch_rule_set` with `tech_to_dispatch_connections`
+    missing entirely from the plant config must also raise."""
+    technologies = {
+        "wave": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [
+        ["wave", "combiner", "electricity", "cable"],
+        ["combiner", "battery", "electricity", "cable"],
+    ]
+    fake = _make_dispatch_fake_model(technologies, None, interconnections)
+    with pytest.raises(ValueError) as excinfo:
+        H2IntegrateModel._check_dispatch_connections(fake)
+    err = str(excinfo.value)
+    assert "Technologies ['battery', 'combiner', 'wave'] declare a `dispatch_rule_set` but" in err
+    assert (
+        "(at least): [['battery', 'battery'], ['combiner', 'battery'], "
+        "['wave', 'combiner']]." in err
+    )

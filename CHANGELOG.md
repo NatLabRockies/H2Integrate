@@ -29,6 +29,7 @@
 - Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
 - Renamed the plant-config site connection key from `resource_to_tech_connections` to `site_to_tech_connections` so it reflects both site metadata and technology connections such as latitude, longitude, and resource data. [PR 879](https://github.com/NatLabRockies/H2Integrate/pull/879)
 - Added headroom outputs (`electricity_headroom` and `electricity_sell_headroom`) to the grid performance model. [PR #755](https://github.com/NatLabRockies/H2Integrate/pull/755)
+- Added `_check_dispatch_connections` to `H2IntegrateModel` to validate `tech_to_dispatch_connections` in the plant config against `dispatch_rule_set`/`control_strategy` declarations in the technology config, catching extraneous or missing dispatch connections at load time instead of deep inside the storage models. Also fixed a latent bug where dispatch rule connections were never wired due to an incorrect dictionary lookup, and removed unused `dispatch_rule_set` entries from examples 09 and 11. [PR 882](https://github.com/NatLabRockies/H2Integrate/pull/882)
 - Enable `BaseConfig.from_dict` to receive an instance of the object it should be creating to enable
   `attrs` converter routines to safely handle instances of existing configuration objects or
   configuration dictionaries for defining objects once. [PR 869](https://github.com/NatLabRockies/H2Integrate/pull/869)
