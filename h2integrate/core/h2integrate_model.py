@@ -1565,7 +1565,7 @@ class H2IntegrateModel:
             combiner_counts (dict): Tracks the next input index per combiner technology.
             splitter_counts (dict): Tracks the next output index per splitter technology.
         """
-        if "combiner" in dest_tech:
+        if self.tech_control_classifiers.get(dest_tech) == "combiner":
             if dest_tech not in combiner_counts:
                 combiner_counts[dest_tech] = 1
             else:
@@ -1576,7 +1576,7 @@ class H2IntegrateModel:
                     f"{source_tech}.{stream_name}:{var_name}_out",
                     f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
                 )
-        elif "splitter" in source_tech:
+        elif self.tech_control_classifiers.get(source_tech) == "splitter":
             if source_tech not in splitter_counts:
                 splitter_counts[source_tech] = 1
             else:
@@ -1671,7 +1671,7 @@ class H2IntegrateModel:
                     self.plant.set_order(subsystem_names)
 
                 # Check if the source technology is a splitter
-                if "splitter" in source_tech:
+                if self.tech_control_classifiers.get(source_tech) == "splitter":
                     # Connect the source technology to the connection component
                     # with specific output names
                     if source_tech not in splitter_counts:
@@ -1693,7 +1693,7 @@ class H2IntegrateModel:
                     )
 
                 # Check if the transport type is a combiner
-                if "combiner" in dest_tech:
+                if self.tech_control_classifiers.get(dest_tech) == "combiner":
                     # Connect the source technology to the connection component
                     # with specific input names
                     if dest_tech not in combiner_counts:
