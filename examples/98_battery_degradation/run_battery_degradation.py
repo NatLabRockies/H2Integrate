@@ -88,9 +88,13 @@ print(f"Discharge: {p_discharge / 1e3:.3f} MW (C/2)   Charge: {p_charge / 1e3:.3
 
 # ---------------------------------------------------------------------------
 # Drive the battery via its set-point (passthrough controller -> command value)
-# and run the model.
+# and run the model. The grid BUYS the electricity used to charge the battery, so
+# grid_buy is driven by the charging portion of the set-point (positive kW). The
+# battery discharge is SOLD to the grid via the plant-config interconnection.
 # ---------------------------------------------------------------------------
+charge_power = np.clip(-set_point, 0.0, None)  # kW bought from the grid while charging
 model.prob.set_val("battery.electricity_set_point", set_point, units="kW")
+model.prob.set_val("grid_buy.electricity_set_point", charge_power, units="kW")
 model.run()
 
 # ---------------------------------------------------------------------------

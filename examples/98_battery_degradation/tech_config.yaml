@@ -46,3 +46,41 @@ technologies:
           # Each end-of-life replacement (from the model's replacement_schedule) costs a
           # full new battery. Depreciation defaults come from the plant-level capital_items.
           replacement_cost_percent: 1.0
+
+  # Grid interconnection used to BUY electricity to charge the battery. Its purchase
+  # command is the battery's charging profile (set in the run script). The purchase cost
+  # enters ProFAST as a variable operating cost (feedstock).
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.0e6  # kW (large; not a binding constraint here)
+      cost_parameters:
+        cost_year: 2022
+        electricity_buy_price: 0.07  # $/kWh paid to charge the battery
+        buy_price_mode: constant
+        interconnection_capex_per_kw: 0.0
+        interconnection_opex_per_kw: 0.0
+        fixed_interconnection_cost: 0.0
+
+  # Grid interconnection used to SELL the battery discharge. It receives the battery's
+  # discharge stream (wired in plant_config). The sales revenue enters ProFAST as a
+  # negative variable operating cost (coproduct revenue).
+  grid_sell:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.0e6  # kW
+      cost_parameters:
+        cost_year: 2022
+        electricity_sell_price: 0.12  # $/kWh earned when discharging to the grid
+        sell_price_mode: constant
+        interconnection_capex_per_kw: 0.0
+        interconnection_opex_per_kw: 0.0
+        fixed_interconnection_cost: 0.0

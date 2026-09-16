@@ -1,8 +1,10 @@
 name: plant_config
 description: >
-  Single-battery plant used to exercise the SimSES-backed BatteryPerformanceModel
-  over a long horizon for degradation analysis. The battery is driven directly by a
-  set-point profile (no generation or demand technologies are connected).
+  Single-battery plant that exercises the SimSES-backed BatteryPerformanceModel over a
+  long horizon for degradation analysis. The battery follows a fixed daily charge/discharge
+  set-point; it BUYS electricity from the grid to charge (grid_buy) and SELLS its discharge
+  back to the grid (grid_sell), so the ProFAST analysis captures grid purchase cost and
+  sales revenue.
 plant:
   plant_life: 30
   simulation:
@@ -11,6 +13,14 @@ plant:
     # cover any horizon up to plant_life years.
     n_timesteps: 525600
     dt: 900
+# Left-to-right technology interconnections.
+technology_interconnections:
+  # grid_buy supplies the battery while charging (also gives the storage its required
+  # input connection). The purchase amount is driven by the battery charge profile set
+  # on grid_buy.electricity_set_point in the run script.
+  - [grid_buy, battery, electricity, cable]
+  # The battery discharge stream is sold to the grid.
+  - [battery, grid_sell, [storage_electricity_discharge, electricity_in]]
 finance_parameters:
   finance_groups:
     profast_model:
@@ -40,11 +50,12 @@ finance_parameters:
     cost_year_adjustment_inflation: 0.025
     target_dollar_year: 2022
   finance_subgroups:
-    # The battery is the sole technology and the commodity stream: its per-year
-    # (degradation-aware) capacity factor drives the ProFAST cash-flow / LCOE analysis
-    # over the full 30-year plant life.
+    # The battery is the commodity stream: its per-year (degradation-aware) capacity factor
+    # drives the ProFAST cash-flow / LCOE analysis over the full 30-year plant life. The
+    # grid technologies contribute the electricity purchase cost (grid_buy) and sales
+    # revenue (grid_sell) as variable operating costs.
     battery:
       commodity: electricity
       commodity_stream: battery
       finance_groups: [profast_model]
-      technologies: [battery]
+      technologies: [battery, grid_buy, grid_sell]
