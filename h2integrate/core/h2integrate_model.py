@@ -855,9 +855,15 @@ class H2IntegrateModel:
                     # numeric scalar: used directly, no connection needed
 
         # --- Step 5: Connect the demand profile to the controller ---------
+        # Input-to-input connection (OpenMDAO 3.44+): as with the buy_price
+        # connection above, this must be made on the top-level model rather
+        # than a subgroup. Connecting via ``self.plant`` (a subgroup) leaves
+        # the demand tech's promoted "*" alias at the model level dangling,
+        # so auto_ivc creates a second, conflicting source for the same
+        # controller input.
         demand_tech = slc_topology["demand_tech"]
         demand_commodity = slc_topology["demand_commodity"]
-        self.plant.connect(
+        self.model.connect(
             f"{demand_tech}.{demand_commodity}_demand",
             f"system_level_controller.{demand_commodity}_demand",
         )
