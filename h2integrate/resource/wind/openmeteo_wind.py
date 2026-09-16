@@ -296,7 +296,11 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
 
         data = data.reset_index(drop=True)
 
-        data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
+        # Handle the leap day according to include_leap_day: remove it when present but
+        # not wanted, keep it when present and wanted, and error if a leap year's data is
+        # missing it. The resource base then resamples this native data to the simulation
+        # timestep and slices it to the requested horizon.
+        data = process_leap_day(data, self.config.include_leap_day)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units

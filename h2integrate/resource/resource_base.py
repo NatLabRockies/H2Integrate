@@ -7,7 +7,12 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
-from h2integrate.resource.utilities.time_tools import add_resource_start_end_times
+from h2integrate.resource.utilities.time_tools import (
+    concatenate_resource_years,
+    add_resource_start_end_times,
+    resample_resource_data_to_dt,
+    conform_resource_data_to_n_timesteps,
+)
 from h2integrate.resource.utilities.download_tools import download_from_api
 
 
@@ -42,8 +47,17 @@ class ResourceBaseAPIConfig(BaseConfig):
             Defaults to an empty dictionary.
         resource_dir (str | Path, optional): Folder to save resource files to or
             load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+        resource_filename (str | Path | list, optional): Filename to save resource data to
+            or load resource data from. For multi-year simulations, provide a list of
+            filenames (one per consecutive year, in chronological order starting at
+            ``resource_year``). Defaults to "".
+        upsample_method (str, optional): interpolation method passed to
+            ``pandas.DataFrame.interpolate`` when resampling to a finer timestep than the
+            data provides. Defaults to "time". The "time" method uses linear interpolation
+            but accounting for the actual time step.
+        downsample_method (str, optional): aggregation passed to the pandas resampler
+            when resampling to a coarser timestep than the data provides. Defaults to
+            "mean".
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -60,8 +74,10 @@ class ResourceBaseAPIConfig(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
+    resource_filename: Path | str | list = field(default="")
     resource_dir: Path | str | None = field(default=None)
+    upsample_method: str = field(default="time")
+    downsample_method: str = field(default="mean")
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -219,8 +235,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             Any: resource data in the format expected by the subclass.
         """
-        site_changed = False
-
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # 0) If site hasn't changed and resource data has already been loaded
@@ -229,14 +243,58 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if self.resource_data is not None:
                 return self.resource_data
 
-        # 1) check if user provided data, add start and end times if so
-        # and return the data
+        # 1) Get the resource data: either the user-provided data (resampled to the
+        # simulation timestep) or enough downloaded/loaded years to cover the horizon.
         if bool(self.config.resource_data):
-            data = add_resource_start_end_times(self.config.resource_data)
-            return data
+            data = self._resample_to_sim_dt(self.config.resource_data)
+        else:
+            data = self._acquire_resource_data(latitude, longitude, site_changed)
 
+        # 2) Slice the data to exactly n_timesteps and add start/end times.
+        data = conform_resource_data_to_n_timesteps(data, self.n_timesteps)
+        data = add_resource_start_end_times(data)
+        return data
+
+    def _resample_to_sim_dt(self, data):
+        """Resample resource data from its native timestep to the simulation timestep.
+
+        Uses the up/downsampling strategies configured on the resource model.
+
+        Args:
+            data (dict): raw resource data at its native timestep.
+
+        Returns:
+            dict: resource data resampled to ``self.dt``.
+        """
+        return resample_resource_data_to_dt(
+            data,
+            self.dt,
+            getattr(self.config, "upsample_method", "time"),
+            getattr(self.config, "downsample_method", "mean"),
+        )
+
+    def _load_single_year_data(self, latitude, longitude, site_changed, resource_filename=None):
+        """Resolve, load, or download one year of resource data.
+
+        Uses the currently configured ``resource_year`` and returns the raw data
+        dictionary. This performs Steps 2-7 described in :py:meth:`get_data` for a
+        single year (without slicing to the simulation horizon).
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+            site_changed (bool): whether the site location changed from the last call.
+            resource_filename (str | Path | None): specific filename to load this year's
+                data from. When None, the default naming convention is used.
+
+        Raises:
+            ValueError: If data was not successfully downloaded from the API.
+
+        Returns:
+            dict: raw resource data for the configured ``resource_year``.
+        """
         # check if user provided directory or filename
-        provided_filename = False if self.config.resource_filename == "" else True
+        provided_filename = bool(resource_filename)
         provided_dir = False if self.config.resource_dir is None else True
 
         # 2a) check if file exists directly within resource directory
@@ -245,7 +303,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # 3a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
             # If a filename was input, use resource_filename as the filename.
-            filepath = resource_dir / self.config.resource_filename
+            filepath = resource_dir / resource_filename
         # Otherwise, create a filename with the method `create_filename()`.
         else:
             filename = self.create_filename(latitude, longitude)
@@ -266,7 +324,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # 3) Create a filename if resource_filename was input
             if provided_filename and not site_changed:
                 # If a filename was input, use resource_filename as the filename.
-                filepath = resource_dir / self.config.resource_filename
+                filepath = resource_dir / resource_filename
             # Otherwise, create a filename with the method `create_filename()`.
             else:
                 filename = self.create_filename(latitude, longitude)
@@ -277,18 +335,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # If the user-provided filename wasn't found, throw a warning
             if not filepath.is_file():
                 msg = (
-                    f"User provided resource filename {self.config.resource_filename} "
+                    f"User provided resource filename {resource_filename} "
                     f"not found in {resource_dir}. Data will be downloaded for this site."
                 )
                 warnings.warn(msg, UserWarning)
 
         # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
-        # filepath, load data using `load_data()`
+        # filepath, load data using `load_data()` and resample to desired the dt
         if filepath.is_file():
             self.filepath = filepath
-            data = self.load_data(filepath)
-            data = add_resource_start_end_times(data)
-            return data
+            return self._resample_to_sim_dt(self.load_data(filepath))
 
         # If the filepath (resource_dir/filename) does not exist, download data
         self.filepath = filepath
@@ -298,13 +354,113 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # the resulting resource_dir and filename from Steps 2 and 3.
         success = self.download_data(url, filepath)
         if success:
-            # 7) Load data from the file created in Step 6 using `load_data()`
-            data = self.load_data(filepath)
-            data = add_resource_start_end_times(data)
-            return data
+            # 7) Load data from the file created in Step 6 using `load_data()` and resample
+            # to the desired dt
+            return self._resample_to_sim_dt(self.load_data(filepath))
 
         else:
             raise ValueError("Did not successfully download resource data.")
+
+    def _acquire_resource_data(self, latitude, longitude, site_changed):
+        """Acquire enough resource data to cover the simulation horizon.
+
+        Loads the configured ``resource_year`` and, if a single year does not provide
+        enough timesteps to cover ``n_timesteps`` (after resampling), continues loading
+        consecutive years until the horizon is covered. Because this is driven by the
+        actual number of timesteps in each loaded year, it naturally handles years of
+        different lengths -- for example a leap year when leap days are retained.
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+            site_changed (bool): whether the site location changed from the last call.
+
+        Raises:
+            ValueError: if not enough resource data is available to cover the horizon
+                (a required year is outside the dataset range, a provided list of files
+                is exhausted, or a single provided filename cannot cover multiple years).
+
+        Returns:
+            dict: a resource data dictionary spanning enough time to cover the horizon.
+        """
+        resource_filename = self.config.resource_filename
+        filename_list = (
+            list(resource_filename) if isinstance(resource_filename, list | tuple) else None
+        )
+        base_year = self.config.resource_year
+
+        yearly_data = []
+        total_timesteps = 0
+        offset = 0
+        try:
+            while total_timesteps < self.n_timesteps:
+                # Resolve the filename to use for this year, if any
+                if filename_list is not None:
+                    if offset >= len(filename_list):
+                        msg = (
+                            f"{type(self).__name__} was given {len(filename_list)} resource "
+                            f"file(s) covering only {total_timesteps} timesteps, fewer than the "
+                            f"{self.n_timesteps} timesteps required by the simulation horizon. "
+                            "Provide additional resource files or shorten the horizon."
+                        )
+                        raise ValueError(msg)
+                    year_filename = filename_list[offset]
+                elif offset == 0:
+                    year_filename = resource_filename or None
+                else:
+                    # A single provided filename cannot supply additional years
+                    if resource_filename:
+                        msg = (
+                            f"{type(self).__name__} cannot satisfy a multi-year simulation "
+                            "horizon from a single resource_filename. Provide a list of "
+                            "filenames (one per consecutive year), or remove resource_filename "
+                            "so the required years can be downloaded."
+                        )
+                        raise ValueError(msg)
+                    year_filename = None
+
+                # Advance the resource year for years after the first
+                if offset > 0:
+                    if not isinstance(base_year, int):
+                        msg = f"Resource year must be an integer, {base_year} was given."
+                        raise ValueError(msg)
+                    try:
+                        # Setting resource_year runs the config validator, which raises
+                        # if the year is outside the range supported by this dataset.
+                        self.config.resource_year = base_year + offset
+                    except (ValueError, TypeError) as e:
+                        msg = (
+                            f"Not enough resource data available for {type(self).__name__} to "
+                            f"cover the requested simulation horizon of {self.n_timesteps} "
+                            f"timesteps. Year {base_year + offset} is outside the range "
+                            "supported by this dataset."
+                        )
+                        raise ValueError(msg) from e
+
+                year_data = self._load_single_year_data(
+                    latitude, longitude, site_changed, year_filename
+                )
+                yearly_data.append(year_data)
+                total_timesteps += self._resource_length(year_data)
+                offset += 1
+        finally:
+            # Restore the configured resource year, which is advanced above for multi-year loads
+            if isinstance(base_year, int):
+                self.config.resource_year = base_year
+
+        return concatenate_resource_years(yearly_data)
+
+    @staticmethod
+    def _resource_length(data):
+        """Return the number of timesteps in a resource data dictionary."""
+        for key in ("year", "month", "day", "hour", "minute"):
+            if key in data:
+                return len(np.asarray(data[key]))
+        # Fall back to the first array-like value
+        for value in data.values():
+            if isinstance(value, np.ndarray | list | tuple) and not isinstance(value, str | bytes):
+                return len(value)
+        return 0
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # update the resource data based on the input latitude and longitude
