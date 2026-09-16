@@ -110,6 +110,14 @@ class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
 
         self.check_pysam_options()
 
+        if self.azimuth_angle_setting == "input" and self.azimuth is None:
+            msg = (
+                "If using an `azimuth_angle_setting` of 'input', it is suggested to "
+                "provide a value for `azimuth`. To calculate the azimuth angle based "
+                "on the site latitude, set `azimuth_angle_setting` to 'lat-func'."
+            )
+            warnings.warn(msg, UserWarning, stacklevel=3)
+
     def check_pysam_options(self):
         """Checks that top-level keys of pysam_options dictionary are valid and that
         system capacity is not given in pysam_options.
@@ -231,12 +239,31 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
     def get_inital_angle_value(self, angle_name: str):
+        """Get the initial value to use for 'angle_name', based on either:
+
+        - the user-input value at the top-level of the config (i.e., `config.angle_name`)
+        - the user-input value in `config.pysam_options['SystemDesign'][angle_name]`
+        - the value from a default model configuration
+        - or a generic default value (0 for tilt, 180 for azimuth)
+
+        Args:
+            angle_name (str): Either 'tilt' or azimuth'
+
+        Raises:
+            ValueError: if angle_name is not 'tilt' or 'azimuth'
+
+        Returns:
+           float: Initial value to use for the 'angle_name' input when it's defined in `setup()`
+        """
         if angle_name not in ["tilt", "azimuth"]:
             msg = (
                 "This method can only be used for an `angle_name` "
                 f"of 'tilt' or 'azimuth' (not {angle_name})"
             )
             raise ValueError(msg)
+        if getattr(self.config, f"{angle_name}_angle_func") != "input":
+            msg = f"This method should only be called if '{angle_name}_angle_func' is 'input'"
+            warnings.warn(msg, UserWarning, stacklevel=3)
 
         default_vals = {
             "tilt": 0,
@@ -270,7 +297,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         """
 
         if self.config.tilt_angle_setting == "input":
-            msg = "Tilt angle should not be calculated when " "'tilt_angle_setting' in input."
+            msg = "Tilt angle should not be calculated when 'tilt_angle_setting' in input."
             raise ValueError(msg)
         # Use absolute value of latitude for tilt calculations
         # to support southern hemisphere (negative) latitudes
@@ -310,7 +337,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         """
 
         if self.config.azimuth_angle_setting == "input":
-            msg = "Azimuth angle should not be calculated when " "'azimuth_angle_setting' in input."
+            msg = "Azimuth angle should not be calculated when 'azimuth_angle_setting' in input."
             raise ValueError(msg)
 
         if self.config.azimuth is not None:
