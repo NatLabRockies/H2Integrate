@@ -26,10 +26,6 @@ class SkippableComputeMixin:
     def initialize(self):
         super().initialize()
 
-        # If subclass is flagged as steppable, don't add skip_compute to options
-        if getattr(self, "_is_steppable", False):
-            return
-
         self.options.declare(
             "skip_compute",
             types=bool,
@@ -53,10 +49,10 @@ class SkippableComputeMixin:
             return
 
         @functools.wraps(user_compute)
-        def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        def compute(self, *args):
             if self.options["skip_compute"]:
                 return None
-            return user_compute(self, inputs, outputs, discrete_inputs, discrete_outputs)
+            return user_compute(self, *args)
 
         compute._skips_when_flagged = True
         cls.compute = compute
