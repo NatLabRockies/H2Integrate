@@ -119,6 +119,13 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
+            f"{self.commodity}_headroom_out",  # unused but "accessible" portion of rated power
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+
+        self.add_output(
             "unmet_electricity_demand",
             val=0.0,
             shape=self.n_timesteps,
@@ -169,6 +176,14 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
+        outputs["electricity_headroom_out"] = (
+            np.minimum(  # we are limitied by either
+                natural_gas_available
+                / heat_rate_mmbtu_per_mwh,  # the power available in the natural gas supply
+                system_capacity,  # or the rated power of the system
+            )
+            - electricity_out
+        )  # and subtracting out what we're using gives the available excess capacity
 
         outputs["rated_electricity_production"] = inputs["system_capacity"]
 

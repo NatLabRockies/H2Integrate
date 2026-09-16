@@ -75,6 +75,10 @@ class H2IntegrateModel:
         # they will need tech_config but not driver or plant config
         self.create_technology_models()
 
+        # validate `tech_to_dispatch_connections` against `dispatch_rule_set`/
+        # `control_strategy` declarations before building any further OpenMDAO connections
+        self._check_dispatch_connections()
+
         self.create_finance_model()
 
         # add system-level controller if configured
@@ -1117,6 +1121,145 @@ class H2IntegrateModel:
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
+    def _check_dispatch_connections(self):
+        """Validate ``tech_to_dispatch_connections`` against the ``dispatch_rule_set``/
+        ``control_strategy`` declarations in the technology config.
+
+        Storage performance models and Pyomo storage controllers (subclasses of
+        ``PyomoStorageControllerBaseClass``) infer feedback-control behavior purely from
+        the *presence* of ``tech_to_dispatch_connections`` in the plant config, without
+        checking whether it is still consistent with the technology config. A common
+        source of hard-to-debug errors is leaving ``tech_to_dispatch_connections`` in
+        the plant config after switching a storage technology (and the technology feeding
+        it) from a Pyomo-based dispatch controller to an open-loop controller. This method
+        catches that mismatch early, before any OpenMDAO components are built.
+
+        Two checks are performed:
+
+        1. Extraneous connections: every technology named as the "dispatching"
+           technology (the second entry of each ``[tech_name, dispatching_tech_name]``
+           pair) must declare a ``dispatch_rule_set`` or use a ``control_strategy`` that
+           subclasses ``PyomoStorageControllerBaseClass``. Otherwise
+           ``tech_to_dispatch_connections`` is stale.
+        2. Missing connections: every technology that declares a ``dispatch_rule_set``
+           must appear in ``tech_to_dispatch_connections`` paired with the downstream
+           technology it feeds (inferred from ``technology_interconnections``).
+
+        Raises:
+            ValueError: If either check fails.
+        """
+        from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+            PyomoStorageControllerBaseClass,
+        )
+
+        technologies = self.technology_config.get("technologies", {})
+        dispatch_connections = self.plant_config.get("tech_to_dispatch_connections") or []
+        invalid_connections = [
+            connection for connection in dispatch_connections if len(connection) != 2
+        ]
+        if invalid_connections:
+            raise ValueError(
+                "Invalid tech to dispatching_tech_name connection(s): "
+                f"{invalid_connections}. Each connection must contain exactly two technology names."
+            )
+
+        def _has_pyomo_storage_controller(tech_name):
+            """
+            True only when the configured controller is registered and subclasses the Pyomo base.
+            """
+            control_model_name = (
+                technologies.get(tech_name, {}).get("control_strategy", {}).get("model")
+            )
+            if control_model_name is None:
+                return False
+            control_cls = self.supported_models.get(control_model_name)
+            return control_cls is not None and issubclass(
+                control_cls, PyomoStorageControllerBaseClass
+            )
+
+        def _is_dispatch_controlled(tech_name):
+            """
+            True when the technology declares dispatch rules or a Pyomo storage controller.
+            """
+            return "dispatch_rule_set" in technologies.get(
+                tech_name, {}
+            ) or _has_pyomo_storage_controller(tech_name)
+
+        # --- Check 1: extraneous connections -------------------------------
+        if dispatch_connections:
+            invalid_dispatching_techs = sorted(
+                {
+                    connection[1]
+                    for connection in dispatch_connections
+                    if not _is_dispatch_controlled(connection[1])
+                }
+            )
+            if invalid_dispatching_techs:
+                plural = len(invalid_dispatching_techs) > 1
+                msg = (
+                    "`tech_to_dispatch_connections` in the plant config references "
+                    f"{invalid_dispatching_techs}, but "
+                    f"{'these technologies do' if plural else 'this technology does'} not "
+                    "declare a `dispatch_rule_set` or use a `control_strategy` that subclasses "
+                    "`PyomoStorageControllerBaseClass`. This usually happens after switching a "
+                    "storage technology to an open-loop controller without removing the "
+                    f"corresponding entries for {invalid_dispatching_techs} from "
+                    "`tech_to_dispatch_connections` in the plant config."
+                )
+                raise ValueError(msg)
+
+        # --- Check 2: missing/incorrect connections -------------------------
+        dispatch_rule_techs = sorted(
+            tech_name
+            for tech_name, tech_info in technologies.items()
+            if "dispatch_rule_set" in tech_info
+        )
+        if not dispatch_rule_techs:
+            return
+
+        existing_pairs = {(connection[0], connection[1]) for connection in dispatch_connections}
+
+        missing_techs = []
+        required_pairs_by_tech = {}
+        for tech_name in dispatch_rule_techs:
+            if _has_pyomo_storage_controller(tech_name):
+                # This technology is itself the one being dispatched (e.g. a storage
+                # tech with a Pyomo control strategy); it is registered via a self-loop.
+                required_pairs = {(tech_name, tech_name)}
+            else:
+                successors = (
+                    self.technology_graph.successors(tech_name)
+                    if tech_name in self.technology_graph
+                    else []
+                )
+                required_pairs = {
+                    (tech_name, successor)
+                    for successor in successors
+                    if _is_dispatch_controlled(successor)
+                }
+            required_pairs_by_tech[tech_name] = required_pairs
+            if not required_pairs or not required_pairs.intersection(existing_pairs):
+                missing_techs.append(tech_name)
+
+        if missing_techs:
+            plural = len(missing_techs) > 1
+            expected_connections = sorted(
+                list(pair)
+                for tech_name in missing_techs
+                for pair in required_pairs_by_tech[tech_name]
+            )
+            msg = (
+                f"Technolog{'ies' if plural else 'y'} {missing_techs} declare a "
+                "`dispatch_rule_set` but "
+                f"{'are' if plural else 'is'} missing from (or incorrectly listed in) "
+                "`tech_to_dispatch_connections` in the plant config. Based on "
+                "`technology_interconnections`, `tech_to_dispatch_connections` should include "
+                f"(at least): {expected_connections}. If a `dispatch_rule_set` is no longer "
+                "needed (e.g. after switching a storage technology to an open-loop controller), "
+                "remove it instead of adding a connection."
+            )
+            raise ValueError(msg)
+
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
 
@@ -1772,7 +1915,7 @@ class H2IntegrateModel:
                 err_msg = f"Invalid connection: {connection}"
                 raise ValueError(err_msg)
 
-        resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
+        site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
         if "sites" in self.plant_config:
             resource_models = {}
@@ -1780,7 +1923,7 @@ class H2IntegrateModel:
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
-            resource_source_connections = [c[0] for c in resource_to_tech_connections]
+            resource_source_connections = [c[0] for c in site_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
             if len(resource_models) != len(resource_source_connections):
                 if len(resource_models) > len(resource_source_connections):
@@ -1793,8 +1936,8 @@ class H2IntegrateModel:
                         msg = (
                             "Some resources are not connected to a technology. Resource models "
                             f"{non_connected_resource} are not included in "
-                            "`resource_to_tech_connections`. Please connect these resources "
-                            "to their technologies under `resource_to_tech_connections` in "
+                            "`site_to_tech_connections`. Please connect these resources "
+                            "to their technologies under `site_to_tech_connections` in "
                             "the plant config file."
                         )
                         raise ValueError(msg)
@@ -1810,13 +1953,13 @@ class H2IntegrateModel:
                         msg = (
                             "Missing resource(s) are not defined but are connected to a"
                             f" technology. Missing resource(s) are {missing_resource}. "
-                            "Please check ``resource_to_tech_connections`` in the plant"
+                            "Please check ``site_to_tech_connections`` in the plant"
                             " config file or add the missing resources"
                             " to plant_config['site']['resources']."
                         )
                         raise ValueError(msg)
 
-            for connection in resource_to_tech_connections:
+            for connection in site_to_tech_connections:
                 if len(connection) != 3:
                     err_msg = f"Invalid resource to tech connection: {connection}"
                     raise ValueError(err_msg)
@@ -1862,7 +2005,7 @@ class H2IntegrateModel:
 
                     # If latitude is connected, make sure longitude is also connected
                     other_connection = [resource_name, tech_name, other_variable]
-                    if other_connection not in resource_to_tech_connections:
+                    if other_connection not in site_to_tech_connections:
                         msg = (
                             f"{site_parameter} is connected between {resource_name} and "
                             f"{tech_name}, but {other_loc_var} is not. Please ensure that "
@@ -1955,8 +2098,10 @@ class H2IntegrateModel:
                 continue
             else:
                 # Only connect dispatch rules if they are defined in the tech_config
-                tech_dispatch_rule = self.technology_config.get(tech_name, {}).get(
-                    "dispatch_rule_set", False
+                tech_dispatch_rule = (
+                    self.technology_config["technologies"]
+                    .get(tech_name, {})
+                    .get("dispatch_rule_set", False)
                 )
                 if tech_dispatch_rule:
                     # Connect the dispatch rules output to the dispatching_tech_name input
@@ -2455,9 +2600,12 @@ class H2IntegrateModel:
 
         # --- Check 4: prevent commodity double-counting via demand components ---
         # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). However, if a source does this it
-        # must NOT also send the same commodity directly to another real consumer,
-        # because the flow would be counted twice.
+        # (e.g. acting as a profile regularizer). A demand component may also route
+        # unused commodity to storage (e.g. battery charging), which is allowed.
+        #
+        # However, if a source sends a commodity directly to a real consumer and also
+        # sends that commodity to a demand component that re-emits it to another real
+        # consumer, the flow can be double-counted and should fail.
         #
         # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
         # Valid:   source -> demand_comp (pure observer)
@@ -2465,11 +2613,14 @@ class H2IntegrateModel:
         # Invalid: source -> real_consumer_A                (competing direct path)
         #          source -> demand_comp -> real_consumer_B (and also via demand)
         #
-        # The check is transitive: a demand component "reaches a real consumer" even
-        # when the path passes through a chain of other demand components first.
+        # The check is transitive across demand-component chains only.
 
-        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
+        def _demand_reaches_competing_consumer(demand_tech: str) -> bool:
+            """Return True if demand_tech reaches a non-storage real consumer.
+
+            Demand chains that terminate at storage are allowed and do not count
+            as competing direct-consumer paths for this check.
+            """
             visited: set[str] = set()
             stack = [demand_tech]
             while stack:
@@ -2480,9 +2631,14 @@ class H2IntegrateModel:
                 for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
                     if not c:
                         continue
-                    if self.tech_control_classifiers.get(d) != "demand":
-                        return True
-                    stack.append(d)
+                    d_classifier = self.tech_control_classifiers.get(d)
+                    if d_classifier == "demand":
+                        stack.append(d)
+                        continue
+                    if d_classifier == "storage":
+                        # Demand -> storage is explicitly allowed.
+                        continue
+                    return True
             return False
 
         # Build per-(source, commodity) destination lists from L4 edges.
@@ -2501,7 +2657,7 @@ class H2IntegrateModel:
                 d
                 for d in dests
                 if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_real_consumer(d)
+                and _demand_reaches_competing_consumer(d)
             ]
             if direct_real_dests and outputting_demand_dests:
                 raise ValueError(

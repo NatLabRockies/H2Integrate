@@ -117,7 +117,62 @@ def test_iron_mine_cost_outputs(plant_config, driver_config, iron_ore_config_mar
         assert total_opex == pytest.approx(7457805.0 * 89.3661325, rel=1e-3)
 
 
-@pytest.mark.regression
+@pytest.mark.unit
+def test_iron_mine_perf_lat_lon(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    prob = om.Problem()
+    iron_ore = NRRIIronMinePerformanceComponent(
+        plant_config=plant_config,
+        tech_config=iron_ore_config_martin_om,
+        driver_config=driver_config,
+    )
+    prob.model.add_subsystem("comp", iron_ore, promotes=["*"])
+    prob.setup()
+
+    hourly_electricity = 1000000
+    hourly_fuel = 50000
+    hourly_diesel = 1e7
+    ore_rated_capacity = 7457805 * 0.98 * 1.016
+
+    prob.set_val("comp.electricity_in", [hourly_electricity] * 8760, units="kW")
+    prob.set_val("comp.natural_gas_in", [hourly_fuel] * 8760, units="MMBtu/h")
+    prob.set_val("comp.diesel_in", [hourly_diesel] * 8760, units="galUS/h")
+    prob.set_val("comp.iron_ore_command_value", [ore_rated_capacity], units="t/h")
+
+    prob.set_val("comp.latitude", 47.53, units="deg")
+    prob.set_val("comp.longitude", -92.91, units="deg")
+
+    prob.run_model()
+
+    with subtests.test("pelletization elec"):
+        pel_elec = prob.get_val("comp.pelletization_electricity", units="kW")
+        assert np.sum(pel_elec) == pytest.approx(47.46 * 7457805 * 0.98, rel=1e-3)
+
+
+@pytest.mark.unit
+def test_iron_mine_lat_lon(plant_config, driver_config, iron_ore_config_martin_om, subtests):
+    plant_config["finance_parameters"]["cost_adjustment_parameters"]["target_dollar_year"] = 2021
+    prob = om.Problem()
+    iron_ore_cost = NRRIIronMineCostComponent(
+        plant_config=plant_config,
+        tech_config=iron_ore_config_martin_om,
+        driver_config=driver_config,
+    )
+    prob.model.add_subsystem("comp", iron_ore_cost, promotes=["*"])
+    prob.setup()
+
+    prob.set_val("comp.latitude", 47.53, units="deg")
+    prob.set_val("comp.longitude", -92.91, units="deg")
+
+    prob.set_val("comp.annual_iron_ore_produced", [7400230 * 1.016], units="t/yr")
+
+    prob.run_model()
+
+    with subtests.test("total_opex"):
+        total_opex = prob.get_val("comp.OpEx", units="USD/yr")
+        assert total_opex == pytest.approx(7400230.0 * 49.31140012, rel=1e-3)
+
+
+@pytest.mark.unit
 def test_adjusting_cost_year(plant_config, driver_config, iron_ore_config_martin_om, subtests):
     iron_ore_config_martin_om["model_inputs"]["shared_parameters"]["mine"] = "United"
     iron_ore_config_martin_om["model_inputs"]["cost_parameters"]["taconite_pellet_type"] = "drg"
