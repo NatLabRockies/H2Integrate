@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 import h2integrate.core.utilities as utilities_module
+import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import (
     ROOT_DIR,
     EXAMPLE_DIR,
@@ -1393,6 +1394,23 @@ def test_create_xdsm_propagates_file_not_found_error():
     ):
         with pytest.raises(FileNotFoundError, match="latex not found"):
             create_xdsm(plant_config)
+
+
+@pytest.mark.unit
+def test_post_process_print_results_flag_calls_reporting_utility():
+    model = object.__new__(H2IntegrateModel)
+    model.state = h2i_model_module.State.RUN
+    model.prob = types.SimpleNamespace(model=object())
+    model.recorder_path = None
+    model.performance_models = []
+
+    with patch.object(h2i_model_module, "print_model_results") as mock_print_results:
+        model.post_process(print_results=True)
+
+    mock_print_results.assert_called_once_with(
+        model.prob.model,
+        excludes=["*resource_data"],
+    )
 
 
 # ---------------------------------------------------------------------------

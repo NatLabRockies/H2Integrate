@@ -4,6 +4,7 @@ from enum import IntEnum
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.reporting import print_results as print_model_results
 from h2integrate.core.utilities import create_xdsm as create_xdsm_utility
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
@@ -2018,7 +2019,7 @@ class H2IntegrateModel:
         if print_results:
             # Use custom summary printer instead of OpenMDAO's built-in printing so we can
             # suppress internal value printing and display only mean values.
-            print_results(self.prob.model, excludes=["*resource_data"])
+            print_model_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
             from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
