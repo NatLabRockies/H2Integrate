@@ -479,6 +479,8 @@ class H2IntegrateModel:
                 - ``"demand_commodity_rate_units"`` (str | None): Units string for the
                   demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
                   specified in the demand tech config.
+                - ``"demand_profile"`` (int | float | list): Default demand profile from
+                    the demand technology configuration.
                 - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
                   ``(tech_name, commodity)`` pairs for every technology that the SLC
                   controls or reads from. Built from outgoing edges of the technology
@@ -615,6 +617,7 @@ class H2IntegrateModel:
         slc_topology["demand_tech"] = demand_tech
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
+        slc_topology["demand_profile"] = all_params.get("demand_profile", 10.0)
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
@@ -841,10 +844,16 @@ class H2IntegrateModel:
                     # numeric scalar: used directly, no connection needed
 
         # --- Step 5: Connect the demand profile to the controller ---------
+        # Input-to-input connection (OpenMDAO 3.44+): as with the buy_price
+        # connection above, this must be made on the top-level model rather
+        # than a subgroup. Connecting via ``self.plant`` (a subgroup) leaves
+        # the demand tech's promoted "*" alias at the model level dangling,
+        # so auto_ivc creates a second, conflicting source for the same
+        # controller input.
         demand_tech = slc_topology["demand_tech"]
         demand_commodity = slc_topology["demand_commodity"]
-        self.plant.connect(
-            f"{demand_tech}.{demand_commodity}_demand_out",
+        self.model.connect(
+            f"{demand_tech}.{demand_commodity}_demand",
             f"system_level_controller.{demand_commodity}_demand",
         )
 
@@ -1540,7 +1549,7 @@ class H2IntegrateModel:
             combiner_counts (dict): Tracks the next input index per combiner technology.
             splitter_counts (dict): Tracks the next output index per splitter technology.
         """
-        if "combiner" in dest_tech:
+        if self.tech_control_classifiers.get(dest_tech) == "combiner":
             if dest_tech not in combiner_counts:
                 combiner_counts[dest_tech] = 1
             else:
@@ -1551,7 +1560,7 @@ class H2IntegrateModel:
                     f"{source_tech}.{stream_name}:{var_name}_out",
                     f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
                 )
-        elif "splitter" in source_tech:
+        elif self.tech_control_classifiers.get(source_tech) == "splitter":
             if source_tech not in splitter_counts:
                 splitter_counts[source_tech] = 1
             else:
@@ -1650,7 +1659,7 @@ class H2IntegrateModel:
                     self.plant.set_order(subsystem_names)
 
                 # Check if the source technology is a splitter
-                if "splitter" in source_tech:
+                if self.tech_control_classifiers.get(source_tech) == "splitter":
                     # Connect the source technology to the connection component
                     # with specific output names
                     if source_tech not in splitter_counts:
@@ -1672,7 +1681,7 @@ class H2IntegrateModel:
                     )
 
                 # Check if the transport type is a combiner
-                if "combiner" in dest_tech:
+                if self.tech_control_classifiers.get(dest_tech) == "combiner":
                     # Connect the source technology to the connection component
                     # with specific input names
                     if dest_tech not in combiner_counts:
