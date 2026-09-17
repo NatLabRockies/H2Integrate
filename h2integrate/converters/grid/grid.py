@@ -144,22 +144,30 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
-
-        max_production = (
-            inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
-        )
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
             self.dt / 3600
         )
-        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
-        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
-            1 / self.fraction_of_year_simulated
+        annual_cf, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
+            performance_timeseries=outputs["electricity_out"],
+            rated_performance=float(inputs["interconnection_size"][0]),
+            state_of_health_timeseries=None,
+            eol_soh=None,
+        )
+        outputs["capacity_factor"] = annual_cf
+        outputs["replacement_schedule"] = replacement_schedule
+        outputs["annual_electricity_produced"] = (
+            annual_cf * float(inputs["interconnection_size"][0]) * 8760
         )
 
-        total_electricity_sold = np.sum(electricity_sold) * (self.dt / 3600)
-        outputs["annual_electricity_sold"] = total_electricity_sold * (
-            1 / self.fraction_of_year_simulated
+        annual_sold_cf, _ = self.calculate_annual_cf_and_replacement_schedule(
+            performance_timeseries=electricity_sold,
+            rated_performance=float(inputs["interconnection_size"][0]),
+            state_of_health_timeseries=None,
+            eol_soh=None,
+        )
+        outputs["annual_electricity_sold"] = (
+            annual_sold_cf * float(inputs["interconnection_size"][0]) * 8760
         )
 
 
