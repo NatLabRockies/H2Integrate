@@ -109,6 +109,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
     - ``demand_commodity``: the commodity being controlled (e.g. "electricity")
     - ``demand_commodity_rate_units``: units string (or None) of the demand commodity
     - ``demand_tech``: name of the demand technology
+    - ``demand_profile``: default demand profile from the demand technology configuration
     - ``storage_techs_to_control``: dictionary with keys of the technology names. The value is True
         if the technology is classified as "storage" and has an attached controller.
         Otherwise the value is False.
@@ -181,16 +182,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.demand_input_name = f"{self.commodity}_demand"
 
         # Demand has to be set to the same value to prevent an error
-        demand_model_inputs = (
-            self.options["tech_config"]
-            .get("technologies", {})
-            .get(self.demand_tech, {})
-            .get("model_inputs", {})
-        )
-        demand_params = demand_model_inputs.get(
-            "performance_parameters", {}
-        ) | demand_model_inputs.get("shared_parameters", {})
-        demand_val = demand_params.get("demand_profile", 10.0)
+        demand_val = slc_topology.get("demand_profile", 10.0)
         self.add_input(
             self.demand_input_name,
             val=demand_val,

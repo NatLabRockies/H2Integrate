@@ -497,6 +497,8 @@ class H2IntegrateModel:
                 - ``"demand_commodity_rate_units"`` (str | None): Units string for the
                   demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
                   specified in the demand tech config.
+                - ``"demand_profile"`` (int | float | list): Default demand profile from
+                    the demand technology configuration.
                 - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
                   ``(tech_name, commodity)`` pairs for every technology that the SLC
                   controls or reads from. Built from outgoing edges of the technology
@@ -633,6 +635,7 @@ class H2IntegrateModel:
         slc_topology["demand_tech"] = demand_tech
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
+        slc_topology["demand_profile"] = all_params.get("demand_profile", 10.0)
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
