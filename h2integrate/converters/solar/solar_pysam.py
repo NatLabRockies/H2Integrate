@@ -375,12 +375,32 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
 
-        max_production = (
-            outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
-        )
+        # For a full-year (annual) simulation, use PySAM's ac_annual and the simple scalar
+        # capacity factor. Pvwattsv8 does not assign ac_annual for non-annual horizons
+        # (sub-annual or multi-year), so use the base-class projection to compute per-year
+        # capacity factors and annual production across the plant life.
+        seconds_per_year = 31_536_000  # 8760 h/year * 3600 s/h
+        seconds_simulated = self.n_timesteps * self.dt
+        is_annual = abs(seconds_simulated - seconds_per_year) < self.dt / 2
 
-        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
-        outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+        rated_production = outputs["rated_electricity_production"][0]
+        if is_annual:
+            max_production = rated_production * self.n_timesteps * (self.dt / 3600)
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+            outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+        else:
+            capacity_factor, replacement_schedule = (
+                self.calculate_annual_cf_and_replacement_schedule(
+                    performance_timeseries=outputs["electricity_out"],
+                    rated_performance=rated_production,
+                    state_of_health_timeseries=None,
+                    eol_soh=None,
+                )
+            )
+            outputs["capacity_factor"] = capacity_factor
+            outputs["replacement_schedule"] = replacement_schedule
+            # per-year annual production is the per-year capacity factor at full-year output
+            outputs["annual_electricity_produced"] = capacity_factor * rated_production * 8760
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)

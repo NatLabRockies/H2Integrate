@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
 from pytest import fixture
@@ -234,21 +235,27 @@ def test_pvwatts_outputs(basic_pysam_options, solar_resource_dict, plant_config,
     # ]
 
     # Check that replacement schedule is between 0 and 1
-    with subtests.test("0 <= replacement_schedule <=1"):
+    with subtests.test("replacement_schedule >= 0"):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") >= 0)
+
+    with subtests.test("replacement_schedule <= 1"):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") <= 1)
 
     with subtests.test("replacement_schedule length"):
         assert len(prob.get_val("comp.replacement_schedule", units="unitless")) == plant_life
 
     # Check that capacity factor is between 0 and 1 with units of "unitless"
-    with subtests.test("0 <= capacity_factor (unitless) <=1"):
+    with subtests.test("capacity_factor (unitless) >= 0"):
         assert np.all(prob.get_val("comp.capacity_factor", units="unitless") >= 0)
+
+    with subtests.test("capacity_factor (unitless) <= 1"):
         assert np.all(prob.get_val("comp.capacity_factor", units="unitless") <= 1)
 
     # Check that capacity factor is between 1 and 100 with units of "percent"
-    with subtests.test("1 <= capacity_factor (percent) <=1"):
+    with subtests.test("capacity_factor (percent) >= 1"):
         assert np.all(prob.get_val("comp.capacity_factor", units="percent") >= 1)
+
+    with subtests.test("capacity_factor (percent) <= 100"):
         assert np.all(prob.get_val("comp.capacity_factor", units="percent") <= 100)
 
     with subtests.test("capacity_factor length"):
@@ -511,3 +518,92 @@ def test_pvwatts_singleowner_withtilt(
 
     with subtests.test("Capacity in kW-DC"):
         assert pytest.approx(system_capacity_DC, rel=1e-6) == pv_design_dict["pv_capacity_kWdc"]
+
+
+def _synthetic_solar_resource(n_timesteps):
+    """Build a synthetic hourly solar resource dict of length ``n_timesteps``."""
+    idx = pd.date_range("2012-01-01 00:30", periods=n_timesteps, freq="1h")
+    daylight = np.clip(np.sin((idx.hour.to_numpy() - 6) / 12 * np.pi), 0, None)
+    ghi = 900.0 * daylight
+    return {
+        "year": idx.year.to_numpy().astype(float),
+        "month": idx.month.to_numpy().astype(float),
+        "day": idx.day.to_numpy().astype(float),
+        "hour": idx.hour.to_numpy().astype(float),
+        "minute": idx.minute.to_numpy().astype(float),
+        "ghi": ghi,
+        "dni": ghi * 0.85,
+        "dhi": ghi * 0.15,
+        "temperature": 15.0 + 10.0 * daylight,
+        "wind_speed": np.full(n_timesteps, 3.0),
+        "pressure": np.full(n_timesteps, 1013.0),
+        "site_lat": 33.0,
+        "site_lon": -101.0,
+        "data_tz": 0.0,
+        "elevation": 1000.0,
+    }
+
+
+def _run_non_annual_solar(n_timesteps):
+    """Run the PySAM solar model standalone at a given horizon with synthetic data."""
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": {
+                "pv_capacity_kWdc": 100000.0,
+                "dc_ac_ratio": 1.2,
+                "create_model_from": "default",
+                "config_name": "PVWattsSingleOwner",
+                "tilt_angle_func": "none",
+                "tilt": 20.0,
+            }
+        }
+    }
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"dt": 3600, "n_timesteps": n_timesteps, "timezone": 0},
+        },
+        "site": {"latitude": 33.0, "longitude": -101.0, "resources": {}},
+    }
+    comp = PYSAMSolarPlantPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config_dict, driver_config={}
+    )
+    prob = om.Problem()
+    prob.model.add_subsystem("pv", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("solar_resource_data", _synthetic_solar_resource(n_timesteps))
+    prob.run_model()
+    return prob
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [4380, 17520])
+def test_pvwatts_non_annual_horizon(n_timesteps, subtests):
+    """Pvwattsv8 supports non-annual horizons; ``ac_annual`` is unavailable there, so the
+    model annualizes the simulated AC energy instead."""
+    prob = _run_non_annual_solar(n_timesteps)
+
+    gen = prob.get_val("pv.electricity_out", units="kW")
+    annual = prob.get_val("pv.annual_electricity_produced", units="kW*h/yr")
+    total = prob.get_val("pv.total_electricity_produced", units="kW*h")[0]
+    capacity_factor = prob.get_val("pv.capacity_factor", units="unitless")
+    n_sim_years = (n_timesteps + 8759) // 8760
+
+    with subtests.test("electricity_out length matches horizon"):
+        assert gen.size == n_timesteps
+    with subtests.test("some generation is produced"):
+        assert np.any(gen > 0)
+    with subtests.test("annual production is positive"):
+        assert np.all(annual > 0)
+    with subtests.test("annual production reconstructs the simulated energy"):
+        if n_sim_years == 1:
+            # sub-annual: the single simulated year is annualized to a full-year equivalent
+            fraction_of_year = n_timesteps * 3600 / 31_536_000
+            assert annual[0] == pytest.approx(total / fraction_of_year, rel=1e-9)
+        else:
+            # whole-year multi-year: the simulated years' annual energies sum to the total
+            assert annual[:n_sim_years].sum() == pytest.approx(total, rel=1e-9)
+    with subtests.test("capacity factor >= 0"):
+        assert np.all(capacity_factor >= 0)
+    with subtests.test("capacity factor <= 1"):
+        assert np.all(capacity_factor <= 1)
