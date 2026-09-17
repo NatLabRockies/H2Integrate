@@ -8,7 +8,7 @@ import yaml
 import numpy as np
 import pytest
 
-import h2integrate.core.h2integrate_model as h2i_model_module
+import h2integrate.core.utilities as utilities_module
 from h2integrate import (
     ROOT_DIR,
     EXAMPLE_DIR,
@@ -17,10 +17,14 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
+from h2integrate.core.utilities import create_xdsm
 from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_control_classifier,
     check_dispatch_connections,
     validate_technology_interconnections,
 )
+from h2integrate.core.connection_utils import create_technology_graph
 
 
 @pytest.mark.integration
@@ -282,9 +286,7 @@ def _make_fake_model(interconnections, classifiers):
     """
     fake = types.SimpleNamespace()
     fake.plant_config = {"technology_interconnections": interconnections}
-    # create_technology_graph does not access any other attribute of self,
-    # so passing the stub as ``self`` is safe.
-    fake.technology_graph = H2IntegrateModel.create_technology_graph(fake, interconnections)
+    fake.technology_graph = create_technology_graph(interconnections)
     fake.tech_control_classifiers = classifiers
     return fake
 
@@ -854,10 +856,7 @@ def test_check_time_step_with_model_bounds_allows_supported_dt():
     class DummyModel:
         _time_step_bounds = (900, 3600)
 
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
-
-    model._check_time_step("DummyModel", DummyModel)
+    check_model_time_step("DummyModel", DummyModel, 1800)
 
 
 @pytest.mark.unit
@@ -868,9 +867,6 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
             3600,
         )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 7200}}}
-
     with pytest.raises(
         ValueError,
         match=(
@@ -878,7 +874,26 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
             r"900 \(s\) and 3600 \(s\), but a time step of 7200 \(s\) was specified"
         ),
     ):
-        model._check_time_step("DummyModel", DummyModel)
+        check_model_time_step("DummyModel", DummyModel, 7200)
+
+
+@pytest.mark.unit
+def test_check_control_classifier_only_requires_classifier_for_slc():
+    class UnclassifiedModel:
+        pass
+
+    check_control_classifier("UnclassifiedModel", UnclassifiedModel, False)
+
+    with pytest.raises(ValueError, match="missing a control classifier"):
+        check_control_classifier("UnclassifiedModel", UnclassifiedModel, True)
+
+
+@pytest.mark.unit
+def test_check_control_classifier_accepts_classified_model():
+    class ClassifiedModel:
+        _control_classifier = "dispatchable"
+
+    check_control_classifier("ClassifiedModel", ClassifiedModel, True)
 
 
 @pytest.mark.unit
@@ -1327,11 +1342,9 @@ def test_no_sites_entry(temp_dir):
 @pytest.mark.unit
 def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
-        model.create_xdsm()
+    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+        create_xdsm(plant_config)
 
     mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
 
@@ -1339,12 +1352,10 @@ def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
 @pytest.mark.unit
 def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
     outfile = "my_custom_xdsm"
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
-        model.create_xdsm(outfile=outfile)
+    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+        create_xdsm(plant_config, outfile=outfile)
 
     mock_fn.assert_called_once_with(plant_config, output_file=outfile)
 
@@ -1352,12 +1363,10 @@ def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
 @pytest.mark.unit
 def test_create_xdsm_raises_when_no_interconnections():
     plant_config = {"technology_interconnections": []}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
         with pytest.raises(ValueError, match="requires technology interconnections"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
 
     mock_fn.assert_not_called()
 
@@ -1365,12 +1374,10 @@ def test_create_xdsm_raises_when_no_interconnections():
 @pytest.mark.unit
 def test_create_xdsm_raises_when_interconnections_key_missing():
     plant_config = {}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
         with pytest.raises(ValueError, match="requires technology interconnections"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
 
     mock_fn.assert_not_called()
 
@@ -1378,16 +1385,14 @@ def test_create_xdsm_raises_when_interconnections_key_missing():
 @pytest.mark.unit
 def test_create_xdsm_propagates_file_not_found_error():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
     with patch.object(
-        h2i_model_module,
+        utilities_module,
         "create_xdsm_from_config",
         side_effect=FileNotFoundError("latex not found"),
     ):
         with pytest.raises(FileNotFoundError, match="latex not found"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
 
 
 # ---------------------------------------------------------------------------
@@ -1435,7 +1440,7 @@ def _make_dispatch_fake_model(technologies, tech_to_dispatch_connections, interc
         "PyomoStorageController": _FakePyomoStorageController,
         "OpenLoopController": _FakeOpenLoopController,
     }
-    fake.technology_graph = H2IntegrateModel.create_technology_graph(fake, interconnections or [])
+    fake.technology_graph = create_technology_graph(interconnections or [])
     return fake
 
 

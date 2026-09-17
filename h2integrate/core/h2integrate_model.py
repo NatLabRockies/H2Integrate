@@ -1,19 +1,23 @@
 import importlib.util
 from enum import IntEnum
 
-import numpy as np
 import networkx as nx
 import openmdao.api as om
 
-from h2integrate.core.utilities import create_xdsm_from_config
+from h2integrate.core.utilities import create_xdsm as create_xdsm_utility
 from h2integrate.core.dict_utils import check_inputs
-from h2integrate.core.file_utils import get_path, find_file, load_yaml
+from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
 from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_control_classifier,
     check_dispatch_connections,
     check_technology_connections,
     validate_technology_interconnections,
 )
-from h2integrate.core.connection_utils import split_indices_from_connected_parameter_definition
+from h2integrate.core.connection_utils import (
+    create_technology_graph,
+    split_indices_from_connected_parameter_definition,
+)
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
@@ -48,7 +52,7 @@ class H2IntegrateModel:
 
         # create technology connection graph based on technology interconnections
         # defined in plant config
-        self.technology_graph = self.create_technology_graph(
+        self.technology_graph = create_technology_graph(
             self.plant_config.get("technology_interconnections", {})
         )
 
@@ -106,35 +110,6 @@ class H2IntegrateModel:
         self.create_driver_model()
 
         self.state = State.INITIALIZED
-
-    def _load_component_config(self, config_key, config_value, config_path, validator_func):
-        """Helper method to load and validate a component configuration.
-
-        Args:
-            config_key (str): Key name for the configuration (e.g., "driver_config")
-            config_value (dict | str): Configuration value from main config
-            config_path (Path | None): Path to main config file (None if dict)
-            validator_func (callable): Validation function to apply
-
-        Returns:
-            tuple: (validated_config, config_file_path, parent_path)
-                - validated_config: Validated configuration dictionary
-                - config_file_path: Path to config file (None if dict)
-                - parent_path: Parent directory of config file (None if dict)
-        """
-        if isinstance(config_value, dict):
-            # Config provided as embedded dictionary
-            return validator_func(config_value), None, None
-        else:
-            # Config provided as filepath - resolve location
-            if config_path is None:
-                file_path = get_path(config_value)
-            else:
-                file_path = find_file(config_value, config_path.parent)
-
-            # Store parent directory for resolving custom model paths later
-            parent_path = file_path.parent
-            return validator_func(file_path), file_path, parent_path
 
     def load_config(self, config_input):
         """Load and validate configuration files for the H2I model.
@@ -213,20 +188,16 @@ class H2IntegrateModel:
             load_driver_yaml,
         )
 
-        self.driver_config, self.driver_config_path, _ = self._load_component_config(
-            "driver_config", config.get("driver_config"), config_path, load_driver_yaml
+        self.driver_config, self.driver_config_path, _ = load_component_config(
+            config.get("driver_config"), config_path, load_driver_yaml
         )
 
         self.technology_config, self.tech_config_path, self.tech_parent_path = (
-            self._load_component_config(
-                "technology_config", config.get("technology_config"), config_path, load_tech_yaml
-            )
+            load_component_config(config.get("technology_config"), config_path, load_tech_yaml)
         )
 
-        self.plant_config, self.plant_config_path, self.plant_parent_path = (
-            self._load_component_config(
-                "plant_config", config.get("plant_config"), config_path, load_plant_yaml
-            )
+        self.plant_config, self.plant_config_path, self.plant_parent_path = load_component_config(
+            config.get("plant_config"), config_path, load_plant_yaml
         )
 
         for name, vals in self.technology_config["technologies"].items():
@@ -597,7 +568,7 @@ class H2IntegrateModel:
             if connection[0] in upstream_controllable_techs
         ]
 
-        upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
+        upstream_tech_graph = create_technology_graph(upstream_interconnections)
         slc_topology["technology_graph"] = upstream_tech_graph
 
         # downselect the technology control classifiers to only include those upstream
@@ -941,7 +912,11 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
-                self._check_time_step(perf_model, comp)
+                check_model_time_step(
+                    perf_model,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
@@ -979,9 +954,13 @@ class H2IntegrateModel:
                         tech_config=individual_tech_config,
                     )
 
-                    self._check_control_classifier(perf_model, comp)
+                    check_control_classifier(perf_model, comp, self.slc)
                     self.tech_control_classifiers.update({tech_name: comp._control_classifier})
-                    self._check_time_step(perf_model, comp)
+                    check_model_time_step(
+                        perf_model,
+                        comp,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
@@ -1057,7 +1036,11 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
-                self._check_time_step(tech_name, comp)
+                check_model_time_step(
+                    tech_name,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
             1 for v in self.tech_control_classifiers.values() if v != "transport"
@@ -1079,7 +1062,11 @@ class H2IntegrateModel:
         model_name = individual_tech_config[model_type]["model"]
         model_object = self.supported_models[model_name]
 
-        self._check_time_step(model_name, model_object)
+        check_model_time_step(
+            model_name,
+            model_object,
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
 
         om_model_object = tech_group.add_subsystem(
             model_name,
@@ -1103,27 +1090,6 @@ class H2IntegrateModel:
             tech_group.linear_solver = om.DirectSolver()
 
         return om_model_object
-
-    def _check_time_step(self, model_name, model_object):
-        dt = int(self.plant_config["plant"]["simulation"]["dt"])
-
-        min_ts = model_object._time_step_bounds[0]
-        max_ts = model_object._time_step_bounds[1]
-        if dt < min_ts or dt > max_ts:
-            msg = (
-                f"Model {model_name} is compatible with time steps "
-                f"between {min_ts} (s) and {max_ts} (s), but a time step of {dt} (s) "
-                "was specified. Please set plant_config['plant']['simulation']['dt'] to a"
-                f" value within the range [{min_ts}, {max_ts}]."
-            )
-            raise ValueError(msg)
-
-    def _check_control_classifier(self, model_name, model_object):
-        if not self.slc:
-            return
-        if not hasattr(model_object, "_control_classifier"):
-            msg = f"Model {model_name} is missing a control classifier"
-            raise ValueError(msg)
 
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
@@ -1667,7 +1633,11 @@ class H2IntegrateModel:
                     )
 
                     # Add the connection component to the model
-                    self._check_time_step(transport_type, connection_component)
+                    check_model_time_step(
+                        transport_type,
+                        connection_component,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
                     self.plant.add_subsystem(connection_name, connection_component)
 
                     # Reorder the subsystems so transporters comes after their source technology
@@ -2048,7 +2018,7 @@ class H2IntegrateModel:
         if print_results:
             # Use custom summary printer instead of OpenMDAO's built-in printing so we can
             # suppress internal value printing and display only mean values.
-            self.print_results(self.prob.model, excludes=["*resource_data"])
+            print_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
             from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
@@ -2064,245 +2034,6 @@ class H2IntegrateModel:
                     plt.show()
         self.state = State.POST_PROCESS
 
-    @staticmethod
-    def print_results(model, includes=None, excludes=None, show_units=True):
-        """Print hierarchical inputs plus explicit/implicit outputs (means only) using Rich.
-
-        Order of rows preserves OpenMDAO's original ordering from list_inputs/list_outputs.
-        Group rows are emitted lazily the first time a variable within that path appears.
-        """
-
-        def _gather_outputs(explicit=True, implicit=False):
-            return model.list_outputs(
-                explicit=explicit,
-                implicit=implicit,
-                val=True,
-                prom_name=True,
-                units=show_units,
-                shape=True,
-                includes=includes,
-                excludes=excludes,
-                out_stream=None,
-                return_format="list",
-            )
-
-        explicit_meta = _gather_outputs(explicit=True, implicit=False)
-        implicit_meta = _gather_outputs(explicit=False, implicit=True)
-
-        # Gather inputs (no explicit/implicit split in OpenMDAO API)
-        input_meta = model.list_inputs(
-            val=True,
-            prom_name=True,
-            units=show_units,
-            shape=True,
-            includes=includes,
-            excludes=excludes,
-            out_stream=None,
-            return_format="list",
-        )
-
-        def _mean(val):
-            if isinstance(val, np.ndarray):
-                return "nan" if val.size == 0 else f"{np.mean(val)}"
-            if isinstance(val, int | float | np.number):
-                return f"{val}"
-            return "n/a"
-
-        from rich import box
-        from rich.table import Table
-        from rich.console import Console
-
-        console = Console()
-
-        def _emit_section(title, meta_list, kind_label="outputs"):
-            if not meta_list:
-                return
-            console.print(f"\n{len(meta_list)} {title.lower()} {kind_label}:")
-            table = Table(show_header=True, header_style="bold", box=box.MINIMAL, pad_edge=False)
-            table.add_column("Variable", overflow="fold")
-            table.add_column("Mean", justify="right")
-            if show_units:
-                table.add_column("Units")
-            table.add_column("Shape")
-            table.add_column("Promoted name", overflow="fold")
-
-            emitted_groups = set()
-            for abs_name, meta in meta_list:
-                parts = abs_name.split(".")
-                # emit group rows
-                for depth in range(len(parts) - 1):
-                    grp_path = ".".join(parts[: depth + 1])
-                    if grp_path not in emitted_groups:
-                        emitted_groups.add(grp_path)
-                        indent = "  " * depth
-                        grp_name = parts[depth]
-                        if show_units:
-                            table.add_row(f"{indent}{grp_name}", "", "", "", "")
-                        else:
-                            table.add_row(f"{indent}{grp_name}", "", "", "")
-                var = parts[-1]
-                indent = "  " * (len(parts) - 1)
-                mean_raw = _mean(meta.get("val"))
-                try:
-                    val = float(mean_raw)
-                    units_val_raw = meta.get("units")
-                    # Format as integer if units are 'year' or variable name is 'cost_year'
-                    if units_val_raw == "year" or var == "cost_year":
-                        mean_val = str(int(val))
-                    elif abs(val) >= 1e5:
-                        formatted = f"{val:,.2f}"
-                        mean_val = formatted.rstrip("0")
-                        if mean_val.endswith("."):
-                            mean_val = mean_val  # Keep e.g. "520." format
-                        else:
-                            mean_val = mean_val + "." if "." not in mean_val else mean_val
-                    else:
-                        formatted = f"{val:,.4f}"
-                        mean_val = formatted.rstrip("0")
-                        # Ensure we end with "." if all decimals were zeros
-                        if mean_val.endswith("."):
-                            pass  # Keep as e.g. "520." or "0."
-                        elif "." not in mean_val:
-                            mean_val = mean_val + "."
-                except (ValueError, TypeError):
-                    mean_val = str(mean_raw)
-                units_val = (
-                    "n/a"
-                    if (var == "cost_year" or meta.get("units") is None)
-                    else str(meta.get("units"))
-                    if show_units
-                    else ""
-                )
-                shape_meta = meta.get("shape", "")
-                if var == "cost_year":
-                    shape_str = "n/a"
-                elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
-                    shape_str = str(shape_meta[0])
-                else:
-                    shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
-                promoted = meta.get("prom_name", "")
-                if show_units:
-                    table.add_row(f"{indent}{var}", mean_val, units_val, shape_str, promoted)
-                else:
-                    table.add_row(f"{indent}{var}", mean_val, shape_str, promoted)
-            console.print(table)
-
-        # Emit sections (inside function scope)
-        _emit_section("Explicit", input_meta, kind_label="inputs")
-        _emit_section("Explicit", explicit_meta, kind_label="outputs")
-        _emit_section("Implicit", implicit_meta, kind_label="outputs")
-
-        # structured return
-        def _structured(meta_list):
-            return {
-                name: {
-                    "mean": _mean(meta.get("val")),
-                    **(
-                        {
-                            "units": (
-                                "n/a"
-                                if name.split(".")[-1] == "cost_year" or meta.get("units") is None
-                                else meta.get("units")
-                            )
-                        }
-                        if show_units
-                        else {}
-                    ),
-                    "shape": (
-                        "n/a"
-                        if name.split(".")[-1] == "cost_year"
-                        else meta.get("shape")[0]
-                        if isinstance(meta.get("shape"), tuple | list)
-                        and len(meta.get("shape")) > 0
-                        else ""
-                        if meta.get("shape") in (None, "", ())
-                        else meta.get("shape")
-                    ),
-                    "promoted_name": meta.get("prom_name"),
-                }
-                for name, meta in meta_list
-            }
-
-        return {
-            "inputs": _structured(input_meta),
-            "explicit_outputs": _structured(explicit_meta),
-            "implicit_outputs": _structured(implicit_meta),
-        }
-
     def create_xdsm(self, outfile="connections_xdsm"):
-        """Create an XDSM diagram from the plant technology interconnections.
-
-        This method reads ``technology_interconnections`` from ``self.plant_config``
-        and delegates diagram generation to
-        :func:`h2integrate.core.utilities.create_xdsm_from_config`.
-
-        Args:
-            outfile (str, optional): Base filename for the generated XDSM output.
-                The default is ``"connections_xdsm"``.
-
-        Raises:
-            ValueError: If ``technology_interconnections`` is empty or missing from
-                the plant configuration.
-        """
-
-        technology_interconnections = self.plant_config.get("technology_interconnections", [])
-
-        if len(technology_interconnections) > 0:
-            create_xdsm_from_config(self.plant_config, output_file=outfile)
-        else:
-            raise ValueError(
-                "Generating an XDSM diagram requires technology interconnections, "
-                "but none were found."
-            )
-
-    def create_technology_graph(self, tech_interconnections: list | set):
-        """Create a directed graph of the technology interconnections.
-
-        Builds a NetworkX directed graph where nodes represent technologies
-        and edges represent connections between them. If a connection includes
-        a commodity (length-4 entry), it is stored as an edge attribute.
-
-        Args:
-            tech_interconnections (list): list of technology interconnections
-
-        Returns:
-            nx.DiGraph: A directed graph with technologies as nodes and
-                interconnections as edges.
-        """
-        technology_graph = nx.DiGraph()
-
-        def _as_commodity_list(commodity):
-            """Coerce a commodity definition to a list."""
-            if commodity is None:
-                return []
-            if isinstance(commodity, str):
-                return [commodity]
-            return list(commodity)
-
-        for connection in tech_interconnections:
-            source = connection[0]
-            destination = connection[1]
-            if len(connection) == 4:
-                new_commodities = _as_commodity_list(connection[2])
-
-                # Commodity is defined in connection. Keep edge commodities
-                # as a list, even for a single commodity.
-                if technology_graph.has_edge(source, destination):
-                    connected_cmods = technology_graph.edges[source, destination].get("commodity")
-                    existing_commodities = _as_commodity_list(connected_cmods)
-                    merged_commodities = list(set(existing_commodities + new_commodities))
-                    technology_graph.add_edge(
-                        source,
-                        destination,
-                        commodity=merged_commodities,
-                    )
-                else:
-                    technology_graph.add_edge(
-                        source,
-                        destination,
-                        commodity=new_commodities,
-                    )
-            else:
-                technology_graph.add_edge(source, destination)
-
-        return technology_graph
+        """Create an XDSM diagram from the plant technology interconnections."""
+        create_xdsm_utility(self.plant_config, outfile=outfile)

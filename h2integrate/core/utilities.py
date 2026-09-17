@@ -68,6 +68,24 @@ def create_xdsm_from_config(config, output_file="connections_xdsm"):
     print(f"XDSM diagram written to {output_file}.pdf")
 
 
+def create_xdsm(plant_config, outfile="connections_xdsm"):
+    """Create an XDSM diagram from plant technology interconnections.
+
+    Args:
+        plant_config (dict): Plant configuration containing technology interconnections.
+        outfile (str): Base filename for the generated XDSM output.
+
+    Raises:
+        ValueError: If no technology interconnections are configured.
+    """
+    if not plant_config.get("technology_interconnections", []):
+        raise ValueError(
+            "Generating an XDSM diagram requires technology interconnections, "
+            "but none were found."
+        )
+    create_xdsm_from_config(plant_config, output_file=outfile)
+
+
 def merge_shared_inputs(config, input_type):
     """
     Merges two dictionaries from a configuration object and resolves potential conflicts.

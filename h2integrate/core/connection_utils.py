@@ -2,7 +2,51 @@
 
 import re
 
+import networkx as nx
 import openmdao.api as om
+
+
+def create_technology_graph(technology_interconnections):
+    """Create a directed graph from technology interconnection definitions.
+
+    Args:
+        technology_interconnections (list | set): Technology connection definitions.
+
+    Returns:
+        networkx.DiGraph: Directed graph with commodities stored on length-4 edges.
+    """
+    technology_graph = nx.DiGraph()
+
+    def _as_commodity_list(commodity):
+        if commodity is None:
+            return []
+        if isinstance(commodity, str):
+            return [commodity]
+        return list(commodity)
+
+    for connection in technology_interconnections:
+        source = connection[0]
+        destination = connection[1]
+        if len(connection) == 4:
+            new_commodities = _as_commodity_list(connection[2])
+            if technology_graph.has_edge(source, destination):
+                connected_commodities = technology_graph.edges[source, destination].get("commodity")
+                existing_commodities = _as_commodity_list(connected_commodities)
+                technology_graph.add_edge(
+                    source,
+                    destination,
+                    commodity=list(set(existing_commodities + new_commodities)),
+                )
+            else:
+                technology_graph.add_edge(
+                    source,
+                    destination,
+                    commodity=new_commodities,
+                )
+        else:
+            technology_graph.add_edge(source, destination)
+
+    return technology_graph
 
 
 def split_indices_from_connected_parameter_definition(connected_parameter):
