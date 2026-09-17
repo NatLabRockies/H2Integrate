@@ -182,12 +182,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.demand_input_name = f"{self.commodity}_demand"
 
         # Demand has to be set to the same value to prevent an error
-        demand_val = slc_topology.get("demand_profile", 10.0)
+        demand_val = slc_topology["demand_profile"]
         self.add_input(
             self.demand_input_name,
             val=demand_val,
             shape=self.n_timesteps,
-            # require_connection=True,
             units=self.commodity_rate_units,
             desc=f"Demand profile of {self.commodity}",
         )
