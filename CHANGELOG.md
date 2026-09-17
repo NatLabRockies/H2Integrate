@@ -35,6 +35,7 @@
   configuration dictionaries for defining objects once. [PR 869](https://github.com/NatLabRockies/H2Integrate/pull/869)
 - Fix bug where initial price in ProFAST NPV list was zero in the first year when installation time finished part way through a year. The key indicator of this bug was a non-zero NPV when run with a pre-determined LCOE. [PR 880](https://github.com/NatLabRockies/H2Integrate/pull/880)
 - Added inputs `dc_ac_ratio`, `tilt_angle` and `azimuth_angle` to `PYSAMSolarPlantPerformanceModel`. [PR #881](https://github.com/NatLabRockies/H2Integrate/pull/881)
+- Move dispatch, topology, commodity checks, and connection slice parsing out of `H2IntegrateModel` into focused utility functions. [PR TBD]
 
 ## 0.9 [August 10, 2026]
 

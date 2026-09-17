@@ -17,6 +17,10 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
+from h2integrate.core.model_checks import (
+    check_dispatch_connections,
+    validate_technology_interconnections,
+)
 
 
 @pytest.mark.integration
@@ -285,6 +289,14 @@ def _make_fake_model(interconnections, classifiers):
     return fake
 
 
+def _run_interconnection_validation(fake):
+    validate_technology_interconnections(
+        fake.plant_config["technology_interconnections"],
+        fake.technology_graph,
+        fake.tech_control_classifiers,
+    )
+
+
 @pytest.mark.unit
 def test_validate_interconnections_multi_commodity_storage(subtests):
     """Storage tech with two different-commodity inputs should be allowed.
@@ -305,7 +317,7 @@ def test_validate_interconnections_multi_commodity_storage(subtests):
     fake = _make_fake_model(interconnections, classifiers)
 
     with subtests.test("two-commodity storage passes validation"):
-        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+        _run_interconnection_validation(fake)  # must not raise
 
     # Same commodity (hydrogen) from two different sources into storage must fail.
     bad_interconnections = [
@@ -316,7 +328,7 @@ def test_validate_interconnections_multi_commodity_storage(subtests):
 
     with subtests.test("duplicate hydrogen sources into storage raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(bad)
+            _run_interconnection_validation(bad)
         err = str(excinfo.value)
         assert "storage" in err
         assert "but should receive it from at most 1." in err
@@ -341,7 +353,7 @@ def test_validate_interconnections_multi_in_multi_out_converter(subtests):
     fake = _make_fake_model(interconnections, classifiers)
 
     with subtests.test("two-in two-out converter passes validation"):
-        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+        _run_interconnection_validation(fake)  # must not raise
 
     # Same commodity to two destinations without a splitter must fail.
     bad_interconnections = [
@@ -354,7 +366,7 @@ def test_validate_interconnections_multi_in_multi_out_converter(subtests):
 
     with subtests.test("same output commodity to two destinations raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(bad)
+            _run_interconnection_validation(bad)
         err = str(excinfo.value)
         assert "converter" in err
         assert "Consider using a splitter component." in err
@@ -370,7 +382,7 @@ def test_validate_interconnections_multi_in_multi_out_converter(subtests):
 
     with subtests.test("same input commodity from two sources raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(bad_in)
+            _run_interconnection_validation(bad_in)
         err = str(excinfo.value)
         assert "converter" in err
         assert "Consider using a combiner component." in err
@@ -405,7 +417,7 @@ def test_validate_interconnections_splitter_combiner_exempt(subtests):
     fake = _make_fake_model(interconnections, classifiers)
 
     with subtests.test("splitter and combiner exempt from max-1 checks"):
-        H2IntegrateModel._validate_technology_interconnections(fake)  # must not raise
+        _run_interconnection_validation(fake)  # must not raise
 
 
 @pytest.mark.unit
@@ -420,7 +432,7 @@ def test_validate_interconnections_storage_no_inputs_raises(subtests):
 
     with subtests.test("storage with no inputs raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake)
+            _run_interconnection_validation(fake)
         err = str(excinfo.value)
         assert "storage" in err
         assert "has no input connections in" in err
@@ -438,7 +450,7 @@ def test_validate_interconnections_length3_commodity_pair_raises(subtests):
 
     with subtests.test("length-3 _out/_in pair raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake)
+            _run_interconnection_validation(fake)
         err = str(excinfo.value)
         assert "electricity" in err
         assert "Use a length-4 connection instead" in err
@@ -456,7 +468,7 @@ def test_validate_interconnections_length3_commodity_pair_with_slices_raises(sub
 
     with subtests.test("length-3 _out/_in pair with slices raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake)
+            _run_interconnection_validation(fake)
         err = str(excinfo.value)
         assert "electricity" in err
         assert "Use a length-4 connection instead" in err
@@ -488,7 +500,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     fake_valid = _make_fake_model(interconnections_valid, classifiers_valid)
 
     with subtests.test("source to real consumer + demand reporter passes validation"):
-        H2IntegrateModel._validate_technology_interconnections(fake_valid)  # must not raise
+        _run_interconnection_validation(fake_valid)  # must not raise
 
     # Demand can pass UNUSED commodity to storage while the source also serves a
     # real consumer directly. This should be allowed and mirrors the pattern:
@@ -511,7 +523,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     )
 
     with subtests.test("source direct consumer plus demand unused_out->storage passes"):
-        H2IntegrateModel._validate_technology_interconnections(fake_storage_passthrough)
+        _run_interconnection_validation(fake_storage_passthrough)
 
     # Two real (non-demand) consumers of the same commodity from one source must still fail.
     interconnections_bad = [
@@ -527,7 +539,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
 
     with subtests.test("source to two real consumers still raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake_bad)
+            _run_interconnection_validation(fake_bad)
         err = str(excinfo.value)
         assert "wind" in err
         assert "Consider using a splitter component." in err
@@ -548,7 +560,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     )
 
     with subtests.test("demand component acting as pass-through to real consumer passes"):
-        H2IntegrateModel._validate_technology_interconnections(fake_passthrough)  # must not raise
+        _run_interconnection_validation(fake_passthrough)  # must not raise
 
     # Double-counting: wind sends electricity to electrolyzer directly AND through a
     # demand component to grid_sell. The same electricity is counted in both paths.
@@ -567,7 +579,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
 
     with subtests.test("source to direct real consumer AND outputting demand raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake_double_count)
+            _run_interconnection_validation(fake_double_count)
         err = str(excinfo.value)
         assert "wind" in err
         assert "double-count" in err
@@ -588,7 +600,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
     fake_daisy_valid = _make_fake_model(interconnections_daisy_valid, classifiers_daisy_valid)
 
     with subtests.test("daisy-chained demand components as sole path to real consumer passes"):
-        H2IntegrateModel._validate_technology_interconnections(fake_daisy_valid)  # must not raise
+        _run_interconnection_validation(fake_daisy_valid)  # must not raise
 
     # Same daisy-chain but wind also has a direct real consumer - should fail.
     interconnections_daisy_double = [
@@ -608,7 +620,7 @@ def test_validate_interconnections_demand_component_not_counted_as_destination(s
 
     with subtests.test("daisy-chained demand with competing direct path raises error"):
         with pytest.raises(ValueError) as excinfo:
-            H2IntegrateModel._validate_technology_interconnections(fake_daisy_double)
+            _run_interconnection_validation(fake_daisy_double)
         err = str(excinfo.value)
         assert "wind" in err
         assert "double-count" in err
@@ -1427,6 +1439,15 @@ def _make_dispatch_fake_model(technologies, tech_to_dispatch_connections, interc
     return fake
 
 
+def _run_dispatch_connection_check(fake):
+    check_dispatch_connections(
+        fake.technology_config,
+        fake.plant_config.get("tech_to_dispatch_connections"),
+        fake.supported_models,
+        fake.technology_graph,
+    )
+
+
 @pytest.mark.unit
 def test_check_dispatch_connections_valid_heuristic_style_passes():
     """combiner (dispatch_rule_set) -> battery (dispatch_rule_set + Pyomo controller),
@@ -1444,7 +1465,7 @@ def test_check_dispatch_connections_valid_heuristic_style_passes():
         [["combiner", "battery"], ["battery", "battery"]],
         interconnections,
     )
-    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+    _run_dispatch_connection_check(fake)  # must not raise
 
 
 @pytest.mark.unit
@@ -1459,7 +1480,7 @@ def test_check_dispatch_connections_valid_standalone_pyomo_controller_passes():
         technologies,
         [["feedstock", "battery"], ["battery", "battery"]],
     )
-    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+    _run_dispatch_connection_check(fake)  # must not raise
 
 
 @pytest.mark.unit
@@ -1467,7 +1488,7 @@ def test_check_dispatch_connections_no_op_when_key_absent():
     """No `tech_to_dispatch_connections` and no `dispatch_rule_set` should be a no-op."""
     technologies = {"wind": {"performance_model": {"model": "SomeWindModel"}}}
     fake = _make_dispatch_fake_model(technologies, None)
-    H2IntegrateModel._check_dispatch_connections(fake)  # must not raise
+    _run_dispatch_connection_check(fake)  # must not raise
 
 
 @pytest.mark.unit
@@ -1485,7 +1506,7 @@ def test_check_dispatch_connections_extraneous_raises():
         interconnections,
     )
     with pytest.raises(ValueError) as excinfo:
-        H2IntegrateModel._check_dispatch_connections(fake)
+        _run_dispatch_connection_check(fake)
     err = str(excinfo.value)
     assert "plant config references ['battery'], but this technology does not" in err
     assert "corresponding entries for ['battery'] from `tech_to_dispatch_connections`" in err
@@ -1509,7 +1530,7 @@ def test_check_dispatch_connections_missing_raises():
         interconnections,
     )
     with pytest.raises(ValueError) as excinfo:
-        H2IntegrateModel._check_dispatch_connections(fake)
+        _run_dispatch_connection_check(fake)
     err = str(excinfo.value)
     assert "Technology ['combiner'] declare a `dispatch_rule_set` but" in err
     assert "(at least): [['combiner', 'battery']]." in err
@@ -1533,7 +1554,7 @@ def test_check_dispatch_connections_missing_key_entirely_raises():
     ]
     fake = _make_dispatch_fake_model(technologies, None, interconnections)
     with pytest.raises(ValueError) as excinfo:
-        H2IntegrateModel._check_dispatch_connections(fake)
+        _run_dispatch_connection_check(fake)
     err = str(excinfo.value)
     assert "Technologies ['battery', 'combiner', 'wave'] declare a `dispatch_rule_set` but" in err
     assert (

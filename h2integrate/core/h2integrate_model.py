@@ -1,4 +1,3 @@
-import re
 import importlib.util
 from enum import IntEnum
 
@@ -9,6 +8,12 @@ import openmdao.api as om
 from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml
+from h2integrate.core.model_checks import (
+    check_dispatch_connections,
+    check_technology_connections,
+    validate_technology_interconnections,
+)
+from h2integrate.core.connection_utils import split_indices_from_connected_parameter_definition
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
@@ -77,7 +82,12 @@ class H2IntegrateModel:
 
         # validate `tech_to_dispatch_connections` against `dispatch_rule_set`/
         # `control_strategy` declarations before building any further OpenMDAO connections
-        self._check_dispatch_connections()
+        check_dispatch_connections(
+            self.technology_config,
+            self.plant_config.get("tech_to_dispatch_connections"),
+            self.supported_models,
+            self.technology_graph,
+        )
 
         self.create_finance_model()
 
@@ -1115,145 +1125,6 @@ class H2IntegrateModel:
             msg = f"Model {model_name} is missing a control classifier"
             raise ValueError(msg)
 
-    def _check_dispatch_connections(self):
-        """Validate ``tech_to_dispatch_connections`` against the ``dispatch_rule_set``/
-        ``control_strategy`` declarations in the technology config.
-
-        Storage performance models and Pyomo storage controllers (subclasses of
-        ``PyomoStorageControllerBaseClass``) infer feedback-control behavior purely from
-        the *presence* of ``tech_to_dispatch_connections`` in the plant config, without
-        checking whether it is still consistent with the technology config. A common
-        source of hard-to-debug errors is leaving ``tech_to_dispatch_connections`` in
-        the plant config after switching a storage technology (and the technology feeding
-        it) from a Pyomo-based dispatch controller to an open-loop controller. This method
-        catches that mismatch early, before any OpenMDAO components are built.
-
-        Two checks are performed:
-
-        1. Extraneous connections: every technology named as the "dispatching"
-           technology (the second entry of each ``[tech_name, dispatching_tech_name]``
-           pair) must declare a ``dispatch_rule_set`` or use a ``control_strategy`` that
-           subclasses ``PyomoStorageControllerBaseClass``. Otherwise
-           ``tech_to_dispatch_connections`` is stale.
-        2. Missing connections: every technology that declares a ``dispatch_rule_set``
-           must appear in ``tech_to_dispatch_connections`` paired with the downstream
-           technology it feeds (inferred from ``technology_interconnections``).
-
-        Raises:
-            ValueError: If either check fails.
-        """
-        from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
-            PyomoStorageControllerBaseClass,
-        )
-
-        technologies = self.technology_config.get("technologies", {})
-        dispatch_connections = self.plant_config.get("tech_to_dispatch_connections") or []
-        invalid_connections = [
-            connection for connection in dispatch_connections if len(connection) != 2
-        ]
-        if invalid_connections:
-            raise ValueError(
-                "Invalid tech to dispatching_tech_name connection(s): "
-                f"{invalid_connections}. Each connection must contain exactly two technology names."
-            )
-
-        def _has_pyomo_storage_controller(tech_name):
-            """
-            True only when the configured controller is registered and subclasses the Pyomo base.
-            """
-            control_model_name = (
-                technologies.get(tech_name, {}).get("control_strategy", {}).get("model")
-            )
-            if control_model_name is None:
-                return False
-            control_cls = self.supported_models.get(control_model_name)
-            return control_cls is not None and issubclass(
-                control_cls, PyomoStorageControllerBaseClass
-            )
-
-        def _is_dispatch_controlled(tech_name):
-            """
-            True when the technology declares dispatch rules or a Pyomo storage controller.
-            """
-            return "dispatch_rule_set" in technologies.get(
-                tech_name, {}
-            ) or _has_pyomo_storage_controller(tech_name)
-
-        # --- Check 1: extraneous connections -------------------------------
-        if dispatch_connections:
-            invalid_dispatching_techs = sorted(
-                {
-                    connection[1]
-                    for connection in dispatch_connections
-                    if not _is_dispatch_controlled(connection[1])
-                }
-            )
-            if invalid_dispatching_techs:
-                plural = len(invalid_dispatching_techs) > 1
-                msg = (
-                    "`tech_to_dispatch_connections` in the plant config references "
-                    f"{invalid_dispatching_techs}, but "
-                    f"{'these technologies do' if plural else 'this technology does'} not "
-                    "declare a `dispatch_rule_set` or use a `control_strategy` that subclasses "
-                    "`PyomoStorageControllerBaseClass`. This usually happens after switching a "
-                    "storage technology to an open-loop controller without removing the "
-                    f"corresponding entries for {invalid_dispatching_techs} from "
-                    "`tech_to_dispatch_connections` in the plant config."
-                )
-                raise ValueError(msg)
-
-        # --- Check 2: missing/incorrect connections -------------------------
-        dispatch_rule_techs = sorted(
-            tech_name
-            for tech_name, tech_info in technologies.items()
-            if "dispatch_rule_set" in tech_info
-        )
-        if not dispatch_rule_techs:
-            return
-
-        existing_pairs = {(connection[0], connection[1]) for connection in dispatch_connections}
-
-        missing_techs = []
-        required_pairs_by_tech = {}
-        for tech_name in dispatch_rule_techs:
-            if _has_pyomo_storage_controller(tech_name):
-                # This technology is itself the one being dispatched (e.g. a storage
-                # tech with a Pyomo control strategy); it is registered via a self-loop.
-                required_pairs = {(tech_name, tech_name)}
-            else:
-                successors = (
-                    self.technology_graph.successors(tech_name)
-                    if tech_name in self.technology_graph
-                    else []
-                )
-                required_pairs = {
-                    (tech_name, successor)
-                    for successor in successors
-                    if _is_dispatch_controlled(successor)
-                }
-            required_pairs_by_tech[tech_name] = required_pairs
-            if not required_pairs or not required_pairs.intersection(existing_pairs):
-                missing_techs.append(tech_name)
-
-        if missing_techs:
-            plural = len(missing_techs) > 1
-            expected_connections = sorted(
-                list(pair)
-                for tech_name in missing_techs
-                for pair in required_pairs_by_tech[tech_name]
-            )
-            msg = (
-                f"Technolog{'ies' if plural else 'y'} {missing_techs} declare a "
-                "`dispatch_rule_set` but "
-                f"{'are' if plural else 'is'} missing from (or incorrectly listed in) "
-                "`tech_to_dispatch_connections` in the plant config. Based on "
-                "`technology_interconnections`, `tech_to_dispatch_connections` should include "
-                f"(at least): {expected_connections}. If a `dispatch_rule_set` is no longer "
-                "needed (e.g. after switching a storage technology to an open-loop controller), "
-                "remove it instead of adding a connection."
-            )
-            raise ValueError(msg)
-
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
 
@@ -1867,7 +1738,7 @@ class H2IntegrateModel:
                 # initialize src_indices to allow connections between different shaped variables
                 if isinstance(connected_parameter, list):
                     connected_parameter, src_indices = (
-                        self._split_indices_from_connected_parameter_definition(connected_parameter)
+                        split_indices_from_connected_parameter_definition(connected_parameter)
                     )
 
                 # connect directly from source to dest
@@ -2130,8 +2001,17 @@ class H2IntegrateModel:
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
-        self._validate_technology_interconnections()
-        self._check_tech_connections()
+        validate_technology_interconnections(
+            self.plant_config.get("technology_interconnections", []),
+            self.technology_graph,
+            self.tech_control_classifiers,
+        )
+        check_technology_connections(
+            self.prob,
+            self.technology_config,
+            self.technology_graph,
+            self.plant_config_path,
+        )
 
     def run(self):
         # do model setup based on the driver config
@@ -2426,402 +2306,3 @@ class H2IntegrateModel:
                 technology_graph.add_edge(source, destination)
 
         return technology_graph
-
-    def _validate_technology_interconnections(self):
-        """Validate technology interconnections for common errors and discouraged patterns.
-
-        Performs the following checks:
-
-        1. Length-3 connections that pass a commodity via a ``[commodity_out, commodity_in]``
-           pair should instead use a length-4 connection with an explicit commodity name and
-           transport component. An error is raised when source and destination parameter names
-           differ only by their ``_out`` / ``_in`` suffix (i.e. the commodity could be inferred).
-
-        2. Storage technology topology: each storage technology must have exactly 1 input
-           connection (length-4) and at most 1 output connection (length-4). The technology
-           directly upstream of the storage component is allowed at most 2 output connections
-           (one to the storage tech and one to a combiner).
-
-        3. For all other technologies connected via length-4 connections (excluding splitters,
-           combiners, storage technologies, and direct predecessors of storage technologies),
-           each individual commodity may arrive from at most 1 source and be sent to at most
-           1 destination. Technologies with multiple inputs or outputs are fine as long as
-           each commodity comes from a single source and goes to a single destination
-           (e.g. an ammonia plant receiving hydrogen, nitrogen, and electricity from three
-           separate technologies is perfectly valid).
-
-        Raises:
-            ValueError: If any interconnection violates the topology rules.
-        """
-        technology_interconnections = self.plant_config.get("technology_interconnections", [])
-
-        # --- Check 1: discouraged length-3 [commodity_out, commodity_in] connections ---
-        for connection in technology_interconnections:
-            if len(connection) != 3:
-                continue
-            connected_parameter = connection[2]
-            if not isinstance(connected_parameter, list | tuple) or len(connected_parameter) != 2:
-                continue
-            source_param, dest_param = connected_parameter
-            if not isinstance(source_param, str) or not isinstance(dest_param, str):
-                continue
-            source_param_base = source_param.split("[", 1)[0]
-            dest_param_base = dest_param.split("[", 1)[0]
-            if source_param_base.endswith("_out") and dest_param_base.endswith("_in"):
-                commodity_from_source = source_param_base[: -len("_out")]
-                commodity_from_dest = dest_param_base[: -len("_in")]
-                if commodity_from_source == commodity_from_dest:
-                    source_tech, dest_tech = connection[0], connection[1]
-                    raise ValueError(
-                        f"Connection [{source_tech!r}, {dest_tech!r}, "
-                        f"[{source_param!r}, {dest_param!r}]] passes commodity "
-                        f"{commodity_from_source!r} between technologies using a "
-                        f"length-3 format. Use a length-4 connection instead: "
-                        f"[{source_tech!r}, {dest_tech!r}, {commodity_from_source!r}, "
-                        f"'<transport_tech>']. You can use "
-                        f"'GenericTransporterPerformanceModel' to transport "
-                        f"{commodity_from_source!r}."
-                    )
-
-        # --- Checks 2 and 3: topology checks using the technology graph ---
-        # Build edge-count degree maps (L4 only) for the storage topology check,
-        # and per-commodity source/destination maps for the general stream check.
-        in_degs_l4: dict[str, int] = {}
-        out_degs_l4: dict[str, int] = {}
-        # in_commodity_sources[tech][commodity] = number of distinct sources
-        in_commodity_sources: dict[str, dict[str, int]] = {}
-        # out_commodity_dests[tech][commodity] = number of distinct destinations
-        out_commodity_dests: dict[str, dict[str, int]] = {}
-
-        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if not commodity:
-                continue  # length-3 connections carry no commodity; skip them
-            out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
-            in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
-            dest_classifier = self.tech_control_classifiers.get(dest)
-            for c in commodity:
-                in_commodity_sources.setdefault(dest, {}).update(
-                    {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
-                )
-                # Demand-classified techs are observers/sinks (they report on a commodity
-                # stream but do not consume it in a topology sense). Exclude them from the
-                # source's output-destination count so that a source may simultaneously
-                # feed a real consumer and a reporting/demand component without triggering
-                # the multi-destination error in Check 3.
-                if dest_classifier != "demand":
-                    current = out_commodity_dests.setdefault(source, {})
-                    current[c] = current.get(c, 0) + 1
-
-        # --- Check 2: storage technology topology ---
-        storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
-        storage_upstream_techs: set[str] = set()
-        for storage_tech in storage_techs:
-            n_in = in_degs_l4.get(storage_tech, 0)
-            if n_in == 0:
-                raise ValueError(
-                    f"Storage technology {storage_tech!r} has no input connections in "
-                    f"the technology graph but should have at least 1."
-                )
-            # Per-commodity check: each commodity must arrive from exactly 1 source.
-            # A storage tech may accept multiple different commodities (e.g. electricity
-            # and hydrogen) from different upstream technologies; that is fine as long as
-            # no single commodity is supplied by more than one source.
-            for commodity, n_sources in in_commodity_sources.get(storage_tech, {}).items():
-                if n_sources > 1:
-                    raise ValueError(
-                        f"Storage technology {storage_tech!r} receives commodity "
-                        f"{commodity!r} from {n_sources} sources in the technology graph "
-                        f"but should receive it from at most 1."
-                    )
-            for commodity, n_out in out_commodity_dests.get(storage_tech, {}).items():
-                if n_out > 1:
-                    raise ValueError(
-                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) "
-                        f"for commodity {commodity!r} but should have at most 1."
-                    )
-            # Identify the upstream technology (connected via a length-4 edge)
-            upstream_techs_l4 = [
-                t
-                for t in self.technology_graph.predecessors(storage_tech)
-                if self.technology_graph.edges[t, storage_tech].get("commodity")
-            ]
-            for upstream_tech in upstream_techs_l4:
-                storage_upstream_techs.add(upstream_tech)
-                for commodity in self.technology_graph.edges[upstream_tech, storage_tech].get(
-                    "commodity"
-                ):
-                    n_out_upstream = out_commodity_dests.get(upstream_tech, {}).get(commodity, 0)
-                    if n_out_upstream > 2:
-                        raise ValueError(
-                            f"Technology {upstream_tech!r} feeds storage technology "
-                            f"{storage_tech!r} but has {n_out_upstream} output connection(s). "
-                            f"It should connect only to {storage_tech!r} and a combiner "
-                            f"(at most 2 output streams)."
-                        )
-
-        # --- Check 3: per-commodity max 1 source/destination for general technologies ---
-        # A technology may receive multiple different commodities from different sources
-        # (e.g. an ammonia plant accepting hydrogen, nitrogen, and electricity is valid),
-        # but each individual commodity must arrive from exactly 1 source and be sent to
-        # exactly 1 destination (unless the tech is a splitter, combiner, storage, or the
-        # direct upstream tech of a storage component, all of which have known exceptions).
-        all_techs_in_l4 = set(in_commodity_sources) | set(out_commodity_dests)
-        for tech in all_techs_in_l4:
-            classifier = self.tech_control_classifiers.get(tech)
-            if classifier in ("splitter", "combiner"):
-                continue
-            if classifier == "storage":
-                continue  # already validated in check 2
-
-            for commodity, n_sources in in_commodity_sources.get(tech, {}).items():
-                if n_sources > 1:
-                    raise ValueError(
-                        f"Technology {tech!r} receives commodity {commodity!r} from "
-                        f"{n_sources} sources in the technology graph but should receive "
-                        f"it from at most 1. Consider using a combiner component."
-                    )
-
-            if tech in storage_upstream_techs:
-                continue  # out-stream validation for storage upstream handled in check 2
-
-            for commodity, n_dests in out_commodity_dests.get(tech, {}).items():
-                if n_dests > 1:
-                    raise ValueError(
-                        f"Technology {tech!r} sends commodity {commodity!r} to "
-                        f"{n_dests} destinations in the technology graph but should "
-                        f"send it to at most 1. Consider using a splitter component."
-                    )
-
-        # --- Check 4: prevent commodity double-counting via demand components ---
-        # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). A demand component may also route
-        # unused commodity to storage (e.g. battery charging), which is allowed.
-        #
-        # However, if a source sends a commodity directly to a real consumer and also
-        # sends that commodity to a demand component that re-emits it to another real
-        # consumer, the flow can be double-counted and should fail.
-        #
-        # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
-        # Valid:   source -> demand_comp (pure observer)
-        #          source -> real_consumer
-        # Invalid: source -> real_consumer_A                (competing direct path)
-        #          source -> demand_comp -> real_consumer_B (and also via demand)
-        #
-        # The check is transitive across demand-component chains only.
-
-        def _demand_reaches_competing_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech reaches a non-storage real consumer.
-
-            Demand chains that terminate at storage are allowed and do not count
-            as competing direct-consumer paths for this check.
-            """
-            visited: set[str] = set()
-            stack = [demand_tech]
-            while stack:
-                node = stack.pop()
-                if node in visited:
-                    continue
-                visited.add(node)
-                for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
-                    if not c:
-                        continue
-                    d_classifier = self.tech_control_classifiers.get(d)
-                    if d_classifier == "demand":
-                        stack.append(d)
-                        continue
-                    if d_classifier == "storage":
-                        # Demand -> storage is explicitly allowed.
-                        continue
-                    return True
-            return False
-
-        # Build per-(source, commodity) destination lists from L4 edges.
-        source_commodity_dests: dict[tuple[str, str], list[str]] = {}
-        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if not commodity:
-                continue
-            for c in commodity:
-                source_commodity_dests.setdefault((source, c), []).append(dest)
-
-        for (source, commodity), dests in source_commodity_dests.items():
-            direct_real_dests = [
-                d for d in dests if self.tech_control_classifiers.get(d) != "demand"
-            ]
-            outputting_demand_dests = [
-                d
-                for d in dests
-                if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_competing_consumer(d)
-            ]
-            if direct_real_dests and outputting_demand_dests:
-                raise ValueError(
-                    f"Technology {source!r} sends commodity {commodity!r} both directly "
-                    f"to {direct_real_dests} and to demand component(s) "
-                    f"{outputting_demand_dests} that re-emit the commodity to real "
-                    f"consumers. This would double-count the commodity flow. Either route "
-                    f"all {commodity!r} from {source!r} through the demand component, or "
-                    f"connect the downstream consumers directly to {source!r} instead."
-                )
-
-    def _check_tech_connections(self):
-        """Check that commodity streams between technologies are valid.
-
-        Validates that each commodity in a length-4 technology interconnection
-        is output by the source technology and accepted as input by the
-        destination technology. Does not check length-3 connections or
-        missing input commodity streams.
-
-        Raises:
-            ValueError: If any commodity connection is invalid.
-        """
-        # Collect IO parameter names for each technology in the graph
-        tech_io = {}
-        for tech_name in self.technology_graph.nodes():
-            tech_info = self.technology_config["technologies"].get(tech_name, {})
-            io_params = set()
-
-            for model_type in [
-                "performance_model",
-                "finance_model",
-                "cost_model",
-                "control_strategy",
-            ]:
-                if not tech_info or model_type not in tech_info:
-                    continue
-
-                model_name = tech_info[model_type]["model"]
-
-                if model_name == "FeedstockPerformanceModel":
-                    group = getattr(self.prob.model.plant, f"{tech_name}_source")
-                else:
-                    group = getattr(self.prob.model.plant, tech_name)
-                    if "FeedstockCostModel" not in model_name:
-                        group = getattr(group, model_name, None)
-                        if group is None:
-                            continue
-
-                io_params.update([key.split(".")[-1] for key in group.get_io_metadata().keys()])
-
-            tech_io[tech_name] = io_params
-
-        def _has_commodity_param(params, commodity, direction):
-            """Check if the technology has the commodity parameter, either exact
-            or numbered (splitter/combiner)."""
-            return f"{commodity}_{direction}" in params or any(
-                re.fullmatch(rf"{commodity}_{direction}\d", p) for p in params
-            )
-
-        # Validate commodity connections
-        invalid_outputs = set()  # (tech, commodity) pairs where source lacks _out param
-        invalid_inputs = set()  # (tech, commodity) pairs where dest lacks _in param
-        for source, dest, commodities in self.technology_graph.edges(data="commodity"):
-            if commodities is None:
-                continue  # length-3 connections have no commodity to check
-
-            for commodity in commodities:
-                if not _has_commodity_param(tech_io[source], commodity, "out"):
-                    invalid_outputs.add((source, commodity))
-                if not _has_commodity_param(tech_io[dest], commodity, "in"):
-                    invalid_inputs.add((dest, commodity))
-
-        # Build a single error message grouping output and input issues separately
-        if invalid_outputs or invalid_inputs:
-            parts = []
-            if invalid_outputs:
-                items = ", ".join(f"`{tech}` -> `{comm}`" for tech, comm in sorted(invalid_outputs))
-                parts.append(
-                    f"The following technologies do not output their specified commodity: {items}."
-                )
-            if invalid_inputs:
-                items = ", ".join(f"`{tech}` <- `{comm}`" for tech, comm in sorted(invalid_inputs))
-                parts.append(
-                    f"The following technologies do not accept "
-                    f"their specified input commodity: {items}."
-                )
-            # Point user to the file that needs fixing
-            parts.append(f"Update `technology_interconnections` in {self.plant_config_path}.")
-            raise ValueError("\n".join(parts))
-
-    @staticmethod
-    def _split_indices_from_connected_parameter_definition(connected_parameter):
-        """Extract and parse slice indices from connected parameter definitions for OpenMDAO
-        connections.
-
-        This function processes parameter names containing slice patterns in square brackets
-        (e.g., "power[0:8760]") and generates OpenMDAO-compatible src_indices for connections
-        between variables of different shapes.
-
-        Args:
-            connected_parameter (list[str]): A two-element list containing:
-                - [0] source parameter name, optionally with pattern like "var[slice_spec]"
-                - [1] destination parameter name, optionally with pattern like "var[slice_spec]"
-
-                Example: ["power[0:8760]", "demand[:]"]
-
-        Returns:
-            tuple: A two-element tuple containing:
-                - connected_parameter (list[str]): The parameter names with slices removed
-                  (e.g., ["power", "demand"])
-                - src_indices: OpenMDAO slicer object for indexing source outputs to match
-                  destination input shapes. Returns om.slicer[slice] for indexing.
-
-        Note:
-            If the destination has a slice pattern, it must include the length ":N"
-            (e.g., "[0:N]"), the function extracts N as the destination length and
-            multiplies the source slice by this factor to create properly scaled indices.
-            The length is required because the length is not known in the OpenMDAO model
-            until prob.setup() has been called.
-        """
-        source_parameter, dest_parameter = connected_parameter
-
-        def _extract_slice(parameter):
-            """Return the contents inside the brackets (e.g. '0:8760'), or None."""
-            match = re.search(r"\[(.*)\]", parameter)
-            return None if match is None else match.group(1)
-
-        def _to_indices(spec):
-            """Convert a bracket spec string into a slice or list of ints."""
-            if ":" in spec:
-                return slice(*(int(p) if p.strip() else None for p in spec.split(":")))
-            return [int(p) for p in spec.split(",")]
-
-        source_slice = _extract_slice(source_parameter)
-        dest_slice = _extract_slice(dest_parameter)
-
-        if source_slice == dest_slice:
-            src_indices = None
-        elif dest_slice is not None and source_slice is not None:
-            # Tile the source indices to fill the destination length to handle shape
-            # mismatches. Examples:
-            #   source="0",   dest_length=8760 -> [0] repeated 8760 times
-            #   source="0,1", dest_length=10   -> [0, 1] cycled to fill 10 slots
-            if dest_slice.split(":")[0] not in ("", "0"):
-                raise ValueError(
-                    "A non-zero start was provided for the slice for destination "
-                    f"parameter <{dest_parameter}>"
-                )
-            dest_length = int(dest_slice.split(":")[-1])
-
-            source_indices = _to_indices(source_slice)
-            if isinstance(source_indices, slice):
-                source_indices = list(
-                    range(
-                        source_indices.start or 0,
-                        source_indices.stop,
-                        source_indices.step or 1,
-                    )
-                )
-
-            # Repeat the source values enough times to cover the destination, then
-            # truncate so the result is exactly dest_length long. This cycles through
-            # the source values when the source is shorter than the destination.
-            n_repeats = -(-dest_length // len(source_indices))  # ceiling division
-            src_indices = om.slicer[(source_indices * n_repeats)[:dest_length]]
-        else:
-            # No destination slice pattern; use source slice pattern directly.
-            src_indices = None if source_slice is None else om.slicer[_to_indices(source_slice)]
-
-        # Remove the slice patterns from parameter names to get clean names.
-        connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
-
-        return connected_parameter, src_indices
