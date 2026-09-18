@@ -4,25 +4,24 @@ from enum import IntEnum
 import networkx as nx
 import openmdao.api as om
 
-from h2integrate.core.reporting import print_results as print_model_results
-from h2integrate.core.utilities import create_xdsm as create_xdsm_utility
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
-from h2integrate.core.model_checks import (
-    check_model_time_step,
-    check_control_classifier,
+from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.connection_utils import (
+    create_technology_graph,
     check_dispatch_connections,
     check_technology_connections,
     validate_technology_interconnections,
-)
-from h2integrate.core.connection_utils import (
-    create_technology_graph,
     split_indices_from_connected_parameter_definition,
 )
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
     no_replacement_schedule_models,
+)
+from h2integrate.postprocess.reporting import (
+    create_xdsm as create_xdsm_utility,
+    print_results as print_model_results,
 )
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
@@ -964,7 +963,7 @@ class H2IntegrateModel:
                         tech_config=individual_tech_config,
                     )
 
-                    check_control_classifier(perf_model, comp, self.slc)
+                    check_model_control_classifier(perf_model, comp, self.slc)
                     self.tech_control_classifiers.update({tech_name: comp._control_classifier})
                     check_model_time_step(
                         perf_model,

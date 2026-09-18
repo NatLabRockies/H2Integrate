@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from h2integrate.core.reporting import print_results
+from h2integrate.postprocess.reporting import print_results
 
 
 class _FakeModel:

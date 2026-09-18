@@ -8,7 +8,7 @@ import yaml
 import numpy as np
 import pytest
 
-import h2integrate.core.utilities as utilities_module
+import h2integrate.postprocess.reporting as reporting_module
 import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import (
     ROOT_DIR,
@@ -18,14 +18,13 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
-from h2integrate.core.utilities import create_xdsm
-from h2integrate.core.model_checks import (
-    check_model_time_step,
-    check_control_classifier,
+from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.connection_utils import (
+    create_technology_graph,
     check_dispatch_connections,
     validate_technology_interconnections,
 )
-from h2integrate.core.connection_utils import create_technology_graph
+from h2integrate.postprocess.reporting import create_xdsm
 
 
 @pytest.mark.integration
@@ -945,10 +944,10 @@ def test_check_control_classifier_only_requires_classifier_for_slc():
     class UnclassifiedModel:
         pass
 
-    check_control_classifier("UnclassifiedModel", UnclassifiedModel, False)
+    check_model_control_classifier("UnclassifiedModel", UnclassifiedModel, False)
 
     with pytest.raises(ValueError, match="missing a control classifier"):
-        check_control_classifier("UnclassifiedModel", UnclassifiedModel, True)
+        check_model_control_classifier("UnclassifiedModel", UnclassifiedModel, True)
 
 
 @pytest.mark.unit
@@ -956,7 +955,7 @@ def test_check_control_classifier_accepts_classified_model():
     class ClassifiedModel:
         _control_classifier = "dispatchable"
 
-    check_control_classifier("ClassifiedModel", ClassifiedModel, True)
+    check_model_control_classifier("ClassifiedModel", ClassifiedModel, True)
 
 
 @pytest.mark.unit
@@ -1406,7 +1405,7 @@ def test_no_sites_entry(temp_dir):
 def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
 
-    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
         create_xdsm(plant_config)
 
     mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
@@ -1417,7 +1416,7 @@ def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
     outfile = "my_custom_xdsm"
 
-    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
         create_xdsm(plant_config, outfile=outfile)
 
     mock_fn.assert_called_once_with(plant_config, output_file=outfile)
@@ -1427,7 +1426,7 @@ def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
 def test_create_xdsm_raises_when_no_interconnections():
     plant_config = {"technology_interconnections": []}
 
-    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
         with pytest.raises(ValueError, match="requires technology interconnections"):
             create_xdsm(plant_config)
 
@@ -1438,7 +1437,7 @@ def test_create_xdsm_raises_when_no_interconnections():
 def test_create_xdsm_raises_when_interconnections_key_missing():
     plant_config = {}
 
-    with patch.object(utilities_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
         with pytest.raises(ValueError, match="requires technology interconnections"):
             create_xdsm(plant_config)
 
@@ -1450,7 +1449,7 @@ def test_create_xdsm_propagates_file_not_found_error():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
 
     with patch.object(
-        utilities_module,
+        reporting_module,
         "create_xdsm_from_config",
         side_effect=FileNotFoundError("latex not found"),
     ):

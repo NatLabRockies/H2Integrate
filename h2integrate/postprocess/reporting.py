@@ -1,4 +1,6 @@
-"""Utilities for reporting OpenMDAO model results."""
+"""Reporting and diagram-generation utilities for completed H2Integrate models."""
+
+from collections import OrderedDict
 
 import numpy as np
 from rich import box
@@ -6,17 +8,34 @@ from rich.table import Table
 from rich.console import Console
 
 
+try:
+    from pyxdsm.XDSM import FUNC, XDSM
+except ImportError:
+    XDSM = None
+    FUNC = None
+
+
 def print_results(model, includes=None, excludes=None, show_units=True):
     """Print hierarchical OpenMDAO inputs and outputs using Rich.
 
+    This utility is intended for a model that has completed OpenMDAO setup. It
+    queries the model's listed variables, prints a compact hierarchical report,
+    and returns the same information in a structured dictionary for callers that
+    need to consume the results programmatically.
+
     Args:
-        model (openmdao.core.System): Model whose inputs and outputs are reported.
-        includes (str | list[str] | None): Patterns of variables to include.
-        excludes (str | list[str] | None): Patterns of variables to exclude.
-        show_units (bool): Whether to include units in the report.
+        model (openmdao.core.System): Set-up OpenMDAO model whose inputs and
+            outputs are reported.
+        includes (str | list[str] | None): OpenMDAO variable patterns to include.
+        excludes (str | list[str] | None): OpenMDAO variable patterns to exclude.
+        show_units (bool): Whether to include units in printed and returned
+            metadata.
 
     Returns:
-        dict: Structured input, explicit output, and implicit output summaries.
+        dict: Mapping with ``inputs``, ``explicit_outputs``, and
+            ``implicit_outputs`` entries. Each entry maps an absolute variable
+            name to its mean value, shape, promoted name, and, when requested,
+            units.
     """
 
     def _gather_outputs(explicit=True, implicit=False):
@@ -165,3 +184,70 @@ def print_results(model, includes=None, excludes=None, show_units=True):
         "explicit_outputs": _structured(explicit_meta),
         "implicit_outputs": _structured(implicit_meta),
     }
+
+
+def create_xdsm_from_config(config, output_file="connections_xdsm"):
+    """Create an XDSM diagram from plant technology interconnections.
+
+    Args:
+        config (dict): Plant configuration containing
+            ``technology_interconnections``.
+        output_file (str): Base filename for the generated XDSM output.
+
+    Returns:
+        None: The diagram is written to ``output_file`` by pyXDSM.
+
+    Raises:
+        ImportError: If pyXDSM is not installed.
+    """
+    if XDSM is None:
+        raise ImportError("pyXDSM is required to generate an XDSM diagram.")
+
+    x = XDSM(use_sfmath=True)
+    technologies = OrderedDict()
+    for connection in config["technology_interconnections"]:
+        technologies[connection[0]] = None
+        technologies[connection[1]] = None
+
+    for tech in technologies:
+        tech_label = tech.replace("_", r"\_")
+        x.add_system(tech, FUNC, rf"\text{{{tech_label}}}")
+
+    for connection in config["technology_interconnections"]:
+        if len(connection) == 3:
+            source, destination, data = connection
+        else:
+            source, destination, data, label = connection
+
+        if isinstance(data, list | tuple) and len(data) >= 2:
+            data = f"{data[0]} as {data[1]}"
+        connection_label = (
+            rf"\text{{{data}}}" if len(connection) == 3 else rf"\text{{{data} {'via'} {label}}}"
+        )
+        x.connect(source, destination, connection_label.replace("_", r"\_"))
+
+    x.write(output_file, quiet=True)
+    print(f"XDSM diagram written to {output_file}.pdf")
+
+
+def create_xdsm(plant_config, outfile="connections_xdsm"):
+    """Create an XDSM diagram from a plant configuration.
+
+    Args:
+        plant_config (dict): Plant configuration containing technology
+            interconnections.
+        outfile (str): Base filename for the generated XDSM output.
+
+    Returns:
+        None: The diagram is written to ``outfile`` by pyXDSM.
+
+    Raises:
+        ValueError: If no technology interconnections are configured.
+        ImportError: If pyXDSM is not installed.
+    """
+    if not plant_config.get("technology_interconnections", []):
+        raise ValueError(
+            "Generating an XDSM diagram requires technology interconnections, "
+            "but none were found."
+        )
+    create_xdsm_from_config(plant_config, output_file=outfile)
