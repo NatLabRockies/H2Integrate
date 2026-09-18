@@ -236,6 +236,48 @@ def _commodity_topology(technology_graph, classifiers):
     return in_degrees, inputs, outputs
 
 
+def _resolves_to_real_consumer(node, commodity, technology_graph, classifiers, visited):
+    """Follow a chain of demand-classified components to see if they lead to a real consumer."""
+    if classifiers.get(node) != "demand":
+        return True
+    if node in visited:
+        return False
+    visited.add(node)
+    for _, destination, commodities in technology_graph.out_edges(node, data="commodity"):
+        if commodity in (commodities or []) and _resolves_to_real_consumer(
+            destination, commodity, technology_graph, classifiers, visited
+        ):
+            return True
+    return False
+
+
+def _check_demand_double_count(tech, commodity, count, technology_graph, classifiers):
+    """Raise if a source double-counts a commodity via a direct path and a demand chain.
+
+    Demand-classified components are not counted as destinations by
+    :func:`_commodity_topology`, but a source that sends a commodity directly to a real
+    consumer *and* to a demand component whose chain also resolves to a real consumer is
+    effectively sending the commodity to two real consumers.
+    """
+    demand_destinations = {
+        destination
+        for _, destination, commodities in technology_graph.out_edges(tech, data="commodity")
+        if classifiers.get(destination) == "demand" and commodity in (commodities or [])
+    }
+    resolved_demand_paths = sum(
+        1
+        for destination in demand_destinations
+        if _resolves_to_real_consumer(destination, commodity, technology_graph, classifiers, {tech})
+    )
+    if count + resolved_demand_paths > 1:
+        raise ValueError(
+            f"Technology {tech!r} sends commodity {commodity!r} both directly to a real "
+            "consumer and through a demand-classified component whose chain also resolves "
+            "to a real consumer, which would double-count the commodity stream. Consider "
+            "using a splitter component or removing the redundant connection."
+        )
+
+
 def validate_technology_interconnections(
     technology_interconnections, technology_graph, tech_control_classifiers
 ):
@@ -256,7 +298,10 @@ def validate_technology_interconnections(
     """
     _check_legacy_commodity_connections(technology_interconnections)
     in_degrees, inputs, outputs = _commodity_topology(technology_graph, tech_control_classifiers)
-    storage_upstream = set()
+    # Maps a storage-upstream tech to the specific commodities it sends to storage; only
+    # those commodities are exempt from the per-tech output-multiplicity check below, so
+    # an unrelated commodity sent by the same tech is still validated normally.
+    storage_upstream_commodities = {}
     for tech, classifier in tech_control_classifiers.items():
         if classifier != "storage":
             continue
@@ -281,8 +326,8 @@ def validate_technology_interconnections(
             commodities = technology_graph.edges[upstream, tech].get("commodity")
             if not commodities:
                 continue
-            storage_upstream.add(upstream)
             for commodity in commodities:
+                storage_upstream_commodities.setdefault(upstream, set()).add(commodity)
                 count = outputs.get(upstream, {}).get(commodity, 0)
                 if count > 2:
                     raise ValueError(
@@ -291,10 +336,7 @@ def validate_technology_interconnections(
                         "a combiner (at most 2 output streams)."
                     )
     for tech in set(inputs) | set(outputs):
-        if (
-            tech_control_classifiers.get(tech) in ("splitter", "combiner", "storage")
-            or tech in storage_upstream
-        ):
+        if tech_control_classifiers.get(tech) in ("splitter", "combiner", "storage"):
             continue
         for commodity, count in inputs.get(tech, {}).items():
             if count > 1:
@@ -303,13 +345,19 @@ def validate_technology_interconnections(
                     "in the technology graph but should receive it from at most 1. Consider "
                     "using a combiner component."
                 )
+        exempt_commodities = storage_upstream_commodities.get(tech, set())
         for commodity, count in outputs.get(tech, {}).items():
+            if commodity in exempt_commodities:
+                continue
             if count > 1:
                 raise ValueError(
                     f"Technology {tech!r} sends commodity {commodity!r} to {count} destinations "
                     "in the technology graph but should send it to at most 1. Consider using "
                     "a splitter component."
                 )
+            _check_demand_double_count(
+                tech, commodity, count, technology_graph, tech_control_classifiers
+            )
 
 
 def _technology_io_parameters(prob, technology_config, technology_graph):
@@ -326,7 +374,7 @@ def _technology_io_parameters(prob, technology_config, technology_graph):
                 prob.model.plant,
                 f"{tech_name}_source" if model_name == "FeedstockPerformanceModel" else tech_name,
             )
-            if "FeedstockCostModel" not in model_name:
+            if model_name not in ("FeedstockCostModel", "FeedstockPerformanceModel"):
                 group = getattr(group, model_name, None)
                 if group is None:
                     continue
