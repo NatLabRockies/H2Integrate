@@ -45,6 +45,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
+        electricity_sold (array): Power sold to the grid (kW).
     """
 
     _time_step_bounds = (
@@ -98,8 +99,24 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             "electricity_sold",
             val=0.0,
             shape=self.n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_sell_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be bought from the grid",
         )
 
         self.add_output(
@@ -144,6 +161,10 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
+
+        (inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600))
+        outputs["electricity_sell_headroom"] = interconnection_size - electricity_sold
+        outputs["electricity_headroom"] = interconnection_size - electricity_bought
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
             self.dt / 3600

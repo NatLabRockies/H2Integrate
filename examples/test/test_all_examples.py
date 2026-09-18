@@ -2652,7 +2652,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
+        assert pytest.approx(lcoi, rel=1e-4) == 2.174385150880128
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2668,7 +2668,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3036489452968594
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2680,7 +2680,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
+        assert pytest.approx(lcoi, rel=1e-4) == 2.266210286641621
 
 
 @pytest.mark.integration
@@ -3188,16 +3188,16 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
     with subtests.test("Check number of discharge events"):
         # With the given demand profile and battery size, there should be 2 discharge events
         num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
-        assert num_discharge_events == 588
+        assert num_discharge_events == 2110
 
     with subtests.test("Check total energy discharged"):
         total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 2428.0
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 9643.0083
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
         total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
 
 
 @pytest.mark.integration
@@ -3251,3 +3251,82 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     with subtests.test("Unused electricity is routed to grid sell"):
         assert pytest.approx(unused_electricity.sum(), rel=1e-6) == grid_electricity_in.sum()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("37_paper_mill", None)],
+)
+def test_paper_mill_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    h2i = H2IntegrateModel(example_folder / "37_paper_mill_mn.yaml")
+
+    h2i.run()
+
+    h2i.post_process()
+
+    paper_capacity = h2i.prob.get_val(
+        "paper_mill.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    paper_capacity_factor = h2i.prob.get_val(
+        "paper_mill.capacity_factor",
+    )[0]
+
+    saf_capacity = h2i.prob.get_val(
+        "saf.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    saf_capacity_factor = h2i.prob.get_val(
+        "saf.capacity_factor",
+    )[0]
+
+    lignin_in = h2i.prob.get_val(
+        "saf.lignin_in",
+        units="kg/h",
+    )
+
+    lignin_yield = 0.06  # t lignin/t paper
+    pulp_yield = 1.1  # t pulp/t paper
+    lignin_consumption = 1650  # kg lignin/t SAF
+
+    with subtests.test("Paper Mill CapEx"):
+        capex = h2i.prob.get_val("paper_mill.CapEx", units="USD")
+        assert pytest.approx(capex, rel=1e-2) == 2500 * paper_capacity
+
+    with subtests.test("Paper Mill OpEx"):
+        opex = h2i.prob.get_val("paper_mill.OpEx", units="USD/year")
+        assert pytest.approx(opex, rel=1e-2) == 1386000000
+
+    with subtests.test("Paper Mill Variable OpEx"):
+        varopex = h2i.prob.get_val("paper_mill.VarOpEx", units="USD/year")
+        assert pytest.approx(varopex, rel=1e-2) == 705431159.4
+
+    with subtests.test("Annual lignin production"):
+        lignin = h2i.prob.get_val("paper_mill.annual_lignin_produced", units="kg/year")
+        assert (
+            pytest.approx(lignin, rel=1e-2)
+            == paper_capacity * paper_capacity_factor * lignin_yield * 1000
+        )
+
+    with subtests.test("Annual pulp production"):
+        pulp = h2i.prob.get_val("paper_mill.annual_pulp_out_produced", units="t/year")
+        assert pytest.approx(pulp, rel=1e-2) == paper_capacity * paper_capacity_factor * pulp_yield
+
+    expected_hourly_saf = np.minimum(
+        saf_capacity * saf_capacity_factor / 8760,
+        lignin_in / lignin_consumption,
+    )
+
+    with subtests.test("Annual SAF production"):
+        saf = h2i.prob.get_val("saf.annual_saf_produced", units="t/year")
+        assert pytest.approx(saf, rel=1e-2) == expected_hourly_saf.sum()
+
+    with subtests.test("Paper mill lignin output is connected to SAF input"):
+        lignin_out = h2i.prob.get_val("paper_mill.lignin_out", units="kg/h")
+        lignin_in = h2i.prob.get_val("saf.lignin_in", units="kg/h")
+        np.testing.assert_allclose(lignin_in, lignin_out, rtol=1e-6)

@@ -39,6 +39,8 @@ parts:
       - file: technology_models/co2.md
       - file: technology_models/methanol.md
       - file: technology_models/ammonia.md
+      - file: technology_models/paper_mill.md
+      - file: technology_models/saf.md
       - file: technology_models/ammonia_synloop_dynamics
       - file: technology_models/wind_plant_ard.md
       - file: technology_models/geologic_hydrogen.md
