@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import numpy as np
 from attrs import define
+from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.control.control_strategies.openloop_control_base import (
@@ -45,8 +46,8 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
+        1,  # 1 second
+        86400,  # 24 hours
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
@@ -81,6 +82,13 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
                 units=self.config.commodity_rate_units,
                 desc="Storage discharge rate",
             )
+
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        self.dt_amount = om_units.convert_units(
+            self.dt,
+            "s",
+            f"({self.config.commodity_amount_units})/({self.config.commodity_rate_units})",
+        )
 
     def compute(self, inputs, outputs):
         """
@@ -151,9 +159,12 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             # Get the input flow at the current time step
             input_flow = inputs[f"{commodity}_in"][t]
 
-            # Calculate the available charge/discharge capacity
-            available_charge = float((soc_max - soc) * max_capacity)
-            available_discharge = float((soc - soc_min) * max_capacity)
+            # Available headroom is naturally an amount. Convert it to a rate using the
+            # timestep width so it can be compared against the charge/discharge limits.
+            available_charge_amount = float((soc_max - soc) * max_capacity)
+            available_discharge_amount = float((soc - soc_min) * max_capacity)
+            available_charge_rate = available_charge_amount / self.dt_amount
+            available_discharge_rate = available_discharge_amount / self.dt_amount
 
             # Determine the output flow based on demand_t and SOC
             if demand_t > input_flow:
@@ -163,10 +174,12 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
                 # `discharge` is as seen by the storage, but `max_discharge_rate` is as observed
                 # outside the storage
                 discharge = min(
-                    discharge_needed, available_discharge, max_discharge_rate / discharge_eff
+                    discharge_needed,
+                    available_discharge_rate,
+                    max_discharge_rate / discharge_eff,
                 )
 
-                soc -= discharge / max_capacity  # soc is a ratio with value between 0 and 1
+                soc -= (discharge * self.dt_amount) / max_capacity
                 # output is as observed outside the storage, so we need to adjust `discharge` by
                 # applying `discharge_efficiency`.
                 combined_output_array[t] = input_flow + discharge * discharge_eff
@@ -180,9 +193,10 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
                 # seen outside the storage so we need to adjust `available_charge` outside the
                 # storage view and the final result back into the storage view.
                 charge = (
-                    min(unused_input, available_charge / charge_eff, max_charge_rate) * charge_eff
+                    min(unused_input, available_charge_rate / charge_eff, max_charge_rate)
+                    * charge_eff
                 )
-                soc += charge / max_capacity  # soc is a ratio with value between 0 and 1
+                soc += (charge * self.dt_amount) / max_capacity
                 combined_output_array[t] = demand_t
                 set_point_array[t] = -1 * charge / charge_eff
 

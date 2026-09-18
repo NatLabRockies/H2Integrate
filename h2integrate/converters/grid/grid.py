@@ -36,7 +36,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     different grid connection points (for example, one for buying upstream and
     another for selling downstream).
 
-    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+    This model is compatible with arbitrary positive time steps.
 
     Inputs
         interconnection_size (float): Maximum power capacity for grid connection (kW).
@@ -48,8 +48,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        300,
-        3600,
+        1,
+        np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "dispatchable"
 
@@ -209,13 +209,13 @@ class GridCostModel(CostModelBaseClass):
     - Revenue from electricity sales (sell mode)
     - Support for time-varying electricity prices
 
-    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+    This model is compatible with arbitrary positive time steps.
 
     """
 
     _time_step_bounds = (
-        300,
-        3600,
+        1,
+        np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
@@ -333,8 +333,8 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_out is already in kW*h/yr (shape=plant_life)
                 varopex += inputs["annual_electricity_out"] * buy_price
             else:
-                # Scalar or per-timestep: same cost each year
-                varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+                buy_cost_timeseries = (self.dt / 3600) * inputs["electricity_out"] * buy_price
+                varopex += self.calculate_annual_varopex(buy_cost_timeseries)
 
         # Add selling revenue if sell price is configured
         if self.config.electricity_sell_price is not None:
@@ -343,6 +343,7 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
                 varopex -= inputs["annual_electricity_sold"] * sell_price
             else:
-                varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+                sell_revenue_timeseries = (self.dt / 3600) * inputs["electricity_sold"] * sell_price
+                varopex -= self.calculate_annual_varopex(sell_revenue_timeseries)
 
         outputs["VarOpEx"] = varopex

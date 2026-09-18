@@ -47,7 +47,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
     _time_step_bounds = (
         1,
-        36000,
+        86400,
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "storage"
 

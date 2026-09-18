@@ -141,6 +141,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             command_value = self._inputs[command_value_key]
             outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
 
+    # TODO rewrite and reorganize this method
     def calculate_annual_cf_and_replacement_schedule(
         self,
         performance_timeseries,
@@ -466,6 +467,72 @@ class CostModelBaseClass(om.ExplicitComponent):
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
+
+    def calculate_annual_varopex(
+        self,
+        varopex_timeseries,
+        extrapolation_method="tile",
+        **kwargs,
+    ):
+        """Project annual variable OpEx across plant life from timestep-level costs.
+
+        Args:
+            varopex_timeseries (array-like): timestep-level variable cost values in
+                annual cost numerator units (for example USD per timestep after any
+                flow * price multiplication).
+            extrapolation_method (str): Extrapolation strategy after the simulated
+                horizon. Options are ``"tile"``, ``"final_sim_value"``, and
+                ``"average_sim_value"``.
+
+        Returns:
+            np.ndarray: annualized variable OpEx for each year of plant life.
+        """
+        varopex_timeseries = np.asarray(varopex_timeseries, dtype=float)
+        if varopex_timeseries.size == 0:
+            raise ValueError("varopex_timeseries must contain at least one value.")
+
+        valid_extrapolation_methods = ("tile", "final_sim_value", "average_sim_value")
+        if extrapolation_method not in valid_extrapolation_methods:
+            raise ValueError(
+                "extrapolation_method must be one of "
+                f"{valid_extrapolation_methods}; got {extrapolation_method!r}."
+            )
+
+        steps_per_year = max(1, round(31_536_000 / self.dt))
+        n_sim_years = math.ceil(varopex_timeseries.size / steps_per_year)
+        simulated_annual_varopex = np.zeros(n_sim_years)
+
+        for year in range(n_sim_years):
+            start = year * steps_per_year
+            end = min(start + steps_per_year, varopex_timeseries.size)
+            segment = varopex_timeseries[start:end]
+            segment_seconds = (end - start) * self.dt
+            if segment_seconds <= 0.0:
+                simulated_annual_varopex[year] = 0.0
+                continue
+
+            simulated_annual_varopex[year] = segment.sum() * (31_536_000 / segment_seconds)
+
+        if extrapolation_method == "tile":
+            n_tiles = math.ceil(self.plant_life / n_sim_years)
+            annual_varopex = np.tile(simulated_annual_varopex, n_tiles)[: self.plant_life]
+        elif extrapolation_method == "final_sim_value":
+            annual_varopex = np.array(
+                [
+                    simulated_annual_varopex[y] if y < n_sim_years else simulated_annual_varopex[-1]
+                    for y in range(self.plant_life)
+                ]
+            )
+        else:
+            simulated_average_varopex = float(np.mean(simulated_annual_varopex))
+            annual_varopex = np.array(
+                [
+                    simulated_annual_varopex[y] if y < n_sim_years else simulated_average_varopex
+                    for y in range(self.plant_life)
+                ]
+            )
+
+        return annual_varopex
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """

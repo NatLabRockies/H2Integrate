@@ -2,6 +2,7 @@ import attrs
 import numpy as np
 import openmdao.api as om
 from attrs import field, define, validators
+from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
@@ -519,7 +520,10 @@ class ProFastBase(om.ExplicitComponent):
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
 
-        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        plant_cfg = self.options["plant_config"]["plant"]
+        plant_life = int(plant_cfg["plant_life"])
+        self.dt = int(plant_cfg["simulation"]["dt"])
+        self.n_timesteps = int(plant_cfg["simulation"]["n_timesteps"])
 
         # Add rated capacity and capacity factor inputs
         self.add_input(
@@ -625,12 +629,30 @@ class ProFastBase(om.ExplicitComponent):
         profast_params["commodity"].update({"unit": self.commodity_amount_units})
 
         # calculate capacity and total production based on commodity type
-        capacity = inputs[f"rated_{self.options['commodity_type']}_production"][0] * 24
+        io_meta_data = self.get_io_metadata()
+        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
+            "units"
+        ]
+        day_amount_per_unit_rate = convert_units(
+            86_400,
+            "s",
+            f"({self.commodity_amount_units})/({rate_units_capacity})",
+        )
+        annual_amount_per_unit_rate = convert_units(
+            31_536_000,
+            "s",
+            f"({self.commodity_amount_units})/({rate_units_capacity})",
+        )
+
+        capacity = (
+            inputs[f"rated_{self.options['commodity_type']}_production"][0]
+            * day_amount_per_unit_rate
+        )
         utilization = dict(zip(years_of_operation, inputs["capacity_factor"]))
         total_production = (
             inputs["capacity_factor"]
             * inputs[f"rated_{self.options['commodity_type']}_production"]
-            * 8760
+            * annual_amount_per_unit_rate
         )
 
         # define profast parameters for capacity and utilization

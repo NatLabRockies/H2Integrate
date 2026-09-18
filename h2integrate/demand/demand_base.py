@@ -1,5 +1,6 @@
 import numpy as np
 from attrs import field, define
+from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
@@ -43,7 +44,7 @@ class DemandComponentBase(PerformanceModelBaseClass):
     demand component behavior.
     """
 
-    _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model
+    _time_step_bounds = (1, np.inf)  # (min, max) time step lengths compatible with this model
     _control_classifier = "demand"
 
     def setup(self):
@@ -168,17 +169,34 @@ class DemandComponentBase(PerformanceModelBaseClass):
         # Calculate actual output based on demand met and curtailment
         outputs[f"{self.commodity}_out"] = commodity_in - outputs[f"unused_{self.commodity}_out"]
 
-        outputs[f"rated_{self.commodity}_production"] = commodity_demand.mean()
+        rated_production = float(np.max(commodity_demand)) if commodity_demand.size > 0 else 0.0
+        outputs[f"rated_{self.commodity}_production"] = rated_production
 
         outputs[f"total_{self.commodity}_produced"] = np.sum(outputs[f"{self.commodity}_out"]) * (
             self.dt / 3600
         )
+        if rated_production <= 0.0:
+            outputs[f"annual_{self.commodity}_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            outputs["replacement_schedule"] = 0.0
+        else:
+            annual_amount_per_unit_rate = om_units.convert_units(
+                31_536_000,
+                "s",
+                f"({self.commodity_amount_units})/({self.commodity_rate_units})",
+            )
 
-        outputs[f"annual_{self.commodity}_produced"] = (
-            outputs[f"total_{self.commodity}_produced"] / self.fraction_of_year_simulated
-        )
-
-        outputs["capacity_factor"] = outputs[f"{self.commodity}_out"].sum() / commodity_demand.sum()
+            annual_cf, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
+                performance_timeseries=outputs[f"{self.commodity}_out"],
+                rated_performance=rated_production,
+                state_of_health_timeseries=None,
+                eol_soh=None,
+            )
+            outputs[f"annual_{self.commodity}_produced"] = (
+                annual_cf * rated_production * annual_amount_per_unit_rate
+            )
+            outputs["capacity_factor"] = annual_cf
+            outputs["replacement_schedule"] = replacement_schedule
 
         total_demand = commodity_demand.sum()
         total_gen = commodity_in.sum()
