@@ -186,50 +186,6 @@ def print_results(model, includes=None, excludes=None, show_units=True):
     }
 
 
-def create_xdsm_from_config(config, output_file="connections_xdsm"):
-    """Create an XDSM diagram from plant technology interconnections.
-
-    Args:
-        config (dict): Plant configuration containing
-            ``technology_interconnections``.
-        output_file (str): Base filename for the generated XDSM output.
-
-    Returns:
-        None: The diagram is written to ``output_file`` by pyXDSM.
-
-    Raises:
-        ImportError: If pyXDSM is not installed.
-    """
-    if XDSM is None:
-        raise ImportError("pyXDSM is required to generate an XDSM diagram.")
-
-    x = XDSM(use_sfmath=True)
-    technologies = OrderedDict()
-    for connection in config["technology_interconnections"]:
-        technologies[connection[0]] = None
-        technologies[connection[1]] = None
-
-    for tech in technologies:
-        tech_label = tech.replace("_", r"\_")
-        x.add_system(tech, FUNC, rf"\text{{{tech_label}}}")
-
-    for connection in config["technology_interconnections"]:
-        if len(connection) == 3:
-            source, destination, data = connection
-        else:
-            source, destination, data, label = connection
-
-        if isinstance(data, list | tuple) and len(data) >= 2:
-            data = f"{data[0]} as {data[1]}"
-        connection_label = (
-            rf"\text{{{data}}}" if len(connection) == 3 else rf"\text{{{data} {'via'} {label}}}"
-        )
-        x.connect(source, destination, connection_label.replace("_", r"\_"))
-
-    x.write(output_file, quiet=True)
-    print(f"XDSM diagram written to {output_file}.pdf")
-
-
 def create_xdsm(plant_config, outfile="connections_xdsm"):
     """Create an XDSM diagram from a plant configuration.
 
@@ -250,4 +206,31 @@ def create_xdsm(plant_config, outfile="connections_xdsm"):
             "Generating an XDSM diagram requires technology interconnections, "
             "but none were found."
         )
-    create_xdsm_from_config(plant_config, output_file=outfile)
+    if XDSM is None:
+        raise ImportError("pyXDSM is required to generate an XDSM diagram.")
+
+    x = XDSM(use_sfmath=True)
+    technologies = OrderedDict()
+    for connection in plant_config["technology_interconnections"]:
+        technologies[connection[0]] = None
+        technologies[connection[1]] = None
+
+    for tech in technologies:
+        tech_label = tech.replace("_", r"\_")
+        x.add_system(tech, FUNC, rf"\text{{{tech_label}}}")
+
+    for connection in plant_config["technology_interconnections"]:
+        if len(connection) == 3:
+            source, destination, data = connection
+        else:
+            source, destination, data, label = connection
+
+        if isinstance(data, list | tuple) and len(data) >= 2:
+            data = f"{data[0]} as {data[1]}"
+        connection_label = (
+            rf"\text{{{data}}}" if len(connection) == 3 else rf"\text{{{data} {'via'} {label}}}"
+        )
+        x.connect(source, destination, connection_label.replace("_", r"\_"))
+
+    x.write(outfile, quiet=True)
+    print(f"XDSM diagram written to {outfile}.pdf")

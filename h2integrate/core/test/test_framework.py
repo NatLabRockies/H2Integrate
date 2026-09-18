@@ -1402,46 +1402,46 @@ def test_no_sites_entry(temp_dir):
 
 
 @pytest.mark.unit
-def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
+def test_create_xdsm_uses_default_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
 
-    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         create_xdsm(plant_config)
 
-    mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
+    mock_xdsm.return_value.write.assert_called_once_with("connections_xdsm", quiet=True)
 
 
 @pytest.mark.unit
-def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
+def test_create_xdsm_uses_custom_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
     outfile = "my_custom_xdsm"
 
-    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         create_xdsm(plant_config, outfile=outfile)
 
-    mock_fn.assert_called_once_with(plant_config, output_file=outfile)
+    mock_xdsm.return_value.write.assert_called_once_with(outfile, quiet=True)
 
 
 @pytest.mark.unit
 def test_create_xdsm_raises_when_no_interconnections():
     plant_config = {"technology_interconnections": []}
 
-    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         with pytest.raises(ValueError, match="requires technology interconnections"):
             create_xdsm(plant_config)
 
-    mock_fn.assert_not_called()
+    mock_xdsm.assert_not_called()
 
 
 @pytest.mark.unit
 def test_create_xdsm_raises_when_interconnections_key_missing():
     plant_config = {}
 
-    with patch.object(reporting_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         with pytest.raises(ValueError, match="requires technology interconnections"):
             create_xdsm(plant_config)
 
-    mock_fn.assert_not_called()
+    mock_xdsm.assert_not_called()
 
 
 @pytest.mark.unit
@@ -1450,7 +1450,7 @@ def test_create_xdsm_propagates_file_not_found_error():
 
     with patch.object(
         reporting_module,
-        "create_xdsm_from_config",
+        "XDSM",
         side_effect=FileNotFoundError("latex not found"),
     ):
         with pytest.raises(FileNotFoundError, match="latex not found"):
