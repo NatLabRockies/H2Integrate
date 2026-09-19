@@ -46,6 +46,68 @@ def test_missing_tech_interconnections(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_combiner_naming_dependency(temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    combiner_tech_names = [
+        k
+        for k, v in tech_config["technologies"].items()
+        if v.get("performance_model", "model") == "GenericCombinerPerformanceModel"
+    ]
+    combiner_tech_renames = {k: k.replace("combiner", "unnamed") for k in combiner_tech_names}
+
+    # rename combiners in technology_interconnections
+    new_tech_connections = []
+    for tech_connection in plant_config["technology_interconnections"]:
+        if len(tech_connection) == 4:
+            source, dest, cmod, transport = tech_connection
+            if source in combiner_tech_names:
+                source = combiner_tech_renames[source]
+            if dest in combiner_tech_renames:
+                dest = combiner_tech_renames[dest]
+            new_connection = [source, dest, cmod, transport]
+            new_tech_connections.append(new_connection)
+        else:
+            new_tech_connections.append(tech_connection)
+    plant_config["technology_interconnections"] = new_tech_connections
+    # rename combiners in tech_to_dispatch_connections
+    for i, dispatch_connection in enumerate(plant_config["tech_to_dispatch_connections"]):
+        if dispatch_connection[0] in combiner_tech_names:
+            plant_config["tech_to_dispatch_connections"][i] = [
+                combiner_tech_renames[dispatch_connection[0]],
+                dispatch_connection[1],
+            ]
+
+    # rename combiners in finance_subgroups
+    for subgroup_name, subgroup_params in plant_config["finance_parameters"][
+        "finance_subgroups"
+    ].items():
+        if subgroup_params["commodity_stream"] in combiner_tech_names:
+            plant_config["finance_parameters"]["finance_subgroups"][subgroup_name][
+                "commodity_stream"
+            ] = combiner_tech_renames[subgroup_params["commodity_stream"]]
+
+    # update tech config
+    new_tech_config = {v: tech_config["technologies"][k] for k, v in combiner_tech_renames.items()}
+    new_tech_config |= {
+        k: v for k, v in tech_config["technologies"].items() if k not in combiner_tech_names
+    }
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": {"technologies": new_tech_config},
+        "driver_config": driver_config,
+    }
+
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
 )
