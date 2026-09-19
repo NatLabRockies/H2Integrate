@@ -37,7 +37,7 @@ def get_mine_from_coordinates(latitude, longitude):
 
 
 @define(kw_only=True)
-class NRRIIronMinePerformanceConfig(BaseConfig):
+class NRRIIronMinePerformanceComponentConfig(BaseConfig):
     """Configuration class for NRRIIronMinePerformanceComponent.
 
     Attributes:
@@ -93,7 +93,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "t"
 
     def setup(self):
-        self.config = NRRIIronMinePerformanceConfig.from_dict(
+        self.config = NRRIIronMinePerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -438,7 +438,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class NRRIIronMineCostConfig(BaseConfig):
+class NRRIIronMineCostComponentConfig(BaseConfig):
     """Configuration class for NRRIIronMineCostComponent.
 
     Attributes:
@@ -523,7 +523,7 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
 
         config_dict.update({"cost_year": self.target_dollar_year})
 
-        self.config = NRRIIronMineCostConfig.from_dict(
+        self.config = NRRIIronMineCostComponentConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

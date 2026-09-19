@@ -18,7 +18,7 @@ from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass i
 
 
 @define
-class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConfig):
+class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerBaseConfig):
     """Configuration for the Peak Load Management optimized storage controller.
 
     Inherits base fields from ``PyomoStorageControllerBaseConfig``:
@@ -172,7 +172,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ValueError: If the length of the time series built from
                 ``plant_config`` does not match ``n_timesteps``.
         """
-        self.config = PeakLoadManagementOptimizedControllerConfig.from_dict(
+        self.config = PeakLoadManagementOptimizedStorageControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
         )
 
