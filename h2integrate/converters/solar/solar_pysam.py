@@ -10,7 +10,7 @@ from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseCla
 
 
 @define(kw_only=True)
-class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     """Configuration class for design parameters of the solar pv plant.
         PYSAMSolarPlantPerformanceModel which uses the Pvwattsv8 module
         available in PySAM. PySAM documentation can be found
@@ -180,7 +180,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,

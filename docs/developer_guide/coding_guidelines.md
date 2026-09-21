@@ -16,6 +16,27 @@ If the variable is exposed to OpenMDAO via the `add_input` or `add_output` metho
 This is because OpenMDAO automatically handles converting units for inputs and outputs, and including units in the variable name can lead to confusion or errors when connecting variables between components.
 If the variable is not exposed to OpenMDAO, you should include units in the name for clarity, e.g. `length_m`, `initial_tank_volume_m3`.
 
+## Model and configuration naming
+
+When a model uses an attrs configuration class, name the configuration class
+after the model class by appending `Config`. For example:
+
+```python
+@define(kw_only=True)
+class ExamplePerformanceModelConfig(BaseConfig):
+	"""Configuration for ``ExamplePerformanceModel``."""
+
+	...
+```
+
+The model should instantiate that class in `setup()`. Keep the model name used
+in `supported_models.py` unchanged when renaming or clarifying a configuration
+class, because that model name is part of the YAML interface. Models that
+intentionally share a base configuration may retain a base config class, but
+the model-specific class should still be used when the fields or semantics
+differ. The `populate_tech_yaml` utility recognizes the direct `{ModelName}Config`
+convention and can also discover inherited or explicitly supplied config classes.
+
 ## Testing
 
 Use subtests to separate distinct behavior or state transitions within a longer test. When several

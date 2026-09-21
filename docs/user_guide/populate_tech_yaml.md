@@ -56,6 +56,34 @@ python -m h2integrate.preprocess.populate_tech_yaml \
 The `--output-path` option can also be written as `-o`. If it is omitted, the
 input file is overwritten.
 
+Extract one model's input template directly as YAML:
+
+```bash
+populate_tech_yaml --model-name StoragePerformanceModel
+```
+
+If automatic discovery does not find the right class (or you want to be
+explicit about a shared base configuration), provide the class name directly:
+
+```bash
+populate_tech_yaml \
+  --model-name GenericDemandComponent \
+  --config-class-name DemandComponentBaseConfig
+```
+
+The module form is equivalent for both extraction commands above:
+
+```bash
+python -m h2integrate.preprocess.populate_tech_yaml \
+  --model-name StoragePerformanceModel
+```
+
+```bash
+python -m h2integrate.preprocess.populate_tech_yaml \
+  --model-name GenericDemandComponent \
+  --config-class-name DemandComponentBaseConfig
+```
+
 ## Python API
 
 Use the file API when you want to load, populate, and save a YAML file:
@@ -81,7 +109,6 @@ skeleton_config = {
             "performance_model": {"model": "StoragePerformanceModel"},
             "cost_model": {"model": "ATBBatteryCostModel"},
             "control_strategy": {"model": "DemandOpenLoopStorageController"},
-            "model_inputs": {},
         }
     }
 }
@@ -98,8 +125,8 @@ from h2integrate.preprocess.populate_tech_yaml import extract_model_inputs
 params = extract_model_inputs("StoragePerformanceModel")
 ```
 
-If a model uses a deliberately non-standard or shared configuration class, pass
-its explicit class name:
+If automatic discovery does not find the right class, or you want to be
+explicit about a shared base configuration, pass the class name directly:
 
 ```python
 params = extract_model_inputs(
@@ -122,7 +149,6 @@ technologies:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
       model: ATBWindPlantCostModel
-    model_inputs: {}
 
   battery:
     performance_model:
@@ -131,14 +157,12 @@ technologies:
       model: ATBBatteryCostModel
     control_strategy:
       model: DemandOpenLoopStorageController
-    model_inputs: {}
 
   electrolyzer:
     performance_model:
       model: ECOElectrolyzerPerformanceModel
     cost_model:
       model: BasicElectrolyzerCostModel
-    model_inputs: {}
 ```
 
 Run the utility:
@@ -230,8 +254,7 @@ for an attrs configuration class in the model module using these conventions:
 1. `{ModelName}Config`
 2. The model name with `Model` replaced by `Config`
 3. The model name with `CostModel` replaced by `Config`
-4. `{ModelName}DesignConfig`
-5. A configuration class named after an attrs-bearing base class in the model's
+4. A configuration class named after an attrs-bearing base class in the model's
    method-resolution order
 
 Only attrs classes are accepted as configuration classes. This prevents a model
@@ -308,7 +331,7 @@ configuration, and review the generated output before using it.
 The implementation uses the repository's `load_yaml()` helper for input files,
 `supported_models` for model discovery, attrs metadata for configuration
 introspection, and `remove_numpy()` before serialization. Shared-parameter
-organization is centralized in `split_shared_parameters()` so the generator and
+organization is centralized in `separate_shared_parameters()` so the generator and
 runtime input validation use the same overlap rule.
 
 The generated YAML is serialized with ordinary PyYAML output and then receives

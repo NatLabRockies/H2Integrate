@@ -220,19 +220,26 @@ def rename_dict_keys(input_dict, init_keyname, new_keyname):
     return input_dict
 
 
-def split_shared_parameters(section_params: dict[str, dict]) -> tuple[dict, dict]:
-    """Split parameter dictionaries into shared and section-specific entries.
+def separate_shared_parameters(section_params: dict[str, dict]) -> tuple[dict, dict]:
+    """Separate shared keys from section-specific parameter dictionaries.
 
     This helper identifies keys that appear in more than one section and returns
     two dictionaries: the shared parameters and the remaining section-local
     parameters. It preserves the first-seen value for each shared key.
 
     Args:
-        section_params (dict[str, dict]): Mapping of section names to parameter
-            dictionaries.
+        section_params (dict[str, dict]): Mapping of model-input section names
+            to parameter dictionaries. Expected keys are typically
+            ``performance``, ``control``, ``cost``, and ``dispatch``. For
+            example, ``{"performance": {"capacity": 1, "profile": []},
+            "cost": {"capacity": 2, "cost_year": 2024}}`` produces
+            ``{"capacity": 1}`` as the shared parameters and leaves
+            ``profile`` and ``cost_year`` in their respective sections.
 
     Returns:
-        tuple[dict, dict]: shared_parameters and section-local parameters.
+        tuple[dict, dict]: A ``(shared_parameters, section_only)`` tuple. The
+            first dictionary contains keys found in at least two sections; the
+            second maps each original section name to its non-shared entries.
     """
     if not section_params:
         return {}, {}
@@ -320,7 +327,7 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
 
     # Check for overlapping keys between any two sets of configurations to reconstruct
     # the shared parameters, and create a restructured configuration
-    shared_params, restructured_sections = split_shared_parameters(
+    shared_params, restructured_sections = separate_shared_parameters(
         {
             "control_parameters": control_params,
             "dispatch_parameters": dispatch_params,

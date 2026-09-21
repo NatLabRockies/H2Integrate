@@ -1,5 +1,6 @@
 """Tests for populate_tech_yaml utility."""
 
+import sys
 import tempfile
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import yaml
 import pytest
 
 from h2integrate.preprocess.populate_tech_yaml import (
+    main,
     find_config_class,
     populate_tech_yaml,
     extract_model_inputs,
@@ -61,13 +63,21 @@ class TestExtractModelInputs:
         assert params["config_name"] == "WindPowerSingleOwner"
         assert params["create_model_from"] == "new"
 
-    def test_explicit_config_class_name(self):
-        """Test extraction for a model with a shared, non-standard config name."""
-        config_class = find_config_class("GenericDemandComponent", "DemandComponentBaseConfig")
-        params = extract_model_inputs("GenericDemandComponent", "DemandComponentBaseConfig")
+    def test_demand_component_config_name(self):
+        """Test automatic extraction for a demand model using a base config."""
+        config_class = find_config_class("GenericDemandComponent")
+        params = extract_model_inputs("GenericDemandComponent")
 
         assert config_class.__name__ == "DemandComponentBaseConfig"
         assert "demand_profile" in params
+
+    def test_flexible_demand_component_config_name(self):
+        """Test automatic extraction for the flexible demand config."""
+        config_class = find_config_class("FlexibleDemandComponent")
+        params = extract_model_inputs("FlexibleDemandComponent")
+
+        assert config_class.__name__ == "FlexibleDemandComponentConfig"
+        assert "rated_demand" in params
 
     def test_cost_model_config_name(self):
         """Test extraction for a config named from a model's CostModel suffix."""
@@ -77,12 +87,12 @@ class TestExtractModelInputs:
         assert config_class.__name__ == "EIANaturalGasFeedstockConfig"
         assert "resource_year" in params
 
-    def test_design_config_name(self):
-        """Test extraction for a model with a DesignConfig suffix."""
+    def test_pysam_solar_config_name(self):
+        """Test extraction for a model with the standard direct config name."""
         config_class = find_config_class("PYSAMSolarPlantPerformanceModel")
         params = extract_model_inputs("PYSAMSolarPlantPerformanceModel")
 
-        assert config_class.__name__ == "PYSAMSolarPlantPerformanceModelDesignConfig"
+        assert config_class.__name__ == "PYSAMSolarPlantPerformanceModelConfig"
         assert "pv_capacity_kWdc" in params
 
     def test_inherited_base_config(self):
@@ -92,6 +102,19 @@ class TestExtractModelInputs:
 
         assert config_class.__name__ == "HydrogenStorageBaseCostModelConfig"
         assert "max_capacity" in params
+
+    def test_extract_model_inputs_cli(self, monkeypatch, capsys):
+        """Test extracting a model template through the command-line entry point."""
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["populate_tech_yaml", "--model-name", "PYSAMSolarPlantPerformanceModel"],
+        )
+
+        main()
+
+        output = capsys.readouterr().out
+        assert "pv_capacity_kWdc: null" in output
 
     @pytest.mark.parametrize(
         ("model_name", "config_name"),
@@ -121,18 +144,26 @@ class TestOrganizeModelParameters:
         """Test organizing parameters from a single model."""
         tech_info = {
             "performance_model": {"model": "GenericCombinerPerformanceModel"},
-            "model_inputs": {},
         }
 
         organized = organize_model_parameters(tech_info)
         assert "performance_parameters" in organized or len(organized) > 0
+
+    def test_organize_model_definitions_only(self):
+        """Test organizing parameters from model definitions alone."""
+        tech_info = {
+            "performance_model": {"model": "GenericCombinerPerformanceModel"},
+        }
+
+        organized = organize_model_parameters(tech_info)
+
+        assert "performance_parameters" in organized
 
     def test_organize_multiple_models(self):
         """Test organizing parameters from multiple models (performance + cost)."""
         tech_info = {
             "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
             "cost_model": {"model": "ATBWindPlantCostModel"},
-            "model_inputs": {},
         }
 
         organized = organize_model_parameters(tech_info)
@@ -146,7 +177,6 @@ class TestOrganizeModelParameters:
             "performance_model": {"model": "StoragePerformanceModel"},
             "control_strategy": {"model": "DemandOpenLoopStorageController"},
             "cost_model": {"model": "ATBBatteryCostModel"},
-            "model_inputs": {},
         }
 
         organized = organize_model_parameters(tech_info)
@@ -168,7 +198,6 @@ class TestPopulateTechConfig:
                 "wind": {
                     "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
                     "cost_model": {"model": "ATBWindPlantCostModel"},
-                    "model_inputs": {},
                 }
             },
         }
@@ -192,13 +221,11 @@ class TestPopulateTechConfig:
                 "wind": {
                     "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
                     "cost_model": {"model": "ATBWindPlantCostModel"},
-                    "model_inputs": {},
                 },
                 "battery": {
                     "performance_model": {"model": "StoragePerformanceModel"},
                     "cost_model": {"model": "ATBBatteryCostModel"},
                     "control_strategy": {"model": "DemandOpenLoopStorageController"},
-                    "model_inputs": {},
                 },
             },
         }
@@ -210,29 +237,37 @@ class TestPopulateTechConfig:
         assert len(populated["technologies"]["wind"]["model_inputs"]) > 0
         assert len(populated["technologies"]["battery"]["model_inputs"]) > 0
 
-    def test_populate_preserves_existing_values(self):
-        """Test that populate_tech_yaml preserves existing non-empty model_inputs."""
+    def test_populate_from_model_definitions_only(self):
+        """Test that model definitions alone produce model_inputs."""
         config = {
             "name": "test",
             "technologies": {
                 "wind": {
                     "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
                     "cost_model": {"model": "ATBWindPlantCostModel"},
-                    "model_inputs": {"performance_parameters": {"num_turbines": 5}},
                 }
             },
         }
 
-        # Deep copy config to compare
-        import copy
+        populated = populate_tech_yaml(config)
 
-        copy.deepcopy(config["technologies"]["wind"]["model_inputs"])
+        assert populated["technologies"]["wind"]["model_inputs"]
+
+    def test_populate_demand_component(self):
+        """Test populating a technology that uses a demand component."""
+        config = {
+            "technologies": {
+                "demand": {
+                    "performance_model": {"model": "GenericDemandComponent"},
+                }
+            }
+        }
 
         populated = populate_tech_yaml(config)
 
-        # If model_inputs was already populated, it should remain populated
-        new_inputs = populated["technologies"]["wind"]["model_inputs"]
-        assert len(new_inputs) > 0
+        demand_inputs = populated["technologies"]["demand"]["model_inputs"]
+        assert "performance_parameters" in demand_inputs
+        assert "demand_profile" in demand_inputs["performance_parameters"]
 
 
 @pytest.mark.unit
@@ -251,7 +286,6 @@ class TestPopulateTechYamlFromFile:
                     "wind": {
                         "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
                         "cost_model": {"model": "ATBWindPlantCostModel"},
-                        "model_inputs": {},
                     }
                 },
             }
@@ -286,7 +320,6 @@ class TestPopulateTechYamlFromFile:
                     "wind": {
                         "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
                         "cost_model": {"model": "ATBWindPlantCostModel"},
-                        "model_inputs": {},
                     }
                 },
             }
@@ -312,7 +345,6 @@ class TestPopulateTechYamlFromFile:
                 "technologies": {
                     "wind": {
                         "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
-                        "model_inputs": {},
                     }
                 }
             }

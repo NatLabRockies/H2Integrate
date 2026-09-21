@@ -1,7 +1,7 @@
 """Populate technology configuration with model input templates.
 
-This utility ingests a tech config file containing model names (but minimal or empty
-model_inputs sections) and auto-generates the model_inputs sections by:
+This utility ingests a tech config file containing model names and auto-generates
+the model_inputs sections by:
 
 1. Instantiating each model's config class
 2. Extracting required and optional parameters from the config
@@ -37,7 +37,7 @@ from pathlib import Path
 import attr
 import yaml
 
-from h2integrate.core.dict_utils import remove_numpy, split_shared_parameters
+from h2integrate.core.dict_utils import remove_numpy, separate_shared_parameters
 from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.supported_models import supported_models
 
@@ -80,7 +80,6 @@ def find_config_class(model_name: str, config_class_name: str | None = None):
             (model_class.__module__, f"{model_name}Config"),
             (model_class.__module__, model_name.replace("Model", "Config")),
             (model_class.__module__, model_name.replace("CostModel", "Config")),
-            (model_class.__module__, f"{model_name}DesignConfig"),
         ]
         for base_class in model_class.__mro__[1:]:
             config_class_candidates.append((base_class.__module__, f"{base_class.__name__}Config"))
@@ -105,7 +104,17 @@ def find_config_class(model_name: str, config_class_name: str | None = None):
 
 
 def _validator_description(validator) -> str | None:
-    """Convert a supported attrs validator into a concise YAML comment."""
+    """Convert a supported attrs validator into a concise YAML comment.
+
+    Args:
+        validator: An attrs validator instance. Supported validators include
+            numeric bounds, allowed-value validators, optional validators,
+            compound validators, and instance-of validators.
+
+    Returns:
+        str | None: A human-readable constraint description, or ``None`` when
+        the validator type is not supported by the formatter.
+    """
     validator_type = type(validator).__name__
 
     if validator_type == "_OptionalValidator":
@@ -134,7 +143,15 @@ def _validator_description(validator) -> str | None:
 
 
 def _model_validator_descriptions(model_name: str) -> dict[str, str]:
-    """Return YAML comment text for the validators on a model config."""
+    """Return YAML comment text for validators on a model configuration class.
+
+    Args:
+        model_name (str): Name of the model in the ``supported_models`` registry.
+
+    Returns:
+        dict[str, str]: Mapping from attrs field names to concise validator
+            descriptions. Fields without a supported validator are omitted.
+    """
     config_class = find_config_class(model_name)
     descriptions = {}
     for attribute in attr.fields(config_class):
@@ -156,7 +173,20 @@ def _model_validator_descriptions(model_name: str) -> dict[str, str]:
 
 
 def _validator_comments(tech_config: dict) -> dict[tuple[str, str, str], str]:
-    """Build comments keyed by technology, model-input section, and parameter."""
+    """Build validator comments for model-input fields in a tech config.
+
+    Args:
+        tech_config (dict): Technology configuration containing a
+            ``technologies`` mapping. Each technology may define
+            ``performance_model``, ``control_strategy``, ``cost_model``, or
+            ``dispatch_rule_set`` entries with a ``model`` name.
+
+    Returns:
+        dict[tuple[str, str, str], str]: Comments keyed by technology name,
+            model-input section, and parameter name. A validator shared by a
+            model is indexed under both its model-specific section and
+            ``shared_parameters``.
+    """
     comments = {}
     for tech_name, tech_info in tech_config.get("technologies", {}).items():
         for model_type, section_name in MODEL_SECTION_NAMES.items():
@@ -177,7 +207,15 @@ def _validator_comments(tech_config: dict) -> dict[tuple[str, str, str], str]:
 
 
 def _dump_with_validator_comments(config: dict) -> str:
-    """Serialize a config and append validator comments to model input scalars."""
+    """Serialize a config and append validator comments to model-input scalars.
+
+    Args:
+        config (dict): Populated technology configuration to serialize.
+
+    Returns:
+        str: YAML text with inline validator comments. The input dictionary is
+            not modified, and comments are not represented in the dictionary.
+    """
     comments = _validator_comments(config)
     yaml_text = yaml.dump(config, default_flow_style=False, sort_keys=False)
     current_technology = None
@@ -213,9 +251,11 @@ def extract_model_inputs(
     their defaults.
 
     Args:
-        model_name (str): Name of the model class (e.g., 'StoragePerformanceModel')
+        model_name (str): Name of the model in ``supported_models`` (for example,
+            ``StoragePerformanceModel``).
         config_class_name (str, optional): Explicit configuration class name when
-            the model does not follow the standard naming convention.
+            the model does not follow the standard naming convention or shares a
+            configuration class with another model.
 
     Returns:
         dict: Dictionary of all configurable parameters from the model class
@@ -286,7 +326,10 @@ def organize_model_parameters(
     - dispatch_parameters
 
     Args:
-        tech_info (dict): Technology info dict containing model names and existing model_inputs
+        tech_info (dict): Technology mapping containing model definitions under
+            ``performance_model``, ``control_strategy``, ``cost_model``, and/or
+            ``dispatch_rule_set``. Each model definition must contain a
+            ``model`` name.
 
     Returns:
         dict: Organized model_inputs with shared_parameters, control_parameters, etc.
@@ -329,7 +372,7 @@ def organize_model_parameters(
             print(f"Warning: Failed to extract parameters for {model_type_key}='{model_name}': {e}")
             continue
 
-    shared_parameters, section_only = split_shared_parameters(all_params_by_section)
+    shared_parameters, section_only = separate_shared_parameters(all_params_by_section)
 
     for section_name in ["performance", "control", "cost", "dispatch"]:
         section_key = f"{section_name}_parameters"
@@ -347,7 +390,9 @@ def populate_tech_yaml(tech_config: dict) -> dict:
     """Populate a skeleton tech config with model_inputs.
 
     Args:
-        tech_config (dict): Skeleton tech config with model names but empty/minimal model_inputs
+        tech_config (dict): Skeleton configuration containing a ``technologies``
+            mapping. Each technology should provide one or more supported model
+            definitions. The input is deep-copied before it is populated.
 
     Returns:
         dict: Updated tech config with populated model_inputs sections
@@ -392,9 +437,12 @@ def populate_tech_yaml_from_file(
     """Load, populate, and optionally save a tech config file.
 
     Args:
-        config_path (str | Path): Path to skeleton tech_config.yaml
-        output_path (str | Path, optional): Path to write populated config.
-            If not provided, overwrites input file.
+        config_path (str | Path): Path to the skeleton YAML technology
+            configuration. It is loaded with the repository's ``load_yaml``
+            helper.
+        output_path (str | Path, optional): Path for the populated YAML output.
+            If omitted, the input file is overwritten. Parent directories are
+            created when needed, and the output includes validator comments.
 
     Returns:
         dict: The populated tech config dictionary
@@ -444,15 +492,31 @@ def populate_tech_yaml_from_file(
 
 
 def main():
-    """Command-line entry point for populate_tech_yaml."""
+    """Command-line entry point for tech config population and model extraction."""
     parser = argparse.ArgumentParser(
-        description="Populate technology configuration with model input templates.",
-        epilog=("Example: " "populate_tech_yaml path/to/skeleton_tech_config.yaml"),
+        description="Populate technology configuration or extract a model input template.",
+        epilog=(
+            "Examples: populate_tech_yaml path/to/skeleton_tech_config.yaml; "
+            "populate_tech_yaml --model-name StoragePerformanceModel"
+        ),
     )
     parser.add_argument(
         "config_path",
+        nargs="?",
         type=str,
         help="Path to skeleton tech_config.yaml file with model names defined",
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        help="Extract and print the input template for a supported model",
+    )
+    parser.add_argument(
+        "--config-class-name",
+        type=str,
+        default=None,
+        help="Explicit config class name for --model-name when needed",
     )
     parser.add_argument(
         "--output-path",
@@ -464,11 +528,15 @@ def main():
 
     args = parser.parse_args()
 
+    if bool(args.config_path) == bool(args.model_name):
+        parser.error("Provide either config_path or --model-name, but not both")
+
     try:
-        populate_tech_yaml_from_file(
-            args.config_path,
-            output_path=args.output_path,
-        )
+        if args.model_name:
+            params = extract_model_inputs(args.model_name, args.config_class_name)
+            print(yaml.dump(params, default_flow_style=False, sort_keys=False), end="")
+        else:
+            populate_tech_yaml_from_file(args.config_path, output_path=args.output_path)
     except (FileNotFoundError, OSError, RuntimeError, ValueError) as e:
         print(f"Error: {e}")
         exit(1)
