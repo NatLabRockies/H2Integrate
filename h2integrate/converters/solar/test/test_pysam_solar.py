@@ -555,7 +555,6 @@ def _run_non_annual_solar(n_timesteps):
                 "dc_ac_ratio": 1.2,
                 "create_model_from": "default",
                 "config_name": "PVWattsSingleOwner",
-                "tilt_angle_func": "none",
                 "tilt": 20.0,
             }
         }
