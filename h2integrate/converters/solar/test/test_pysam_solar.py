@@ -665,9 +665,14 @@ def test_pvwatts_with_lifetime_performance(
     prob.run_model()
 
     aep = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")
+    cf = prob.get_val("pv_perf.capacity_factor", units="unitless")
     with subtests.test("AEP at year 0 < AEP at year 1"):
         assert aep[1] < aep[0]
     with subtests.test("AEP year 0"):
         assert pytest.approx(aep[0], rel=1e-6) == 527216534.92436135
     with subtests.test("AEP year 30"):
         assert pytest.approx(aep[-1], rel=1e-6) == 523444808.25535893
+    with subtests.test("AEP is always decreasing"):
+        assert all(v < 0 for v in np.diff(aep))
+    with subtests.test("CF is always decreasing"):
+        assert all(v < 0 for v in np.diff(cf))
