@@ -3,6 +3,13 @@ from datetime import timezone, timedelta
 import pandas as pd
 
 
+def is_leap_year(year):
+    is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
+        year % 4 == 0 and year % 100 != 0
+    )
+    return is_leap
+
+
 def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
     """Process leap day data by optionally removing it and validating data length.
 
@@ -28,6 +35,7 @@ def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
     convert_to_dict = False
     if isinstance(data, dict):
         data = pd.DataFrame(data)
+        # TODO: update to use `separate_timeseries_and_meta_data`
         convert_to_dict = True
 
     case_of_time_cols = "lower" if "month" in data.columns.to_list() else "upper"
