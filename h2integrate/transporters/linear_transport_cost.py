@@ -12,10 +12,13 @@ class LinearTransportCostConfig(CostModelBaseConfig):
     Attributes:
         capex_per_km (float): Capital cost in USD/km.
         fixed_opex_per_km (float): Annual operating cost in USD/km/year
+        circuity_ratio (float): Ratio of actual travel distance to straight-line distance.
+        Default is 1.0.
     """
 
     capex_per_km: float = field(validator=validators.ge(0))
     fixed_opex_per_km: float = field(validator=validators.ge(0))
+    circuity_ratio: float = field(validator=validators.ge(1), default=1.0)
 
 
 class LinearDistanceCostModel(CostModelBaseClass):
@@ -44,6 +47,7 @@ class LinearDistanceCostModel(CostModelBaseClass):
 
         self.add_input("unit_capex", self.config.capex_per_km, units="USD/km")
         self.add_input("unit_fixed_opex", self.config.fixed_opex_per_km, units="USD/km/year")
+        self.add_input("circuity_ratio", self.config.circuity_ratio, units="unitless")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         source_location = (inputs["source_latitude"][0], inputs["source_longitude"][0])
@@ -54,7 +58,7 @@ class LinearDistanceCostModel(CostModelBaseClass):
             source_location, destination_location, ellipsoid="WGS-84"
         ).km
 
-        outputs["transport_distance"] = transport_distance
+        outputs["transport_distance"] = transport_distance * inputs["circuity_ratio"]
 
         outputs["CapEx"] = transport_distance * inputs["unit_capex"]
         outputs["OpEx"] = transport_distance * inputs["unit_fixed_opex"]
