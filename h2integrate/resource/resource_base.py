@@ -1,3 +1,4 @@
+import copy
 import warnings
 from pathlib import Path
 
@@ -145,7 +146,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         return resource_specs
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year=None):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
 
         "{latitude}_{longitude}_{resource_year}_{dataset_desc}_{interval}min_{tz_desc}_tz.csv"
@@ -154,6 +155,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (int | str | None): resource year to build the filename for. When
+                None, ``self.config.resource_year`` is used.
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
@@ -161,12 +164,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year=None):
         """Create url for data download.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (int | str | None): resource year to build the url for. When None,
+                ``self.config.resource_year`` is used.
 
         Returns:
             str: url to use for API call.
@@ -188,12 +193,15 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         success = download_from_api(url, fpath)
         return success
 
-    def load_data(self, fpath):
+    def load_data(self, fpath, resource_year=None):
         """Loads data from a file, reformats data to follow a standardized naming convention,
         converts data to standardized units, and creates a data time profile.
 
         Args:
             fpath (str | fpath): filepath to load the data from.
+            resource_year (int | str | None): resource year the file corresponds to, used by
+                datasets that filter a multi-year file down to a single year. When None,
+                ``self.config.resource_year`` is used.
 
         Raises:
             NotImplementedError: this method should be implemented in a subclass.
@@ -273,12 +281,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             getattr(self.config, "downsample_method", "mean"),
         )
 
-    def _load_single_year_data(self, latitude, longitude, site_changed, resource_filename=None):
+    def _load_single_year_data(
+        self, latitude, longitude, site_changed, resource_filename=None, resource_year=None
+    ):
         """Resolve, load, or download one year of resource data.
 
-        Uses the currently configured ``resource_year`` and returns the raw data
-        dictionary. This performs Steps 2-7 described in :py:meth:`get_data` for a
-        single year (without slicing to the simulation horizon).
+        Performs Steps 2-7 described in :py:meth:`get_data` for a single year (without
+        slicing to the simulation horizon).
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -286,13 +295,19 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             site_changed (bool): whether the site location changed from the last call.
             resource_filename (str | Path | None): specific filename to load this year's
                 data from. When None, the default naming convention is used.
+            resource_year (int | str | None): resource year to load. When None,
+                ``self.config.resource_year`` is used. For multi-year horizons the caller
+                passes the advanced year so filenames, URLs, and any per-year filtering use
+                the correct year without modifying ``self.config``.
 
         Raises:
             ValueError: If data was not successfully downloaded from the API.
 
         Returns:
-            dict: raw resource data for the configured ``resource_year``.
+            dict: raw resource data for the requested year.
         """
+        resource_year = self.config.resource_year if resource_year is None else resource_year
+
         # check if user provided directory or filename
         provided_filename = bool(resource_filename)
         provided_dir = False if self.config.resource_dir is None else True
@@ -306,7 +321,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             filepath = resource_dir / resource_filename
         # Otherwise, create a filename with the method `create_filename()`.
         else:
-            filename = self.create_filename(latitude, longitude)
+            filename = self.create_filename(latitude, longitude, resource_year=resource_year)
             filepath = resource_dir / filename
         # if file doesn't exist, continue to Step 2b
         if not filepath.is_file():
@@ -327,7 +342,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 filepath = resource_dir / resource_filename
             # Otherwise, create a filename with the method `create_filename()`.
             else:
-                filename = self.create_filename(latitude, longitude)
+                filename = self.create_filename(latitude, longitude, resource_year=resource_year)
                 filepath = resource_dir / filename
 
         # Check if the filename was provided by the user and the site hasn't changed
@@ -344,19 +359,19 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # filepath, load data using `load_data()` and resample to desired the dt
         if filepath.is_file():
             self.filepath = filepath
-            return self._resample_to_sim_dt(self.load_data(filepath))
+            return self._resample_to_sim_dt(self.load_data(filepath, resource_year=resource_year))
 
         # If the filepath (resource_dir/filename) does not exist, download data
         self.filepath = filepath
         # 5) Create the url to download data using `create_url()` and continue to Step 6.
-        url = self.create_url(latitude, longitude)
+        url = self.create_url(latitude, longitude, resource_year=resource_year)
         # 6) Download data from the url created in Step 5 and save to a filepath created from
         # the resulting resource_dir and filename from Steps 2 and 3.
         success = self.download_data(url, filepath)
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()` and resample
             # to the desired dt
-            return self._resample_to_sim_dt(self.load_data(filepath))
+            return self._resample_to_sim_dt(self.load_data(filepath, resource_year=resource_year))
 
         else:
             raise ValueError("Did not successfully download resource data.")
@@ -369,6 +384,11 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         consecutive years until the horizon is covered. Because this is driven by the
         actual number of timesteps in each loaded year, it naturally handles years of
         different lengths -- for example a leap year when leap days are retained.
+
+        Datasets whose ``resource_year`` is a typical meteorological/representative year
+        (a non-integer value such as ``"tmy-2022"``) have no meaningful "next year", so the
+        same representative year is reused for each additional year needed to cover a
+        multi-year horizon.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -392,61 +412,62 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         yearly_data = []
         total_timesteps = 0
         offset = 0
-        try:
-            while total_timesteps < self.n_timesteps:
-                # Resolve the filename to use for this year, if any
-                if filename_list is not None:
-                    if offset >= len(filename_list):
-                        msg = (
-                            f"{type(self).__name__} was given {len(filename_list)} resource "
-                            f"file(s) covering only {total_timesteps} timesteps, fewer than the "
-                            f"{self.n_timesteps} timesteps required by the simulation horizon. "
-                            "Provide additional resource files or shorten the horizon."
-                        )
-                        raise ValueError(msg)
-                    year_filename = filename_list[offset]
-                elif offset == 0:
-                    year_filename = resource_filename or None
-                else:
-                    # A single provided filename cannot supply additional years
-                    if resource_filename:
-                        msg = (
-                            f"{type(self).__name__} cannot satisfy a multi-year simulation "
-                            "horizon from a single resource_filename. Provide a list of "
-                            "filenames (one per consecutive year), or remove resource_filename "
-                            "so the required years can be downloaded."
-                        )
-                        raise ValueError(msg)
-                    year_filename = None
+        while total_timesteps < self.n_timesteps:
+            # Resolve the filename to use for this year, if any
+            if filename_list is not None:
+                if offset >= len(filename_list):
+                    msg = (
+                        f"{type(self).__name__} was given {len(filename_list)} resource "
+                        f"file(s) covering only {total_timesteps} timesteps, fewer than the "
+                        f"{self.n_timesteps} timesteps required by the simulation horizon. "
+                        "Provide additional resource files or shorten the horizon."
+                    )
+                    raise ValueError(msg)
+                year_filename = filename_list[offset]
+            elif offset == 0:
+                year_filename = resource_filename or None
+            else:
+                # A single provided filename cannot supply additional years
+                if resource_filename:
+                    msg = (
+                        f"{type(self).__name__} cannot satisfy a multi-year simulation "
+                        "horizon from a single resource_filename. Provide a list of "
+                        "filenames (one per consecutive year), or remove resource_filename "
+                        "so the required years can be downloaded."
+                    )
+                    raise ValueError(msg)
+                year_filename = None
 
-                # Advance the resource year for years after the first
-                if offset > 0:
-                    if not isinstance(base_year, int):
-                        msg = f"Resource year must be an integer, {base_year} was given."
-                        raise ValueError(msg)
-                    try:
-                        # Setting resource_year runs the config validator, which raises
-                        # if the year is outside the range supported by this dataset.
-                        self.config.resource_year = base_year + offset
-                    except (ValueError, TypeError) as e:
-                        msg = (
-                            f"Not enough resource data available for {type(self).__name__} to "
-                            f"cover the requested simulation horizon of {self.n_timesteps} "
-                            f"timesteps. Year {base_year + offset} is outside the range "
-                            "supported by this dataset."
-                        )
-                        raise ValueError(msg) from e
+            # Determine the resource year to load. Years are kept as local values so the
+            # model's own ``self.config`` is never modified. When a later year must be
+            # downloaded (no explicit filename) for an integer-year dataset, the advanced
+            # year is validated against the dataset's rules using a throwaway duplicate
+            # config. The first year, non-integer (typical-year) datasets, and explicit
+            # filenames reuse the base year, so a typical year repeats to fill a multi-year
+            # horizon.
+            load_year = base_year
+            if year_filename is None and offset > 0 and isinstance(base_year, int):
+                load_year = base_year + offset
+                validation_config = copy.copy(self.config)
+                try:
+                    # Assigning resource_year on the duplicate runs the dataset validator,
+                    # which raises if the year is outside the supported range.
+                    validation_config.resource_year = load_year
+                except (ValueError, TypeError) as e:
+                    msg = (
+                        f"Not enough resource data available for {type(self).__name__} to "
+                        f"cover the requested simulation horizon of {self.n_timesteps} "
+                        f"timesteps. Year {load_year} is outside the range "
+                        "supported by this dataset."
+                    )
+                    raise ValueError(msg) from e
 
-                year_data = self._load_single_year_data(
-                    latitude, longitude, site_changed, year_filename
-                )
-                yearly_data.append(year_data)
-                total_timesteps += self._resource_length(year_data)
-                offset += 1
-        finally:
-            # Restore the configured resource year, which is advanced above for multi-year loads
-            if isinstance(base_year, int):
-                self.config.resource_year = base_year
+            year_data = self._load_single_year_data(
+                latitude, longitude, site_changed, year_filename, resource_year=load_year
+            )
+            yearly_data.append(year_data)
+            total_timesteps += self._resource_length(year_data)
+            offset += 1
 
         return concatenate_resource_years(yearly_data)
 

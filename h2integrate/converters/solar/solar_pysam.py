@@ -481,11 +481,9 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         # (sub-annual or multi-year), so use the base-class projection to compute per-year
         # capacity factors and annual production across the plant life.
         seconds_per_year = 31_536_000  # 8760 h/year * 3600 s/h
-        seconds_simulated = self.n_timesteps * self.dt
-        is_annual = abs(seconds_simulated - seconds_per_year) < self.dt / 2
 
         rated_production = outputs["rated_electricity_production"][0]
-        if is_annual:
+        if abs(self.fraction_of_year_simulated - 1.0) < (self.dt / 2) / seconds_per_year:
             max_production = rated_production * self.n_timesteps * (self.dt / 3600)
             outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
             outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
