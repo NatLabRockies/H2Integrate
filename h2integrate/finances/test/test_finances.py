@@ -50,6 +50,10 @@ def model_configs():
         },
         "plant": {
             "plant_life": 30,
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
             "grid_connection": True,
             "ppa_price": 0.05,
         },
@@ -434,6 +438,10 @@ def test_profast_config_provided():
         },
         "plant": {
             "plant_life": 30,
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
             "cost_year": 2022,
             "grid_connection": True,
             "ppa_price": 0.05,
@@ -538,6 +546,10 @@ def test_parameter_validation_clashing_values():
         },
         "plant": {
             "plant_life": 30,  # Different from pf_params
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
         },
     }
 
@@ -630,6 +642,10 @@ def test_parameter_validation_duplicate_parameters():
         },
         "plant": {
             "plant_life": 30,  # Different from pf_params
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
         },
     }
 
