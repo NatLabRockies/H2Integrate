@@ -118,7 +118,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             )
 
     def apply_curtailment(self, outputs):
-        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+        """
+        Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
         then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
@@ -127,6 +128,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Should be called at the end of each flexible model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
+
         if "system_level_control" in self.options["plant_config"]:
             if getattr(self, "_control_classifier", None) != "flexible":
                 return
@@ -166,15 +168,17 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 ``state_of_health_timeseries`` is provided.
             no_degradation_extrapolation (str): Extrapolation strategy when
                 ``state_of_health_timeseries`` is None. Options:
+
                 - ``"tile"``: repeat simulated annual values cyclically.
                 - ``"final_sim_value"``: hold the last simulated annual value constant for
-                    the rest of the plant life beyond simulated years.
+                  the rest of the plant life beyond simulated years.
                 - ``"average_sim_value"``: hold simulated average annual value constant for
-                    the rest of the plant life beyond simulated years.
+                  the rest of the plant life beyond simulated years.
             soh_cycle_repetition (str): When ``state_of_health_timeseries`` is provided,
                 controls what repeats after the simulated (and completed) cycle history.
                 All simulated data is always preserved at the front of the timeline.
                 Options:
+
                 - ``"all_soh_cycles"``: repeat the full ordered set of simulated cycles.
                 - ``"final_soh_cycle"``: repeat only the final completed cycle.
 
@@ -182,7 +186,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             tuple[np.ndarray, np.ndarray]: projected annual capacity factors and
             replacement schedule.
         """
-
         performance_timeseries = np.asarray(performance_timeseries, dtype=float)
         if performance_timeseries.size == 0:
             raise ValueError("performance_timeseries must contain at least one value.")
@@ -408,7 +411,8 @@ class CostModelBaseConfig(BaseConfig):
 
 
 class CostModelBaseClass(om.ExplicitComponent):
-    """Baseclass to be used for all cost models. The built-in outputs
+    """
+    Baseclass to be used for all cost models. The built-in outputs
     are used by the finance model and must be outputted by all cost models.
 
     Subclasses should use CostModelBaseConfig for their configuration class.
