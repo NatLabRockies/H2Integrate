@@ -499,10 +499,15 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
             # using lifetime results
+            # split the generation profile to have results per-year
             generation_per_year = np.split(np.array(self.system_model.Outputs.gen), self.plant_life)
+            # sum the generation per-year
             aep_per_year = np.array(generation_per_year).sum(axis=1)
+            # get the number of timesteps per year (should be the same for all years)
             n_timesteps_per_year = np.array([len(k) for k in generation_per_year])
+            # output the first n_timesteps of the generation profile
             outputs["electricity_out"] = np.array(self.system_model.Outputs.gen)[: self.n_timesteps]
+            # make production is the max production per-year
             max_production = (
                 outputs["rated_electricity_production"] * n_timesteps_per_year * (self.dt / 3600)
             )
