@@ -476,14 +476,17 @@ def test_resample_scalar_metadata_preserved(subtests):
 @pytest.mark.unit
 def test_resample_unknown_upsample_method_raises():
     data = _make_timeseries(5, 3600)
-    # an invalid pandas interpolation method raises
-    with pytest.raises(ValueError, match="method must be one of"):
+    # An invalid pandas interpolation method raises. The exact message differs across
+    # pandas versions, but the offending method name is always reported.
+    with pytest.raises(ValueError, match="not_a_method"):
         resample_resource_data_to_dt(data, 1800, upsample_method="not_a_method")
 
 
 @pytest.mark.unit
 def test_resample_unknown_downsample_method_raises():
     data = _make_timeseries(10, 1800)
-    # an invalid pandas aggregation raises
-    with pytest.raises(AttributeError, match="is not a valid function"):
+    # An invalid pandas aggregation raises. Different pandas versions raise different
+    # exception types (AttributeError vs ValueError) with different messages, so match
+    # on the offending method name that is common to all versions.
+    with pytest.raises((AttributeError, ValueError), match="not_a_method"):
         resample_resource_data_to_dt(data, 3600, downsample_method="not_a_method")
