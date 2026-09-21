@@ -9,7 +9,6 @@ from attrs import field, define, validators
 from retry_requests import retry
 
 from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
-from h2integrate.resource.utilities.time_tools import process_leap_day
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
@@ -104,7 +103,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
             "solar_resource_data", val=data, desc="Dict of solar resource data"
         )
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_openmeteo_archive_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -123,12 +122,12 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
@@ -139,8 +138,8 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
             str: url to use for API call.
         """
 
-        start_year = int(self.config.resource_year - 1)
-        end_year = int(self.config.resource_year + 1)
+        start_year = int(resource_year - 1)
+        end_year = int(resource_year + 1)
 
         input_data = {
             "latitude": latitude,
@@ -295,11 +294,11 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
         data["Hour"] = time.hour
         data["Minute"] = time.minute
 
-        data = data[data["Year"] == self.config.resource_year]
+        # data = data[data["Year"] == self.config.resource_year]
 
         data = data.reset_index(drop=True)
 
-        data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
+        # data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units

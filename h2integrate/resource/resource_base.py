@@ -1,4 +1,5 @@
 import warnings
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -7,7 +8,17 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
-from h2integrate.resource.utilities.time_tools import add_resource_start_end_times
+from h2integrate.resource.utilities.data_tools import (
+    append_timeseries_data,
+    clip_data_to_n_timesteps,
+    clip_data_to_resource_year,
+    separate_timeseries_and_meta_data,
+)
+from h2integrate.resource.utilities.time_tools import (
+    is_leap_year,
+    process_leap_day,
+    add_resource_start_end_times,
+)
 from h2integrate.resource.utilities.download_tools import download_from_api
 
 
@@ -62,6 +73,7 @@ class ResourceBaseAPIConfig(BaseConfig):
     resource_data: dict | object = field(default={})
     resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
+    include_leap_day: bool = field(default=False)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -94,6 +106,130 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
+
+        self.resource_years = self._get_resource_years(self.config.resource_year)
+
+    def _check_resource_year(self, resource_year):
+        """Check if the input resource year is valid based on the config validator.
+
+        Args:
+            resource_year (str | int): resource year to pull data for.
+            If resource_year is a string, it should be formatted as 'tmy-{year}' or similar.
+
+        Raises:
+            ValueError: If the resource year in invalid based on the config validator
+        """
+        init_resource_year = deepcopy(self.config.resource_year)
+
+        resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
+
+        if resource_year_validator == "_InValidator":
+            year_options = self.config.__attrs_attrs__.resource_year.validator.options
+            if isinstance(resource_year, str):
+                # resource_year is already a string, like 'tmy-2020'
+                if resource_year not in year_options:
+                    msg = f"Invalid resource year '{resource_year}', " f"options are {year_options}"
+                    raise ValueError(msg)
+
+            if isinstance(resource_year, int):
+                year_str = f"{init_resource_year.split('-')[0]}-{resource_year}"
+                if year_str not in year_options:
+                    msg = f"Invalid resource year '{year_str}', " f"options are {year_options}"
+                    raise ValueError(msg)
+
+            return
+
+        # Bounds validator
+        for validator in self.config.__attrs_attrs__.resource_year.validator._validators:
+            if "<" in validator.compare_op:
+                last_yr = (
+                    validator.bound if validator.compare_op == "<=" else int(validator.bound - 1)
+                )
+            if ">" in validator.compare_op:
+                first_yr = (
+                    validator.bound if validator.compare_op == ">=" else int(validator.bound + 1)
+                )
+
+        if resource_year < first_yr or resource_year > last_yr:
+            msg = (
+                f"Invaild resource year of {resource_year}. "
+                f"Resource year must be between {first_yr} and {last_yr}"
+            )
+            raise ValueError(msg)
+
+    def _get_resource_years(self, resource_starting_year):
+        resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
+        if resource_year_validator == "_InValidator":
+            # to accomodate tmy solar resource models
+            year_options = self.config.__attrs_attrs__.resource_year.validator.options
+            # resource_year_type, resource_year = self.config.resource_year.split("-")
+            if isinstance(resource_starting_year, str):
+                # resource_year is formatted like `tmy-2020`
+                resource_year_type, resource_year = resource_starting_year.split("-")
+                resource_base_year = int(resource_year)
+            else:
+                # resource_year is just the year, get the "type" from the config (like tmy or tgy)
+                resource_year_type, _ = self.config.resource_year.split("-")
+                resource_base_year = int(resource_starting_year)
+
+            # resource_year = int(resource_year)
+            # resource_base_year = deepcopy(resource_year)
+            future_years = sorted(
+                [
+                    int(yr.split("-")[-1])
+                    for yr in year_options
+                    if (f"{resource_year_type}-" in yr)
+                    and int(yr.split("-")[-1]) >= resource_base_year
+                ]
+            )
+
+        else:
+            resource_base_year = int(resource_starting_year)
+            for validator in self.config.__attrs_attrs__.resource_year.validator._validators:
+                if "<" in validator.compare_op:
+                    last_available_yr = (
+                        validator.bound
+                        if validator.compare_op == "<="
+                        else int(validator.bound - 1)
+                    )
+
+            future_years = (
+                np.arange(resource_base_year, last_available_yr + 1, 1).astype(int).tolist()
+            )
+            # resource_base_year = deepcopy(self.config.resource_year)
+
+        include_leap = getattr(self.config, "include_leap_day", False)
+
+        if include_leap:
+            hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
+        else:
+            hours_per_simulation_year = [8760] * len(future_years)
+
+        # Get the maximum number of hours available in the resource years
+        # following resource_start_year
+        future_hours_available = int(sum(hours_per_simulation_year))
+
+        # Get the number of hours in the simulation
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+
+        if future_hours_available < hours_simulated:
+            msg = f"Not enough future resource years for simulation of {hours_simulated} hours"
+            raise ValueError(msg)
+
+        cumulative_hrs = np.cumsum(hours_per_simulation_year)
+
+        # Get the last resource year needed to get enough resource data for n_timesteps
+        last_resource_year = [
+            y for y, h in zip(future_years, cumulative_hrs) if h >= hours_simulated
+        ][0]
+
+        resource_years = (
+            np.arange(resource_base_year, last_resource_year + 1, 1).astype(int).tolist()
+        )
+        if resource_year_validator == "_InValidator":
+            # Using TMY data, turn resource year into strings again
+            resource_years = [f"{resource_year_type}-{int(y)}" for y in resource_years]
+        return sorted(resource_years)
 
     def helper_setup_method(self):
         """
@@ -129,7 +265,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         return resource_specs
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Suggested filename formatting is:
 
         "{latitude}_{longitude}_{resource_year}_{dataset_desc}_{interval}min_{tz_desc}_tz.csv"
@@ -145,7 +281,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
@@ -189,7 +325,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def get_data(self, latitude, longitude, first_call=True):
+    def get_data_for_year(
+        self, latitude, longitude, resource_year, resource_filename="", first_call=True
+    ):
         """Get resource data to handle any of the expected inputs. This method does the following:
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
@@ -219,7 +357,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             Any: resource data in the format expected by the subclass.
         """
-        site_changed = False
 
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
@@ -236,7 +373,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             return data
 
         # check if user provided directory or filename
-        provided_filename = False if self.config.resource_filename == "" else True
+        provided_filename = False if resource_filename == "" else True
         provided_dir = False if self.config.resource_dir is None else True
 
         # 2a) check if file exists directly within resource directory
@@ -245,10 +382,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # 3a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
             # If a filename was input, use resource_filename as the filename.
-            filepath = resource_dir / self.config.resource_filename
+            filepath = resource_dir / resource_filename
         # Otherwise, create a filename with the method `create_filename()`.
         else:
-            filename = self.create_filename(latitude, longitude)
+            filename = self.create_filename(latitude, longitude, resource_year)
             filepath = resource_dir / filename
         # if file doesn't exist, continue to Step 2b
         if not filepath.is_file():
@@ -266,10 +403,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # 3) Create a filename if resource_filename was input
             if provided_filename and not site_changed:
                 # If a filename was input, use resource_filename as the filename.
-                filepath = resource_dir / self.config.resource_filename
+                filepath = resource_dir / resource_filename
             # Otherwise, create a filename with the method `create_filename()`.
             else:
-                filename = self.create_filename(latitude, longitude)
+                filename = self.create_filename(latitude, longitude, resource_year)
                 filepath = resource_dir / filename
 
         # Check if the filename was provided by the user and the site hasn't changed
@@ -277,7 +414,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # If the user-provided filename wasn't found, throw a warning
             if not filepath.is_file():
                 msg = (
-                    f"User provided resource filename {self.config.resource_filename} "
+                    f"User provided resource filename {resource_filename} "
                     f"not found in {resource_dir}. Data will be downloaded for this site."
                 )
                 warnings.warn(msg, UserWarning)
@@ -287,24 +424,99 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if filepath.is_file():
             self.filepath = filepath
             data = self.load_data(filepath)
+            data = clip_data_to_resource_year(data, resource_year)
             data = add_resource_start_end_times(data)
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
         self.filepath = filepath
         # 5) Create the url to download data using `create_url()` and continue to Step 6.
-        url = self.create_url(latitude, longitude)
+        url = self.create_url(latitude, longitude, resource_year)
         # 6) Download data from the url created in Step 5 and save to a filepath created from
         # the resulting resource_dir and filename from Steps 2 and 3.
         success = self.download_data(url, filepath)
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()`
             data = self.load_data(filepath)
+            if (yr_ts := data.get("year")) is not None:
+                if len(set(yr_ts)) > 1:
+                    data = clip_data_to_resource_year(data, resource_year)
             data = add_resource_start_end_times(data)
             return data
 
         else:
             raise ValueError("Did not successfully download resource data.")
+
+    def get_data(self, latitude, longitude, first_call=True):
+        site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
+
+        # 0) If site hasn't changed and resource data has already been loaded
+        # just return the resource data that was loaded in the setup() method
+        if not site_changed and not first_call:
+            if self.resource_data is not None:
+                return self.resource_data
+
+        if len(self.resource_years) == 1:
+            resource_data = self.get_data_for_year(
+                latitude,
+                longitude,
+                self.resource_years[0],
+                resource_filename=self.config.resource_filename,
+                first_call=first_call,
+            )
+            md, ts = separate_timeseries_and_meta_data(resource_data)
+            ts = process_leap_day(
+                ts, getattr(self.config, "include_leap_day", False), self.n_timesteps
+            )
+            resource_data = md | ts
+            resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
+            resource_data = add_resource_start_end_times(resource_data)
+            return resource_data
+
+        # Multiple years
+        if isinstance(self.config.resource_filename, list):
+            resource_files = deepcopy(self.config.resource_filename)
+        else:
+            resource_files = [self.config.resource_filename]
+
+        timeseries_data = {}
+        meta_data = {}
+
+        for year in self.resource_years:
+            if not isinstance(year, str):
+                year = int(year)
+
+            resource_fname_match = [k for k in resource_files if f"_{year}_" in k]
+            resource_fname = resource_fname_match[0] if bool(resource_fname_match) else ""
+            # self.config.resource_filename = resource_fname_match[0]
+
+            # self.config.resource_year = year
+            self._check_resource_year(year)
+
+            resource_data = self.get_data_for_year(
+                latitude, longitude, year, resource_filename=resource_fname, first_call=first_call
+            )
+            md, ts = separate_timeseries_and_meta_data(resource_data)
+
+            meta_data |= md
+            if year == self.resource_years[0]:
+                timeseries_data |= ts
+            else:
+                timeseries_data = append_timeseries_data(timeseries_data, ts)
+
+        # NOTE: here is where we could clip data if needed
+        # timeseries_data = self.clip_timeseries_data(timeseries_data)
+        # NOTE: this is also where we could up/downsample
+        timeseries_data = process_leap_day(
+            timeseries_data, getattr(self.config, "include_leap_day", False), self.n_timesteps
+        )
+        timeseries_data = clip_data_to_n_timesteps(timeseries_data, n_timesteps=self.n_timesteps)
+        timeseries_data = add_resource_start_end_times(timeseries_data)
+
+        # reset resource-filename
+        # self.config.resource_filename = resource_files
+
+        return meta_data | timeseries_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # update the resource data based on the input latitude and longitude

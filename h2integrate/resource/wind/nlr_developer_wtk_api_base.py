@@ -64,7 +64,7 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         # add resource data dictionary as an output
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_wtk_v2_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -83,12 +83,12 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
@@ -100,9 +100,10 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         """
         input_data = {
             "wkt": f"POINT({longitude} {latitude})",
-            "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
+            "names": [str(resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
+            "leap_day": str(self.config.include_leap_day).lower(),
             "api_key": get_nlr_developer_api_key(),
             "email": get_nlr_developer_api_email(),
         }
