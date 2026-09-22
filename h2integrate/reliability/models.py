@@ -235,6 +235,7 @@ class PerformanceReliability(BaseConfig):
         maintenance (BaseReliability): Reliability model for the maintenance downtime events.
     """
 
+    use_reliability: bool = field(validator=validators.instance_of(bool))
     simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
     availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
     failure_model: str | None = field(
