@@ -336,7 +336,7 @@ class UniformDowntime(BaseDowntime):
     )
     n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
-    @max_hours.validate
+    @max_hours.validator
     def validate_max_hours(self, attribute, value: int):
         """Ensures that :py:attr:`value` is greater than :py:attr:`min_hours`."""
         if (value <= self.min_hours).any():
