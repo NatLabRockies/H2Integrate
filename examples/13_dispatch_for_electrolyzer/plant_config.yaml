@@ -25,7 +25,7 @@ technology_interconnections:
   - [elec_combiner, elec_load_demand, electricity, cable]
   # connect the electricity supplied to the demand to the electrolyzer
   - [elec_load_demand, electrolyzer, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, distributed_wind_plant, wind_resource_data]
   - [site.solar_resource, distributed_pv, solar_resource_data]

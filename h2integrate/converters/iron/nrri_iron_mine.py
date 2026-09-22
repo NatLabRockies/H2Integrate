@@ -12,6 +12,30 @@ from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceMo
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
+MINE_LOCATIONS = {
+    "Hibbing": {"latitude": 47.53, "longitude": -92.91},
+    "Northshore": {"latitude": 47.29, "longitude": -91.25},
+    "United": {"latitude": 47.34, "longitude": -92.58},
+    "Minorca": {"latitude": 47.55, "longitude": -92.52},
+    "Tilden": {"latitude": 46.48, "longitude": -87.66},
+}
+
+
+def get_mine_from_coordinates(latitude, longitude):
+    """Return the mine matching the provided latitude and longitude."""
+    for mine, location in MINE_LOCATIONS.items():
+        if np.isclose(latitude, location["latitude"]) and np.isclose(
+            longitude, location["longitude"]
+        ):
+            return mine
+
+    raise ValueError(
+        f"Latitude and longitude inputs do not match any known mine locations. "
+        f"Please check the inputs. Provided latitude: {latitude}, "
+        f"longitude: {longitude}."
+    )
+
+
 @define(kw_only=True)
 class NRRIIronMinePerformanceConfig(BaseConfig):
     """Configuration class for NRRIIronMinePerformanceComponent.
@@ -21,13 +45,38 @@ class NRRIIronMinePerformanceConfig(BaseConfig):
             "Minorca" or "Tilden"
         max_ore_production_rate_tonnes_per_hr (float): capacity of the pellet plant
             in units of metric tonnes of pellets produced per hour.
-
+        latitude (float): latitude of the mine location. If not provided, it will be set
+            based on the mine name.
+        longitude (float): longitude of the mine location. If not provided, it will be set
+            based on the mine name.
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
     mine: str = field(
         validator=validators.in_(["Hibbing", "Northshore", "United", "Minorca", "Tilden"])
     )
+    latitude: float = field(default=None)
+    longitude: float = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.latitude is not None or self.longitude is not None:
+            # check if the latitude and longitude are correct for the mine location
+            correct_latitude = MINE_LOCATIONS[self.mine]["latitude"]
+            correct_longitude = MINE_LOCATIONS[self.mine]["longitude"]
+            if (
+                self.latitude is None
+                or self.longitude is None
+                or not np.isclose(self.latitude, correct_latitude)
+                or not np.isclose(self.longitude, correct_longitude)
+            ):
+                raise ValueError(
+                    f"Incorrect latitude and/or longitude for mine {self.mine}. "
+                    f"Expected ({correct_latitude}, {correct_longitude}), got "
+                    f"({self.latitude}, {self.longitude})."
+                )
+
+        self.latitude = MINE_LOCATIONS[self.mine]["latitude"]
+        self.longitude = MINE_LOCATIONS[self.mine]["longitude"]
 
 
 class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
@@ -83,6 +132,20 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
             shape=self.n_timesteps,
             units="galUS/h",
             desc="Diesel feedstock into iron mine",
+        )
+
+        # add latitude and longitude inputs for mine location
+        self.add_input(
+            "latitude",
+            val=self.config.latitude,
+            units="deg",
+            desc="Latitude of the mine location",
+        )
+        self.add_input(
+            "longitude",
+            val=self.config.longitude,
+            units="deg",
+            desc="Longitude of the mine location",
         )
 
         self.add_output(
@@ -151,8 +214,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "nrri_ore" / "perf_coeffs.csv"
         # nrri ore performance model
-        coeff_df = pd.read_csv(coeff_fpath)
-        self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)
+        self.coeff_dataframe = pd.read_csv(coeff_fpath)
 
     def format_coeff_df(self, coeff_df, mine):
         """Update the coefficient dataframe such that values are adjusted to standard units
@@ -227,6 +289,11 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         return coeff_df
 
     def compute(self, inputs, outputs):
+        # get mine location based on latitude and longitude inputs
+        mine_location = get_mine_from_coordinates(inputs["latitude"], inputs["longitude"])
+
+        self.coeff_df = self.format_coeff_df(self.coeff_dataframe, mine_location)
+
         energy_per_process = {}
         natural_gas_per_process = {}
         diesel_per_process = {}
@@ -238,7 +305,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         if system_capacity * 8760 > ref_pellets:
             msg = (
                 f"System capacity of {system_capacity} t/yr exceeds the reference pellet"
-                f" production of {ref_pellets} t/yr."
+                f" production of {ref_pellets/8760} t/yr."
                 f" This may lead to unrealistic results."
             )
             warnings.warn(msg, UserWarning)
@@ -379,6 +446,10 @@ class NRRIIronMineCostConfig(BaseConfig):
             "Minorca" or "Tilden"
         taconite_pellet_type (str): type of taconite pellets, options are "std" or "drg".
         cost_year (int): target dollar year to convert costs to.
+        latitude (float): latitude of the mine location. If not provided, it will be set
+            based on the mine name.
+        longitude (float): longitude of the mine location. If not provided, it will be set
+            based on the mine name.
     """
 
     mine: str = field(
@@ -390,6 +461,28 @@ class NRRIIronMineCostConfig(BaseConfig):
     # the cost model is based on costs from 2021 and can be adjusted to another cost year
     # using CPI adjustment.
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
+    latitude: float = field(default=None)
+    longitude: float = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.latitude is not None or self.longitude is not None:
+            # check if the latitude and longitude are correct for the mine location
+            correct_latitude = MINE_LOCATIONS[self.mine]["latitude"]
+            correct_longitude = MINE_LOCATIONS[self.mine]["longitude"]
+            if (
+                self.latitude is None
+                or self.longitude is None
+                or not np.isclose(self.latitude, correct_latitude)
+                or not np.isclose(self.longitude, correct_longitude)
+            ):
+                raise ValueError(
+                    f"Incorrect latitude and/or longitude for mine {self.mine}. "
+                    f"Expected ({correct_latitude}, {correct_longitude}), got "
+                    f"({self.latitude}, {self.longitude})."
+                )
+
+        self.latitude = MINE_LOCATIONS[self.mine]["latitude"]
+        self.longitude = MINE_LOCATIONS[self.mine]["longitude"]
 
 
 class NRRIIronMineCostComponent(CostModelBaseClass):
@@ -446,10 +539,22 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
             desc="Annual iron ore production",
         )
 
+        self.add_input(
+            "latitude",
+            val=self.config.latitude,
+            units="deg",
+            desc="Latitude of the mine location",
+        )
+        self.add_input(
+            "longitude",
+            val=self.config.longitude,
+            units="deg",
+            desc="Longitude of the mine location",
+        )
+
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "nrri_ore" / "cost_coeffs.csv"
         # nrri ore cost model
-        coeff_df = pd.read_csv(coeff_fpath)
-        self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)
+        self.coeff_dataframe = pd.read_csv(coeff_fpath)
 
     def format_coeff_df(self, coeff_df, mine):
         """Update the coefficient dataframe such that values are adjusted to standard units
@@ -510,6 +615,11 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         return coeff_df
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # get mine location based on latitude and longitude inputs
+        mine_location = get_mine_from_coordinates(inputs["latitude"], inputs["longitude"])
+
+        self.coeff_df = self.format_coeff_df(self.coeff_dataframe, mine_location)
+
         pellet_type = self.config.taconite_pellet_type
 
         # Get the capital cost for the reference design and scale to the modeled mine

@@ -1,18 +1,27 @@
-import re
 import importlib.util
 from enum import IntEnum
 
-import numpy as np
 import networkx as nx
 import openmdao.api as om
 
-from h2integrate.core.utilities import create_xdsm_from_config
 from h2integrate.core.dict_utils import check_inputs
-from h2integrate.core.file_utils import get_path, find_file, load_yaml
+from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
+from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.connection_utils import (
+    create_technology_graph,
+    check_dispatch_connections,
+    check_technology_connections,
+    validate_technology_interconnections,
+    split_indices_from_connected_parameter_definition,
+)
 from h2integrate.core.supported_models import (
     no_cost_models,
     supported_models,
     no_replacement_schedule_models,
+)
+from h2integrate.postprocess.reporting import (
+    create_xdsm as create_xdsm_utility,
+    print_results as print_model_results,
 )
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
@@ -43,7 +52,7 @@ class H2IntegrateModel:
 
         # create technology connection graph based on technology interconnections
         # defined in plant config
-        self.technology_graph = self.create_technology_graph(
+        self.technology_graph = create_technology_graph(
             self.plant_config.get("technology_interconnections", {})
         )
 
@@ -75,6 +84,15 @@ class H2IntegrateModel:
         # they will need tech_config but not driver or plant config
         self.create_technology_models()
 
+        # validate `tech_to_dispatch_connections` against `dispatch_rule_set`/
+        # `control_strategy` declarations before building any further OpenMDAO connections
+        check_dispatch_connections(
+            self.technology_config,
+            self.plant_config.get("tech_to_dispatch_connections"),
+            self.supported_models,
+            self.technology_graph,
+        )
+
         self.create_finance_model()
 
         # add system-level controller if configured
@@ -92,35 +110,6 @@ class H2IntegrateModel:
         self.create_driver_model()
 
         self.state = State.INITIALIZED
-
-    def _load_component_config(self, config_key, config_value, config_path, validator_func):
-        """Helper method to load and validate a component configuration.
-
-        Args:
-            config_key (str): Key name for the configuration (e.g., "driver_config")
-            config_value (dict | str): Configuration value from main config
-            config_path (Path | None): Path to main config file (None if dict)
-            validator_func (callable): Validation function to apply
-
-        Returns:
-            tuple: (validated_config, config_file_path, parent_path)
-                - validated_config: Validated configuration dictionary
-                - config_file_path: Path to config file (None if dict)
-                - parent_path: Parent directory of config file (None if dict)
-        """
-        if isinstance(config_value, dict):
-            # Config provided as embedded dictionary
-            return validator_func(config_value), None, None
-        else:
-            # Config provided as filepath - resolve location
-            if config_path is None:
-                file_path = get_path(config_value)
-            else:
-                file_path = find_file(config_value, config_path.parent)
-
-            # Store parent directory for resolving custom model paths later
-            parent_path = file_path.parent
-            return validator_func(file_path), file_path, parent_path
 
     def load_config(self, config_input):
         """Load and validate configuration files for the H2I model.
@@ -199,20 +188,16 @@ class H2IntegrateModel:
             load_driver_yaml,
         )
 
-        self.driver_config, self.driver_config_path, _ = self._load_component_config(
-            "driver_config", config.get("driver_config"), config_path, load_driver_yaml
+        self.driver_config, self.driver_config_path, _ = load_component_config(
+            config.get("driver_config"), config_path, load_driver_yaml
         )
 
         self.technology_config, self.tech_config_path, self.tech_parent_path = (
-            self._load_component_config(
-                "technology_config", config.get("technology_config"), config_path, load_tech_yaml
-            )
+            load_component_config(config.get("technology_config"), config_path, load_tech_yaml)
         )
 
-        self.plant_config, self.plant_config_path, self.plant_parent_path = (
-            self._load_component_config(
-                "plant_config", config.get("plant_config"), config_path, load_plant_yaml
-            )
+        self.plant_config, self.plant_config_path, self.plant_parent_path = load_component_config(
+            config.get("plant_config"), config_path, load_plant_yaml
         )
 
         for name, vals in self.technology_config["technologies"].items():
@@ -493,6 +478,8 @@ class H2IntegrateModel:
                 - ``"demand_commodity_rate_units"`` (str | None): Units string for the
                   demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
                   specified in the demand tech config.
+                - ``"demand_profile"`` (int | float | list): Default demand profile from
+                    the demand technology configuration.
                 - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
                   ``(tech_name, commodity)`` pairs for every technology that the SLC
                   controls or reads from. Built from outgoing edges of the technology
@@ -583,7 +570,7 @@ class H2IntegrateModel:
             if connection[0] in upstream_controllable_techs
         ]
 
-        upstream_tech_graph = self.create_technology_graph(upstream_interconnections)
+        upstream_tech_graph = create_technology_graph(upstream_interconnections)
         slc_topology["technology_graph"] = upstream_tech_graph
 
         # downselect the technology control classifiers to only include those upstream
@@ -629,6 +616,7 @@ class H2IntegrateModel:
         slc_topology["demand_tech"] = demand_tech
         slc_topology["demand_commodity"] = all_params["commodity"]
         slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
+        slc_topology["demand_profile"] = all_params.get("demand_profile", 10.0)
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
@@ -855,10 +843,16 @@ class H2IntegrateModel:
                     # numeric scalar: used directly, no connection needed
 
         # --- Step 5: Connect the demand profile to the controller ---------
+        # Input-to-input connection (OpenMDAO 3.44+): as with the buy_price
+        # connection above, this must be made on the top-level model rather
+        # than a subgroup. Connecting via ``self.plant`` (a subgroup) leaves
+        # the demand tech's promoted "*" alias at the model level dangling,
+        # so auto_ivc creates a second, conflicting source for the same
+        # controller input.
         demand_tech = slc_topology["demand_tech"]
         demand_commodity = slc_topology["demand_commodity"]
-        self.plant.connect(
-            f"{demand_tech}.{demand_commodity}_demand_out",
+        self.model.connect(
+            f"{demand_tech}.{demand_commodity}_demand",
             f"system_level_controller.{demand_commodity}_demand",
         )
 
@@ -927,7 +921,11 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
-                self._check_time_step(perf_model, comp)
+                check_model_time_step(
+                    perf_model,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
@@ -965,9 +963,13 @@ class H2IntegrateModel:
                         tech_config=individual_tech_config,
                     )
 
-                    self._check_control_classifier(perf_model, comp)
+                    check_model_control_classifier(perf_model, comp, self.slc)
                     self.tech_control_classifiers.update({tech_name: comp._control_classifier})
-                    self._check_time_step(perf_model, comp)
+                    check_model_time_step(
+                        perf_model,
+                        comp,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
                     self.performance_models.append(om_model_object)
                     self.cost_models.append(om_model_object)
@@ -1043,7 +1045,11 @@ class H2IntegrateModel:
                     plant_config=self.plant_config,
                     tech_config=individual_tech_config,
                 )
-                self._check_time_step(tech_name, comp)
+                check_model_time_step(
+                    tech_name,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
             1 for v in self.tech_control_classifiers.values() if v != "transport"
@@ -1065,7 +1071,11 @@ class H2IntegrateModel:
         model_name = individual_tech_config[model_type]["model"]
         model_object = self.supported_models[model_name]
 
-        self._check_time_step(model_name, model_object)
+        check_model_time_step(
+            model_name,
+            model_object,
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
 
         om_model_object = tech_group.add_subsystem(
             model_name,
@@ -1089,27 +1099,6 @@ class H2IntegrateModel:
             tech_group.linear_solver = om.DirectSolver()
 
         return om_model_object
-
-    def _check_time_step(self, model_name, model_object):
-        dt = int(self.plant_config["plant"]["simulation"]["dt"])
-
-        min_ts = model_object._time_step_bounds[0]
-        max_ts = model_object._time_step_bounds[1]
-        if dt < min_ts or dt > max_ts:
-            msg = (
-                f"Model {model_name} is compatible with time steps "
-                f"between {min_ts} (s) and {max_ts} (s), but a time step of {dt} (s) "
-                "was specified. Please set plant_config['plant']['simulation']['dt'] to a"
-                f" value within the range [{min_ts}, {max_ts}]."
-            )
-            raise ValueError(msg)
-
-    def _check_control_classifier(self, model_name, model_object):
-        if not self.slc:
-            return
-        if not hasattr(model_object, "_control_classifier"):
-            msg = f"Model {model_name} is missing a control classifier"
-            raise ValueError(msg)
 
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
@@ -1559,7 +1548,7 @@ class H2IntegrateModel:
             combiner_counts (dict): Tracks the next input index per combiner technology.
             splitter_counts (dict): Tracks the next output index per splitter technology.
         """
-        if "combiner" in dest_tech:
+        if self.tech_control_classifiers.get(dest_tech) == "combiner":
             if dest_tech not in combiner_counts:
                 combiner_counts[dest_tech] = 1
             else:
@@ -1570,7 +1559,7 @@ class H2IntegrateModel:
                     f"{source_tech}.{stream_name}:{var_name}_out",
                     f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
                 )
-        elif "splitter" in source_tech:
+        elif self.tech_control_classifiers.get(source_tech) == "splitter":
             if source_tech not in splitter_counts:
                 splitter_counts[source_tech] = 1
             else:
@@ -1653,7 +1642,11 @@ class H2IntegrateModel:
                     )
 
                     # Add the connection component to the model
-                    self._check_time_step(transport_type, connection_component)
+                    check_model_time_step(
+                        transport_type,
+                        connection_component,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
                     self.plant.add_subsystem(connection_name, connection_component)
 
                     # Reorder the subsystems so transporters comes after their source technology
@@ -1665,7 +1658,7 @@ class H2IntegrateModel:
                     self.plant.set_order(subsystem_names)
 
                 # Check if the source technology is a splitter
-                if "splitter" in source_tech:
+                if self.tech_control_classifiers.get(source_tech) == "splitter":
                     # Connect the source technology to the connection component
                     # with specific output names
                     if source_tech not in splitter_counts:
@@ -1687,7 +1680,7 @@ class H2IntegrateModel:
                     )
 
                 # Check if the transport type is a combiner
-                if "combiner" in dest_tech:
+                if self.tech_control_classifiers.get(dest_tech) == "combiner":
                     # Connect the source technology to the connection component
                     # with specific input names
                     if dest_tech not in combiner_counts:
@@ -1724,7 +1717,7 @@ class H2IntegrateModel:
                 # initialize src_indices to allow connections between different shaped variables
                 if isinstance(connected_parameter, list):
                     connected_parameter, src_indices = (
-                        self._split_indices_from_connected_parameter_definition(connected_parameter)
+                        split_indices_from_connected_parameter_definition(connected_parameter)
                     )
 
                 # connect directly from source to dest
@@ -1766,7 +1759,7 @@ class H2IntegrateModel:
                 err_msg = f"Invalid connection: {connection}"
                 raise ValueError(err_msg)
 
-        resource_to_tech_connections = self.plant_config.get("resource_to_tech_connections", [])
+        site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
         if "sites" in self.plant_config:
             resource_models = {}
@@ -1774,7 +1767,7 @@ class H2IntegrateModel:
                 for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
                     resource_models[f"{site_grp}.{resource_key}"] = resource_params
 
-            resource_source_connections = [c[0] for c in resource_to_tech_connections]
+            resource_source_connections = [c[0] for c in site_to_tech_connections]
             # Check if there is a missing resource to tech connection or missing resource model
             if len(resource_models) != len(resource_source_connections):
                 if len(resource_models) > len(resource_source_connections):
@@ -1787,8 +1780,8 @@ class H2IntegrateModel:
                         msg = (
                             "Some resources are not connected to a technology. Resource models "
                             f"{non_connected_resource} are not included in "
-                            "`resource_to_tech_connections`. Please connect these resources "
-                            "to their technologies under `resource_to_tech_connections` in "
+                            "`site_to_tech_connections`. Please connect these resources "
+                            "to their technologies under `site_to_tech_connections` in "
                             "the plant config file."
                         )
                         raise ValueError(msg)
@@ -1804,13 +1797,13 @@ class H2IntegrateModel:
                         msg = (
                             "Missing resource(s) are not defined but are connected to a"
                             f" technology. Missing resource(s) are {missing_resource}. "
-                            "Please check ``resource_to_tech_connections`` in the plant"
+                            "Please check ``site_to_tech_connections`` in the plant"
                             " config file or add the missing resources"
                             " to plant_config['site']['resources']."
                         )
                         raise ValueError(msg)
 
-            for connection in resource_to_tech_connections:
+            for connection in site_to_tech_connections:
                 if len(connection) != 3:
                     err_msg = f"Invalid resource to tech connection: {connection}"
                     raise ValueError(err_msg)
@@ -1856,7 +1849,7 @@ class H2IntegrateModel:
 
                     # If latitude is connected, make sure longitude is also connected
                     other_connection = [resource_name, tech_name, other_variable]
-                    if other_connection not in resource_to_tech_connections:
+                    if other_connection not in site_to_tech_connections:
                         msg = (
                             f"{site_parameter} is connected between {resource_name} and "
                             f"{tech_name}, but {other_loc_var} is not. Please ensure that "
@@ -1949,8 +1942,10 @@ class H2IntegrateModel:
                 continue
             else:
                 # Only connect dispatch rules if they are defined in the tech_config
-                tech_dispatch_rule = self.technology_config.get(tech_name, {}).get(
-                    "dispatch_rule_set", False
+                tech_dispatch_rule = (
+                    self.technology_config["technologies"]
+                    .get(tech_name, {})
+                    .get("dispatch_rule_set", False)
                 )
                 if tech_dispatch_rule:
                     # Connect the dispatch rules output to the dispatching_tech_name input
@@ -1985,8 +1980,17 @@ class H2IntegrateModel:
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
-        self._validate_technology_interconnections()
-        self._check_tech_connections()
+        validate_technology_interconnections(
+            self.plant_config.get("technology_interconnections", []),
+            self.technology_graph,
+            self.tech_control_classifiers,
+        )
+        check_technology_connections(
+            self.prob,
+            self.technology_config,
+            self.technology_graph,
+            self.plant_config_path,
+        )
 
     def run(self):
         # do model setup based on the driver config
@@ -2023,7 +2027,7 @@ class H2IntegrateModel:
         if print_results:
             # Use custom summary printer instead of OpenMDAO's built-in printing so we can
             # suppress internal value printing and display only mean values.
-            self.print_results(self.prob.model, excludes=["*resource_data"])
+            print_model_results(self.prob.model, excludes=["*resource_data"])
 
         if summarize_sql and self.recorder_path is not None:
             from h2integrate.postprocess.sql_to_csv import convert_sql_to_csv_summary
@@ -2039,633 +2043,6 @@ class H2IntegrateModel:
                     plt.show()
         self.state = State.POST_PROCESS
 
-    @staticmethod
-    def print_results(model, includes=None, excludes=None, show_units=True):
-        """Print hierarchical inputs plus explicit/implicit outputs (means only) using Rich.
-
-        Order of rows preserves OpenMDAO's original ordering from list_inputs/list_outputs.
-        Group rows are emitted lazily the first time a variable within that path appears.
-        """
-
-        def _gather_outputs(explicit=True, implicit=False):
-            return model.list_outputs(
-                explicit=explicit,
-                implicit=implicit,
-                val=True,
-                prom_name=True,
-                units=show_units,
-                shape=True,
-                includes=includes,
-                excludes=excludes,
-                out_stream=None,
-                return_format="list",
-            )
-
-        explicit_meta = _gather_outputs(explicit=True, implicit=False)
-        implicit_meta = _gather_outputs(explicit=False, implicit=True)
-
-        # Gather inputs (no explicit/implicit split in OpenMDAO API)
-        input_meta = model.list_inputs(
-            val=True,
-            prom_name=True,
-            units=show_units,
-            shape=True,
-            includes=includes,
-            excludes=excludes,
-            out_stream=None,
-            return_format="list",
-        )
-
-        def _mean(val):
-            if isinstance(val, np.ndarray):
-                return "nan" if val.size == 0 else f"{np.mean(val)}"
-            if isinstance(val, int | float | np.number):
-                return f"{val}"
-            return "n/a"
-
-        from rich import box
-        from rich.table import Table
-        from rich.console import Console
-
-        console = Console()
-
-        def _emit_section(title, meta_list, kind_label="outputs"):
-            if not meta_list:
-                return
-            console.print(f"\n{len(meta_list)} {title.lower()} {kind_label}:")
-            table = Table(show_header=True, header_style="bold", box=box.MINIMAL, pad_edge=False)
-            table.add_column("Variable", overflow="fold")
-            table.add_column("Mean", justify="right")
-            if show_units:
-                table.add_column("Units")
-            table.add_column("Shape")
-            table.add_column("Promoted name", overflow="fold")
-
-            emitted_groups = set()
-            for abs_name, meta in meta_list:
-                parts = abs_name.split(".")
-                # emit group rows
-                for depth in range(len(parts) - 1):
-                    grp_path = ".".join(parts[: depth + 1])
-                    if grp_path not in emitted_groups:
-                        emitted_groups.add(grp_path)
-                        indent = "  " * depth
-                        grp_name = parts[depth]
-                        if show_units:
-                            table.add_row(f"{indent}{grp_name}", "", "", "", "")
-                        else:
-                            table.add_row(f"{indent}{grp_name}", "", "", "")
-                var = parts[-1]
-                indent = "  " * (len(parts) - 1)
-                mean_raw = _mean(meta.get("val"))
-                try:
-                    val = float(mean_raw)
-                    units_val_raw = meta.get("units")
-                    # Format as integer if units are 'year' or variable name is 'cost_year'
-                    if units_val_raw == "year" or var == "cost_year":
-                        mean_val = str(int(val))
-                    elif abs(val) >= 1e5:
-                        formatted = f"{val:,.2f}"
-                        mean_val = formatted.rstrip("0")
-                        if mean_val.endswith("."):
-                            mean_val = mean_val  # Keep e.g. "520." format
-                        else:
-                            mean_val = mean_val + "." if "." not in mean_val else mean_val
-                    else:
-                        formatted = f"{val:,.4f}"
-                        mean_val = formatted.rstrip("0")
-                        # Ensure we end with "." if all decimals were zeros
-                        if mean_val.endswith("."):
-                            pass  # Keep as e.g. "520." or "0."
-                        elif "." not in mean_val:
-                            mean_val = mean_val + "."
-                except (ValueError, TypeError):
-                    mean_val = str(mean_raw)
-                units_val = (
-                    "n/a"
-                    if (var == "cost_year" or meta.get("units") is None)
-                    else str(meta.get("units"))
-                    if show_units
-                    else ""
-                )
-                shape_meta = meta.get("shape", "")
-                if var == "cost_year":
-                    shape_str = "n/a"
-                elif isinstance(shape_meta, tuple | list) and len(shape_meta) > 0:
-                    shape_str = str(shape_meta[0])
-                else:
-                    shape_str = "" if shape_meta in (None, "", ()) else str(shape_meta)
-                promoted = meta.get("prom_name", "")
-                if show_units:
-                    table.add_row(f"{indent}{var}", mean_val, units_val, shape_str, promoted)
-                else:
-                    table.add_row(f"{indent}{var}", mean_val, shape_str, promoted)
-            console.print(table)
-
-        # Emit sections (inside function scope)
-        _emit_section("Explicit", input_meta, kind_label="inputs")
-        _emit_section("Explicit", explicit_meta, kind_label="outputs")
-        _emit_section("Implicit", implicit_meta, kind_label="outputs")
-
-        # structured return
-        def _structured(meta_list):
-            return {
-                name: {
-                    "mean": _mean(meta.get("val")),
-                    **(
-                        {
-                            "units": (
-                                "n/a"
-                                if name.split(".")[-1] == "cost_year" or meta.get("units") is None
-                                else meta.get("units")
-                            )
-                        }
-                        if show_units
-                        else {}
-                    ),
-                    "shape": (
-                        "n/a"
-                        if name.split(".")[-1] == "cost_year"
-                        else meta.get("shape")[0]
-                        if isinstance(meta.get("shape"), tuple | list)
-                        and len(meta.get("shape")) > 0
-                        else ""
-                        if meta.get("shape") in (None, "", ())
-                        else meta.get("shape")
-                    ),
-                    "promoted_name": meta.get("prom_name"),
-                }
-                for name, meta in meta_list
-            }
-
-        return {
-            "inputs": _structured(input_meta),
-            "explicit_outputs": _structured(explicit_meta),
-            "implicit_outputs": _structured(implicit_meta),
-        }
-
     def create_xdsm(self, outfile="connections_xdsm"):
-        """Create an XDSM diagram from the plant technology interconnections.
-
-        This method reads ``technology_interconnections`` from ``self.plant_config``
-        and delegates diagram generation to
-        :func:`h2integrate.core.utilities.create_xdsm_from_config`.
-
-        Args:
-            outfile (str, optional): Base filename for the generated XDSM output.
-                The default is ``"connections_xdsm"``.
-
-        Raises:
-            ValueError: If ``technology_interconnections`` is empty or missing from
-                the plant configuration.
-        """
-
-        technology_interconnections = self.plant_config.get("technology_interconnections", [])
-
-        if len(technology_interconnections) > 0:
-            create_xdsm_from_config(self.plant_config, output_file=outfile)
-        else:
-            raise ValueError(
-                "Generating an XDSM diagram requires technology interconnections, "
-                "but none were found."
-            )
-
-    def create_technology_graph(self, tech_interconnections: list | set):
-        """Create a directed graph of the technology interconnections.
-
-        Builds a NetworkX directed graph where nodes represent technologies
-        and edges represent connections between them. If a connection includes
-        a commodity (length-4 entry), it is stored as an edge attribute.
-
-        Args:
-            tech_interconnections (list): list of technology interconnections
-
-        Returns:
-            nx.DiGraph: A directed graph with technologies as nodes and
-                interconnections as edges.
-        """
-        technology_graph = nx.DiGraph()
-
-        def _as_commodity_list(commodity):
-            """Coerce a commodity definition to a list."""
-            if commodity is None:
-                return []
-            if isinstance(commodity, str):
-                return [commodity]
-            return list(commodity)
-
-        for connection in tech_interconnections:
-            source = connection[0]
-            destination = connection[1]
-            if len(connection) == 4:
-                new_commodities = _as_commodity_list(connection[2])
-
-                # Commodity is defined in connection. Keep edge commodities
-                # as a list, even for a single commodity.
-                if technology_graph.has_edge(source, destination):
-                    connected_cmods = technology_graph.edges[source, destination].get("commodity")
-                    existing_commodities = _as_commodity_list(connected_cmods)
-                    merged_commodities = list(set(existing_commodities + new_commodities))
-                    technology_graph.add_edge(
-                        source,
-                        destination,
-                        commodity=merged_commodities,
-                    )
-                else:
-                    technology_graph.add_edge(
-                        source,
-                        destination,
-                        commodity=new_commodities,
-                    )
-            else:
-                technology_graph.add_edge(source, destination)
-
-        return technology_graph
-
-    def _validate_technology_interconnections(self):
-        """Validate technology interconnections for common errors and discouraged patterns.
-
-        Performs the following checks:
-
-        1. Length-3 connections that pass a commodity via a ``[commodity_out, commodity_in]``
-           pair should instead use a length-4 connection with an explicit commodity name and
-           transport component. An error is raised when source and destination parameter names
-           differ only by their ``_out`` / ``_in`` suffix (i.e. the commodity could be inferred).
-
-        2. Storage technology topology: each storage technology must have exactly 1 input
-           connection (length-4) and at most 1 output connection (length-4). The technology
-           directly upstream of the storage component is allowed at most 2 output connections
-           (one to the storage tech and one to a combiner).
-
-        3. For all other technologies connected via length-4 connections (excluding splitters,
-           combiners, storage technologies, and direct predecessors of storage technologies),
-           each individual commodity may arrive from at most 1 source and be sent to at most
-           1 destination. Technologies with multiple inputs or outputs are fine as long as
-           each commodity comes from a single source and goes to a single destination
-           (e.g. an ammonia plant receiving hydrogen, nitrogen, and electricity from three
-           separate technologies is perfectly valid).
-
-        Raises:
-            ValueError: If any interconnection violates the topology rules.
-        """
-        technology_interconnections = self.plant_config.get("technology_interconnections", [])
-
-        # --- Check 1: discouraged length-3 [commodity_out, commodity_in] connections ---
-        for connection in technology_interconnections:
-            if len(connection) != 3:
-                continue
-            connected_parameter = connection[2]
-            if not isinstance(connected_parameter, list | tuple) or len(connected_parameter) != 2:
-                continue
-            source_param, dest_param = connected_parameter
-            if not isinstance(source_param, str) or not isinstance(dest_param, str):
-                continue
-            source_param_base = source_param.split("[", 1)[0]
-            dest_param_base = dest_param.split("[", 1)[0]
-            if source_param_base.endswith("_out") and dest_param_base.endswith("_in"):
-                commodity_from_source = source_param_base[: -len("_out")]
-                commodity_from_dest = dest_param_base[: -len("_in")]
-                if commodity_from_source == commodity_from_dest:
-                    source_tech, dest_tech = connection[0], connection[1]
-                    raise ValueError(
-                        f"Connection [{source_tech!r}, {dest_tech!r}, "
-                        f"[{source_param!r}, {dest_param!r}]] passes commodity "
-                        f"{commodity_from_source!r} between technologies using a "
-                        f"length-3 format. Use a length-4 connection instead: "
-                        f"[{source_tech!r}, {dest_tech!r}, {commodity_from_source!r}, "
-                        f"'<transport_tech>']. You can use "
-                        f"'GenericTransporterPerformanceModel' to transport "
-                        f"{commodity_from_source!r}."
-                    )
-
-        # --- Checks 2 and 3: topology checks using the technology graph ---
-        # Build edge-count degree maps (L4 only) for the storage topology check,
-        # and per-commodity source/destination maps for the general stream check.
-        in_degs_l4: dict[str, int] = {}
-        out_degs_l4: dict[str, int] = {}
-        # in_commodity_sources[tech][commodity] = number of distinct sources
-        in_commodity_sources: dict[str, dict[str, int]] = {}
-        # out_commodity_dests[tech][commodity] = number of distinct destinations
-        out_commodity_dests: dict[str, dict[str, int]] = {}
-
-        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if not commodity:
-                continue  # length-3 connections carry no commodity; skip them
-            out_degs_l4[source] = out_degs_l4.get(source, 0) + 1
-            in_degs_l4[dest] = in_degs_l4.get(dest, 0) + 1
-            dest_classifier = self.tech_control_classifiers.get(dest)
-            for c in commodity:
-                in_commodity_sources.setdefault(dest, {}).update(
-                    {c: in_commodity_sources.get(dest, {}).get(c, 0) + 1}
-                )
-                # Demand-classified techs are observers/sinks (they report on a commodity
-                # stream but do not consume it in a topology sense). Exclude them from the
-                # source's output-destination count so that a source may simultaneously
-                # feed a real consumer and a reporting/demand component without triggering
-                # the multi-destination error in Check 3.
-                if dest_classifier != "demand":
-                    current = out_commodity_dests.setdefault(source, {})
-                    current[c] = current.get(c, 0) + 1
-
-        # --- Check 2: storage technology topology ---
-        storage_techs = [k for k, v in self.tech_control_classifiers.items() if v == "storage"]
-        storage_upstream_techs: set[str] = set()
-        for storage_tech in storage_techs:
-            n_in = in_degs_l4.get(storage_tech, 0)
-            if n_in == 0:
-                raise ValueError(
-                    f"Storage technology {storage_tech!r} has no input connections in "
-                    f"the technology graph but should have at least 1."
-                )
-            # Per-commodity check: each commodity must arrive from exactly 1 source.
-            # A storage tech may accept multiple different commodities (e.g. electricity
-            # and hydrogen) from different upstream technologies; that is fine as long as
-            # no single commodity is supplied by more than one source.
-            for commodity, n_sources in in_commodity_sources.get(storage_tech, {}).items():
-                if n_sources > 1:
-                    raise ValueError(
-                        f"Storage technology {storage_tech!r} receives commodity "
-                        f"{commodity!r} from {n_sources} sources in the technology graph "
-                        f"but should receive it from at most 1."
-                    )
-            for commodity, n_out in out_commodity_dests.get(storage_tech, {}).items():
-                if n_out > 1:
-                    raise ValueError(
-                        f"Storage technology {storage_tech!r} has {n_out} output connection(s) "
-                        f"for commodity {commodity!r} but should have at most 1."
-                    )
-            # Identify the upstream technology (connected via a length-4 edge)
-            upstream_techs_l4 = [
-                t
-                for t in self.technology_graph.predecessors(storage_tech)
-                if self.technology_graph.edges[t, storage_tech].get("commodity")
-            ]
-            for upstream_tech in upstream_techs_l4:
-                storage_upstream_techs.add(upstream_tech)
-                for commodity in self.technology_graph.edges[upstream_tech, storage_tech].get(
-                    "commodity"
-                ):
-                    n_out_upstream = out_commodity_dests.get(upstream_tech, {}).get(commodity, 0)
-                    if n_out_upstream > 2:
-                        raise ValueError(
-                            f"Technology {upstream_tech!r} feeds storage technology "
-                            f"{storage_tech!r} but has {n_out_upstream} output connection(s). "
-                            f"It should connect only to {storage_tech!r} and a combiner "
-                            f"(at most 2 output streams)."
-                        )
-
-        # --- Check 3: per-commodity max 1 source/destination for general technologies ---
-        # A technology may receive multiple different commodities from different sources
-        # (e.g. an ammonia plant accepting hydrogen, nitrogen, and electricity is valid),
-        # but each individual commodity must arrive from exactly 1 source and be sent to
-        # exactly 1 destination (unless the tech is a splitter, combiner, storage, or the
-        # direct upstream tech of a storage component, all of which have known exceptions).
-        all_techs_in_l4 = set(in_commodity_sources) | set(out_commodity_dests)
-        for tech in all_techs_in_l4:
-            classifier = self.tech_control_classifiers.get(tech)
-            if classifier in ("splitter", "combiner"):
-                continue
-            if classifier == "storage":
-                continue  # already validated in check 2
-
-            for commodity, n_sources in in_commodity_sources.get(tech, {}).items():
-                if n_sources > 1:
-                    raise ValueError(
-                        f"Technology {tech!r} receives commodity {commodity!r} from "
-                        f"{n_sources} sources in the technology graph but should receive "
-                        f"it from at most 1. Consider using a combiner component."
-                    )
-
-            if tech in storage_upstream_techs:
-                continue  # out-stream validation for storage upstream handled in check 2
-
-            for commodity, n_dests in out_commodity_dests.get(tech, {}).items():
-                if n_dests > 1:
-                    raise ValueError(
-                        f"Technology {tech!r} sends commodity {commodity!r} to "
-                        f"{n_dests} destinations in the technology graph but should "
-                        f"send it to at most 1. Consider using a splitter component."
-                    )
-
-        # --- Check 4: prevent commodity double-counting via demand components ---
-        # A demand component may receive a commodity and pass it on to a real consumer
-        # (e.g. acting as a profile regularizer). However, if a source does this it
-        # must NOT also send the same commodity directly to another real consumer,
-        # because the flow would be counted twice.
-        #
-        # Valid:   source -> demand_comp -> real_consumer   (single path through demand)
-        # Valid:   source -> demand_comp (pure observer)
-        #          source -> real_consumer
-        # Invalid: source -> real_consumer_A                (competing direct path)
-        #          source -> demand_comp -> real_consumer_B (and also via demand)
-        #
-        # The check is transitive: a demand component "reaches a real consumer" even
-        # when the path passes through a chain of other demand components first.
-
-        def _demand_reaches_real_consumer(demand_tech: str) -> bool:
-            """Return True if demand_tech can reach a non-demand tech via L4 edges."""
-            visited: set[str] = set()
-            stack = [demand_tech]
-            while stack:
-                node = stack.pop()
-                if node in visited:
-                    continue
-                visited.add(node)
-                for _, d, c in self.technology_graph.out_edges(node, data="commodity"):
-                    if not c:
-                        continue
-                    if self.tech_control_classifiers.get(d) != "demand":
-                        return True
-                    stack.append(d)
-            return False
-
-        # Build per-(source, commodity) destination lists from L4 edges.
-        source_commodity_dests: dict[tuple[str, str], list[str]] = {}
-        for source, dest, commodity in self.technology_graph.edges(data="commodity"):
-            if not commodity:
-                continue
-            for c in commodity:
-                source_commodity_dests.setdefault((source, c), []).append(dest)
-
-        for (source, commodity), dests in source_commodity_dests.items():
-            direct_real_dests = [
-                d for d in dests if self.tech_control_classifiers.get(d) != "demand"
-            ]
-            outputting_demand_dests = [
-                d
-                for d in dests
-                if self.tech_control_classifiers.get(d) == "demand"
-                and _demand_reaches_real_consumer(d)
-            ]
-            if direct_real_dests and outputting_demand_dests:
-                raise ValueError(
-                    f"Technology {source!r} sends commodity {commodity!r} both directly "
-                    f"to {direct_real_dests} and to demand component(s) "
-                    f"{outputting_demand_dests} that re-emit the commodity to real "
-                    f"consumers. This would double-count the commodity flow. Either route "
-                    f"all {commodity!r} from {source!r} through the demand component, or "
-                    f"connect the downstream consumers directly to {source!r} instead."
-                )
-
-    def _check_tech_connections(self):
-        """Check that commodity streams between technologies are valid.
-
-        Validates that each commodity in a length-4 technology interconnection
-        is output by the source technology and accepted as input by the
-        destination technology. Does not check length-3 connections or
-        missing input commodity streams.
-
-        Raises:
-            ValueError: If any commodity connection is invalid.
-        """
-        # Collect IO parameter names for each technology in the graph
-        tech_io = {}
-        for tech_name in self.technology_graph.nodes():
-            tech_info = self.technology_config["technologies"].get(tech_name, {})
-            io_params = set()
-
-            for model_type in [
-                "performance_model",
-                "finance_model",
-                "cost_model",
-                "control_strategy",
-            ]:
-                if not tech_info or model_type not in tech_info:
-                    continue
-
-                model_name = tech_info[model_type]["model"]
-
-                if model_name == "FeedstockPerformanceModel":
-                    group = getattr(self.prob.model.plant, f"{tech_name}_source")
-                else:
-                    group = getattr(self.prob.model.plant, tech_name)
-                    if "FeedstockCostModel" not in model_name:
-                        group = getattr(group, model_name, None)
-                        if group is None:
-                            continue
-
-                io_params.update([key.split(".")[-1] for key in group.get_io_metadata().keys()])
-
-            tech_io[tech_name] = io_params
-
-        def _has_commodity_param(params, commodity, direction):
-            """Check if the technology has the commodity parameter, either exact
-            or numbered (splitter/combiner)."""
-            return f"{commodity}_{direction}" in params or any(
-                re.fullmatch(rf"{commodity}_{direction}\d", p) for p in params
-            )
-
-        # Validate commodity connections
-        invalid_outputs = set()  # (tech, commodity) pairs where source lacks _out param
-        invalid_inputs = set()  # (tech, commodity) pairs where dest lacks _in param
-        for source, dest, commodities in self.technology_graph.edges(data="commodity"):
-            if commodities is None:
-                continue  # length-3 connections have no commodity to check
-
-            for commodity in commodities:
-                if not _has_commodity_param(tech_io[source], commodity, "out"):
-                    invalid_outputs.add((source, commodity))
-                if not _has_commodity_param(tech_io[dest], commodity, "in"):
-                    invalid_inputs.add((dest, commodity))
-
-        # Build a single error message grouping output and input issues separately
-        if invalid_outputs or invalid_inputs:
-            parts = []
-            if invalid_outputs:
-                items = ", ".join(f"`{tech}` -> `{comm}`" for tech, comm in sorted(invalid_outputs))
-                parts.append(
-                    f"The following technologies do not output their specified commodity: {items}."
-                )
-            if invalid_inputs:
-                items = ", ".join(f"`{tech}` <- `{comm}`" for tech, comm in sorted(invalid_inputs))
-                parts.append(
-                    f"The following technologies do not accept "
-                    f"their specified input commodity: {items}."
-                )
-            # Point user to the file that needs fixing
-            parts.append(f"Update `technology_interconnections` in {self.plant_config_path}.")
-            raise ValueError("\n".join(parts))
-
-    @staticmethod
-    def _split_indices_from_connected_parameter_definition(connected_parameter):
-        """Extract and parse slice indices from connected parameter definitions for OpenMDAO
-        connections.
-
-        This function processes parameter names containing slice patterns in square brackets
-        (e.g., "power[0:8760]") and generates OpenMDAO-compatible src_indices for connections
-        between variables of different shapes.
-
-        Args:
-            connected_parameter (list[str]): A two-element list containing:
-                - [0] source parameter name, optionally with pattern like "var[slice_spec]"
-                - [1] destination parameter name, optionally with pattern like "var[slice_spec]"
-
-                Example: ["power[0:8760]", "demand[:]"]
-
-        Returns:
-            tuple: A two-element tuple containing:
-                - connected_parameter (list[str]): The parameter names with slices removed
-                  (e.g., ["power", "demand"])
-                - src_indices: OpenMDAO slicer object for indexing source outputs to match
-                  destination input shapes. Returns om.slicer[slice] for indexing.
-
-        Note:
-            If the destination has a slice pattern, it must include the length ":N"
-            (e.g., "[0:N]"), the function extracts N as the destination length and
-            multiplies the source slice by this factor to create properly scaled indices.
-            The length is required because the length is not known in the OpenMDAO model
-            until prob.setup() has been called.
-        """
-        source_parameter, dest_parameter = connected_parameter
-
-        def _extract_slice(parameter):
-            """Return the contents inside the brackets (e.g. '0:8760'), or None."""
-            match = re.search(r"\[(.*)\]", parameter)
-            return None if match is None else match.group(1)
-
-        def _to_indices(spec):
-            """Convert a bracket spec string into a slice or list of ints."""
-            if ":" in spec:
-                return slice(*(int(p) if p.strip() else None for p in spec.split(":")))
-            return [int(p) for p in spec.split(",")]
-
-        source_slice = _extract_slice(source_parameter)
-        dest_slice = _extract_slice(dest_parameter)
-
-        if source_slice == dest_slice:
-            src_indices = None
-        elif dest_slice is not None and source_slice is not None:
-            # Tile the source indices to fill the destination length to handle shape
-            # mismatches. Examples:
-            #   source="0",   dest_length=8760 -> [0] repeated 8760 times
-            #   source="0,1", dest_length=10   -> [0, 1] cycled to fill 10 slots
-            if dest_slice.split(":")[0] not in ("", "0"):
-                raise ValueError(
-                    "A non-zero start was provided for the slice for destination "
-                    f"parameter <{dest_parameter}>"
-                )
-            dest_length = int(dest_slice.split(":")[-1])
-
-            source_indices = _to_indices(source_slice)
-            if isinstance(source_indices, slice):
-                source_indices = list(
-                    range(
-                        source_indices.start or 0,
-                        source_indices.stop,
-                        source_indices.step or 1,
-                    )
-                )
-
-            # Repeat the source values enough times to cover the destination, then
-            # truncate so the result is exactly dest_length long. This cycles through
-            # the source values when the source is shorter than the destination.
-            n_repeats = -(-dest_length // len(source_indices))  # ceiling division
-            src_indices = om.slicer[(source_indices * n_repeats)[:dest_length]]
-        else:
-            # No destination slice pattern; use source slice pattern directly.
-            src_indices = None if source_slice is None else om.slicer[_to_indices(source_slice)]
-
-        # Remove the slice patterns from parameter names to get clean names.
-        connected_parameter = [source_parameter.split("[")[0], dest_parameter.split("[")[0]]
-
-        return connected_parameter, src_indices
+        """Create an XDSM diagram from the plant technology interconnections."""
+        create_xdsm_utility(self.plant_config, outfile=outfile)
