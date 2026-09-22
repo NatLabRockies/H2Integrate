@@ -92,6 +92,7 @@ class BaseDowntime(ABC, BaseConfig):
     simulation: SimulationConfig = field(
         converter=SimulationConfig.from_dict, validator=validators.instance_of(SimulationConfig)
     )
+    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
     @abstractmethod
     def sample_downtime(self) -> np.ndarray:
@@ -336,7 +337,6 @@ class FixedDowntime(BaseDowntime):
         converter=to_array(int, (-1, 1)),
         validator=(validators.instance_of(np.ndarray), array_ge(1)),
     )
-    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
     def __attrs_post_init__(self):
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
@@ -367,7 +367,6 @@ class UniformDowntime(BaseDowntime):
         converter=to_array(int, (-1, 1)),
         validator=(validators.instance_of(np.ndarray), array_ge(1)),
     )
-    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
     @max_hours.validator
     def validate_max_hours(self, attribute, value: int):
@@ -406,7 +405,6 @@ class LogNormalDowntime(BaseDowntime):
         converter=to_array(float, (-1, 1)),
         validator=(validators.instance_of(np.ndarray), match_shape("mean"), array_ge(0)),
     )
-    n_components: int = field(default=1, validator=(validators.instance_of(int), validators.ge(1)))
 
     def __attrs_post_init__(self):
         self.n_components, self.mean, self.sigma = update_dimensions(
