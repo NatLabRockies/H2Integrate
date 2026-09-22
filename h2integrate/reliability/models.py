@@ -29,18 +29,7 @@ AVAILABILITY_TYPES = (
 )
 
 
-def create_failure_model(name: str, config: dict):
-    """Retrieves and initializes a matching reliability model."""
-    match name:
-        case "WeibullReliability":
-            return WeibullReliability.from_dict(config)
-        case "FixedIntervalReliability":
-            return FixedIntervalReliability.from_dict(config)
-        case _:
-            raise NotImplementedError(f"{name} is not a valid model name")
-
-
-def create_maintenance_model(name: str, config: dict):
+def create_reliability_model(name: str, config: dict):
     """Retrieves and initializes a matching reliability model."""
     match name:
         case "WeibullReliability":
@@ -61,6 +50,8 @@ def create_downtime_model(config: dict | int):
             return LogNormalDowntime.from_dict(parameters)
         case "FixedDowntime":
             return FixedDowntime.from_dict(parameters)
+        case "UniformDowntime":
+            return UniformDowntime.from_dict(config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -101,12 +92,31 @@ class BaseDowntime(ABC, BaseConfig):
     )
 
     @abstractmethod
-    def sample_downtime(self) -> np.ndarray: ...
+    def sample_downtime(self) -> np.ndarray:
+        """Downtime length sampling method that all models must implement to create the first 100
+        events' downtime duration without ramping.
+
+        Raises:
+            NotImplementedError: Subclass must implement this method.
+
+        Returns:
+            np.ndarray: First 100 downtime events' duration with shape
+                (:py:attr:`n_components`, 100).
+        """
+        raise NotImplementedError("Failed to successfully subclass, please implement me.")
 
 
 @define(kw_only=True)
 class BaseReliability(ABC, BaseConfig):
-    """Base reliability class responsible for common definitions and functionality.
+    """Base downtime class providing the minimal specifications for the model, and
+    calculations for the downtime sampling and availability. Subclasses need to
+    implement the following:
+
+        - any required model model parameters (e.g., ``scale``, ``shape``, ``mean``)
+        - ``__attrs_post_init__`` that updates the model parameters and
+          :py:attr:`n_components`
+        - :py:meth:`sample_events` to implement the sampling of the first 100 events with shape
+          ():py:attr:`n_components`, 100).
 
     Args:
         dt (int): Timestep in seconds.
@@ -155,10 +165,30 @@ class BaseReliability(ABC, BaseConfig):
     )
 
     def __attrs_post_init__(self):
+        """Provides the automatic owntime model initialization. All subclasses should implement
+        the following.
+
+        >>> super().__attrs_post_init__()
+        >>> self.n_components, self.model_param1, self.model_param2 = update_dimensions(
+                self.n_components, self.model_param1, self.model_param2
+            )
+
+        >>> self.create_downtime_events()
+        >>> self.calculate_availability()
+        """
         downtime_config = self.downtime | {"simulation": self.simulation}
         self.downtime = create_downtime_model(downtime_config)
 
     def sample_events(self) -> np.ndarray:
+        """Event sampling method that all models must implement to create the first 100 downtime
+        events.
+
+        Raises:
+            NotImplementedError: Subclass must implement this method.
+
+        Returns:
+            np.ndarray: First 100 downtime events with shape (:py:attr:`n_components`, 100).
+        """
         raise NotImplementedError("Failed to successfully subclass, please implement me.")
 
     def create_downtime_events(self):
@@ -266,13 +296,13 @@ class PerformanceReliability(BaseConfig):
 
         if self.failure_model is not None:
             if self.failure_parameters is not None:
-                self.failures = create_failure_model(
+                self.failures = create_reliability_model(
                     self.failure_model, self.failure_parameters | simulation_config | availability
                 )
 
         if self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
-                self.maintenance = create_maintenance_model(
+                self.maintenance = create_reliability_model(
                     self.maintenance_model,
                     self.maintenance_parameters | simulation_config | availability,
                 )
