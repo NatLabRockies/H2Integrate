@@ -23,10 +23,6 @@ VALID_RELIABILITY = (
     "WeibullReliability",
     "FixedIntervalReliability",
 )
-AVAILABILITY_TYPES = (
-    "minimum",
-    "fractional",
-)
 
 
 def create_reliability_model(name: str, config: dict):
@@ -54,6 +50,12 @@ def create_downtime_model(config: dict | int):
             return UniformDowntime.from_dict(config)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
+
+
+AVAILABILITY_TYPES = (
+    "minimum",
+    "fractional",
+)
 
 
 @define
@@ -165,7 +167,7 @@ class BaseReliability(ABC, BaseConfig):
     )
 
     def __attrs_post_init__(self):
-        """Provides the automatic owntime model initialization. All subclasses should implement
+        """Provides the automatic downtime model initialization. All subclasses should implement
         the following.
 
         >>> super().__attrs_post_init__()
@@ -234,7 +236,7 @@ class BaseReliability(ABC, BaseConfig):
 
 @define
 class PerformanceReliability(BaseConfig):
-    """General performance model to coordinate downtime from failure and maintenance events. Does
+    r"""General performance model to coordinate downtime from failure and maintenance events. Does
     not consider the timing within or between models to coordinate downtime. This is a highly
     simplified version of WOMBAT (https://github.com/NLRWindSystems/WOMBAT) without any
     advanced scheduling, equipment dispatching, site conditions, etc.
@@ -270,9 +272,7 @@ class PerformanceReliability(BaseConfig):
     use_reliability: bool = field(validator=validators.instance_of(bool))
     simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
     availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
-    failure_model: str | None = field(
-        default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
-    )
+    failure_model: str | None = field(default=None)
     maintenance_model: str | None = field(
         default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
     )
