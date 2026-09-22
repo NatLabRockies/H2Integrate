@@ -41,10 +41,10 @@ sites:
 
 The `resource_year` parameter is used to generate the hourly timestamp arrays (year, month, day, hour, minute) that are passed internally to the PySAM MhkWave model in timeseries mode.
 
-The wave resource outputs are connected to the wave performance model via `resource_to_tech_connections` in `plant_config.yaml`:
+The wave resource outputs are connected to the wave performance model via `site_to_tech_connections` in `plant_config.yaml`:
 
 ```yaml
-resource_to_tech_connections:
+site_to_tech_connections:
   - [site.wave_resource, wave, significant_wave_height]
   - [site.wave_resource, wave, energy_period]
 ```
