@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-def separate_timeseries_and_meta_data(data):
+def separate_timeseries_and_meta_data(data: dict):
     """Separate a dictionary into meta-data and timeseries data components
 
     Args:
@@ -81,8 +81,9 @@ def clip_data_to_resource_year(data, resource_year):
 
     Args:
         data (dict): resource data
-        resource_year (str | int): resource year to pull data for.
-        If resource_year is a string, it should be formatted as 'tmy-{year}' or similar.
+        resource_year (str | int): resource year to pull data for. If
+        resource_year is a string, it should be formatted as 'tmy-{year}'
+        or similar.
 
     Raises:
         ValueError: if data is missing a 'year' or 'Year' key

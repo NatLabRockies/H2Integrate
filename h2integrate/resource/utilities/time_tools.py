@@ -4,6 +4,14 @@ import pandas as pd
 
 
 def is_leap_year(year):
+    """Determine if a year is leap year
+
+    Args:
+        year (int): calendar year
+
+    Returns:
+        bool: True if the year is a leap year
+    """
     is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
         year % 4 == 0 and year % 100 != 0
     )

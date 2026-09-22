@@ -157,6 +157,33 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
+    def _get_number_of_resource_years_needed(self):
+        self.pathname.split(".")
+
+        # Get the number of hours in the simulation
+        hours_simulated = (self.dt / 3600) * self.n_timesteps
+
+        if hours_simulated % 8760 == 0:
+            n_years_needed = hours_simulated // 8760
+            return n_years_needed
+
+        include_leap = getattr(self.config, "include_leap_day", False)
+        # check if remainder is multiple of 24, indicating leap days
+        remainder_hrs = hours_simulated % 8760
+        if remainder_hrs % 24 == 0 and include_leap:
+            # remaining hours is divisible by 24 and including leap-day
+            n_leap_years = remainder_hrs // 24
+            # number of hours from non-leap years
+            n_hrs_leap_years = n_leap_years * (8760 + 24)
+            n_hrs_non_leap = hours_simulated - n_hrs_leap_years
+            if n_hrs_non_leap % 8760 == 0:
+                n_years_needed = n_leap_years + (n_hrs_non_leap // 8760)
+            else:
+                # need an extra year
+                n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
+            return n_years_needed
+        return (hours_simulated // 8760) + 1
+
     def _get_resource_years(self, resource_starting_year):
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
