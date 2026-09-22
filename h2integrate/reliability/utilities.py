@@ -41,5 +41,10 @@ def calculate_annual_timesteps(value, self_) -> float:
 
 
 def calculate_hourly_timesteps(value, self_) -> float:
-    """Calculates the number of timesteps in an hour from the :py:attr:`self_.dt`, rounded up."""
+    """Calculates the number of timesteps in an hour from the :py:attr:`self_.dt`, rounded up.
+
+    Note:
+        This conversion is not intended to handle simulations with a coarser resolution than hourly
+        timesteps.
+    """
     return int(np.ceil(SECONDS_IN_HOUR / self_.dt))
