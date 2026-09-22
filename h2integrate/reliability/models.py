@@ -210,6 +210,8 @@ class PerformanceReliability(BaseConfig):
     advanced scheduling, equipment dispatching, site conditions, etc.
 
     Args:
+        use_reliability (bool): Used for the performance model to toggle the use of the
+            reliability modeling.
         simulation (dict | SimulationConfig): Simulation configuration based on
             :py:class:`SimulationConfig`.
         availability_type (str): One of "minimum" or "fractional". Defaults to "minimum".
