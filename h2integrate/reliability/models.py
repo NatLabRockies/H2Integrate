@@ -309,6 +309,7 @@ class PerformanceReliability(BaseConfig):
     )
     failures: BaseReliability | None = field(default=None, init=False)
     maintenance: BaseReliability | None = field(default=None, init=False)
+    n_components: int = field(default=1, init=False)
 
     def __attrs_post_init__(self):
         """Creates and runs the failure and maintenance models, and calculates availability."""
@@ -316,18 +317,24 @@ class PerformanceReliability(BaseConfig):
         availability = {"availability_type": self.availability_type}
         self.availability = np.ones(self.simulation.n_timesteps)
 
-        if has_failure := self.failure_model is not None:
+        has_maintenance = False
+        has_failure = False
+        if self.failure_model is not None:
             if self.failure_parameters is not None:
+                has_failure = True
                 self.failures = create_reliability_model(
                     self.failure_model, self.failure_parameters | simulation_config | availability
                 )
+                self.n_components = self.failures.n_components
 
-        if has_maintenance := self.maintenance_model is not None:
+        if self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
+                has_maintenance = True
                 self.maintenance = create_reliability_model(
                     self.maintenance_model,
                     self.maintenance_parameters | simulation_config | availability,
                 )
+                self.n_components = self.maintenance.n_components
 
         if has_failure and has_maintenance:
             failure_components = self.failures.n_components
@@ -344,21 +351,26 @@ class PerformanceReliability(BaseConfig):
         failure-based downtime and maintenance-based downtime with shape
         :py:attr:`simulation.n_timesteps`.
         """
-        # TODO: fix this to ensure component-level failure and maintenance are combined,
-        # then the overall system availability.
         failure_availability = maintenance_availability = self.availability
         if self.failures is not None:
-            failure_availability = self.failures.system_availability
+            failure_availability = self.failures.component_availability
         if self.maintenance is not None:
-            maintenance_availability = self.maintenance.system_availability
-        self.availability = np.minimum(failure_availability, maintenance_availability)
+            maintenance_availability = self.maintenance.component_availability
+
+        availability = np.minimum(failure_availability, maintenance_availability)
+        if availability.shape == (self.simulation.n_timesteps,):
+            return availability
+        if self.availability_type == "fractional":
+            return np.sum(availability, axis=0) / self.n_components
+        if self.availability_type == "minimum":
+            return np.min(availability, axis=0)
 
     def run(self):
         if self.failures is not None:
             self.failures.run()
         if self.maintenance is not None:
             self.maintenance.run()
-        self.calculate_availability()
+        self.availability = self.calculate_availability()
 
 
 @define(kw_only=True)

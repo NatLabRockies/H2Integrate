@@ -322,6 +322,7 @@ def test_PerformanceReliability(subtests):
         config = availability_config | simulation_config
         reliability = PerformanceReliability.from_dict(config)
         assert reliability.availability_type == "minimum"
+        assert reliability.n_components == 1
         assert reliability.failure_model is None
         assert reliability.failure_parameters is None
         assert reliability.failures is None
@@ -331,6 +332,11 @@ def test_PerformanceReliability(subtests):
         assert isinstance(reliability.simulation, SimulationConfig)
         assert reliability.simulation.dt == config["simulation"]["dt"]
         assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+
+        assert reliability.run() is None  # run should run nothing without failure
+        npt.assert_array_equal(
+            reliability.availability, np.ones(reliability.simulation.n_timesteps)
+        )
 
     with subtests.test("Check n_components comparison"):
         config = availability_config | simulation_config | failure_config | maintenance_config
@@ -381,6 +387,7 @@ def test_PerformanceReliability(subtests):
         npt.assert_array_equal(
             reliability.availability, np.ones(config["simulation"]["n_timesteps"])
         )
+        assert reliability.n_components == reliability.failures.n_components
 
         assert isinstance(reliability.simulation, SimulationConfig)
         assert reliability.simulation.dt == config["simulation"]["dt"]
@@ -400,3 +407,50 @@ def test_PerformanceReliability(subtests):
         assert reliability.maintenance_parameters == config["maintenance_parameters"]
         assert isinstance(reliability.maintenance, FixedIntervalReliability)
         assert isinstance(reliability.maintenance.downtime, FixedDowntime)
+
+
+@pytest.mark.regression
+def test_PerformanceReliability_results(subtests):
+    """Tests the ``PerformanceReliability`` initialization and a basic setup."""
+    config = {
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+        "use_reliability": False,
+        "availability_type": "minimum",
+        "failure_model": "WeibullReliability",
+        "maintenance_model": "FixedIntervalReliability",
+        "failure_parameters": {
+            "scale": 0.5,
+            "shape": 1,
+            "n_components": 3,
+            "burn_in": 6.5,
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 3,
+            },
+        },
+        "maintenance_parameters": {
+            "frequency": [0.25, 1, 4],
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 1,
+            },
+        },
+    }
+
+    reliability = PerformanceReliability.from_dict(config)
+    reliability.run()
+    failure_availability = reliability.failures.component_availability
+    maintenance_availability = reliability.maintenance.component_availability
+    total_availability = np.min(np.minimum(failure_availability, maintenance_availability), axis=0)
+    npt.assert_array_equal(reliability.availability, total_availability)
+
+    config["availability_type"] = "fractional"
+    reliability = PerformanceReliability.from_dict(config)
+    reliability.run()
+    failure_availability = reliability.failures.component_availability
+    maintenance_availability = reliability.maintenance.component_availability
+    total_availability = np.sum(np.minimum(failure_availability, maintenance_availability), axis=0)
+    total_availability /= reliability.failures.n_components
+    npt.assert_array_equal(reliability.availability, total_availability)
