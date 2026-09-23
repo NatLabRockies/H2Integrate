@@ -164,7 +164,9 @@ class BaseReliability(ABC, BaseConfig):
 
     time_to_failures: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
     downtime_per_event: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
-    availability: np.ndarray = field(init=False, validator=validators.instance_of(np.ndarray))
+    component_availability: np.ndarray = field(
+        init=False, validator=validators.instance_of(np.ndarray)
+    )
     system_availability: np.ndarray = field(
         init=False, validator=validators.instance_of(np.ndarray)
     )
@@ -208,7 +210,7 @@ class BaseReliability(ABC, BaseConfig):
         simulation_end = burn_in_time + self.simulation.n_timesteps
 
         accumulated = np.zeros((self.n_components, 1), dtype=int)
-        availability = np.ones((self.n_components, simulation_end), dtype=float)
+        component_availability = np.ones((self.n_components, simulation_end), dtype=float)
 
         while any(accumulated < simulation_end):
             if not self.time_to_failures.size == 0:
@@ -226,16 +228,18 @@ class BaseReliability(ABC, BaseConfig):
             for i, (s, e) in enumerate(zip(start.flatten(), end.flatten())):
                 if s < simulation_end:
                     e = min(simulation_end, e)
-                    availability[i, s:e] = 0
+                    component_availability[i, s:e] = 0
             accumulated = end
 
-        self.availability = availability[:, burn_in_time:simulation_end]
+        self.component_availability = component_availability[:, burn_in_time:simulation_end]
 
         match self.availability_type:
             case "fractional":
-                self.system_availability = np.sum(self.availability, axis=0) / self.n_components
+                self.system_availability = (
+                    np.sum(self.component_availability, axis=0) / self.n_components
+                )
             case "minimum":
-                self.system_availability = np.min(self.availability, axis=0)
+                self.system_availability = np.min(self.component_availability, axis=0)
 
 
 @define
@@ -268,7 +272,8 @@ class PerformanceReliability(BaseConfig):
             not need to be defined here.
 
     Attributes:
-        availability (np.ndarray): Total availability, shape: (:py:attr:`simulation.n_timesteps`).
+        availability (np.ndarray): Total availability, with shape
+            (:py:attr:`simulation.n_timesteps`).
         failures (BaseReliability): Reliability model for the failure-based downtime events.
         maintenance (BaseReliability): Reliability model for the maintenance downtime events.
     """
@@ -318,6 +323,8 @@ class PerformanceReliability(BaseConfig):
         failure-based downtime and maintenance-based downtime with shape
         :py:attr:`simulation.n_timesteps`.
         """
+        # TODO: fix this to ensure component-level failure and maintenance are combined,
+        # then the overall system availability.
         failure_availability = maintenance_availability = self.availability
         if self.failures is not None:
             failure_availability = self.failures.system_availability

@@ -190,7 +190,7 @@ def test_base_reliability(subtests):
         assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
         assert getattr(reliability, "time_to_failures", None) is None
         assert getattr(reliability, "downtime_per_event", None) is None
-        assert getattr(reliability, "availability", None) is None
+        assert getattr(reliability, "component_availability", None) is None
         assert getattr(reliability, "system_availability", None) is None
 
     with subtests.test("Correct implementation"):
