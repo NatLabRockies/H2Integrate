@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
+import numpy.testing as npt
 from attrs import field, define, validators
 
-from h2integrate.reliability.models import BaseDowntime, SimulationConfig
+from h2integrate.reliability.models import BaseDowntime, BaseReliability, SimulationConfig
 from h2integrate.core.array_validators import to_array
 from h2integrate.reliability.utilities import update_dimensions
 
@@ -68,9 +69,11 @@ class SimpleDowntime(BaseDowntime):
     )
 
     def __attrs_post_init__(self):
+        """Post initialization hook to correct the dimensionality of inputs."""
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
 
     def sample_downtime(self):
+        """Samples the time to downtime duration for 100 events."""
         return np.ones((1, 100), dtype=int) * self.hours
 
 
@@ -105,4 +108,116 @@ def test_base_downtime(subtests):
 
         durations = downtime.sample_downtime()
         correct_durations = np.ones((config["n_components"], 100)) * config["hours"]
-        np.testing.assert_array_equal(durations, correct_durations)
+        npt.assert_array_equal(durations, correct_durations)
+
+
+@define
+class IncompleteReliability(BaseReliability):
+    hours: int = field()
+
+
+@define
+class DiscretelyIncompleteReliability(BaseReliability):
+    hours: int = field()
+
+    def sample_events(self):
+        return np.ones((1, 100), dtype=int) * self.hours
+
+
+@define
+class SimpleReliability(BaseReliability):
+    hours: int = field(
+        converter=to_array(int, (-1, 1)),
+        validator=validators.instance_of(np.ndarray),
+    )
+
+    def __attrs_post_init__(self):
+        """Post initialization hook to correct the dimensionality of inputs and run the models."""
+        super().__attrs_post_init__()
+        self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
+
+        self.create_downtime_events()
+        self.calculate_availability()
+
+    def sample_events(self):
+        """Samples the time to next downtime event for 100 events."""
+        return np.ones((1, 100), dtype=int) * self.hours
+
+
+@pytest.mark.unit
+def test_base_reliability(subtests):
+    """Tests the ``BaseReliability`` class and provides a demonstration of correct minimal form."""
+    with subtests.test("Obviously bad routines fail"):
+        missing_msg = "without an implementation for abstract method 'sample_events'"
+        with pytest.raises(TypeError, match=missing_msg):
+            BaseReliability()
+
+        config = {
+            "hours": 2,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": 2},
+            "simulation": {"dt": 3600, "n_timesteps": 8760},
+        }
+        with pytest.raises(TypeError, match=missing_msg):
+            IncompleteReliability.from_dict(config)
+
+    with subtests.test("Missing base parameterizations cause failure"):
+        config = {
+            "hours": [200, 2000],
+            "n_components": 2,
+        }
+        msg = r"missing the following inputs: \['availability_type', 'downtime', 'simulation'\]"
+        with pytest.raises(AttributeError, match=msg):
+            DiscretelyIncompleteReliability.from_dict(config)
+
+    with subtests.test("Missing post initialization hook causes misconfiguration"):
+        config = {
+            "hours": [200, 2000],
+            "n_components": 3,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": 2},
+            "simulation": {"dt": 3600, "n_timesteps": 8760},
+        }
+        reliability = DiscretelyIncompleteReliability.from_dict(config)
+        assert reliability.hours == config["hours"]
+        assert reliability.n_components == config["n_components"]
+
+        # non-problematic checks
+        assert reliability.simulation.dt == config["simulation"]["dt"]
+        assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+        assert reliability.availability_type == "minimum"
+        assert reliability.burn_in == 0
+        assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
+        assert getattr(reliability, "time_to_failures", None) is None
+        assert getattr(reliability, "downtime_per_event", None) is None
+        assert getattr(reliability, "availability", None) is None
+        assert getattr(reliability, "system_availability", None) is None
+
+    with subtests.test("Correct implementation"):
+        config = {
+            "hours": [200, 2000],
+            "n_components": 3,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": 2},
+            "simulation": {"dt": 3600, "n_timesteps": 8760},
+        }
+        base_hours = np.array([[200], [2000]])
+        reliability = SimpleReliability.from_dict(config)
+
+        npt.assert_array_equal(reliability.hours, base_hours)
+        assert reliability.simulation.dt == config["simulation"]["dt"]
+        assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+        assert reliability.n_components == len(config["hours"])
+
+        assert reliability.availability_type == "minimum"
+        assert reliability.burn_in == 0
+        assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
+
+        # First
+        # npt.assert_array_equal(reliability.time_to_failures, np.ones((2, 99), dtype=int) * base_hours)  # noqa: E501
+        # npt.assert_array_equal(reliability.downtime_per_event, )
+        # npt.assert_array_equal(reliability.availability, )
+        # npt.assert_array_equal(reliability.system_availability, )
+
+        # correct_durations = np.ones((config["n_components"], 100)) * config["hours"]
+        # npt.assert_array_equal(durations, correct_durations)
