@@ -220,7 +220,7 @@ class BaseReliability(ABC, BaseConfig):
         component_availability = np.ones((self.n_components, simulation_end), dtype=float)
 
         while any(accumulated < simulation_end):
-            if not self.time_to_failures.size == 0:
+            if self.time_to_failures.size == 0:
                 self.create_downtime_events()
             event = self.time_to_failures[:, 0].reshape(-1, 1)
             self.time_to_failures = self.time_to_failures[:, 1:]
