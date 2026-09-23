@@ -13,13 +13,12 @@ class LinearMassTransportCostConfig(CostModelBaseConfig):
         capex_per_mton_km (float): Capital cost in USD/t-km (metric tonne)
         fixed_opex_per_mton_km (float): Annual operating cost in USD/t-km/year
         commodity (str): Name of commodity being transported
-        circuity_ratio (float): Ratio of actual travel distance to straight-line distance.
-        Default is 1.0.
+        circuity_ratio (float, optional): Ratio of actual travel distance to straight-line distance.
+        Defaults t0 1.0.
     """
 
     capex_per_mton_km: float = field(validator=validators.ge(0))
     fixed_opex_per_mton_km: float = field(validator=validators.ge(0))
-
     commodity: str = field()
     circuity_ratio: float = field(validator=validators.ge(1), default=1.0)
 
