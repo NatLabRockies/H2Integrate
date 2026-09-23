@@ -3,7 +3,15 @@ import pytest
 import numpy.testing as npt
 from attrs import field, define, validators
 
-from h2integrate.reliability.models import BaseDowntime, BaseReliability, SimulationConfig
+from h2integrate.reliability.models import (
+    BaseDowntime,
+    FixedDowntime,
+    BaseReliability,
+    SimulationConfig,
+    WeibullReliability,
+    PerformanceReliability,
+    FixedIntervalReliability,
+)
 from h2integrate.core.array_validators import to_array
 from h2integrate.reliability.utilities import update_dimensions
 
@@ -214,8 +222,22 @@ def test_base_reliability(subtests):
         assert reliability.burn_in == 0
         assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
 
-        reliability.run()
 
+@pytest.mark.regression
+def test_base_reliability_results(subtests):
+    """Tests the ``BaseReliability`` class results against a basic setup."""
+    config = {
+        "hours": [200, 2000],
+        "n_components": 3,
+        "availability_type": "minimum",
+        "downtime": {"model": "FixedDowntime", "hours": 2},
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+    }
+    base_hours = np.array([[200], [2000]])
+    reliability = SimpleReliability.from_dict(config)
+    reliability.run()
+
+    with subtests.test("Check array shapes for iterations until completion"):
         remaining_samples = 56  # 100 - 44 [ceiling of 8760 / (200 + 2)]
         base_remainder = np.ones((2, remaining_samples), dtype=int)
         remaining_to_failure = base_remainder * base_hours
@@ -224,8 +246,9 @@ def test_base_reliability(subtests):
         print(reliability.downtime_per_event)
         npt.assert_array_equal(reliability.downtime_per_event, remaining_downtime)
 
-        # Manually calculate where the downtime events are supposed to occur for each
-        # of the components and test for correctness
+    # Manually calculate where the downtime events are supposed to occur for each
+    # of the components and test for correctness
+    with subtests.test("Check component-level availabilities"):
         n_events1 = 43  # 44 ensures we're past the 8760 end point, so 43 actual events
         avail1 = np.ones(8760)
         i = 0
@@ -252,6 +275,7 @@ def test_base_reliability(subtests):
         assert events == n_events2
         assert avail2.sum() == 8760 - n_events2 * 2
 
+    with subtests.test("Check total availability"):
         expected_component_availability = np.vstack((avail1, avail2))
         assert reliability.component_availability.shape == (2, 8760)
         assert np.all(reliability.component_availability >= 0)
@@ -263,3 +287,116 @@ def test_base_reliability(subtests):
         assert np.all(reliability.system_availability >= 0)
         assert np.all(reliability.system_availability <= 1)
         npt.assert_array_equal(reliability.system_availability, expected_system_availability)
+
+
+@pytest.mark.unit
+def test_PerformanceReliability(subtests):
+    """Tests the ``PerformanceReliability`` initialization and a basic setup."""
+    availability_config = {"availability_type": "minimum"}
+    simulation_config = {"simulation": {"dt": 3600, "n_timesteps": 8760}}
+    failure_config = {
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+        "failure_model": "SimpleReliability",
+        "failure_parameters": {
+            "hours": 2000,
+            "n_components": 3,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": 2},
+        },
+    }
+    maintenance_config = {
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+        "maintenance_model": "SimpleReliability",
+        "maintenance_parameters": {
+            "hours": 200,
+            "n_components": 3,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": 1},
+        },
+    }
+    with subtests.test("Check minimal specification for defaults"):
+        msg = r"missing the following inputs: \['availability_type'\]"
+        with pytest.raises(AttributeError, match=msg):
+            PerformanceReliability.from_dict(simulation_config)
+
+        config = availability_config | simulation_config
+        reliability = PerformanceReliability.from_dict(config)
+        assert reliability.availability_type == "minimum"
+        assert reliability.failure_model is None
+        assert reliability.failure_parameters is None
+        assert reliability.failures is None
+        assert reliability.maintenance_model is None
+        assert reliability.maintenance_parameters is None
+        assert reliability.maintenance is None
+        assert isinstance(reliability.simulation, SimulationConfig)
+        assert reliability.simulation.dt == config["simulation"]["dt"]
+        assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+
+    with subtests.test("Check n_components comparison"):
+        config = availability_config | simulation_config | failure_config | maintenance_config
+        config["maintenance_parameters"]["n_components"] = 4
+        msg = (
+            "Failure and maintenance models must have the same number of components:"
+            f' {config["failure_parameters"]["n_components"]}'
+            f' != {config["maintenance_parameters"]["n_components"]}'
+        )
+        with pytest.raises(ValueError):
+            PerformanceReliability.from_dict(config)
+
+    with subtests.test("Check SimpleReliability invalid"):
+        config = availability_config | simulation_config | failure_config | maintenance_config
+        with pytest.raises(ValueError, match=r" \(got 'SimpleReliability'\)"):
+            PerformanceReliability.from_dict(config)
+
+    config = {
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+        "use_reliability": False,
+        "availability_type": "fractional",
+        "failure_model": "WeibullReliability",
+        "maintenance_model": "FixedIntervalReliability",
+        "failure_parameters": {
+            "scale": 0.5,
+            "shape": 1,
+            "n_components": 3,
+            "burn_in": 6.5,
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 3,
+            },
+        },
+        "maintenance_parameters": {
+            "frequency": [0.25, 1, 4],
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 1,
+            },
+        },
+    }
+    reliability = PerformanceReliability.from_dict(config)
+    with subtests.test("Check correct setup"):
+        assert reliability.availability_type == "fractional"
+        assert not reliability.use_reliability
+        npt.assert_array_equal(
+            reliability.availability, np.ones(config["simulation"]["n_timesteps"])
+        )
+
+        assert isinstance(reliability.simulation, SimulationConfig)
+        assert reliability.simulation.dt == config["simulation"]["dt"]
+        assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+        assert (
+            reliability.simulation
+            == reliability.failures.simulation
+            == reliability.maintenance.simulation
+        )
+
+        assert reliability.failure_model == config["failure_model"]
+        assert reliability.failure_parameters == config["failure_parameters"]
+        assert isinstance(reliability.failures, WeibullReliability)
+        assert isinstance(reliability.failures.downtime, FixedDowntime)
+
+        assert reliability.maintenance_model == config["maintenance_model"]
+        assert reliability.maintenance_parameters == config["maintenance_parameters"]
+        assert isinstance(reliability.maintenance, FixedIntervalReliability)
+        assert isinstance(reliability.maintenance.downtime, FixedDowntime)

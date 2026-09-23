@@ -260,11 +260,9 @@ class PerformanceReliability(BaseConfig):
     advanced scheduling, equipment dispatching, site conditions, etc.
 
     Args:
-        use_reliability (bool): Used for the performance model to toggle the use of the
-            reliability modeling.
         simulation (dict | SimulationConfig): Simulation configuration based on
             :py:class:`SimulationConfig`.
-        availability_type (str): One of "minimum" or "fractional". Defaults to "minimum".
+        availability_type (str): One of "minimum" or "fractional".
 
             - fractional: Use when components are representative of different systems, i.e., 100
                 wind turbines instead.
@@ -272,6 +270,9 @@ class PerformanceReliability(BaseConfig):
             - minimum: Minimum of all components at all timesteps. Use when components are
                 representative of a single system, i.e., multiple components of a single wind
                 turbine.
+        use_reliability (bool, optional): Used for the performance model to toggle the use of the
+            reliability modeling. Defaults to True to match the assumption contained in performance
+            models.
         failure_model (str | None): Name of the failure model to use, when modeling.
         maintenance_model (str | None): Name of the maintenance model to use, when modeling.
         failure_parameters (str | None): Configuration for the failure model, when modeling. The
@@ -288,10 +289,12 @@ class PerformanceReliability(BaseConfig):
         maintenance (BaseReliability): Reliability model for the maintenance downtime events.
     """
 
-    use_reliability: bool = field(validator=validators.instance_of(bool))
     simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
     availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
-    failure_model: str | None = field(default=None)
+    use_reliability: bool = field(default=True, validator=validators.instance_of(bool))
+    failure_model: str | None = field(
+        default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
+    )
     maintenance_model: str | None = field(
         default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
     )
@@ -313,18 +316,28 @@ class PerformanceReliability(BaseConfig):
         availability = {"availability_type": self.availability_type}
         self.availability = np.ones(self.simulation.n_timesteps)
 
-        if self.failure_model is not None:
+        if has_failure := self.failure_model is not None:
             if self.failure_parameters is not None:
                 self.failures = create_reliability_model(
                     self.failure_model, self.failure_parameters | simulation_config | availability
                 )
 
-        if self.maintenance_model is not None:
+        if has_maintenance := self.maintenance_model is not None:
             if self.maintenance_parameters is not None:
                 self.maintenance = create_reliability_model(
                     self.maintenance_model,
                     self.maintenance_parameters | simulation_config | availability,
                 )
+
+        if has_failure and has_maintenance:
+            failure_components = self.failures.n_components
+            maintenance_components = self.maintenance.n_components
+            if failure_components != maintenance_components:
+                msg = (
+                    "Failure and maintenance models must have the same number of components:"
+                    f" {failure_components} != {maintenance_components}"
+                )
+                raise ValueError(msg)
 
     def calculate_availability(self):
         """Calculates the final system availability as the minimum availability between the
