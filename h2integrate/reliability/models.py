@@ -15,7 +15,9 @@ from h2integrate.reliability.utilities import (
 )
 
 
-# generated from np.random.SeedSequence().entropy
+# Per the SciPy and NumPy documentation, a large, uncommon seed needs to be created to ensure
+# a sufficiently independent and large state space and the initial seed to ensure replication
+# of results is generated from: np.random.SeedSequence().entropy.
 rng = np.random.default_rng(279299947538423226929715083173412195503)
 
 
@@ -182,6 +184,7 @@ class BaseReliability(ABC, BaseConfig):
         downtime_config = self.downtime | {"simulation": self.simulation}
         self.downtime = create_downtime_model(downtime_config)
 
+    @abstractmethod
     def sample_events(self) -> np.ndarray:
         """Event sampling method that all models must implement to create the first 100 downtime
         events.
