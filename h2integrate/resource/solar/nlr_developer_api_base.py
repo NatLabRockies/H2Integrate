@@ -38,7 +38,7 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
             "solar_resource_data", val=data, desc="Dict of solar resource data"
         )
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year=None):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_{config.dataset_desc}_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -46,35 +46,40 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (int | str | None): resource year to build the filename for. When
+                None, ``self.config.resource_year`` is used.
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
         """
-        # TODO: update to handle multiple years
-        # TODO: update to handle nonstandard time intervals
+
+        resource_year = self.config.resource_year if resource_year is None else resource_year
         if self.utc:
             tz_desc = "utc"
         else:
             tz_desc = "local"
         filename = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year=None):
         """Create url for data download.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (int | str | None): resource year to build the url for. When None,
+                ``self.config.resource_year`` is used.
 
         Returns:
             str: url to use for API call.
         """
+        resource_year = self.config.resource_year if resource_year is None else resource_year
         input_data = {
             "wkt": f"POINT({longitude} {latitude})",
-            "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
+            "names": [str(resource_year)],
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
             "api_key": get_nlr_developer_api_key(),
@@ -83,7 +88,7 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
         url = self.base_url + urllib.parse.urlencode(input_data, True)
         return url
 
-    def load_data(self, fpath):
+    def load_data(self, fpath, resource_year=None):
         """Load data from a file and format as a dictionary that:
 
         1) follows naming convention described in SolarResourceBase.

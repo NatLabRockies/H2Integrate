@@ -36,7 +36,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
+    resource_filename: Path | str | list = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
 
@@ -86,7 +86,7 @@ class WTKHRRRMETAPIConfig(ResourceBaseAPIConfig):
     resource_type: str = "wind"
     valid_intervals: list[int] = field(factory=lambda: [60])
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
+    resource_filename: Path | str | list = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
 
