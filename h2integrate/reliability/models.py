@@ -87,8 +87,15 @@ class BaseDowntime(ABC, BaseConfig):
     """Base downtime class responsible for common definitions and functionality.
 
     Args:
-        dt (int): Timestep in seconds.
-        n_timesteps (int): Number of timesteps in a simulation.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        n_components (int): Number of iid components to generate based on the distribution's
+            single input. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
     """
 
     simulation: SimulationConfig = field(
@@ -339,8 +346,15 @@ class FixedDowntime(BaseDowntime):
 
     Args:
         hours (int | array-like): Length of downtime per event, in hours. Must be at least 1 hour.
-        n_components (int): Number of identical components to sample to avoid defining an array of
-            :py:attr:`hours` values when they are the same. Defaults to 1.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        n_components (int): Number of iid components to generate based on the distribution's
+            single input. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
     """
 
     hours: int | ArrayLike = field(
@@ -358,15 +372,23 @@ class FixedDowntime(BaseDowntime):
 
 @define(kw_only=True)
 class UniformDowntime(BaseDowntime):
-    """Basic uniform downtime model for generating the length of downtime for a given event.
+    """Basic uniform distribution-based downtime model for generating the length of downtime for a
+    given event.
 
     Args:
         min_hours (int | array-like): Minimum length of downtime per event, in hours. Must be at
             least 1 hour.
         max_hours (int | array-like): Maximum length of downtime per event, in hours. Must be at
             least 1 hour and greater than :py:attr:`min_hours`.
-        n_components (int): Number of identical components to sample to avoid defining an array of
-            :py:attr:`hours` values when they are the same. Defaults to 1.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        n_components (int): Number of iid components to generate based on the distribution's
+            single input. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
     """
 
     min_hours: int | ArrayLike = field(
@@ -405,6 +427,15 @@ class LogNormalDowntime(BaseDowntime):
     Args:
         mean (float | array-like): Average length of downtime per event, in hours.
         sigma (float | array-like): Standard deviation of the distribution(s), in hours.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        n_components (int): Number of iid components to generate based on the distribution's
+            single input. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
     """
 
     mean: float = field(
