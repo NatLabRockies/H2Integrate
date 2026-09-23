@@ -335,7 +335,7 @@ class PerformanceReliability(BaseConfig):
 
 @define(kw_only=True)
 class FixedDowntime(BaseDowntime):
-    """Basic fixed downtime model for generating the length of downtime for a given event.
+    """Basic fixed duration downtime model for generating the length of downtime for a given event.
 
     Args:
         hours (int | array-like): Length of downtime per event, in hours. Must be at least 1 hour.
