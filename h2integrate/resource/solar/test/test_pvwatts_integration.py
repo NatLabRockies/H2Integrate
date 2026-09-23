@@ -7,7 +7,7 @@ from h2integrate.converters.solar.solar_pysam import PYSAMSolarPlantPerformanceM
 
 
 @fixture
-def pysam_performance_model():
+def pysam_performance_model(timezone=0):
     pysam_options = {
         "SystemDesign": {
             "array_type": 2,
@@ -26,7 +26,7 @@ def pysam_performance_model():
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "input",  # "lat-func",
         "pysam_options": pysam_options,
     }
 
@@ -42,7 +42,7 @@ def pysam_performance_model():
             "dt": 3600,
             "n_timesteps": 8760,
             "start_time": "01/01/1900 00:30:00",
-            "timezone": 0,
+            "timezone": timezone,
         },
     }
 
@@ -153,7 +153,7 @@ def make_pysam_system_openmeteo(tz):
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "input",  # "lat-func",
         "pysam_options": pysam_options,
     }
 

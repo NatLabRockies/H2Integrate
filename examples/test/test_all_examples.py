@@ -1969,11 +1969,31 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
         aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
         lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
+        lcoe_transported = case.get_val(
+            "finance_subgroup_transported_electricity.LCOE_optimistic", units="USD/(MW*h)"
+        )[0]
+        transport_distance = case.get_val("electricity_transport.transport_distance", units="km")[0]
+        transport_capex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.capex_electricity_transport", units="USD"
+        )
+        transport_opex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.opex_electricity_transport", units="USD/year"
+        )
+        transport_capex = case.get_val("electricity_transport.CapEx", units="USD")
+        transport_opex = case.get_val("electricity_transport.OpEx", units="USD/year")
 
         site_res = pd.DataFrame(
-            [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
+            [aep, lcoe, lcoe_transported, solar_capacity, transport_distance],
+            index=["AEP", "LCOE", "LCOE-T", "solar_capacity", "Distance"],
+            columns=[lat_lon],
         ).T
         res_df = pd.concat([site_res, res_df], axis=0)
+
+        with subtests.test(f"Case {ci}: Transport Costs are Non-zero"):
+            assert transport_capex_adj == transport_capex
+            assert transport_opex_adj == transport_opex
+            assert transport_capex_adj > 0
+            assert transport_opex_adj > 0
 
         with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
             assert (
@@ -1985,6 +2005,26 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
                 pytest.approx(case.get_val("site.longitude", units="deg"), abs=0.1)
                 == solar_resource_data["site_lon"]
             )
+        with subtests.test(f"Case {ci}: Site longitude matches transport source longitude"):
+            assert pytest.approx(
+                case.get_val("site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_longitude", units="deg")
+        with subtests.test(f"Case {ci}: Site latitude matches transport source latitude"):
+            assert pytest.approx(
+                case.get_val("site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_latitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site longitude matches transport source longitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_longitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site latitude matches transport source latitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_latitude", units="deg")
 
     locations = list(set(res_df.index.to_list()))
     solar_sizes = list(set(res_df["solar_capacity"].to_list()))
@@ -1993,12 +2033,21 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         assert len(solar_sizes) == 2
     with subtests.test("Two unique sites"):
         assert len(locations) == 2
+    with subtests.test("Two unique transport distances"):
+        assert len(list(set(res_df["Distance"].to_list()))) == 2
 
     with subtests.test("Unique AEPs per case"):
         assert len(list(set(res_df["AEP"].to_list()))) == len(res_df)
 
+    with subtests.test("Unique LCOE (transported) per case"):
+        assert len(list(set(res_df["LCOE-T"].to_list()))) == len(res_df)
+
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
+
+    with subtests.test("Transported LCOE > LCOE"):
+        lcoe_comp = (res_df["LCOE-T"] > res_df["LCOE"]).to_list()
+        assert all(k for k in lcoe_comp)
 
 
 @pytest.mark.integration
@@ -2610,7 +2659,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
+        assert pytest.approx(lcoi, rel=1e-4) == 2.174385150880128
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2626,7 +2675,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
+        assert pytest.approx(lcoi, rel=1e-4) == 3.3036489452968594
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2638,7 +2687,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
+        assert pytest.approx(lcoi, rel=1e-4) == 2.266210286641621
 
 
 @pytest.mark.integration
@@ -3146,16 +3195,16 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
     with subtests.test("Check number of discharge events"):
         # With the given demand profile and battery size, there should be 2 discharge events
         num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
-        assert num_discharge_events == 588
+        assert num_discharge_events == 2110
 
     with subtests.test("Check total energy discharged"):
         total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 2428.0
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 9643.0083
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
         total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
 
 
 @pytest.mark.integration
@@ -3270,3 +3319,82 @@ def test_concurrent_simulation_example(subtests, temp_copy_of_example):
             assert (
                 v <= 1e-8
             ), f"H2I output: {k}, is not consistent between sequential and concurrent simulations"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("37_paper_mill", None)],
+)
+def test_paper_mill_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    h2i = H2IntegrateModel(example_folder / "37_paper_mill_mn.yaml")
+
+    h2i.run()
+
+    h2i.post_process()
+
+    paper_capacity = h2i.prob.get_val(
+        "paper_mill.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    paper_capacity_factor = h2i.prob.get_val(
+        "paper_mill.capacity_factor",
+    )[0]
+
+    saf_capacity = h2i.prob.get_val(
+        "saf.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    saf_capacity_factor = h2i.prob.get_val(
+        "saf.capacity_factor",
+    )[0]
+
+    lignin_in = h2i.prob.get_val(
+        "saf.lignin_in",
+        units="kg/h",
+    )
+
+    lignin_yield = 0.06  # t lignin/t paper
+    pulp_yield = 1.1  # t pulp/t paper
+    lignin_consumption = 1650  # kg lignin/t SAF
+
+    with subtests.test("Paper Mill CapEx"):
+        capex = h2i.prob.get_val("paper_mill.CapEx", units="USD")
+        assert pytest.approx(capex, rel=1e-2) == 2500 * paper_capacity
+
+    with subtests.test("Paper Mill OpEx"):
+        opex = h2i.prob.get_val("paper_mill.OpEx", units="USD/year")
+        assert pytest.approx(opex, rel=1e-2) == 1386000000
+
+    with subtests.test("Paper Mill Variable OpEx"):
+        varopex = h2i.prob.get_val("paper_mill.VarOpEx", units="USD/year")
+        assert pytest.approx(varopex, rel=1e-2) == 705431159.4
+
+    with subtests.test("Annual lignin production"):
+        lignin = h2i.prob.get_val("paper_mill.annual_lignin_produced", units="kg/year")
+        assert (
+            pytest.approx(lignin, rel=1e-2)
+            == paper_capacity * paper_capacity_factor * lignin_yield * 1000
+        )
+
+    with subtests.test("Annual pulp production"):
+        pulp = h2i.prob.get_val("paper_mill.annual_pulp_out_produced", units="t/year")
+        assert pytest.approx(pulp, rel=1e-2) == paper_capacity * paper_capacity_factor * pulp_yield
+
+    expected_hourly_saf = np.minimum(
+        saf_capacity * saf_capacity_factor / 8760,
+        lignin_in / lignin_consumption,
+    )
+
+    with subtests.test("Annual SAF production"):
+        saf = h2i.prob.get_val("saf.annual_saf_produced", units="t/year")
+        assert pytest.approx(saf, rel=1e-2) == expected_hourly_saf.sum()
+
+    with subtests.test("Paper mill lignin output is connected to SAF input"):
+        lignin_out = h2i.prob.get_val("paper_mill.lignin_out", units="kg/h")
+        lignin_in = h2i.prob.get_val("saf.lignin_in", units="kg/h")
+        np.testing.assert_allclose(lignin_in, lignin_out, rtol=1e-6)

@@ -96,14 +96,6 @@ class DemandComponentBase(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            f"{self.commodity}_demand_out",
-            val=self.config.demand_profile,
-            shape=self.n_timesteps,
-            units=self.commodity_rate_units,
-            desc=f"Pass-through of {self.commodity} demand profile",
-        )
-
-        self.add_output(
             "percent_load_missed",
             val=0.0,
             units="percent",
@@ -161,10 +153,6 @@ class DemandComponentBase(PerformanceModelBaseClass):
         # Arrays relevant to the current simulation range
         commodity_in_sim = commodity_in[simulation_range.start : simulation_range.stop]
         commodity_demand_sim = commodity_demand[simulation_range.start : simulation_range.stop]
-
-        outputs[f"{self.commodity}_demand_out"][simulation_range.start : simulation_range.stop] = (
-            commodity_demand_sim
-        )
 
         remaining_demand = commodity_demand_sim - commodity_in_sim
 

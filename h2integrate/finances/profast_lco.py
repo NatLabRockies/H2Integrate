@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+from openmdao.utils.units import simplify_unit
 
 from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
@@ -103,7 +104,7 @@ class ProFastLCO(ProFastBase):
 
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[self.LCO_str]["units"]
-        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
         pf = self.populate_profast(inputs)
 

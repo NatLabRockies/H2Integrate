@@ -4,6 +4,7 @@
 - [Wind Resource Data](wind_resource:models)
 - [Solar Resource Data](solar_resource:models)
 - [Tidal Resource Data](tidal_resource:models)
+- [Resource Datasets](h5_dataset:overview)
 
 ## Common Resource Datasets and Considerations
 
@@ -75,7 +76,7 @@ sites:
         resource_parameters:
           filename: river_data.csv
 
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the river resource to the run-of-river hydro technology
   - [site.river_resource, river, discharge]
 ```

@@ -86,6 +86,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI`
     + {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI`
     + {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI`
+    + {py:class}`~h2integrate.resource.solar.nlr_nsrdb_dataset_model.NSRDBDatasetH5`
     + {py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResource`
 
 - `tidal`
@@ -100,6 +101,7 @@ auto-generated API page.
   - other components:
     + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI`
     + {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource`
+    + {py:class}`~h2integrate.resource.wind.nlr_hrrr_met_toolkit_dataset_model.WTKHRRRMETDatasetH5`
     + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=
@@ -131,8 +133,10 @@ auto-generated API page.
 
 - `generic`: generic converter components
   - performance models:
+    + {py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorPerformanceModel` - Performance model for diesel generators.
     + {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel` - Performance model for simple Brayton-cycle turbines.
   - cost models:
+    + {py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorCostModel` - Cost model for diesel generators.
     + {py:class}`~h2integrate.converters.generic_converter_cost.GenericConverterCostModel`
 
 - `geoh2`: geologic hydrogen well and surface processing
@@ -259,6 +263,8 @@ auto-generated API page.
 ## Transport models
 
 - `transport`: commodity transporters, combiners, and splitters
+  - cost models:
+    + {py:class}`~h2integrate.transporters.linear_transport_cost.LinearDistanceCostModel` - Combine any commodity or resource from multiple sources into one output without losses.
   - other components:
     + {py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModel` - Combine multiple gas streams into one using mass-weighted averaging.
     + {py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceModel` - Combine any commodity or resource from multiple sources into one output without losses.

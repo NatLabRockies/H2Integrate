@@ -28,7 +28,7 @@ technology_interconnections:
 tech_to_dispatch_connections:
   - [wind, battery]
   - [battery, battery]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
 finance_parameters:
