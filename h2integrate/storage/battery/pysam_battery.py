@@ -188,6 +188,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         storage_capacity: float,
         commodity_available=list | np.ndarray,
         sim_start_index: int = 0,
+        sim_end_index: int = 8760,
     ):
         """Run the PySAM BatteryStateful model over a control window.
 
@@ -211,6 +212,9 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 PySAM control input to set each step ("input_power" or "input_current").
             sim_start_index : int, optional
                 Starting index for writing into persistent output arrays (default 0).
+            sim_end_index (int, optional):
+                Ending index for writing into persistent output arrays.
+                Defaults to 8760 (1 year)
 
         Returns:
             tuple[np.ndarray, np.ndarray]: Battery power (kW) and SOC (%) per timestep.

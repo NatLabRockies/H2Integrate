@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
-
+- Add concurrent simulation capability to h2integrate framework and some example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 - Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
@@ -18,6 +18,7 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Refactored `skip_compute` for the concurrent/steppable simulation solver into a `SkippableComputeMixin` used by `CostModelBaseClass` and `ProFastBase`. `skip_compute` is now a component option instead of a discrete input, and cost/finance model `compute()` methods are skipped automatically, so no individual model needs to check the flag itself. [PR TBD]
 - Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
 - Add resource models that can extract resource data from NLR resource datasets using the `rex` package [PR 854](https://github.com/NatLabRockies/H2Integrate/pull/854)
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset

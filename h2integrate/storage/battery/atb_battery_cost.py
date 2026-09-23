@@ -104,8 +104,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
             storage_duration_hrs = max_capacity_kWh / max_charge_rate_kW
         if max_charge_rate_kW < 0:
             msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{max_charge_rate_kW} kW"
+                f"max_charge_rate cannot be less than zero and has value of {max_charge_rate_kW} kW"
             )
             raise UserWarning(msg)
         # CapEx equation from Cell E29

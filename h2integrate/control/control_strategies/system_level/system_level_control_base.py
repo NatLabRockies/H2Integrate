@@ -139,6 +139,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
       and divide by the dispatchable tech's annualized total production.
     """
 
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # system level controller is capable of steppable simulation.
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

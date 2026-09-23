@@ -257,7 +257,7 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         # Estimate the initial SOC
 
         # 1. Set the starting SOC (as a fraction) at the start of the simulation.
-        self.current_soc = np.max(
+        self.soc_init = np.max(
             [self.config.min_soc_fraction, commodity_storage_soc[0] / rated_storage_capacity]
         )
 

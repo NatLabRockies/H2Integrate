@@ -7,6 +7,7 @@ from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.core.model_baseclasses import SkippableComputeMixin
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
@@ -454,7 +455,7 @@ class ProFASTDefaultIncentive(BaseConfig):
         return self.as_dict()
 
 
-class ProFastBase(om.ExplicitComponent):
+class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
     """
     Base component for using the ProFAST financial model within OpenMDAO.
 
@@ -495,8 +496,11 @@ class ProFastBase(om.ExplicitComponent):
             is replaced in each year of the plant life.
     """
 
+    _is_steppable = False
+
     def initialize(self):
         """Declare OpenMDAO component options."""
+        super().initialize()
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)

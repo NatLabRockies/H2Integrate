@@ -8,7 +8,14 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR, H2IntegrateModel, load_yaml, load_plant_yaml
+from h2integrate import (
+    ROOT_DIR,
+    H2IntegrateModel,
+    load_yaml,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -871,7 +878,7 @@ def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
     "example_folder,resource_example_folder", [("13_dispatch_for_electrolyzer", None)]
 )
 def test_electrolyzer_demand(subtests, temp_copy_of_example):
-    from h2integrate import load_tech_yaml, load_plant_yaml, load_driver_yaml
+    from h2integrate import load_plant_yaml, load_driver_yaml
 
     example_folder = temp_copy_of_example
 
@@ -1797,7 +1804,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
     assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
-    from h2integrate import write_yaml, load_driver_yaml
+    from h2integrate import write_yaml
     from h2integrate.core.dict_utils import update_defaults
     from h2integrate.core.file_utils import check_file_format_for_csv_generator
 
@@ -3251,6 +3258,67 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     with subtests.test("Unused electricity is routed to grid sell"):
         assert pytest.approx(unused_electricity.sum(), rel=1e-6) == grid_electricity_in.sum()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("37_concurrent_simulation", None)]
+)
+def test_concurrent_simulation_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    # Load config files into dict
+    config_root = example_folder
+    config_path = config_root / "solar_battery_grid.yaml"
+
+    # Load top level config
+    config = load_yaml(config_path)
+    config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
+
+    # Run simulation sequentially, one subsystem at a time
+    config["plant_config"]["plant"]["simulation"].pop("n_steps_per_compute")
+
+    h2i_seq = H2IntegrateModel(config)
+    h2i_seq.run()
+    h2i_seq.post_process(print_results=False)
+
+    inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
+    outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
+
+    # Run simulation concurrently for all subsystems, one step at a time
+    config["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
+    config["plant_config"]["plant"]["simulation"]["n_steps_per_compute"] = 24
+
+    # Create an H2I model for steppable simulation
+    h2i_con = H2IntegrateModel(config)
+    h2i_con.run()
+    h2i_con.post_process(print_results=False)
+
+    inputs_con = dict(h2i_con.model.list_inputs(out_stream=None))
+    outputs_con = dict(h2i_con.model.list_outputs(out_stream=None))
+
+    from h2integrate.core.dict_utils import percent_diff_dicts
+
+    inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
+    outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
+
+    with subtests.test("Component iter_count reflects expected number of calls"):
+        assert h2i_seq.plant.battery.StoragePerformanceModel.iter_count == 1
+        assert h2i_con.plant.battery.StoragePerformanceModel.iter_count == 365
+
+    with subtests.test("Sequential and concurrent H2I inputs are consistent"):
+        for k, v in inputs_pd_dict.items():
+            if k.endswith(".timestep_index"):
+                continue
+            assert (
+                v <= 1e-8
+            ), f"H2I input: {k}, is not consistent between sequential and concurrent simulations"
+
+    with subtests.test("Sequential and concurrent H2I outputs are consistent"):
+        for k, v in outputs_pd_dict.items():
+            assert (
+                v <= 1e-8
+            ), f"H2I output: {k}, is not consistent between sequential and concurrent simulations"
 
 
 @pytest.mark.integration
