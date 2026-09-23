@@ -252,13 +252,14 @@ def test_base_reliability(subtests):
         assert events == n_events2
         assert avail2.sum() == 8760 - n_events2 * 2
 
+        expected_component_availability = np.vstack((avail1, avail2))
         assert reliability.component_availability.shape == (2, 8760)
         assert np.all(reliability.component_availability >= 0)
         assert np.all(reliability.component_availability <= 1)
+        npt.assert_array_equal(reliability.component_availability, expected_component_availability)
 
+        expected_system_availability = np.min(expected_component_availability, axis=0)
         assert reliability.system_availability.shape == (8760,)
         assert np.all(reliability.system_availability >= 0)
         assert np.all(reliability.system_availability <= 1)
-
-        # correct_durations = np.ones((config["n_components"], 100)) * config["hours"]
-        # npt.assert_array_equal(durations, correct_durations)
+        npt.assert_array_equal(reliability.system_availability, expected_system_availability)
