@@ -17,6 +17,7 @@ from h2integrate.resource.utilities.data_tools import (
 from h2integrate.resource.utilities.time_tools import (
     is_leap_year,
     process_leap_day,
+    check_data_length,
     add_resource_start_end_times,
 )
 from h2integrate.resource.utilities.download_tools import download_from_api
@@ -107,7 +108,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
 
-        self.resource_years = self._get_resource_years(self.config.resource_year)
+        # NOTE: below could be done in setup() if resource_year is not an openmdao input
+        # self.resource_years = self._get_resource_years(self.config.resource_year)
 
     def _check_resource_year(self, resource_year):
         """Check if the input resource year is valid based on the config validator.
@@ -157,33 +159,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
-    def _get_number_of_resource_years_needed(self):
-        self.pathname.split(".")
-
-        # Get the number of hours in the simulation
-        hours_simulated = (self.dt / 3600) * self.n_timesteps
-
-        if hours_simulated % 8760 == 0:
-            n_years_needed = hours_simulated // 8760
-            return n_years_needed
-
-        include_leap = getattr(self.config, "include_leap_day", False)
-        # check if remainder is multiple of 24, indicating leap days
-        remainder_hrs = hours_simulated % 8760
-        if remainder_hrs % 24 == 0 and include_leap:
-            # remaining hours is divisible by 24 and including leap-day
-            n_leap_years = remainder_hrs // 24
-            # number of hours from non-leap years
-            n_hrs_leap_years = n_leap_years * (8760 + 24)
-            n_hrs_non_leap = hours_simulated - n_hrs_leap_years
-            if n_hrs_non_leap % 8760 == 0:
-                n_years_needed = n_leap_years + (n_hrs_non_leap // 8760)
-            else:
-                # need an extra year
-                n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
-            return n_years_needed
-        return (hours_simulated // 8760) + 1
-
     def _get_resource_years(self, resource_starting_year):
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
@@ -225,9 +200,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             # resource_base_year = deepcopy(self.config.resource_year)
 
-        include_leap = getattr(self.config, "include_leap_day", False)
-
-        if include_leap:
+        if self.config.include_leap_day:
             hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
         else:
             hours_per_simulation_year = [8760] * len(future_years)
@@ -397,6 +370,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # and return the data
         if bool(self.config.resource_data):
             data = add_resource_start_end_times(self.config.resource_data)
+
+            if site_changed:
+                msg = (
+                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
+                    "Since resource data was user-input as a dictionary, the resource data will"
+                    "remain unchanged and still be for the site "
+                    f"({self.config.latitude}, {self.config.longitude}) provided in the config"
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
             return data
 
         # check if user provided directory or filename
@@ -452,7 +435,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             self.filepath = filepath
             data = self.load_data(filepath)
             data = clip_data_to_resource_year(data, resource_year)
-            data = add_resource_start_end_times(data)
+            # data = add_resource_start_end_times(data)
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -468,13 +451,25 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if (yr_ts := data.get("year")) is not None:
                 if len(set(yr_ts)) > 1:
                     data = clip_data_to_resource_year(data, resource_year)
-            data = add_resource_start_end_times(data)
+            # data = add_resource_start_end_times(data)
             return data
 
         else:
             raise ValueError("Did not successfully download resource data.")
 
+    def process_final_resource_data(self, resource_data):
+        # md, ts = separate_timeseries_and_meta_data(resource_data)
+        # ts = process_leap_day(ts, self.config.include_leap_day)
+
+        # resource_data = md | ts
+        resource_data = process_leap_day(resource_data, self.config.include_leap_day)
+        resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
+        resource_data = add_resource_start_end_times(resource_data)
+        check_data_length(resource_data, self.n_timesteps)
+        return resource_data
+
     def get_data(self, latitude, longitude, first_call=True):
+        resource_years = self._get_resource_years(self.config.resource_year)
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # 0) If site hasn't changed and resource data has already been loaded
@@ -483,33 +478,38 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if self.resource_data is not None:
                 return self.resource_data
 
-        if len(self.resource_years) == 1:
+        if len(resource_years) == 1:
+            # only getting 1 year of resource data
             resource_data = self.get_data_for_year(
                 latitude,
                 longitude,
-                self.resource_years[0],
+                resource_years[0],
                 resource_filename=self.config.resource_filename,
                 first_call=first_call,
             )
-            md, ts = separate_timeseries_and_meta_data(resource_data)
-            ts = process_leap_day(
-                ts, getattr(self.config, "include_leap_day", False), self.n_timesteps
-            )
-            resource_data = md | ts
-            resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
-            resource_data = add_resource_start_end_times(resource_data)
+
+            resource_data = self.process_final_resource_data(resource_data)
+            # md, ts = separate_timeseries_and_meta_data(resource_data)
+            # ts = process_leap_day(
+            #     ts, self.config.include_leap_day, self.n_timesteps
+            # )
+            # resource_data = md | ts
+            # resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
+            # resource_data = add_resource_start_end_times(resource_data)
             return resource_data
 
         # Multiple years
         if isinstance(self.config.resource_filename, list):
             resource_files = deepcopy(self.config.resource_filename)
+            raise NotImplementedError("Cannot take resource filenames as a list")
+
         else:
             resource_files = [self.config.resource_filename]
 
         timeseries_data = {}
         meta_data = {}
 
-        for year in self.resource_years:
+        for year in resource_years:
             if not isinstance(year, str):
                 year = int(year)
 
@@ -526,7 +526,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             md, ts = separate_timeseries_and_meta_data(resource_data)
 
             meta_data |= md
-            if year == self.resource_years[0]:
+            if year == resource_years[0]:
                 timeseries_data |= ts
             else:
                 timeseries_data = append_timeseries_data(timeseries_data, ts)
@@ -534,16 +534,20 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # NOTE: here is where we could clip data if needed
         # timeseries_data = self.clip_timeseries_data(timeseries_data)
         # NOTE: this is also where we could up/downsample
-        timeseries_data = process_leap_day(
-            timeseries_data, getattr(self.config, "include_leap_day", False), self.n_timesteps
-        )
-        timeseries_data = clip_data_to_n_timesteps(timeseries_data, n_timesteps=self.n_timesteps)
-        timeseries_data = add_resource_start_end_times(timeseries_data)
+
+        resource_data = meta_data | timeseries_data
+        resource_data = self.process_final_resource_data(resource_data)
+        # timeseries_data = process_leap_day(
+        #     timeseries_data, getattr(self.config, "include_leap_day", False), self.n_timesteps
+        # )
+        # timeseries_data = clip_data_to_n_timesteps(timeseries_data, n_timesteps=self.n_timesteps)
+        # timeseries_data = add_resource_start_end_times(timeseries_data)
 
         # reset resource-filename
         # self.config.resource_filename = resource_files
 
-        return meta_data | timeseries_data
+        # return meta_data | timeseries_data
+        return resource_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # update the resource data based on the input latitude and longitude

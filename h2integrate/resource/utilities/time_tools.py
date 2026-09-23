@@ -2,6 +2,8 @@ from datetime import timezone, timedelta
 
 import pandas as pd
 
+from h2integrate.resource.utilities.data_tools import separate_timeseries_and_meta_data
+
 
 def is_leap_year(year):
     """Determine if a year is leap year
@@ -18,7 +20,46 @@ def is_leap_year(year):
     return is_leap
 
 
-def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
+def check_data_length(data, n_timesteps: int):
+    """_summary_
+
+    Args:
+        data (dict): DataFrame-like dictionary of resource data containing
+            "Month" and "Day" columns.
+        n_timesteps (int): Number of timesteps in the simulation.
+
+    Raises:
+        ValueError: If the length of the data does not match ``n_timesteps``
+            after leap day processing.
+    """
+    if isinstance(data, dict):
+        _, ts_data = separate_timeseries_and_meta_data(data)
+        data = pd.DataFrame(ts_data)
+
+    data = data.rename(columns={"month": "Month", "day": "Day"})
+
+    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+
+    # Check if data is the same length as the number of timesteps
+    if len(data) != n_timesteps:
+        leap_day_msg = ""
+        if data_has_leap_day and len(data) > n_timesteps:
+            # Add extra detail to error message if error may be due to leap day
+            leap_day_msg = (
+                "This may be because the resource data includes a leap day. ",
+                "To remove data from a leap day from resource data, please set "
+                "`include_leap_day` to False.",
+            )
+
+        msg = (
+            f"Resource data is not the same length as n_timesteps. "
+            f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
+            f"{leap_day_msg}"
+        )
+        raise ValueError(msg)
+
+
+def process_leap_day(data: dict, include_leap_day: bool):
     """Process leap day data by optionally removing it and validating data length.
 
     Checks whether the provided resource data contains a leap day (February 29th).
@@ -42,8 +83,8 @@ def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
 
     convert_to_dict = False
     if isinstance(data, dict):
-        data = pd.DataFrame(data)
-        # TODO: update to use `separate_timeseries_and_meta_data`
+        meta_data, ts_data = separate_timeseries_and_meta_data(data)
+        data = pd.DataFrame(ts_data)
         convert_to_dict = True
 
     case_of_time_cols = "lower" if "month" in data.columns.to_list() else "upper"
@@ -65,29 +106,29 @@ def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
         data = data.drop(index=leap_day_index)
 
     # Check if data is the same length as the number of timesteps
-    if len(data) != n_timesteps:
-        leap_day_msg = ""
-        if data_has_leap_day and len(data) > n_timesteps:
-            # Add extra detail to error message if error may be due to leap day
-            leap_day_msg = (
-                "This may be because the resource data includes a leap day. ",
-                "To remove data from a leap day from resource data, please set "
-                "`include_leap_day` to False.",
-            )
+    # if len(data) != n_timesteps:
+    #     leap_day_msg = ""
+    #     if data_has_leap_day and len(data) > n_timesteps:
+    #         # Add extra detail to error message if error may be due to leap day
+    #         leap_day_msg = (
+    #             "This may be because the resource data includes a leap day. ",
+    #             "To remove data from a leap day from resource data, please set "
+    #             "`include_leap_day` to False.",
+    #         )
 
-        msg = (
-            f"Resource data is not the same length as n_timesteps. "
-            f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
-            f"{leap_day_msg}"
-        )
-        raise ValueError(msg)
+    #     msg = (
+    #         f"Resource data is not the same length as n_timesteps. "
+    #         f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
+    #         f"{leap_day_msg}"
+    #     )
+    #     raise ValueError(msg)
 
     if case_of_time_cols == "lower":
         data = data.rename(columns={"Month": "month", "Day": "day"})
 
     if convert_to_dict:
         data_out = {k: data[k].values for k in data.columns.to_list()}
-        return data_out
+        return meta_data | data_out
     return data
 
 
@@ -141,3 +182,42 @@ def add_resource_start_end_times(data: dict):
     data.update(time_start_end_info)
 
     return data
+
+
+def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap: bool):
+    """Get the number of years required to get n_timesteps worth of resource data
+
+    NOTE: this function is intended to be used if other ways of getting
+    multiple years of resource data is desired (such as with filenames, or a list of years, etc)
+
+    Args:
+        dt (int): number of seconds in a timesteps
+        n_timesteps (int): number of timesteps in the simulation
+        include_leap (bool): whether to
+
+    Returns:
+        int: number of years needed to get n_timesteps worth of resource data
+    """
+
+    # Get the number of hours in the simulation
+    hours_simulated = (dt / 3600) * n_timesteps
+
+    if hours_simulated % 8760 == 0:
+        n_years_needed = hours_simulated // 8760
+        return n_years_needed
+
+    # check if remainder is multiple of 24, indicating leap days
+    remainder_hrs = hours_simulated % 8760
+    if remainder_hrs % 24 == 0 and include_leap:
+        # remaining hours is divisible by 24 and including leap-day
+        n_leap_years = remainder_hrs // 24
+        # number of hours from non-leap years
+        n_hrs_leap_years = n_leap_years * (8760 + 24)
+        n_hrs_non_leap = hours_simulated - n_hrs_leap_years
+        if n_hrs_non_leap % 8760 == 0:
+            n_years_needed = n_leap_years + (n_hrs_non_leap // 8760)
+        else:
+            # need an extra year
+            n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
+        return n_years_needed
+    return (hours_simulated // 8760) + 1

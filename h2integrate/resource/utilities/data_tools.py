@@ -24,7 +24,7 @@ def separate_timeseries_and_meta_data(data: dict):
     return meta_data, timeseries_data
 
 
-def append_timeseries_data(data_full, new_data, return_with_metadata=False):
+def append_timeseries_data(data_full, new_data, return_with_metadata=True):
     """Append timeseries data from `new_data` to `data_full` and return the resulting dictionary.
 
     Args:
