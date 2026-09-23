@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import pytest
 import numpy.testing as npt
@@ -454,3 +456,32 @@ def test_PerformanceReliability_results(subtests):
     total_availability = np.sum(np.minimum(failure_availability, maintenance_availability), axis=0)
     total_availability /= reliability.failures.n_components
     npt.assert_array_equal(reliability.availability, total_availability)
+
+    with subtests.test("Missing reliability models replicate individual availability"):
+        no_maint_config = deepcopy(config)
+        no_maint_config.pop("maintenance_model")
+        reliability = PerformanceReliability.from_dict(no_maint_config)
+        reliability.run()
+        npt.assert_array_equal(reliability.availability, reliability.failures.system_availability)
+
+        no_maint_config = deepcopy(config)
+        no_maint_config.pop("maintenance_parameters")
+        reliability = PerformanceReliability.from_dict(no_maint_config)
+        reliability.run()
+        npt.assert_array_equal(reliability.availability, reliability.failures.system_availability)
+
+        no_fail_config = deepcopy(config)
+        no_fail_config.pop("failure_model")
+        reliability = PerformanceReliability.from_dict(no_fail_config)
+        reliability.run()
+        npt.assert_array_equal(
+            reliability.availability, reliability.maintenance.system_availability
+        )
+
+        no_fail_config = deepcopy(config)
+        no_fail_config.pop("failure_parameters")
+        reliability = PerformanceReliability.from_dict(no_fail_config)
+        reliability.run()
+        npt.assert_array_equal(
+            reliability.availability, reliability.maintenance.system_availability
+        )
