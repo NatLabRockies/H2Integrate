@@ -136,9 +136,6 @@ class SimpleReliability(BaseReliability):
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
         super().__attrs_post_init__()
 
-        self.create_downtime_events()
-        self.calculate_availability()
-
     def sample_events(self):
         """Samples the time to next downtime event for 100 events."""
         return np.ones((1, 100), dtype=int) * self.hours
@@ -193,6 +190,10 @@ def test_base_reliability(subtests):
         assert getattr(reliability, "component_availability", None) is None
         assert getattr(reliability, "system_availability", None) is None
 
+        msg = r"operands could not be broadcast together with shapes \(1,100\) \(2,\)"
+        with pytest.raises(ValueError, match=msg):
+            reliability.run()
+
     with subtests.test("Correct implementation"):
         config = {
             "hours": [200, 2000],
@@ -212,6 +213,8 @@ def test_base_reliability(subtests):
         assert reliability.availability_type == "minimum"
         assert reliability.burn_in == 0
         assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
+
+        reliability.run()
 
         remaining_samples = 56  # 100 - 44 [ceiling of 8760 / (200 + 2)]
         base_remainder = np.ones((2, remaining_samples), dtype=int)

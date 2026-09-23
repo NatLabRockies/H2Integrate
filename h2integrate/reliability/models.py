@@ -182,16 +182,19 @@ class BaseReliability(ABC, BaseConfig):
         """Provides the automatic downtime model initialization. All subclasses should implement
         the following.
 
-        >>> super().__attrs_post_init__()
         >>> self.n_components, self.model_param1, self.model_param2 = update_dimensions(
                 self.n_components, self.model_param1, self.model_param2
             )
-
-        >>> self.create_downtime_events()
-        >>> self.calculate_availability()
+        >>> super().__attrs_post_init__()
         """
-        downtime_config = self.downtime | {"simulation": self.simulation}
+        downtime_config = (
+            self.downtime | {"simulation": self.simulation} | {"n_components": self.n_components}
+        )
         self.downtime = create_downtime_model(downtime_config)
+
+    def run(self):
+        self.create_downtime_events()
+        self.calculate_availability()
 
     @abstractmethod
     def sample_events(self) -> np.ndarray:
@@ -323,8 +326,6 @@ class PerformanceReliability(BaseConfig):
                     self.maintenance_parameters | simulation_config | availability,
                 )
 
-        self.calculate_availability()
-
     def calculate_availability(self):
         """Calculates the final system availability as the minimum availability between the
         failure-based downtime and maintenance-based downtime with shape
@@ -338,6 +339,13 @@ class PerformanceReliability(BaseConfig):
         if self.maintenance is not None:
             maintenance_availability = self.maintenance.system_availability
         self.availability = np.minimum(failure_availability, maintenance_availability)
+
+    def run(self):
+        if self.failures is not None:
+            self.failures.run()
+        if self.maintenance is not None:
+            self.maintenance.run()
+        self.calculate_availability()
 
 
 @define(kw_only=True)
@@ -497,9 +505,6 @@ class WeibullReliability(BaseReliability):
             self.n_components, self.scale, self.shape
         )
 
-        self.create_downtime_events()
-        self.calculate_availability()
-
     def sample_events(self):
         """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
         return np.ceil(
@@ -530,9 +535,6 @@ class FixedIntervalReliability(BaseReliability):
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
         self.n_components, self.frequency = update_dimensions(self.n_components, self.frequency)
-
-        self.create_downtime_events()
-        self.calculate_availability()
 
     def sample_events(self):
         """Creates the time to next failure array for each event's modality with the first event

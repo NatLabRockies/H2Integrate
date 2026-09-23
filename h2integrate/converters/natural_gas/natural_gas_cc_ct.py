@@ -87,6 +87,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
             use_reliability = config.get("use_reliability", use_reliability)
             self.reliability_model = PerformanceReliability(config=config | simulation_config)
+            self.reliability_model.run()
         self.use_reliability = use_reliability
 
         # Add natural gas consumed output
