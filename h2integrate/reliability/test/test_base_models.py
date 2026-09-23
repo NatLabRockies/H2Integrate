@@ -133,8 +133,8 @@ class SimpleReliability(BaseReliability):
 
     def __attrs_post_init__(self):
         """Post initialization hook to correct the dimensionality of inputs and run the models."""
-        super().__attrs_post_init__()
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
+        super().__attrs_post_init__()
 
         self.create_downtime_events()
         self.calculate_availability()
@@ -213,11 +213,49 @@ def test_base_reliability(subtests):
         assert reliability.burn_in == 0
         assert isinstance(reliability.downtime, BaseDowntime)  # Checked thoroughly in test_models
 
-        # First
-        # npt.assert_array_equal(reliability.time_to_failures, np.ones((2, 99), dtype=int) * base_hours)  # noqa: E501
-        # npt.assert_array_equal(reliability.downtime_per_event, )
-        # npt.assert_array_equal(reliability.availability, )
-        # npt.assert_array_equal(reliability.system_availability, )
+        remaining_samples = 56  # 100 - 44 [ceiling of 8760 / (200 + 2)]
+        base_remainder = np.ones((2, remaining_samples), dtype=int)
+        remaining_to_failure = base_remainder * base_hours
+        remaining_downtime = base_remainder * config["downtime"]["hours"]
+        npt.assert_array_equal(reliability.time_to_failures, remaining_to_failure)
+        print(reliability.downtime_per_event)
+        npt.assert_array_equal(reliability.downtime_per_event, remaining_downtime)
+
+        # Manually calculate where the downtime events are supposed to occur for each
+        # of the components and test for correctness
+        n_events1 = 43  # 44 ensures we're past the 8760 end point, so 43 actual events
+        avail1 = np.ones(8760)
+        i = 0
+        events = 0
+        while (start := i + 200) < 8760:
+            start = i + 200
+            end = start + 2
+            avail1[start:end] = 0
+            i = end
+            events += 1
+        assert events == n_events1
+        assert avail1.sum() == 8760 - n_events1 * 2
+
+        n_events2 = np.floor(8760 / (2000 + 2))
+        avail2 = np.ones(8760)
+        i = 0
+        events = 0
+        while (start := i + 2000) < 8760:
+            start = i + 2000
+            end = start + 2
+            avail2[start:end] = 0
+            i = end
+            events += 1
+        assert events == n_events2
+        assert avail2.sum() == 8760 - n_events2 * 2
+
+        assert reliability.component_availability.shape == (2, 8760)
+        assert np.all(reliability.component_availability >= 0)
+        assert np.all(reliability.component_availability <= 1)
+
+        assert reliability.system_availability.shape == (8760,)
+        assert np.all(reliability.system_availability >= 0)
+        assert np.all(reliability.system_availability <= 1)
 
         # correct_durations = np.ones((config["n_components"], 100)) * config["hours"]
         # npt.assert_array_equal(durations, correct_durations)
