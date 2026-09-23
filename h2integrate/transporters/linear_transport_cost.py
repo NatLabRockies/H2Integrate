@@ -60,5 +60,5 @@ class LinearDistanceCostModel(CostModelBaseClass):
 
         outputs["transport_distance"] = transport_distance * inputs["circuity_ratio"]
 
-        outputs["CapEx"] = transport_distance * inputs["unit_capex"]
-        outputs["OpEx"] = transport_distance * inputs["unit_fixed_opex"]
+        outputs["CapEx"] = outputs["transport_distance"] * inputs["unit_capex"]
+        outputs["OpEx"] = outputs["transport_distance"] * inputs["unit_fixed_opex"]
