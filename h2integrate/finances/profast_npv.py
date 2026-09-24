@@ -126,7 +126,9 @@ class ProFastNPV(ProFastBase):
             pf = self.populate_profast(inputs)
 
         non_op_Nyears = int(np.ceil(self.params.installation_time / 12) + 1)
-        sell_profile = np.concatenate(
-            [np.zeros(non_op_Nyears), inputs[f"sell_price_{self.output_txt}"]]
-        )
+        sell_price = inputs[f"sell_price_{self.output_txt}"]
+        # Use first operating-year price for pre-operation padding.
+        # ProFAST needs the non-zero price padding when installation time is not divisible by 12.
+        sell_profile = np.concatenate([np.full(non_op_Nyears, sell_price[0]), sell_price])
+
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(price=sell_profile)

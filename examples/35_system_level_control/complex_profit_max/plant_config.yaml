@@ -30,7 +30,7 @@ technology_interconnections:
   - [grid_buy, fin_combiner, electricity, cable]
   # Final combiner delivers to demand
   - [fin_combiner, electrical_load_demand, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   - [site.wind_resource, wind, wind_resource_data]
   - [site.solar_resource, solar, solar_resource_data]
 plant:

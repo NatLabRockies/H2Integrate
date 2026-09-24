@@ -22,7 +22,7 @@ technology_interconnections:
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_set_point]]
   - [electrical_load_demand, grid_sell, [unused_electricity_out, electricity_in]]
 tech_to_dispatch_connections: []
-resource_to_tech_connections: []
+site_to_tech_connections: []
 finance_parameters:
   finance_groups:
     nuclear_finance:

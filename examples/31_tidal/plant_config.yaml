@@ -19,7 +19,7 @@ sites:
 technology_interconnections: []
 # resource interconnections
 # array of arrays containing left-to-right resource interconnections;
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the tidal resource to the tidal technology
   - [site.tidal_resource, tidal, tidal_velocity]
 plant:
