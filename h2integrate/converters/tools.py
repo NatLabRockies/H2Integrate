@@ -32,15 +32,24 @@ def check_pysam_input_params(user_dict, pysam_options):
 
 
 def apply_non_native_lifetime_degradation(generation, degradation, plant_life):
-    """_summary_
+    """Apply annual degradation percentages to a single-year generation profile.
+
+    The input generation profile is repeated once per plant year and scaled by that
+    year's degradation factor. A single degradation value is treated as a constant
+    annual rate, increasing linearly from zero degradation in the first year. If
+    multiple values are supplied, each is the total degradation percentage for its
+    corresponding year.
 
     Args:
-        generation (np.ndarray): generation timeseries profile
-        degradation (list): annual degradation rate as a fraction
-        plant_life (int): plant life in years
+        generation (np.ndarray): Single-year generation time series.
+        degradation (list): Annual degradation percentage(s), not fractions.
+            A single value specifies the annual rate; multiple values specify the
+            degradation percentage for each year.
+        plant_life (int): Number of years in the plant lifetime.
 
     Returns:
-        np.ndarray: generation profile with losses from degradation
+        np.ndarray: Concatenated lifetime generation profile after applying
+        degradation.
     """
     # degradation = self.design_dict["Lifetime"]["ac_degradation"]
     if not isinstance(generation, np.ndarray):
