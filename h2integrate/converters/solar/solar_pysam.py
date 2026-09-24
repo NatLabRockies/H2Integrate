@@ -223,7 +223,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.assign(design_dict)
 
         if self.config.tilt_angle_setting == "input":
-            tilt = self.get_inital_angle_value("tilt")
+            tilt = self.get_initial_angle_value("tilt")
             self.add_input(
                 "tilt_angle",
                 val=tilt,
@@ -232,7 +232,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
         if self.config.azimuth_angle_setting == "input":
-            azimuth = self.get_inital_angle_value("azimuth")
+            azimuth = self.get_initial_angle_value("azimuth")
             self.add_input(
                 "azimuth_angle",
                 val=azimuth,
@@ -240,7 +240,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 desc="Solar panel azimuth angle in degrees",
             )
 
-    def get_inital_angle_value(self, angle_name: str):
+    def get_initial_angle_value(self, angle_name: str):
         """Get the initial value to use for 'angle_name', based on either:
 
         - the user-input value at the top-level of the config (i.e., `config.angle_name`)

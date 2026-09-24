@@ -274,7 +274,8 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         if "Lifetime" in design_dict and not hasattr(self.system_model, "Lifetime"):
             design_dict.pop("Lifetime")
-            self.system_model.assign(design_dict)
+
+        self.system_model.assign(design_dict)
 
         self.data_to_field_number = {
             "temperature": 1,
