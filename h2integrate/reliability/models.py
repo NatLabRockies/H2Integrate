@@ -224,6 +224,12 @@ class BaseReliability(ABC, BaseConfig):
             self.downtime | {"simulation": self.simulation} | {"n_components": self.n_components}
         )
         self.downtime = create_downtime_model(downtime_config)
+        if self.n_components != self.downtime.n_components:
+            msg = (
+                "Reliability and their downtime models must have the same 'n_components':"
+                f" {self.n_components} != {self.downtime.n_components}."
+            )
+            raise ValueError(msg)
 
     def run(self):
         self.create_downtime_events()

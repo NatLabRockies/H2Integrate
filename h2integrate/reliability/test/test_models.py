@@ -241,6 +241,18 @@ def test_base_reliability(subtests):
         with pytest.raises(ValueError, match=msg):
             reliability.run()
 
+    with subtests.test("Mismatched n_components fail"):
+        config = {
+            "hours": [200, 2000, 20000],
+            "n_components": 3,
+            "availability_type": "minimum",
+            "downtime": {"model": "FixedDowntime", "hours": [2, 3]},
+            "simulation": {"dt": 3600, "n_timesteps": 8760},
+        }
+        msg = "Reliability and their downtime models must have the same 'n_components': 3 != 2"
+        with pytest.raises(ValueError, match=msg):
+            SimpleReliability.from_dict(config)
+
     with subtests.test("Correct implementation"):
         config = {
             "hours": [200, 2000],
