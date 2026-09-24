@@ -391,6 +391,11 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         # TODO degradation: adjustments for degradation
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
+        # extract desired data from solar resource
+        solar_resource_data = discrete_inputs["solar_resource_data"]
+        solar_resource_data["temperature"]
+        solar_resource_data["ghi"]
+
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
 

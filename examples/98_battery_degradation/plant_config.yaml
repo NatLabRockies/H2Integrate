@@ -5,6 +5,16 @@ description: >
   set-point; it BUYS electricity from the grid to charge (grid_buy) and SELLS its discharge
   back to the grid (grid_sell), so the ProFAST analysis captures grid purchase cost and
   sales revenue.
+sites:
+  site:
+    latitude: 39.755
+    longitude: -105.221
+    resources:
+      solar_resource:
+        resource_model: GOESAggregatedSolarAPI
+        resource_parameters:
+          resource_year: 2013
+          resource_filename: 39.7555_-105.2211_psmv3_60_2012.csv
 plant:
   plant_life: 30
   simulation:
@@ -21,6 +31,9 @@ technology_interconnections:
   - [grid_buy, battery, electricity, cable]
   # The battery discharge stream is sold to the grid.
   - [battery, grid_sell, [storage_electricity_discharge, electricity_in]]
+site_to_tech_connections:
+  # connect the wind resource to the wind technology
+  - [site.solar_resource, battery, solar_resource_data]
 finance_parameters:
   finance_groups:
     profast_model:
