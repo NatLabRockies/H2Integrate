@@ -56,34 +56,6 @@ python -m h2integrate.preprocess.populate_tech_yaml \
 The `--output-path` option can also be written as `-o`. If it is omitted, the
 input file is overwritten.
 
-Extract one model's input template directly as YAML:
-
-```bash
-populate_tech_yaml --model-name StoragePerformanceModel
-```
-
-If automatic discovery does not find the right class (or you want to be
-explicit about a shared base configuration), provide the class name directly:
-
-```bash
-populate_tech_yaml \
-  --model-name GenericDemandComponent \
-  --config-class-name DemandComponentBaseConfig
-```
-
-The module form is equivalent for both extraction commands above:
-
-```bash
-python -m h2integrate.preprocess.populate_tech_yaml \
-  --model-name StoragePerformanceModel
-```
-
-```bash
-python -m h2integrate.preprocess.populate_tech_yaml \
-  --model-name GenericDemandComponent \
-  --config-class-name DemandComponentBaseConfig
-```
-
 ## Python API
 
 Use the file API when you want to load, populate, and save a YAML file:
@@ -115,24 +87,6 @@ skeleton_config = {
 
 populated = populate_tech_yaml(skeleton_config)
 model_inputs = populated["technologies"]["battery"]["model_inputs"]
-```
-
-For a single model, use `extract_model_inputs()`:
-
-```python
-from h2integrate.preprocess.populate_tech_yaml import extract_model_inputs
-
-params = extract_model_inputs("StoragePerformanceModel")
-```
-
-If automatic discovery does not find the right class, or you want to be
-explicit about a shared base configuration, pass the class name directly:
-
-```python
-params = extract_model_inputs(
-    "GenericDemandComponent",
-    config_class_name="DemandComponentBaseConfig",
-)
 ```
 
 ## Skeleton Example
@@ -290,18 +244,12 @@ python -c "from h2integrate.core.supported_models import supported_models; print
 ### Could not find config class
 
 The model may use a non-standard or inherited config class, or it may not expose
-an attrs configuration class at all. If you know the class name, try:
-
-```python
-extract_model_inputs(
-    "GenericDemandComponent",
-    config_class_name="DemandComponentBaseConfig",
-)
-```
-
-Models without attrs configuration classes cannot be populated by this utility
-until a suitable configuration class is added. The utility skips failed model
-extractions during multi-model organization and prints a warning.
+an attrs configuration class at all. Models without attrs configuration classes
+cannot be populated by this utility until a suitable configuration class is
+added. The utility skips those models during multi-model organization and prints
+a warning. For a complete YAML workflow, ensure that your skeleton configuration
+is correctly defined and that all required fields are populated before running
+the utility.
 
 ### Failed to instantiate config
 
@@ -318,7 +266,8 @@ uses a shared or inherited base configuration.
 
 Comments are written only by `populate_tech_yaml_from_file()`. The dictionary
 APIs cannot retain comments. Also, only validator types that the formatter can
-describe produce comments; unsupported custom validators do not fail extraction.
+describe produce comments; unsupported custom validators do not prevent YAML
+population.
 
 ### Existing values were replaced
 
