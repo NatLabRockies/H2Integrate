@@ -84,9 +84,9 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
                     "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
                 },
             }
-            config = merge_shared_inputs(self.options["tech_config"]["model_inputs"], "reliability")
+            config = self.options["tech_config"]["model_inputs"]["reliability"]
             use_reliability = config.get("use_reliability", use_reliability)
-            self.reliability_model = PerformanceReliability(config=config | simulation_config)
+            self.reliability_model = PerformanceReliability.from_dict(config | simulation_config)
             self.reliability_model.run()
         self.use_reliability = use_reliability
 
