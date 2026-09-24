@@ -14,7 +14,7 @@ class LinearMassTransportCostConfig(CostModelBaseConfig):
         fixed_opex_per_mton_km (float): Annual operating cost in USD/t-km/year
         commodity (str): Name of commodity being transported
         circuity_ratio (float, optional): Ratio of actual travel distance to straight-line distance.
-        Defaults t0 1.0.
+        Defaults to 1.0.
     """
 
     capex_per_mton_km: float = field(validator=validators.ge(0))
@@ -25,10 +25,11 @@ class LinearMassTransportCostConfig(CostModelBaseConfig):
 
 class LinearMassTransportCostModel(CostModelBaseClass):
     """
-    Combine any commodity or resource from multiple sources into one output without losses.
+    Calculate capital and annual operating costs for transporting a commodity by mass and distance.
 
-    This component is purposefully simple; a more realistic case might include
-    losses or other considerations from system components.
+    The model calculates the geodesic distance between source and destination coordinates,
+    adjusts it by a circuity ratio, and multiplies it by annual commodity throughput and
+    the configured cost rates.
     """
 
     _time_step_bounds = (1, 1e9)
@@ -65,7 +66,7 @@ class LinearMassTransportCostModel(CostModelBaseClass):
         source_location = (inputs["source_latitude"][0], inputs["source_longitude"][0])
         destination_location = (inputs["dest_latitude"][0], inputs["dest_longitude"][0])
 
-        # Calculate the distance bewteen the source and destination locations
+        # Calculate the distance between the source and destination locations
         transport_distance = distance.geodesic(
             source_location, destination_location, ellipsoid="WGS-84"
         ).km
