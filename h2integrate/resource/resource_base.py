@@ -564,7 +564,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if self.config.resource_year_setting == "start_year":
             resource_years = self._get_resource_years(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
-        elif self.config.resource_year_setting == "filename":
+        elif self.config.resource_year_setting == "filenames":
             # NOTE: maybe should check that the site is the same for each file?
             # NOTE: maybe should check the timezone is the same for each file?
             # NOTE: maybe should check the timestep for each file?
@@ -594,7 +594,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             md, ts = separate_timeseries_and_meta_data(resource_data)
 
             meta_data |= md
-            if year == resource_years[0]:
+            if not bool(timeseries_data):
+                # timeseries data is empty, populate it
                 timeseries_data |= ts
             else:
                 timeseries_data = append_timeseries_data(timeseries_data, ts)
@@ -602,16 +603,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # NOTE: this where we could up/downsample
         resource_data = meta_data | timeseries_data
         resource_data = self.process_final_resource_data(resource_data)
-        # timeseries_data = process_leap_day(
-        #     timeseries_data, getattr(self.config, "include_leap_day", False), self.n_timesteps
-        # )
-        # timeseries_data = clip_data_to_n_timesteps(timeseries_data, n_timesteps=self.n_timesteps)
-        # timeseries_data = add_resource_start_end_times(timeseries_data)
-
-        # reset resource-filename
-        # self.config.resource_filename = resource_files
-
-        # return meta_data | timeseries_data
         return resource_data
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
