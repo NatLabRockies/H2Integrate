@@ -377,16 +377,50 @@ def test_PerformanceReliability(subtests):
             reliability.availability, np.ones(reliability.simulation.n_timesteps)
         )
 
+    config = {
+        "simulation": {"dt": 3600, "n_timesteps": 8760},
+        "use_reliability": False,
+        "availability_type": "fractional",
+        "failure_model": "WeibullReliability",
+        "maintenance_model": "FixedIntervalReliability",
+        "failure_parameters": {
+            "scale": 0.5,
+            "shape": 1,
+            "n_components": 3,
+            "burn_in": 6.5,
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 3,
+            },
+        },
+        "maintenance_parameters": {
+            "frequency": [0.25, 1, 4],
+            "n_components": 3,
+            "downtime": {
+                "model": "FixedDowntime",
+                "hours": 5,
+                "n_components": 1,
+            },
+        },
+    }
+
     with subtests.test("Check n_components comparison"):
-        config = availability_config | simulation_config | failure_config | maintenance_config
-        config["maintenance_parameters"]["n_components"] = 4
+        config["failure_parameters"]["n_components"] = 4
         msg = (
-            "Failure and maintenance models must have the same number of components:"
-            f' {config["failure_parameters"]["n_components"]}'
+            "Failure and maintenance models must have the same number of components when using"
+            f" 'fractional' availability: {config['failure_parameters']['n_components']}"
             f' != {config["maintenance_parameters"]["n_components"]}'
         )
-        with pytest.raises(ValueError):
-            PerformanceReliability.from_dict(config)
+        with pytest.raises(ValueError, match=msg):
+            reliability = PerformanceReliability.from_dict(config)
+
+        config["availability_type"] = "minimum"
+        reliability = PerformanceReliability.from_dict(config)
+        assert reliability.failures.n_components == config["failure_parameters"]["n_components"]
+        assert (
+            reliability.maintenance.n_components == config["maintenance_parameters"]["n_components"]
+        )
 
     with subtests.test("Check SimpleReliability invalid"):
         config = availability_config | simulation_config | failure_config | maintenance_config
@@ -480,9 +514,9 @@ def test_PerformanceReliability_results(subtests):
 
     reliability = PerformanceReliability.from_dict(config)
     reliability.run()
-    failure_availability = reliability.failures.component_availability
-    maintenance_availability = reliability.maintenance.component_availability
-    total_availability = np.min(np.minimum(failure_availability, maintenance_availability), axis=0)
+    failure_availability = reliability.failures.system_availability
+    maintenance_availability = reliability.maintenance.system_availability
+    total_availability = np.minimum(failure_availability, maintenance_availability)
     npt.assert_array_equal(reliability.availability, total_availability)
 
     config["availability_type"] = "fractional"

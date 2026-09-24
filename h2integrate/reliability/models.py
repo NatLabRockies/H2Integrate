@@ -28,7 +28,15 @@ VALID_RELIABILITY = (
 
 
 def create_reliability_model(name: str, config: dict):
-    """Retrieves and initializes a matching reliability model."""
+    """Creates and returns a reliability model based on the name.
+
+    Args:
+        name (str): Name of the reliability model corresponding directly to the class name.
+        config (dict): Configuration dictionary that will be passed to the :py:attr:`name` model.
+
+    Returns:
+        BaseReliability: An initialized reliability model.
+    """
     match name:
         case "WeibullReliability":
             return WeibullReliability.from_dict(config)
@@ -39,6 +47,15 @@ def create_reliability_model(name: str, config: dict):
 
 
 def create_downtime_model(config: dict | int):
+    """Creates and returns a downtime model.
+
+    Args:
+        config (dict): Configuration dictionary with a "model" key and value to indicate the model
+            that will be passed to the model.
+
+    Returns:
+        BaseDowntime: An initialized downtime model.
+    """
     if not isinstance(config, dict):
         return FixedDowntime(hours=config)
     name = config["model"]
@@ -62,6 +79,18 @@ AVAILABILITY_TYPES = (
 
 @define
 class SimulationConfig(BaseConfig):
+    """Shared configuration for the simulation details contained in the plant configuration.
+
+    Args:
+        dt (int): Timestep in seconds.
+        n_timesteps (int): Number of timesteps in a simulation.
+
+    Attributes:
+        n_timesteps_in_year (int): Number of rounded up, whole timesteps in a calendar year.
+        n_timesteps_in_hour (int): Number of rounded up, whole timesteps in an hour.
+        simulation_years (float): Length of the simulation period, in years.
+    """
+
     dt: int = field(validator=validators.gt(0))
     n_timesteps: int = field(validator=validators.gt(0))
     n_timesteps_in_year: int = field(
@@ -120,7 +149,7 @@ class BaseDowntime(ABC, BaseConfig):
 
 @define(kw_only=True)
 class BaseReliability(ABC, BaseConfig):
-    """Base downtime class providing the minimal specifications for the model, and
+    r"""Base downtime class providing the minimal specifications for the model, and
     calculations for the downtime sampling and availability. Subclasses need to
     implement the following:
 
@@ -128,7 +157,7 @@ class BaseReliability(ABC, BaseConfig):
         - ``__attrs_post_init__`` that updates the model parameters and
           :py:attr:`n_components`
         - :py:meth:`sample_events` to implement the sampling of the first 100 events with shape
-          ():py:attr:`n_components`, 100).
+          ( :py:attr:`n_components`, 100).
 
     Args:
         simulation (dict | ``SimulationConfig``): Configuration consisting of:
@@ -139,11 +168,12 @@ class BaseReliability(ABC, BaseConfig):
         availability_type (str): One of "minimum" or "fractional".
 
             - fractional: Use when components are representative of different systems, i.e., 100
-                wind turbines instead.
-                :math:`availability_{system} = \frac{1}{N} \\sum_{i=0}^{N} availability_{turbine}
+              wind turbines within a wind farm instead of 100 components of a single wind turbine.
+              :math:`availability_{system} = \frac{1}{N} \sum_{i=0}^{N} availability_i` where
+              :math:`i` is a single system in a grouping of systems.
             - minimum: Minimum of all components at all timesteps. Use when components are
-                representative of a single system, i.e., multiple components of a single wind
-                turbine.
+              representative of a single system, i.e., multiple components of a single wind
+              turbine, rather than a grouping of systems (i.e., a wind power plant).
 
         burn_in (float): Number of years into the simulation to use as the starting point of the
             the simulation's availability record. Defaults to 0.
@@ -265,14 +295,18 @@ class PerformanceReliability(BaseConfig):
     Args:
         simulation (dict | SimulationConfig): Simulation configuration based on
             :py:class:`SimulationConfig`.
-        availability_type (str): One of "minimum" or "fractional".
+        availability_type (str): One of "minimum" or "fractional". When using both a
+            :py:attr:`failure_model` and :py:attr:`maintenance_model` with "fractional"
+            availability, :py:attr:`n_components` for both models must be equal.
 
             - fractional: Use when components are representative of different systems, i.e., 100
-                wind turbines instead.
-                :math:`availability_{system} = \frac{1}{N} \\sum_{i=0}^{N} availability_{turbine}
+              wind turbines within a wind farm instead of 100 components of a single wind turbine.
+              :math:`availability_{system} = \frac{1}{N} \sum_{i=0}^{N} availability_i` where
+              :math:`i` is a single system in a grouping of systems.
             - minimum: Minimum of all components at all timesteps. Use when components are
-                representative of a single system, i.e., multiple components of a single wind
-                turbine.
+              representative of a single system, i.e., multiple components of a single wind
+              turbine, rather than a grouping of systems (i.e., a wind power plant).
+
         use_reliability (bool, optional): Used for the performance model to toggle the use of the
             reliability modeling. Defaults to True to match the assumption contained in performance
             models.
@@ -339,36 +373,47 @@ class PerformanceReliability(BaseConfig):
                 )
                 self.n_components = self.maintenance.n_components
 
-        if has_failure and has_maintenance:
-            failure_components = self.failures.n_components
-            maintenance_components = self.maintenance.n_components
-            if failure_components != maintenance_components:
-                msg = (
-                    "Failure and maintenance models must have the same number of components:"
-                    f" {failure_components} != {maintenance_components}"
-                )
-                raise ValueError(msg)
+        if self.availability_type == "fractional":
+            if has_failure and has_maintenance:
+                failure_components = self.failures.n_components
+                maintenance_components = self.maintenance.n_components
+                if failure_components != maintenance_components:
+                    msg = (
+                        "Failure and maintenance models must have the same number of components"
+                        f" when using 'fractional' availability: {failure_components} !="
+                        f" {maintenance_components}"
+                    )
+                    raise ValueError(msg)
 
     def calculate_availability(self):
         """Calculates the final system availability as the minimum availability between the
         failure-based downtime and maintenance-based downtime with shape
-        :py:attr:`simulation.n_timesteps`.
+        (:py:attr:`simulation.n_timesteps`, ).
+
+        Returns:
+            np.ndarray: An array of availability with shape(:py:attr:`simulation.n_timesteps`, )
+                with values in the range [0, 1].
         """
+        is_fractional = self.availability_type == "fractional"
         failure_availability = maintenance_availability = self.availability
         if self.failures is not None:
-            failure_availability = self.failures.component_availability
+            if is_fractional:
+                failure_availability = self.failures.component_availability
+            else:
+                failure_availability = self.failures.system_availability
         if self.maintenance is not None:
-            maintenance_availability = self.maintenance.component_availability
+            if is_fractional:
+                maintenance_availability = self.maintenance.component_availability
+            else:
+                maintenance_availability = self.maintenance.system_availability
 
         availability = np.minimum(failure_availability, maintenance_availability)
-        if availability.shape == (self.simulation.n_timesteps,):
-            return availability
-        if self.availability_type == "fractional":
+        if is_fractional:
             return np.sum(availability, axis=0) / self.n_components
-        if self.availability_type == "minimum":
-            return np.min(availability, axis=0)
+        return availability
 
     def run(self):
+        """Runs the failure and maintenance models, and calculates the total availability."""
         if self.failures is not None:
             self.failures.run()
         if self.maintenance is not None:
@@ -402,7 +447,12 @@ class FixedDowntime(BaseDowntime):
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
 
     def sample_downtime(self):
-        """Return an array of 100 :py:attr:`hours`."""
+        """Return an array of shape (:py:attr:`n_components, 100) :py:attr:`hours` as the downtime
+        duration for the next 100 downtime events.
+
+        Returns:
+            np.ndarray: An array of the next 100 events' downtime durations.
+        """
         return np.ones((1, 100), dtype=int) * self.hours * self.simulation.n_timesteps_in_hour
 
 
@@ -449,7 +499,12 @@ class UniformDowntime(BaseDowntime):
         )
 
     def sample_downtime(self):
-        """Return an array of 100 :py:attr:`hours`."""
+        """Return an array of 100 samples from a uniform distribution.
+
+        Returns:
+            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+                downtime durations.
+        """
         return (
             rng.integers(self.min_hours, self.max_hours, size=(self.n_components, 100))
             * self.simulation.n_timesteps_in_hour
@@ -489,7 +544,12 @@ class LogNormalDowntime(BaseDowntime):
         )
 
     def sample_downtime(self) -> np.ndarray:
-        """Return an array of 100 samples of each lognormal distribution."""
+        """Return an array of shape (:py:attr:`n_components, 100) samples of each
+        lognormal distribution.
+
+        Returns:
+            np.ndarray: An array of the next 100 events' downtime durations.
+        """
         return np.ceil(
             rng.lognormal(self.mean, self.sigma, size=(self.mean.shape[0], 100))
             / self.simulation.n_timesteps_in_hour
@@ -512,10 +572,38 @@ class WeibullReliability(BaseReliability):
             a value greater than 1 corresponds to an increasing hazard rate over time (
             aging/wear-out failures); and a value of 1 corresponds to a constant hazard
             rate over time (exponential distribution).
-        downtime (float): Average amount of downtime per failure.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        availability_type (str): One of "minimum" or "fractional".
+
+            - fractional: Use when components are representative of different systems, i.e., 100
+              wind turbines within a wind farm instead of 100 components of a single wind turbine.
+              :math:`availability_{system} = \frac{1}{N} \sum_{i=0}^{N} availability_i` where
+              :math:`i` is a single system in a grouping of systems.
+            - minimum: Minimum of all components at all timesteps. Use when components are
+              representative of a single system, i.e., multiple components of a single wind
+              turbine, rather than a grouping of systems (i.e., a wind power plant).
+
+        burn_in (float): Number of years into the simulation to use as the starting point of the
+            the simulation's availability record. Defaults to 0.
+        n_components (int): Number of identical components to sample to avoid defining an array of
+            mean and sigma values when they are the same. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
+        downtime (dict): Configuration for a downtime model.
 
     Attributes:
-        rng (np.random._generator.Generator): NumPy random generator object.
+        time_to_failures (np.ndarray): Array of the hours to the next failure for each modeled
+            component. Generated by each subclass' :py:meth:`sample_events`.
+        downtime_per_event (np.ndarray): Number of hours of downtime corresponding to each downtime
+            event in :py:attr:`time_to_failures`.
+        availability (np.ndarray): Operational ratio of each modeled component for every time step
+            of the simulation.
+        system_availability (np.ndarray): Minimum operational ratio of all components for every time
+            time step of the simulation.
     """
 
     scale: float = field(
@@ -534,7 +622,12 @@ class WeibullReliability(BaseReliability):
         )
 
     def sample_events(self):
-        """Samples 100 events for each simulated component, rounding up to the nearest timestep."""
+        """Samples 100 events for each simulated component, rounding up to the nearest timestep.
+
+        Returns:
+            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+                time to next failure.
+        """
         return np.ceil(
             rng.weibull(self.shape, size=(self.shape.size, 100))
             * self.scale
@@ -544,15 +637,45 @@ class WeibullReliability(BaseReliability):
 
 @define(kw_only=True)
 class FixedIntervalReliability(BaseReliability):
-    """Basic fixed interval downtime reliability model.
+    r"""Basic fixed interval downtime reliability model.
 
     Args:
         frequency (int | float | array-like): The annual frequency of events, e.g., 4 is equivalent
             to a quarterly downtime event and 0.25 is equivalent to an every 4 years downtime event.
             For all events the timing of the first event will be sampled within the first year or
             interval period to offset events from being based on January 1st in an 8760.
-        downtime (int | float | dict): Either fixed length of each downtime, in hours, or a
-            configuration dictionary for a downtime length model.
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        availability_type (str): One of "minimum" or "fractional".
+
+            - fractional: Use when components are representative of different systems, i.e., 100
+              wind turbines within a wind farm instead of 100 components of a single wind turbine.
+              :math:`availability_{system} = \frac{1}{N} \sum_{i=0}^{N} availability_i` where
+              :math:`i` is a single system in a grouping of systems.
+            - minimum: Minimum of all components at all timesteps. Use when components are
+              representative of a single system, i.e., multiple components of a single wind
+              turbine, rather than a grouping of systems (i.e., a wind power plant).
+
+        burn_in (float): Number of years into the simulation to use as the starting point of the
+            the simulation's availability record. Defaults to 0.
+        n_components (int): Number of identical components to sample to avoid defining an array of
+            mean and sigma values when they are the same. After initialization this value changes
+            to align with the number of components being simulated, regardless of identicality.
+            Defaults to 1.
+        downtime (dict): Configuration for a downtime model.
+
+    Attributes:
+        time_to_failures (np.ndarray): Array of the hours to the next failure for each modeled
+            component. Generated by each subclass' :py:meth:`sample_events`.
+        downtime_per_event (np.ndarray): Number of hours of downtime corresponding to each downtime
+            event in :py:attr:`time_to_failures`.
+        availability (np.ndarray): Operational ratio of each modeled component for every time step
+            of the simulation.
+        system_availability (np.ndarray): Minimum operational ratio of all components for every time
+            time step of the simulation.
     """
 
     frequency: float = field(
@@ -570,7 +693,8 @@ class FixedIntervalReliability(BaseReliability):
         is shorter.
 
         Returns:
-            time_to_failures (np.ndarray): An array of the next 100 events' time to next failure.
+            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+                time to next failure.
         """
         interval = np.ceil(
             8760 / (1 / self.frequency) / self.simulation.n_timesteps_in_hour
