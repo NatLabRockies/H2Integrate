@@ -96,14 +96,6 @@ class DemandComponentBase(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            f"{self.commodity}_demand_out",
-            val=self.config.demand_profile,
-            shape=self.n_timesteps,
-            units=self.commodity_rate_units,
-            desc=f"Pass-through of {self.commodity} demand profile",
-        )
-
-        self.add_output(
             "percent_load_missed",
             val=0.0,
             units="percent",
@@ -152,8 +144,6 @@ class DemandComponentBase(PerformanceModelBaseClass):
             array shape ``(n_timesteps,)`` except ``percent_load_missed`` and
             ``curtailment_percent``, which are scalar summary outputs.
         """
-
-        outputs[f"{self.commodity}_demand_out"] = commodity_demand
 
         remaining_demand = commodity_demand - commodity_in
 

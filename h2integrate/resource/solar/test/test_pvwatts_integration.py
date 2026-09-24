@@ -26,7 +26,7 @@ def pysam_performance_model(timezone=0):
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "input",  # "lat-func",
         "pysam_options": pysam_options,
     }
 
@@ -153,7 +153,7 @@ def make_pysam_system_openmeteo(tz):
         "create_model_from": "default",
         "config_name": "PVWattsSingleOwner",
         "tilt": 0.0,
-        "tilt_angle_func": "none",  # "lat-func",
+        "tilt_angle_setting": "input",  # "lat-func",
         "pysam_options": pysam_options,
     }
 

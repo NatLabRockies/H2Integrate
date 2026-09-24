@@ -49,7 +49,7 @@ technologies:
       performance_parameters:
         dc_ac_ratio: 1.23  # pv inverter capacity is equal to 50 MWdc/1.22
         create_model_from: new
-        tilt_angle_func: none
+        tilt_angle_setting: input
         tilt: 20.0
         pysam_options:
           SystemDesign:

@@ -5,6 +5,7 @@ import networkx as nx
 from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
+from h2integrate.core.connection_utils import create_technology_graph
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
     SystemLevelControlBase,
 )
@@ -71,7 +72,7 @@ def test_slc_topology_missing_demand(plant_config, tech_control_classifiers, sub
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config("electrical_load_demand", storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     # check that error is thrown
@@ -94,7 +95,7 @@ def test_slc_topology_demand_not_in_tech(plant_config, tech_control_classifiers,
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config("unused_load_demand", storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     # check that error is thrown
@@ -120,7 +121,7 @@ def test_slc_topology_invalid_demand_tech(plant_config, tech_control_classifiers
         demand_tech, storage_techs, demand_class_name="AmmoniaPlant"
     )
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     with subtests.test("Error raised when demand component is invalid"):
@@ -151,7 +152,7 @@ def test_slc_topology_unconnected_demand(plant_config, tech_control_classifiers,
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     with subtests.test("Error raised when demand component is unconnected"):
@@ -174,7 +175,7 @@ def test_slc_topology_h2_system(plant_config, tech_control_classifiers, subtests
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     slc_topology = model._classify_slc_technologies()
@@ -207,7 +208,7 @@ def test_slc_topology_nh3_system(plant_config, tech_control_classifiers, subtest
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     slc_topology = model._classify_slc_technologies()
@@ -241,7 +242,7 @@ def test_slc_topology_nh3_system_upstream_demand(plant_config, tech_control_clas
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     slc_topology = model._classify_slc_technologies()
@@ -281,7 +282,7 @@ def test_slc_topology_nh3_system_with_h2_demand(plant_config, tech_control_class
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     slc_topology = model._classify_slc_technologies()
@@ -317,7 +318,7 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
     tech_config = make_mock_tech_config(demand_tech, storage_techs)
     model.technology_config = tech_config
-    model.technology_graph = model.create_technology_graph(
+    model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
     )
     slc_topology = model._classify_slc_technologies()

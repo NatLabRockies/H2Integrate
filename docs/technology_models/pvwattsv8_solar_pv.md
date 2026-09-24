@@ -14,8 +14,8 @@ technologies:
                 pv_capacity_kWdc: 1000.0
                 dc_ac_ratio: 1.3
                 create_model_from: "new" #"options are "default" and "new"
-                tilt: #panel tilt angle to use if tilt_angle_func is "none"
-                tilt_angle_func: "lat-func" #options are "lat-func", "lat", "none"
+                tilt: #panel tilt angle to use if tilt_angle_setting is "input"
+                tilt_angle_setting: "lat-func" #options are "lat-func", "lat", "input"
                 config_name: #only used if create_model_from is "default"
                 pysam_options: #user specified pysam inputs
                     SystemDesign:
@@ -37,9 +37,9 @@ $$
 \text{PV Capacity (kW-AC)} = \frac{\text{PV Capacity (kW-DC)}}{\text{dc_ac_ratio}}
 $$
 
-- `tilt` (optional): tilt angle of the PV panel (in degrees) used if `tilt_angle_func` is `"none"`. Must be between 0 and 90.
-- `tilt_angle_func` (optional): options are `"none"`, `"lat-func"` or `"lat"` and defaults to `"none"`.
-    - `"none"`: use the tilt angle value specified in `'tilt'` input (if provided). If `tilt` is not provided, use the default value from the Pvwattsv8 module or config.
+- `tilt` (optional): tilt angle of the PV panel (in degrees) used if `tilt_angle_setting` is `"input"`. Must be between 0 and 90.
+- `tilt_angle_setting` (optional): options are `"input"`, `"lat-func"` or `"lat"` and defaults to `"input"`.
+    - `"input"`: use the tilt angle value specified in `'tilt'` input (if provided). If `tilt` is not provided, use the default value from the Pvwattsv8 module or config.
     - `"lat"`: set the panel tilt angle equal to the latitude of the site.
     - `"lat-func"`: calculate the tilt angle based on the latitude of the site using the equation below:
 
@@ -51,6 +51,15 @@ $$
             \text{lat} & \text{if } 50^\circ < \text{lat} \\
         \end{cases}
         $$
+
+- `azimuth` (optional): azimuth angle of the PV panel (in degrees) used if `azimuth_angle_setting` is `"input"`. Must be between -360 and 360.
+    - East: 90
+    - South: 180 (default for most Pvwattsv8 configurations)
+    - West: 270
+    - North: 360
+- `azimuth_angle_setting` (optional): options are `"input"` or `"lat-func"`, defaults to `"lat-func"`
+    - `"input"`: use the azimuth angle value specified in `'azimuth'` input (if provided). If `azimuth` is not provided, use the default value from the Pvwattsv8 module or config.
+    - `"lat-func"`: if the latitude is negative, sets the azimuth angle to 0 (north-facing). If the latitude is positive, sets the azimuth angle to 180 (south-facing).
 
 - `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the PV model is initialized using `Pvwattsv8.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the PV model is initialized using `Pvwattsv8.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
 - `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"PVWattsSingleOwner"`. The available options and their default parameters are listed below:
@@ -104,8 +113,12 @@ Some common design parameters that a user may want to specify within the [System
 
     ```{note}
     Do not specify tilt angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
-    - `tilt_angle_func` is set to either "lat" or "lat-func"
-    - `tilt_angle_func` is set to "none" and `tilt` is specified under the performance parameters.
+    - `tilt_angle_setting` is set to either "lat" or "lat-func"
+    - `tilt_angle_setting` is set to "input" and `tilt` is specified under the performance parameters.
+
+    Do not specify azimuth angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
+    - `azimuth_angle_setting` is set to "lat-func"
+    - `azimuth_angle_setting` is set to "input" and `azimuth` is specified under the performance parameters.
     ```
 
 (solarresource-group)=
