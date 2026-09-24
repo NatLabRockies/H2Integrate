@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Iterable
 
 import numpy as np
@@ -109,6 +110,22 @@ class ProFastNPV(ProFastBase):
         ]
         conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
 
+        if "system_level_control" in self.options["plant_config"]:
+            non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
+            has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
+
+            if non_pos_prod or has_zero_cf:
+                # Has either zero rated production or zero capacity factor
+                outputs[f"NPV_{self.output_txt}"] = -1e20
+                bug_desc = "capacity" if non_pos_prod else "capacity factor"
+                msg = (
+                    f"Commodity stream for finance group has a zero {bug_desc}. "
+                    "If you recieve this warning multiple times, there may be a problem "
+                    "with your setup. ProFAST is not being run on this iteration and the "
+                    f"NPV_{self.output_txt} is being set to default value of -1e20"
+                )
+                warnings.warn(msg, UserWarning)
+                return
         # ensure that sell price units are compatible with the rate units
         if float(conversion_ratio) != 1.0:
             # convert rate units to units compatible with the price_units
