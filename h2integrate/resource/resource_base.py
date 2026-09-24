@@ -354,6 +354,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (str | int): year corresponding to the resource data
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
@@ -367,7 +368,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
-
+            resource_year (str | int): year corresponding to the resource data
         Returns:
             str: url to use for API call.
         """
@@ -408,7 +409,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
     def get_data_for_year(
         self, latitude, longitude, resource_year, resource_filename="", first_call=True
     ):
-        """Get resource data to handle any of the expected inputs. This method does the following:
+        """Get resource data for a single resource year to handle any of the expected inputs.
+        This method does the following:
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
             inputs are different than the previous latitude and longitude values. If resource data
@@ -427,6 +429,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
+            resource_year (str | int): year corresponding to the resource data
+            resource_filename (str, optional): name of the resource file
             first_call (bool): True if called from `setup()` method, False if called from
                 `compute()` method to prevent unnecessary reloading of data.
 
@@ -448,19 +452,19 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 1) check if user provided data, add start and end times if so
         # and return the data
-        if bool(self.config.resource_data):
-            data = add_resource_start_end_times(self.config.resource_data)
+        # if bool(self.config.resource_data):
+        #     data = add_resource_start_end_times(self.config.resource_data)
 
-            if site_changed:
-                msg = (
-                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
-                    "Since resource data was user-input as a dictionary, the resource data will"
-                    "remain unchanged and still be for the site "
-                    f"({self.config.latitude}, {self.config.longitude}) provided in the config"
-                )
-                warnings.warn(msg, UserWarning, stacklevel=3)
+        #     if site_changed:
+        #         msg = (
+        #             f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
+        #             "Since resource data was user-input as a dictionary, the resource data will"
+        #             "remain unchanged and still be for the site "
+        #             f"({self.config.latitude}, {self.config.longitude}) provided in the config"
+        #         )
+        #         warnings.warn(msg, UserWarning, stacklevel=3)
 
-            return data
+        #     return data
 
         # check if user provided directory or filename
         provided_filename = False if resource_filename == "" else True
@@ -529,12 +533,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()`
             data = self.load_data(filepath)
-            # NOTE: below two if-statements may not be necessary?
-            if (yr_ts := data.get("year")) is not None:
-                if len(set(yr_ts)) > 1:
-                    # Clip data to a single resource year
-
-                    data = clip_data_to_resource_year(data, resource_year)
+            # Clip data to a single resource year
+            data = clip_data_to_resource_year(data, resource_year)
             # NOTE: this where we could up/downsample
             return data
 
@@ -542,10 +542,20 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             raise ValueError("Did not successfully download resource data.")
 
     def process_final_resource_data(self, resource_data):
-        # md, ts = separate_timeseries_and_meta_data(resource_data)
-        # ts = process_leap_day(ts, self.config.include_leap_day)
+        """Final processing of multi-year resource data. This method does the following:
 
-        # resource_data = md | ts
+        1. Remove resource data for leap-day if needed
+        2. Clip the resource data to the number of timesteps in a simulation
+        3. Add start and end-times to the resource data
+        4. Check that the length of the timeseries resource data is the same as n_timesteps
+
+        Args:
+            resource_data (dict): dictionary of resource data for all resource years
+
+        Returns:
+            dict: resource_data after final processing and checks
+        """
+
         resource_data = process_leap_day(resource_data, self.config.include_leap_day)
         resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
         resource_data = add_resource_start_end_times(resource_data)
@@ -553,6 +563,26 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         return resource_data
 
     def get_data(self, latitude, longitude, first_call=True):
+        """Get resource data for varying simulation lengths.
+
+        0) If this is not the first resource call of the simulation, check if latitude and longitude
+            inputs are different than the previous latitude and longitude values. If resource data
+            has not been already loaded for the, continue to Step 1.
+        1) Check if resource data was input. If not, continue to Step 2.
+        2) Determine the resource years and resource filenames to loop through based on
+            ``config.resource_year_setting``
+        3) Loop through the resource years and resource filenames, calling ``get_data()``
+            for each iteration
+
+        Args:
+            latitude (float): latitude corresponding to location for resource data
+            longitude (float): longitude corresponding to location for resource data
+            first_call (bool): True if called from `setup()` method, False if called from
+                `compute()` method to prevent unnecessary reloading of data.
+
+        Returns:
+            dict: resource data in the format expected by the subclass.
+        """
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # 0) If site hasn't changed and resource data has already been loaded
@@ -561,9 +591,27 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if self.resource_data is not None:
                 return self.resource_data
 
+        # 1) check if user provided data, add start and end times if so
+        # and return the data
+        if bool(self.config.resource_data):
+            data = add_resource_start_end_times(self.config.resource_data)
+
+            if site_changed:
+                msg = (
+                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
+                    "Since resource data was user-input as a dictionary, the resource data will"
+                    "remain unchanged and still be for the site "
+                    f"({self.config.latitude}, {self.config.longitude}) provided in the config"
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
+            return data
+
+        # 2) Determine the resource years and resource filenames to loop
         if self.config.resource_year_setting == "start_year":
             resource_years = self._get_resource_years(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
+
         elif self.config.resource_year_setting == "filenames":
             # NOTE: maybe should check that the site is the same for each file?
             # NOTE: maybe should check the timezone is the same for each file?
@@ -579,8 +627,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         timeseries_data = {}
         meta_data = {}
 
+        # 3) Loop through the resource years
         for year, filename in zip(resource_years, resource_filenames):
             if not isinstance(year, str):
+                # make sure year is an integer if its not a string
                 year = int(year)
 
             # Check that the resource year is valid
@@ -591,17 +641,25 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 latitude, longitude, year, resource_filename=filename, first_call=first_call
             )
 
+            # Extract the metadata and timeseries data
             md, ts = separate_timeseries_and_meta_data(resource_data)
 
+            # Update the meta-data with the most recent meta-data
             meta_data |= md
+
             if not bool(timeseries_data):
-                # timeseries data is empty, populate it
+                # timeseries_data is empty (first-loop), populate it
                 timeseries_data |= ts
             else:
+                # append new timeseries data to existing
                 timeseries_data = append_timeseries_data(timeseries_data, ts)
 
         # NOTE: this where we could up/downsample
+
+        # combine meta-data and timeseries data
         resource_data = meta_data | timeseries_data
+
+        # final clean-up and check of the resource data
         resource_data = self.process_final_resource_data(resource_data)
         return resource_data
 
