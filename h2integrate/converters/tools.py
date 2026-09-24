@@ -46,12 +46,15 @@ def apply_non_native_lifetime_degradation(generation, degradation, plant_life):
     if not isinstance(generation, np.ndarray):
         generation = np.array(generation)
 
+    # A single rate represents linear annual degradation across the plant life.
     if len(degradation) == 1:
         year_indices = np.arange(plant_life)
         degradation_factors = 1 - degradation[0] * year_indices / 100
         degradation_factors[0] = 1.0
     else:
+        # Multiple rates provide the degradation percentage for each year.
         degradation_factors = 1 - np.asarray(degradation) / 100
+    # Scale one generation profile per year, then join them into a lifetime series.
     generation = np.concatenate(
         [generation * degradation_factor for degradation_factor in degradation_factors]
     )
@@ -94,19 +97,19 @@ def check_pysam_lifetime_options(design_dict, plant_life, degradation_varname):
     else:
         degradation = list(degradation)
         if not degradation:
-            raise ValueError(f"Lifetime.{degradation} must contain at least one value.")
+            raise ValueError(f"Lifetime.{degradation_varname} must contain at least one value.")
 
     if len(degradation) != plant_life:
         msg = (
             f"Updating '{degradation_varname}' from length "
-            f"{len(degradation)} to length {plant_life}",
+            f"{len(degradation)} to length {plant_life}"
         )
         warnings.warn(
             msg,
             UserWarning,
             stacklevel=2,
         )
-        # tile the dc_degration so that its the same length as plant_life
+        # Repeat or truncate the supplied annual values to match the plant life.
         degradation = np.resize(degradation, plant_life).tolist()
 
     # update analysis_period and degradation_varname in the design dict
