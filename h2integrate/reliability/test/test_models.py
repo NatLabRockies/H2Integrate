@@ -333,6 +333,7 @@ def test_PerformanceReliability(subtests):
     """Tests the ``PerformanceReliability`` initialization and a basic setup."""
     availability_config = {"availability_type": "minimum"}
     simulation_config = {"simulation": {"dt": 3600, "n_timesteps": 8760}}
+    base_config = availability_config | simulation_config
     failure_config = {
         "simulation": {"dt": 3600, "n_timesteps": 8760},
         "failure_model": "SimpleReliability",
@@ -358,10 +359,10 @@ def test_PerformanceReliability(subtests):
         with pytest.raises(AttributeError, match=msg):
             PerformanceReliability.from_dict(simulation_config)
 
-        config = availability_config | simulation_config
-        reliability = PerformanceReliability.from_dict(config)
+        reliability = PerformanceReliability.from_dict(base_config)
         assert reliability.availability_type == "minimum"
         assert reliability.n_components == 1
+        assert reliability.burn_in == 0
         assert reliability.failure_model is None
         assert reliability.failure_parameters is None
         assert reliability.failures is None
@@ -369,8 +370,8 @@ def test_PerformanceReliability(subtests):
         assert reliability.maintenance_parameters is None
         assert reliability.maintenance is None
         assert isinstance(reliability.simulation, SimulationConfig)
-        assert reliability.simulation.dt == config["simulation"]["dt"]
-        assert reliability.simulation.n_timesteps == config["simulation"]["n_timesteps"]
+        assert reliability.simulation.dt == base_config["simulation"]["dt"]
+        assert reliability.simulation.n_timesteps == base_config["simulation"]["n_timesteps"]
 
         assert reliability.run() is None  # run should run nothing without failure
         npt.assert_array_equal(
@@ -381,13 +382,13 @@ def test_PerformanceReliability(subtests):
         "simulation": {"dt": 3600, "n_timesteps": 8760},
         "use_reliability": False,
         "availability_type": "fractional",
+        "burn_in": 6.5,
         "failure_model": "WeibullReliability",
         "maintenance_model": "FixedIntervalReliability",
         "failure_parameters": {
             "scale": 0.5,
             "shape": 1,
             "n_components": 3,
-            "burn_in": 6.5,
             "downtime": {
                 "model": "FixedDowntime",
                 "hours": 5,
@@ -405,7 +406,7 @@ def test_PerformanceReliability(subtests):
         },
     }
 
-    with subtests.test("Check n_components comparison"):
+    with subtests.test("Check attribute pass-through"):
         config["failure_parameters"]["n_components"] = 4
         msg = (
             "Failure and maintenance models must have the same number of components when using"
@@ -417,13 +418,16 @@ def test_PerformanceReliability(subtests):
 
         config["availability_type"] = "minimum"
         reliability = PerformanceReliability.from_dict(config)
+        assert reliability.burn_in == config["burn_in"]
+        assert reliability.failures.burn_in == config["burn_in"]
+        assert reliability.maintenance.burn_in == config["burn_in"]
         assert reliability.failures.n_components == config["failure_parameters"]["n_components"]
         assert (
             reliability.maintenance.n_components == config["maintenance_parameters"]["n_components"]
         )
 
     with subtests.test("Check SimpleReliability invalid"):
-        config = availability_config | simulation_config | failure_config | maintenance_config
+        config = base_config | failure_config | maintenance_config
         with pytest.raises(ValueError, match=r" \(got 'SimpleReliability'\)"):
             PerformanceReliability.from_dict(config)
 

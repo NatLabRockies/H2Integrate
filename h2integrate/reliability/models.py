@@ -66,7 +66,7 @@ def create_downtime_model(config: dict | int):
         case "FixedDowntime":
             return FixedDowntime.from_dict(parameters)
         case "UniformDowntime":
-            return UniformDowntime.from_dict(config)
+            return UniformDowntime.from_dict(parameters)
         case _:
             raise NotImplementedError(f"{name} is not a valid model name")
 
@@ -310,6 +310,9 @@ class PerformanceReliability(BaseConfig):
         use_reliability (bool, optional): Used for the performance model to toggle the use of the
             reliability modeling. Defaults to True to match the assumption contained in performance
             models.
+        burn_in (float): Number of years into the simulation to use as the starting point of the
+            the simulation's availability record. Applied to both the failure and maintenance models
+            as an override. Defaults to 0.
         failure_model (str | None): Name of the failure model to use, when modeling.
         maintenance_model (str | None): Name of the maintenance model to use, when modeling.
         failure_parameters (str | None): Configuration for the failure model, when modeling. The
@@ -329,6 +332,7 @@ class PerformanceReliability(BaseConfig):
     simulation: dict | SimulationConfig = field(converter=SimulationConfig.from_dict)
     availability_type: str = field(validator=validators.in_(AVAILABILITY_TYPES))
     use_reliability: bool = field(default=True, validator=validators.instance_of(bool))
+    burn_in: float = field(default=0, converter=float, validator=validators.ge(0))
     failure_model: str | None = field(
         default=None, validator=validators.optional(validators.in_(VALID_RELIABILITY))
     )
@@ -350,8 +354,11 @@ class PerformanceReliability(BaseConfig):
 
     def __attrs_post_init__(self):
         """Creates and runs the failure and maintenance models, and calculates availability."""
-        simulation_config = {"simulation": self.simulation}
-        availability = {"availability_type": self.availability_type}
+        shared_config = {
+            "simulation": self.simulation,
+            "availability_type": self.availability_type,
+            "burn_in": self.burn_in,
+        }
         self.availability = np.ones(self.simulation.n_timesteps)
 
         has_maintenance = False
@@ -360,7 +367,7 @@ class PerformanceReliability(BaseConfig):
             if self.failure_parameters is not None:
                 has_failure = True
                 self.failures = create_reliability_model(
-                    self.failure_model, self.failure_parameters | simulation_config | availability
+                    self.failure_model, self.failure_parameters | shared_config
                 )
                 self.n_components = self.failures.n_components
 
@@ -368,8 +375,7 @@ class PerformanceReliability(BaseConfig):
             if self.maintenance_parameters is not None:
                 has_maintenance = True
                 self.maintenance = create_reliability_model(
-                    self.maintenance_model,
-                    self.maintenance_parameters | simulation_config | availability,
+                    self.maintenance_model, self.maintenance_parameters | shared_config
                 )
                 self.n_components = self.maintenance.n_components
 
