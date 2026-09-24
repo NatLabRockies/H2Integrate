@@ -9,8 +9,8 @@ import pyomo.environ as pyomo
 
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_optimized_storage_controller import (
-    PeakLoadManagementOptimizedControllerConfig,
     PeakLoadManagementOptimizedStorageController,
+    PeakLoadManagementOptimizedStorageControllerConfig,
 )
 
 
@@ -46,7 +46,7 @@ def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
 @pytest.fixture
 def base_config():
     n = 24
-    return PeakLoadManagementOptimizedControllerConfig(
+    return PeakLoadManagementOptimizedStorageControllerConfig(
         max_capacity=10.0,
         max_soc_fraction=1.0,
         min_soc_fraction=0.0,
@@ -405,8 +405,10 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         "signal_threshold_percentile": 0.0,
         "event_duration": {"val": 2, "units": "h"},
     }
-    config_kwh = PeakLoadManagementOptimizedControllerConfig(**common, performance_incentive=5.0)
-    config_event = PeakLoadManagementOptimizedControllerConfig(
+    config_kwh = PeakLoadManagementOptimizedStorageControllerConfig(
+        **common, performance_incentive=5.0
+    )
+    config_event = PeakLoadManagementOptimizedStorageControllerConfig(
         **common, performance_incentive_per_event=10.0
     )
 
@@ -440,7 +442,7 @@ def test_optimizer_respects_set_point_cap(subtests):
     """p_discharge/p_charge are capped by set_point_w's magnitude when the new
     constrain_dispatch_to_set_point flag is set, on top of the usual P_max bound."""
     n = 24
-    config = PeakLoadManagementOptimizedControllerConfig(
+    config = PeakLoadManagementOptimizedStorageControllerConfig(
         max_capacity=10.0,
         max_soc_fraction=1.0,
         min_soc_fraction=0.0,

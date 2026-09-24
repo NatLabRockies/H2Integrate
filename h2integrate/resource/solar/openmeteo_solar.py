@@ -14,7 +14,7 @@ from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
 
 
 @define(kw_only=True)
-class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
+class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
@@ -53,7 +53,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalSolarAPIConfig.from_dict(
+        self.config = OpenMeteoHistoricalSolarResourceConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

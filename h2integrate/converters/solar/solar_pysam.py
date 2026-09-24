@@ -5,12 +5,12 @@ import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.converters.tools import check_pysam_input_params
+from h2integrate.converters.tools import check_pysam_input_params, check_pysam_lifetime_options
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 
 @define(kw_only=True)
-class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     """Configuration class for design parameters of the solar pv plant.
         PYSAMSolarPlantPerformanceModel which uses the Pvwattsv8 module
         available in PySAM. PySAM documentation can be found
@@ -180,7 +180,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -217,11 +217,13 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 else:
                     design_dict.update({group: group_parameters})
 
+        check_pysam_lifetime_options(design_dict, self.plant_life, "dc_degradation")
+
         self.design_dict = design_dict
         self.system_model.assign(design_dict)
 
         if self.config.tilt_angle_setting == "input":
-            tilt = self.get_inital_angle_value("tilt")
+            tilt = self.get_initial_angle_value("tilt")
             self.add_input(
                 "tilt_angle",
                 val=tilt,
@@ -230,7 +232,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
         if self.config.azimuth_angle_setting == "input":
-            azimuth = self.get_inital_angle_value("azimuth")
+            azimuth = self.get_initial_angle_value("azimuth")
             self.add_input(
                 "azimuth_angle",
                 val=azimuth,
@@ -238,7 +240,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 desc="Solar panel azimuth angle in degrees",
             )
 
-    def get_inital_angle_value(self, angle_name: str):
+    def get_initial_angle_value(self, angle_name: str):
         """Get the initial value to use for 'angle_name', based on either:
 
         - the user-input value at the top-level of the config (i.e., `config.angle_name`)
@@ -469,19 +471,42 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.execute(0)
 
         # assign outputs
-        outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-dc
         pv_capacity_kWdc = self.system_model.value("system_capacity")
         dc_ac_ratio = self.system_model.value("dc_ac_ratio")
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
-        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
 
-        max_production = (
-            outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
-        )
+        if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
+            # using lifetime results
+            # split the generation profile to have results per-year
+            generation_per_year = np.split(np.array(self.system_model.Outputs.gen), self.plant_life)
+            # sum the generation per-year
+            aep_per_year = np.array(generation_per_year).sum(axis=1)
+            # get the number of timesteps per year (should be the same for all years)
+            n_timesteps_per_year = np.array([len(k) for k in generation_per_year])
+            # output the first n_timesteps of the generation profile
+            outputs["electricity_out"] = np.array(self.system_model.Outputs.gen)[: self.n_timesteps]
+            # make production is the max production per-year
+            max_production = (
+                outputs["rated_electricity_production"] * n_timesteps_per_year * (self.dt / 3600)
+            )
+            outputs["annual_electricity_produced"] = aep_per_year
+            outputs["capacity_factor"] = outputs["annual_electricity_produced"] / max_production
+            outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
+                self.dt / 3600
+            )
 
-        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
-        outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+        else:
+            # not using lifetime output, use results as-is
+            outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-AC
+            max_production = (
+                outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
+            )
+            outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+            outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
+                self.dt / 3600
+            )
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)

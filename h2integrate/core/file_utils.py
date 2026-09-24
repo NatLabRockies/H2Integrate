@@ -151,6 +151,28 @@ def find_file(filename: str | Path, root_folder: str | Path | None = None):
     )
 
 
+def load_component_config(config_value, config_path, validator_func):
+    """Load and validate an embedded or file-based component configuration.
+
+    Args:
+        config_value (dict | str | Path): Embedded configuration or configuration path.
+        config_path (Path | None): Path to the main configuration file, when available.
+        validator_func (callable): Function used to load and validate the configuration.
+
+    Returns:
+        tuple: Validated configuration, resolved file path, and its parent directory.
+    """
+    if isinstance(config_value, dict):
+        return validator_func(config_value), None, None
+
+    file_path = (
+        get_path(config_value)
+        if config_path is None
+        else find_file(config_value, config_path.parent)
+    )
+    return validator_func(file_path), file_path, file_path.parent
+
+
 class DuplicateKeyError(Exception):
     """Exception raised when a duplicate YAML key is found.
 

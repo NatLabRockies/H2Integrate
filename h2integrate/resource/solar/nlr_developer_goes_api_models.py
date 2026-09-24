@@ -5,7 +5,7 @@ from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISol
 
 
 @define(kw_only=True)
-class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
+class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Aggregated PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
@@ -36,7 +36,7 @@ class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
         # create the resource config
-        self.config = GOESAggregatedAPIConfig.from_dict(
+        self.config = GOESAggregatedSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -44,7 +44,7 @@ class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESConusAPIConfig(ResourceBaseAPIConfig):
+class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Conus PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
     This dataset covers regions within the continental United States at a spatial resolution of
@@ -78,7 +78,7 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESConusAPIConfig.from_dict(
+        self.config = GOESConusSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -86,7 +86,7 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
+class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 2 km.
@@ -119,7 +119,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESFullDiscAPIConfig.from_dict(
+        self.config = GOESFullDiscSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -127,7 +127,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESTMYAPIConfig(ResourceBaseAPIConfig):
+class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
@@ -184,7 +184,7 @@ class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESTMYAPIConfig.from_dict(
+        self.config = GOESTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

@@ -14,7 +14,7 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
 
 
 @define(kw_only=True)
-class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
+class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """Configuration class for the HTSE performance model.
 
     Args:
@@ -65,7 +65,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
 
     def setup(self) -> None:
-        self.config = HTSEElectrolyzerPerformanceModelConfig.from_dict(
+        self.config = HTSEPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
