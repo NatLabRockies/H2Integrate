@@ -22,6 +22,9 @@ The [`PerformanceReliability`](#h2integrate.reliability.models.PerformanceReliab
 to be integrated into a performance model by applying multiplying the `availability` by the
 appropriate production or demand array.
 
+To ensure stability of results, the seeding of the random generator is fixed for repeatable results
+across simulations.
+
 (reliability:availability)=
 ## Availability Types
 
