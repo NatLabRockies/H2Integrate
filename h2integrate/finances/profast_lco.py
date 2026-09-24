@@ -108,18 +108,21 @@ class ProFastLCO(ProFastBase):
 
         pf = self.populate_profast(inputs)
 
-        if "system_level_control" in self.options["plant_config"] and np.all(
-            inputs["capacity_factor"] == 0.0
-        ):
-            outputs[self.LCO_str] = 1e12
-            msg = (
-                f"Commodity stream for finance group has a zero capacity factor. "
-                "If you recieve this warning multiple times, there may be a problem "
-                "with your setup. ProFAST is not being run on this iteration and the "
-                f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
-            )
-            warnings.warn(msg, UserWarning)
-            return
+        if "system_level_control" in self.options["plant_config"]:
+            non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
+            has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
+
+            if non_pos_prod or has_zero_cf:
+                bug_desc = "capacity" if non_pos_prod else "capacity factor"
+                outputs[self.LCO_str] = 1e12
+                msg = (
+                    f"Commodity stream for finance group has a zero {bug_desc}. "
+                    "If you recieve this warning multiple times, there may be a problem "
+                    "with your setup. ProFAST is not being run on this iteration and the "
+                    f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+                )
+                warnings.warn(msg, UserWarning)
+                return
         # simulate ProFAST
         sol, summary, price_breakdown = run_profast(pf)
 
