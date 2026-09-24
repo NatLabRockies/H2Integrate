@@ -14,7 +14,7 @@ from h2integrate.resource.utilities.download_tools import make_time_index_openme
 
 
 @define(kw_only=True)
-class OpenMeteoHistoricalWindAPIConfig(ResourceBaseAPIConfig):
+class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
@@ -55,7 +55,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalWindAPIConfig.from_dict(
+        self.config = OpenMeteoHistoricalWindResourceConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

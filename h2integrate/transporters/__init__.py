@@ -6,3 +6,4 @@ from h2integrate.transporters.generic_transporter import GenericTransporterPerfo
 from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
 from h2integrate.transporters.linear_transport_cost import LinearDistanceCostModel
+from h2integrate.transporters.linear_mass_transport_cost import LinearMassTransportCostModel

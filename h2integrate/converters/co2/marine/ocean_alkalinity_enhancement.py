@@ -255,6 +255,13 @@ class OAECostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
 
 
+@define(kw_only=True)
+class OAECostAndFinancialModelConfig(OAECostModelConfig):
+    """Configuration for the combined OAE cost and finance model."""
+
+    pass
+
+
 class OAECostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     ocean alkalinity enhancement (OAE) system.
@@ -366,12 +373,12 @@ class OAECostAndFinancialModel(CostModelBaseClass):
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
-            self.config = OAECostModelConfig.from_dict(
+            self.config = OAECostAndFinancialModelConfig.from_dict(
                 merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
                 additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(
+            self.config = OAECostAndFinancialModelConfig.from_dict(
                 data={},
                 additional_cls_name=self.__class__.__name__,
             )

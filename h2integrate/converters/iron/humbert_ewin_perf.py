@@ -9,7 +9,7 @@ and TEA literature for three different types of iron electrowinning:
 - Molten Oxide Electrolysis (MOE)
 
 Classes:
-    HumbertEwinConfig: Sets the required model_inputs fields.
+    HumbertEwinPerformanceComponentConfig: Sets the required model_inputs fields.
     HumbertEwinPerformanceComponent: Defines initialize(), setup(), and compute() methods.
 
 """
@@ -22,7 +22,7 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define
-class HumbertEwinConfig(BaseConfig):
+class HumbertEwinPerformanceComponentConfig(BaseConfig):
     """Configuration class for the Humbert iron electrowinning performance model.
 
     Args:
@@ -89,7 +89,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         super().initialize()
 
     def setup(self):
-        self.config = HumbertEwinConfig.from_dict(
+        self.config = HumbertEwinPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
         )

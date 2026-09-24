@@ -46,6 +46,18 @@ Within the class for a technology you have three basic functions that are always
     - Calculations use inputs defined in the `setup()`.
     - Sets the standard outputs that were declared in the setup method.
 
+Configuration classes should follow the model naming convention: append `Config`
+to the complete model class name. For example, `MyPerformanceModel` should use
+`MyPerformanceModelConfig`, and `MyCostModel` should use
+`MyCostModelConfig`. Define the class with `attrs` and inherit from
+`BaseConfig`, `CostModelBaseConfig`, or the appropriate existing config base
+class. Instantiate the matching config in `setup()`.
+
+This convention allows `populate_tech_yaml` to discover the configuration class
+automatically and generate the model's input template. If a model intentionally
+shares a base config or requires a specialized config name, document that
+relationship and ensure the model's own setup path remains unambiguous.
+
 ```{note}
 `setup` is where the configuration object is built and where any additional I/O is registered. Always call `super().setup()` first so that the baseclass can register the standard production outputs (and, for flexible models, the command-value input). The `compute` signature is
 `compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because performance models may use discrete I/O (e.g. resource data dictionaries).
@@ -192,6 +204,11 @@ supported_models = _ModelRegistry(
 
 For the import to resolve, also export your class from the relevant subpackage
 `__init__.py` (for example, `h2integrate/converters/solar/__init__.py`).
+
+The registry key is the model name used in YAML. Keep it aligned with the model
+class name and use the same complete name when naming its configuration class:
+`{ModelName}Config`. This applies independently to performance, cost, control,
+dispatch, and finance models.
 
 ## More complex cases
 

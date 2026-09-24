@@ -84,28 +84,28 @@ class TestCalcTiltAngle:
     # --- tilt_angle_setting = "none" ---
     def test_none_mode_default_with_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=15.0, create_model_from="default")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(15.0)
 
     def test_none_mode_default_without_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="default")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(20.0)  # from system_model.value("tilt")
 
     def test_none_mode_new_with_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=10.0, create_model_from="new")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(10.0)
 
     def test_none_mode_new_without_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="new")
         model.config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(22.0)
 
     def test_none_mode_new_no_tilt_anywhere(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="new")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(0)  # default fallback
 
 
@@ -611,3 +611,68 @@ def test_pvwatts_input_tilt_azimuth(
             pytest.approx(prob.get_val("pv_perf.dc_ac_ratio", units="unitless")[0], rel=1e-6)
             == 1.34
         )
+
+
+@pytest.mark.unit
+def test_pvwatts_with_lifetime_performance(
+    basic_pysam_options, solar_resource_dict, plant_config, subtests
+):
+    """Test `PYSAMSolarPlantPerformanceModel` with a basic input scenario:
+
+    - `pysam_options` is provided
+    - `create_model_from` is set to 'default'
+    - `config_name` is 'PVWattsSingleOwner', this is used to create the starting system model
+        because `create_model_from` is default.
+    - `tilt_angle_setting` is "input" and tilt is provided (in two separate places) as zero.
+    """
+
+    basic_pysam_options["SystemDesign"].update({"tilt": 0.0})
+    basic_pysam_options["Lifetime"] = {
+        "system_use_lifetime_output": 1,
+        "analysis_period": 30,
+        "dc_degradation": np.cumsum(np.full(30, 0.025)).tolist(),
+    }
+    pv_design_dict = {
+        "pv_capacity_kWdc": 250000.0,
+        "dc_ac_ratio": 1.23,
+        "create_model_from": "default",
+        "config_name": "PVWattsSingleOwner",
+        "tilt": 0.0,
+        "tilt_angle_setting": "input",  # "lat-func",
+        "pysam_options": basic_pysam_options,
+    }
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": pv_design_dict,
+        }
+    }
+
+    prob = om.Problem()
+    solar_resource = GOESAggregatedSolarAPI(
+        plant_config=plant_config,
+        resource_config=solar_resource_dict,
+        driver_config={},
+    )
+    comp = PYSAMSolarPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+    prob.model.add_subsystem("solar_resource", solar_resource, promotes=["*"])
+    prob.model.add_subsystem("pv_perf", comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")
+    cf = prob.get_val("pv_perf.capacity_factor", units="unitless")
+    with subtests.test("AEP at year 0 < AEP at year 1"):
+        assert aep[1] < aep[0]
+    with subtests.test("AEP year 0"):
+        assert pytest.approx(aep[0], rel=1e-6) == 527216534.92436135
+    with subtests.test("AEP year 30"):
+        assert pytest.approx(aep[-1], rel=1e-6) == 523444808.25535893
+    with subtests.test("AEP is always decreasing"):
+        assert all(v < 0 for v in np.diff(aep))
+    with subtests.test("CF is always decreasing"):
+        assert all(v < 0 for v in np.diff(cf))

@@ -7,7 +7,7 @@ from h2integrate.resource.wind.nlr_developer_wtk_api_base import NLRDeveloperAPI
 
 
 @define(kw_only=True)
-class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
+class WTKNLRDeveloperAPIWindResourceConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Wind Toolkit Data V2 <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/>`_.
 
@@ -47,7 +47,7 @@ class WTKNLRDeveloperAPIWindResource(NLRDeveloperAPIWindResourceBase):
         self.base_url = "https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download.csv?"
 
         # create the resource config
-        self.config = WTKNLRDeveloperAPIConfig.from_dict(
+        self.config = WTKNLRDeveloperAPIWindResourceConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -56,7 +56,7 @@ class WTKNLRDeveloperAPIWindResource(NLRDeveloperAPIWindResourceBase):
 
 
 @define(kw_only=True)
-class WTKHRRRMETAPIConfig(ResourceBaseAPIConfig):
+class HRRRMETToolkitWindAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `HRRR MET Toolkit <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-hrrr-met-toolkit-v1-0-0-download/>`_.
     This dataset covers the Continental United States at a spatial resolution of 2 km.
@@ -97,7 +97,7 @@ class HRRRMETToolkitWindAPI(NLRDeveloperAPIWindResourceBase):
         self.base_url = "https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-hrrr-met-toolkit-v1-0-0-download.csv?"
 
         # create the resource config
-        self.config = WTKHRRRMETAPIConfig.from_dict(
+        self.config = HRRRMETToolkitWindAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
