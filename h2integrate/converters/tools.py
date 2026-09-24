@@ -31,6 +31,33 @@ def check_pysam_input_params(user_dict, pysam_options):
     return
 
 
+def apply_non_native_lifetime_degradation(generation, degradation, plant_life):
+    """_summary_
+
+    Args:
+        generation (np.ndarray): generation timeseries profile
+        degradation (list): annual degradation rate as a fraction
+        plant_life (int): plant life in years
+
+    Returns:
+        np.ndarray: generation profile with losses from degradation
+    """
+    # degradation = self.design_dict["Lifetime"]["ac_degradation"]
+    if not isinstance(generation, np.ndarray):
+        generation = np.array(generation)
+
+    if len(degradation) == 1:
+        year_indices = np.arange(plant_life)
+        degradation_factors = 1 - degradation[0] * year_indices / 100
+        degradation_factors[0] = 1.0
+    else:
+        degradation_factors = 1 - np.asarray(degradation) / 100
+    generation = np.concatenate(
+        [generation * degradation_factor for degradation_factor in degradation_factors]
+    )
+    return generation
+
+
 def check_pysam_lifetime_options(design_dict, plant_life, degradation_varname):
     """If using lifetime output from a PySAM model, ensure that analysis_period
     and the annual degradation are both the same length as the plant life.
@@ -46,27 +73,44 @@ def check_pysam_lifetime_options(design_dict, plant_life, degradation_varname):
     """
     lifetime_opts = design_dict.get("Lifetime", {})
     if not bool(lifetime_opts.get("system_use_lifetime_output", 0)):
+        # not using lifetime output
         return design_dict
 
     # using lifetime output
+
     # check that analysis_period is the same as plant life
     if lifetime_opts.get("analysis_period", plant_life) != plant_life:
         old = lifetime_opts["analysis_period"]
-        warnings.warn(f"Updating analysis_period from {old} to {plant_life} (plant_life)")
-
-    # check that degradation_varname is the same length as plant life
-    if len(lifetime_opts.get(degradation_varname, [0.0] * plant_life)) != plant_life:
-        old_len = len(lifetime_opts.get(degradation_varname, [0.0] * plant_life))
         warnings.warn(
-            f"Updating '{degradation_varname}' from length {old_len} to length {plant_life}"
+            f"Updating analysis_period from {old} to {plant_life} (plant_life)",
+            UserWarning,
+            stacklevel=3,
         )
 
-    # tile the dc_degration so that its the same length as plant_life
-    dc_deg_init = lifetime_opts.get(degradation_varname, [0.0] * plant_life)
-    n_repeats = np.ceil(plant_life / len(dc_deg_init))
-    degradation = np.tile(dc_deg_init, int(n_repeats))[:plant_life]
+    # check that degradation_varname is the same length as plant life
+    degradation = lifetime_opts.get(degradation_varname)
+    if degradation is None:
+        degradation = [0.0] * plant_life
+    else:
+        degradation = list(degradation)
+        if not degradation:
+            raise ValueError(f"Lifetime.{degradation} must contain at least one value.")
+
+    if len(degradation) != plant_life:
+        msg = (
+            f"Updating '{degradation_varname}' from length "
+            f"{len(degradation)} to length {plant_life}",
+        )
+        warnings.warn(
+            msg,
+            UserWarning,
+            stacklevel=2,
+        )
+        # tile the dc_degration so that its the same length as plant_life
+        degradation = np.resize(degradation, plant_life).tolist()
+
     # update analysis_period and degradation_varname in the design dict
     lifetime_opts["analysis_period"] = plant_life
-    lifetime_opts[degradation_varname] = degradation.tolist()
+    lifetime_opts[degradation_varname] = degradation
     design_dict["Lifetime"].update(lifetime_opts)
     return design_dict

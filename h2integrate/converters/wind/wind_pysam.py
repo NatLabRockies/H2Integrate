@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.converters.tools import check_pysam_lifetime_options
+from h2integrate.converters.tools import (
+    check_pysam_lifetime_options,
+    apply_non_native_lifetime_degradation,
+)
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -267,7 +270,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         design_dict = check_pysam_lifetime_options(design_dict, self.plant_life, "ac_degradation")
 
-        self.system_model.assign(design_dict)
+        self.design_dict = design_dict.copy()
+
+        if "Lifetime" in design_dict and not hasattr(self.system_model, "Lifetime"):
+            design_dict.pop("Lifetime")
+            self.system_model.assign(design_dict)
 
         self.data_to_field_number = {
             "temperature": 1,
@@ -513,27 +520,27 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         generation = np.asarray(self.system_model.Outputs.gen)
         time_step_hours = self.dt / 3600
 
-        if self.use_lifetime_output:
-            if not self.native_lifetime_output:
+        use_lifetime_output = bool(
+            self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)
+        )
+        native_lifetime_output = hasattr(self.system_model, "Lifetime")
+
+        if use_lifetime_output:
+            if not native_lifetime_output:
                 degradation = self.design_dict["Lifetime"]["ac_degradation"]
-                if len(degradation) == 1:
-                    year_indices = np.arange(self.plant_life)
-                    degradation_factors = 1 - degradation[0] * year_indices / 100
-                    degradation_factors[0] = 1.0
-                else:
-                    degradation_factors = 1 - np.asarray(degradation) / 100
-                generation = np.concatenate(
-                    [generation * degradation_factor for degradation_factor in degradation_factors]
+                generation = apply_non_native_lifetime_degradation(
+                    generation, degradation, self.plant_life
                 )
 
             generation_per_year = np.split(generation, self.plant_life)
             annual_energy = np.array(
                 [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
             )
+            n_timesteps_per_yr = np.array(
+                [len(year_generation) for year_generation in generation_per_year]
+            )
             max_production = (
-                outputs["rated_electricity_production"]
-                * np.array([len(year_generation) for year_generation in generation_per_year])
-                * time_step_hours
+                outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
             )
             outputs["electricity_out"] = generation[: self.n_timesteps]
             outputs["annual_electricity_produced"] = annual_energy
@@ -546,7 +553,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             )
 
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * time_step_hours
-        if not self.use_lifetime_output:
+        if not use_lifetime_output:
             outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
