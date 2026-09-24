@@ -391,8 +391,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         # TODO degradation: adjustments for degradation
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
-        discrete_inputs["solar_resource_data"]["temperature"]
-        discrete_inputs["solar_resource_data"]["ghi"]
+        # temp = deepcopy(discrete_inputs["solar_resource_data"]["temperature"])  # deg C
+        # ghi = deepcopy(discrete_inputs["solar_resource_data"]["ghi"])  # W/m^2
 
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
