@@ -25,7 +25,7 @@ from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
 @define
-class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
+class CMUElectricArcFurnaceDRIPerformanceComponentConfig(BaseConfig):
     """Configuration baseclass for CMUElectricArcFurnaceDRIPerformanceComponent.
 
     Attributes:
@@ -153,7 +153,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = CMUElectricArcFurnaceDRIPerformanceConfig.from_dict(
+        self.config = CMUElectricArcFurnaceDRIPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,

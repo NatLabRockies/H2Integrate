@@ -9,7 +9,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class AmmoniaPerformanceModelConfig(BaseConfig):
+class SimpleAmmoniaPerformanceModelConfig(BaseConfig):
     """Configuration inputs for the ammonia performance model, including plant capacity and
     capacity factor.
 
@@ -43,7 +43,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        self.config = AmmoniaPerformanceModelConfig.from_dict(
+        self.config = SimpleAmmoniaPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -64,7 +64,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class AmmoniaCostModelConfig(CostModelBaseConfig):
+class SimpleAmmoniaCostModelConfig(CostModelBaseConfig):
     """
     Configuration inputs for the ammonia cost model, including plant capacity and
     feedstock details.
@@ -118,7 +118,7 @@ class SimpleAmmoniaCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = AmmoniaCostModelConfig.from_dict(
+        self.config = SimpleAmmoniaCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
