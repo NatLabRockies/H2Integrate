@@ -131,9 +131,12 @@ class BaseReliability(ABC, BaseConfig):
           ():py:attr:`n_components`, 100).
 
     Args:
-        dt (int): Timestep in seconds.
-        n_timesteps (int): Number of timesteps in a simulation.
-        availability_type (str): One of "minimum" or "fractional". Defaults to "minimum".
+        simulation (dict | ``SimulationConfig``): Configuration consisting of:
+
+            - dt (int): Timestep in seconds.
+            - n_timesteps (int): Number of timesteps in a simulation.
+
+        availability_type (str): One of "minimum" or "fractional".
 
             - fractional: Use when components are representative of different systems, i.e., 100
                 wind turbines instead.
