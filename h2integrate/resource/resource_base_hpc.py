@@ -8,7 +8,11 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
-from h2integrate.resource.utilities.time_tools import process_leap_day, add_resource_start_end_times
+from h2integrate.resource.utilities.time_tools import (
+    is_leap_year,
+    process_leap_day,
+    add_resource_start_end_times,
+)
 
 
 @define(kw_only=True)
@@ -389,9 +393,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
 
         # At this point we have to downsample the data
         year = self.config.resource_year
-        is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
-            year % 4 == 0 and year % 100 != 0
-        )
+        is_leap = is_leap_year(year)
         remaining_timesteps = data_n_timesteps % self.n_timesteps != 0
         step = data_n_timesteps // self.n_timesteps
         if is_leap and remaining_timesteps:

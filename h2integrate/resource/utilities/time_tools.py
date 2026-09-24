@@ -106,24 +106,6 @@ def process_leap_day(data: dict, include_leap_day: bool):
         # Drop the leap day data from the dataframe
         data = data.drop(index=leap_day_index)
 
-    # Check if data is the same length as the number of timesteps
-    # if len(data) != n_timesteps:
-    #     leap_day_msg = ""
-    #     if data_has_leap_day and len(data) > n_timesteps:
-    #         # Add extra detail to error message if error may be due to leap day
-    #         leap_day_msg = (
-    #             "This may be because the resource data includes a leap day. ",
-    #             "To remove data from a leap day from resource data, please set "
-    #             "`include_leap_day` to False.",
-    #         )
-
-    #     msg = (
-    #         f"Resource data is not the same length as n_timesteps. "
-    #         f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
-    #         f"{leap_day_msg}"
-    #     )
-    #     raise ValueError(msg)
-
     if case_of_time_cols == "lower":
         data = data.rename(columns={"Month": "month", "Day": "day"})
 
@@ -188,13 +170,10 @@ def add_resource_start_end_times(data: dict):
 def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap: bool):
     """Get the number of years required to get n_timesteps worth of resource data
 
-    NOTE: this function is intended to be used if other ways of getting
-    multiple years of resource data is desired (such as with filenames, or a list of years, etc)
-
     Args:
         dt (int): number of seconds in a timesteps
         n_timesteps (int): number of timesteps in the simulation
-        include_leap (bool): whether to
+        include_leap (bool): whether to include leap days or not.
 
     Returns:
         int: number of years needed to get n_timesteps worth of resource data
@@ -204,6 +183,7 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
     hours_simulated = (dt / 3600) * n_timesteps
 
     if hours_simulated % 8760 == 0:
+        # using multiples of 8760, easy to calc number of years needed
         n_years_needed = hours_simulated // 8760
         return int(n_years_needed)
 
@@ -225,6 +205,7 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
 
 def get_future_valid_resource_years(resource_config, resource_starting_year, dt, n_timesteps):
+    # functionalized-version of `_get_resource_years()` in resource_base.py
     resource_year_validator = type(resource_config.__attrs_attrs__.resource_year.validator).__name__
     if resource_year_validator == "_InValidator":
         # to accomodate tmy solar resource models

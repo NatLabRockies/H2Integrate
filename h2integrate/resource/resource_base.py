@@ -55,10 +55,23 @@ class ResourceBaseAPIConfig(BaseConfig):
             Defaults to an empty dictionary.
         resource_dir (str | Path, optional): Folder to save resource files to or
             load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+        resource_filename (str | list, optional): Filename(s) to save resource data to or load
+            resource data from. Defaults to "". Can only be a list of filenames if
+            `resource_year_setting` is 'filenames' and running a simulation requiring
+            multiple resource years.
         include_leap_day (bool, optional): If False, remove data from leap day if the
             resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
+        resource_year_setting (str, optional): what setting to use if running a simulation
+            for multiple resource years. Must be 'start_year' if running a simulation with
+            <=1 resource year. Options are:
+
+            - 'start_year' (default): use `resource_year` as the starting resource year and pull
+                future resource years if/as needed.
+            - 'year_order': use a list of resource years provided in ``resource_year_order``
+            - 'filenames': use a list of filenames provided in ``resource_filename``
+
+        resource_year_order (list, optional): Only used if `resource_year_setting` is 'year_order'.
+            List of resource years in-order, such as [2012, 2011, 2013]. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -93,16 +106,19 @@ class ResourceBaseAPIConfig(BaseConfig):
 
     def __attrs_post_init__(self):
         if self.resource_year_setting == "year_order":
+            # Check for missing inputs
             if self.resource_year_order is None:
                 msg = (
-                    "With resource_year_setting of 'year_order', "
+                    "With `resource_year_setting` of 'year_order', "
                     "the attribute `resource_year_order` is required. "
                     "Please provide a list of resource years for the attribute "
                     "'resource_year_order'."
                 )
                 raise AttributeError(msg)
+            # TODO: Check for extraneous or extra inputs
 
         if self.resource_year_setting == "filenames":
+            # Check for missing inputs
             if not isinstance(self.resource_filename, list):
                 msg = (
                     "With resource_year_setting of 'filename', "
@@ -111,8 +127,10 @@ class ResourceBaseAPIConfig(BaseConfig):
                     "'resource_filename'."
                 )
                 raise AttributeError(msg)
+            # TODO: Check for extraneous inputs
 
         if self.resource_year_setting == "start_year":
+            # Check for missing inputs
             if self.resource_year_order is not None:
                 msg = (
                     "With resource_year_setting of 'start_year', "
@@ -120,8 +138,18 @@ class ResourceBaseAPIConfig(BaseConfig):
                     "Please remove the attribute 'resource_year_order'."
                 )
                 raise AttributeError(msg)
-
-        # TODO: Could do a lot more checks for extraneous inputs
+            # Check for extraneous inputs
+            invalid_inputs = ""
+            if isinstance(self.resource_filename, list):
+                invalid_inputs += "`resource_filename` must be a single filename and not a list. "
+            if self.resource_year_order is not None:
+                invalid_inputs += "'resource_year_order' is an extraneous input. "
+            if len(invalid_inputs) > 0:
+                msg = (
+                    "Invalid inputs provided for ``resource_year_setting`` of 'start_year': \n"
+                    f"{invalid_inputs}"
+                )
+                raise AttributeError(msg)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
