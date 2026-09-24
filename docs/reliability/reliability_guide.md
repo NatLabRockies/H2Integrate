@@ -109,7 +109,7 @@ config = {
         "downtime": {
             "model": "FixedDowntime",
             "hours": 5,
-            "n_components": 2,
+            "n_components": 3,
         },
     },
     "maintenance_parameters":{
@@ -182,4 +182,40 @@ impact the actual production of energy from the natural gas plant.
             self.reliability_model.run()
             natural_gas_demand * self.reliability_model.availability
         ...
+```
+
+To apply the above example to the natural gas model, the following "reliability" dictionary should
+be added to a "tech_config.yaml" file, such as in
+`H2Integrate/examples/16_natural_gas/tech_config.yaml`.
+
+```yaml
+...
+technologies:
+  ...
+  natural_gas_plant:
+    ...
+    model_inputs:
+      ...
+      reliability:
+        use_reliability: True
+        availability_type: fractional
+        burn_in: 6.5
+        failure_model: WeibullReliability
+        maintenance_model: FixedIntervalReliability
+        failure_parameters:
+          scale: 0.5
+          shape: 1
+          n_components: 3
+          downtime:
+            model: FixedDowntime
+            hours: 5
+            n_components: 3
+        maintenance_parameters:
+          frequency: [0.25, 1, 4]
+          downtime:
+            model: UniformDowntime
+            min_hours: 2
+            max_hours: 5
+            n_components: 3
+...
 ```
