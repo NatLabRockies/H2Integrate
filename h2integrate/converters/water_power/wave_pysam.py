@@ -3,6 +3,7 @@ import PySAM.MhkWave as MhkWave
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.converters.tools import check_pysam_lifetime_options
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -78,10 +79,7 @@ class PySAMWavePerformanceConfig(BaseConfig):
             ValueError: If ``number_devices`` is provided in
                 ``pysam_options["MHKWave"]``.
         """
-        valid_groups = [
-            "MHKWave",
-            "AdjustmentFactors",
-        ]
+        valid_groups = ["MHKWave", "AdjustmentFactors", "Lifetime"]
         if bool(self.pysam_options):
             invalid_groups = [k for k in self.pysam_options if k not in valid_groups]
             if len(invalid_groups) > 0:
@@ -195,6 +193,11 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
                     design_dict[group].update(group_parameters)
                 else:
                     design_dict.update({group: group_parameters})
+
+        design_dict = check_pysam_lifetime_options(
+            design_dict, self.plant_life, "generic_degradation"
+        )
+
         self.system_model.assign(design_dict)
 
     def compute(self, inputs, outputs):

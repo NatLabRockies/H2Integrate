@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.converters.tools import check_pysam_lifetime_options
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -129,6 +130,7 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             "AdjustmentFactors",
             "HybridCosts",
             "Uncertainty",
+            "Lifetime",
         ]
         if bool(self.pysam_options):
             invalid_groups = [k for k in self.pysam_options if k not in valid_groups]
@@ -262,6 +264,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                     design_dict[group].update(group_parameters)
                 else:
                     design_dict.update({group: group_parameters})
+
+        design_dict = check_pysam_lifetime_options(design_dict, self.plant_life, "ac_degradation")
+
         self.system_model.assign(design_dict)
 
         self.data_to_field_number = {
