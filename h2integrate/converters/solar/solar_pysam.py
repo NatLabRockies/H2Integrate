@@ -217,6 +217,32 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 else:
                     design_dict.update({group: group_parameters})
 
+        lifetime_opts = design_dict.get("Lifetime", {})
+        if bool(lifetime_opts.get("system_use_lifetime_output", 0)):
+            # using lifetime output
+            # check that analysis_period is the same as plant life
+            if lifetime_opts.get("analysis_period", self.plant_life) != self.plant_life:
+                old = lifetime_opts["analysis_period"]
+                warnings.warn(
+                    f"Updating analysis_period from {old} to {self.plant_life} (plant_life)"
+                )
+
+            # check that dc_degradation is the same length as plant life
+            if len(lifetime_opts.get("dc_degradation", [0.0] * self.plant_life)) != self.plant_life:
+                old_len = len(lifetime_opts.get("dc_degradation", [0.0] * self.plant_life))
+                warnings.warn(
+                    f"Updating dc_degradation from length {old_len} to length {self.plant_life}"
+                )
+
+            # tile the dc_degration so that its the same length as plant_life
+            dc_deg_init = lifetime_opts.get("dc_degradation", [0.0] * self.plant_life)
+            n_repeats = np.ceil(self.plant_life / len(dc_deg_init))
+            dc_degradation = np.tile(dc_deg_init, int(n_repeats))[: self.plant_life]
+            # update analysis_period and dc_degradation in the design dict
+            lifetime_opts["analysis_period"] = self.plant_life
+            lifetime_opts["dc_degradation"] = dc_degradation.tolist()
+            design_dict["Lifetime"].update(lifetime_opts)
+
         self.design_dict = design_dict
         self.system_model.assign(design_dict)
 
@@ -469,19 +495,42 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         self.system_model.execute(0)
 
         # assign outputs
-        outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-dc
         pv_capacity_kWdc = self.system_model.value("system_capacity")
         dc_ac_ratio = self.system_model.value("dc_ac_ratio")
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
-        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
 
-        max_production = (
-            outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
-        )
+        if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
+            # using lifetime results
+            # split the generation profile to have results per-year
+            generation_per_year = np.split(np.array(self.system_model.Outputs.gen), self.plant_life)
+            # sum the generation per-year
+            aep_per_year = np.array(generation_per_year).sum(axis=1)
+            # get the number of timesteps per year (should be the same for all years)
+            n_timesteps_per_year = np.array([len(k) for k in generation_per_year])
+            # output the first n_timesteps of the generation profile
+            outputs["electricity_out"] = np.array(self.system_model.Outputs.gen)[: self.n_timesteps]
+            # make production is the max production per-year
+            max_production = (
+                outputs["rated_electricity_production"] * n_timesteps_per_year * (self.dt / 3600)
+            )
+            outputs["annual_electricity_produced"] = aep_per_year
+            outputs["capacity_factor"] = outputs["annual_electricity_produced"] / max_production
+            outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
+                self.dt / 3600
+            )
 
-        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
-        outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+        else:
+            # not using lifetime output, use results as-is
+            outputs["electricity_out"] = self.system_model.Outputs.gen  # kW-AC
+            max_production = (
+                outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
+            )
+            outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
+            outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
+                self.dt / 3600
+            )
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)

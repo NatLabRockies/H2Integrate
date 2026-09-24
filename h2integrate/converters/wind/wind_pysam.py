@@ -1,4 +1,5 @@
 import operator
+import warnings
 import functools
 from typing import Any
 
@@ -129,6 +130,7 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             "AdjustmentFactors",
             "HybridCosts",
             "Uncertainty",
+            "Lifetime",
         ]
         if bool(self.pysam_options):
             invalid_groups = [k for k in self.pysam_options if k not in valid_groups]
@@ -262,7 +264,47 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                     design_dict[group].update(group_parameters)
                 else:
                     design_dict.update({group: group_parameters})
-        self.system_model.assign(design_dict)
+
+        lifetime_options = design_dict.get("Lifetime", {})
+        self.use_lifetime_output = bool(lifetime_options.get("system_use_lifetime_output", 0))
+        self.native_lifetime_output = hasattr(self.system_model, "Lifetime")
+        if self.use_lifetime_output:
+            analysis_period = lifetime_options.get("analysis_period", self.plant_life)
+            if analysis_period != self.plant_life:
+                warnings.warn(
+                    f"Updating analysis_period from {analysis_period} to {self.plant_life} "
+                    "(plant_life)",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+            degradation = lifetime_options.get("ac_degradation")
+            if degradation is None:
+                degradation = [0.0] * self.plant_life
+            else:
+                degradation = list(degradation)
+                if not degradation:
+                    raise ValueError("Lifetime.ac_degradation must contain at least one value.")
+                if len(degradation) not in (1, self.plant_life):
+                    warnings.warn(
+                        f"Updating ac_degradation from length {len(degradation)} to "
+                        f"length {self.plant_life}",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    degradation = np.resize(degradation, self.plant_life).tolist()
+
+            lifetime_options["analysis_period"] = self.plant_life
+            lifetime_options["ac_degradation"] = degradation
+            design_dict["Lifetime"] = lifetime_options
+
+        self.design_dict = design_dict
+        model_inputs = design_dict
+        if self.use_lifetime_output and not self.native_lifetime_output:
+            model_inputs = {
+                group: values for group, values in design_dict.items() if group != "Lifetime"
+            }
+        self.system_model.assign(model_inputs)
 
         self.data_to_field_number = {
             "temperature": 1,
@@ -504,17 +546,45 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         # run the model
         self.system_model.execute(0)
 
-        outputs["electricity_out"] = self.system_model.Outputs.gen
         outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
+        generation = np.asarray(self.system_model.Outputs.gen)
+        time_step_hours = self.dt / 3600
 
-        # outputs["total_capacity"] = self.system_model.Farm.system_capacity
-        # outputs["annual_energy"] = self.system_model.Outputs.annual_energy
-        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
-        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
-        max_production = (
-            self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
-        )
-        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+        if self.use_lifetime_output:
+            if not self.native_lifetime_output:
+                degradation = self.design_dict["Lifetime"]["ac_degradation"]
+                if len(degradation) == 1:
+                    year_indices = np.arange(self.plant_life)
+                    degradation_factors = 1 - degradation[0] * year_indices / 100
+                    degradation_factors[0] = 1.0
+                else:
+                    degradation_factors = 1 - np.asarray(degradation) / 100
+                generation = np.concatenate(
+                    [generation * degradation_factor for degradation_factor in degradation_factors]
+                )
+
+            generation_per_year = np.split(generation, self.plant_life)
+            annual_energy = np.array(
+                [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
+            )
+            max_production = (
+                outputs["rated_electricity_production"]
+                * np.array([len(year_generation) for year_generation in generation_per_year])
+                * time_step_hours
+            )
+            outputs["electricity_out"] = generation[: self.n_timesteps]
+            outputs["annual_electricity_produced"] = annual_energy
+            outputs["capacity_factor"] = annual_energy / max_production
+        else:
+            outputs["electricity_out"] = generation
+            outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+            max_production = (
+                self.n_timesteps * outputs["rated_electricity_production"] * time_step_hours
+            )
+
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * time_step_hours
+        if not self.use_lifetime_output:
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)
