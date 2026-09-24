@@ -38,6 +38,8 @@
 - Removed pass-through demand from demand components, updated demand to SLC connection to use input-to-input connection, and removed tech naming dependence for combiners and splitters [PR 884](https://github.com/NatLabRockies/H2Integrate/pull/884)
 - Added inputs `dc_ac_ratio`, `tilt_angle` and `azimuth_angle` to `PYSAMSolarPlantPerformanceModel`. [PR #881](https://github.com/NatLabRockies/H2Integrate/pull/881)
 - Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
+- Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
+- Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
 
 ## 0.9 [August 10, 2026]
 
