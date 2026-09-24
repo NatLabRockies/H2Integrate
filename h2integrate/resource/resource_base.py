@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
@@ -19,6 +19,7 @@ from h2integrate.resource.utilities.time_tools import (
     process_leap_day,
     check_data_length,
     add_resource_start_end_times,
+    get_number_of_resource_years_needed,
 )
 from h2integrate.resource.utilities.download_tools import download_from_api
 
@@ -56,6 +57,8 @@ class ResourceBaseAPIConfig(BaseConfig):
             load resource files from. Defaults to "".
         resource_filename (str, optional): Filename to save resource data to or load
             resource data from. Defaults to None.
+        include_leap_day (bool, optional): If False, remove data from leap day if the
+            resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -72,9 +75,53 @@ class ResourceBaseAPIConfig(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
+    resource_filename: Path | str | list = field(default="")
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
+    resource_year_setting: str = field(
+        default="start_year",
+        converter=str.lower,
+        validator=validators.in_(
+            [
+                "year_order",
+                "start_year",
+                "filenames",
+            ]
+        ),
+    )
+    resource_year_order: list | None = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.resource_year_setting == "year_order":
+            if self.resource_year_order is None:
+                msg = (
+                    "With resource_year_setting of 'year_order', "
+                    "the attribute `resource_year_order` is required. "
+                    "Please provide a list of resource years for the attribute "
+                    "'resource_year_order'."
+                )
+                raise AttributeError(msg)
+
+        if self.resource_year_setting == "filenames":
+            if not isinstance(self.resource_filename, list):
+                msg = (
+                    "With resource_year_setting of 'filename', "
+                    "the attribute `resource_filename` must be a list. "
+                    "Please provide a list of filenames for the attribute "
+                    "'resource_filename'."
+                )
+                raise AttributeError(msg)
+
+        if self.resource_year_setting == "start_year":
+            if self.resource_year_order is not None:
+                msg = (
+                    "With resource_year_setting of 'start_year', "
+                    "the attribute `resource_year_order` is an extraneous input. "
+                    "Please remove the attribute 'resource_year_order'."
+                )
+                raise AttributeError(msg)
+
+        # TODO: Could do a lot more checks for extraneous inputs
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -107,6 +154,37 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
+
+        # Calculate the number of resource years needed to achieve the simulation length
+        n_data_years = get_number_of_resource_years_needed(
+            self.dt, self.n_timesteps, self.config.include_leap_day
+        )
+
+        # If only running 1 year, then only valid option is 'start_year'
+        if n_data_years == 1 and self.config.resource_year_setting != "start_year":
+            msg = (
+                "Invalid resource_year_setting when simulating 1 year. `resource_year_setting`"
+                "must be 'start_year' when only using 1 year of resource data."
+            )
+            raise AttributeError(msg)
+
+        # If using filenames, check that the correct number of files were included
+        if self.config.resource_year_setting == "filenames":
+            if len(self.config.resource_filename) != n_data_years:
+                msg = (
+                    f"{n_data_years} resource filenames are required to "
+                    f"but {len(self.config.resource_filename)} were provided."
+                )
+                raise ValueError(msg)
+        # If using a resource_year list, check that the correct number of files were included
+        if self.config.resource_year_setting == "year_order":
+            if len(self.config.resource_year_order) != n_data_years:
+                msg = (
+                    f"{n_data_years} resource years are required to "
+                    f"but {len(self.config.resource_year_order)} were provided."
+                    f"Please ensure that 'resource_year_order' has {n_data_years} years"
+                )
+                raise ValueError(msg)
 
         # NOTE: below could be done in setup() if resource_year is not an openmdao input
         # self.resource_years = self._get_resource_years(self.config.resource_year)
@@ -160,6 +238,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             raise ValueError(msg)
 
     def _get_resource_years(self, resource_starting_year):
+        # TODO: replace with method in time_tools()
+
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
             # to accomodate tmy solar resource models
@@ -362,9 +442,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 0) If site hasn't changed and resource data has already been loaded
         # just return the resource data that was loaded in the setup() method
-        if not site_changed and not first_call:
-            if self.resource_data is not None:
-                return self.resource_data
+        # if not site_changed and not first_call:
+        #     if self.resource_data is not None:
+        #         return self.resource_data
 
         # 1) check if user provided data, add start and end times if so
         # and return the data
@@ -434,8 +514,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if filepath.is_file():
             self.filepath = filepath
             data = self.load_data(filepath)
+            # Clip data to a single resource year
             data = clip_data_to_resource_year(data, resource_year)
-            # data = add_resource_start_end_times(data)
+            # NOTE: this where we could up/downsample
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -448,10 +529,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 7) Load data from the file created in Step 6 using `load_data()`
             data = self.load_data(filepath)
+            # NOTE: below two if-statements may not be necessary?
             if (yr_ts := data.get("year")) is not None:
                 if len(set(yr_ts)) > 1:
+                    # Clip data to a single resource year
+
                     data = clip_data_to_resource_year(data, resource_year)
-            # data = add_resource_start_end_times(data)
+            # NOTE: this where we could up/downsample
             return data
 
         else:
@@ -469,7 +553,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         return resource_data
 
     def get_data(self, latitude, longitude, first_call=True):
-        resource_years = self._get_resource_years(self.config.resource_year)
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # 0) If site hasn't changed and resource data has already been loaded
@@ -478,51 +561,36 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if self.resource_data is not None:
                 return self.resource_data
 
-        if len(resource_years) == 1:
-            # only getting 1 year of resource data
-            resource_data = self.get_data_for_year(
-                latitude,
-                longitude,
-                resource_years[0],
-                resource_filename=self.config.resource_filename,
-                first_call=first_call,
-            )
-
-            resource_data = self.process_final_resource_data(resource_data)
-            # md, ts = separate_timeseries_and_meta_data(resource_data)
-            # ts = process_leap_day(
-            #     ts, self.config.include_leap_day, self.n_timesteps
-            # )
-            # resource_data = md | ts
-            # resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
-            # resource_data = add_resource_start_end_times(resource_data)
-            return resource_data
-
-        # Multiple years
-        if isinstance(self.config.resource_filename, list):
-            resource_files = deepcopy(self.config.resource_filename)
-            raise NotImplementedError("Cannot take resource filenames as a list")
-
-        else:
-            resource_files = [self.config.resource_filename]
+        if self.config.resource_year_setting == "start_year":
+            resource_years = self._get_resource_years(self.config.resource_year)
+            resource_filenames = [self.config.resource_filename] * len(resource_years)
+        elif self.config.resource_year_setting == "filename":
+            # NOTE: maybe should check that the site is the same for each file?
+            # NOTE: maybe should check the timezone is the same for each file?
+            # NOTE: maybe should check the timestep for each file?
+            resource_years = [self.config.resource_year] * len(self.config.resource_filename)
+            resource_filenames = self.config.resource_filename
+        elif self.config.resource_year_setting == "year_order":
+            for year in self.config.resource_year_order:
+                self._check_resource_year(year)
+            resource_years = self.config.resource_year_order
+            resource_filenames = [self.config.resource_filename] * len(resource_years)
 
         timeseries_data = {}
         meta_data = {}
 
-        for year in resource_years:
+        for year, filename in zip(resource_years, resource_filenames):
             if not isinstance(year, str):
                 year = int(year)
 
-            resource_fname_match = [k for k in resource_files if f"_{year}_" in k]
-            resource_fname = resource_fname_match[0] if bool(resource_fname_match) else ""
-            # self.config.resource_filename = resource_fname_match[0]
-
-            # self.config.resource_year = year
+            # Check that the resource year is valid
             self._check_resource_year(year)
 
+            # Get the resource data for this year
             resource_data = self.get_data_for_year(
-                latitude, longitude, year, resource_filename=resource_fname, first_call=first_call
+                latitude, longitude, year, resource_filename=filename, first_call=first_call
             )
+
             md, ts = separate_timeseries_and_meta_data(resource_data)
 
             meta_data |= md
@@ -531,10 +599,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             else:
                 timeseries_data = append_timeseries_data(timeseries_data, ts)
 
-        # NOTE: here is where we could clip data if needed
-        # timeseries_data = self.clip_timeseries_data(timeseries_data)
-        # NOTE: this is also where we could up/downsample
-
+        # NOTE: this where we could up/downsample
         resource_data = meta_data | timeseries_data
         resource_data = self.process_final_resource_data(resource_data)
         # timeseries_data = process_leap_day(

@@ -294,11 +294,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
         data["Hour"] = time.hour
         data["Minute"] = time.minute
 
-        # data = data[data["Year"] == self.config.resource_year]
-
         data = data.reset_index(drop=True)
-
-        # data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units
