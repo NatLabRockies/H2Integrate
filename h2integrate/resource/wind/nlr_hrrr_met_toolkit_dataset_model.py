@@ -6,6 +6,7 @@ from rex import WindX
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, ResourceBaseH5Config
+from h2integrate.resource.utilities.time_tools import TIME_DATA_KEYS
 from h2integrate.resource.wind.wind_resource_base import WindResourceBase
 
 
@@ -88,7 +89,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
                 self.interval = int(min(self.config.valid_intervals))
 
         # get the resource data
-        data = self.get_data(self.config.latitude, self.config.longitude)
+        data = self.get_data(self.config.latitude, self.config.longitude, self.config.resource_year)
 
         self.resource_data = data
 
@@ -120,7 +121,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # Add the timeseries data to the remaining rows of the csv file
         data_df.to_csv(fpath, encoding="utf-8", mode="a")
 
-    def load_data_from_dataset(self, latitude, longitude):
+    def load_data_from_dataset(self, latitude, longitude, resource_year):
         """Load resource data from an .h5 dataset.
 
         Args:
@@ -134,7 +135,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
         # this method could likely be moved into a baseclass
 
         # Get filepath of the .h5 dataset
-        dataset_path = self.create_dataset_filepath()
+        dataset_path = self.create_dataset_filepath(resource_year)
 
         # Load the dataset from the .h5 file using the WindX resource extraction tool
         with WindX(dataset_path, hsds=self.config.use_hsds) as res:
@@ -165,7 +166,7 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             "elevation": float(site_meta["elevation"]),
             "filepath": str(dataset_path),
             # Below is extra data (not available in API calls)
-            "resource_year": self.config.resource_year,
+            "resource_year": resource_year,
             "country": site_meta.get("country"),
             "state": site_meta.get("state"),
             "county": site_meta.get("county"),
@@ -193,13 +194,13 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
             data_df = pd.DataFrame(resource_data, index=time_index)
             data_df.index.name = "time"
             # create the filename for the csv
-            csv_filename = self.create_csv_filename(site_gid, latitude, longitude)
+            csv_filename = self.create_csv_filename(site_gid, latitude, longitude, resource_year)
             # save before units-correction in case theres a future change in units-correction
             self.save_to_csv(data_df, site_data, data_units, csv_filename)
 
         # Convert the time index to a dictionary
-        time_cols = ["year", "month", "day", "hour", "minute"]
-        time_dict = {k: getattr(time_index, k).values for k in time_cols}
+        # time_cols = ["year", "month", "day", "hour", "minute"]
+        time_dict = {k: getattr(time_index, k).values for k in TIME_DATA_KEYS}
 
         # Ensure that time-series data are numpy arrays
         data_dict = {k: np.array(v) for k, v in resource_data.items()}
@@ -238,8 +239,8 @@ class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
 
         # Convert the "time" column to a dictionary of time keys
         time_data = pd.DatetimeIndex(data["time"])
-        time_cols = ["year", "month", "day", "hour", "minute"]
-        time_dict = {k: getattr(time_data, k).values for k in time_cols}
+        # time_cols = ["year", "month", "day", "hour", "minute"]
+        time_dict = {k: getattr(time_data, k).values for k in TIME_DATA_KEYS}
 
         # Create a dictionary of units for each column of resource data
         data_units = {k.replace(" Units", ""): v for k, v in header_dict.items() if " Units" in k}

@@ -6,6 +6,9 @@ import pandas as pd
 from h2integrate.resource.utilities.data_tools import separate_timeseries_and_meta_data
 
 
+TIME_DATA_KEYS = ["year", "month", "day", "hour", "minute", "second"]
+
+
 def is_leap_year(year):
     """Determine if a year is leap year
 
