@@ -269,7 +269,7 @@ auto-generated API page.
 - `transport`: commodity transporters, combiners, and splitters
   - cost models:
     + {py:class}`~h2integrate.transporters.linear_transport_cost.LinearDistanceCostModel` - Combine any commodity or resource from multiple sources into one output without losses.
-    + {py:class}`~h2integrate.transporters.linear_mass_transport_cost.LinearMassTransportCostModel` - Combine any commodity or resource from multiple sources into one output without losses.
+    + {py:class}`~h2integrate.transporters.linear_mass_transport_cost.LinearMassTransportCostModel` - Calculate capital and annual operating costs for transporting a commodity by mass and distance.
   - other components:
     + {py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModel` - Combine multiple gas streams into one using mass-weighted averaging.
     + {py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceModel` - Combine any commodity or resource from multiple sources into one output without losses.
