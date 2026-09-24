@@ -37,6 +37,11 @@
 - Removed pass-through demand from demand components, updated demand to SLC connection to use input-to-input connection, and removed tech naming dependence for combiners and splitters [PR 884](https://github.com/NatLabRockies/H2Integrate/pull/884)
 - Added inputs `dc_ac_ratio`, `tilt_angle` and `azimuth_angle` to `PYSAMSolarPlantPerformanceModel`. [PR #881](https://github.com/NatLabRockies/H2Integrate/pull/881)
 - Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
+- Adds the ability to model reliability in a WOMBAT-lite formulation to randomly sample downtime
+  events and durations to account for system and component-level availability. The
+  `PerformanceReliability` class is made available for integration with existing performance models
+  by applying the `availability` to either the demand or production of energy, dependent on the
+  performance model's design. . [PR 833](https://github.com/NatLabRockies/H2Integrate/pull/833)
 
 ## 0.9 [August 10, 2026]
 
