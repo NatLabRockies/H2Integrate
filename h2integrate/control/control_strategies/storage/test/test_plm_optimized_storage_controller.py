@@ -1,6 +1,7 @@
 import math
 from types import SimpleNamespace
 
+import attrs
 import numpy as np
 import pandas as pd
 import pytest
@@ -27,6 +28,9 @@ def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
     controller.time_index = pd.date_range("2024-01-01", periods=n_timesteps, freq="h")
     controller.in_peak_window = controller._compute_peak_window_mask()
     controller.month_ids = controller._compute_month_ids()
+    controller.in_exclusive_control_month = controller._compute_exclusive_control_mask()
+    controller.days_in_month_lookup = controller._compute_days_in_month_lookup()
+    controller.in_demand_charge_window = controller._compute_demand_charge_window_mask()
     if config.event_duration is not None:
         controller.steps_per_event = max(
             1,
@@ -707,3 +711,244 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
         assert abs(p_discharge_coop_history.sum() - expected_history.sum()) < 1e-4
     with subtests.test("number of coop discharge steps matches"):
         assert active.sum() == expected_active.sum()
+
+
+@pytest.mark.unit
+def test_exclusive_control_mask_and_window_boundary_check(subtests):
+    controller = _make_controller()
+
+    for control_tier, expected_months in [
+        (None, []),
+        (1, list(range(1, 13))),
+        (4, [12, 1, 2, 3]),  # tier 4 = winter_control_months only
+    ]:
+        with subtests.test(f"_compute_exclusive_control_mask, control_tier={control_tier}"):
+            controller.config = SimpleNamespace(
+                control_tier=control_tier,
+                winter_control_months=[12, 1, 2, 3],
+                summer_control_months=[6, 7, 8, 9],
+            )
+            controller.month_ids = np.arange(1, 13)
+            mask = controller._compute_exclusive_control_mask()
+            assert np.array_equal(mask, np.isin(controller.month_ids, expected_months))
+
+    # First 10 timesteps off, next 14 on.
+    controller.n_timesteps = 24
+    controller.in_exclusive_control_month = np.array([False] * 10 + [True] * 14)
+
+    with subtests.test("_check_windows_do_not_span_control_boundary passes when aligned"):
+        controller.config = SimpleNamespace(n_control_window_hours=10)
+        controller._check_windows_do_not_span_control_boundary()  # must not raise
+
+    with subtests.test("_check_windows_do_not_span_control_boundary raises when mixed"):
+        controller.config = SimpleNamespace(n_control_window_hours=24)
+        with pytest.raises(ValueError, match="spans an Exclusive Control Month boundary"):
+            controller._check_windows_do_not_span_control_boundary()
+
+
+@pytest.fixture
+def seasonal_config():
+    n = 24
+    return PeakLoadManagementOptimizedControllerConfig(
+        max_capacity=40.0,
+        max_soc_fraction=1.0,
+        min_soc_fraction=0.0,
+        init_soc_fraction=1.0,
+        n_control_window_hours=n,
+        commodity="electricity",
+        commodity_rate_units="kW",
+        tech_name="battery",
+        system_commodity_interface_limit=100.0,
+        max_charge_rate=5.0,
+        lmp_signal=list(range(n)),
+        demand_signal=list(range(n)),
+        peak_window={"start": "13:00:00", "end": "21:00:00"},
+        GnT_pricingfunction_coeffs=[1.05, 20],
+        performance_incentive=10.0,
+        n_max_events=24,
+        signal_threshold_percentile=0.0,
+        control_tier=4,
+        energy_rate=0.1,
+        demand_charge_rate=5.0,
+        demand_charge_window={"start": "13:00:00", "end": "21:00:00"},
+    )
+
+
+@pytest.mark.unit
+def test_control_tier_requires_bill_min_fields(seasonal_config):
+    """control_tier without energy_rate/demand_charge_rate/demand_charge_window must raise."""
+    kwargs = attrs.asdict(seasonal_config, recurse=False)
+    del kwargs["energy_rate"]
+    del kwargs["demand_charge_rate"]
+    del kwargs["demand_charge_window"]
+
+    with pytest.raises(ValueError, match="control_tier requires"):
+        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+
+
+@pytest.mark.unit
+def test_bill_min_fields_require_control_tier(seasonal_config):
+    """energy_rate/demand_charge_rate/demand_charge_window without control_tier must raise."""
+    kwargs = attrs.asdict(seasonal_config, recurse=False)
+    del kwargs["control_tier"]
+
+    with pytest.raises(ValueError, match="require control_tier"):
+        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+
+
+@pytest.mark.unit
+def test_invalid_control_tier_raises(seasonal_config):
+    """control_tier must be one of 1, 2, 3, 4."""
+    kwargs = attrs.asdict(seasonal_config, recurse=False)
+    kwargs["control_tier"] = 5
+
+    with pytest.raises(ValueError, match="control_tier must be one of"):
+        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+
+
+@pytest.mark.unit
+def test_invalid_max_cycles_per_day_raises(seasonal_config):
+    """max_cycles_per_day must be > 0."""
+    kwargs = attrs.asdict(seasonal_config, recurse=False)
+    kwargs["max_cycles_per_day"] = 0.0
+
+    with pytest.raises(ValueError, match="max_cycles_per_day must be > 0"):
+        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+
+
+@pytest.mark.regression
+def test_build_bill_min_model_respects_soc_and_power_links(subtests, seasonal_config):
+    """The off-month bill-minimization MILP obeys the same power/SOC constraints
+    as the on-model, using its own (non G&T) variable names."""
+    controller = _make_controller_with_config(seasonal_config)
+    model = controller._build_bill_min_model(
+        window_start=0,
+        window_len=24,
+        init_soc=seasonal_config.init_soc_fraction,
+        P_max=seasonal_config.max_charge_rate,
+        storage_capacity=seasonal_config.max_capacity,
+    )
+
+    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
+
+    for t in range(24):
+        discharge = pyomo.value(model.discharge[t])
+        charge = pyomo.value(model.charge[t])
+        p_discharge = pyomo.value(model.p_discharge[t])
+        p_charge = pyomo.value(model.p_charge[t])
+        soc = pyomo.value(model.soc[t])
+        with subtests.test(f"no simultaneous charge/discharge at t={t}"):
+            assert discharge + charge <= 1 + 1e-6
+        with subtests.test(f"p_discharge zero when binary zero at t={t}"):
+            if discharge < 0.5:
+                assert p_discharge < 1e-6
+        with subtests.test(f"p_charge zero when binary zero at t={t}"):
+            if charge < 0.5:
+                assert p_charge < 1e-6
+        with subtests.test(f"SOC within bounds at t={t}"):
+            assert soc >= seasonal_config.min_soc_fraction - 1e-6
+            assert soc <= seasonal_config.max_soc_fraction + 1e-6
+        with subtests.test(f"no charging during the Class A Peak Period at t={t}"):
+            if controller.in_peak_window[t]:
+                assert charge < 0.5
+                assert p_charge < 1e-6
+
+
+def _seasonal_nov_dec_configs(n_control_window_hours):
+    """Build (plant_config, tech_config) for a 5-day Nov29->Dec3 sim, control_tier=4."""
+    n = 24 * 5  # Nov 29 - Dec 3
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {
+                "n_timesteps": n,
+                "dt": 3600,
+                "timezone": 0,
+                "start_time": "11/29/2024 00:00:00",
+            },
+        },
+        "tech_to_dispatch_connections": [["controller", "storage"]],
+    }
+    tech_config = {
+        "model_inputs": {
+            "shared_parameters": {
+                "tech_name": "battery",
+                "commodity": "electricity",
+                "commodity_rate_units": "kW",
+                "max_charge_rate": 5.0,
+                "max_capacity": 40.0,
+                "max_soc_fraction": 1.0,
+                "min_soc_fraction": 0.0,
+                "init_soc_fraction": 1.0,
+                "charge_efficiency": 1.0,
+                "discharge_efficiency": 1.0,
+            },
+            "performance_parameters": {"demand_profile": 10.0},
+            "control_parameters": {
+                "system_commodity_interface_limit": 1.0e9,
+                "lmp_signal": np.ones(n).tolist(),
+                "demand_signal": np.ones(n).tolist(),
+                "GnT_pricingfunction_coeffs": [1.05, 20],
+                "peak_window": {"start": "13:00:00", "end": "21:00:00"},
+                "performance_incentive": 10.0,
+                "n_max_events": 24,
+                "signal_threshold_percentile": 0.0,
+                "n_control_window_hours": n_control_window_hours,
+                "control_tier": 4,
+                "energy_rate": 0.1,
+                "demand_charge_rate": 5.0,
+                "demand_charge_window": {"start": "13:00:00", "end": "21:00:00"},
+            },
+        }
+    }
+    return n, plant_config, tech_config
+
+
+def _build_seasonal_problem(n, plant_config, tech_config):
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "IVC", om.IndepVarComp("electricity_in", val=np.ones(n), units="kW"), promotes=["*"]
+    )
+    prob.model.add_subsystem(
+        "controller",
+        PeakLoadManagementOptimizedStorageController(
+            plant_config=plant_config, tech_config=tech_config
+        ),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "storage",
+        StoragePerformanceModel(plant_config=plant_config, tech_config=tech_config),
+        promotes=["*"],
+    )
+    return prob
+
+
+@pytest.mark.regression
+def test_seasonal_dispatch_across_month_boundary(subtests):
+    """End-to-end over a Nov->Dec sim (control_tier=4, winter-only): a window wide
+    enough to straddle the boundary raises at setup, while daily windows (aligned to
+    midnight) correctly alternate between the Exclusive Control Month MILP and the
+    off-month bill-minimization MILP, with SOC staying within bounds throughout."""
+    n, plant_config, tech_config = _seasonal_nov_dec_configs(n_control_window_hours=24 * 5)
+    with subtests.test("window spanning the boundary raises at setup"):
+        prob = _build_seasonal_problem(n, plant_config, tech_config)
+        with pytest.raises(ValueError, match="spans an Exclusive Control Month boundary"):
+            prob.setup()
+
+    n, plant_config, tech_config = _seasonal_nov_dec_configs(n_control_window_hours=24)
+    prob = _build_seasonal_problem(n, plant_config, tech_config)
+    prob.setup()
+    prob.run_model()
+
+    controller = prob.model._get_subsystem("controller")
+    soc = prob.get_val("SOC", units="unitless")
+
+    with subtests.test("Nov (idx<48) is an off-month"):
+        assert not controller.in_exclusive_control_month[:48].any()
+    with subtests.test("Dec (idx>=48) is an Exclusive Control Month"):
+        assert controller.in_exclusive_control_month[48:].all()
+    with subtests.test("SOC never below min"):
+        assert np.all(soc >= 0.0 - 1e-6)
+    with subtests.test("SOC never above max"):
+        assert np.all(soc <= 1.0 + 1e-6)
