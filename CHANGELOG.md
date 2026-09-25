@@ -56,7 +56,6 @@
 - Introduce general system-level controls framework. [PR 751(https://github.com/NatLabRockies/H2Integrate/pull/751)]
 - Add `PeakLoadManagementHeuristicOpenLoopStorageController` as a storage control strategy. [PR 641](https://github.com/NatLabRockies/H2Integrate/pull/641)
 - Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
-- Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
 
 ### Updates
 
