@@ -272,7 +272,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if resource_year_validator == "_InValidator":
             # to accomodate tmy solar resource models
             year_options = self.config.__attrs_attrs__.resource_year.validator.options
-            # resource_year_type, resource_year = self.config.resource_year.split("-")
             if isinstance(resource_starting_year, str):
                 # resource_year is formatted like `tmy-2020`
                 resource_year_type, resource_year = resource_starting_year.split("-")
@@ -282,8 +281,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 resource_year_type, _ = self.config.resource_year.split("-")
                 resource_base_year = int(resource_starting_year)
 
-            # resource_year = int(resource_year)
-            # resource_base_year = deepcopy(resource_year)
             future_years = sorted(
                 [
                     int(yr.split("-")[-1])
@@ -306,7 +303,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             future_years = (
                 np.arange(resource_base_year, last_available_yr + 1, 1).astype(int).tolist()
             )
-            # resource_base_year = deepcopy(self.config.resource_year)
 
         if self.config.include_leap_day:
             hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
