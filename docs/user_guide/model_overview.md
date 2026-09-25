@@ -283,7 +283,6 @@ auto-generated API page.
     + {py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModel` - Combine multiple gas streams into one using mass-weighted averaging.
     + {py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceModel` - Combine any commodity or resource from multiple sources into one output without losses.
     + {py:class}`~h2integrate.transporters.generic_splitter.GenericSplitterPerformanceModel` - Split a commodity stream from one source into two outputs.
-    + {py:class}`~h2integrate.transporters.generic_summer.GenericSummerPerformanceModel` - Sum the production or consumption profile of some commodity from a single source.
     + {py:class}`~h2integrate.transporters.generic_transporter.GenericTransporterPerformanceModel` - Transport any commodity from a source technology to a destination technology.
     + {py:class}`~h2integrate.transporters.cable.CablePerformanceModel` (registered as `cable`) - Pass-through cable with no losses.
     + {py:class}`~h2integrate.transporters.pipe.PipePerformanceModel` (registered as `pipe`) - Pass-through pipe with no losses.
