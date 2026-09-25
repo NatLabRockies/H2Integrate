@@ -18,6 +18,7 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Added `populate_tech_yaml` utility to automatically generate `model_inputs` sections in technology configuration files by introspecting model classes and organizing parameters into appropriate sections. Simplifies building tech configs, especially for storage models with multiple parameter sections. [PR 866](https://github.com/NatLabRockies/H2Integrate/pull/866)
 - Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
 - Add resource models that can extract resource data from NLR resource datasets using the `rex` package [PR 854](https://github.com/NatLabRockies/H2Integrate/pull/854)
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
@@ -39,6 +40,7 @@
 - Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
 - Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
 - Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
+- Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
 
 ## 0.9 [August 10, 2026]
 

@@ -5,12 +5,12 @@ import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.converters.tools import check_pysam_input_params
+from h2integrate.converters.tools import check_pysam_input_params, check_pysam_lifetime_options
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
 
 @define(kw_only=True)
-class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     """Configuration class for design parameters of the solar pv plant.
         PYSAMSolarPlantPerformanceModel which uses the Pvwattsv8 module
         available in PySAM. PySAM documentation can be found
@@ -180,7 +180,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -217,37 +217,13 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 else:
                     design_dict.update({group: group_parameters})
 
-        lifetime_opts = design_dict.get("Lifetime", {})
-        if bool(lifetime_opts.get("system_use_lifetime_output", 0)):
-            # using lifetime output
-            # check that analysis_period is the same as plant life
-            if lifetime_opts.get("analysis_period", self.plant_life) != self.plant_life:
-                old = lifetime_opts["analysis_period"]
-                warnings.warn(
-                    f"Updating analysis_period from {old} to {self.plant_life} (plant_life)"
-                )
-
-            # check that dc_degradation is the same length as plant life
-            if len(lifetime_opts.get("dc_degradation", [0.0] * self.plant_life)) != self.plant_life:
-                old_len = len(lifetime_opts.get("dc_degradation", [0.0] * self.plant_life))
-                warnings.warn(
-                    f"Updating dc_degradation from length {old_len} to length {self.plant_life}"
-                )
-
-            # tile the dc_degration so that its the same length as plant_life
-            dc_deg_init = lifetime_opts.get("dc_degradation", [0.0] * self.plant_life)
-            n_repeats = np.ceil(self.plant_life / len(dc_deg_init))
-            dc_degradation = np.tile(dc_deg_init, int(n_repeats))[: self.plant_life]
-            # update analysis_period and dc_degradation in the design dict
-            lifetime_opts["analysis_period"] = self.plant_life
-            lifetime_opts["dc_degradation"] = dc_degradation.tolist()
-            design_dict["Lifetime"].update(lifetime_opts)
+        check_pysam_lifetime_options(design_dict, self.plant_life, "dc_degradation")
 
         self.design_dict = design_dict
         self.system_model.assign(design_dict)
 
         if self.config.tilt_angle_setting == "input":
-            tilt = self.get_inital_angle_value("tilt")
+            tilt = self.get_initial_angle_value("tilt")
             self.add_input(
                 "tilt_angle",
                 val=tilt,
@@ -256,7 +232,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
         if self.config.azimuth_angle_setting == "input":
-            azimuth = self.get_inital_angle_value("azimuth")
+            azimuth = self.get_initial_angle_value("azimuth")
             self.add_input(
                 "azimuth_angle",
                 val=azimuth,
@@ -264,7 +240,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 desc="Solar panel azimuth angle in degrees",
             )
 
-    def get_inital_angle_value(self, angle_name: str):
+    def get_initial_angle_value(self, angle_name: str):
         """Get the initial value to use for 'angle_name', based on either:
 
         - the user-input value at the top-level of the config (i.e., `config.angle_name`)

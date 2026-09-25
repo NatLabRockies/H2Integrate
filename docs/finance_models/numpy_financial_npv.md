@@ -12,7 +12,7 @@ By convention:
 - Revenues (commodity sales) are positive cash flows.
 
 ## Model Inputs
-### `NumpyFinancialNPVFinanceConfig`
+### `NumpyFinancialNPVConfig`
 **Description**
 Configuration class defining financial parameters for the NPV calculation.
 Implements validation and default handling using the `attrs` library.
