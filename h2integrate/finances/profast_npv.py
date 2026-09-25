@@ -1,9 +1,8 @@
 from collections.abc import Iterable
 
 import numpy as np
-from openmdao.utils.units import convert_units, simplify_unit
+from openmdao.utils.units import simplify_unit
 
-from h2integrate.finances.tools import _compute_rate_units
 from h2integrate.finances.profast_base import ProFastBase
 
 
@@ -100,30 +99,10 @@ class ProFastNPV(ProFastBase):
         self.price_units = io_meta_data[f"sell_price_{self.output_txt}"]["units"]
         self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
-        # compute rate_units from the price
-        rate_units_from_price = _compute_rate_units(
-            self.commodity_sell_price_units, check_conversion=False
-        )
-        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
-            "units"
-        ]
-        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
-
-        # ensure that sell price units are compatible with the rate units
-        if float(conversion_ratio) != 1.0:
-            # convert rate units to units compatible with the price_units
-            inputs_adjusted = dict(inputs.items())
-            capacity_converted = convert_units(
-                inputs[f"rated_{self.options['commodity_type']}_production"],
-                rate_units_capacity,
-                rate_units_from_price,
-            )
-            inputs_adjusted[f"rated_{self.options['commodity_type']}_production"] = (
-                capacity_converted
-            )
-            pf = self.populate_profast(inputs_adjusted)
-        else:
-            pf = self.populate_profast(inputs)
+        # ``populate_profast`` converts the rated production (in its native rate units)
+        # into the commodity amount units implied by the price, so no additional
+        # rate-unit adjustment is needed here.
+        pf = self.populate_profast(inputs)
 
         non_op_Nyears = int(np.ceil(self.params.installation_time / 12) + 1)
         sell_price = inputs[f"sell_price_{self.output_txt}"]
