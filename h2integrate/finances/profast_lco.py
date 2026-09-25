@@ -106,8 +106,6 @@ class ProFastLCO(ProFastBase):
         self.price_units = io_meta_data[self.LCO_str]["units"]
         self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
-        pf = self.populate_profast(inputs)
-
         if "system_level_control" in self.options["plant_config"]:
             non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
             has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
@@ -123,6 +121,10 @@ class ProFastLCO(ProFastBase):
                 )
                 warnings.warn(msg, UserWarning)
                 return
+
+        # populate ProFAST
+        pf = self.populate_profast(inputs)
+
         # simulate ProFAST
         sol, summary, price_breakdown = run_profast(pf)
 
