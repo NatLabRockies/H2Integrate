@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 import openmdao.api as om
 
@@ -254,3 +255,44 @@ def test_solar_resource_h2i_download_leap_year(
         assert solar_data["start_time"] == f"{resource_year}/01/01 00:00:00 (+0800)"
     with subtests.test("Time step"):
         assert solar_data["dt"] == plant_simulation["simulation"]["dt"]
+
+
+@pytest.mark.unit
+def test_multi_year_solar_resource(subtests):
+    plant_config = {"plant": {
+        "simulation": {
+            "n_timesteps": 17544, # 2 years + leap day
+            "dt": 3600,
+            "timezone": 0,
+        },
+        "plant_life": 30,
+        },
+    "site": {
+        "latitude": -27.3649,
+        "longitude": 152.67935,
+    }
+    }
+
+    resource_config = {
+        "latitude": -27.3649,
+        "longitude": 152.67935,
+        "resource_year": 2012,
+        "include_leap_day": True,
+    }
+
+    prob = om.Problem()
+    comp = supported_models["Himawari7SolarAPI"](
+        plant_config=plant_config,
+        resource_config=resource_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    prob.run_model()
+
+    solar_resource = prob.model.get_val("resource.solar_resource_data")
+
+    ts_keys = [k for k,v in solar_resource.items() if isinstance(v, list | np.ndarray)]
+
+    with subtests.test("timeseries is 17544"):
+        assert all(len(solar_resource[k])==17544 for k in ts_keys)

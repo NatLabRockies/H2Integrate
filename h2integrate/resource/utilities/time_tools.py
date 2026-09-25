@@ -1,9 +1,69 @@
 from datetime import timezone, timedelta
 
+import numpy as np
 import pandas as pd
 
+from h2integrate.resource.utilities.data_tools import separate_timeseries_and_meta_data
 
-def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
+
+TIME_DATA_KEYS = ["year", "month", "day", "hour", "minute", "second"]
+
+
+def is_leap_year(year):
+    """Determine if a year is leap year
+
+    Args:
+        year (int): calendar year
+
+    Returns:
+        bool: True if the year is a leap year
+    """
+    is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
+        year % 4 == 0 and year % 100 != 0
+    )
+    return is_leap
+
+
+def check_data_length(data, n_timesteps: int):
+    """_summary_
+
+    Args:
+        data (dict): DataFrame-like dictionary of resource data containing
+            "Month" and "Day" columns.
+        n_timesteps (int): Number of timesteps in the simulation.
+
+    Raises:
+        ValueError: If the length of the data does not match ``n_timesteps``
+            after leap day processing.
+    """
+    if isinstance(data, dict):
+        _, ts_data = separate_timeseries_and_meta_data(data)
+        data = pd.DataFrame(ts_data)
+
+    data = data.rename(columns={"month": "Month", "day": "Day"})
+
+    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+
+    # Check if data is the same length as the number of timesteps
+    if len(data) != n_timesteps:
+        leap_day_msg = ""
+        if data_has_leap_day and len(data) > n_timesteps:
+            # Add extra detail to error message if error may be due to leap day
+            leap_day_msg = (
+                "This may be because the resource data includes a leap day. ",
+                "To remove data from a leap day from resource data, please set "
+                "`include_leap_day` to False.",
+            )
+
+        msg = (
+            f"Resource data is not the same length as n_timesteps. "
+            f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
+            f"{leap_day_msg}"
+        )
+        raise ValueError(msg)
+
+
+def process_leap_day(data: dict, include_leap_day: bool):
     """Process leap day data by optionally removing it and validating data length.
 
     Checks whether the provided resource data contains a leap day (February 29th).
@@ -27,7 +87,8 @@ def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
 
     convert_to_dict = False
     if isinstance(data, dict):
-        data = pd.DataFrame(data)
+        meta_data, ts_data = separate_timeseries_and_meta_data(data)
+        data = pd.DataFrame(ts_data)
         convert_to_dict = True
 
     case_of_time_cols = "lower" if "month" in data.columns.to_list() else "upper"
@@ -48,30 +109,12 @@ def process_leap_day(data: dict, include_leap_day: bool, n_timesteps: int):
         # Drop the leap day data from the dataframe
         data = data.drop(index=leap_day_index)
 
-    # Check if data is the same length as the number of timesteps
-    if len(data) != n_timesteps:
-        leap_day_msg = ""
-        if data_has_leap_day and len(data) > n_timesteps:
-            # Add extra detail to error message if error may be due to leap day
-            leap_day_msg = (
-                "This may be because the resource data includes a leap day. ",
-                "To remove data from a leap day from resource data, please set "
-                "`include_leap_day` to False.",
-            )
-
-        msg = (
-            f"Resource data is not the same length as n_timesteps. "
-            f"Resource data has length {len(data)}, n_timesteps is {n_timesteps}. "
-            f"{leap_day_msg}"
-        )
-        raise ValueError(msg)
-
     if case_of_time_cols == "lower":
         data = data.rename(columns={"Month": "month", "Day": "day"})
 
     if convert_to_dict:
         data_out = {k: data[k].values for k in data.columns.to_list()}
-        return data_out
+        return meta_data | data_out
     return data
 
 
@@ -125,3 +168,103 @@ def add_resource_start_end_times(data: dict):
     data.update(time_start_end_info)
 
     return data
+
+
+def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap: bool):
+    """Get the number of years required to get n_timesteps worth of resource data
+
+    Args:
+        dt (int): number of seconds in a timesteps
+        n_timesteps (int): number of timesteps in the simulation
+        include_leap (bool): whether to include leap days or not.
+
+    Returns:
+        int: number of years needed to get n_timesteps worth of resource data
+    """
+
+    # Get the number of hours in the simulation
+    hours_simulated = (dt / 3600) * n_timesteps
+
+    if hours_simulated % 8760 == 0:
+        # using multiples of 8760, easy to calc number of years needed
+        n_years_needed = hours_simulated // 8760
+        return int(n_years_needed)
+
+    # check if remainder is multiple of 24, indicating leap days
+    remainder_hrs = hours_simulated % 8760
+    if remainder_hrs % 24 == 0 and include_leap:
+        # remaining hours is divisible by 24 and including leap-day
+        n_leap_years = np.min([remainder_hrs // 24, hours_simulated // 8760])
+        # number of hours from non-leap years
+        n_hrs_leap_years = n_leap_years * (8760 + 24)
+        n_hrs_non_leap = hours_simulated - n_hrs_leap_years
+        if n_hrs_non_leap % 8760 == 0:
+            n_years_needed = n_leap_years + (n_hrs_non_leap // 8760)
+        else:
+            # need an extra year
+            n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
+        return n_years_needed
+    return int((hours_simulated // 8760) + 1)
+
+
+def get_future_valid_resource_years(resource_config, resource_starting_year, dt, n_timesteps):
+    # functionalized-version of `_get_resource_years()` in resource_base.py
+    resource_year_validator = type(resource_config.__attrs_attrs__.resource_year.validator).__name__
+    if resource_year_validator == "_InValidator":
+        # to accomodate tmy solar resource models
+        year_options = resource_config.__attrs_attrs__.resource_year.validator.options
+        if isinstance(resource_starting_year, str):
+            # resource_year is formatted like `tmy-2020`
+            resource_year_type, resource_year = resource_starting_year.split("-")
+            resource_base_year = int(resource_year)
+        else:
+            # resource_year is just the year, get the "type" from the config (like tmy or tgy)
+            resource_year_type, _ = resource_config.resource_year.split("-")
+            resource_base_year = int(resource_starting_year)
+
+        future_years = sorted(
+            [
+                int(yr.split("-")[-1])
+                for yr in year_options
+                if (f"{resource_year_type}-" in yr) and int(yr.split("-")[-1]) >= resource_base_year
+            ]
+        )
+
+    else:
+        resource_base_year = int(resource_starting_year)
+        for validator in resource_config.__attrs_attrs__.resource_year.validator._validators:
+            if "<" in validator.compare_op:
+                last_available_yr = (
+                    validator.bound if validator.compare_op == "<=" else int(validator.bound - 1)
+                )
+
+        future_years = np.arange(resource_base_year, last_available_yr + 1, 1).astype(int).tolist()
+
+    if resource_config.include_leap_day:
+        hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
+    else:
+        hours_per_simulation_year = [8760] * len(future_years)
+
+    # Get the maximum number of hours available in the resource years
+    # following resource_start_year
+    future_hours_available = int(sum(hours_per_simulation_year))
+
+    # Get the number of hours in the simulation
+    hours_simulated = (dt / 3600) * n_timesteps
+
+    if future_hours_available < hours_simulated:
+        msg = f"Not enough future resource years for simulation of {hours_simulated} hours"
+        raise ValueError(msg)
+
+    cumulative_hrs = np.cumsum(hours_per_simulation_year)
+
+    # Get the last resource year needed to get enough resource data for n_timesteps
+    last_resource_year = [y for y, h in zip(future_years, cumulative_hrs) if h >= hours_simulated][
+        0
+    ]
+
+    resource_years = np.arange(resource_base_year, last_resource_year + 1, 1).astype(int).tolist()
+    if resource_year_validator == "_InValidator":
+        # Using TMY data, turn resource year into strings again
+        resource_years = [f"{resource_year_type}-{int(y)}" for y in resource_years]
+    return sorted(resource_years)
