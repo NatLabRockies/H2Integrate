@@ -40,6 +40,7 @@
 - Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
 - Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
 - Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
+- Remove the unused single-source commodity summation component and its references. [PR 898](https://github.com/NatLabRockies/H2Integrate/pull/898)
 - Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
 
 ## 0.9 [August 10, 2026]
