@@ -1,8 +1,10 @@
+import numpy as np
 import pandas as pd
 import PySAM.MhkWave as MhkWave
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.converters.tools import check_pysam_lifetime_options
 from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
 
 
@@ -78,10 +80,7 @@ class PySAMWavePerformanceConfig(BaseConfig):
             ValueError: If ``number_devices`` is provided in
                 ``pysam_options["MHKWave"]``.
         """
-        valid_groups = [
-            "MHKWave",
-            "AdjustmentFactors",
-        ]
+        valid_groups = ["MHKWave", "AdjustmentFactors", "Lifetime"]
         if bool(self.pysam_options):
             invalid_groups = [k for k in self.pysam_options if k not in valid_groups]
             if len(invalid_groups) > 0:
@@ -195,6 +194,13 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
                     design_dict[group].update(group_parameters)
                 else:
                     design_dict.update({group: group_parameters})
+
+        design_dict = check_pysam_lifetime_options(
+            design_dict, self.plant_life, "generic_degradation"
+        )
+
+        self.design_dict = design_dict
+
         self.system_model.assign(design_dict)
 
     def compute(self, inputs, outputs):
@@ -232,15 +238,38 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
         # Run the model
         self.system_model.execute(0)
 
-        outputs["electricity_out"] = self.system_model.Outputs.gen
         outputs["rated_electricity_production"] = system_capacity_kw
+        generation = np.asarray(self.system_model.Outputs.gen)
+        time_step_hours = self.dt / 3600
+
+        use_lifetime_output = bool(
+            self.config.pysam_options.get("Lifetime", {}).get("system_use_lifetime_output", 0)
+        )
+        if use_lifetime_output:
+            generation_per_year = np.split(generation, self.plant_life)
+            annual_energy = np.array(
+                [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
+            )
+            n_timesteps_per_yr = np.array(
+                [len(year_generation) for year_generation in generation_per_year]
+            )
+            max_production = (
+                outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
+            )
+            outputs["electricity_out"] = generation[: self.n_timesteps]
+            outputs["annual_electricity_produced"] = annual_energy
+            outputs["capacity_factor"] = annual_energy / max_production
+
+        else:
+            outputs["electricity_out"] = generation
+            outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
 
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
 
-        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
-        outputs["capacity_factor"] = (
-            self.system_model.Outputs.capacity_factor / 100
-        )  # divide by 100 to make it unitless
+        if not use_lifetime_output:
+            outputs["capacity_factor"] = (
+                self.system_model.Outputs.capacity_factor / 100
+            )  # divide by 100 to make it unitless
 
         # Honor a system-level controller's set-point by curtailing
         # `electricity_out`. No-op when there is no system-level controller.
