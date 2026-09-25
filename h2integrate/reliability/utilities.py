@@ -10,7 +10,7 @@ def update_dimensions(n_components: int, *args: np.ndarray):
     :py:attr:`n_components` to match. If the size of an array passed :py:attr:`args` is 1 and
     :py:attr:`n_components` is greater than 1, all arrays passed to :py:attr:`args` will be
     broadcast to an array shaped (:py:attr:`n_components`, 1). If the arrays are already larger
-    than 1, then :py:attr:`n_components will be updated to the size of the arrays.
+    than 1, then :py:attr:`n_components` will be updated to the size of the arrays.
 
     Args:
         n_components (int): Number of components in the model

@@ -459,7 +459,7 @@ class FixedDowntime(BaseDowntime):
         self.n_components, self.hours = update_dimensions(self.n_components, self.hours)
 
     def sample_downtime(self):
-        """Return an array of shape (:py:attr:`n_components, 100) :py:attr:`hours` as the downtime
+        """Return an array of shape (:py:attr:`n_components`, 100) :py:attr:`hours` as the downtime
         duration for the next 100 downtime events.
 
         Returns:
@@ -514,7 +514,7 @@ class UniformDowntime(BaseDowntime):
         """Return an array of 100 samples from a uniform distribution.
 
         Returns:
-            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+            np.ndarray: An array of shape (:py:attr:`n_components`, 100) for the next 100 events'
                 downtime durations.
         """
         return (
@@ -556,7 +556,7 @@ class LogNormalDowntime(BaseDowntime):
         )
 
     def sample_downtime(self) -> np.ndarray:
-        """Return an array of shape (:py:attr:`n_components, 100) samples of each
+        """Return an array of shape (:py:attr:`n_components`, 100) samples of each
         lognormal distribution.
 
         Returns:
@@ -637,7 +637,7 @@ class WeibullReliability(BaseReliability):
         """Samples 100 events for each simulated component, rounding up to the nearest timestep.
 
         Returns:
-            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+            np.ndarray: An array of shape (:py:attr:`n_components`, 100) for the next 100 events'
                 time to next failure.
         """
         return np.ceil(
@@ -705,7 +705,7 @@ class FixedIntervalReliability(BaseReliability):
         is shorter.
 
         Returns:
-            np.ndarray: An array of shape (:py:attr:`n_components, 100) for the next 100 events'
+            np.ndarray: An array of shape (:py:attr:`n_components`, 100) for the next 100 events'
                 time to next failure.
         """
         interval = np.ceil(
