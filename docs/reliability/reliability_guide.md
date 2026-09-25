@@ -9,7 +9,7 @@ kernelspec:
   name: python3
 ---
 
-(reliability)=
+(reliability-guide)=
 # Reliability Modeling
 
 Inspired by the work in NLR's [WOMBAT](https://github.com/NLRWindSystems/WOMBAT) model for
