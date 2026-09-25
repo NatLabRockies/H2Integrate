@@ -1,3 +1,4 @@
+import sys
 from copy import deepcopy
 
 import numpy as np
@@ -18,6 +19,9 @@ from h2integrate.reliability.models import (
 )
 from h2integrate.core.array_validators import to_array
 from h2integrate.reliability.utilities import update_dimensions
+
+
+PY_MINOR_VERSION = int(sys.version.split(".")[1])
 
 
 # NOTE: If you add a new model, ensure it's added to the appropriate mapping
@@ -128,7 +132,9 @@ class SimpleDowntime(BaseDowntime):
 def test_base_downtime(subtests):
     """Tests the ``BaseDowntime`` class and provides a demonstration of correct minimal form."""
     with subtests.test("Obviously bad routines fail"):
-        missing_msg = "without an implementation for abstract method 'sample_downtime'"
+        msg_312_plus = "without an implementation for abstract method 'sample_downtime'"
+        msg_311 = r"Can't instantiate abstract class (.*) with abstract method sample_downtime"
+        missing_msg = msg_311 if PY_MINOR_VERSION < 12 else msg_312_plus
         with pytest.raises(TypeError, match=missing_msg):
             BaseDowntime()
 
@@ -192,7 +198,9 @@ class SimpleReliability(BaseReliability):
 def test_base_reliability(subtests):
     """Tests the ``BaseReliability`` class and provides a demonstration of correct minimal form."""
     with subtests.test("Obviously bad routines fail"):
-        missing_msg = "without an implementation for abstract method 'sample_events'"
+        msg_312_plus = "without an implementation for abstract method 'sample_events'"
+        msg_311 = r"Can't instantiate abstract class (.*) with abstract method sample_events"
+        missing_msg = msg_311 if PY_MINOR_VERSION < 12 else msg_312_plus
         with pytest.raises(TypeError, match=missing_msg):
             BaseReliability()
 
