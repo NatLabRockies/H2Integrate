@@ -41,6 +41,7 @@
 - Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
 - Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
 - Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
+- Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
 
 ## 0.9 [August 10, 2026]
 

@@ -333,8 +333,9 @@ def test_profast_comp_sales_tax(
 
 
 @pytest.mark.regression
-def test_profast_lco_warnings_with_slc(
-    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
+@pytest.mark.parametrize("use_slc", [True, False])
+def test_profast_lco_warnings(
+    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests, use_slc
 ):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -343,8 +344,9 @@ def test_profast_lco_warnings_with_slc(
             "plant_life": 30,
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
-        "system_level_control": {},
     }
+    if use_slc:
+        plant_config["system_level_control"] = {}
     pf = ProFastLCO(
         driver_config={},
         plant_config=plant_config,
