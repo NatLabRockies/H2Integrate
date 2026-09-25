@@ -1,8 +1,17 @@
-import numpy as np
+import warnings
 
+import numpy as np
+from attrs import field, define
+
+from h2integrate.core.utilities import BaseConfig
 from h2integrate.control.control_strategies.system_level.system_level_control_base import (
     SystemLevelControlBase,
 )
+
+
+@define(kw_only=True)
+class DemandFollowingControlConfig(BaseConfig):
+    use_average_conversion_factor: bool = field(default=False)
 
 
 class DemandFollowingControl(SystemLevelControlBase):
@@ -31,55 +40,175 @@ class DemandFollowingControl(SystemLevelControlBase):
        (each receives ``remaining_demand / n_dispatchable``).
     """
 
-    def compute(self, inputs, outputs):
-        commodity = self.commodity
-        demand = inputs[self.demand_input_name].copy()
+    def setup(self):
+        super().setup()
+
+        self.config = DemandFollowingControlConfig.from_dict(
+            self.options["plant_config"]["system_level_control"].get("control_parameters", {}),
+            strict=False,
+        )
+
+        self.tech_demands_set = []
+
+    def get_setpoints_for_commodity_subset(
+        self, inputs, outputs, commodity, commodity_demand, tech_subset: list | set | None = None
+    ):
+        # TODO: rename this method
+        if tech_subset is None:
+            tech_subset = set(self.input_techs)
+
+        fixed_tech_subset = set(self.fixed_techs) & set(tech_subset)
+        flexible_tech_subest = set(self.flexible_techs) & set(tech_subset)
+        storage_tech_subset = set(self.storage_techs) & set(tech_subset)
+        dispatchable_tech_subset = set(self.dispatchable_techs) & set(tech_subset)
 
         # 1. Fixed techs: always produce, subtract from demand
-        for fixed_tech in self.fixed_techs:
+        for fixed_tech in fixed_tech_subset:
             commodity_from_tech = self._get_commodity_for_tech(fixed_tech)
             for tech_commodity in commodity_from_tech:
                 if tech_commodity == commodity:
-                    demand = self._subtract_fixed(fixed_tech, demand, commodity, inputs)
+                    commodity_demand = self._subtract_fixed(
+                        fixed_tech, commodity_demand, commodity, inputs
+                    )
+                    self.tech_demands_set.append((fixed_tech, tech_commodity))
 
         # 2. Flexible techs: operate at full production
-        for flexible_tech in self.flexible_techs:
+        for flexible_tech in flexible_tech_subest:
             commodity_from_tech = self._get_commodity_for_tech(flexible_tech)
             for tech_commodity in commodity_from_tech:
                 if tech_commodity == commodity:
-                    demand = self._subtract_flexible(
-                        flexible_tech, demand, commodity, inputs, outputs
+                    commodity_demand = self._subtract_flexible(
+                        flexible_tech, commodity_demand, commodity, inputs, outputs
                     )
+                    self.tech_demands_set.append((flexible_tech, tech_commodity))
                 else:
                     if f"{flexible_tech}_rated_{tech_commodity}_production" in inputs:
                         # set the per-tech set-point as the rated production
                         outputs[f"{flexible_tech}_{tech_commodity}_set_point"] = inputs[
                             f"{flexible_tech}_rated_{tech_commodity}_production"
                         ] * np.ones(self.n_timesteps)
+                        self.tech_demands_set.append((flexible_tech, tech_commodity))
 
         # 3. Storage dispatch
         # number of storage components that produce the demanded commodity
         n_storage = len(
-            [s for s in self.storage_techs if commodity in self._get_commodity_for_tech(s)]
+            [s for s in storage_tech_subset if commodity in self._get_commodity_for_tech(s)]
         )
-        for storage_tech in self.storage_techs:
+        for storage_tech in storage_tech_subset:
             commodity_from_tech = self._get_commodity_for_tech(storage_tech)
             if commodity in commodity_from_tech:
-                demand = self._dispatch_storage(
-                    storage_tech, demand / n_storage, commodity, inputs, outputs
+                commodity_demand = self._dispatch_storage(
+                    storage_tech, commodity_demand / n_storage, commodity, inputs, outputs
                 )
+                self.tech_demands_set.append((storage_tech, commodity))
 
         # 4. Dispatchable techs
-        remaining_demand = np.maximum(demand, 0.0)
+        remaining_demand = np.maximum(commodity_demand, 0.0)
 
         # calculate the number of dispatchable technologies that
         # produce the demanded commodity
         n_dispatchable = len(
-            [s for s in self.dispatchable_techs if commodity in self._get_commodity_for_tech(s)]
+            [s for s in dispatchable_tech_subset if commodity in self._get_commodity_for_tech(s)]
         )
-        for dispatchable_tech in self.dispatchable_techs:
+        for dispatchable_tech in dispatchable_tech_subset:
             commodity_from_tech = self._get_commodity_for_tech(dispatchable_tech)
             if commodity in commodity_from_tech:
                 outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
                     remaining_demand / n_dispatchable
                 )
+                self.tech_demands_set.append((dispatchable_tech, commodity))
+
+        return outputs
+
+    def get_conversion_factors(self, converters, converter_upstreams, inputs):
+        conversion_factors = {}
+        for converter_info in list(converters):
+            input_cmod, tech, output_cmod = converter_info
+            tech_ancestors = converter_upstreams[(input_cmod, tech)]
+            conversion_ratio = self.get_converter_conversion_ratio(
+                inputs, input_cmod, output_cmod, tech, list(tech_ancestors)
+            )
+
+            has_nan = np.isnan(conversion_ratio).any()
+            has_inf = np.isinf(conversion_ratio).any()
+            is_zero = np.all(conversion_ratio == 0.0)
+            if has_inf or has_nan or is_zero:
+                # not all values are finite
+                if is_zero:
+                    bad_indices = list(np.arange(0, len(conversion_ratio), 1))
+                else:
+                    inf_indices = np.argwhere(~np.isfinite(conversion_ratio)).flatten()
+                    nan_indices = np.argwhere(~np.isnan(conversion_ratio)).flatten()
+                    bad_indices = list(set(inf_indices) | set(nan_indices))
+
+                capacity_ratio = self.get_converter_capacity_ratio(
+                    inputs,
+                    input_cmod,
+                    output_cmod,
+                    tech,
+                    list(tech_ancestors),
+                )
+                conversion_ratio[bad_indices] = capacity_ratio
+
+            if self.config.use_average_conversion_factor:
+                conversion_ratio = conversion_ratio.mean()
+
+            conversion_factors[converter_info] = conversion_ratio
+        return conversion_factors
+
+    def compute(self, inputs, outputs):
+        if not self.multi_commodity_system:
+            self.get_setpoints_for_commodity_subset(
+                inputs, outputs, self.commodity, inputs[self.demand_input_name].copy()
+            )
+            return
+
+        converter_conversion_factors = self.get_conversion_factors(
+            self.rename_me_config.converters, self.rename_me_config.converter_upstreams, inputs
+        )
+
+        conversion_factor_of_1 = (
+            1.0 if self.config.use_average_conversion_factor else np.ones(self.n_timesteps)
+        )
+
+        non_converter_conversion_factors = dict(
+            zip(
+                self.rename_me_config.non_converter_conversion_factor_keys,
+                [conversion_factor_of_1]
+                * len(self.rename_me_config.non_converter_conversion_factor_keys),
+            )
+        )
+        conversion_factors = non_converter_conversion_factors | converter_conversion_factors
+
+        self.tech_demands_set = []
+
+        demand_techs = self.rename_me_config.converter_upstreams[(self.commodity, self.demand_tech)]
+
+        outputs = self.get_setpoints_for_commodity_subset(
+            inputs,
+            outputs,
+            self.commodity,
+            inputs[self.demand_input_name].copy(),
+            tech_subset=demand_techs,
+        )
+
+        conversion_factors_tracker = {}
+        for recipe_name, recipe in self.rename_me_config.conversion_recipes.items():
+            commodity_to_demand = recipe_name[1]
+            techs_to_demand = self.get_techs_to_demand_from_recipe(recipe_name)
+            conversion_factor = self.get_conversion_from_recipe(conversion_factors, recipe)
+            demand = inputs[self.demand_input_name].copy() * conversion_factor
+            outputs = self.get_setpoints_for_commodity_subset(
+                inputs,
+                outputs,
+                commodity_to_demand,
+                demand,
+                tech_subset=techs_to_demand,
+            )
+            conversion_factors_tracker[recipe_name] = conversion_factor
+        unset_techs_cmods = self.techs_to_commodities - set(self.tech_demands_set)
+        unset_techs = [k for k in list(unset_techs_cmods) if k[0] not in self.feedstock_comps]
+        if unset_techs:
+            warnings.warn(
+                f"Commands not set for these technologies: {unset_techs}", UserWarning, stacklevel=3
+            )
