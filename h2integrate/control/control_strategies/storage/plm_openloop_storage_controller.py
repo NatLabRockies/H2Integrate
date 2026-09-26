@@ -11,7 +11,7 @@ from h2integrate.core.utilities import (
     merge_shared_inputs,
     build_time_series_from_plant_config,
 )
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )

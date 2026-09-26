@@ -4,7 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, LHV_CH4_MJ_PER_KG, faraday
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 @define(kw_only=True)

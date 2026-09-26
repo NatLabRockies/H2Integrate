@@ -5,8 +5,8 @@ import pandas as pd
 from rex import NSRDBX
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, ResourceBaseH5Config
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
+from h2integrate.resource.resource_hpc_baseclass import ResourceBaseH5Model, ResourceBaseH5Config
+from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 
 
 @define(kw_only=True)

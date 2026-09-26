@@ -8,7 +8,7 @@ from geopy import distance
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 

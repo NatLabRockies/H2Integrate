@@ -1,5 +1,5 @@
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
+from h2integrate.demand.demand_baseclass import DemandComponentBase, DemandComponentBaseConfig
 
 
 class GenericDemandComponent(DemandComponentBase):

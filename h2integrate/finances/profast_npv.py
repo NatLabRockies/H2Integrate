@@ -5,7 +5,7 @@ import numpy as np
 from openmdao.utils.units import convert_units, simplify_unit
 
 from h2integrate.finances.tools import _compute_rate_units
-from h2integrate.finances.profast_base import ProFastBase
+from h2integrate.finances.profast_baseclass import ProFastBase
 
 
 class ProFastNPV(ProFastBase):
