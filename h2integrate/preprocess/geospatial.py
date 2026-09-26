@@ -136,7 +136,8 @@ def get_state_from_coords(
             raise ValueError(msg)
         coordinates = list(zip(latitude, longitude))
 
-    result = rg.search(coordinates)
+    # mode=1 (single-process) avoids spawning a process pool, which is slow for few coordinates
+    result = rg.search(coordinates, mode=1)
     single = len(result) == 1
     state = [convert_state_to_code(convert_state_value(el["admin1"])) for el in result]
     return state[0] if single else state
