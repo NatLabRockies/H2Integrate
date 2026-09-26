@@ -1,7 +1,7 @@
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)

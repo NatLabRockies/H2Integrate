@@ -2,8 +2,10 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.wind.nlr_developer_wtk_api_base import NLRDeveloperAPIWindResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.wind.nlr_developer_wtk_api_baseclass import (
+    NLRDeveloperAPIWindResourceBase,
+)
 
 
 @define(kw_only=True)

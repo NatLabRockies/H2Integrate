@@ -4,7 +4,7 @@ from attrs import field, define, validators
 from h2integrate.core.dynamics import apply_ramping_limits, startup_loss_multiplier
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.tools.constants import H_MW, N_MW, AR_MW
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     ResizeablePerformanceModelBaseClass,
     ResizeablePerformanceModelBaseConfig,
 )

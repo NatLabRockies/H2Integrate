@@ -1,7 +1,7 @@
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
 

@@ -2,7 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
+from h2integrate.demand.demand_baseclass import DemandComponentBase, DemandComponentBaseConfig
 
 
 @define(kw_only=True)

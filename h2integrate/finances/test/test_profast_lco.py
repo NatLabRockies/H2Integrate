@@ -3,7 +3,7 @@ import openmdao.api as om
 from pytest import fixture
 
 from h2integrate.finances.profast_lco import ProFastLCO
-from h2integrate.finances.profast_base import BasicProFASTParameterConfig
+from h2integrate.finances.profast_baseclass import BasicProFASTParameterConfig
 
 
 @fixture

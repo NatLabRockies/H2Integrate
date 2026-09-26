@@ -2,7 +2,7 @@ import PySAM.MhkCosts as MhkCost
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)

@@ -74,7 +74,7 @@ are flagged immediately.
 Here is an example of setting up a solar performance model in H2Integrate.
 
 ```python
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 class SolarPerformanceClass(PerformanceModelBaseClass):
