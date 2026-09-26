@@ -21,13 +21,9 @@ design_variables:
     latitude:
       flag: true
       units: deg
-      lower: -90.0
-      upper: 90.0
     longitude:
       flag: true
       units: deg
-      lower: -180.0
-      upper: 180.0
 objective:
   name: finance_subgroup_electricity.LCOE_optimistic
 recorder:
