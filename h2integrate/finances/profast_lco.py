@@ -12,8 +12,8 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase
 from h2integrate.core.inputs.validation import write_yaml
+from h2integrate.finances.profast_baseclass import ProFastBase
 
 
 class ProFastLCO(ProFastBase):

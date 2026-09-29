@@ -8,10 +8,10 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.time_tools import process_leap_day
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
+from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 
 
 @define(kw_only=True)
