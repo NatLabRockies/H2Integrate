@@ -21,7 +21,7 @@ from h2integrate.tools.constants import (
     P_STD_KPA,
     LHV_CH4_MJ_PER_KG,
 )
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 @define
