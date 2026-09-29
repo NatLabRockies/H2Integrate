@@ -37,6 +37,12 @@ the model-specific class should still be used when the fields or semantics
 differ. The `populate_tech_yaml` utility recognizes the direct `{ModelName}Config`
 convention and can also discover inherited or explicitly supplied config classes.
 
+## Base class file naming
+
+Modules that define base classes should use the `_baseclass.py` suffix, for example
+`h2integrate/core/model_baseclass.py` or `h2integrate/storage/storage_baseclass.py`.
+This keeps base classes easy to find by searching the code base for `baseclass`.
+
 ## Testing
 
 Use subtests to separate distinct behavior or state transitions within a longer test. When several
