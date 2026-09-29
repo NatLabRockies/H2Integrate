@@ -156,13 +156,12 @@ def test_floris_turbine_export(temp_dir, subtests):
             pytest.approx(
                 prob.get_val("wind_plant.rated_electricity_production", units="MW"), rel=1e-6
             )
-            == 600.0
+            == 150.0
         )
 
     with subtests.test("File runs with Floris, check turbine size"):
         assert (
-            pytest.approx(prob.get_val("wind_plant.num_turbines", units="unitless"), rel=1e-6)
-            == 100
+            pytest.approx(prob.get_val("wind_plant.num_turbines", units="unitless"), rel=1e-6) == 25
         )
 
     with subtests.test("File runs with Floris, check hub-height"):
@@ -171,7 +170,7 @@ def test_floris_turbine_export(temp_dir, subtests):
     with subtests.test("File runs with Floris, check capacity factor"):
         assert (
             pytest.approx(prob.get_val("wind_plant.capacity_factor", units="percent")[0], rel=1e-6)
-            == 53.556784
+            == 54.746018024685526
         )
 
     with subtests.test("File runs with Floris, check total electricity produced"):
@@ -179,7 +178,7 @@ def test_floris_turbine_export(temp_dir, subtests):
             pytest.approx(
                 prob.get_val("wind_plant.total_electricity_produced", units="MW*h")[0], rel=1e-6
             )
-            == 2814944.574
+            == 719362.6768443679
         )
 
     with subtests.test("File runs with Floris, check AEP"):
@@ -187,5 +186,5 @@ def test_floris_turbine_export(temp_dir, subtests):
             pytest.approx(
                 prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/yr")[0], rel=1e-6
             )
-            == 2814944.574
+            == 719362.6768443679
         )

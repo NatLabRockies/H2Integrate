@@ -214,7 +214,10 @@ class Loader(yaml.SafeLoader):
         the ``__line__{key}`` and ``__line__`` keys in the key and value nodes are not represented
         by the schema, and therefore raise an error during validation.
         """
-        numbered_node = copy.deepcopy(node)
+        # A shallow copy with a new value list is enough to keep the shadow nodes out of ``node``;
+        # a deep copy is very slow for mappings that contain long sequences
+        numbered_node = copy.copy(node)
+        numbered_node.value = list(node.value)
         numbered_nodes = []
         for key_node, _ in numbered_node.value:
             shadow_key_node = ScalarNode(
